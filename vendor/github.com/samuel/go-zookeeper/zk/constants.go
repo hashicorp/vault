@@ -2,7 +2,6 @@ package zk
 
 import (
 	"errors"
-	"fmt"
 )
 
 const (
@@ -26,7 +25,6 @@ const (
 	opGetChildren2 = 12
 	opCheck        = 13
 	opMulti        = 14
-	opReconfig     = 16
 	opClose        = -11
 	opSetAuth      = 100
 	opSetWatches   = 101
@@ -94,7 +92,7 @@ func (s State) String() string {
 	if name := stateNames[s]; name != "" {
 		return name
 	}
-	return "unknown state"
+	return "Unknown"
 }
 
 type ErrCode int32
@@ -115,10 +113,8 @@ var (
 	ErrClosing                 = errors.New("zk: zookeeper is closing")
 	ErrNothing                 = errors.New("zk: no server responsees to process")
 	ErrSessionMoved            = errors.New("zk: session moved to another server, so operation is ignored")
-	ErrReconfigDisabled        = errors.New("attempts to perform a reconfiguration operation when reconfiguration feature is disabled")
-	ErrBadArguments            = errors.New("invalid arguments")
-	// ErrInvalidCallback         = errors.New("zk: invalid callback specified")
 
+	// ErrInvalidCallback         = errors.New("zk: invalid callback specified")
 	errCodeToError = map[ErrCode]error{
 		0:                          nil,
 		errAPIError:                ErrAPIError,
@@ -130,13 +126,11 @@ var (
 		errNotEmpty:                ErrNotEmpty,
 		errSessionExpired:          ErrSessionExpired,
 		// errInvalidCallback:         ErrInvalidCallback,
-		errInvalidAcl:        ErrInvalidACL,
-		errAuthFailed:        ErrAuthFailed,
-		errClosing:           ErrClosing,
-		errNothing:           ErrNothing,
-		errSessionMoved:      ErrSessionMoved,
-		errZReconfigDisabled: ErrReconfigDisabled,
-		errBadArguments:      ErrBadArguments,
+		errInvalidAcl:   ErrInvalidACL,
+		errAuthFailed:   ErrAuthFailed,
+		errClosing:      ErrClosing,
+		errNothing:      ErrNothing,
+		errSessionMoved: ErrSessionMoved,
 	}
 )
 
@@ -144,7 +138,7 @@ func (e ErrCode) toError() error {
 	if err, ok := errCodeToError[e]; ok {
 		return err
 	}
-	return fmt.Errorf("unknown error: %v", e)
+	return ErrUnknown
 }
 
 const (
@@ -174,8 +168,6 @@ const (
 	errClosing                 ErrCode = -116
 	errNothing                 ErrCode = -117
 	errSessionMoved            ErrCode = -118
-	// Attempts to perform a reconfiguration operation when reconfiguration feature is disabled
-	errZReconfigDisabled ErrCode = -123
 )
 
 // Constants for ACL permissions
@@ -205,7 +197,6 @@ var (
 		opGetChildren2: "getChildren2",
 		opCheck:        "check",
 		opMulti:        "multi",
-		opReconfig:     "reconfig",
 		opClose:        "close",
 		opSetAuth:      "setAuth",
 		opSetWatches:   "setWatches",

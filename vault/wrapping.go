@@ -12,8 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/shared-secure-libs/metricsutil"
-	vaultmetrics "github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -153,7 +152,7 @@ DONELISTHANDLING:
 		[]string{"token", "creation"},
 		1,
 		[]metrics.Label{
-			vaultmetrics.NamespaceLabel(ns),
+			metricsutil.NamespaceLabel(ns),
 			// The type of the secret engine is not all that useful;
 			// we could use "token" but let's be more descriptive,
 			// even if it's not a real auth method.

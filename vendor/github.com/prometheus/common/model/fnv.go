@@ -20,7 +20,7 @@ const (
 	prime64  = 1099511628211
 )
 
-// hashNew initializes a new fnv64a hash value.
+// hashNew initializies a new fnv64a hash value.
 func hashNew() uint64 {
 	return offset64
 }
