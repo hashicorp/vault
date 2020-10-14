@@ -113,7 +113,8 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	if c.HTTPClient != nil {
 		def.Config.HTTPClient = c.HTTPClient
 		_, checkFullURI := os.LookupEnv("AWS_CONTAINER_CREDENTIALS_FULL_URI")
-		if !checkFullURI {
+		_, checkRelativeURI := os.LookupEnv("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI")
+		if !checkFullURI && !checkRelativeURI {
 			// match the sdk defaults from https://github.com/aws/aws-sdk-go/pull/3066
 			def.Config.HTTPClient.Timeout = 1 * time.Second
 			def.Config.MaxRetries = aws.Int(2)
