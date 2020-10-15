@@ -470,7 +470,7 @@ github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
-# github.com/hashicorp/hcl v1.0.1-0.20201015155626-f6b4bdc86722
+# github.com/hashicorp/hcl v1.0.1-vault
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
 github.com/hashicorp/hcl/hcl/parser
