@@ -56,7 +56,7 @@ func (h *HANA) secretValues() map[string]string {
 func (h *HANA) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
 	conf, err := h.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %s", err)
+		return newdbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
 	}
 
 	return newdbplugin.InitializeResponse{
@@ -289,7 +289,7 @@ func (h *HANA) updateUserExpiration(ctx context.Context, tx *sql.Tx, username st
 // Revoking hana user will deactivate user and try to perform a soft drop
 func (h *HANA) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
 	h.Lock()
-	h.Unlock()
+	defer h.Unlock()
 
 	// default revoke will be a soft drop on user
 	if len(req.Statements.Commands) == 0 {
