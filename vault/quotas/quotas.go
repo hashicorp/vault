@@ -560,12 +560,18 @@ func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 // SetEnableRateLimitAuditLogging updates the operator preference regarding the
 // audit logging behavior.
 func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	m.config.EnableRateLimitAuditLogging = val
 }
 
 // SetEnableRateLimitResponseHeaders updates the operator preference regarding
 // the rate limit quota HTTP header behavior.
 func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	m.config.EnableRateLimitResponseHeaders = val
 }
 
@@ -574,6 +580,9 @@ func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
 // SetRateLimitExemptPaths will wipe out the existing path manager and set the
 // paths based on the provided argument.
 func (m *Manager) SetRateLimitExemptPaths(vals []string) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	if vals == nil {
 		vals = []string{}
 	}
@@ -586,18 +595,27 @@ func (m *Manager) SetRateLimitExemptPaths(vals []string) {
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	return m.config.EnableRateLimitAuditLogging
 }
 
 // RateLimitResponseHeadersEnabled returns if the quota configuration allows for
 // rate limit quota HTTP headers to be added to responses.
 func (m *Manager) RateLimitResponseHeadersEnabled() bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	return m.config.EnableRateLimitResponseHeaders
 }
 
 // RateLimitExemptPaths returns the list of exempt paths from all rate limit
 // resource quotas from the Manager's configuration.
 func (m *Manager) RateLimitExemptPaths() []string {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	return m.config.RateLimitExemptPaths
 }
 
@@ -605,6 +623,9 @@ func (m *Manager) RateLimitExemptPaths() []string {
 // any rate limit quota. If not rate limit path manager is defined, false is
 // returned.
 func (m *Manager) RateLimitPathExempt(path string) bool {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	if m.rateLimitPathManager == nil {
 		return false
 	}
