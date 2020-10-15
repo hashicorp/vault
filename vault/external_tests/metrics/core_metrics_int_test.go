@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/shared-secure-libs/metricsutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 )

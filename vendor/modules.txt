@@ -494,8 +494,6 @@ github.com/hashicorp/raft
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.3
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/shared-secure-libs v0.0.2
-github.com/hashicorp/shared-secure-libs/metricsutil
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools

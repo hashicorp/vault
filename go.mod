@@ -73,7 +73,6 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
-	github.com/hashicorp/shared-secure-libs v0.0.2
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
@@ -152,7 +151,6 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
