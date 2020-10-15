@@ -101,7 +101,7 @@ module('Integration | Component | replication-secondary-card', function(hooks) {
     assert
       .dom('[data-test-inline-error-message]')
       .includesText(
-        'There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again.',
+        'There has been some transient failure. Your cluster will eventually switch back to connection and try to establish a connection again.',
         'show correct error message'
       );
   });

@@ -61,10 +61,7 @@ export default Component.extend({
    *
    */
   labelString: computed('attr.{name,options.label}', function() {
-    if (!this.attr.options) {
-      return;
-    }
-    const label = this.attr.options.label;
+    const label = this.attr.options ? this.attr.options.label : '';
     const name = this.attr.name;
     if (label) {
       return label;

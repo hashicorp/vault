@@ -40,6 +40,9 @@ export default Component.extend({
       }
 
       if (modelIsError) {
+        if (!this.model.adapterError) {
+          return;
+        }
         if (this.model.adapterError.errors.length > 0) {
           return this.model.adapterError.errors;
         }

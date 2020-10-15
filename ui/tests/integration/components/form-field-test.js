@@ -32,8 +32,8 @@ module('Integration | Component | form field', function(hooks) {
 
   test('it renders', async function(assert) {
     let model = EmberObject.create({});
-    this.set('attr', { name: 'foo' });
-    this.set('model', model);
+    this.attr = { name: 'foo' };
+    this.model = model;
     await render(hbs`{{form-field attr=attr model=model}}`);
 
     assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
