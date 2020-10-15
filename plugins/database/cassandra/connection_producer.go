@@ -8,16 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 // cassandraConnectionProducer implements ConnectionProducer and provides an
@@ -52,7 +51,7 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -60,7 +59,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbp
 
 	err := mapstructure.WeakDecode(req.Config, c)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	if c.ConnectTimeoutRaw == nil {
@@ -68,7 +67,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbp
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
 	}
 
 	if c.SocketKeepAliveRaw == nil {
@@ -76,16 +75,16 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbp
 	}
 	c.socketKeepAlive, err = parseutil.ParseDurationSecond(c.SocketKeepAliveRaw)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
+		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
 	}
 
 	switch {
 	case len(c.Hosts) == 0:
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("hosts cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("hosts cannot be empty")
 	case len(c.Username) == 0:
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
 	case len(c.Password) == 0:
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -94,11 +93,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbp
 	case len(c.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -108,11 +107,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbp
 	case len(c.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -126,11 +125,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req newdbp
 
 	if req.VerifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
 

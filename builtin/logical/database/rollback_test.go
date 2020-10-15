@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -102,9 +102,9 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	// Alter the database password so it no longer matches what is in storage
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := v5.UpdateUserRequest{
 		Username: databaseUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &v5.ChangePassword{
 			NewPassword: "newSecret",
 		},
 	}
@@ -348,9 +348,9 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	// Alter the database password
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := v5.UpdateUserRequest{
 		Username: databaseUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &v5.ChangePassword{
 			NewPassword: "newSecret",
 		},
 	}

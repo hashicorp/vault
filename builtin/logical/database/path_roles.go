@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -522,11 +522,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName        string              `json:"db_name"`
-	Statements    dbplugin.Statements `json:"statements"`
-	DefaultTTL    time.Duration       `json:"default_ttl"`
-	MaxTTL        time.Duration       `json:"max_ttl"`
-	StaticAccount *staticAccount      `json:"static_account" mapstructure:"static_account"`
+	DBName        string         `json:"db_name"`
+	Statements    v4.Statements  `json:"statements"`
+	DefaultTTL    time.Duration  `json:"default_ttl"`
+	MaxTTL        time.Duration  `json:"max_ttl"`
+	StaticAccount *staticAccount `json:"static_account" mapstructure:"static_account"`
 }
 
 type staticAccount struct {
