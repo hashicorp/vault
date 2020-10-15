@@ -1,5 +1,9 @@
 ## Next
 
+CHANGES:
+
+* agent: Agent now properly returns a non-zero exit code on error, such as one due to template rendering failure. Using `error_on_missing_key` in the template config will cause agent to immediately exit on failure. In order to make agent properly exit due to continuous failure from template rendering errors, the old behavior of indefinitely restarting the template server is now changed to exit once the default retry attempt of 12 times (with exponential backoff) gets exhausted. [[GH-9670](https://github.com/hashicorp/vault/pull/9670)]  
+
 FEATURES:
 
 * **Couchbase Secrets**: Vault can now manage static and dynamic credentials for Couchbase. [[GH-9664](https://github.com/hashicorp/vault/pull/9664)]
@@ -7,11 +11,14 @@ FEATURES:
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
-* secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords. [[GH-16](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/16)]
 * secrets/transit: fix missing plaintext in bulk decrypt response [[GH-9991](https://github.com/hashicorp/vault/pull/9991)]
 * command/server: Delay informational messages in -dev mode until logs have settled. [[GH-9702](https://github.com/hashicorp/vault/pull/9702)]
 * command/server: Add environment variable support for `disable_mlock`. [[GH-9931](https://github.com/hashicorp/vault/pull/9931)]
+* core/metrics: Add metrics for storage cache [[GH_10079](https://github.com/hashicorp/vault/pull/10079)]
 * sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
+* seal/awskms: Add logging during awskms auto-unseal [[GH-9794](https://github.com/hashicorp/vault/pull/9794)]
+* storage/azure: Update SDK library to use [azure-storage-blob-go](https://github.com/Azure/azure-storage-blob-go) since previous library has been deprecated. [[GH-9577](https://github.com/hashicorp/vault/pull/9577/)]
+* secrets/ad: `rotate-root` now supports POST requests like other secret engines [[GH-70](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/70)]
 
 BUG FIXES:
 
@@ -20,6 +27,7 @@ BUG FIXES:
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
 * identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
+* replication (enterprise): Fix panic when old filter path evaluation fails
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
@@ -30,6 +38,9 @@ BUG FIXES:
 
 * auth/aws: Restrict region selection when in the aws-us-gov partition to avoid IAM errors [[GH-9947](https://github.com/hashicorp/vault/pull/9947)]
 * core: Fix deadlock in handling EGP policies
+* core (enterprise): Fix extraneous error messages in DR Cluster
+* secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
+* secrets/ad: Fix bug where `password_policy` setting was not using correct key when `ad/config` was read [[GH-71](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/71)]
 
 ## 1.5.4
 ### September 24th, 2020
@@ -241,7 +252,7 @@ All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1
 BUG FIXES:
 
 * auth/aws: Made header handling for IAM authentication more robust
-* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing
+* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing [[GH-9824](https://github.com/hashicorp/vault/pull/9824)]
 
 ## 1.4.5.1
 ### August 21st, 2020

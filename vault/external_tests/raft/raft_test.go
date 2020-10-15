@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
@@ -38,6 +39,56 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_RetryAutoJoin(t *testing.T) {
+	t.Parallel()
+
+	var (
+		conf vault.CoreConfig
+
+		opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	)
+
+	teststorage.RaftBackendSetup(&conf, &opts)
+
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	leaderCore := cluster.Cores[0]
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			AutoJoin:  "provider=aws region=eu-west-1 tag_key=consul tag_value=tag access_key_id=a secret_access_key=a",
+			TLSConfig: leaderCore.TLSConfig,
+			Retry:     true,
+		},
+	}
+
+	{
+		// expected to pass but not join as we're not actually discovering leader addresses
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		require.NoError(t, err)
+	}
+
+	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+		"core-0": true,
+	})
 }
 
 func TestRaft_Retry_Join(t *testing.T) {

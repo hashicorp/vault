@@ -3,9 +3,10 @@ const path = require('path')
 
 module.exports = withHashicorp({
   defaultLayout: true,
-  transpileModules: ['is-absolute-url', '@hashicorp/react-mega-nav'],
+  transpileModules: ['is-absolute-url', '@hashicorp/react-.*'],
   mdx: { resolveIncludes: path.join(__dirname, 'pages') },
 })({
+  svgo: { plugins: [{ removeViewBox: false }] },
   experimental: {
     modern: true,
     rewrites: () => [

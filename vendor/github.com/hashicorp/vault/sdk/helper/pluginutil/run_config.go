@@ -29,7 +29,7 @@ type runConfig struct {
 	autoMTLS       bool
 }
 
-func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
+func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
 	cmd := exec.Command(rc.command, rc.args...)
 	cmd.Env = append(cmd.Env, rc.env...)
 
@@ -39,11 +39,14 @@ func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
 
-	var clientTLSConfig *tls.Config
-	if !rc.isMetadataMode {
-		// Add the metadata mode ENV and set it to false
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadataModeEnv, "false"))
+	if rc.isMetadataMode {
+		rc.logger = rc.logger.With("metadata", "true")
+	}
+	metadataEnv := fmt.Sprintf("%s=%t", PluginMetadataModeEnv, rc.isMetadataMode)
+	cmd.Env = append(cmd.Env, metadataEnv)
 
+	var clientTLSConfig *tls.Config
+	if !rc.autoMTLS && !rc.isMetadataMode {
 		// Get a CA TLS Certificate
 		certBytes, key, err := generateCert()
 		if err != nil {
@@ -65,9 +68,6 @@ func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
 
 		// Add the response wrap token to the ENV of the plugin
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
-	} else {
-		rc.logger = rc.logger.With("metadata", "true")
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadataModeEnv, "true"))
 	}
 
 	secureConfig := &plugin.SecureConfig{
@@ -88,9 +88,16 @@ func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
 		},
 		AutoMTLS: rc.autoMTLS,
 	}
+	return clientConfig, nil
+}
+
+func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
+	clientConfig, err := rc.makeConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	client := plugin.NewClient(clientConfig)
-
 	return client, nil
 }
 
