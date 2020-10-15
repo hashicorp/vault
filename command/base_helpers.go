@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	kvbuilder "github.com/hashicorp/shared-secure-libs/kv-builder"
 	"github.com/hashicorp/vault/api"
+	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"

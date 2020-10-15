@@ -1,7 +1,5 @@
 module github.com/mitchellh/cli
 
-go 1.11
-
 require (
 	github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310
 	github.com/bgentry/speakeasy v0.1.0
