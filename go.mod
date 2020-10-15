@@ -152,6 +152,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
