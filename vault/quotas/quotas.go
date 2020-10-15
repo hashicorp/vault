@@ -631,8 +631,8 @@ func (m *Manager) RateLimitExemptPaths() []string {
 // any rate limit quota. If not rate limit path manager is defined, false is
 // returned.
 func (m *Manager) RateLimitPathExempt(path string) bool {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
 	if m.rateLimitPathManager == nil {
 		return false
