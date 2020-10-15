@@ -518,9 +518,9 @@ func PossibleMaintenanceOperationResultCodeTypesValues() []MaintenanceOperationR
 type OperatingSystemStateTypes string
 
 const (
-	// Generalized ...
+	// Generalized Generalized image. Needs to be provisioned during deployment time.
 	Generalized OperatingSystemStateTypes = "Generalized"
-	// Specialized ...
+	// Specialized Specialized image. Contains already provisioned OS Disk.
 	Specialized OperatingSystemStateTypes = "Specialized"
 )
 
@@ -970,11 +970,13 @@ const (
 	Low VirtualMachinePriorityTypes = "Low"
 	// Regular ...
 	Regular VirtualMachinePriorityTypes = "Regular"
+	// Spot ...
+	Spot VirtualMachinePriorityTypes = "Spot"
 )
 
 // PossibleVirtualMachinePriorityTypesValues returns an array of possible values for the VirtualMachinePriorityTypes const type.
 func PossibleVirtualMachinePriorityTypesValues() []VirtualMachinePriorityTypes {
-	return []VirtualMachinePriorityTypes{Low, Regular}
+	return []VirtualMachinePriorityTypes{Low, Regular, Spot}
 }
 
 // VirtualMachineScaleSetScaleInRules enumerates the values for virtual machine scale set scale in rules.
@@ -1429,10 +1431,8 @@ type AutomaticOSUpgradeProperties struct {
 type AutomaticRepairsPolicy struct {
 	// Enabled - Specifies whether automatic repairs should be enabled on the virtual machine scale set. The default value is false.
 	Enabled *bool `json:"enabled,omitempty"`
-	// GracePeriod - The amount of time for which automatic repairs are suspended due to a state change on VM. The grace time starts after the state change has completed. This helps avoid premature or accidental repairs. The time duration should be specified in ISO 8601 format. The default value is 5 minutes (PT5M).
+	// GracePeriod - The amount of time for which automatic repairs are suspended due to a state change on VM. The grace time starts after the state change has completed. This helps avoid premature or accidental repairs. The time duration should be specified in ISO 8601 format. The minimum allowed grace period is 30 minutes (PT30M), which is also the default value. The maximum allowed grace period is 90 minutes (PT90M).
 	GracePeriod *string `json:"gracePeriod,omitempty"`
-	// MaxInstanceRepairsPercent - The percentage (capacity of scaleset) of virtual machines that will be simultaneously repaired. The default value is 20%.
-	MaxInstanceRepairsPercent *int32 `json:"maxInstanceRepairsPercent,omitempty"`
 }
 
 // AvailabilitySet specifies information about the availability set that the virtual machine should be
@@ -1785,10 +1785,10 @@ func (asu *AvailabilitySetUpdate) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-// BillingProfile specifies the billing related details of a low priority VM or VMSS. <br><br>Minimum
+// BillingProfile specifies the billing related details of a Azure Spot VM or VMSS. <br><br>Minimum
 // api-version: 2019-03-01.
 type BillingProfile struct {
-	// MaxPrice - Specifies the maximum price you are willing to pay for a low priority VM/VMSS. This price is in US Dollars. <br><br> This price will be compared with the current low priority price for the VM size. Also, the prices are compared at the time of create/update of low priority VM/VMSS and the operation will only succeed if  the maxPrice is greater than the current low priority price. <br><br> The maxPrice will also be used for evicting a low priority VM/VMSS if the current low priority price goes beyond the maxPrice after creation of VM/VMSS. <br><br> Possible values are: <br><br> - Any decimal value greater than zero. Example: $0.01538 <br><br> -1 – indicates default price to be up-to on-demand. <br><br> You can set the maxPrice to -1 to indicate that the low priority VM/VMSS should not be evicted for price reasons. Also, the default max price is -1 if it is not provided by you. <br><br>Minimum api-version: 2019-03-01.
+	// MaxPrice - Specifies the maximum price you are willing to pay for a Azure Spot VM/VMSS. This price is in US Dollars. <br><br> This price will be compared with the current Azure Spot price for the VM size. Also, the prices are compared at the time of create/update of Azure Spot VM/VMSS and the operation will only succeed if  the maxPrice is greater than the current Azure Spot price. <br><br> The maxPrice will also be used for evicting a Azure Spot VM/VMSS if the current Azure Spot price goes beyond the maxPrice after creation of VM/VMSS. <br><br> Possible values are: <br><br> - Any decimal value greater than zero. Example: 0.01538 <br><br> -1 – indicates default price to be up-to on-demand. <br><br> You can set the maxPrice to -1 to indicate that the Azure Spot VM/VMSS should not be evicted for price reasons. Also, the default max price is -1 if it is not provided by you. <br><br>Minimum api-version: 2019-03-01.
 	MaxPrice *float64 `json:"maxPrice,omitempty"`
 }
 
@@ -2228,7 +2228,7 @@ type ContainerServiceWindowsProfile struct {
 type CreationData struct {
 	// CreateOption - This enumerates the possible sources of a disk's creation. Possible values include: 'Empty', 'Attach', 'FromImage', 'Import', 'Copy', 'Restore', 'Upload'
 	CreateOption DiskCreateOption `json:"createOption,omitempty"`
-	// StorageAccountID - If createOption is Import, the Azure Resource Manager identifier of the storage account containing the blob to import as a disk. Required only if the blob is in a different subscription
+	// StorageAccountID - Required if createOption is Import. The Azure Resource Manager identifier of the storage account containing the blob to import as a disk.
 	StorageAccountID *string `json:"storageAccountId,omitempty"`
 	// ImageReference - Disk source information.
 	ImageReference *ImageDiskReference `json:"imageReference,omitempty"`
@@ -4027,6 +4027,8 @@ type DiskUpdateProperties struct {
 	DiskIOPSReadWrite *int64 `json:"diskIOPSReadWrite,omitempty"`
 	// DiskMBpsReadWrite - The bandwidth allowed for this disk; only settable for UltraSSD disks. MBps means millions of bytes per second - MB here uses the ISO notation, of powers of 10.
 	DiskMBpsReadWrite *int32 `json:"diskMBpsReadWrite,omitempty"`
+	// Encryption - Encryption property can be used to encrypt data at rest with customer managed keys or platform managed keys.
+	Encryption *Encryption `json:"encryption,omitempty"`
 }
 
 // Encryption encryption at rest settings for disk or snapshot
@@ -4125,6 +4127,35 @@ func (future *GalleriesDeleteFuture) Result(client GalleriesClient) (ar autorest
 		return
 	}
 	ar.Response = future.Response()
+	return
+}
+
+// GalleriesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type GalleriesUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *GalleriesUpdateFuture) Result(client GalleriesClient) (g Gallery, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleriesUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.GalleriesUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if g.Response.Response, err = future.GetResult(sender); err == nil && g.Response.Response.StatusCode != http.StatusNoContent {
+		g, err = client.UpdateResponder(g.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleriesUpdateFuture", "Result", g.Response.Response, "Failure responding to request")
+		}
+	}
 	return
 }
 
@@ -4543,6 +4574,88 @@ func (future *GalleryApplicationsDeleteFuture) Result(client GalleryApplications
 	return
 }
 
+// GalleryApplicationsUpdateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type GalleryApplicationsUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *GalleryApplicationsUpdateFuture) Result(client GalleryApplicationsClient) (ga GalleryApplication, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationsUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if ga.Response.Response, err = future.GetResult(sender); err == nil && ga.Response.Response.StatusCode != http.StatusNoContent {
+		ga, err = client.UpdateResponder(ga.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsUpdateFuture", "Result", ga.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GalleryApplicationUpdate specifies information about the gallery Application Definition that you want to
+// update.
+type GalleryApplicationUpdate struct {
+	*GalleryApplicationProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryApplicationUpdate.
+func (gau GalleryApplicationUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gau.GalleryApplicationProperties != nil {
+		objectMap["properties"] = gau.GalleryApplicationProperties
+	}
+	if gau.Tags != nil {
+		objectMap["tags"] = gau.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GalleryApplicationUpdate struct.
+func (gau *GalleryApplicationUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var galleryApplicationProperties GalleryApplicationProperties
+				err = json.Unmarshal(*v, &galleryApplicationProperties)
+				if err != nil {
+					return err
+				}
+				gau.GalleryApplicationProperties = &galleryApplicationProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				gau.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
 // GalleryApplicationVersion specifies information about the gallery Application Version that you want to
 // create or update.
 type GalleryApplicationVersion struct {
@@ -4871,6 +4984,88 @@ func (future *GalleryApplicationVersionsDeleteFuture) Result(client GalleryAppli
 	}
 	ar.Response = future.Response()
 	return
+}
+
+// GalleryApplicationVersionsUpdateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type GalleryApplicationVersionsUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *GalleryApplicationVersionsUpdateFuture) Result(client GalleryApplicationVersionsClient) (gav GalleryApplicationVersion, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationVersionsUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if gav.Response.Response, err = future.GetResult(sender); err == nil && gav.Response.Response.StatusCode != http.StatusNoContent {
+		gav, err = client.UpdateResponder(gav.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsUpdateFuture", "Result", gav.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GalleryApplicationVersionUpdate specifies information about the gallery Application Version that you
+// want to update.
+type GalleryApplicationVersionUpdate struct {
+	*GalleryApplicationVersionProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryApplicationVersionUpdate.
+func (gavu GalleryApplicationVersionUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gavu.GalleryApplicationVersionProperties != nil {
+		objectMap["properties"] = gavu.GalleryApplicationVersionProperties
+	}
+	if gavu.Tags != nil {
+		objectMap["tags"] = gavu.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GalleryApplicationVersionUpdate struct.
+func (gavu *GalleryApplicationVersionUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var galleryApplicationVersionProperties GalleryApplicationVersionProperties
+				err = json.Unmarshal(*v, &galleryApplicationVersionProperties)
+				if err != nil {
+					return err
+				}
+				gavu.GalleryApplicationVersionProperties = &galleryApplicationVersionProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				gavu.Tags = tags
+			}
+		}
+	}
+
+	return nil
 }
 
 // GalleryArtifactPublishingProfileBase describes the basic gallery artifact publishing profile.
@@ -5260,6 +5455,87 @@ func (future *GalleryImagesDeleteFuture) Result(client GalleryImagesClient) (ar 
 	return
 }
 
+// GalleryImagesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type GalleryImagesUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *GalleryImagesUpdateFuture) Result(client GalleryImagesClient) (gi GalleryImage, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleryImagesUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.GalleryImagesUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if gi.Response.Response, err = future.GetResult(sender); err == nil && gi.Response.Response.StatusCode != http.StatusNoContent {
+		gi, err = client.UpdateResponder(gi.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleryImagesUpdateFuture", "Result", gi.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GalleryImageUpdate specifies information about the gallery Image Definition that you want to update.
+type GalleryImageUpdate struct {
+	*GalleryImageProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryImageUpdate.
+func (giu GalleryImageUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if giu.GalleryImageProperties != nil {
+		objectMap["properties"] = giu.GalleryImageProperties
+	}
+	if giu.Tags != nil {
+		objectMap["tags"] = giu.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GalleryImageUpdate struct.
+func (giu *GalleryImageUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var galleryImageProperties GalleryImageProperties
+				err = json.Unmarshal(*v, &galleryImageProperties)
+				if err != nil {
+					return err
+				}
+				giu.GalleryImageProperties = &galleryImageProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				giu.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
 // GalleryImageVersion specifies information about the gallery Image Version that you want to create or
 // update.
 type GalleryImageVersion struct {
@@ -5593,6 +5869,87 @@ type GalleryImageVersionStorageProfile struct {
 	DataDiskImages *[]GalleryDataDiskImage `json:"dataDiskImages,omitempty"`
 }
 
+// GalleryImageVersionsUpdateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type GalleryImageVersionsUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *GalleryImageVersionsUpdateFuture) Result(client GalleryImageVersionsClient) (giv GalleryImageVersion, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.GalleryImageVersionsUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if giv.Response.Response, err = future.GetResult(sender); err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
+		giv, err = client.UpdateResponder(giv.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsUpdateFuture", "Result", giv.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GalleryImageVersionUpdate specifies information about the gallery Image Version that you want to update.
+type GalleryImageVersionUpdate struct {
+	*GalleryImageVersionProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryImageVersionUpdate.
+func (givu GalleryImageVersionUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if givu.GalleryImageVersionProperties != nil {
+		objectMap["properties"] = givu.GalleryImageVersionProperties
+	}
+	if givu.Tags != nil {
+		objectMap["tags"] = givu.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GalleryImageVersionUpdate struct.
+func (givu *GalleryImageVersionUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var galleryImageVersionProperties GalleryImageVersionProperties
+				err = json.Unmarshal(*v, &galleryImageVersionProperties)
+				if err != nil {
+					return err
+				}
+				givu.GalleryImageVersionProperties = &galleryImageVersionProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				givu.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
 // GalleryList the List Galleries operation response.
 type GalleryList struct {
 	autorest.Response `json:"-"`
@@ -5755,6 +6112,58 @@ type GalleryProperties struct {
 	Identifier  *GalleryIdentifier `json:"identifier,omitempty"`
 	// ProvisioningState - READ-ONLY; The provisioning state, which only appears in the response. Possible values include: 'ProvisioningStateCreating', 'ProvisioningStateUpdating', 'ProvisioningStateFailed', 'ProvisioningStateSucceeded', 'ProvisioningStateDeleting', 'ProvisioningStateMigrating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+}
+
+// GalleryUpdate specifies information about the Shared Image Gallery that you want to update.
+type GalleryUpdate struct {
+	*GalleryProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryUpdate.
+func (gu GalleryUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gu.GalleryProperties != nil {
+		objectMap["properties"] = gu.GalleryProperties
+	}
+	if gu.Tags != nil {
+		objectMap["tags"] = gu.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GalleryUpdate struct.
+func (gu *GalleryUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var galleryProperties GalleryProperties
+				err = json.Unmarshal(*v, &galleryProperties)
+				if err != nil {
+					return err
+				}
+				gu.GalleryProperties = &galleryProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				gu.Tags = tags
+			}
+		}
+	}
+
+	return nil
 }
 
 // GrantAccessData data used for requesting a SAS.
@@ -6113,7 +6522,7 @@ type ImagePurchasePlan struct {
 // ImageReference specifies information about the image to use. You can specify information about platform
 // images, marketplace images, or virtual machine images. This element is required when you want to use a
 // platform image, marketplace image, or virtual machine image, but is not used in other creation
-// operations.
+// operations. NOTE: Image reference publisher and offer can only be set when you create the scale set
 type ImageReference struct {
 	// Publisher - The image publisher.
 	Publisher *string `json:"publisher,omitempty"`
@@ -6123,6 +6532,8 @@ type ImageReference struct {
 	Sku *string `json:"sku,omitempty"`
 	// Version - Specifies the version of the platform image or marketplace image used to create the virtual machine. The allowed formats are Major.Minor.Build or 'latest'. Major, Minor, and Build are decimal numbers. Specify 'latest' to use the latest version of an image available at deploy time. Even if you use 'latest', the VM image will not automatically update after deploy time even if a new version becomes available.
 	Version *string `json:"version,omitempty"`
+	// ExactVersion - READ-ONLY; Specifies in decimal numbers, the version of platform image or marketplace image used to create the virtual machine. This readonly field differs from 'version', only if the value specified in 'version' field is 'latest'.
+	ExactVersion *string `json:"exactVersion,omitempty"`
 	// ID - Resource Id
 	ID *string `json:"id,omitempty"`
 }
@@ -6793,15 +7204,16 @@ type OSDiskImage struct {
 	OperatingSystem OperatingSystemTypes `json:"operatingSystem,omitempty"`
 }
 
-// OSProfile specifies the operating system settings for the virtual machine.
+// OSProfile specifies the operating system settings for the virtual machine. Some of the settings cannot
+// be changed once VM is provisioned.
 type OSProfile struct {
 	// ComputerName - Specifies the host OS name of the virtual machine. <br><br> This name cannot be updated after the VM is created. <br><br> **Max-length (Windows):** 15 characters <br><br> **Max-length (Linux):** 64 characters. <br><br> For naming conventions and restrictions see [Azure infrastructure services implementation guidelines](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-infrastructure-subscription-accounts-guidelines?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json#1-naming-conventions).
 	ComputerName *string `json:"computerName,omitempty"`
-	// AdminUsername - Specifies the name of the administrator account. <br><br> **Windows-only restriction:** Cannot end in "." <br><br> **Disallowed values:** "administrator", "admin", "user", "user1", "test", "user2", "test1", "user3", "admin1", "1", "123", "a", "actuser", "adm", "admin2", "aspnet", "backup", "console", "david", "guest", "john", "owner", "root", "server", "sql", "support", "support_388945a0", "sys", "test2", "test3", "user4", "user5". <br><br> **Minimum-length (Linux):** 1  character <br><br> **Max-length (Linux):** 64 characters <br><br> **Max-length (Windows):** 20 characters  <br><br><li> For root access to the Linux VM, see [Using root privileges on Linux virtual machines in Azure](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-use-root-privileges?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json)<br><li> For a list of built-in system users on Linux that should not be used in this field, see [Selecting User Names for Linux on Azure](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-usernames?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json)
+	// AdminUsername - Specifies the name of the administrator account. <br><br> This property cannot be updated after the VM is created. <br><br> **Windows-only restriction:** Cannot end in "." <br><br> **Disallowed values:** "administrator", "admin", "user", "user1", "test", "user2", "test1", "user3", "admin1", "1", "123", "a", "actuser", "adm", "admin2", "aspnet", "backup", "console", "david", "guest", "john", "owner", "root", "server", "sql", "support", "support_388945a0", "sys", "test2", "test3", "user4", "user5". <br><br> **Minimum-length (Linux):** 1  character <br><br> **Max-length (Linux):** 64 characters <br><br> **Max-length (Windows):** 20 characters  <br><br><li> For root access to the Linux VM, see [Using root privileges on Linux virtual machines in Azure](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-use-root-privileges?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json)<br><li> For a list of built-in system users on Linux that should not be used in this field, see [Selecting User Names for Linux on Azure](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-usernames?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json)
 	AdminUsername *string `json:"adminUsername,omitempty"`
 	// AdminPassword - Specifies the password of the administrator account. <br><br> **Minimum-length (Windows):** 8 characters <br><br> **Minimum-length (Linux):** 6 characters <br><br> **Max-length (Windows):** 123 characters <br><br> **Max-length (Linux):** 72 characters <br><br> **Complexity requirements:** 3 out of 4 conditions below need to be fulfilled <br> Has lower characters <br>Has upper characters <br> Has a digit <br> Has a special character (Regex match [\W_]) <br><br> **Disallowed values:** "abc@123", "P@$$w0rd", "P@ssw0rd", "P@ssword123", "Pa$$word", "pass@word1", "Password!", "Password1", "Password22", "iloveyou!" <br><br> For resetting the password, see [How to reset the Remote Desktop service or its login password in a Windows VM](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-windows-reset-rdp?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) <br><br> For resetting root password, see [Manage users, SSH, and check or repair disks on Azure Linux VMs using the VMAccess Extension](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-using-vmaccess-extension?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json#reset-root-password)
 	AdminPassword *string `json:"adminPassword,omitempty"`
-	// CustomData - Specifies a base-64 encoded string of custom data. The base-64 encoded string is decoded to a binary array that is saved as a file on the Virtual Machine. The maximum length of the binary array is 65535 bytes. <br><br> For using cloud-init for your VM, see [Using cloud-init to customize a Linux VM during creation](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-using-cloud-init?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json)
+	// CustomData - Specifies a base-64 encoded string of custom data. The base-64 encoded string is decoded to a binary array that is saved as a file on the Virtual Machine. The maximum length of the binary array is 65535 bytes. <br><br> **Note: Do not pass any secrets or passwords in customData property** <br><br> This property cannot be updated after the VM is created. <br><br> customData is passed to the VM to be saved as a file, for more information see [Custom Data on Azure VMs](https://docs.microsoft.com/azure/virtual-machines/custom-data) <br><br> For using cloud-init for your Linux VM, see [Using cloud-init to customize a Linux VM during creation](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-using-cloud-init?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json)
 	CustomData *string `json:"customData,omitempty"`
 	// WindowsConfiguration - Specifies Windows operating system settings on the virtual machine.
 	WindowsConfiguration *WindowsConfiguration `json:"windowsConfiguration,omitempty"`
@@ -6811,7 +7223,7 @@ type OSProfile struct {
 	Secrets *[]VaultSecretGroup `json:"secrets,omitempty"`
 	// AllowExtensionOperations - Specifies whether extension operations should be allowed on the virtual machine. <br><br>This may only be set to False when no extensions are present on the virtual machine.
 	AllowExtensionOperations *bool `json:"allowExtensionOperations,omitempty"`
-	// RequireGuestProvisionSignal - Specifies whether the guest provision signal is required from the virtual machine.
+	// RequireGuestProvisionSignal - Specifies whether the guest provision signal is required to infer provision success of the virtual machine.
 	RequireGuestProvisionSignal *bool `json:"requireGuestProvisionSignal,omitempty"`
 }
 
@@ -7084,11 +7496,13 @@ type ProximityPlacementGroupProperties struct {
 	// ProximityPlacementGroupType - Specifies the type of the proximity placement group. <br><br> Possible values are: <br><br> **Standard** : Co-locate resources within an Azure region or Availability Zone. <br><br> **Ultra** : For future use. Possible values include: 'Standard', 'Ultra'
 	ProximityPlacementGroupType ProximityPlacementGroupType `json:"proximityPlacementGroupType,omitempty"`
 	// VirtualMachines - READ-ONLY; A list of references to all virtual machines in the proximity placement group.
-	VirtualMachines *[]SubResource `json:"virtualMachines,omitempty"`
+	VirtualMachines *[]SubResourceWithColocationStatus `json:"virtualMachines,omitempty"`
 	// VirtualMachineScaleSets - READ-ONLY; A list of references to all virtual machine scale sets in the proximity placement group.
-	VirtualMachineScaleSets *[]SubResource `json:"virtualMachineScaleSets,omitempty"`
+	VirtualMachineScaleSets *[]SubResourceWithColocationStatus `json:"virtualMachineScaleSets,omitempty"`
 	// AvailabilitySets - READ-ONLY; A list of references to all availability sets in the proximity placement group.
-	AvailabilitySets *[]SubResource `json:"availabilitySets,omitempty"`
+	AvailabilitySets *[]SubResourceWithColocationStatus `json:"availabilitySets,omitempty"`
+	// ColocationStatus - Describes colocation status of the Proximity Placement Group.
+	ColocationStatus *InstanceViewStatus `json:"colocationStatus,omitempty"`
 }
 
 // ProximityPlacementGroupUpdate specifies information about the proximity placement group.
@@ -7835,7 +8249,9 @@ type ScheduledEventsProfile struct {
 	TerminateNotificationProfile *TerminateNotificationProfile `json:"terminateNotificationProfile,omitempty"`
 }
 
-// Sku describes a virtual machine scale set sku.
+// Sku describes a virtual machine scale set sku. NOTE: If the new VM SKU is not supported on the hardware
+// the scale set is currently on, you need to deallocate the VMs in the scale set before you modify the SKU
+// name.
 type Sku struct {
 	// Name - The sku name.
 	Name *string `json:"name,omitempty"`
@@ -8355,6 +8771,8 @@ type SnapshotUpdateProperties struct {
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
 	// EncryptionSettingsCollection - Encryption settings collection used be Azure Disk Encryption, can contain multiple encryption settings per disk or snapshot.
 	EncryptionSettingsCollection *EncryptionSettingsCollection `json:"encryptionSettingsCollection,omitempty"`
+	// Encryption - Encryption property can be used to encrypt data at rest with customer managed keys or platform managed keys.
+	Encryption *Encryption `json:"encryption,omitempty"`
 }
 
 // SourceVault the vault id is an Azure Resource Manager Resource id in the form
@@ -8398,6 +8816,14 @@ type SubResource struct {
 // SubResourceReadOnly ...
 type SubResourceReadOnly struct {
 	// ID - READ-ONLY; Resource Id
+	ID *string `json:"id,omitempty"`
+}
+
+// SubResourceWithColocationStatus ...
+type SubResourceWithColocationStatus struct {
+	// ColocationStatus - Describes colocation status of a resource in the Proximity Placement Group.
+	ColocationStatus *InstanceViewStatus `json:"colocationStatus,omitempty"`
+	// ID - Resource Id
 	ID *string `json:"id,omitempty"`
 }
 
@@ -9512,23 +9938,23 @@ type VirtualMachineProperties struct {
 	StorageProfile *StorageProfile `json:"storageProfile,omitempty"`
 	// AdditionalCapabilities - Specifies additional capabilities enabled or disabled on the virtual machine.
 	AdditionalCapabilities *AdditionalCapabilities `json:"additionalCapabilities,omitempty"`
-	// OsProfile - Specifies the operating system settings for the virtual machine.
+	// OsProfile - Specifies the operating system settings used while creating the virtual machine. Some of the settings cannot be changed once VM is provisioned.
 	OsProfile *OSProfile `json:"osProfile,omitempty"`
 	// NetworkProfile - Specifies the network interfaces of the virtual machine.
 	NetworkProfile *NetworkProfile `json:"networkProfile,omitempty"`
 	// DiagnosticsProfile - Specifies the boot diagnostic settings state. <br><br>Minimum api-version: 2015-06-15.
 	DiagnosticsProfile *DiagnosticsProfile `json:"diagnosticsProfile,omitempty"`
-	// AvailabilitySet - Specifies information about the availability set that the virtual machine should be assigned to. Virtual machines specified in the same availability set are allocated to different nodes to maximize availability. For more information about availability sets, see [Manage the availability of virtual machines](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-windows-manage-availability?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json). <br><br> For more information on Azure planned maintenance, see [Planned maintenance for virtual machines in Azure](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-windows-planned-maintenance?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) <br><br> Currently, a VM can only be added to availability set at creation time. An existing VM cannot be added to an availability set. <br><br>This property cannot exist along with a non-null properties.virtualMachineScaleSet reference.
+	// AvailabilitySet - Specifies information about the availability set that the virtual machine should be assigned to. Virtual machines specified in the same availability set are allocated to different nodes to maximize availability. For more information about availability sets, see [Manage the availability of virtual machines](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-windows-manage-availability?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json). <br><br> For more information on Azure planned maintenance, see [Planned maintenance for virtual machines in Azure](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-windows-planned-maintenance?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) <br><br> Currently, a VM can only be added to availability set at creation time. The availability set to which the VM is being added should be under the same resource group as the availability set resource. An existing VM cannot be added to an availability set. <br><br>This property cannot exist along with a non-null properties.virtualMachineScaleSet reference.
 	AvailabilitySet *SubResource `json:"availabilitySet,omitempty"`
 	// VirtualMachineScaleSet - Specifies information about the virtual machine scale set that the virtual machine should be assigned to. Virtual machines specified in the same virtual machine scale set are allocated to different nodes to maximize availability. Currently, a VM can only be added to virtual machine scale set at creation time. An existing VM cannot be added to a virtual machine scale set. <br><br>This property cannot exist along with a non-null properties.availabilitySet reference. <br><br>Minimum api‐version: 2019‐03‐01
 	VirtualMachineScaleSet *SubResource `json:"virtualMachineScaleSet,omitempty"`
 	// ProximityPlacementGroup - Specifies information about the proximity placement group that the virtual machine should be assigned to. <br><br>Minimum api-version: 2018-04-01.
 	ProximityPlacementGroup *SubResource `json:"proximityPlacementGroup,omitempty"`
-	// Priority - Specifies the priority for the virtual machine. <br><br>Minimum api-version: 2019-03-01. Possible values include: 'Regular', 'Low'
+	// Priority - Specifies the priority for the virtual machine. <br><br>Minimum api-version: 2019-03-01. Possible values include: 'Regular', 'Low', 'Spot'
 	Priority VirtualMachinePriorityTypes `json:"priority,omitempty"`
-	// EvictionPolicy - Specifies the eviction policy for the low priority virtual machine. Only supported value is 'Deallocate'. <br><br>Minimum api-version: 2019-03-01. Possible values include: 'Deallocate', 'Delete'
+	// EvictionPolicy - Specifies the eviction policy for the Azure Spot virtual machine and Azure Spot scale set. <br><br>For Azure Spot virtual machines, the only supported value is 'Deallocate' and the minimum api-version is 2019-03-01. <br><br>For Azure Spot scale sets, both 'Deallocate' and 'Delete' are supported and the minimum api-version is 2017-10-30-preview. Possible values include: 'Deallocate', 'Delete'
 	EvictionPolicy VirtualMachineEvictionPolicyTypes `json:"evictionPolicy,omitempty"`
-	// BillingProfile - Specifies the billing related details of a low priority virtual machine. <br><br>Minimum api-version: 2019-03-01.
+	// BillingProfile - Specifies the billing related details of a Azure Spot virtual machine. <br><br>Minimum api-version: 2019-03-01.
 	BillingProfile *BillingProfile `json:"billingProfile,omitempty"`
 	// Host - Specifies information about the dedicated host that the virtual machine resides in. <br><br>Minimum api-version: 2018-10-01.
 	Host *SubResource `json:"host,omitempty"`
@@ -9559,7 +9985,7 @@ type VirtualMachineScaleSet struct {
 	*VirtualMachineScaleSetProperties `json:"properties,omitempty"`
 	// Identity - The identity of the virtual machine scale set, if configured.
 	Identity *VirtualMachineScaleSetIdentity `json:"identity,omitempty"`
-	// Zones - The virtual machine scale set zones.
+	// Zones - The virtual machine scale set zones. NOTE: Availability zones can only be set when you create the scale set.
 	Zones *[]string `json:"zones,omitempty"`
 	// ID - READ-ONLY; Resource Id
 	ID *string `json:"id,omitempty"`
@@ -9731,7 +10157,9 @@ type VirtualMachineScaleSetDataDisk struct {
 type VirtualMachineScaleSetExtension struct {
 	autorest.Response `json:"-"`
 	// Name - The name of the extension.
-	Name                                       *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type
+	Type                                       *string `json:"type,omitempty"`
 	*VirtualMachineScaleSetExtensionProperties `json:"properties,omitempty"`
 	// ID - READ-ONLY; Resource Id
 	ID *string `json:"id,omitempty"`
@@ -9766,6 +10194,15 @@ func (vmsse *VirtualMachineScaleSetExtension) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				vmsse.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				vmsse.Type = &typeVar
 			}
 		case "properties":
 			if v != nil {
@@ -10017,6 +10454,106 @@ func (future *VirtualMachineScaleSetExtensionsDeleteFuture) Result(client Virtua
 	}
 	ar.Response = future.Response()
 	return
+}
+
+// VirtualMachineScaleSetExtensionsUpdateFuture an abstraction for monitoring and retrieving the results of
+// a long-running operation.
+type VirtualMachineScaleSetExtensionsUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *VirtualMachineScaleSetExtensionsUpdateFuture) Result(client VirtualMachineScaleSetExtensionsClient) (vmsse VirtualMachineScaleSetExtension, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetExtensionsUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if vmsse.Response.Response, err = future.GetResult(sender); err == nil && vmsse.Response.Response.StatusCode != http.StatusNoContent {
+		vmsse, err = client.UpdateResponder(vmsse.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsUpdateFuture", "Result", vmsse.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// VirtualMachineScaleSetExtensionUpdate describes a Virtual Machine Scale Set Extension.
+type VirtualMachineScaleSetExtensionUpdate struct {
+	// Name - READ-ONLY; The name of the extension.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type
+	Type                                       *string `json:"type,omitempty"`
+	*VirtualMachineScaleSetExtensionProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Resource Id
+	ID *string `json:"id,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VirtualMachineScaleSetExtensionUpdate.
+func (vmsseu VirtualMachineScaleSetExtensionUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmsseu.VirtualMachineScaleSetExtensionProperties != nil {
+		objectMap["properties"] = vmsseu.VirtualMachineScaleSetExtensionProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for VirtualMachineScaleSetExtensionUpdate struct.
+func (vmsseu *VirtualMachineScaleSetExtensionUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				vmsseu.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				vmsseu.Type = &typeVar
+			}
+		case "properties":
+			if v != nil {
+				var virtualMachineScaleSetExtensionProperties VirtualMachineScaleSetExtensionProperties
+				err = json.Unmarshal(*v, &virtualMachineScaleSetExtensionProperties)
+				if err != nil {
+					return err
+				}
+				vmsseu.VirtualMachineScaleSetExtensionProperties = &virtualMachineScaleSetExtensionProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				vmsseu.ID = &ID
+			}
+		}
+	}
+
+	return nil
 }
 
 // VirtualMachineScaleSetIdentity identity for the virtual machine scale set.
@@ -11591,7 +12128,8 @@ func (vmssuic *VirtualMachineScaleSetUpdateIPConfiguration) UnmarshalJSON(body [
 }
 
 // VirtualMachineScaleSetUpdateIPConfigurationProperties describes a virtual machine scale set network
-// profile's IP configuration properties.
+// profile's IP configuration properties. NOTE: The subnet of a scale set may be modified as long as the
+// original subnet and the new subnet are in the same virtual network.
 type VirtualMachineScaleSetUpdateIPConfigurationProperties struct {
 	// Subnet - The subnet.
 	Subnet *APIEntityReference `json:"subnet,omitempty"`
@@ -11745,12 +12283,14 @@ type VirtualMachineScaleSetUpdateProperties struct {
 	Overprovision *bool `json:"overprovision,omitempty"`
 	// DoNotRunExtensionsOnOverprovisionedVMs - When Overprovision is enabled, extensions are launched only on the requested number of VMs which are finally kept. This property will hence ensure that the extensions do not run on the extra overprovisioned VMs.
 	DoNotRunExtensionsOnOverprovisionedVMs *bool `json:"doNotRunExtensionsOnOverprovisionedVMs,omitempty"`
-	// SinglePlacementGroup - When true this limits the scale set to a single placement group, of max size 100 virtual machines.
+	// SinglePlacementGroup - When true this limits the scale set to a single placement group, of max size 100 virtual machines.NOTE: If singlePlacementGroup is true, it may be modified to false. However, if singlePlacementGroup is false, it may not be modified to true.
 	SinglePlacementGroup *bool `json:"singlePlacementGroup,omitempty"`
 	// AdditionalCapabilities - Specifies additional capabilities enabled or disabled on the Virtual Machines in the Virtual Machine Scale Set. For instance: whether the Virtual Machines have the capability to support attaching managed data disks with UltraSSD_LRS storage account type.
 	AdditionalCapabilities *AdditionalCapabilities `json:"additionalCapabilities,omitempty"`
 	// ScaleInPolicy - Specifies the scale-in policy that decides which virtual machines are chosen for removal when a Virtual Machine Scale Set is scaled-in.
 	ScaleInPolicy *ScaleInPolicy `json:"scaleInPolicy,omitempty"`
+	// ProximityPlacementGroup - Specifies information about the proximity placement group that the virtual machine scale set should be assigned to. <br><br>Minimum api-version: 2018-04-01.
+	ProximityPlacementGroup *SubResource `json:"proximityPlacementGroup,omitempty"`
 }
 
 // VirtualMachineScaleSetUpdatePublicIPAddressConfiguration describes a virtual machines scale set IP
@@ -11839,7 +12379,7 @@ type VirtualMachineScaleSetUpdateVMProfile struct {
 	ExtensionProfile *VirtualMachineScaleSetExtensionProfile `json:"extensionProfile,omitempty"`
 	// LicenseType - The license type, which is for bring your own license scenario.
 	LicenseType *string `json:"licenseType,omitempty"`
-	// BillingProfile - Specifies the billing related details of a low priority VMSS. <br><br>Minimum api-version: 2019-03-01.
+	// BillingProfile - Specifies the billing related details of a Azure Spot VMSS. <br><br>Minimum api-version: 2019-03-01.
 	BillingProfile *BillingProfile `json:"billingProfile,omitempty"`
 	// ScheduledEventsProfile - Specifies Scheduled Event related configurations.
 	ScheduledEventsProfile *ScheduledEventsProfile `json:"scheduledEventsProfile,omitempty"`
@@ -12302,11 +12842,11 @@ type VirtualMachineScaleSetVMProfile struct {
 	ExtensionProfile *VirtualMachineScaleSetExtensionProfile `json:"extensionProfile,omitempty"`
 	// LicenseType - Specifies that the image or disk that is being used was licensed on-premises. This element is only used for images that contain the Windows Server operating system. <br><br> Possible values are: <br><br> Windows_Client <br><br> Windows_Server <br><br> If this element is included in a request for an update, the value must match the initial value. This value cannot be updated. <br><br> For more information, see [Azure Hybrid Use Benefit for Windows Server](https://docs.microsoft.com/azure/virtual-machines/virtual-machines-windows-hybrid-use-benefit-licensing?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) <br><br> Minimum api-version: 2015-06-15
 	LicenseType *string `json:"licenseType,omitempty"`
-	// Priority - Specifies the priority for the virtual machines in the scale set. <br><br>Minimum api-version: 2017-10-30-preview. Possible values include: 'Regular', 'Low'
+	// Priority - Specifies the priority for the virtual machines in the scale set. <br><br>Minimum api-version: 2017-10-30-preview. Possible values include: 'Regular', 'Low', 'Spot'
 	Priority VirtualMachinePriorityTypes `json:"priority,omitempty"`
-	// EvictionPolicy - Specifies the eviction policy for virtual machines in a low priority scale set. <br><br>Minimum api-version: 2017-10-30-preview. Possible values include: 'Deallocate', 'Delete'
+	// EvictionPolicy - Specifies the eviction policy for the Azure Spot virtual machine and Azure Spot scale set. <br><br>For Azure Spot virtual machines, the only supported value is 'Deallocate' and the minimum api-version is 2019-03-01. <br><br>For Azure Spot scale sets, both 'Deallocate' and 'Delete' are supported and the minimum api-version is 2017-10-30-preview. Possible values include: 'Deallocate', 'Delete'
 	EvictionPolicy VirtualMachineEvictionPolicyTypes `json:"evictionPolicy,omitempty"`
-	// BillingProfile - Specifies the billing related details of a low priority VMSS. <br><br>Minimum api-version: 2019-03-01.
+	// BillingProfile - Specifies the billing related details of a Azure Spot VMSS. <br><br>Minimum api-version: 2019-03-01.
 	BillingProfile *BillingProfile `json:"billingProfile,omitempty"`
 	// ScheduledEventsProfile - Specifies Scheduled Event related configurations.
 	ScheduledEventsProfile *ScheduledEventsProfile `json:"scheduledEventsProfile,omitempty"`
@@ -13110,7 +13650,7 @@ type WindowsConfiguration struct {
 	ProvisionVMAgent *bool `json:"provisionVMAgent,omitempty"`
 	// EnableAutomaticUpdates - Indicates whether Automatic Updates is enabled for the Windows virtual machine. Default value is true. <br><br> For virtual machine scale sets, this property can be updated and updates will take effect on OS reprovisioning.
 	EnableAutomaticUpdates *bool `json:"enableAutomaticUpdates,omitempty"`
-	// TimeZone - Specifies the time zone of the virtual machine. e.g. "Pacific Standard Time"
+	// TimeZone - Specifies the time zone of the virtual machine. e.g. "Pacific Standard Time". <br><br> Possible values can be [TimeZoneInfo.Id](https://docs.microsoft.com/en-us/dotnet/api/system.timezoneinfo.id?#System_TimeZoneInfo_Id) value from time zones returned by [TimeZoneInfo.GetSystemTimeZones](https://docs.microsoft.com/en-us/dotnet/api/system.timezoneinfo.getsystemtimezones).
 	TimeZone *string `json:"timeZone,omitempty"`
 	// AdditionalUnattendContent - Specifies additional base-64 encoded XML formatted information that can be included in the Unattend.xml file, which is used by Windows Setup.
 	AdditionalUnattendContent *[]AdditionalUnattendContent `json:"additionalUnattendContent,omitempty"`
@@ -13126,7 +13666,7 @@ type WinRMConfiguration struct {
 
 // WinRMListener describes Protocol and thumbprint of Windows Remote Management listener
 type WinRMListener struct {
-	// Protocol - Specifies the protocol of listener. <br><br> Possible values are: <br>**http** <br><br> **https**. Possible values include: 'HTTP', 'HTTPS'
+	// Protocol - Specifies the protocol of WinRM listener. <br><br> Possible values are: <br>**http** <br><br> **https**. Possible values include: 'HTTP', 'HTTPS'
 	Protocol ProtocolTypes `json:"protocol,omitempty"`
 	// CertificateURL - This is the URL of a certificate that has been uploaded to Key Vault as a secret. For adding a secret to the Key Vault, see [Add a key or secret to the key vault](https://docs.microsoft.com/azure/key-vault/key-vault-get-started/#add). In this case, your certificate needs to be It is the Base64 encoding of the following JSON Object which is encoded in UTF-8: <br><br> {<br>  "data":"<Base64-encoded-certificate>",<br>  "dataType":"pfx",<br>  "password":"<pfx-file-password>"<br>}
 	CertificateURL *string `json:"certificateUrl,omitempty"`

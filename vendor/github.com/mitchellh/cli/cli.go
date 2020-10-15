@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
@@ -110,22 +109,17 @@ type CLI struct {
 	AutocompleteGlobalFlags    complete.Flags
 	autocompleteInstaller      autocompleteInstaller // For tests
 
+	// HelpFunc and HelpWriter are used to output help information, if
+	// requested.
+	//
 	// HelpFunc is the function called to generate the generic help
 	// text that is shown if help must be shown for the CLI that doesn't
 	// pertain to a specific command.
-	HelpFunc HelpFunc
-
-	// HelpWriter is used to print help text and version when requested.
-	// Defaults to os.Stderr for backwards compatibility.
-	// It is recommended that you set HelpWriter to os.Stdout, and
-	// ErrorWriter to os.Stderr.
+	//
+	// HelpWriter is the Writer where the help text is outputted to. If
+	// not specified, it will default to Stderr.
+	HelpFunc   HelpFunc
 	HelpWriter io.Writer
-
-	// ErrorWriter used to output errors when a command can not be run.
-	// Defaults to the value of HelpWriter for backwards compatibility.
-	// It is recommended that you set HelpWriter to os.Stdout, and
-	// ErrorWriter to os.Stderr.
-	ErrorWriter io.Writer
 
 	//---------------------------------------------------------------
 	// Internal fields set automatically
@@ -234,7 +228,7 @@ func (c *CLI) Run() (int, error) {
 	// implementation. If the command is invalid or blank, it is an error.
 	raw, ok := c.commandTree.Get(c.Subcommand())
 	if !ok {
-		c.ErrorWriter.Write([]byte(c.HelpFunc(c.helpCommands(c.subcommandParent())) + "\n"))
+		c.HelpWriter.Write([]byte(c.HelpFunc(c.helpCommands(c.subcommandParent())) + "\n"))
 		return 127, nil
 	}
 
@@ -245,23 +239,23 @@ func (c *CLI) Run() (int, error) {
 
 	// If we've been instructed to just print the help, then print it
 	if c.IsHelp() {
-		c.commandHelp(c.HelpWriter, command)
+		c.commandHelp(command)
 		return 0, nil
 	}
 
 	// If there is an invalid flag, then error
 	if len(c.topFlags) > 0 {
-		c.ErrorWriter.Write([]byte(
+		c.HelpWriter.Write([]byte(
 			"Invalid flags before the subcommand. If these flags are for\n" +
 				"the subcommand, please put them after the subcommand.\n\n"))
-		c.commandHelp(c.ErrorWriter, command)
+		c.commandHelp(command)
 		return 1, nil
 	}
 
 	code := command.Run(c.SubcommandArgs())
 	if code == RunResultHelp {
 		// Requesting help
-		c.commandHelp(c.ErrorWriter, command)
+		c.commandHelp(command)
 		return 1, nil
 	}
 
@@ -315,9 +309,6 @@ func (c *CLI) init() {
 
 	if c.HelpWriter == nil {
 		c.HelpWriter = os.Stderr
-	}
-	if c.ErrorWriter == nil {
-		c.ErrorWriter = c.HelpWriter
 	}
 
 	// Build our hidden commands
@@ -404,16 +395,6 @@ func (c *CLI) initAutocomplete() {
 		c.autocompleteInstaller = &realAutocompleteInstaller{}
 	}
 
-	// We first set c.autocomplete to a noop autocompleter that outputs
-	// to nul so that we can detect if we're autocompleting or not. If we're
-	// not, then we do nothing. This saves a LOT of compute cycles since
-	// initAutoCompleteSub has to walk every command.
-	c.autocomplete = complete.New(c.Name, complete.Command{})
-	c.autocomplete.Out = ioutil.Discard
-	if !c.autocomplete.Complete() {
-		return
-	}
-
 	// Build the root command
 	cmd := c.initAutocompleteSub("")
 
@@ -423,8 +404,8 @@ func (c *CLI) initAutocomplete() {
 		cmd.Flags = map[string]complete.Predictor{
 			"-" + c.AutocompleteInstall:   complete.PredictNothing,
 			"-" + c.AutocompleteUninstall: complete.PredictNothing,
-			"-help":                       complete.PredictNothing,
-			"-version":                    complete.PredictNothing,
+			"-help":    complete.PredictNothing,
+			"-version": complete.PredictNothing,
 		}
 	}
 	cmd.GlobalFlags = c.AutocompleteGlobalFlags
@@ -502,7 +483,7 @@ func (c *CLI) initAutocompleteSub(prefix string) complete.Command {
 	return cmd
 }
 
-func (c *CLI) commandHelp(out io.Writer, command Command) {
+func (c *CLI) commandHelp(command Command) {
 	// Get the template to use
 	tpl := strings.TrimSpace(defaultHelpTemplate)
 	if t, ok := command.(CommandHelpTemplate); ok {
@@ -552,12 +533,12 @@ func (c *CLI) commandHelp(out io.Writer, command Command) {
 			// Get the command
 			raw, ok := subcommands[k]
 			if !ok {
-				c.ErrorWriter.Write([]byte(fmt.Sprintf(
+				c.HelpWriter.Write([]byte(fmt.Sprintf(
 					"Error getting subcommand %q", k)))
 			}
 			sub, err := raw()
 			if err != nil {
-				c.ErrorWriter.Write([]byte(fmt.Sprintf(
+				c.HelpWriter.Write([]byte(fmt.Sprintf(
 					"Error instantiating %q: %s", k, err)))
 			}
 
@@ -578,13 +559,13 @@ func (c *CLI) commandHelp(out io.Writer, command Command) {
 	data["Subcommands"] = subcommandsTpl
 
 	// Write
-	err = t.Execute(out, data)
+	err = t.Execute(c.HelpWriter, data)
 	if err == nil {
 		return
 	}
 
 	// An error, just output...
-	c.ErrorWriter.Write([]byte(fmt.Sprintf(
+	c.HelpWriter.Write([]byte(fmt.Sprintf(
 		"Internal error rendering help: %s", err)))
 }
 
