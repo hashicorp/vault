@@ -562,13 +562,22 @@ func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+	m.setEnableRateLimitAuditLoggingLocked(val)
+}
 
+func (m *Manager) setEnableRateLimitAuditLoggingLocked(val bool) {
 	m.config.EnableRateLimitAuditLogging = val
 }
 
 // SetEnableRateLimitResponseHeaders updates the operator preference regarding
 // the rate limit quota HTTP header behavior.
 func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.setEnableRateLimitResponseHeadersLocked(val)
+}
+
+func (m *Manager) setEnableRateLimitResponseHeadersLocked(val bool) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -582,11 +591,13 @@ func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
 func (m *Manager) SetRateLimitExemptPaths(vals []string) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+	m.setRateLimitExemptPathsLocked(vals)
+}
 
+func (m *Manager) setRateLimitExemptPathsLocked(vals []string) {
 	if vals == nil {
 		vals = []string{}
 	}
-
 	m.config.RateLimitExemptPaths = vals
 	m.rateLimitPathManager = pathmanager.New()
 	m.rateLimitPathManager.AddPaths(vals)
@@ -856,9 +867,9 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 		exemptPaths = config.RateLimitExemptPaths
 	}
 
-	m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
-	m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
-	m.SetRateLimitExemptPaths(exemptPaths)
+	m.setEnableRateLimitAuditLoggingLocked(config.EnableRateLimitAuditLogging)
+	m.setEnableRateLimitResponseHeadersLocked(config.EnableRateLimitResponseHeaders)
+	m.setRateLimitExemptPathsLocked(exemptPaths)
 
 	// Load the quota rules for all supported types from storage and load it in
 	// the quota manager.
