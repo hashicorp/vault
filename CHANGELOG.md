@@ -28,7 +28,6 @@ BUG FIXES:
 * core: Fix race involved in enabling certain features via a license change
 * core: Fix error handling in HCL parsing of objects with invalid syntax [[GH-410](https://github.com/hashicorp/hcl/pull/410)]
 * identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
-* replication (enterprise): Fix panic when old filter path evaluation fails
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
@@ -228,6 +227,13 @@ BUG FIXES:
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
+
+## 1.4.7.1
+### October 15th, 2020
+### Enterprise Only
+
+BUG FIXES:
+* replication (enterprise): Fix panic when old filter path evaluation fails
 
 ## 1.4.7
 ### September 24th, 2020

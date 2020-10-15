@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -340,7 +340,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	}
 	output.Password = newPassword
 
-	config := dbplugin.StaticUserConfig{
+	config := v4.StaticUserConfig{
 		Username: input.Role.StaticAccount.Username,
 		Password: newPassword,
 	}
@@ -358,11 +358,11 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := v5.UpdateUserRequest{
 		Username: input.Role.StaticAccount.Username,
-		Password: &newdbplugin.ChangePassword{
+		Password: &v5.ChangePassword{
 			NewPassword: newPassword,
-			Statements: newdbplugin.Statements{
+			Statements: v5.Statements{
 				Commands: input.Role.Statements.Rotation,
 			},
 		},

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin/proto"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"google.golang.org/grpc"
 )
 
