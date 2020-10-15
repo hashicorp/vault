@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
-	dbtesting "github.com/hashicorp/vault/sdk/database/newdbplugin/testing"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
@@ -23,7 +23,7 @@ func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, f
 		connectionDetails[k] = v
 	}
 
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           connectionDetails,
 		VerifyConnection: true,
 	}
@@ -61,15 +61,15 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 
 func TestPostgreSQL_NewUser(t *testing.T) {
 	type testCase struct {
-		req            newdbplugin.NewUserRequest
+		req            dbplugin.NewUserRequest
 		expectErr      bool
 		credsAssertion credsAssertion
 	}
 
 	tests := map[string]testCase{
 		"no creation statements": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
@@ -81,12 +81,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 			credsAssertion: assertCredsDoNotExist,
 		},
 		"admin name": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
@@ -102,12 +102,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 			credsAssertion: assertCredsExist,
 		},
 		"admin username": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
@@ -123,12 +123,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 			credsAssertion: assertCredsExist,
 		},
 		"read only name": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
@@ -145,12 +145,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 			credsAssertion: assertCredsExist,
 		},
 		"read only username": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
@@ -168,12 +168,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 		},
 		// https://github.com/hashicorp/vault/issues/6098
 		"reproduce GH-6098": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{
 						// NOTE: "rolname" in the following line is not a typo.
 						"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
@@ -186,12 +186,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 			credsAssertion: assertCredsDoNotExist,
 		},
 		"reproduce issue with template": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{
 						`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
 					},
@@ -203,12 +203,12 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 			credsAssertion: assertCredsDoNotExist,
 		},
 		"large block statements": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: newUserLargeBlockStatements,
 				},
 				Password:   "somesecurepassword",
@@ -284,12 +284,12 @@ func TestUpdateUser_Password(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			initialPass := "myreallysecurepassword"
-			createReq := newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{createAdminUser},
 				},
 				Password:   initialPass,
@@ -300,11 +300,11 @@ func TestUpdateUser_Password(t *testing.T) {
 			assertCredsExist(t, db.ConnectionURL, createResp.Username, initialPass)
 
 			newPass := "somenewpassword"
-			updateReq := newdbplugin.UpdateUserRequest{
+			updateReq := dbplugin.UpdateUserRequest{
 				Username: createResp.Username,
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: newPass,
-					Statements: newdbplugin.Statements{
+					Statements: dbplugin.Statements{
 						Commands: test.statements,
 					},
 				},
@@ -326,11 +326,11 @@ func TestUpdateUser_Password(t *testing.T) {
 
 	t.Run("user does not exist", func(t *testing.T) {
 		newPass := "somenewpassword"
-		updateReq := newdbplugin.UpdateUserRequest{
+		updateReq := dbplugin.UpdateUserRequest{
 			Username: "missing-user",
-			Password: &newdbplugin.ChangePassword{
+			Password: &dbplugin.ChangePassword{
 				NewPassword: newPass,
-				Statements:  newdbplugin.Statements{},
+				Statements:  dbplugin.Statements{},
 			},
 		}
 
@@ -394,12 +394,12 @@ func TestUpdateUser_Expiration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			password := "myreallysecurepassword"
 			initialExpiration := test.initialExpiration.Truncate(time.Second)
-			createReq := newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{createAdminUser},
 				},
 				Password:   password,
@@ -418,11 +418,11 @@ func TestUpdateUser_Expiration(t *testing.T) {
 			}
 
 			newExpiration := test.newExpiration.Truncate(time.Second)
-			updateReq := newdbplugin.UpdateUserRequest{
+			updateReq := dbplugin.UpdateUserRequest{
 				Username: createResp.Username,
-				Expiration: &newdbplugin.ChangeExpiration{
+				Expiration: &dbplugin.ChangeExpiration{
 					NewExpiration: newExpiration,
-					Statements: newdbplugin.Statements{
+					Statements: dbplugin.Statements{
 						Commands: test.statements,
 					},
 				},
@@ -538,12 +538,12 @@ func TestDeleteUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			password := "myreallysecurepassword"
-			createReq := newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{createAdminUser},
 				},
 				Password:   password,
@@ -553,9 +553,9 @@ func TestDeleteUser(t *testing.T) {
 
 			assertCredsExist(t, db.ConnectionURL, createResp.Username, password)
 
-			deleteReq := newdbplugin.DeleteUserRequest{
+			deleteReq := dbplugin.DeleteUserRequest{
 				Username: createResp.Username,
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: test.revokeStmts,
 				},
 			}

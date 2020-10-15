@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"strings"
 
+	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-
-	stdmysql "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -37,7 +36,7 @@ var (
 	LegacyUsernameLen int = 16
 )
 
-var _ newdbplugin.Database = (*MySQL)(nil)
+var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
 	*mySQLConnectionProducer
@@ -49,7 +48,7 @@ func New(legacy bool) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		db := new(legacy)
 		// Wrap the plugin with middleware to sanitize errors
-		dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 		return dbType, nil
 	}
@@ -82,7 +81,7 @@ func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -100,25 +99,25 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (m *MySQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	err := m.mySQLConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
 	return resp, nil
 }
 
-func (m *MySQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (m *MySQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	if len(req.Statements.Commands) == 0 {
-		return newdbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
 	username, err := m.generateUsername(req)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	password := req.Password
@@ -133,16 +132,16 @@ func (m *MySQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (ne
 	}
 
 	if err := m.executePreparedStatementsWithMap(ctx, req.Statements.Commands, queryMap); err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	resp := newdbplugin.NewUserResponse{
+	resp := dbplugin.NewUserResponse{
 		Username: username,
 	}
 	return resp, nil
 }
 
-func (m *MySQL) generateUsername(req newdbplugin.NewUserRequest) (string, error) {
+func (m *MySQL) generateUsername(req dbplugin.NewUserRequest) (string, error) {
 	var dispNameLen, roleNameLen, maxLen int
 
 	if m.legacy {
@@ -167,7 +166,7 @@ func (m *MySQL) generateUsername(req newdbplugin.NewUserRequest) (string, error)
 	return username, nil
 }
 
-func (m *MySQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (m *MySQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	// Grab the read lock
 	m.Lock()
 	defer m.Unlock()
@@ -175,7 +174,7 @@ func (m *MySQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReques
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	revocationStmts := req.Statements.Commands
@@ -187,7 +186,7 @@ func (m *MySQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReques
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer tx.Rollback()
 
@@ -205,31 +204,31 @@ func (m *MySQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReques
 			query = strings.Replace(query, "{{username}}", req.Username, -1)
 			_, err = tx.ExecContext(ctx, query)
 			if err != nil {
-				return newdbplugin.DeleteUserResponse{}, err
+				return dbplugin.DeleteUserResponse{}, err
 			}
 		}
 	}
 
 	// Commit the transaction
 	err = tx.Commit()
-	return newdbplugin.DeleteUserResponse{}, err
+	return dbplugin.DeleteUserResponse{}, err
 }
 
-func (m *MySQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (m *MySQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no change requested")
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no change requested")
 	}
 
 	if req.Password != nil {
 		err := m.changeUserPassword(ctx, req.Username, req.Password.NewPassword, req.Password.Statements.Commands)
 		if err != nil {
-			return newdbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change password: %w", err)
+			return dbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change password: %w", err)
 		}
 	}
 
 	// Expiration change/update is currently a no-op
 
-	return newdbplugin.UpdateUserResponse{}, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
 func (m *MySQL) changeUserPassword(ctx context.Context, username, password string, rotateStatements []string) error {
