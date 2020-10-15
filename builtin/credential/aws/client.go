@@ -26,6 +26,7 @@ import (
 func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, region, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{
 		Region: region,
+		Logger: b.Logger(),
 	}
 
 	// Read the configured secret key and access key

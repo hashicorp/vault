@@ -125,6 +125,11 @@ type RaftBackend struct {
 // LeaderJoinInfo contains information required by a node to join itself as a
 // follower to an existing raft cluster
 type LeaderJoinInfo struct {
+	// AutoJoin defines any cloud auto-join metadata. If supplied, Vault will
+	// attempt to automatically discover peers in addition to what can be provided
+	// via 'leader_api_addr'.
+	AutoJoin string `json:"auto_join"`
+
 	// LeaderAPIAddr is the address of the leader node to connect to
 	LeaderAPIAddr string `json:"leader_api_addr"`
 
@@ -178,11 +183,15 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 		return nil, errors.New("invalid retry_join config")
 	}
 
-	for _, info := range leaderInfos {
+	for i, info := range leaderInfos {
+		if len(info.AutoJoin) != 0 && len(info.LeaderAPIAddr) != 0 {
+			return nil, errors.New("cannot provide both a leader_api_addr and auto_join")
+		}
+
 		info.Retry = true
 		info.TLSConfig, err = parseTLSInfo(info)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node (retry_join index: %d): {{err}}", i), err)
 		}
 	}
 
@@ -219,11 +228,6 @@ func EnsurePath(path string, dir bool) error {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	// Create the FSM.
-	fsm, err := NewFSM(conf, logger.Named("fsm"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create fsm: %v", err)
-	}
 
 	path := os.Getenv(EnvVaultRaftPath)
 	if path == "" {
@@ -232,6 +236,12 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			return nil, fmt.Errorf("'path' must be set")
 		}
 		path = pathFromConfig
+	}
+
+	// Create the FSM.
+	fsm, err := NewFSM(path, logger.Named("fsm"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
@@ -606,6 +616,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			MaxPool:               3,
 			Timeout:               10 * time.Second,
 			ServerAddressProvider: b.serverAddressProvider,
+			Logger:                b.logger.Named("raft-net"),
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
@@ -767,11 +778,14 @@ func (b *RaftBackend) AppliedIndex() uint64 {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
+	if b.fsm == nil {
 		return 0
 	}
 
-	return b.raft.AppliedIndex()
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Index
 }
 
 // RemovePeer removes the given peer ID from the raft cluster. If the node is
@@ -955,9 +969,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 		},
 	}
 
-	b.l.RLock()
 	err := b.applyLog(ctx, command)
-	b.l.RUnlock()
 
 	// Do a best-effort attempt to let the standbys apply the restoreCallbackOp
 	// before we continue.
