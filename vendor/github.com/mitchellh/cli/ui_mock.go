@@ -1,11 +1,9 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 )
 
@@ -37,12 +35,9 @@ func (u *MockUi) Ask(query string) (string, error) {
 
 	var result string
 	fmt.Fprint(u.OutputWriter, query)
-	r := bufio.NewReader(u.InputReader)
-	line, err := r.ReadString('\n')
-	if err != nil {
+	if _, err := fmt.Fscanln(u.InputReader, &result); err != nil {
 		return "", err
 	}
-	result = strings.TrimRight(line, "\r\n")
 
 	return result, nil
 }

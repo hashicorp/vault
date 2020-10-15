@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/shared-secure-libs/configutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
 func TestTransitWrapper_Lifecycle(t *testing.T) {

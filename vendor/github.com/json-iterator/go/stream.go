@@ -103,14 +103,14 @@ func (stream *Stream) Flush() error {
 	if stream.Error != nil {
 		return stream.Error
 	}
-	_, err := stream.out.Write(stream.buf)
+	n, err := stream.out.Write(stream.buf)
 	if err != nil {
 		if stream.Error == nil {
 			stream.Error = err
 		}
 		return err
 	}
-	stream.buf = stream.buf[:0]
+	stream.buf = stream.buf[n:]
 	return nil
 }
 
@@ -177,6 +177,7 @@ func (stream *Stream) WriteEmptyObject() {
 func (stream *Stream) WriteMore() {
 	stream.writeByte(',')
 	stream.writeIndention(0)
+	stream.Flush()
 }
 
 // WriteArrayStart write [ with possible indention
