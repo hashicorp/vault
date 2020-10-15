@@ -13,17 +13,12 @@ module('Integration | Component | console/log object', function(hooks) {
     const objectContent = { one: 'two', three: 'four', seven: { five: 'six' }, eight: [5, 6] };
     const data = { one: 'two', three: 'four', seven: { five: 'six' }, eight: [5, 6] };
     stringifyObjectValues(data);
-    const expectedText = columnify(data, {
-      preserveNewLines: true,
-      headingTransform: function(heading) {
-        return capitalize([heading]);
-      },
-    });
-
+    const expectedText = 'Key Value one two three four seven {"five":"six"} eight [5,6]';
     this.set('content', objectContent);
 
     await render(hbs`{{console/log-object content=content}}`);
-
-    assert.dom('pre').includesText(`${expectedText}`);
+    console.log(expectedText, 'expectedText');
+    await this.pauseTest();
+    assert.dom('pre').includesText(expectedText);
   });
 });

@@ -65,7 +65,6 @@ export default Component.extend(TRANSIT_PARAMS, {
   onRefresh() {},
   init() {
     this._super(...arguments);
-    console.log(this.key.supportedActions.firstObject, 'meep');
     if (this.selectedAction) {
       return;
     }
