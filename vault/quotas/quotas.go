@@ -578,9 +578,6 @@ func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
 }
 
 func (m *Manager) setEnableRateLimitResponseHeadersLocked(val bool) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	m.config.EnableRateLimitResponseHeaders = val
 }
 
