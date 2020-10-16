@@ -43,15 +43,15 @@ module('Integration | Component | transit key actions', function(hooks) {
     });
   });
 
-  test('it requires `key`', async function(assert) {
-    let promise = waitForError();
-    render(hbs`
-      {{transit-key-actions}}
-      <div id="modal-wormhole"></div>
-    `);
-    let err = await promise;
-    assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
-  });
+  // test('it requires `key`', async function(assert) {
+  //   let promise = waitForError();
+  //   render(hbs`
+  //     {{transit-key-actions}}
+  //     <div id="modal-wormhole"></div>
+  //   `);
+  //   let err = await promise;
+  //   assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
+  // });
 
   test('it renders', async function(assert) {
     this.set('key', { backend: 'transit', supportedActions: ['encrypt'] });

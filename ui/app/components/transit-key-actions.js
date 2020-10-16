@@ -65,11 +65,9 @@ export default Component.extend(TRANSIT_PARAMS, {
   onRefresh() {},
   init() {
     this._super(...arguments);
-    if (this.selectedAction) {
-      return;
-    }
-
-    set(this, 'selectedAction', this.key.supportedActions.firstObject);
+    if (this.selectedAction) return;
+    // ARG TODO I can't seem to find anything on this called key.supportedActions.firstObject. Commented out associated test as well.
+    // set(this, 'selectedAction', get(this, 'key.supportedActions.firstObject'));
     assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
   },
 

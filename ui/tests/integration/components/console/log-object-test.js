@@ -2,8 +2,6 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import columnify from 'columnify';
-import { capitalize } from 'vault/helpers/capitalize';
 import { stringifyObjectValues } from 'vault/components/console/log-object';
 
 module('Integration | Component | console/log object', function(hooks) {
