@@ -1864,7 +1864,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
-	if err := enterprisePostUnseal(c); err != nil {
+	if err := enterprisePostUnseal(c, false); err != nil {
 		return err
 	}
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
@@ -2099,7 +2099,7 @@ func (c *Core) preSeal() error {
 	return result
 }
 
-func enterprisePostUnsealImpl(c *Core) error {
+func enterprisePostUnsealImpl(c *Core, isStandby bool) error {
 	return nil
 }
 
