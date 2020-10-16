@@ -1409,6 +1409,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.LicensingConfig = base.LicensingConfig
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
+		coreConfig.MetricSink = base.MetricSink
 		coreConfig.SecureRandomReader = base.SecureRandomReader
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 

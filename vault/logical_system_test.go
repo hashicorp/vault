@@ -56,6 +56,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-prefix/*",
 		"leases/revoke-force/*",
 		"leases/lookup/*",
+		"storage/raft/snapshot-auto/config/*",
 	}
 
 	b := testSystemBackend(t)

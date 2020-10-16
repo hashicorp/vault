@@ -1864,7 +1864,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
-	if err := enterprisePostUnseal(c); err != nil {
+	if err := enterprisePostUnseal(c, false); err != nil {
 		return err
 	}
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
@@ -2099,7 +2099,7 @@ func (c *Core) preSeal() error {
 	return result
 }
 
-func enterprisePostUnsealImpl(c *Core) error {
+func enterprisePostUnsealImpl(c *Core, isStandby bool) error {
 	return nil
 }
 
@@ -2522,14 +2522,26 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby)
 }
 
-// ApplyRateLimitQuota checks the request against all the applicable quota rules
+// ApplyRateLimitQuota checks the request against all the applicable quota rules.
+// If the given request's path is exempt, no rate limiting will be applied.
 func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
 	req.Type = quotas.TypeRateLimit
+
+	resp := quotas.Response{
+		Allowed: true,
+		Headers: make(map[string]string),
+	}
+
 	if c.quotaManager != nil {
+		// skip rate limit checks for paths that are exempt from rate limiting
+		if c.quotaManager.RateLimitPathExempt(req.Path) {
+			return resp, nil
+		}
+
 		return c.quotaManager.ApplyQuota(req)
 	}
 
-	return quotas.Response{Allowed: true}, nil
+	return resp, nil
 }
 
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
