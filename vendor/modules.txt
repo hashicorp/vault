@@ -521,7 +521,7 @@ github.com/hashicorp/vault-plugin-auth-kubernetes
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201015205944-34379d02de61
 github.com/hashicorp/vault-plugin-database-couchbase
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3-beta1.0.20201015213515-5fe53ca4a7c9
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
 github.com/hashicorp/vault-plugin-database-mongodbatlas
@@ -702,7 +702,7 @@ github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kr/pretty v0.2.0
+# github.com/kr/pretty v0.2.1
 github.com/kr/pretty
 # github.com/kr/text v0.2.0
 github.com/kr/text
