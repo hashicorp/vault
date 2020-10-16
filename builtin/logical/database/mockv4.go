@@ -7,7 +7,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
 const mockV4Type = "mockv4"
@@ -17,7 +17,7 @@ type MockDatabaseV4 struct {
 	config map[string]interface{}
 }
 
-var _ dbplugin.Database = &MockDatabaseV4{}
+var _ v4.Database = &MockDatabaseV4{}
 
 // New returns a new in-memory instance
 func NewV4() (interface{}, error) {
@@ -31,7 +31,7 @@ func RunV4(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	v4.Serve(dbType.(v4.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -49,7 +49,7 @@ func (m MockDatabaseV4) Initialize(ctx context.Context, config map[string]interf
 	return err
 }
 
-func (m MockDatabaseV4) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (m MockDatabaseV4) CreateUser(ctx context.Context, statements v4.Statements, usernameConfig v4.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	log.Default().Info("CreateUser called",
 		"statements", statements,
 		"usernameConfig", usernameConfig,
@@ -64,7 +64,7 @@ func (m MockDatabaseV4) CreateUser(ctx context.Context, statements dbplugin.Stat
 	return user, pass, nil
 }
 
-func (m MockDatabaseV4) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
+func (m MockDatabaseV4) RenewUser(ctx context.Context, statements v4.Statements, username string, expiration time.Time) error {
 	log.Default().Info("RenewUser called",
 		"statements", statements,
 		"username", username,
@@ -73,7 +73,7 @@ func (m MockDatabaseV4) RenewUser(ctx context.Context, statements dbplugin.State
 	return nil
 }
 
-func (m MockDatabaseV4) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+func (m MockDatabaseV4) RevokeUser(ctx context.Context, statements v4.Statements, username string) error {
 	log.Default().Info("RevokeUser called",
 		"statements", statements,
 		"username", username)
@@ -94,7 +94,7 @@ func (m MockDatabaseV4) RotateRootCredentials(ctx context.Context, statements []
 	return m.config, nil
 }
 
-func (m MockDatabaseV4) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticConfig dbplugin.StaticUserConfig) (username string, password string, err error) {
+func (m MockDatabaseV4) SetCredentials(ctx context.Context, statements v4.Statements, staticConfig v4.StaticUserConfig) (username string, password string, err error) {
 	log.Default().Info("SetCredentials called",
 		"statements", statements,
 		"staticConfig", staticConfig)

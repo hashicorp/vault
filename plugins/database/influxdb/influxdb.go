@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	influx "github.com/influxdata/influxdb/client/v2"
 )
@@ -22,7 +21,7 @@ const (
 	influxdbTypeName                  = "influxdb"
 )
 
-var _ newdbplugin.Database = &Influxdb{}
+var _ dbplugin.Database = &Influxdb{}
 
 // Influxdb is an implementation of Database interface
 type Influxdb struct {
@@ -32,7 +31,7 @@ type Influxdb struct {
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
 	db := new()
-	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
@@ -53,7 +52,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -74,13 +73,13 @@ func (i *Influxdb) getConnection(ctx context.Context) (influx.Client, error) {
 
 // NewUser generates the username/password on the underlying Influxdb secret backend as instructed by
 // the statements provided.
-func (i *Influxdb) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (resp newdbplugin.NewUserResponse, err error) {
+func (i *Influxdb) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (resp dbplugin.NewUserResponse, err error) {
 	i.Lock()
 	defer i.Unlock()
 
 	cli, err := i.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
 	creationIFQL := req.Statements.Commands
@@ -101,7 +100,7 @@ func (i *Influxdb) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) 
 		credsutil.ToLower(),
 	)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
 	}
 	username = strings.Replace(username, "-", "_", -1)
 
@@ -122,11 +121,11 @@ func (i *Influxdb) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) 
 				if response != nil && response.Error() != nil {
 					attemptRollback(cli, username, rollbackIFQL)
 				}
-				return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
+				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
 			}
 		}
 	}
-	resp = newdbplugin.NewUserResponse{
+	resp = dbplugin.NewUserResponse{
 		Username: username,
 	}
 	return resp, nil
@@ -157,13 +156,13 @@ func attemptRollback(cli influx.Client, username string, rollbackStatements []st
 	return nil
 }
 
-func (i *Influxdb) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (i *Influxdb) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	i.Lock()
 	defer i.Unlock()
 
 	cli, err := i.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
 	revocationIFQL := req.Statements.Commands
@@ -190,14 +189,14 @@ func (i *Influxdb) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReq
 		}
 	}
 	if result.ErrorOrNil() != nil {
-		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("failed to delete user cleanly: %w", result.ErrorOrNil())
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to delete user cleanly: %w", result.ErrorOrNil())
 	}
-	return newdbplugin.DeleteUserResponse{}, nil
+	return dbplugin.DeleteUserResponse{}, nil
 }
 
-func (i *Influxdb) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (i *Influxdb) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
 	}
 
 	i.Lock()
@@ -206,14 +205,14 @@ func (i *Influxdb) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReq
 	if req.Password != nil {
 		err := i.changeUserPassword(ctx, req.Username, req.Password)
 		if err != nil {
-			return newdbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change %q password: %w", req.Username, err)
+			return dbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change %q password: %w", req.Username, err)
 		}
 	}
 	// Expiration is a no-op
-	return newdbplugin.UpdateUserResponse{}, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-func (i *Influxdb) changeUserPassword(ctx context.Context, username string, changePassword *newdbplugin.ChangePassword) error {
+func (i *Influxdb) changeUserPassword(ctx context.Context, username string, changePassword *dbplugin.ChangePassword) error {
 	cli, err := i.getConnection(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to get connection: %w", err)
