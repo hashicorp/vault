@@ -536,6 +536,7 @@ github.com/hashicorp/go-plugin v1.0.1/go.mod h1:++UyYGoz3o5w9ZzAdZxtQKrWWP+iqPBn
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a h1:FmnBDwGwlTgugDGbVxwV8UavqSMACbGrUpfc98yFLR4=
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a/go.mod h1:xbXnmKqX9/+RhPkJ4zrEx4738HacP72aaUPlT2RZ4sU=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
+github.com/hashicorp/go-retryablehttp v0.6.2/go.mod h1:gEx6HMUGxYYhJScX7W1Il64m6cc2C1mDaW3NQ9sY1FY=
 github.com/hashicorp/go-retryablehttp v0.6.6/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
 github.com/hashicorp/go-retryablehttp v0.6.7 h1:8/CAEZt/+F7kR7GevNHulKkUjLht3CPmn7egmhieNKo=
 github.com/hashicorp/go-retryablehttp v0.6.7/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
@@ -604,8 +605,8 @@ github.com/hashicorp/vault-plugin-auth-oci v0.5.5 h1:nIP8g+VZd2V+LY/D5omWhLSnhHu
 github.com/hashicorp/vault-plugin-auth-oci v0.5.5/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
 github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201015205944-34379d02de61 h1:zkG0nN4k3RI1XE7hYca1egZcvmuNPsnuOozxMT0BEWc=
 github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201015205944-34379d02de61/go.mod h1:iGPlVBGC/1ufQnEybsONOw3m1KMPYe+qMjIGUfHTpzA=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3-beta1.0.20201015213515-5fe53ca4a7c9 h1:qJ0I6NpisYKrt69hg3MtSDLvJWHh64mtVAGyew9FJ4w=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3-beta1.0.20201015213515-5fe53ca4a7c9/go.mod h1:wve4k04si3gimTmCE8zXKLd9aJdUpbLjUVSbtgyxiwM=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGpVOoZI7nDGG+gwTZKzL1Ou4WZQ+Tdxk=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2 h1:tSToR3JRARqQkV9B10rk4VlZe2Sr9fOdhEP2NdxPo0I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
@@ -708,7 +709,6 @@ github.com/konsorten/go-windows-terminal-sequences v1.0.3 h1:CE8S1cTafDpPvMhIxNJ
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
-github.com/kr/pretty v0.2.0 h1:s5hAObm+yFO5uHYt5dYjxi2rXrsnmRpJx4OYvIWUaQs=
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.2.1 h1:Fmg33tUaq4/8ym9TJN1x7sLJnHVwhP33CNkpYV/7rwI=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
