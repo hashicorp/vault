@@ -41,6 +41,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	})
 	cluster.Start()
 	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
