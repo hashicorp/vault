@@ -7,12 +7,11 @@ import (
 	"testing"
 	"time"
 
-	dbtesting "github.com/hashicorp/vault/sdk/database/newdbplugin/testing"
-
 	backoff "github.com/cenkalti/backoff/v3"
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 )
 
 func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()) {
@@ -20,7 +19,7 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 	pieces := strings.Split(connURL, ":")
 
 	db := new()
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"hosts":            connURL,
 			"port":             pieces[1],
@@ -70,12 +69,12 @@ func TestCassandra_CreateUser(t *testing.T) {
 	defer cleanup()
 
 	password := "myreallysecurepassword"
-	createReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   password,
@@ -98,12 +97,12 @@ func TestMyCassandra_UpdateUserPassword(t *testing.T) {
 	defer cleanup()
 
 	password := "myreallysecurepassword"
-	createReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   password,
@@ -115,11 +114,11 @@ func TestMyCassandra_UpdateUserPassword(t *testing.T) {
 	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
 
 	newPassword := "somenewpassword"
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := dbplugin.UpdateUserRequest{
 		Username: createResp.Username,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: newPassword,
-			Statements:  newdbplugin.Statements{},
+			Statements:  dbplugin.Statements{},
 		},
 		Expiration: nil,
 	}
@@ -134,12 +133,12 @@ func TestCassandra_DeleteUser(t *testing.T) {
 	defer cleanup()
 
 	password := "myreallysecurepassword"
-	createReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   password,
@@ -150,7 +149,7 @@ func TestCassandra_DeleteUser(t *testing.T) {
 
 	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
 
-	deleteReq := newdbplugin.DeleteUserRequest{
+	deleteReq := dbplugin.DeleteUserRequest{
 		Username: createResp.Username,
 	}
 

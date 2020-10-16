@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -26,12 +26,12 @@ type MongoDB struct {
 	*mongoDBConnectionProducer
 }
 
-var _ newdbplugin.Database = &MongoDB{}
+var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
 func New() (interface{}, error) {
 	db := new()
-	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
 }
 
@@ -52,7 +52,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -71,7 +71,7 @@ func (m *MongoDB) getConnection(ctx context.Context) (*mongo.Client, error) {
 	return client.(*mongo.Client), nil
 }
 
-func (m *MongoDB) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -79,21 +79,21 @@ func (m *MongoDB) Initialize(ctx context.Context, req newdbplugin.InitializeRequ
 
 	err := mapstructure.WeakDecode(req.Config, m.mongoDBConnectionProducer)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	if len(m.ConnectionURL) == 0 {
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("connection_url cannot be empty-mongo fail")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("connection_url cannot be empty-mongo fail")
 	}
 
 	writeOpts, err := m.getWriteConcern()
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	authOpts, err := m.getTLSAuth()
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	m.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
@@ -105,28 +105,28 @@ func (m *MongoDB) Initialize(ctx context.Context, req newdbplugin.InitializeRequ
 	if req.VerifyConnection {
 		_, err := m.Connection(ctx)
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
 		}
 
 		err = m.client.Ping(ctx, readpref.Primary())
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
 		}
 	}
 
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
 	return resp, nil
 }
 
-func (m *MongoDB) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (m *MongoDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
 
 	if len(req.Statements.Commands) == 0 {
-		return newdbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
 	username, err := credsutil.GenerateUsername(
@@ -136,14 +136,14 @@ func (m *MongoDB) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (
 		credsutil.Separator("-"),
 	)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
 	err = json.Unmarshal([]byte(req.Statements.Commands[0]), &mongoCS)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	// Default to "admin" if no db provided
@@ -152,7 +152,7 @@ func (m *MongoDB) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (
 	}
 
 	if len(mongoCS.Roles) == 0 {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("roles array is required in creation statement")
+		return dbplugin.NewUserResponse{}, fmt.Errorf("roles array is required in creation statement")
 	}
 
 	createUserCmd := createUserCommand{
@@ -162,21 +162,21 @@ func (m *MongoDB) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (
 	}
 
 	if err := m.runCommandWithRetry(ctx, mongoCS.DB, createUserCmd); err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	resp := newdbplugin.NewUserResponse{
+	resp := dbplugin.NewUserResponse{
 		Username: username,
 	}
 	return resp, nil
 }
 
-func (m *MongoDB) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (m *MongoDB) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password != nil {
 		err := m.changeUserPassword(ctx, req.Username, req.Password.NewPassword)
-		return newdbplugin.UpdateUserResponse{}, err
+		return dbplugin.UpdateUserResponse{}, err
 	}
-	return newdbplugin.UpdateUserResponse{}, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
 func (m *MongoDB) changeUserPassword(ctx context.Context, username, password string) error {
@@ -208,7 +208,7 @@ func (m *MongoDB) changeUserPassword(ctx context.Context, username, password str
 	return nil
 }
 
-func (m *MongoDB) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -220,14 +220,14 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequ
 	case 1:
 		revocationStatement = req.Statements.Commands[0]
 	default:
-		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(req.Statements.Commands))
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(req.Statements.Commands))
 	}
 
 	// Unmarshal revocation statements into mongodbRoles
 	var mongoCS mongoDBStatement
 	err := json.Unmarshal([]byte(revocationStatement), &mongoCS)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	db := mongoCS.DB
@@ -242,7 +242,7 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequ
 	}
 
 	err = m.runCommandWithRetry(ctx, db, dropUserCmd)
-	return newdbplugin.DeleteUserResponse{}, err
+	return dbplugin.DeleteUserResponse{}, err
 }
 
 // runCommandWithRetry runs a command and retries once more if there's a failure

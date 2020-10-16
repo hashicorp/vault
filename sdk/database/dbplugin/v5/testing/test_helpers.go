@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 func getRequestTimeout(t *testing.T) time.Duration {
@@ -22,7 +22,7 @@ func getRequestTimeout(t *testing.T) time.Duration {
 	return dur
 }
 
-func AssertInitialize(t *testing.T, db newdbplugin.Database, req newdbplugin.InitializeRequest) newdbplugin.InitializeResponse {
+func AssertInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) dbplugin.InitializeResponse {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
@@ -35,7 +35,7 @@ func AssertInitialize(t *testing.T, db newdbplugin.Database, req newdbplugin.Ini
 	return resp
 }
 
-func AssertNewUser(t *testing.T, db newdbplugin.Database, req newdbplugin.NewUserRequest) newdbplugin.NewUserResponse {
+func AssertNewUser(t *testing.T, db dbplugin.Database, req dbplugin.NewUserRequest) dbplugin.NewUserResponse {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
@@ -52,7 +52,7 @@ func AssertNewUser(t *testing.T, db newdbplugin.Database, req newdbplugin.NewUse
 	return resp
 }
 
-func AssertUpdateUser(t *testing.T, db newdbplugin.Database, req newdbplugin.UpdateUserRequest) {
+func AssertUpdateUser(t *testing.T, db dbplugin.Database, req dbplugin.UpdateUserRequest) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
@@ -64,7 +64,7 @@ func AssertUpdateUser(t *testing.T, db newdbplugin.Database, req newdbplugin.Upd
 	}
 }
 
-func AssertDeleteUser(t *testing.T, db newdbplugin.Database, req newdbplugin.DeleteUserRequest) {
+func AssertDeleteUser(t *testing.T, db dbplugin.Database, req dbplugin.DeleteUserRequest) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
@@ -76,7 +76,7 @@ func AssertDeleteUser(t *testing.T, db newdbplugin.Database, req newdbplugin.Del
 	}
 }
 
-func AssertClose(t *testing.T, db newdbplugin.Database) {
+func AssertClose(t *testing.T, db dbplugin.Database) {
 	t.Helper()
 	err := db.Close()
 	if err != nil {

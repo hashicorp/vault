@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -111,11 +111,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		updateReq := newdbplugin.UpdateUserRequest{
+		updateReq := v5.UpdateUserRequest{
 			Username: username,
-			Password: &newdbplugin.ChangePassword{
+			Password: &v5.ChangePassword{
 				NewPassword: newPassword,
-				Statements: newdbplugin.Statements{
+				Statements: v5.Statements{
 					Commands: config.RootCredentialsRotateStatements,
 				},
 			},
