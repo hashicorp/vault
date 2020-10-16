@@ -519,7 +519,7 @@ github.com/hashicorp/vault-plugin-auth-kerberos
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 github.com/hashicorp/vault-plugin-auth-oci
-# github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201009184913-83c385bec4a2
+# github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201015205944-34379d02de61
 github.com/hashicorp/vault-plugin-database-couchbase
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 github.com/hashicorp/vault-plugin-database-elasticsearch
@@ -551,7 +551,7 @@ github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20201007132131-6a41edbf89f5 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20201015192012-a69ee0f65a28 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
 github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto
@@ -559,7 +559,6 @@ github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/database/helper/dbutil
-github.com/hashicorp/vault/sdk/database/newdbplugin
 github.com/hashicorp/vault/sdk/framework
 github.com/hashicorp/vault/sdk/helper/authmetadata
 github.com/hashicorp/vault/sdk/helper/awsutil
