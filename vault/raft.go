@@ -16,6 +16,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-discover"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
@@ -739,14 +740,14 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("node must be unsealed before joining")
 	}
 
-	// Disallow leader API address to be provided if we're using raft for HA-only
+	// Disallow leader API address to be provided if we're using raft for HA-only.
 	// The leader API address is obtained directly through storage. This serves
 	// as a form of verification that this node is sharing the same physical
 	// storage as the leader node.
 	if isRaftHAOnly {
 		for _, info := range leaderInfos {
-			if info.LeaderAPIAddr != "" {
-				return false, errors.New("leader API address must be unset when raft is used exclusively for HA")
+			if info.LeaderAPIAddr != "" || info.AutoJoin != "" {
+				return false, errors.New("leader API address and auto-join metadata must be unset when raft is used exclusively for HA")
 			}
 		}
 
@@ -778,12 +779,17 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		leaderInfos[0].LeaderAPIAddr = adv.RedirectAddr
 	}
 
+	disco, err := newDiscover()
+	if err != nil {
+		return false, errwrap.Wrapf("failed to create auto-join discovery: {{err}}", err)
+	}
+
 	join := func(retry bool) error {
-		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
+		joinLeader := func(leaderInfo *raft.LeaderJoinInfo, leaderAddr string) error {
 			if leaderInfo == nil {
 				return errors.New("raft leader information is nil")
 			}
-			if len(leaderInfo.LeaderAPIAddr) == 0 {
+			if len(leaderAddr) == 0 {
 				return errors.New("raft leader address not provided")
 			}
 
@@ -797,7 +803,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return nil
 			}
 
-			c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderInfo.LeaderAPIAddr)
+			c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderAddr)
 
 			// Create an API client to interact with the leader node
 			transport := cleanhttp.DefaultPooledTransport()
@@ -819,13 +825,16 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			client := &http.Client{
 				Transport: transport,
 			}
+
 			config := api.DefaultConfig()
 			if config.Error != nil {
 				return errwrap.Wrapf("failed to create api client: {{err}}", config.Error)
 			}
-			config.Address = leaderInfo.LeaderAPIAddr
+
+			config.Address = leaderAddr
 			config.HttpClient = client
 			config.MaxRetries = 0
+
 			apiClient, err := api.NewClient(config)
 			if err != nil {
 				return errwrap.Wrapf("failed to create api client: {{err}}", err)
@@ -865,6 +874,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
 				return errwrap.Wrapf("error decoding raft bootstrap challenge: {{err}}", err)
 			}
+
 			raftInfo := &raftInformation{
 				challenge:           eBlob,
 				leaderClient:        apiClient,
@@ -911,11 +921,36 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// Each join try goes through all the possible leader nodes and attempts to join
 		// them, until one of the attempt succeeds.
 		for _, leaderInfo := range leaderInfos {
-			err = joinLeader(leaderInfo)
-			if err == nil {
-				return nil
+			switch {
+			case leaderInfo.LeaderAPIAddr != "" && leaderInfo.AutoJoin != "":
+				c.logger.Info("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
+
+			case leaderInfo.LeaderAPIAddr != "":
+				if err := joinLeader(leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
+					c.logger.Info("join attempt failed", "error", err)
+				} else {
+					// successfully joined leader
+					return nil
+				}
+
+			case leaderInfo.AutoJoin != "":
+				addrs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
+				if err != nil {
+					c.logger.Info("failed to parse addresses from auto-join metadata", "error", err)
+				}
+
+				for _, addr := range addrs {
+					if err := joinLeader(leaderInfo, addr); err != nil {
+						c.logger.Info("join attempt failed", "error", err)
+					} else {
+						// successfully joined leader
+						return nil
+					}
+				}
+
+			default:
+				c.logger.Info("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
 			}
-			c.logger.Info("join attempt failed", "error", err)
 		}
 
 		return errors.New("failed to join any raft leader node")
@@ -1115,4 +1150,15 @@ type answerRespData struct {
 type answerResp struct {
 	Peers      []raft.Peer      `json:"peers"`
 	TLSKeyring *raft.TLSKeyring `json:"tls_keyring"`
+}
+
+func newDiscover() (*discover.Discover, error) {
+	providers := make(map[string]discover.Provider)
+	for k, v := range discover.Providers {
+		providers[k] = v
+	}
+
+	return discover.New(
+		discover.WithProviders(providers),
+	)
 }

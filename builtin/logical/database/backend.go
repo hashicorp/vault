@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -193,7 +193,7 @@ func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, rol
 
 	switch {
 	case upgradeCh.Statements != nil:
-		var stmts dbplugin.Statements
+		var stmts v4.Statements
 		if upgradeCh.Statements.CreationStatements != "" {
 			stmts.Creation = []string{upgradeCh.Statements.CreationStatements}
 		}
@@ -265,7 +265,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := v5.InitializeRequest{
 		Config:           config.ConnectionDetails,
 		VerifyConnection: true,
 	}
@@ -316,7 +316,7 @@ func (b *databaseBackend) clearConnection(name string) error {
 func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
-	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
+	case rpc.ErrShutdown, v4.ErrPluginShutdown:
 		// Put this in a goroutine so that requests can run with the read or write lock
 		// and simply defer the unlock.  Since we are attaching the instance and matching
 		// the id in the connection map, we can safely do this.

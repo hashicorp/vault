@@ -12,8 +12,8 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
-	dbtesting "github.com/hashicorp/vault/sdk/database/newdbplugin/testing"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -35,7 +35,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 	// Make a copy since the original map could be modified by the Initialize call
 	expectedConfig := copyConfig(config)
 
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           config,
 		VerifyConnection: true,
 	}
@@ -58,7 +58,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 	db := new()
 	defer dbtesting.AssertClose(t, db)
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"connection_url": connURL,
 		},
@@ -67,12 +67,12 @@ func TestMongoDB_CreateUser(t *testing.T) {
 	dbtesting.AssertInitialize(t, db, initReq)
 
 	password := "myreallysecurepassword"
-	createReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{mongoAdminRole},
 		},
 		Password:   password,
@@ -87,7 +87,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"connection_url": connURL,
 			"write_concern":  `{ "wmode": "majority", "wtimeout": 5000 }`,
@@ -101,12 +101,12 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 	dbtesting.AssertInitialize(t, db, initReq)
 
 	password := "myreallysecurepassword"
-	createReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{mongoAdminRole},
 		},
 		Password:   password,
@@ -124,7 +124,7 @@ func TestMongoDB_DeleteUser(t *testing.T) {
 	db := new()
 	defer dbtesting.AssertClose(t, db)
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"connection_url": connURL,
 		},
@@ -133,12 +133,12 @@ func TestMongoDB_DeleteUser(t *testing.T) {
 	dbtesting.AssertInitialize(t, db, initReq)
 
 	password := "myreallysecurepassword"
-	createReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{mongoAdminRole},
 		},
 		Password:   password,
@@ -148,7 +148,7 @@ func TestMongoDB_DeleteUser(t *testing.T) {
 	assertCredsExist(t, createResp.Username, password, connURL)
 
 	// Test default revocation statement
-	delReq := newdbplugin.DeleteUserRequest{
+	delReq := dbplugin.DeleteUserRequest{
 		Username: createResp.Username,
 	}
 
@@ -167,7 +167,7 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 	db := new()
 	defer dbtesting.AssertClose(t, db)
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"connection_url": connURL,
 		},
@@ -182,9 +182,9 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 
 	newPassword := "myreallysecurecredentials"
 
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := dbplugin.UpdateUserRequest{
 		Username: dbUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: newPassword,
 		},
 	}

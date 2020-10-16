@@ -9,9 +9,9 @@ import (
 	"io"
 	"net"
 
-	"github.com/hashicorp/shared-secure-libs/configutil"
-	"github.com/hashicorp/shared-secure-libs/reloadutil"
 	"github.com/hashicorp/vault/helper/proxyutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/mitchellh/cli"
 )
 
