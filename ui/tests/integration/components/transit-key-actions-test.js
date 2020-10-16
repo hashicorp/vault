@@ -42,7 +42,7 @@ module('Integration | Component | transit key actions', function(hooks) {
       this.storeService = this.owner.lookup('service:store');
     });
   });
-
+  // ARG this test can't get to work.
   // test('it requires `key`', async function(assert) {
   //   let promise = waitForError();
   //   render(hbs`

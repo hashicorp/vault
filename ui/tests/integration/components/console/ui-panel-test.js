@@ -40,6 +40,7 @@ module('Integration | Component | console/ui panel', function(hooks) {
     await render(hbs`{{console/ui-panel}}`);
     await component.runCommands('list this/thing/here');
     await component.up();
+    // ARG a test that has timing issues, ping Frontend channel
     assert.equal(
       component.consoleInputValue,
       'list this/thing/here',
