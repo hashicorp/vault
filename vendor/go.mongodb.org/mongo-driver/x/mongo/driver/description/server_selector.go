@@ -223,8 +223,15 @@ func selectByTagSet(candidates []Server, tagSets []tag.Set) []Server {
 	}
 
 	for _, ts := range tagSets {
+		// If this tag set is empty, we can take a fast path because the empty list is a subset of all tag sets, so
+		// all candidate servers will be selected.
+		if len(ts) == 0 {
+			return candidates
+		}
+
 		var results []Server
 		for _, s := range candidates {
+			// ts is non-empty, so only servers with a non-empty set of tags need to be checked.
 			if len(s.Tags) > 0 && s.Tags.ContainsAll(ts) {
 				results = append(results, s)
 			}
