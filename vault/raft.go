@@ -940,6 +940,10 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 				for _, addr := range addrs {
+					// FIXME: How to handle scheme and ports?
+					addr = fmt.Sprintf("http://%s:8200", addr)
+					fmt.Println("AUTO JOIN ADDR:", addr)
+
 					if err := joinLeader(leaderInfo, addr); err != nil {
 						c.logger.Info("join attempt failed", "error", err)
 					} else {
