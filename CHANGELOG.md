@@ -11,7 +11,6 @@ FEATURES:
 IMPROVEMENTS:
 
 * approle: Role names can now be referenced in templated policies through the `approle.metadata.role_name` property [[GH-9529](https://github.com/hashicorp/vault/pull/9529)]
-* auth/aws, core/seal, secret/aws: Set default IMDS timeouts to match AWS SDK [[GH-10133](https://github.com/hashicorp/vault/pull/10133)]
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
 * secrets/transit: fix missing plaintext in bulk decrypt response [[GH-9991](https://github.com/hashicorp/vault/pull/9991)]
 * command/server: Delay informational messages in -dev mode until logs have settled. [[GH-9702](https://github.com/hashicorp/vault/pull/9702)]
@@ -35,6 +34,10 @@ BUG FIXES:
 
 ## 1.5.5
 ### TBD
+
+IMPROVEMENTS:
+
+* auth/aws, core/seal, secret/aws: Set default IMDS timeouts to match AWS SDK [[GH-10133](https://github.com/hashicorp/vault/pull/10133)]
 
 BUG FIXES:
 
