@@ -71,7 +71,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			respondError(w, http.StatusTooManyRequests, quotaErr)
 
 			if core.Logger().IsTrace() {
-				core.Logger().Trace("request rejected due to lease count quota violation", "request_path", path)
+				core.Logger().Trace("request rejected due to rate limit quota violation", "request_path", path)
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {

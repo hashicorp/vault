@@ -23,6 +23,7 @@ import (
 )
 
 func TestAppRoleEndToEnd(t *testing.T) {
+	t.Parallel()
 
 	testCases := []struct {
 		removeSecretIDFile bool
@@ -54,6 +55,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 			secretFileAction = "remove"
 		}
 		t.Run(fmt.Sprintf("%s_secret_id_file bindSecretID=%v secretIDLess=%v expectToken=%v", secretFileAction, tc.bindSecretID, tc.secretIDLess, tc.expectToken), func(t *testing.T) {
+			t.Parallel()
 			testAppRoleEndToEnd(t, tc.removeSecretIDFile, tc.bindSecretID, tc.secretIDLess, tc.expectToken)
 		})
 	}
@@ -175,11 +177,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	os.Remove(out)
 	t.Logf("output: %s", out)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	secretFromAgent := secret
 	if secretIDLess {
@@ -222,9 +220,18 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	config := &sink.SinkConfig{
@@ -243,13 +250,26 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
 	defer func() {
-		<-ss.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Check that no sink file exists
 	_, err = os.Lstat(out)
@@ -501,11 +521,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	os.Remove(out)
 	t.Logf("output: %s", out)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	secretFromAgent := secret
 	if secretIDLess {
@@ -548,9 +564,18 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	config := &sink.SinkConfig{
@@ -569,13 +594,26 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	defer func() {
-		<-ss.DoneCh
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Check that no sink file exists
 	_, err = os.Lstat(out)

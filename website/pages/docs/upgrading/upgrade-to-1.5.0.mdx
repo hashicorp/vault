@@ -12,6 +12,13 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.5.0 compared to 1.4.1. Please read it carefully.
 
+## Google Cloud Storage `credentials_file` removed
+
+The deprecated `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS`
+environment variable or default credentials may be used instead. See
+[GCS Authentication](https://www.vaultproject.io/docs/configuration/storage/google-cloud-storage#gcs-authentication)
+for details on supported options.
+
 ## Raft Configuration
 
 A new Raft configuration value, `max_entry_size`, has been introduced. This value
@@ -41,6 +48,25 @@ This will suppress the metrics `vault.identity.entity.count`,
 `vault.identity.entity.alias.count`, `vault.token.count`, `vault.token.count.by_auth`,
 `vault.token.count.by_policy`, `vault.token.count.by_ttl` and `vault.secret.kv.count`
 that were introduced in version 1.5.0, but all other Vault telemetry will remain available.
+
+## Zero-length keys in key-value stores will cause Vault to crash.
+
+A key-value data store might have a zero-length key, created before the request handling was
+modified to make this operation impossible. The metrics collection process crashes if it encounters
+this while counting the number of KV secrets.
+
+A workaround for this issue is to disable collection of usage gauges in
+the [telemetry](/docs/configuration/telemetry) stanza of the configuration.
+
+```
+telemetry {
+  ...
+  usage_gauge_period = "none"
+}
+```
+
+This will disable all the metrics listed in the previous section. Or, set the environment value
+`VAULT_DISABLE_KV_GAUGE`, which will disable only `vault.secret.kv.count`.
 
 ## Non-string values in seal config prevent startup
 

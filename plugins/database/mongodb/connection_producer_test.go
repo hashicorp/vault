@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/ory/dockertest"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -78,17 +79,20 @@ net:
 	// Test
 	mongo := new()
 
-	conf := map[string]interface{}{
-		"connection_url":      retURL,
-		"allowed_roles":       "*",
-		"tls_certificate_key": clientCert.CombinedPEM(),
-		"tls_ca":              caCert.Pem,
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url":      retURL,
+			"allowed_roles":       "*",
+			"tls_certificate_key": clientCert.CombinedPEM(),
+			"tls_ca":              caCert.Pem,
+		},
+		VerifyConnection: true,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := mongo.Init(ctx, conf, true)
+	_, err := mongo.Initialize(ctx, initReq)
 	if err != nil {
 		t.Fatalf("Unable to initialize mongo engine: %s", err)
 	}

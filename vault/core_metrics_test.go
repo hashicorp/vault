@@ -140,6 +140,63 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 	}
 }
 
+func TestCoreMetrics_KvSecretGauge_BadPath(t *testing.T) {
+	// Use the real KV implementation instead of Passthrough
+	AddTestLogicalBackend("kv", logicalKv.Factory)
+	// Clean up for the next test.
+	defer func() {
+		delete(testLogicalBackends, "kv")
+	}()
+	core, _, _ := TestCoreUnsealed(t)
+
+	me := &MountEntry{
+		Table:   mountTableType,
+		Path:    sanitizePath("kv1"),
+		Type:    "kv",
+		Options: map[string]string{"version": "1"},
+	}
+	ctx := namespace.RootContext(nil)
+	err := core.mount(ctx, me)
+	if err != nil {
+		t.Fatalf("mount error: %v", err)
+	}
+
+	// I don't think there's any remaining way to create a zero-length
+	// key via the API, so we'll fake it by talking to the storage layer directly.
+	fake_entry := &logical.StorageEntry{
+		Key:   "logical/" + me.UUID + "/foo/",
+		Value: []byte{1},
+	}
+	err = core.barrier.Put(ctx, fake_entry)
+	if err != nil {
+		t.Fatalf("put error: %v", err)
+	}
+
+	values, err := core.kvSecretGaugeCollector(ctx)
+	if err != nil {
+		t.Fatalf("collector error: %v", err)
+	}
+	t.Logf("Values: %v", values)
+	found := false
+	var count float32 = -1
+	for _, glv := range values {
+		for _, l := range glv.Labels {
+			if l.Name == "mount_point" && l.Value == "kv1/" {
+				found = true
+				count = glv.Value
+				break
+			}
+		}
+	}
+	if found {
+		if count != 1.0 {
+			t.Errorf("bad secret count for kv1/")
+		}
+	} else {
+		t.Errorf("no secret count for kv1/")
+	}
+}
+
 func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
 	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	ctx := namespace.RootContext(nil)

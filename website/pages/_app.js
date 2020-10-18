@@ -9,7 +9,7 @@ import NProgress from '@hashicorp/nextjs-scripts/lib/nprogress'
 import useAnchorLinkAnalytics from '@hashicorp/nextjs-scripts/lib/anchor-link-analytics'
 import HashiHead from '@hashicorp/react-head'
 import ProductSubnav from 'components/subnav'
-import MegaNav from '@hashicorp/react-mega-nav'
+import HashiStackMenu from '@hashicorp/react-hashi-stack-menu'
 import Footer from 'components/footer'
 import Error from './_error'
 
@@ -32,31 +32,31 @@ function App({ Component, pageProps }) {
         icon={[
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=16&w=16',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
             type: 'image/png',
             sizes: '16x16',
           },
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=32&w=32',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
             type: 'image/png',
             sizes: '32x32',
           },
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=96&w=96',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
             type: 'image/png',
             sizes: '96x96',
           },
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=192&w=192',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
             type: 'image/png',
             sizes: '192x192',
           },
         ]}
       />
-      <MegaNav product="Vault" />
+      <HashiStackMenu />
       <ProductSubnav />
       <Component {...pageProps} />
       <Footer openConsentManager={openConsentManager} />

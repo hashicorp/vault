@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
@@ -43,6 +44,8 @@ type Wrapper struct {
 	currentKeyID *atomic.Value
 
 	client kmsiface.KMSAPI
+
+	logger hclog.Logger
 }
 
 // Ensure that we are implementing Wrapper
@@ -55,6 +58,7 @@ func NewWrapper(opts *wrapping.WrapperOptions) *Wrapper {
 	}
 	k := &Wrapper{
 		currentKeyID: new(atomic.Value),
+		logger:       opts.Logger,
 	}
 	k.currentKeyID.Store("")
 	return k
@@ -276,6 +280,7 @@ func (k *Wrapper) GetAWSKMSClient() (*kms.KMS, error) {
 	credsConfig.SecretKey = k.secretKey
 	credsConfig.SessionToken = k.sessionToken
 	credsConfig.Region = k.region
+	credsConfig.Logger = k.logger
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
 
