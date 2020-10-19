@@ -145,10 +145,14 @@ Logging in via the Vault UI requires a redirect URI of the form:
 
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
-If [namespaces](/docs/enterprise/namespaces) are being used,
+By default, if [namespaces](/docs/enterprise/namespaces) are being used,
 they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
+
+However, if [`pass_namespace_in_state`](/api-docs/auth/jwt#pass_namespace_in_state)
+is set to `true`, the namespace query parameter should not be included in the
+allowed redirect URI, both in Vault and the OIDC provider configs.
 
 ### OIDC Login (Vault UI)
 
