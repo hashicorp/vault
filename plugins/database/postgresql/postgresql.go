@@ -160,6 +160,18 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	defer tx.Rollback()
 
 	for _, stmt := range stmts {
+		if containsMultilineStatement(stmt) {
+			// Execute it as-is.
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+				return err
+			}
+			continue
+		}
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {

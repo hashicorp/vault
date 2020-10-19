@@ -275,6 +275,22 @@ func TestUpdateUser_Password(t *testing.T) {
 			expectErr:      true,
 			credsAssertion: assertCredsDoNotExist,
 		},
+		"name creation and rotation": {
+			statements: []string{
+				`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='{{name}}') THEN CREATE ROLE "{{name}}"; END IF; END $$`,
+				`ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';`,
+			},
+			expectErr:      false,
+			credsAssertion: assertCredsDoNotExist,
+		},
+		"username creation and rotation": {
+			statements: []string{
+				`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='{{username}}') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
+				`ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';`,
+			},
+			expectErr:      false,
+			credsAssertion: assertCredsDoNotExist,
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
