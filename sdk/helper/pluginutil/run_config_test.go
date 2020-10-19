@@ -50,7 +50,6 @@ func TestNameMakeConfig(t *testing.T) {
 				},
 				logger:         hclog.NewNullLogger(),
 				isMetadataMode: true,
-				autoMTLS:       false,
 			},
 
 			responseWrapInfoTimes: 0,
@@ -109,7 +108,6 @@ func TestNameMakeConfig(t *testing.T) {
 				},
 				logger:         hclog.NewNullLogger(),
 				isMetadataMode: false,
-				autoMTLS:       false,
 			},
 
 			responseWrapInfo: &wrapping.ResponseWrapInfo{
@@ -154,124 +152,6 @@ func TestNameMakeConfig(t *testing.T) {
 				AutoMTLS: false,
 			},
 			expectTLSConfig: true,
-		},
-		"metadata mode, AutoMTLS": {
-			rc: runConfig{
-				command: "echo",
-				args:    []string{"foo", "bar"},
-				sha256:  []byte("some_sha256"),
-				env:     []string{"initial=true"},
-				pluginSets: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
-						"bogus": nil,
-					},
-				},
-				hs: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				logger:         hclog.NewNullLogger(),
-				isMetadataMode: true,
-				autoMTLS:       true,
-			},
-
-			responseWrapInfoTimes: 0,
-
-			mlockEnabled:      false,
-			mlockEnabledTimes: 1,
-
-			expectedConfig: &plugin.ClientConfig{
-				HandshakeConfig: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				VersionedPlugins: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
-						"bogus": nil,
-					},
-				},
-				Cmd: commandWithEnv(
-					"echo",
-					[]string{"foo", "bar"},
-					[]string{
-						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
-						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
-					},
-				),
-				SecureConfig: &plugin.SecureConfig{
-					Checksum: []byte("some_sha256"),
-					// Hash is generated
-				},
-				AllowedProtocols: []plugin.Protocol{
-					plugin.ProtocolNetRPC,
-					plugin.ProtocolGRPC,
-				},
-				Logger:   hclog.NewNullLogger(),
-				AutoMTLS: true,
-			},
-			expectTLSConfig: false,
-		},
-		"not-metadata mode, AutoMTLS": {
-			rc: runConfig{
-				command: "echo",
-				args:    []string{"foo", "bar"},
-				sha256:  []byte("some_sha256"),
-				env:     []string{"initial=true"},
-				pluginSets: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
-						"bogus": nil,
-					},
-				},
-				hs: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				logger:         hclog.NewNullLogger(),
-				isMetadataMode: false,
-				autoMTLS:       true,
-			},
-
-			responseWrapInfoTimes: 0,
-
-			mlockEnabled:      false,
-			mlockEnabledTimes: 1,
-
-			expectedConfig: &plugin.ClientConfig{
-				HandshakeConfig: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				VersionedPlugins: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
-						"bogus": nil,
-					},
-				},
-				Cmd: commandWithEnv(
-					"echo",
-					[]string{"foo", "bar"},
-					[]string{
-						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
-						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
-					},
-				),
-				SecureConfig: &plugin.SecureConfig{
-					Checksum: []byte("some_sha256"),
-					// Hash is generated
-				},
-				AllowedProtocols: []plugin.Protocol{
-					plugin.ProtocolNetRPC,
-					plugin.ProtocolGRPC,
-				},
-				Logger:   hclog.NewNullLogger(),
-				AutoMTLS: true,
-			},
-			expectTLSConfig: false,
 		},
 	}
 
