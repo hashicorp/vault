@@ -232,8 +232,8 @@ export default Service.extend({
         let url;
         id = encodePath(id);
         // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
-        // check first for the dynamicApiPath which is passed through from the model->adapter
-        // If no dynamicApiPath, then use apiPath set higher up in function
+        // overwrite apiPath if dynamicApiPath exist.
+        // dynamicApiPath comes from the model->adapter
         if (dynamicApiPath) {
           apiPath = dynamicApiPath;
         }
