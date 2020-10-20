@@ -68,8 +68,8 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
-			// Only emit on active node of cluster that is not a DR cecondary.
-			if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
+			// Only emit on active node
+			if c.PerfStandby() {
 				break
 			}
 
@@ -196,11 +196,10 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 		},
 	}
 
-	// Disable collection if configured, or if we're a performance standby
-	// node or DR secondary cluster.
+	// Disable collection if configured, or if we're a performance standby.
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
 		c.logger.Info("usage gauge collection is disabled")
-	} else if standby, _ := c.Standby(); !standby && !c.IsDRSecondary() {
+	} else if !c.PerfStandby() {
 		for _, init := range metricsInit {
 			if init.DisableEnvVar != "" {
 				if os.Getenv(init.DisableEnvVar) != "" {
