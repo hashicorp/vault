@@ -1,7 +1,7 @@
 syntax = "proto3";
-package newdbplugin; // TODO: Update name
+package dbplugin.v5;
 
-option go_package = "github.com/hashicorp/vault/sdk/database/newdbplugin/proto";
+option go_package = "github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto";
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
