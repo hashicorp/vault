@@ -940,6 +940,32 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 				for _, addr := range addrs {
+					u, err := url.Parse(addr)
+					if err != nil {
+						c.logger.Info("failed to parse discovered address", "error", err)
+						continue
+					}
+
+					if u.Scheme == "" {
+						scheme := leaderInfo.Scheme
+						if scheme == "" {
+							// default to HTTPS when no scheme is provided
+							scheme = "https"
+						}
+
+						addr = fmt.Sprintf("%s://%s", scheme, addr)
+					}
+
+					if u.Port() == "" {
+						port := leaderInfo.Port
+						if port == 0 {
+							// default to 8200 when no port is provided
+							port = 8200
+						}
+
+						addr = fmt.Sprintf("%s:%d", addr, port)
+					}
+
 					if err := joinLeader(leaderInfo, addr); err != nil {
 						c.logger.Info("join attempt failed", "error", err)
 					} else {
