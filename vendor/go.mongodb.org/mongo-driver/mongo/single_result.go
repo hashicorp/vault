@@ -29,7 +29,7 @@ type SingleResult struct {
 }
 
 // Decode will unmarshal the document represented by this SingleResult into v. If there was an error from the operation
-// that created this SingleResult, that error will be returned. If the operation returned no documents, DecodeBytes will
+// that created this SingleResult, that error will be returned. If the operation returned no documents, Decode will
 // return ErrNoDocuments.
 //
 // If the operation was successful and returned a document, Decode will return any errors from the unmarshalling process
