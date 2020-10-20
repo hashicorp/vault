@@ -182,7 +182,7 @@ func (t *MountTable) shallowClone() *MountTable {
 
 // setTaint is used to set the taint on given entry Accepts either the mount
 // entry's path or namespace + path, i.e. <ns-path>/secret/ or <ns-path>/token/
-func (t *MountTable) setTaint(ctx context.Context, path string, tainted bool, mountState string) (*MountEntry, error) {
+func (t *MountTable) setTaint(ctx context.Context, path string, value bool) (*MountEntry, error) {
 	n := len(t.Entries)
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -190,8 +190,7 @@ func (t *MountTable) setTaint(ctx context.Context, path string, tainted bool, mo
 	}
 	for i := 0; i < n; i++ {
 		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
-			t.Entries[i].Tainted = tainted
-			t.Entries[i].MountState = mountState
+			t.Entries[i].Tainted = value
 			return t.Entries[i], nil
 		}
 	}
@@ -250,8 +249,6 @@ func (t *MountTable) sortEntriesByPathDepth() *MountTable {
 	return t
 }
 
-const mountStateUnmounting = "unmounting"
-
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
 	Table                 string            `json:"table"`                   // The table it belongs to
@@ -267,7 +264,6 @@ type MountEntry struct {
 	SealWrap              bool              `json:"seal_wrap"`               // Whether to wrap CSPs
 	ExternalEntropyAccess bool              `json:"external_entropy_access"` // Whether to allow external entropy source access
 	Tainted               bool              `json:"tainted,omitempty"`       // Set as a Write-Ahead flag for unmount/remount
-	MountState            string            `json:"mount_state,omitempty"`   // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
 
 	// namespace contains the populated namespace
@@ -641,7 +637,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 	entry := c.router.MatchingMountEntry(ctx, path)
 
 	// Mark the entry as tainted
-	if err := c.taintMountEntry(ctx, path, updateStorage, true); err != nil {
+	if err := c.taintMountEntry(ctx, path, updateStorage); err != nil {
 		c.logger.Error("failed to taint mount entry for path being unmounted", "error", err, "path", path)
 		return err
 	}
@@ -759,18 +755,13 @@ func (c *Core) removeMountEntry(ctx context.Context, path string, updateStorage 
 }
 
 // taintMountEntry is used to mark an entry in the mount table as tainted
-func (c *Core) taintMountEntry(ctx context.Context, path string, updateStorage, unmounting bool) error {
+func (c *Core) taintMountEntry(ctx context.Context, path string, updateStorage bool) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	mountState := ""
-	if unmounting {
-		mountState = mountStateUnmounting
-	}
-
 	// As modifying the taint of an entry affects shallow clones,
 	// we simply use the original
-	entry, err := c.mounts.setTaint(ctx, path, true, mountState)
+	entry, err := c.mounts.setTaint(ctx, path, true)
 	if err != nil {
 		return err
 	}
@@ -865,7 +856,7 @@ func (c *Core) remount(ctx context.Context, src, dst string, updateStorage bool)
 	}
 
 	// Mark the entry as tainted
-	if err := c.taintMountEntry(ctx, src, updateStorage, false); err != nil {
+	if err := c.taintMountEntry(ctx, src, updateStorage); err != nil {
 		return err
 	}
 
@@ -989,38 +980,9 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		}
 	}
 
-	// If this node is a performance standby we do not want to attempt to
-	// upgrade the mount table, this will be the active node's responsibility.
-	if !c.perfStandby {
-		err := c.runMountUpdates(ctx, needPersist)
-		if err != nil {
-			c.logger.Error("failed to run mount table upgrades", "error", err)
-			return err
-		}
-	}
+	// Note that this is only designed to work with singletons, as it checks by
+	// type only.
 
-	for _, entry := range c.mounts.Entries {
-		if entry.NamespaceID == "" {
-			entry.NamespaceID = namespace.RootNamespaceID
-		}
-		ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
-		if err != nil {
-			return err
-		}
-		if ns == nil {
-			return namespace.ErrNoNamespace
-		}
-		entry.namespace = ns
-
-		// Sync values to the cache
-		entry.SyncCache()
-	}
-	return nil
-}
-
-// Note that this is only designed to work with singletons, as it checks by
-// type only.
-func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 	// Upgrade to typed mount table
 	if c.mounts.Type == "" {
 		c.mounts.Type = mountTableType
@@ -1052,10 +1014,6 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 
 	// Upgrade to table-scoped entries
 	for _, entry := range c.mounts.Entries {
-		if !c.PR1103disabled && entry.Type == mountTypeNSCubbyhole && !entry.Local && !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationDRSecondary) {
-			entry.Local = true
-			needPersist = true
-		}
 		if entry.Type == cubbyholeMountType && !entry.Local {
 			entry.Local = true
 			needPersist = true
@@ -1085,6 +1043,17 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
 		}
+		ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
+		if err != nil {
+			return err
+		}
+		if ns == nil {
+			return namespace.ErrNoNamespace
+		}
+		entry.namespace = ns
+
+		// Sync values to the cache
+		entry.SyncCache()
 	}
 
 	// Done if we have restored the mount table and we don't need
