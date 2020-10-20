@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/lib/pq"
 )
@@ -68,7 +68,7 @@ func redshiftEnv() (url string, user string, password string, errEmpty error) {
 	return url, user, password, nil
 }
 
-func TestPostgreSQL_Initialize(t *testing.T) {
+func TestRedshift_Initialize(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -111,7 +111,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 
 }
 
-func TestPostgreSQL_CreateUser(t *testing.T) {
+func TestRedshift_NewUser(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -131,32 +131,35 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	usernameConfig := dbplugin.UsernameConfig{
+	usernameConfig := newdbplugin.UsernameMetadata{
 		DisplayName: "test",
 		RoleName:    "test",
 	}
 
 	// Test with no configured Creation Statement
-	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
+	_, err = db.NewUser(context.Background(), newdbplugin.NewUserRequest{})
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
 	}
 
-	statements := dbplugin.Statements{
-		Creation: []string{testRedshiftRole},
+	req := newdbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Password:       "SuperSecurePa55w0rd!",
+		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Expiration:     time.Now().Add(5 * time.Minute),
 	}
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	resp, err := db.NewUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, url, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s\n%s:%s", err, username, password)
+	if err = testCredsExist(t, url, resp.Username, req.Password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s\n%s:%s", err, resp.Username, req.Password)
 	}
 
-	statements.Creation = []string{testRedshiftReadOnlyRole}
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	req.Statements.Commands = []string{testRedshiftReadOnlyRole}
+	resp, err = db.NewUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -164,12 +167,12 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 	// Sleep to make sure we haven't expired if granularity is only down to the second
 	time.Sleep(2 * time.Second)
 
-	if err = testCredsExist(t, url, username, password); err != nil {
+	if err = testCredsExist(t, url, resp.Username, req.Password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
 
-func TestPostgreSQL_RenewUser(t *testing.T) {
+func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -189,60 +192,76 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	statements := dbplugin.Statements{
-		Creation: []string{testRedshiftRole},
-	}
-
-	usernameConfig := dbplugin.UsernameConfig{
+	usernameConfig := newdbplugin.UsernameMetadata{
 		DisplayName: "test",
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
+	req := newdbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Password:       "SuperSecurePa55w0rd!",
+		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Expiration:     time.Now().Add(5 * time.Second),
+	}
+
+	newResponse, err := db.NewUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, url, username, password); err != nil {
+	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
+	// Test default renew statement
+	updateReq := newdbplugin.UpdateUserRequest{
+		Username: newResponse.Username,
+		Expiration: &newdbplugin.ChangeExpiration{
+			NewExpiration: time.Now().Add(time.Minute),
+		},
+	}
+
+	_, err = db.UpdateUser(context.Background(), updateReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Sleep longer than the initial expiration time
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
-	if err = testCredsExist(t, url, username, password); err != nil {
+	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
-	statements.Renewal = []string{defaultRenewSQL}
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
+
+	// Now test the same again with explicitly set renew statements
+	req.Statements.Commands = []string{defaultRenewSQL}
+	req.Expiration = time.Now().Add(5 * time.Second)
+
+	_, err = db.NewUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, url, username, password); err != nil {
+	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
+	updateReq.Expiration.NewExpiration = time.Now().Add(time.Minute)
+	_, err = db.UpdateUser(context.Background(), updateReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Sleep longer than the initial expiration time
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
-	if err = testCredsExist(t, url, username, password); err != nil {
+	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 }
 
-func TestPostgreSQL_RevokeUser(t *testing.T) {
+func TestRedshift_DeleteUser(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -262,26 +281,33 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	statements := dbplugin.Statements{
-		Creation: []string{testRedshiftRole},
-	}
-
-	usernameConfig := dbplugin.UsernameConfig{
+	usernameConfig := newdbplugin.UsernameMetadata{
 		DisplayName: "test",
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
+	const password = "SuperSecretPa55word!"
+	newRequest := newdbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Password:       password,
+		Expiration:     time.Now().Add(2 * time.Second),
+	}
+
+	newResponse, err := db.NewUser(context.Background(), newRequest)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	username := newResponse.Username
 
 	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 	// Test default revoke statements
-	err = db.RevokeUser(context.Background(), statements, username)
+	_, err = db.DeleteUser(context.Background(), newdbplugin.DeleteUserRequest{
+		Username: username,
+	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -290,18 +316,25 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
+	newRequest.Expiration = time.Now().Add(2 * time.Second)
+	newResponse, err = db.NewUser(context.Background(), newRequest)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	username = newResponse.Username
 
 	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 	// Test custom revoke statements
-	statements.Revocation = []string{defaultRedshiftRevocationSQL}
-	err = db.RevokeUser(context.Background(), statements, username)
+	req := newdbplugin.DeleteUserRequest{
+		Username: username,
+		Statements: newdbplugin.Statements{
+			Commands: []string{defaultRedshiftRevocationSQL},
+		},
+	}
+	_, err = db.DeleteUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -311,7 +344,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 }
 
-func TestPostgresSQL_SetCredentials(t *testing.T) {
+/*func TestRedshift_UpdateUser_Password(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -385,14 +418,13 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	}
 }
 
-func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
-	/*
-		   Extra precaution is taken for rotating root creds because it's assumed that this
-		   test will run against a live redshift cluster. This test must run last because
-		   it is destructive.
+func TestRedshift_RotateRootCredentials(t *testing.T) {
+	// Extra precaution is taken for rotating root creds because it's assumed that this
+	// test will run against a live redshift cluster. This test must run last because
+	// it is destructive.
+	//
+	// To run this test you must pass TEST_ROTATE_ROOT=1
 
-			 To run this test you must pass TEST_ROTATE_ROOT=1
-	*/
 	if os.Getenv(vaultACC) != "1" || os.Getenv("TEST_ROTATE_ROOT") != "1" {
 		t.SkipNow()
 	}
@@ -436,7 +468,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-}
+}*/
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	t.Helper()
