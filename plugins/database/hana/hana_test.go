@@ -4,13 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"os"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 )
 
 func TestHANA_Initialize(t *testing.T) {
@@ -23,24 +22,15 @@ func TestHANA_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config:           connectionDetails,
 		VerifyConnection: true,
 	}
 
 	db := new()
-	_, err := db.Initialize(context.Background(), initReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	initResp := dbtesting.AssertInitialize(t, db, initReq)
+	if initResp.Config == nil {
+		t.Fatalf("config not set by initialization")
 	}
 }
 
@@ -49,57 +39,71 @@ func TestHANA_NewUser(t *testing.T) {
 	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
 		t.SkipNow()
 	}
+
 	connURL := os.Getenv("HANA_URL")
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+	type testCase struct {
+		req           dbplugin.NewUserRequest
+		expectErr     bool
+		assertUser    func(t testing.TB, connURL, username, password string)
 	}
 
-	initReq := newdbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db := new()
-	_, err := db.Initialize(context.Background(), initReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	password, err := credsutil.RandomAlphaNumeric(32, true)
-	if err != nil {
-		t.Fatalf("failed to generate password: %s", err)
-	}
-	password = strings.Replace(password, "-", "_", -1)
-
-	req := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
-			DisplayName: "test-test",
-			RoleName:    "test-test",
+	tests := map[string]testCase{
+		"no creation statements": {
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test-test",
+					RoleName:    "test-test",
+				},
+				Statements: dbplugin.Statements{},
+				Password:   "AG4qagho_dsvZ",
+				Expiration: time.Now().Add(1 * time.Second),
+			},
+			expectErr:     true,
+			assertUser:    assertCredsDoNotExist,
 		},
-		Statements: newdbplugin.Statements{
-			Commands: []string{},
+		"with creation statements": {
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test-test",
+					RoleName:    "test-test",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{testHANARole},
+				},
+				Password:   "AG4qagho_dsvZ",
+				Expiration: time.Now().Add(1 * time.Second),
+			},
+			expectErr:     false,
+			assertUser:    assertCredsExist,
 		},
-		Password:   password,
-		Expiration: time.Now().Add(time.Hour),
 	}
 
-	// Test with no configured Creation Statement
-	userResp, err := db.NewUser(context.Background(), req)
-	if err == nil {
-		t.Fatal("Expected error when no creation statement is provided")
-	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+			}
 
-	// Add a statement command
-	req.Statements.Commands = []string{testHANARole}
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
 
-	userResp, err = db.NewUser(context.Background(), req)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+			db := new()
+			dbtesting.AssertInitialize(t, db, initReq)
+			defer dbtesting.AssertClose(t, db)
 
-	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
+			createResp, err := db.NewUser(context.Background(), test.req)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, received nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			test.assertUser(t, connURL, createResp.Username, test.req.Password)
+		})
 	}
 }
 
@@ -109,87 +113,77 @@ func TestHANA_UpdateUser(t *testing.T) {
 	}
 	connURL := os.Getenv("HANA_URL")
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+	type testCase struct {
+		req              dbplugin.UpdateUserRequest
+		startingPassword string
+		expectErrOnLogin bool
 	}
 
-	initReq := newdbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db := new()
-	_, err := db.Initialize(context.Background(), initReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	password, err := credsutil.RandomAlphaNumeric(32, true)
-	if err != nil {
-		t.Fatalf("failed to generate password: %s", err)
-	}
-	password = strings.Replace(password, "-", "_", -1)
-
-	newReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
-			DisplayName: "test-test",
-			RoleName:    "test-test",
+	tests := map[string]testCase{
+		"no update statements": {
+			req: dbplugin.UpdateUserRequest{
+				Password: &dbplugin.ChangePassword{
+					NewPassword: "this_is_ALSO_Thirty_2_characters_",
+				},
+			},
+			startingPassword: "this_is_Thirty_2_characters_wow_",
+			expectErrOnLogin: true,
 		},
-		Password: password,
-		Statements: newdbplugin.Statements{
-			Commands: []string{testHANARole},
-		},
-		Expiration: time.Now().Add(time.Hour),
-	}
-
-	// Test default revoke statements
-	userResp, err := db.NewUser(context.Background(), newReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	newPassword, err := credsutil.RandomAlphaNumeric(32, true)
-	if err != nil {
-		t.Fatalf("failed to generate password: %s", err)
-	}
-	newPassword = strings.Replace(newPassword, "-", "_", -1)
-
-	// Change Password
-	updateReq := newdbplugin.UpdateUserRequest{
-		Username: userResp.Username,
-		Password: &newdbplugin.ChangePassword{
-			NewPassword: newPassword,
+		"with custom update statements": {
+			req: dbplugin.UpdateUserRequest{
+				Password: &dbplugin.ChangePassword{
+					NewPassword: "this_is_ALSO_Thirty_2_characters_",
+					Statements: dbplugin.Statements{
+						Commands: []string{testHANAUpdate},
+					},
+				},
+			},
+			startingPassword: "this_is_Thirty_2_characters_wow_",
+			expectErrOnLogin: false,
 		},
 	}
 
-	_, err = db.UpdateUser(context.Background(), updateReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err := testCredsExist(t, connURL, userResp.Username, newPassword); err == nil {
-		t.Fatal("Credentials were not changed")
-	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+			}
 
-	// Test custom update statement
-	userResp, err = db.NewUser(context.Background(), newReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
 
-	updateReq.Password.Statements.Commands = []string{testHANAUpdate}
-	updateReq.Username = userResp.Username
-	_, err = db.UpdateUser(context.Background(), updateReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err := testCredsExist(t, connURL, userResp.Username, newPassword); err == nil {
-		t.Fatal("Credentials were not revoked")
+			db := new()
+			dbtesting.AssertInitialize(t, db, initReq)
+			defer dbtesting.AssertClose(t, db)
+
+			newReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test-test",
+					RoleName:    "test-test",
+				},
+				Password: test.startingPassword,
+				Statements: dbplugin.Statements{
+					Commands: []string{testHANARole},
+				},
+				Expiration: time.Now().Add(time.Hour),
+			}
+
+			userResp := dbtesting.AssertNewUser(t, db, newReq)
+			assertCredsExist(t, connURL, userResp.Username, test.startingPassword)
+
+			test.req.Username = userResp.Username
+
+			dbtesting.AssertUpdateUser(t, db, test.req)
+			err := testCredsExist(t, connURL, userResp.Username, test.req.Password.NewPassword)
+			if test.expectErrOnLogin && err == nil {
+				t.Fatalf("Able to login with new creds when expecting an issue")
+			}
+			if !test.expectErrOnLogin && err != nil {
+				t.Fatalf("Unable to login: %s", err)
+			}
+		})
 	}
 }
 
@@ -199,77 +193,60 @@ func TestHANA_DeleteUser(t *testing.T) {
 	}
 	connURL := os.Getenv("HANA_URL")
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+	type testCase struct {
+		req              dbplugin.DeleteUserRequest
 	}
 
-	initReq := newdbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db := new()
-	_, err := db.Initialize(context.Background(), initReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	password, err := credsutil.RandomAlphaNumeric(32, true)
-	if err != nil {
-		t.Fatalf("failed to generate password: %s", err)
-	}
-	password = strings.Replace(password, "-", "_", -1)
-
-	newReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
-			DisplayName: "test-test",
-			RoleName:    "test-test",
+	tests := map[string]testCase{
+		"no update statements": {
+			req: dbplugin.DeleteUserRequest{},
 		},
-		Password: password,
-		Statements: newdbplugin.Statements{
-			Commands: []string{testHANARole},
+		"with custom update statements": {
+			req: dbplugin.DeleteUserRequest{
+				Statements: dbplugin.Statements{
+					Commands: []string{testHANADrop},
+				},
+			},
 		},
-		Expiration: time.Now().Add(time.Hour),
 	}
 
-	// Test default revoke statements
-	userResp, err := db.NewUser(context.Background(), newReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+			}
 
-	delReq := newdbplugin.DeleteUserRequest{
-		Username: userResp.Username,
-	}
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
 
-	_, err = db.DeleteUser(context.Background(), delReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err := testCredsExist(t, connURL, userResp.Username, password); err == nil {
-		t.Fatal("Credentials were not revoked")
-	}
+			db := new()
+			dbtesting.AssertInitialize(t, db, initReq)
+			defer dbtesting.AssertClose(t, db)
 
-	// Test custom revoke statement
-	userResp, err = db.NewUser(context.Background(), newReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+			password := "this_is_Thirty_2_characters_wow_"
 
-	delReq.Statements.Commands = []string{testHANADrop}
-	delReq.Username = userResp.Username
-	_, err = db.DeleteUser(context.Background(), delReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if err := testCredsExist(t, connURL, userResp.Username, password); err == nil {
-		t.Fatal("Credentials were not revoked")
+			newReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test-test",
+					RoleName:    "test-test",
+				},
+				Password: password,
+				Statements: dbplugin.Statements{
+					Commands: []string{testHANARole},
+				},
+				Expiration: time.Now().Add(time.Hour),
+			}
+
+			userResp := dbtesting.AssertNewUser(t, db, newReq)
+			assertCredsExist(t, connURL, userResp.Username, password)
+
+			test.req.Username = userResp.Username
+
+			dbtesting.AssertDeleteUser(t, db, test.req)
+			assertCredsDoNotExist(t, connURL, userResp.Username, password)
+		})
 	}
 }
 
@@ -285,11 +262,27 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	return db.Ping()
 }
 
+func assertCredsExist(t testing.TB, connURL, username, password string) {
+	t.Helper()
+	err := testCredsExist(t, connURL, username, password)
+	if err != nil {
+		t.Fatalf("Unable to log in as %q: %s", username, err)
+	}
+}
+
+func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
+	t.Helper()
+	err := testCredsExist(t, connURL, username, password)
+	if err == nil {
+		t.Fatalf("Able to log in when we should not be able to")
+	}
+}
+
 const testHANARole = `
-CREATE USER {{name}} PASSWORD {{password}} NO FORCE_FIRST_PASSWORD_CHANGE VALID UNTIL '{{expiration}}';`
+CREATE USER {{name}} PASSWORD "{{password}}" NO FORCE_FIRST_PASSWORD_CHANGE VALID UNTIL '{{expiration}}';`
 
 const testHANADrop = `
 DROP USER {{name}} CASCADE;`
 
 const testHANAUpdate = `
-ALTER USER {{name}} PASSWORD "{{password}}";`
+ALTER USER {{name}} PASSWORD "{{password}}" NO FORCE_FIRST_PASSWORD_CHANGE;`
