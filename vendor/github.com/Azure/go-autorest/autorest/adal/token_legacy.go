@@ -1,4 +1,4 @@
-package autorest
+// +build !go1.13
 
 // Copyright 2017 Microsoft Corporation
 //
@@ -14,28 +14,23 @@ package autorest
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+package adal
+
 import (
-	"fmt"
-	"runtime"
+	"context"
+	"net/http"
+	"time"
 )
 
-const number = "v14.2.1"
-
-var (
-	userAgent = fmt.Sprintf("Go/%s (%s-%s) go-autorest/%s",
-		runtime.Version(),
-		runtime.GOARCH,
-		runtime.GOOS,
-		number,
-	)
-)
-
-// UserAgent returns a string containing the Go version, system architecture and OS, and the go-autorest version.
-func UserAgent() string {
-	return userAgent
-}
-
-// Version returns the semantic version (see http://semver.org).
-func Version() string {
-	return number
+func getMSIEndpoint(ctx context.Context, sender Sender) (*http.Response, error) {
+	// this cannot fail, the return sig is due to legacy reasons
+	msiEndpoint, _ := GetMSIVMEndpoint()
+	tempCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	req, _ := http.NewRequest(http.MethodGet, msiEndpoint, nil)
+	req = req.WithContext(tempCtx)
+	q := req.URL.Query()
+	q.Add("api-version", msiAPIVersion)
+	req.URL.RawQuery = q.Encode()
+	return sender.Do(req)
 }
