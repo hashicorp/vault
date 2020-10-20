@@ -574,15 +574,11 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		Type: credentialTableType,
 	}
 
-	var localAuthCount int
-	var nonLocalAuthCount int
 	for _, entry := range table.Entries {
 		if entry.Local {
 			localAuth.Entries = append(localAuth.Entries, entry)
-			localAuthCount += 1
 		} else {
 			nonLocalAuth.Entries = append(nonLocalAuth.Entries, entry)
-			nonLocalAuthCount += 1
 		}
 	}
 
@@ -617,26 +613,26 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(nonLocalAuthCount, false, true, compressedBytes)
+		c.tableMetrics(len(nonLocalAuth.Entries), false, true, compressedBytes)
 
 		// Write local mounts
 		compressedBytes, err = writeTable(localAuth, coreLocalAuthConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(localAuthCount, true, true, compressedBytes)
+		c.tableMetrics(len(localAuth.Entries), true, true, compressedBytes)
 	case *local:
 		compressedBytes, err = writeTable(localAuth, coreLocalAuthConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(localAuthCount, true, true, compressedBytes)
+		c.tableMetrics(len(localAuth.Entries), true, true, compressedBytes)
 	default:
 		compressedBytes, err = writeTable(nonLocalAuth, coreAuthConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(nonLocalAuthCount, false, true, compressedBytes)
+		c.tableMetrics(len(nonLocalAuth.Entries), false, true, compressedBytes)
 	}
 
 	return err

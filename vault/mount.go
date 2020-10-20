@@ -1092,15 +1092,11 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		Type: mountTableType,
 	}
 
-	var localMountsCount int
-	var nonLocalMountsCount int
 	for _, entry := range table.Entries {
 		if entry.Local {
 			localMounts.Entries = append(localMounts.Entries, entry)
-			localMountsCount += 1
 		} else {
 			nonLocalMounts.Entries = append(nonLocalMounts.Entries, entry)
-			nonLocalMountsCount += 1
 		}
 	}
 
@@ -1135,14 +1131,14 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(nonLocalMountsCount, false, false, compressedBytes)
+		c.tableMetrics(len(nonLocalMounts.Entries), false, false, compressedBytes)
 
 		// Write local mounts
 		compressedBytes, err = writeTable(localMounts, coreLocalMountConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(localMountsCount, true, false, compressedBytes)
+		c.tableMetrics(len(localMounts.Entries), true, false, compressedBytes)
 
 	case *local:
 		// Write local mounts
@@ -1150,14 +1146,14 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(localMountsCount, true, false, compressedBytes)
+		c.tableMetrics(len(localMounts.Entries), true, false, compressedBytes)
 	default:
 		// Write non-local mounts
 		compressedBytes, err = writeTable(nonLocalMounts, coreMountConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(nonLocalMountsCount, false, false, compressedBytes)
+		c.tableMetrics(len(nonLocalMounts.Entries), false, false, compressedBytes)
 	}
 
 	return nil
