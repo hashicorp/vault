@@ -27,7 +27,7 @@ type HANA struct {
 	*connutil.SQLConnectionProducer
 }
 
-var _ dbplugin.Database = &HANA{}
+var _ dbplugin.Database = (*HANA)(nil)
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -90,7 +90,7 @@ func (h *HANA) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-// CreateUser generates the username/password on the underlying HANA secret backend
+// NewUser generates the username/password on the underlying HANA secret backend
 // as instructed by the CreationStatement provided.
 func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (response dbplugin.NewUserResponse, err error) {
 	// Grab the lock
@@ -107,14 +107,15 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	dispName := credsutil.DisplayName(req.UsernameConfig.DisplayName, 32)
-	roleName := credsutil.RoleName(req.UsernameConfig.RoleName, 20)
-	maxLen := credsutil.MaxLength(maxIdentifierLength)
-	separator := credsutil.Separator("_")
-	caps := credsutil.ToUpper()
-
 	// Generate username
-	username, err := credsutil.GenerateUsername(dispName, roleName, maxLen, separator, caps)
+	username, err := credsutil.GenerateUsername(
+		credsutil.DisplayName(req.UsernameConfig.DisplayName, 32),
+		credsutil.RoleName(req.UsernameConfig.RoleName, 20),
+		credsutil.MaxLength(maxIdentifierLength),
+		credsutil.Separator("_"),
+		credsutil.ToUpper(),
+	)
+
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
@@ -122,11 +123,6 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 	// HANA does not allow hyphens in usernames, and highly prefers capital letters
 	username = strings.Replace(username, "-", "_", -1)
 	username = strings.ToUpper(username)
-
-	// Most HANA configurations have password constraints
-	// Prefix with A1a to satisfy these constraints. User will be forced to change upon login
-	password := req.Password
-	password = strings.Replace(password, "-", "_", -1)
 
 	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
 	// regardless of whether vault is alive to revoke lease
@@ -149,7 +145,7 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 
 			m := map[string]string{
 				"name":       username,
-				"password":   password,
+				"password":   req.Password,
 				"expiration": expirationStr,
 			}
 
@@ -171,7 +167,8 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 	return resp, nil
 }
 
-// Renewing hana user just means altering user's valid until property
+// UpdateUser allows for updating the expiration or password of the user mentioned in
+// the UpdateUserRequest
 func (h *HANA) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	h.Lock()
 	defer h.Unlock()
