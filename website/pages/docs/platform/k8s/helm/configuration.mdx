@@ -135,7 +135,7 @@ and consider if they're appropriate for your deployment.
     ```
 
   - `failurePolicy` (`string : ""`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
-    When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue.
+    When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
 
 - `server` - Values that configure running a Vault server within Kubernetes.
 
