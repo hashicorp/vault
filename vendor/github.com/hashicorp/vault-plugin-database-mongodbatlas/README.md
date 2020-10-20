@@ -23,3 +23,21 @@ If you believe you have found a security issue in Vault or with this plugin, _pl
 contacting HashiCorp at [security@hashicorp.com](mailto:security@hashicorp.com) and contact MongoDB
 directly via [security@mongodb.com](mailto:security@mongodb.com) or
 [open a ticket](https://jira.mongodb.org/plugins/servlet/samlsso?redirectTo=%2Fbrowse%2FSECURITY) (link is external).
+
+## Acceptance Testing
+
+In order to perform acceptance testing, you need to set the environment
+variable `VAULT_ACC=1` as well as provide all the of necessary information to
+connect to a MongoDB Atlas Project. All `ATLAS_*` environment variables must be
+provided in order for the acceptance tests to run properly. A cluster must be
+available during the test. A 
+[free tier cluster](https://docs.atlas.mongodb.com/tutorial/deploy-free-tier-cluster/) 
+can be provisioned manually to test.
+
+| Environment variable | Description                                                   |
+|----------------------|---------------------------------------------------------------|
+| ATLAS_PUBLIC_KEY     | The Atlas API public key                                      |
+| ATLAS_PRIVATE_KEY    | The Atlas API private key                                     |
+| ATLAS_PROJECT_ID     | The desired project ID or group ID                            |
+| ATLAS_CONN_URL       | The desired cluster's connection URL within the project       |
+| ATLAS_ALLOWLIST_IP   | The public IP of the machine that the test is being performed |

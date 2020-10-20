@@ -54,3 +54,21 @@ func ModeFromString(mode string) (Mode, error) {
 	}
 	return Mode(0), fmt.Errorf("unknown read preference %v", mode)
 }
+
+// String returns the string representation of mode.
+func (mode Mode) String() string {
+	switch mode {
+	case PrimaryMode:
+		return "primary"
+	case PrimaryPreferredMode:
+		return "primaryPreferred"
+	case SecondaryMode:
+		return "secondary"
+	case SecondaryPreferredMode:
+		return "secondaryPreferred"
+	case NearestMode:
+		return "nearest"
+	default:
+		return "unknown"
+	}
+}

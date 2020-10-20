@@ -55,7 +55,7 @@ func (op Operation) legacyFind(ctx context.Context, dst []byte, srvr Server, con
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server)
+		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
 	}
 	return nil
 }
@@ -225,7 +225,7 @@ func (op Operation) legacyGetMore(ctx context.Context, dst []byte, srvr Server, 
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server)
+		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
 	}
 	return nil
 }
@@ -297,7 +297,7 @@ func (op Operation) legacyKillCursors(ctx context.Context, dst []byte, srvr Serv
 	if err != nil {
 		err = Error{Message: err.Error(), Labels: []string{TransientTransactionError, NetworkError}}
 		if ep, ok := srvr.(ErrorProcessor); ok {
-			ep.ProcessError(err)
+			ep.ProcessError(err, conn)
 		}
 
 		finishedInfo.cmdErr = err
@@ -393,7 +393,7 @@ func (op Operation) legacyListCollections(ctx context.Context, dst []byte, srvr 
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server)
+		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
 	}
 	return nil
 }
@@ -520,7 +520,7 @@ func (op Operation) legacyListIndexes(ctx context.Context, dst []byte, srvr Serv
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server)
+		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
 	}
 	return nil
 }
@@ -635,7 +635,7 @@ func (op Operation) appendLegacyQueryDocument(dst []byte, filter bsoncore.Docume
 func (op Operation) roundTripLegacyCursor(ctx context.Context, wm []byte, srvr Server, conn Connection, collName, identifier string) (bsoncore.Document, error) {
 	wm, err := op.roundTripLegacy(ctx, conn, wm)
 	if ep, ok := srvr.(ErrorProcessor); ok {
-		ep.ProcessError(err)
+		ep.ProcessError(err, conn)
 	}
 	if err != nil {
 		return nil, err
@@ -648,12 +648,12 @@ func (op Operation) roundTripLegacyCursor(ctx context.Context, wm []byte, srvr S
 func (op Operation) roundTripLegacy(ctx context.Context, conn Connection, wm []byte) ([]byte, error) {
 	err := conn.WriteWireMessage(ctx, wm)
 	if err != nil {
-		return nil, Error{Message: err.Error(), Labels: []string{TransientTransactionError, NetworkError}}
+		return nil, Error{Message: err.Error(), Labels: []string{TransientTransactionError, NetworkError}, Wrapped: err}
 	}
 
 	wm, err = conn.ReadWireMessage(ctx, wm[:0])
 	if err != nil {
-		err = Error{Message: err.Error(), Labels: []string{TransientTransactionError, NetworkError}}
+		err = Error{Message: err.Error(), Labels: []string{TransientTransactionError, NetworkError}, Wrapped: err}
 	}
 	return wm, err
 }
