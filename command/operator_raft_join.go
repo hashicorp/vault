@@ -14,10 +14,12 @@ var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
 
 type OperatorRaftJoinCommand struct {
 	flagRetry            bool
+	flagNonVoter         bool
 	flagLeaderCACert     string
 	flagLeaderClientCert string
 	flagLeaderClientKey  string
-	flagNonVoter         bool
+	flagAutoJoinScheme   string
+	flagAutoJoinPort     uint
 	*BaseCommand
 }
 
@@ -39,6 +41,13 @@ Usage: vault operator raft join [options] <leader-api-addr|auto-join-configurati
 
       $ vault operator raft join "provider=aws region=eu-west-1 ..."
 			
+  Join the current node as a peer to the Raft cluster by providing cloud auto-join
+  configuration with an explicit URI scheme and port.
+
+      $ vault operator raft join "provider=aws region=eu-west-1 ..." \
+        -auto-join-scheme="http" \
+        -auto-join-port=8201
+
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
 
@@ -56,6 +65,22 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "auto-join-scheme",
+		Target:     &c.flagAutoJoinScheme,
+		Completion: complete.PredictNothing,
+		Default:    "https",
+		Usage:      "An optional URI protocol scheme used for addresses discovered via auto-join.",
+	})
+
+	f.UintVar(&UintVar{
+		Name:       "auto-join-port",
+		Target:     &c.flagAutoJoinPort,
+		Completion: complete.PredictNothing,
+		Default:    8200,
+		Usage:      "An optional port used for addresses discovered via auto-join.",
+	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-ca-cert",
@@ -158,6 +183,8 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 
 	if strings.Contains(leaderInfo, "provider=") {
 		joinReq.AutoJoin = leaderInfo
+		joinReq.AutoJoinScheme = c.flagAutoJoinScheme
+		joinReq.AutoJoinPort = c.flagAutoJoinPort
 	} else {
 		joinReq.LeaderAPIAddr = leaderInfo
 	}
