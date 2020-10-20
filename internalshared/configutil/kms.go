@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
 	"github.com/hashicorp/go-multierror"
@@ -186,6 +187,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	case wrapping.GCPCKMS:
 		wrapper, kmsInfo, err = GetGCPCKMSKMSFunc(opts, configKMS)
 
+	case wrapping.HuaweiCloudKMS:
+		wrapper, kmsInfo, err = GetHuaweiCloudKMSFunc(opts, configKMS)
+
 	case wrapping.OCIKMS:
 		wrapper, kmsInfo, err = GetOCIKMSKMSFunc(opts, configKMS)
 
@@ -303,6 +307,24 @@ func GetGCPCKMSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrappe
 		info["GCP KMS Region"] = wrapperInfo["region"]
 		info["GCP KMS Key Ring"] = wrapperInfo["key_ring"]
 		info["GCP KMS Crypto Key"] = wrapperInfo["crypto_key"]
+	}
+	return wrapper, info, nil
+}
+
+func GetHuaweiCloudKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+	wrapper := huaweicloudkms.NewWrapper(opts)
+	wrapperInfo, err := wrapper.SetConfig(kms.Config)
+	if err != nil {
+		// If the error is any other than logical.KeyNotFoundError, return the error
+		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
+			return nil, nil, err
+		}
+	}
+	info := make(map[string]string)
+	if wrapperInfo != nil {
+		info["HuaweiCloud KMS Region"] = wrapperInfo["region"]
+		info["HuaweiCloud KMS Project"] = wrapperInfo["project"]
+		info["HuaweiCloud KMS KeyID"] = wrapperInfo["kms_key_id"]
 	}
 	return wrapper, info, nil
 }
