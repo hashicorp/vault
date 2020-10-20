@@ -1014,8 +1014,11 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != nil {
-		t.Fatal("expected nil response")
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if !resp.IsEmpty() {
+		t.Fatal("expected empty response")
 	}
 
 	p, err := keysutil.LoadPolicy(context.Background(), storage, path.Join("policy", "testkey"))
@@ -1502,8 +1505,11 @@ func TestBadInput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != nil {
-		t.Fatal("expected nil response")
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if !resp.IsEmpty() {
+		t.Fatal("expected empty response")
 	}
 
 	req.Path = "decrypt/test"
