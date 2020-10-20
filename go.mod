@@ -34,6 +34,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
@@ -72,7 +73,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
-	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
+	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
