@@ -122,7 +122,7 @@ PRODUCT_REVISION_NICE_NAME := <current-workdir>
 DIRTY_FILES := $(shell cd $(REPO_ROOT) && git ls-files -o -m --exclude-standard -- $(ALWAYS_EXCLUDE_SOURCE_GIT) | xargs)
 ifneq ($(DIRTY_FILES),)
 DIRTY := dirty_$(shell cd $(REPO_ROOT) && cat $(DIRTY_FILES) | $(SUM) || echo FAIL)_
-ifeq ($(DIRTY),FAIL_)
+ifeq ($(findstring FAIL_,$(DIRTY)),FAIL_)
 $(error Failed to determine dirty files sha1sum)
 endif
 endif
@@ -234,6 +234,8 @@ PRODUCT_CIRCLECI_SLUG := $(shell $(call QUERY_SPEC,.config["circleci-project-slu
 
 # PRODUCT_CIRCLECI_HOST is the host configured to build this repo.
 PRODUCT_CIRCLECI_HOST := $(shell $(call QUERY_SPEC,.config["circleci-host"]))
+
+export ON_PUBLISH := $(shell $(call QUERY_SPEC,.config["on-publish"]))
 
 # End including config once only.
 endif
