@@ -17,3 +17,6 @@
 # binaries and such
 bin/*
 pkg/*
+
+# custom test script
+scripts/custom.sh
