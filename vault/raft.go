@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
+	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
@@ -1183,6 +1184,8 @@ func newDiscover() (*discover.Discover, error) {
 	for k, v := range discover.Providers {
 		providers[k] = v
 	}
+
+	providers["k8s"] = &discoverk8s.Provider{}
 
 	return discover.New(
 		discover.WithProviders(providers),
