@@ -947,7 +947,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					}
 
 					if u.Scheme == "" {
-						scheme := leaderInfo.Scheme
+						scheme := leaderInfo.AutoJoinScheme
 						if scheme == "" {
 							// default to HTTPS when no scheme is provided
 							scheme = "https"
@@ -957,7 +957,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					}
 
 					if u.Port() == "" {
-						port := leaderInfo.Port
+						port := leaderInfo.AutoJoinPort
 						if port == 0 {
 							// default to 8200 when no port is provided
 							port = 8200

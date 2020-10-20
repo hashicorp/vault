@@ -130,12 +130,13 @@ type LeaderJoinInfo struct {
 	// via 'leader_api_addr'.
 	AutoJoin string `json:"auto_join"`
 
-	// Scheme defines the optional URI protocol scheme for addresses discovered via
-	// auto-join.
-	Scheme string `json:"scheme"`
+	// AutoJoinScheme defines the optional URI protocol scheme for addresses
+	// discovered via auto-join.
+	AutoJoinScheme string `json:"auto_join_scheme"`
 
-	// Port defines the optional port used for addressed discovered via auto-join.
-	Port uint `json:"port"`
+	// AutoJoinPort defines the optional port used for addressed discovered via
+	// auto-join.
+	AutoJoinPort uint `json:"auto_join_port"`
 
 	// LeaderAPIAddr is the address of the leader node to connect to
 	LeaderAPIAddr string `json:"leader_api_addr"`
