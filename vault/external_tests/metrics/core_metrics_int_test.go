@@ -3,15 +3,131 @@ package metrics
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"testing"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 )
+
+func TestMountTableMetrics(t *testing.T) {
+	inm := metrics.NewInmemSink(time.Minute, time.Minute*10)
+	clusterSink := metricsutil.NewClusterMetricSink("mycluster", inm)
+	clusterSink.GaugeInterval = time.Second
+	conf := &vault.CoreConfig{
+		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inm, true),
+		MetricSink:      clusterSink,
+	}
+	cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
+		KeepStandbysSealed: false,
+		HandlerFunc:        vaulthttp.Handler,
+		NumCores:           2,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	// Wait for core to become active
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+
+	client := cores[0].Client
+
+	// Verify that the nonlocal logical mount table has 3 entries -- cubbyhole, identity, and kv
+
+	data, err := sysMetricsReq(client, cluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nonlocalLogicalMountsize, err := gaugeSearchHelper(data, 3)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	// Mount new kv
+	if err = client.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+		Options: map[string]string{
+			"version": "2",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err = sysMetricsReq(client, cluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nonlocalLogicalMountsizeAfterMount, err := gaugeSearchHelper(data, 4)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if nonlocalLogicalMountsizeAfterMount <= nonlocalLogicalMountsize {
+		t.Errorf("Mount size does not change after new mount is mounted")
+	}
+
+}
+
+func sysMetricsReq(client *api.Client, cluster *vault.TestCluster) (*SysMetricsJSON, error) {
+	r := client.NewRequest("GET", "/v1/sys/metrics")
+	r.Headers.Set("X-Vault-Token", cluster.RootToken)
+	var data SysMetricsJSON
+	mountAddResp, err := client.RawRequestWithContext(context.Background(), r)
+	if err != nil {
+		return nil, err
+	}
+	bodyBytes, err := ioutil.ReadAll(mountAddResp.Response.Body)
+	if err != nil {
+		return nil, err
+	}
+	if mountAddResp != nil {
+		defer mountAddResp.Body.Close()
+	}
+	if err := json.Unmarshal(bodyBytes, &data); err != nil {
+		return nil, errors.New("failed to unmarshal:" + err.Error())
+	}
+	return &data, nil
+}
+
+func gaugeSearchHelper(data *SysMetricsJSON, expectedValue int) (int, error) {
+	foundFlag := false
+	tablesize := int(^uint(0) >> 1)
+	for _, gauge := range data.Gauges {
+		labels := gauge.Labels
+		if loc, ok := labels["local"]; ok && loc.(string) == "false" {
+			if tp, ok := labels["type"]; ok && tp.(string) == "logical" {
+				if gauge.Name == "core.mount_table.num_entries" {
+					foundFlag = true
+					if err := gaugeConditionCheck("eq", expectedValue, gauge.Value); err != nil {
+						return int(^uint(0) >> 1), err
+					}
+				} else if gauge.Name == "core.mount_table.size" {
+					tablesize = gauge.Value
+				}
+			}
+		}
+	}
+	if !foundFlag {
+		return int(^uint(0) >> 1), errors.New("No metrics reported for mount sizes")
+	}
+	return tablesize, nil
+}
+
+func gaugeConditionCheck(comparator string, compareVal int, compareToVal int) error {
+	if comparator == "eq" && compareVal != compareToVal {
+		return errors.New("equality gauge check for comparison failed")
+	}
+	return nil
+}
 
 func TestLeaderReElectionMetrics(t *testing.T) {
 	inm := metrics.NewInmemSink(time.Minute, time.Minute*10)
@@ -127,6 +243,7 @@ type SysMetricsJSON struct {
 }
 
 type GaugeJSON struct {
-	Name  string `json:"Name"`
-	Value int    `json:"Value"`
+	Name   string                 `json:"Name"`
+	Value  int                    `json:"Value"`
+	Labels map[string]interface{} `json:"Labels"`
 }
