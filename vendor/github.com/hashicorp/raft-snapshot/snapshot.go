@@ -6,12 +6,14 @@ package snapshot
 import (
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 )
 
@@ -19,8 +21,9 @@ import (
 // to hold a snapshot. By using an intermediate file we avoid holding everything
 // in memory.
 type Snapshot struct {
-	file  *os.File
-	index uint64
+	file     *os.File
+	index    uint64
+	checksum string
 }
 
 // Size returns the file size of the snapshot archive.
@@ -43,11 +46,11 @@ type Sealer interface {
 // and returns an object that gives access to the file as an io.Reader. You must
 // arrange to call Close() on the returned object or else you will leak a
 // temporary file.
-func New(logger log.Logger, r *raft.Raft) (*Snapshot, error) {
+func New(logger hclog.Logger, r *raft.Raft) (*Snapshot, error) {
 	return NewWithSealer(logger, r, nil)
 }
 
-func NewWithSealer(logger log.Logger, r *raft.Raft, sealer Sealer) (*Snapshot, error) {
+func NewWithSealer(logger hclog.Logger, r *raft.Raft, sealer Sealer) (*Snapshot, error) {
 	// Take the snapshot.
 	future := r.Snapshot()
 	if err := future.Error(); err != nil {
@@ -86,8 +89,11 @@ func NewWithSealer(logger log.Logger, r *raft.Raft, sealer Sealer) (*Snapshot, e
 		}
 	}()
 
+	hash := sha256.New()
+	out := io.MultiWriter(hash, archive)
+
 	// Wrap the file writer in a gzip compressor.
-	compressor := gzip.NewWriter(archive)
+	compressor := gzip.NewWriter(out)
 
 	// Write the archive.
 	if err := write(compressor, metadata, snap, sealer); err != nil {
@@ -99,17 +105,57 @@ func NewWithSealer(logger log.Logger, r *raft.Raft, sealer Sealer) (*Snapshot, e
 		return nil, fmt.Errorf("failed to compress snapshot file: %v", err)
 	}
 
-	// Sync the compressed file and rewind it so it's ready to be streamed
-	// out by the caller.
-	if err := archive.Sync(); err != nil {
-		return nil, fmt.Errorf("failed to sync snapshot: %v", err)
-	}
+	// rewind it so it's ready to be streamed out by the caller.
 	if _, err := archive.Seek(0, 0); err != nil {
 		return nil, fmt.Errorf("failed to rewind snapshot: %v", err)
 	}
+	checksum := "sha-256=" + base64.StdEncoding.EncodeToString(hash.Sum(nil))
 
 	keep = true
-	return &Snapshot{archive, metadata.Index}, nil
+	return &Snapshot{archive, metadata.Index, checksum}, nil
+}
+
+// Write takes a state snapshot of the given Raft instance into w.
+func Write(logger hclog.Logger, r *raft.Raft, sealer Sealer, w io.Writer) error {
+	// Take the snapshot.
+	future := r.Snapshot()
+	if err := future.Error(); err != nil {
+		return fmt.Errorf("Raft error when taking snapshot: %v", err)
+	}
+
+	// Open up the snapshot.
+	metadata, snap, err := future.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open snapshot: %w", err)
+	}
+	var closed bool
+	defer func() {
+		if !closed {
+			if err := snap.Close(); err != nil {
+				logger.Error("failed to close Raft snapshot", "error", err)
+			}
+		}
+	}()
+
+	// Wrap the file writer in a gzip compressor.
+	compressor := gzip.NewWriter(w)
+
+	// Write the archive.
+	if err := write(compressor, metadata, snap, sealer); err != nil {
+		return fmt.Errorf("failed to write snapshot file: %v", err)
+	}
+
+	// Finish the compressed stream.
+	if err := compressor.Close(); err != nil {
+		return fmt.Errorf("failed to compress snapshot file: %v", err)
+	}
+
+	if err := snap.Close(); err != nil {
+		return fmt.Errorf("failed to close Raft snapshot: %w", err)
+	}
+	closed = true
+
+	return nil
 }
 
 // Index returns the index of the snapshot. This is safe to call on a nil
@@ -119,6 +165,15 @@ func (s *Snapshot) Index() uint64 {
 		return 0
 	}
 	return s.index
+}
+
+// Checksum returns the checksum for the snapshot in the <algo>=<base64 of hash> format
+// e.g. "sha-256=gPelGB7..."
+func (s *Snapshot) Checksum() string {
+	if s == nil {
+		return ""
+	}
+	return s.checksum
 }
 
 // Read passes through to the underlying snapshot file. This is safe to call on
@@ -158,16 +213,54 @@ func Verify(in io.Reader) (*raft.SnapshotMeta, error) {
 	if err := read(decomp, &metadata, ioutil.Discard, nil); err != nil {
 		return nil, fmt.Errorf("failed to read snapshot file: %v", err)
 	}
+
+	if err := concludeGzipRead(decomp); err != nil {
+		return nil, err
+	}
+
+	return &metadata, nil
+}
+
+// concludeGzipRead should be invoked after you think you've consumed all of
+// the data from the gzip stream. It will error if the stream was corrupt.
+//
+// The docs for gzip.Reader say: "Clients should treat data returned by Read as
+// tentative until they receive the io.EOF marking the end of the data."
+func concludeGzipRead(decomp *gzip.Reader) error {
+	extra, err := io.Copy(ioutil.Discard, decomp) // Copy consumes the EOF
+	if err != nil {
+		return err
+	} else if extra != 0 {
+		return fmt.Errorf("%d unread uncompressed bytes remain", extra)
+	}
+	return nil
+}
+
+// Parse reads the snapshot from the input reader, decompresses it, and pipes
+// the binary data to the output writer.
+func Parse(in io.Reader, out io.Writer) (*raft.SnapshotMeta, error) {
+	// Wrap the reader in a gzip decompressor.
+	decomp, err := gzip.NewReader(in)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decompress snapshot: %v", err)
+	}
+	defer decomp.Close()
+
+	// Read the archive, and write the snapshot data to out.
+	var metadata raft.SnapshotMeta
+	if err := read(decomp, &metadata, out, nil); err != nil {
+		return nil, fmt.Errorf("failed to read snapshot file: %v", err)
+	}
 	return &metadata, nil
 }
 
 // Restore takes the snapshot from the reader and attempts to apply it to the
 // given Raft instance.
-func Restore(logger log.Logger, in io.Reader, r *raft.Raft) error {
+func Restore(logger hclog.Logger, in io.Reader, r *raft.Raft) error {
 	return RestoreWithSealer(logger, in, r, nil)
 }
 
-func RestoreWithSealer(logger log.Logger, in io.Reader, r *raft.Raft, sealer Sealer) error {
+func RestoreWithSealer(logger hclog.Logger, in io.Reader, r *raft.Raft, sealer Sealer) error {
 	var metadata raft.SnapshotMeta
 	snap, cleanupFunc, err := WriteToTempFileWithSealer(logger, in, &metadata, sealer)
 	if err != nil {
@@ -183,11 +276,11 @@ func RestoreWithSealer(logger log.Logger, in io.Reader, r *raft.Raft, sealer Sea
 	return nil
 }
 
-func WriteToTempFile(logger log.Logger, in io.Reader, metadata *raft.SnapshotMeta) (*os.File, func(), error) {
+func WriteToTempFile(logger hclog.Logger, in io.Reader, metadata *raft.SnapshotMeta) (*os.File, func(), error) {
 	return WriteToTempFileWithSealer(logger, in, metadata, nil)
 }
 
-func WriteToTempFileWithSealer(logger log.Logger, in io.Reader, metadata *raft.SnapshotMeta, sealer Sealer) (*os.File, func(), error) {
+func WriteToTempFileWithSealer(logger hclog.Logger, in io.Reader, metadata *raft.SnapshotMeta, sealer Sealer) (*os.File, func(), error) {
 	// Wrap the reader in a gzip decompressor.
 	decomp, err := gzip.NewReader(in)
 	if err != nil {
@@ -220,11 +313,7 @@ func WriteToTempFileWithSealer(logger log.Logger, in io.Reader, metadata *raft.S
 		return nil, nil, fmt.Errorf("failed to read snapshot file: %v", err)
 	}
 
-	// Sync and rewind the file so it's ready to be read again.
-	if err := snap.Sync(); err != nil {
-		cleanupFunc()
-		return nil, nil, fmt.Errorf("failed to sync temp snapshot: %v", err)
-	}
+	// Rewind the file so it's ready to be read again.
 	if _, err := snap.Seek(0, 0); err != nil {
 		cleanupFunc()
 		return nil, nil, fmt.Errorf("failed to rewind temp snapshot: %v", err)
