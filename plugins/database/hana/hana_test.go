@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,8 @@ func TestHANA_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
+	expectedConfig := copyConfig(connectionDetails)
+
 	initReq := dbplugin.InitializeRequest{
 		Config:           connectionDetails,
 		VerifyConnection: true,
@@ -29,8 +32,9 @@ func TestHANA_Initialize(t *testing.T) {
 
 	db := new()
 	initResp := dbtesting.AssertInitialize(t, db, initReq)
-	if initResp.Config == nil {
-		t.Fatalf("config not set by initialization")
+
+	if !reflect.DeepEqual(initResp.Config, expectedConfig) {
+		t.Fatalf("Actual config: %#v\nExpected config: %#v", initResp.Config, expectedConfig)
 	}
 }
 
@@ -117,6 +121,7 @@ func TestHANA_UpdateUser(t *testing.T) {
 		req              dbplugin.UpdateUserRequest
 		startingPassword string
 		expectErrOnLogin bool
+		expectedErrMsg   string
 	}
 
 	tests := map[string]testCase{
@@ -128,6 +133,7 @@ func TestHANA_UpdateUser(t *testing.T) {
 			},
 			startingPassword: "this_is_Thirty_2_characters_wow_",
 			expectErrOnLogin: true,
+			expectedErrMsg:   "user is forced to change password",
 		},
 		"with custom update statements": {
 			req: dbplugin.UpdateUserRequest{
@@ -177,8 +183,12 @@ func TestHANA_UpdateUser(t *testing.T) {
 
 			dbtesting.AssertUpdateUser(t, db, test.req)
 			err := testCredsExist(t, connURL, userResp.Username, test.req.Password.NewPassword)
-			if test.expectErrOnLogin && err == nil {
-				t.Fatalf("Able to login with new creds when expecting an issue")
+			if test.expectErrOnLogin {
+				if err == nil {
+					t.Fatalf("Able to login with new creds when expecting an issue")
+				} else if test.expectedErrMsg != "" && !strings.Contains(err.Error(), test.expectedErrMsg) {
+					t.Fatalf("Expected error message to contain \"%s\", received: %s", test.expectedErrMsg, err)
+				}
 			}
 			if !test.expectErrOnLogin && err != nil {
 				t.Fatalf("Unable to login: %s", err)
@@ -276,6 +286,14 @@ func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
 	if err == nil {
 		t.Fatalf("Able to log in when we should not be able to")
 	}
+}
+
+func copyConfig(config map[string]interface{}) map[string]interface{} {
+	newConfig := map[string]interface{}{}
+	for k, v := range config {
+		newConfig[k] = v
+	}
+	return newConfig
 }
 
 const testHANARole = `
