@@ -10,10 +10,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/lib/pq"
@@ -35,7 +35,7 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 `
 )
 
-var _ newdbplugin.Database = (*RedShift)(nil)
+var _ dbplugin.Database = (*RedShift)(nil)
 
 // lowercaseUsername is the reason we wrote this plugin. Redshift implements (mostly)
 // a postgres 8 interface, and part of that is under the hood, it's lowercasing the
@@ -44,7 +44,7 @@ func New(lowercaseUsername bool) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		db := newRedshift(lowercaseUsername)
 		// Wrap the plugin with middleware to sanitize errors
-		dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 		return dbType, nil
 	}
 }
@@ -68,7 +68,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -88,13 +88,13 @@ func (r *RedShift) Type() (string, error) {
 	return middlewareTypeName, nil
 }
 
-func (r *RedShift) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (r *RedShift) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	conf, err := r.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
 	}
 
-	return newdbplugin.InitializeResponse{
+	return dbplugin.InitializeResponse{
 		Config: conf,
 	}, nil
 }
@@ -109,9 +109,9 @@ func (r *RedShift) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (r *RedShift) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	if len(req.Statements.Commands) == 0 {
-		return newdbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
 	// Grab the lock
@@ -130,7 +130,7 @@ func (r *RedShift) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) 
 
 	username, err := credsutil.GenerateUsername(usernameOpts...)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 	password := req.Password
 	expirationStr := req.Expiration.UTC().Format("2006-01-02 15:04:05")
@@ -138,14 +138,14 @@ func (r *RedShift) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) 
 	// Get the connection
 	db, err := r.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 	defer db.Close()
 
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 
 	}
 	defer func() {
@@ -166,23 +166,23 @@ func (r *RedShift) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) 
 				"expiration": expirationStr,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return newdbplugin.NewUserResponse{}, err
+				return dbplugin.NewUserResponse{}, err
 			}
 		}
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
-	return newdbplugin.NewUserResponse{
+	return dbplugin.NewUserResponse{
 		Username: username,
 	}, nil
 }
 
-func (r *RedShift) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (r *RedShift) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return newdbplugin.UpdateUserResponse{}, nil
+		return dbplugin.UpdateUserResponse{}, nil
 	}
 
 	r.Lock()
@@ -190,13 +190,13 @@ func (r *RedShift) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReq
 
 	db, err := r.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.UpdateUserResponse{}, err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return newdbplugin.UpdateUserResponse{}, err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 	defer func() {
 		tx.Rollback()
@@ -222,7 +222,7 @@ func (r *RedShift) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReq
 					"expiration": expirationStr,
 				}
 				if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-					return newdbplugin.UpdateUserResponse{}, err
+					return dbplugin.UpdateUserResponse{}, err
 				}
 			}
 		}
@@ -232,14 +232,14 @@ func (r *RedShift) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReq
 		username := req.Username
 		password := req.Password.NewPassword
 		if username == "" || password == "" {
-			return newdbplugin.UpdateUserResponse{}, errors.New("must provide both username and password")
+			return dbplugin.UpdateUserResponse{}, errors.New("must provide both username and password")
 		}
 
 		// Check if the role exists
 		var exists bool
 		err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
 		if err != nil && err != sql.ErrNoRows {
-			return newdbplugin.UpdateUserResponse{}, err
+			return dbplugin.UpdateUserResponse{}, err
 		}
 
 		// Vault requires the database user already exist, and that the credentials
@@ -262,16 +262,16 @@ func (r *RedShift) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReq
 					"password": password,
 				}
 				if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-					return newdbplugin.UpdateUserResponse{}, err
+					return dbplugin.UpdateUserResponse{}, err
 				}
 			}
 		}
 	}
 
-	return newdbplugin.UpdateUserResponse{}, tx.Commit()
+	return dbplugin.UpdateUserResponse{}, tx.Commit()
 }
 
-func (r *RedShift) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (r *RedShift) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	// Grab the lock
 	r.Lock()
 	defer r.Unlock()
@@ -283,16 +283,16 @@ func (r *RedShift) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReq
 	return r.customDeleteUser(ctx, req)
 }
 
-func (r *RedShift) customDeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (r *RedShift) customDeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	db, err := r.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer func() {
 		tx.Rollback()
@@ -309,18 +309,18 @@ func (r *RedShift) customDeleteUser(ctx context.Context, req newdbplugin.DeleteU
 				"name": req.Username,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return newdbplugin.DeleteUserResponse{}, err
+				return dbplugin.DeleteUserResponse{}, err
 			}
 		}
 	}
 
-	return newdbplugin.DeleteUserResponse{}, tx.Commit()
+	return dbplugin.DeleteUserResponse{}, tx.Commit()
 }
 
-func (r *RedShift) defaultDeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	db, err := r.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer db.Close()
 
@@ -330,11 +330,11 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req newdbplugin.Delete
 	var exists bool
 	err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	if !exists {
-		return newdbplugin.DeleteUserResponse{}, nil
+		return dbplugin.DeleteUserResponse{}, nil
 	}
 
 	// Query for permissions; we need to revoke permissions before we can drop
@@ -343,13 +343,13 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req newdbplugin.Delete
 	// we want to remove as much access as possible
 	stmt, err := db.PrepareContext(ctx, "SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee=$1;")
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer stmt.Close()
 
 	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer rows.Close()
 
@@ -386,7 +386,7 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req newdbplugin.Delete
 	// this username
 	var dbname sql.NullString
 	if err := db.QueryRowContext(ctx, "SELECT current_database();").Scan(&dbname); err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	if dbname.Valid {
@@ -425,22 +425,22 @@ $$;`)
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return newdbplugin.DeleteUserResponse{}, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
+		return dbplugin.DeleteUserResponse{}, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return newdbplugin.DeleteUserResponse{}, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
+		return dbplugin.DeleteUserResponse{}, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
 		`DROP USER IF EXISTS %s;`, pq.QuoteIdentifier(username)))
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer stmt.Close()
 	if _, err := stmt.ExecContext(ctx); err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
-	return newdbplugin.DeleteUserResponse{}, nil
+	return dbplugin.DeleteUserResponse{}, nil
 }

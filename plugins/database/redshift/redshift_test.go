@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
-
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/lib/pq"
 )
@@ -134,21 +132,21 @@ func TestRedshift_NewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	usernameConfig := newdbplugin.UsernameMetadata{
+	usernameConfig := dbplugin.UsernameMetadata{
 		DisplayName: "test",
 		RoleName:    "test",
 	}
 
 	// Test with no configured Creation Statement
-	_, err = db.NewUser(context.Background(), newdbplugin.NewUserRequest{})
+	_, err = db.NewUser(context.Background(), dbplugin.NewUserRequest{})
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
 	}
 
-	req := newdbplugin.NewUserRequest{
+	req := dbplugin.NewUserRequest{
 		UsernameConfig: usernameConfig,
 		Password:       "SuperSecurePa55w0rd!",
-		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Statements:     dbplugin.Statements{Commands: []string{testRedshiftRole}},
 		Expiration:     time.Now().Add(5 * time.Minute),
 	}
 
@@ -195,16 +193,16 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	usernameConfig := newdbplugin.UsernameMetadata{
+	usernameConfig := dbplugin.UsernameMetadata{
 		DisplayName: "test",
 		RoleName:    "test",
 	}
 
 	const password = "SuperSecurePa55w0rd!"
-	newReq := newdbplugin.NewUserRequest{
+	newReq := dbplugin.NewUserRequest{
 		UsernameConfig: usernameConfig,
 		Password:       password,
-		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Statements:     dbplugin.Statements{Commands: []string{testRedshiftRole}},
 		Expiration:     time.Now().Add(5 * time.Second),
 	}
 
@@ -219,9 +217,9 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	}
 
 	// Test default renew statement
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := dbplugin.UpdateUserRequest{
 		Username: username,
-		Expiration: &newdbplugin.ChangeExpiration{
+		Expiration: &dbplugin.ChangeExpiration{
 			NewExpiration: time.Now().Add(time.Minute),
 		},
 	}
@@ -239,10 +237,10 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	}
 
 	// Now test the same again with explicitly set renew statements
-	newReq = newdbplugin.NewUserRequest{
+	newReq = dbplugin.NewUserRequest{
 		UsernameConfig: usernameConfig,
 		Password:       password,
-		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Statements:     dbplugin.Statements{Commands: []string{testRedshiftRole}},
 		Expiration:     time.Now().Add(5 * time.Second),
 	}
 
@@ -256,11 +254,11 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	updateReq = newdbplugin.UpdateUserRequest{
+	updateReq = dbplugin.UpdateUserRequest{
 		Username: username,
-		Expiration: &newdbplugin.ChangeExpiration{
+		Expiration: &dbplugin.ChangeExpiration{
 			NewExpiration: time.Now().Add(time.Minute),
-			Statements: newdbplugin.Statements{
+			Statements: dbplugin.Statements{
 				Commands: []string{defaultRenewSQL},
 			},
 		},
@@ -300,15 +298,15 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	usernameConfig := newdbplugin.UsernameMetadata{
+	usernameConfig := dbplugin.UsernameMetadata{
 		DisplayName: "test",
 		RoleName:    "test",
 	}
 
 	const password = "SuperSecretPa55word!"
-	newRequest := newdbplugin.NewUserRequest{
+	newRequest := dbplugin.NewUserRequest{
 		UsernameConfig: usernameConfig,
-		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Statements:     dbplugin.Statements{Commands: []string{testRedshiftRole}},
 		Password:       password,
 		Expiration:     time.Now().Add(2 * time.Second),
 	}
@@ -324,7 +322,7 @@ func TestRedshift_DeleteUser(t *testing.T) {
 	}
 
 	// Test default revoke statements
-	_, err = db.DeleteUser(context.Background(), newdbplugin.DeleteUserRequest{
+	_, err = db.DeleteUser(context.Background(), dbplugin.DeleteUserRequest{
 		Username: username,
 	})
 	if err != nil {
@@ -347,9 +345,9 @@ func TestRedshift_DeleteUser(t *testing.T) {
 	}
 
 	// Test custom revoke statements
-	req := newdbplugin.DeleteUserRequest{
+	req := dbplugin.DeleteUserRequest{
 		Username: username,
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{defaultRedshiftRevocationSQL},
 		},
 	}
@@ -394,11 +392,11 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 	const password1 = "MyTemporaryRootPassword1!"
 	const password2 = "MyTemporaryRootPassword2!"
 
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := dbplugin.UpdateUserRequest{
 		Username: dbUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: password1,
-			Statements:  newdbplugin.Statements{},
+			Statements:  dbplugin.Statements{},
 		},
 	}
 
@@ -413,11 +411,11 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 	}
 
 	// Test with explicitly set rotation statement
-	updateReq = newdbplugin.UpdateUserRequest{
+	updateReq = dbplugin.UpdateUserRequest{
 		Username: dbUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: password2,
-			Statements: newdbplugin.Statements{
+			Statements: dbplugin.Statements{
 				Commands: []string{testRedshiftStaticRoleRotate},
 			},
 		},
@@ -468,9 +466,9 @@ func TestRedshift_UpdateUser_RootPassword(t *testing.T) {
 	}
 
 	const tempPassword = "MyTemporaryRootPassword1!"
-	updateReq := newdbplugin.UpdateUserRequest{
+	updateReq := dbplugin.UpdateUserRequest{
 		Username: adminUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: tempPassword,
 		},
 	}
@@ -503,9 +501,9 @@ func TestRedshift_UpdateUser_RootPassword(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	updateReq = newdbplugin.UpdateUserRequest{
+	updateReq = dbplugin.UpdateUserRequest{
 		Username: adminUser,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: adminPassword,
 		},
 	}
