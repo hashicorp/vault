@@ -928,7 +928,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			case leaderInfo.LeaderAPIAddr != "":
 				if err := joinLeader(leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
-					c.logger.Error("join attempt failed", "error", err)
+					c.logger.Warn("join attempt failed", "error", err)
 				} else {
 					// successfully joined leader
 					return nil
@@ -968,7 +968,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					}
 
 					if err := joinLeader(leaderInfo, addr); err != nil {
-						c.logger.Error("join attempt failed", "error", err)
+						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
 						return nil
