@@ -37,12 +37,13 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 
 var _ dbplugin.Database = (*RedShift)(nil)
 
-// lowercaseUsername is the reason we wrote this plugin. Redshift implements (mostly)
+// New implements builtinplugins.BuiltinFactory
+// lowerCaseUsername is the reason we wrote this plugin. Redshift implements (mostly)
 // a postgres 8 interface, and part of that is under the hood, it's lowercasing the
 // usernames.
-func New(lowercaseUsername bool) func() (interface{}, error) {
+func New(lowerCaseUsername bool) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		db := newRedshift(lowercaseUsername)
+		db := newRedshift(lowerCaseUsername)
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 		return dbType, nil
@@ -88,6 +89,8 @@ func (r *RedShift) Type() (string, error) {
 	return middlewareTypeName, nil
 }
 
+// Initialize must be called on each new RedShift struct before use.
+// It uses the connutil.SQLConnectionProducer's Init function to do all the lifting.
 func (r *RedShift) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	conf, err := r.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
@@ -109,6 +112,9 @@ func (r *RedShift) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
+// NewUser creates a new user in the database. There is no default statement for
+// creating users, so one must be specified in the plugin config.
+// Generated usernames are of the form v-{display-name}-{role-name}-{UUID}-{timestamp}
 func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	if len(req.Statements.Commands) == 0 {
 		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
@@ -180,6 +186,10 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 	}, nil
 }
 
+// UpdateUser can update the expiration or the password of a user, or both.
+// The updates all happen in a single transaction, so they will either all
+// succeed or all fail.
+// Both updates support both default and custom statements.
 func (r *RedShift) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
 		return dbplugin.UpdateUserResponse{}, nil
@@ -271,6 +281,7 @@ func (r *RedShift) UpdateUser(ctx context.Context, req dbplugin.UpdateUserReques
 	return dbplugin.UpdateUserResponse{}, tx.Commit()
 }
 
+// DeleteUser supports both default and custom statements to delete a user.
 func (r *RedShift) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	// Grab the lock
 	r.Lock()

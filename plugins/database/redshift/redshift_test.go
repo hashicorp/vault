@@ -102,14 +102,16 @@ func TestRedshift_Initialize(t *testing.T) {
 	// Test decoding a string value for max_open_connections
 	connectionDetails = map[string]interface{}{
 		"connection_url":       connURL,
-		"max_open_connections": "5",
+		"max_open_connections": "73",
 	}
 
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
+	if db.MaxOpenConnections != 73 {
+		t.Fatalf("Expected max_open_connections to be set to 73, but was %d", db.MaxOpenConnections)
+	}
 }
 
 func TestRedshift_NewUser(t *testing.T) {
@@ -143,23 +145,34 @@ func TestRedshift_NewUser(t *testing.T) {
 		t.Fatal("Expected error when no creation statement is provided")
 	}
 
+	const password = "SuperSecurePa55w0rd!"
 	req := dbplugin.NewUserRequest{
 		UsernameConfig: usernameConfig,
-		Password:       "SuperSecurePa55w0rd!",
-		Statements:     dbplugin.Statements{Commands: []string{testRedshiftRole}},
-		Expiration:     time.Now().Add(5 * time.Minute),
+		Password:       password,
+		Statements: dbplugin.Statements{
+			Commands: []string{testRedshiftRole},
+		},
+		Expiration: time.Now().Add(5 * time.Minute),
 	}
 
 	resp, err := db.NewUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	username := resp.Username
 
-	if err = testCredsExist(t, url, resp.Username, req.Password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s\n%s:%s", err, resp.Username, req.Password)
+	if err = testCredsExist(t, url, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s\n%s:%s", err, username, password)
 	}
 
-	req.Statements.Commands = []string{testRedshiftReadOnlyRole}
+	req = dbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Password:       "SuperSecurePa55w0rd!",
+		Statements: dbplugin.Statements{
+			Commands: []string{testRedshiftReadOnlyRole},
+		},
+		Expiration: time.Now().Add(5 * time.Minute),
+	}
 	resp, err = db.NewUser(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -168,7 +181,7 @@ func TestRedshift_NewUser(t *testing.T) {
 	// Sleep to make sure we haven't expired if granularity is only down to the second
 	time.Sleep(2 * time.Second)
 
-	if err = testCredsExist(t, url, resp.Username, req.Password); err != nil {
+	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
