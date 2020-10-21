@@ -166,6 +166,11 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagAutoJoinScheme != "" && (c.flagAutoJoinScheme != "http" && c.flagAutoJoinScheme != "https") {
+		c.UI.Error(fmt.Sprintf("invalid scheme '%s'; must either be http or https", c.flagAutoJoinScheme))
+		return 1
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
