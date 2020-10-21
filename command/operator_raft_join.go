@@ -44,9 +44,8 @@ Usage: vault operator raft join [options] <leader-api-addr|auto-join-configurati
   Join the current node as a peer to the Raft cluster by providing cloud auto-join
   configuration with an explicit URI scheme and port.
 
-      $ vault operator raft join "provider=aws region=eu-west-1 ..." \
-        -auto-join-scheme="http" \
-        -auto-join-port=8201
+			$ vault operator raft join -auto-join-scheme="http" -auto-join-port=8201 \
+			  "provider=aws region=eu-west-1 ..."
 
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
