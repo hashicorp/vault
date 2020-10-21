@@ -22,7 +22,7 @@ First, create the primary cluster:
 ```shell
 helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.5.2_ent' \
+  --set='server.image.tag=1.5.4_ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -74,7 +74,7 @@ disaster recovery replication.
 ```shell
 helm install vault-secondary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.5.2_ent' \
+  --set='server.image.tag=1.5.4_ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
