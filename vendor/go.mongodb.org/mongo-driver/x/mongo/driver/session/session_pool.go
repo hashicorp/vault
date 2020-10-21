@@ -9,7 +9,7 @@ package session
 import (
 	"sync"
 
-	"go.mongodb.org/mongo-driver/x/bsonx"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 )
 
@@ -149,11 +149,11 @@ func (p *Pool) ReturnSession(ss *Server) {
 }
 
 // IDSlice returns a slice of session IDs for each session in the pool
-func (p *Pool) IDSlice() []bsonx.Doc {
+func (p *Pool) IDSlice() []bsoncore.Document {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	ids := []bsonx.Doc{}
+	var ids []bsoncore.Document
 	for node := p.head; node != nil; node = node.next {
 		ids = append(ids, node.SessionID)
 	}
