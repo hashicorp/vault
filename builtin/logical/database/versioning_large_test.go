@@ -250,7 +250,7 @@ func TestBackend_PluginMain_MockV4(t *testing.T) {
 }
 
 func TestBackend_PluginMain_MockV5(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
