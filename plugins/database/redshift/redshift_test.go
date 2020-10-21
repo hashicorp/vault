@@ -6,9 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-uuid"
 
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 
@@ -48,24 +49,26 @@ var (
 	vaultACC = "VAULT_ACC"
 )
 
-func redshiftEnv() (url string, user string, password string, errEmpty error) {
+func interpolateConnectionURL(url, user, password string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s", user, password, url)
+}
+
+func redshiftEnv() (connURL string, url string, user string, password string, errEmpty error) {
 	errEmpty = errors.New("err: empty but required env value")
 
 	if url = os.Getenv(keyRedshiftURL); url == "" {
-		return "", "", "", errEmpty
+		return "", "", "", "", errEmpty
 	}
 
 	if user = os.Getenv(keyRedshiftUser); url == "" {
-		return "", "", "", errEmpty
+		return "", "", "", "", errEmpty
 	}
 
 	if password = os.Getenv(keyRedshiftPassword); url == "" {
-		return "", "", "", errEmpty
+		return "", "", "", "", errEmpty
 	}
 
-	url = fmt.Sprintf("postgres://%s:%s@%s", user, password, url)
-
-	return url, user, password, nil
+	return interpolateConnectionURL(url, user, password), url, user, password, nil
 }
 
 func TestRedshift_Initialize(t *testing.T) {
@@ -73,13 +76,13 @@ func TestRedshift_Initialize(t *testing.T) {
 		t.SkipNow()
 	}
 
-	url, _, _, err := redshiftEnv()
+	connURL, _, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url":       url,
+		"connection_url":       connURL,
 		"max_open_connections": 5,
 	}
 
@@ -100,7 +103,7 @@ func TestRedshift_Initialize(t *testing.T) {
 
 	// Test decoding a string value for max_open_connections
 	connectionDetails = map[string]interface{}{
-		"connection_url":       url,
+		"connection_url":       connURL,
 		"max_open_connections": "5",
 	}
 
@@ -116,13 +119,13 @@ func TestRedshift_NewUser(t *testing.T) {
 		t.SkipNow()
 	}
 
-	url, _, _, err := redshiftEnv()
+	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": url,
+		"connection_url": connURL,
 	}
 
 	db := newRedshift(true)
@@ -177,13 +180,13 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 		t.SkipNow()
 	}
 
-	url, _, _, err := redshiftEnv()
+	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": url,
+		"connection_url": connURL,
 	}
 
 	db := newRedshift(true)
@@ -197,25 +200,27 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	req := newdbplugin.NewUserRequest{
+	const password = "SuperSecurePa55w0rd!"
+	newReq := newdbplugin.NewUserRequest{
 		UsernameConfig: usernameConfig,
-		Password:       "SuperSecurePa55w0rd!",
+		Password:       password,
 		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
 		Expiration:     time.Now().Add(5 * time.Second),
 	}
 
-	newResponse, err := db.NewUser(context.Background(), req)
+	newResp, err := db.NewUser(context.Background(), newReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	username := newResp.Username
 
-	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
+	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 	// Test default renew statement
 	updateReq := newdbplugin.UpdateUserRequest{
-		Username: newResponse.Username,
+		Username: username,
 		Expiration: &newdbplugin.ChangeExpiration{
 			NewExpiration: time.Now().Add(time.Minute),
 		},
@@ -229,24 +234,38 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	// Sleep longer than the initial expiration time
 	time.Sleep(5 * time.Second)
 
-	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
+	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 	// Now test the same again with explicitly set renew statements
-	req.Statements.Commands = []string{defaultRenewSQL}
-	req.Expiration = time.Now().Add(5 * time.Second)
+	newReq = newdbplugin.NewUserRequest{
+		UsernameConfig: usernameConfig,
+		Password:       password,
+		Statements:     newdbplugin.Statements{Commands: []string{testRedshiftRole}},
+		Expiration:     time.Now().Add(5 * time.Second),
+	}
 
-	_, err = db.NewUser(context.Background(), req)
+	newResp, err = db.NewUser(context.Background(), newReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	username = newResp.Username
 
-	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
+	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	updateReq.Expiration.NewExpiration = time.Now().Add(time.Minute)
+	updateReq = newdbplugin.UpdateUserRequest{
+		Username: username,
+		Expiration: &newdbplugin.ChangeExpiration{
+			NewExpiration: time.Now().Add(time.Minute),
+			Statements: newdbplugin.Statements{
+				Commands: []string{defaultRenewSQL},
+			},
+		},
+	}
+
 	_, err = db.UpdateUser(context.Background(), updateReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -255,7 +274,7 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	// Sleep longer than the initial expiration time
 	time.Sleep(5 * time.Second)
 
-	if err = testCredsExist(t, url, newResponse.Username, req.Password); err != nil {
+	if err = testCredsExist(t, url, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -266,13 +285,13 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		t.SkipNow()
 	}
 
-	url, _, _, err := redshiftEnv()
+	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": url,
+		"connection_url": connURL,
 	}
 
 	db := newRedshift(true)
@@ -344,18 +363,18 @@ func TestRedshift_DeleteUser(t *testing.T) {
 	}
 }
 
-/*func TestRedshift_UpdateUser_Password(t *testing.T) {
+func TestRedshift_UpdateUser_Password(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
 
-	url, _, _, err := redshiftEnv()
+	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": url,
+		"connection_url": connURL,
 	}
 
 	// create the database user
@@ -364,7 +383,7 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	dbUser := "vaultstatictest-" + fmt.Sprintf("%s", uid)
-	createTestPGUser(t, url, dbUser, "1Password", testRoleStaticCreate)
+	createTestPGUser(t, connURL, dbUser, "1Password", testRoleStaticCreate)
 
 	db := newRedshift(true)
 	_, err = db.Init(context.Background(), connectionDetails, true)
@@ -372,56 +391,51 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	password, err := db.GenerateCredentials(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	const password1 = "MyTemporaryRootPassword1!"
+	const password2 = "MyTemporaryRootPassword2!"
 
-	usernameConfig := dbplugin.StaticUserConfig{
+	updateReq := newdbplugin.UpdateUserRequest{
 		Username: dbUser,
-		Password: password,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: password1,
+			Statements:  newdbplugin.Statements{},
+		},
 	}
 
 	// Test with no configured Rotation Statement
-	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
-	if err == nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	statements := dbplugin.Statements{
-		Rotation: []string{testRedshiftStaticRoleRotate},
-	}
-	// User should not exist, make sure we can create
-	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	_, err = db.UpdateUser(context.Background(), updateReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, url, username, password); err != nil {
+	if err := testCredsExist(t, url, dbUser, password1); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// call SetCredentials again, password will change
-	newPassword, _ := db.GenerateCredentials(context.Background())
-	usernameConfig.Password = newPassword
-	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	// Test with explicitly set rotation statement
+	updateReq = newdbplugin.UpdateUserRequest{
+		Username: dbUser,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: password2,
+			Statements: newdbplugin.Statements{
+				Commands: []string{testRedshiftStaticRoleRotate},
+			},
+		},
+	}
+	_, err = db.UpdateUser(context.Background(), updateReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if password != newPassword {
-		t.Fatal("passwords should have changed")
-	}
-
-	if err := testCredsExist(t, url, username, password); err != nil {
+	if err := testCredsExist(t, url, dbUser, password2); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
 
-func TestRedshift_RotateRootCredentials(t *testing.T) {
+func TestRedshift_UpdateUser_RootPassword(t *testing.T) {
 	// Extra precaution is taken for rotating root creds because it's assumed that this
-	// test will run against a live redshift cluster. This test must run last because
-	// it is destructive.
+	// test will run against a live redshift cluster. It will try to set the password
+	// back to the old password at the end, but only as a best effort.
 	//
 	// To run this test you must pass TEST_ROTATE_ROOT=1
 
@@ -429,13 +443,13 @@ func TestRedshift_RotateRootCredentials(t *testing.T) {
 		t.SkipNow()
 	}
 
-	url, adminUser, adminPassword, err := redshiftEnv()
+	connURL, url, adminUser, adminPassword, err := redshiftEnv()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": url,
+		"connection_url": connURL,
 		"username":       adminUser,
 		"password":       adminPassword,
 	}
@@ -453,31 +467,67 @@ func TestRedshift_RotateRootCredentials(t *testing.T) {
 		t.Fatal("Database should be initialized")
 	}
 
-	newConf, err := db.RotateRootCredentials(context.Background(), nil)
+	const tempPassword = "MyTemporaryRootPassword1!"
+	updateReq := newdbplugin.UpdateUserRequest{
+		Username: adminUser,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: tempPassword,
+		},
+	}
+	_, err = db.UpdateUser(context.Background(), updateReq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	fmt.Printf("rotated root credentials, new user/pass:\nusername: %s\npassword: %s\n", newConf["username"], newConf["password"])
-
-	if newConf["password"] == adminPassword {
-		t.Fatal("password was not updated")
+	if err = testCredsExist(t, url, adminUser, tempPassword); err != nil {
+		t.Fatalf("Failed to test new admin user credentials after rotation: %s", err)
 	}
 
 	err = db.Close()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-}*/
 
-func testCredsExist(t testing.TB, connURL, username, password string) error {
-	t.Helper()
-	_, adminUser, adminPassword, err := redshiftEnv()
-	if err != nil {
-		return err
+	// Switch it back at the end to make the test somewhat less destructive.
+	// We re-initialize the whole plugin, which is roughly what the real database
+	// backend does for each operation.
+	connectionDetails = map[string]interface{}{
+		"connection_url": interpolateConnectionURL(url, adminUser, tempPassword),
+		"username":       adminUser,
+		"password":       tempPassword,
 	}
 
-	connURL = strings.Replace(connURL, fmt.Sprintf("%s:%s", adminUser, adminPassword), fmt.Sprintf("%s:%s", username, password), 1)
+	db = newRedshift(true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	updateReq = newdbplugin.UpdateUserRequest{
+		Username: adminUser,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: adminPassword,
+		},
+	}
+	_, err = db.UpdateUser(context.Background(), updateReq)
+	if err != nil {
+		t.Fatalf("Failed to switch password back, err: %v", err)
+	}
+
+	if err = testCredsExist(t, url, adminUser, adminPassword); err != nil {
+		t.Fatalf("Failed to reset admin user credentials after rotation: %s", err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+func testCredsExist(t testing.TB, url, username, password string) error {
+	t.Helper()
+
+	connURL := interpolateConnectionURL(url, username, password)
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
 		return err

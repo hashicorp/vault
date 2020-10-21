@@ -99,7 +99,7 @@ func (r *RedShift) Initialize(ctx context.Context, req newdbplugin.InitializeReq
 	}, nil
 }
 
-// getConnection accepts a context and retuns a new pointer to a sql.DB object.
+// getConnection accepts a context and returns a new pointer to a sql.DB object.
 // It's up to the caller to close the connection or handle reuse logic.
 func (r *RedShift) getConnection(ctx context.Context) (*sql.DB, error) {
 	db, err := r.Connection(ctx)
