@@ -924,11 +924,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		for _, leaderInfo := range leaderInfos {
 			switch {
 			case leaderInfo.LeaderAPIAddr != "" && leaderInfo.AutoJoin != "":
-				c.logger.Info("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
+				c.logger.Error("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
 
 			case leaderInfo.LeaderAPIAddr != "":
 				if err := joinLeader(leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
-					c.logger.Info("join attempt failed", "error", err)
+					c.logger.Error("join attempt failed", "error", err)
 				} else {
 					// successfully joined leader
 					return nil
@@ -937,13 +937,13 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			case leaderInfo.AutoJoin != "":
 				addrs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
 				if err != nil {
-					c.logger.Info("failed to parse addresses from auto-join metadata", "error", err)
+					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
 
 				for _, addr := range addrs {
 					u, err := url.Parse(addr)
 					if err != nil {
-						c.logger.Info("failed to parse discovered address", "error", err)
+						c.logger.Error("failed to parse discovered address", "error", err)
 						continue
 					}
 
@@ -968,7 +968,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					}
 
 					if err := joinLeader(leaderInfo, addr); err != nil {
-						c.logger.Info("join attempt failed", "error", err)
+						c.logger.Error("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
 						return nil
@@ -976,7 +976,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 			default:
-				c.logger.Info("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
+				c.logger.Error("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
 			}
 		}
 
