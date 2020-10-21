@@ -137,6 +137,10 @@ type MountTable struct {
 // padding, which is negligable and subject to change, and thus
 // not accounted for.
 func (c *Core) tableMetrics(entryCount int, isLocal bool, isAuth bool, compressedTable []byte) {
+	if c.metricsHelper == nil {
+		// do nothing if metrics are not initialized
+		return
+	}
 	typeAuthLabelMap := map[bool]metrics.Label{
 		true:  metrics.Label{Name: "type", Value: "auth"},
 		false: metrics.Label{Name: "type", Value: "logical"},

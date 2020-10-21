@@ -430,6 +430,10 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 }
 
 func (c *Core) cachedGaugeMetricsEmitter() {
+	if c.metricsHelper == nil {
+		return
+	}
+
 	loopMetrics := &c.metricsHelper.LoopMetrics.Metrics
 
 	emit := func(key interface{}, value interface{}) bool {
