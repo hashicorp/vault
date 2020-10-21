@@ -196,6 +196,10 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 			return nil, errors.New("cannot provide both a leader_api_addr and auto_join")
 		}
 
+		if info.AutoJoinScheme != "" && (info.AutoJoinScheme != "http" && info.AutoJoinScheme != "https") {
+			return nil, fmt.Errorf("invalid scheme '%s'; must either be http or https", info.AutoJoinScheme)
+		}
+
 		info.Retry = true
 		info.TLSConfig, err = parseTLSInfo(info)
 		if err != nil {
