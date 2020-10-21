@@ -36,7 +36,7 @@ BUG FIXES:
 * ui: Update language in promote dr modal flow [[GH-10155](https://github.com/hashicorp/vault/pull/10155)]
 
 ## 1.5.5
-### TBD
+### October 21, 2020
 
 IMPROVEMENTS:
 
