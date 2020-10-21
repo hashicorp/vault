@@ -45,6 +45,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * auth/aws: Restrict region selection when in the aws-us-gov partition to avoid IAM errors [[GH-9947](https://github.com/hashicorp/vault/pull/9947)]
+* core (enterprise): Allow operators to add and remove (Raft) peers in a DR secondary cluster using Integrated Storage.
+* core (enterprise): Add DR operation token to the remove peer API and CLI command (when DR secondary).
 * core (enterprise): Fix deadlock in handling EGP policies
 * core (enterprise): Fix extraneous error messages in DR Cluster
 * secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
