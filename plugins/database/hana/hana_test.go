@@ -4,13 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 )
 
 func TestHANA_Initialize(t *testing.T) {
@@ -32,6 +33,7 @@ func TestHANA_Initialize(t *testing.T) {
 
 	db := new()
 	initResp := dbtesting.AssertInitialize(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
 
 	if !reflect.DeepEqual(initResp.Config, expectedConfig) {
 		t.Fatalf("Actual config: %#v\nExpected config: %#v", initResp.Config, expectedConfig)
@@ -47,39 +49,21 @@ func TestHANA_NewUser(t *testing.T) {
 	connURL := os.Getenv("HANA_URL")
 
 	type testCase struct {
-		req           dbplugin.NewUserRequest
-		expectErr     bool
-		assertUser    func(t testing.TB, connURL, username, password string)
+		commands   []string
+		expectErr  bool
+		assertUser func(t testing.TB, connURL, username, password string)
 	}
 
 	tests := map[string]testCase{
 		"no creation statements": {
-			req: dbplugin.NewUserRequest{
-				UsernameConfig: dbplugin.UsernameMetadata{
-					DisplayName: "test-test",
-					RoleName:    "test-test",
-				},
-				Statements: dbplugin.Statements{},
-				Password:   "AG4qagho_dsvZ",
-				Expiration: time.Now().Add(1 * time.Second),
-			},
-			expectErr:     true,
-			assertUser:    assertCredsDoNotExist,
+			commands:   []string{},
+			expectErr:  true,
+			assertUser: assertCredsDoNotExist,
 		},
 		"with creation statements": {
-			req: dbplugin.NewUserRequest{
-				UsernameConfig: dbplugin.UsernameMetadata{
-					DisplayName: "test-test",
-					RoleName:    "test-test",
-				},
-				Statements: dbplugin.Statements{
-					Commands: []string{testHANARole},
-				},
-				Password:   "AG4qagho_dsvZ",
-				Expiration: time.Now().Add(1 * time.Second),
-			},
-			expectErr:     false,
-			assertUser:    assertCredsExist,
+			commands:   []string{testHANARole},
+			expectErr:  false,
+			assertUser: assertCredsExist,
 		},
 	}
 
@@ -98,7 +82,19 @@ func TestHANA_NewUser(t *testing.T) {
 			dbtesting.AssertInitialize(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
-			createResp, err := db.NewUser(context.Background(), test.req)
+			req := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test-test",
+					RoleName:    "test-test",
+				},
+				Statements: dbplugin.Statements{
+					Commands: test.commands,
+				},
+				Password:   "AG4qagho_dsvZ",
+				Expiration: time.Now().Add(1 * time.Second),
+			}
+
+			createResp, err := db.NewUser(context.Background(), req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, received nil")
 			}
@@ -106,7 +102,7 @@ func TestHANA_NewUser(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			test.assertUser(t, connURL, createResp.Username, test.req.Password)
+			test.assertUser(t, connURL, createResp.Username, req.Password)
 		})
 	}
 }
@@ -118,33 +114,19 @@ func TestHANA_UpdateUser(t *testing.T) {
 	connURL := os.Getenv("HANA_URL")
 
 	type testCase struct {
-		req              dbplugin.UpdateUserRequest
-		startingPassword string
+		commands         []string
 		expectErrOnLogin bool
 		expectedErrMsg   string
 	}
 
 	tests := map[string]testCase{
 		"no update statements": {
-			req: dbplugin.UpdateUserRequest{
-				Password: &dbplugin.ChangePassword{
-					NewPassword: "this_is_ALSO_Thirty_2_characters_",
-				},
-			},
-			startingPassword: "this_is_Thirty_2_characters_wow_",
+			commands:         []string{},
 			expectErrOnLogin: true,
 			expectedErrMsg:   "user is forced to change password",
 		},
 		"with custom update statements": {
-			req: dbplugin.UpdateUserRequest{
-				Password: &dbplugin.ChangePassword{
-					NewPassword: "this_is_ALSO_Thirty_2_characters_",
-					Statements: dbplugin.Statements{
-						Commands: []string{testHANAUpdate},
-					},
-				},
-			},
-			startingPassword: "this_is_Thirty_2_characters_wow_",
+			commands:         []string{testHANAUpdate},
 			expectErrOnLogin: false,
 		},
 	}
@@ -164,12 +146,13 @@ func TestHANA_UpdateUser(t *testing.T) {
 			dbtesting.AssertInitialize(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
+			password := "this_is_Thirty_2_characters_wow_"
 			newReq := dbplugin.NewUserRequest{
 				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test-test",
 					RoleName:    "test-test",
 				},
-				Password: test.startingPassword,
+				Password: password,
 				Statements: dbplugin.Statements{
 					Commands: []string{testHANARole},
 				},
@@ -177,12 +160,20 @@ func TestHANA_UpdateUser(t *testing.T) {
 			}
 
 			userResp := dbtesting.AssertNewUser(t, db, newReq)
-			assertCredsExist(t, connURL, userResp.Username, test.startingPassword)
+			assertCredsExist(t, connURL, userResp.Username, password)
 
-			test.req.Username = userResp.Username
+			req := dbplugin.UpdateUserRequest{
+				Username: userResp.Username,
+				Password: &dbplugin.ChangePassword{
+					NewPassword: "this_is_ALSO_Thirty_2_characters_",
+					Statements: dbplugin.Statements{
+						Commands: test.commands,
+					},
+				},
+			}
 
-			dbtesting.AssertUpdateUser(t, db, test.req)
-			err := testCredsExist(t, connURL, userResp.Username, test.req.Password.NewPassword)
+			dbtesting.AssertUpdateUser(t, db, req)
+			err := testCredsExist(t, connURL, userResp.Username, req.Password.NewPassword)
 			if test.expectErrOnLogin {
 				if err == nil {
 					t.Fatalf("Able to login with new creds when expecting an issue")
@@ -204,19 +195,15 @@ func TestHANA_DeleteUser(t *testing.T) {
 	connURL := os.Getenv("HANA_URL")
 
 	type testCase struct {
-		req              dbplugin.DeleteUserRequest
+		commands []string
 	}
 
 	tests := map[string]testCase{
 		"no update statements": {
-			req: dbplugin.DeleteUserRequest{},
+			commands: []string{},
 		},
 		"with custom update statements": {
-			req: dbplugin.DeleteUserRequest{
-				Statements: dbplugin.Statements{
-					Commands: []string{testHANADrop},
-				},
-			},
+			commands: []string{testHANADrop},
 		},
 	}
 
@@ -252,9 +239,14 @@ func TestHANA_DeleteUser(t *testing.T) {
 			userResp := dbtesting.AssertNewUser(t, db, newReq)
 			assertCredsExist(t, connURL, userResp.Username, password)
 
-			test.req.Username = userResp.Username
+			req := dbplugin.DeleteUserRequest{
+				Username: userResp.Username,
+				Statements: dbplugin.Statements{
+					Commands: test.commands,
+				},
+			}
 
-			dbtesting.AssertDeleteUser(t, db, test.req)
+			dbtesting.AssertDeleteUser(t, db, req)
 			assertCredsDoNotExist(t, connURL, userResp.Username, password)
 		})
 	}
