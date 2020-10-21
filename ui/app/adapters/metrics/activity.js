@@ -8,8 +8,10 @@ export default Application.extend({
     const url = this.urlForQuery(null, type);
     // API accepts start and end as query params
     return this.ajax(url, 'GET', { data: query }).then(resp => {
-      resp.id = resp.request_id;
-      return resp;
+      let response = resp || {};
+      // if the response is a 204 it has no request id
+      response.id = response.request_id || 'no-data';
+      return response;
     });
   },
 });
