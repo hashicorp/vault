@@ -221,14 +221,6 @@ github.com/coreos/go-oidc
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd/v22 v22.0.0
 github.com/coreos/go-systemd/v22/journal
-# github.com/couchbase/gocb/v2 v2.1.4
-github.com/couchbase/gocb/v2
-github.com/couchbase/gocb/v2/search
-# github.com/couchbase/gocbcore/v9 v9.0.4
-github.com/couchbase/gocbcore/v9
-github.com/couchbase/gocbcore/v9/connstr
-github.com/couchbase/gocbcore/v9/memd
-github.com/couchbase/gocbcore/v9/scram
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
@@ -518,12 +510,6 @@ github.com/hashicorp/vault-plugin-auth-kerberos
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 github.com/hashicorp/vault-plugin-auth-oci
-# github.com/hashicorp/vault-plugin-database-couchbase v0.2.0
-github.com/hashicorp/vault-plugin-database-couchbase
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.0
-github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.0
-github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
 # github.com/hashicorp/vault-plugin-secrets-ad v0.7.1-0.20201009192637-c613b2a27345

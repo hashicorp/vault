@@ -29,6 +29,7 @@ require (
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
+	github.com/containerd/continuity v0.0.0-20200710164510-efbc4488d8fe // indirect
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
@@ -67,6 +68,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
@@ -81,9 +83,6 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20200921171209-a8c355e565cb
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
-	github.com/hashicorp/vault-plugin-database-couchbase v0.2.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.7.1-0.20201009192637-c613b2a27345
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
