@@ -87,11 +87,6 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Description: "Provider-specific configuration. Optional.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Provider Config",
-					Value: map[string]interface{}{
-						"provider":               "gsuite",
-						"fetch_groups":           true,
-						"gsuite_service_account": "ey4921...",
-					},
 				},
 			},
 		},
