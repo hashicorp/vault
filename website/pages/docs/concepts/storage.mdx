@@ -51,9 +51,8 @@ Storage](/docs/commands/operator/raft#snapshot)).
 
 We recommend taking backups **before**, but not during, write operations to the `/sys` API
 (excluding the `/sys/leases`, `/sys/namespaces`, `/sys/tools`, `/sys/wrapping`, `/sys/policies`, and
-`/sys/pprof` endpoints). Some examples of workflows that write to the `/sys` API are upgrades,
-server moves, and rekeys. In the future, this guidance may change for the Integrated Storage
-backend.
+`/sys/pprof` endpoints). Some examples of workflows that write to the `/sys` API are upgrades and
+rekeys. In the future, this guidance may change for the Integrated Storage backend.
 
 To perform a backup or restore of Vault's encrypted data when using a HashiCorp-supported storage
 backend, see the instructions linked below. For other storage backends, follow the documentation of
