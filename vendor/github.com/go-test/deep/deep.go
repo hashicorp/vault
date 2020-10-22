@@ -29,6 +29,12 @@ var (
 	// CompareUnexportedFields causes unexported struct fields, like s in
 	// T{s int}, to be compared when true.
 	CompareUnexportedFields = false
+
+	// NilSlicesAreEmpty causes a nil slice to be equal to an empty slice.
+	NilSlicesAreEmpty = false
+
+	// NilMapsAreEmpty causes a nil map to be equal to an empty map.
+	NilMapsAreEmpty = false
 )
 
 var (
@@ -57,6 +63,9 @@ var errorType = reflect.TypeOf((*error)(nil)).Elem()
 //
 // If a type has an Equal method, like time.Equal, it is called to check for
 // equality.
+//
+// When comparing a struct, if a field has the tag `deep:"-"` then it will be
+// ignored.
 func Equal(a, b interface{}) []string {
 	aVal := reflect.ValueOf(a)
 	bVal := reflect.ValueOf(b)
@@ -103,7 +112,18 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 	aType := a.Type()
 	bType := b.Type()
 	if aType != bType {
-		c.saveDiff(aType, bType)
+		// Built-in types don't have a name, so don't report [3]int != [2]int as " != "
+		if aType.Name() == "" || aType.Name() != bType.Name() {
+			c.saveDiff(aType, bType)
+		} else {
+			// Type names can be the same, e.g. pkg/v1.Error and pkg/v2.Error
+			// are both exported as pkg, so unless we include the full pkg path
+			// the diff will be "pkg.Error != pkg.Error"
+			// https://github.com/go-test/deep/issues/39
+			aFullType := aType.PkgPath() + "." + aType.Name()
+			bFullType := bType.PkgPath() + "." + bType.Name()
+			c.saveDiff(aFullType, bFullType)
+		}
 		logError(ErrTypeMismatch)
 		return
 	}
@@ -188,6 +208,10 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 				continue // skip unexported field, e.g. s in type T struct {s string}
 			}
 
+			if aType.Field(i).Tag.Get("deep") == "-" {
+				continue // field wants to be ignored
+			}
+
 			c.push(aType.Field(i).Name) // push field name to buff
 
 			// Get the Value for each field, e.g. FirstName has Type = string,
@@ -221,10 +245,20 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 		*/
 
 		if a.IsNil() || b.IsNil() {
-			if a.IsNil() && !b.IsNil() {
-				c.saveDiff("<nil map>", b)
-			} else if !a.IsNil() && b.IsNil() {
-				c.saveDiff(a, "<nil map>")
+			if NilMapsAreEmpty {
+				if a.IsNil() && b.Len() != 0 {
+					c.saveDiff("<nil map>", b)
+					return
+				} else if a.Len() != 0 && b.IsNil() {
+					c.saveDiff(a, "<nil map>")
+					return
+				}
+			} else {
+				if a.IsNil() && !b.IsNil() {
+					c.saveDiff("<nil map>", b)
+				} else if !a.IsNil() && b.IsNil() {
+					c.saveDiff(a, "<nil map>")
+				}
 			}
 			return
 		}
@@ -234,7 +268,7 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 		}
 
 		for _, key := range a.MapKeys() {
-			c.push(fmt.Sprintf("map[%s]", key))
+			c.push(fmt.Sprintf("map[%v]", key))
 
 			aVal := a.MapIndex(key)
 			bVal := b.MapIndex(key)
@@ -256,7 +290,7 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 				continue
 			}
 
-			c.push(fmt.Sprintf("map[%s]", key))
+			c.push(fmt.Sprintf("map[%v]", key))
 			c.saveDiff("<does not have key>", b.MapIndex(key))
 			c.pop()
 			if len(c.diff) >= MaxDiff {
@@ -274,13 +308,22 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 			}
 		}
 	case reflect.Slice:
-		if a.IsNil() || b.IsNil() {
+		if NilSlicesAreEmpty {
+			if a.IsNil() && b.Len() != 0 {
+				c.saveDiff("<nil slice>", b)
+				return
+			} else if a.Len() != 0 && b.IsNil() {
+				c.saveDiff(a, "<nil slice>")
+				return
+			}
+		} else {
 			if a.IsNil() && !b.IsNil() {
 				c.saveDiff("<nil slice>", b)
+				return
 			} else if !a.IsNil() && b.IsNil() {
 				c.saveDiff(a, "<nil slice>")
+				return
 			}
-			return
 		}
 
 		aLen := a.Len()
@@ -314,8 +357,13 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 	/////////////////////////////////////////////////////////////////////
 
 	case reflect.Float32, reflect.Float64:
-		// Avoid 0.04147685731961082 != 0.041476857319611
-		// 6 decimal places is close enough
+		// Round floats to FloatPrecision decimal places to compare with
+		// user-defined precision. As is commonly know, floats have "imprecision"
+		// such that 0.1 becomes 0.100000001490116119384765625. This cannot
+		// be avoided; it can only be handled. Issue 30 suggested that floats
+		// be compared using an epsilon: equal = |a-b| < epsilon.
+		// In many cases the result is the same, but I think epsilon is a little
+		// less clear for users to reason about. See issue 30 for details.
 		aval := fmt.Sprintf(c.floatFormat, a.Float())
 		bval := fmt.Sprintf(c.floatFormat, b.Float())
 		if aval != bval {

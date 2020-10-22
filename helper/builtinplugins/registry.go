@@ -11,9 +11,9 @@ import (
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 
-	// dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
-	// dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
-	// dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
+	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
+	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -99,16 +99,16 @@ func newRegistry() *registry {
 			"mysql-rds-database-plugin":    dbMysql.New(true),
 			"mysql-legacy-database-plugin": dbMysql.New(true),
 
-			"cassandra-database-plugin": dbCass.New,
-			// "couchbase-database-plugin":     dbCouchbase.New,
-			// "elasticsearch-database-plugin": dbElastic.New,
-			"hana-database-plugin":     dbHana.New,
-			"influxdb-database-plugin": dbInflux.New,
-			"mongodb-database-plugin":  dbMongo.New,
-			// "mongodbatlas-database-plugin":  dbMongoAtlas.New,
-			"mssql-database-plugin":      dbMssql.New,
-			"postgresql-database-plugin": dbPostgres.New,
-			"redshift-database-plugin":   dbRedshift.New(true),
+			"cassandra-database-plugin":     dbCass.New,
+			"couchbase-database-plugin":     dbCouchbase.New,
+			"elasticsearch-database-plugin": dbElastic.New,
+			"hana-database-plugin":          dbHana.New,
+			"influxdb-database-plugin":      dbInflux.New,
+			"mongodb-database-plugin":       dbMongo.New,
+			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
+			"mssql-database-plugin":         dbMssql.New,
+			"postgresql-database-plugin":    dbPostgres.New,
+			"redshift-database-plugin":      dbRedshift.New(true),
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,
