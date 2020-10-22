@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin/proto"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

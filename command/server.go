@@ -378,6 +378,12 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
+func (c *ServerCommand) flushLog() {
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: c.logOutput,
+	}, c.gatedWriter)
+}
+
 func (c *ServerCommand) parseConfig() (*server.Config, error) {
 	// Load the configuration
 	var config *server.Config
@@ -426,6 +432,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
 	})
+
+	// Ensure logging is flushed if initialization fails
+	defer c.flushLog()
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -669,9 +678,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+	c.flushLog()
 
 	for {
 		select {
@@ -907,6 +914,9 @@ func (c *ServerCommand) Run(args []string) int {
 			JSONFormat: logFormat == logging.JSONFormat,
 		})
 	}
+
+	// Ensure logging is flushed if initialization fails
+	defer c.flushLog()
 
 	allLoggers := []log.Logger{c.logger}
 
@@ -1804,9 +1814,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	// Release the log gate.
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+	c.flushLog()
 
 	// Write out the PID to the file now that server has successfully started
 	if err := c.storePidFile(config.PidFile); err != nil {
@@ -2212,9 +2220,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	// Release the log gate.
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+	c.flushLog()
 
 	// Wait for shutdown
 	shutdownTriggered := false
@@ -2449,9 +2455,7 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 			c.UI.Warn("\nWARNING! Unable to read storage migration status.")
 
 			// unexpected state, so stop buffering log messages
-			c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-				Output: c.logOutput,
-			}, c.gatedWriter)
+			c.flushLog()
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 

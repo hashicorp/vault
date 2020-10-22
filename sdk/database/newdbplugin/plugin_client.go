@@ -45,7 +45,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Logger(logger),
 		pluginutil.MetadataMode(isMetadataMode),
-		pluginutil.AutoMTLS(true),
 	)
 	if err != nil {
 		return nil, err

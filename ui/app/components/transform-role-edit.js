@@ -38,7 +38,6 @@ export default TransformBase.extend({
 
     Promise.all(promises).then(res => {
       let hasError = res.find(r => !!r.errorStatus);
-
       if (hasError) {
         let errorAdding = res.find(r => r.errorStatus === 403 && r.action === 'ADD');
         let errorRemoving = res.find(r => r.errorStatus === 403 && r.action === 'REMOVE');
@@ -102,6 +101,17 @@ export default TransformBase.extend({
           .filter(t => !!t);
         this.handleUpdateTransformations(updateTransformations, roleId);
       });
+    },
+
+    delete() {
+      const roleId = this.model?.id;
+      const roleTransformations = this.model?.transformations || [];
+      const updateTransformations = roleTransformations.map(t => ({
+        id: t,
+        action: 'REMOVE',
+      }));
+      this.handleUpdateTransformations(updateTransformations, roleId);
+      this.applyDelete();
     },
   },
 });

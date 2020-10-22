@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc/codes"
@@ -18,13 +18,13 @@ import (
 func TestInitDatabase_missingDB(t *testing.T) {
 	dbw := databaseVersionWrapper{}
 
-	req := newdbplugin.InitializeRequest{}
+	req := v5.InitializeRequest{}
 	resp, err := dbw.Initialize(context.Background(), req)
 	if err == nil {
 		t.Fatalf("err expected, got nil")
 	}
 
-	expectedResp := newdbplugin.InitializeResponse{}
+	expectedResp := v5.InitializeResponse{}
 	if !reflect.DeepEqual(resp, expectedResp) {
 		t.Fatalf("Actual resp: %#v\nExpected resp: %#v", resp, expectedResp)
 	}
@@ -32,31 +32,31 @@ func TestInitDatabase_missingDB(t *testing.T) {
 
 func TestInitDatabase_newDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.InitializeRequest
+		req v5.InitializeRequest
 
-		newInitResp  newdbplugin.InitializeResponse
+		newInitResp  v5.InitializeResponse
 		newInitErr   error
 		newInitCalls int
 
-		expectedResp newdbplugin.InitializeResponse
+		expectedResp v5.InitializeResponse
 		expectErr    bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.InitializeRequest{
+			req: v5.InitializeRequest{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
 				VerifyConnection: true,
 			},
-			newInitResp: newdbplugin.InitializeResponse{
+			newInitResp: v5.InitializeResponse{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
 			},
 			newInitCalls: 1,
-			expectedResp: newdbplugin.InitializeResponse{
+			expectedResp: v5.InitializeResponse{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -64,16 +64,16 @@ func TestInitDatabase_newDB(t *testing.T) {
 			expectErr: false,
 		},
 		"error": {
-			req: newdbplugin.InitializeRequest{
+			req: v5.InitializeRequest{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
 				VerifyConnection: true,
 			},
-			newInitResp:  newdbplugin.InitializeResponse{},
+			newInitResp:  v5.InitializeResponse{},
 			newInitErr:   fmt.Errorf("test error"),
 			newInitCalls: 1,
-			expectedResp: newdbplugin.InitializeResponse{},
+			expectedResp: v5.InitializeResponse{},
 			expectErr:    true,
 		},
 	}
@@ -106,19 +106,19 @@ func TestInitDatabase_newDB(t *testing.T) {
 
 func TestInitDatabase_legacyDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.InitializeRequest
+		req v5.InitializeRequest
 
 		initConfig map[string]interface{}
 		initErr    error
 		initCalls  int
 
-		expectedResp newdbplugin.InitializeResponse
+		expectedResp v5.InitializeResponse
 		expectErr    bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.InitializeRequest{
+			req: v5.InitializeRequest{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -128,7 +128,7 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 				"foo": "bar",
 			},
 			initCalls: 1,
-			expectedResp: newdbplugin.InitializeResponse{
+			expectedResp: v5.InitializeResponse{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -136,7 +136,7 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 			expectErr: false,
 		},
 		"error": {
-			req: newdbplugin.InitializeRequest{
+			req: v5.InitializeRequest{
 				Config: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -144,7 +144,7 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 			},
 			initErr:      fmt.Errorf("test error"),
 			initCalls:    1,
-			expectedResp: newdbplugin.InitializeResponse{},
+			expectedResp: v5.InitializeResponse{},
 			expectErr:    true,
 		},
 	}
@@ -348,13 +348,13 @@ func TestGeneratePassword_no_policy(t *testing.T) {
 func TestNewUser_missingDB(t *testing.T) {
 	dbw := databaseVersionWrapper{}
 
-	req := newdbplugin.NewUserRequest{}
+	req := v5.NewUserRequest{}
 	resp, pass, err := dbw.NewUser(context.Background(), req)
 	if err == nil {
 		t.Fatalf("err expected, got nil")
 	}
 
-	expectedResp := newdbplugin.NewUserResponse{}
+	expectedResp := v5.NewUserResponse{}
 	if !reflect.DeepEqual(resp, expectedResp) {
 		t.Fatalf("Actual resp: %#v\nExpected resp: %#v", resp, expectedResp)
 	}
@@ -366,41 +366,41 @@ func TestNewUser_missingDB(t *testing.T) {
 
 func TestNewUser_newDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.NewUserRequest
+		req v5.NewUserRequest
 
-		newUserResp  newdbplugin.NewUserResponse
+		newUserResp  v5.NewUserResponse
 		newUserErr   error
 		newUserCalls int
 
-		expectedResp newdbplugin.NewUserResponse
+		expectedResp v5.NewUserResponse
 		expectErr    bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.NewUserRequest{
+			req: v5.NewUserRequest{
 				Password: "new_password",
 			},
 
-			newUserResp: newdbplugin.NewUserResponse{
+			newUserResp: v5.NewUserResponse{
 				Username: "newuser",
 			},
 			newUserCalls: 1,
 
-			expectedResp: newdbplugin.NewUserResponse{
+			expectedResp: v5.NewUserResponse{
 				Username: "newuser",
 			},
 			expectErr: false,
 		},
 		"error": {
-			req: newdbplugin.NewUserRequest{
+			req: v5.NewUserRequest{
 				Password: "new_password",
 			},
 
 			newUserErr:   fmt.Errorf("test error"),
 			newUserCalls: 1,
 
-			expectedResp: newdbplugin.NewUserResponse{},
+			expectedResp: v5.NewUserResponse{},
 			expectErr:    true,
 		},
 	}
@@ -437,21 +437,21 @@ func TestNewUser_newDB(t *testing.T) {
 
 func TestNewUser_legacyDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.NewUserRequest
+		req v5.NewUserRequest
 
 		createUserUsername string
 		createUserPassword string
 		createUserErr      error
 		createUserCalls    int
 
-		expectedResp     newdbplugin.NewUserResponse
+		expectedResp     v5.NewUserResponse
 		expectedPassword string
 		expectErr        bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.NewUserRequest{
+			req: v5.NewUserRequest{
 				Password: "new_password",
 			},
 
@@ -459,21 +459,21 @@ func TestNewUser_legacyDB(t *testing.T) {
 			createUserPassword: "securepassword",
 			createUserCalls:    1,
 
-			expectedResp: newdbplugin.NewUserResponse{
+			expectedResp: v5.NewUserResponse{
 				Username: "newuser",
 			},
 			expectedPassword: "securepassword",
 			expectErr:        false,
 		},
 		"error": {
-			req: newdbplugin.NewUserRequest{
+			req: v5.NewUserRequest{
 				Password: "new_password",
 			},
 
 			createUserErr:   fmt.Errorf("test error"),
 			createUserCalls: 1,
 
-			expectedResp: newdbplugin.NewUserResponse{},
+			expectedResp: v5.NewUserResponse{},
 			expectErr:    true,
 		},
 	}
@@ -511,7 +511,7 @@ func TestNewUser_legacyDB(t *testing.T) {
 func TestUpdateUser_missingDB(t *testing.T) {
 	dbw := databaseVersionWrapper{}
 
-	req := newdbplugin.UpdateUserRequest{}
+	req := v5.UpdateUserRequest{}
 	resp, err := dbw.UpdateUser(context.Background(), req, false)
 	if err == nil {
 		t.Fatalf("err expected, got nil")
@@ -525,25 +525,25 @@ func TestUpdateUser_missingDB(t *testing.T) {
 
 func TestUpdateUser_newDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.UpdateUserRequest
+		req v5.UpdateUserRequest
 
 		updateUserErr   error
 		updateUserCalls int
 
-		expectedResp newdbplugin.UpdateUserResponse
+		expectedResp v5.UpdateUserResponse
 		expectErr    bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
 			},
 			updateUserCalls: 1,
 			expectErr:       false,
 		},
 		"error": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
 			},
 			updateUserErr:   fmt.Errorf("test error"),
@@ -556,7 +556,7 @@ func TestUpdateUser_newDB(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			newDB := new(mockNewDatabase)
 			newDB.On("UpdateUser", mock.Anything, mock.Anything).
-				Return(newdbplugin.UpdateUserResponse{}, test.updateUserErr)
+				Return(v5.UpdateUserResponse{}, test.updateUserErr)
 			defer newDB.AssertNumberOfCalls(t, "UpdateUser", test.updateUserCalls)
 
 			dbw := databaseVersionWrapper{
@@ -576,7 +576,7 @@ func TestUpdateUser_newDB(t *testing.T) {
 
 func TestUpdateUser_legacyDB(t *testing.T) {
 	type testCase struct {
-		req        newdbplugin.UpdateUserRequest
+		req        v5.UpdateUserRequest
 		isRootUser bool
 
 		setCredentialsErr   error
@@ -595,7 +595,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 
 	tests := map[string]testCase{
 		"missing changes": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
 			},
 			isRootUser: false,
@@ -607,10 +607,10 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr: true,
 		},
 		"both password and expiration changes": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username:   "existing_user",
-				Password:   &newdbplugin.ChangePassword{},
-				Expiration: &newdbplugin.ChangeExpiration{},
+				Password:   &v5.ChangePassword{},
+				Expiration: &v5.ChangeExpiration{},
 			},
 			isRootUser: false,
 
@@ -621,9 +621,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr: true,
 		},
 		"change password - SetCredentials": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Password: &newdbplugin.ChangePassword{
+				Password: &v5.ChangePassword{
 					NewPassword: "newpassowrd",
 				},
 			},
@@ -638,9 +638,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr:      false,
 		},
 		"change password - SetCredentials failed": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Password: &newdbplugin.ChangePassword{
+				Password: &v5.ChangePassword{
 					NewPassword: "newpassowrd",
 				},
 			},
@@ -655,9 +655,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr:      true,
 		},
 		"change password - SetCredentials unimplemented but not a root user": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Password: &newdbplugin.ChangePassword{
+				Password: &v5.ChangePassword{
 					NewPassword: "newpassowrd",
 				},
 			},
@@ -673,9 +673,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr:      true,
 		},
 		"change password - RotateRootCredentials": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Password: &newdbplugin.ChangePassword{
+				Password: &v5.ChangePassword{
 					NewPassword: "newpassowrd",
 				},
 			},
@@ -697,9 +697,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr: false,
 		},
 		"change password - RotateRootCredentials failed": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Password: &newdbplugin.ChangePassword{
+				Password: &v5.ChangePassword{
 					NewPassword: "newpassowrd",
 				},
 			},
@@ -717,9 +717,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 		},
 
 		"change expiration": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Expiration: &newdbplugin.ChangeExpiration{
+				Expiration: &v5.ChangeExpiration{
 					NewExpiration: time.Now(),
 				},
 			},
@@ -735,9 +735,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectErr:      false,
 		},
 		"change expiration failed": {
-			req: newdbplugin.UpdateUserRequest{
+			req: v5.UpdateUserRequest{
 				Username: "existing_user",
-				Expiration: &newdbplugin.ChangeExpiration{
+				Expiration: &v5.ChangeExpiration{
 					NewExpiration: time.Now(),
 				},
 			},
@@ -791,7 +791,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 func TestDeleteUser_missingDB(t *testing.T) {
 	dbw := databaseVersionWrapper{}
 
-	req := newdbplugin.DeleteUserRequest{}
+	req := v5.DeleteUserRequest{}
 	_, err := dbw.DeleteUser(context.Background(), req)
 	if err == nil {
 		t.Fatalf("err expected, got nil")
@@ -800,7 +800,7 @@ func TestDeleteUser_missingDB(t *testing.T) {
 
 func TestDeleteUser_newDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.DeleteUserRequest
+		req v5.DeleteUserRequest
 
 		deleteUserErr   error
 		deleteUserCalls int
@@ -810,7 +810,7 @@ func TestDeleteUser_newDB(t *testing.T) {
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.DeleteUserRequest{
+			req: v5.DeleteUserRequest{
 				Username: "existing_user",
 			},
 
@@ -820,7 +820,7 @@ func TestDeleteUser_newDB(t *testing.T) {
 			expectErr: false,
 		},
 		"error": {
-			req: newdbplugin.DeleteUserRequest{
+			req: v5.DeleteUserRequest{
 				Username: "existing_user",
 			},
 
@@ -835,7 +835,7 @@ func TestDeleteUser_newDB(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			newDB := new(mockNewDatabase)
 			newDB.On("DeleteUser", mock.Anything, mock.Anything).
-				Return(newdbplugin.DeleteUserResponse{}, test.deleteUserErr)
+				Return(v5.DeleteUserResponse{}, test.deleteUserErr)
 			defer newDB.AssertNumberOfCalls(t, "DeleteUser", test.deleteUserCalls)
 
 			dbw := databaseVersionWrapper{
@@ -855,7 +855,7 @@ func TestDeleteUser_newDB(t *testing.T) {
 
 func TestDeleteUser_legacyDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.DeleteUserRequest
+		req v5.DeleteUserRequest
 
 		revokeUserErr   error
 		revokeUserCalls int
@@ -865,7 +865,7 @@ func TestDeleteUser_legacyDB(t *testing.T) {
 
 	tests := map[string]testCase{
 		"success": {
-			req: newdbplugin.DeleteUserRequest{
+			req: v5.DeleteUserRequest{
 				Username: "existing_user",
 			},
 
@@ -875,7 +875,7 @@ func TestDeleteUser_legacyDB(t *testing.T) {
 			expectErr: false,
 		},
 		"error": {
-			req: newdbplugin.DeleteUserRequest{
+			req: v5.DeleteUserRequest{
 				Username: "existing_user",
 			},
 

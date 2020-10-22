@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"net/http"
 	"time"
@@ -39,7 +40,6 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	DoneCh                       chan struct{}
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	logger                       hclog.Logger
@@ -60,7 +60,6 @@ type AuthHandlerConfig struct {
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
-		DoneCh: make(chan struct{}),
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
@@ -83,16 +82,15 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if am == nil {
-		panic("nil auth method")
+		return errors.New("auth handler: nil auth method")
 	}
 
 	ah.logger.Info("starting auth handler")
 	defer func() {
 		am.Shutdown()
 		close(ah.OutputCh)
-		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
@@ -122,7 +120,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 
 		default:
 		}
