@@ -6,15 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
+	_ "github.com/SAP/go-hdb/driver"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-
-	_ "github.com/SAP/go-hdb/driver"
 )
 
 const (
@@ -62,18 +60,6 @@ func (h *HANA) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (
 	return dbplugin.InitializeResponse{
 		Config: conf,
 	}, nil
-}
-
-// Run instantiates a HANA object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 // Type returns the TypeName for this backend
