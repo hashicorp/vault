@@ -573,6 +573,28 @@ Policy](#recommended-vault-iam-policy) except it doesn't need any further
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
 for the IAM Role to be assumed.
 
+### AWS Instance Metadata Timeouts
+
+~> Affects Vault 1.4 and later
+
+Anytime Vault needs to connect to the [EC2 instance metadata
+service][aws-ec2-mds] on an EC2 instance, there may be a delay. The AWS SDK used
+by Vault first attempts to connect to [v2 of the instance metadata service
+(IMDSv2)][aws-ec2-imdsv2], and if that times out, it falls back to v1. In Vault
+1.4, this timeout could take up to 2 minutes. In Vault 1.5 and later, it can
+take up to 2 seconds. The timeout occurs in situations such as Vault running in
+docker on an EC2 instance, and the instance hop limit is set to 1 which prevents
+connections from docker to IMDSv2.
+
+To avoid the timeout altogether, the hop limit may be [adjusted on the
+underlying EC2 instances][aws-ec2-imdsv2-config]. If Vault is running in a docker
+container on an EC2 host, setting the hop limit to 2 will allow the AWS SDK to
+connect to IMDSv2 without delay.
+
+[aws-ec2-mds]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+[aws-ec2-imdsv2]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html
+[aws-ec2-imdsv2-config]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html#configuring-instance-metadata-options
+
 ## Authentication
 
 ### Via the CLI
