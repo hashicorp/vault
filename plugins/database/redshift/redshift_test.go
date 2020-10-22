@@ -3,14 +3,13 @@ package redshift
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/lib/pq"
 )
@@ -24,10 +23,6 @@ as environment variables to be used to run these tests. Note that these tests
 will create users on your redshift cluster and currently do not clean up after
 themselves.
 
-The RotateRoot test is potentially destructive in that it will rotate your root
-password on your Redshift cluster to an insecure, cleartext password defined in the
-test method. Because of this, you must pass TEST_ROTATE_ROOT=1 to enable it explicitly.
-
 Do not run this test suite against a production Redshift cluster.
 
 Configuration:
@@ -36,7 +31,6 @@ Configuration:
 		REDSHIFT_USER=my-redshift-admin-user
 		REDSHIFT_PASSWORD=my-redshift-admin-password
 		VAULT_ACC=<unset || 1> # This must be set to run any of the tests in this test suite
-		TEST_ROTATE_ROOT=<unset || 1> # This must be set to explicitly run the rotate root test
 */
 
 var (
@@ -52,21 +46,20 @@ func interpolateConnectionURL(url, user, password string) string {
 }
 
 func redshiftEnv() (connURL string, url string, user string, password string, errEmpty error) {
-	errEmpty = errors.New("err: empty but required env value")
-
 	if url = os.Getenv(keyRedshiftURL); url == "" {
-		return "", "", "", "", errEmpty
+		return "", "", "", "", fmt.Errorf("%s environment variable required", keyRedshiftURL)
 	}
 
 	if user = os.Getenv(keyRedshiftUser); url == "" {
-		return "", "", "", "", errEmpty
+		return "", "", "", "", fmt.Errorf("%s environment variable required", keyRedshiftUser)
 	}
 
 	if password = os.Getenv(keyRedshiftPassword); url == "" {
-		return "", "", "", "", errEmpty
+		return "", "", "", "", fmt.Errorf("%s environment variable required", keyRedshiftPassword)
 	}
 
-	return interpolateConnectionURL(url, user, password), url, user, password, nil
+	connURL = interpolateConnectionURL(url, user, password)
+	return connURL, url, user, password, nil
 }
 
 func TestRedshift_Initialize(t *testing.T) {
@@ -84,7 +77,7 @@ func TestRedshift_Initialize(t *testing.T) {
 		"max_open_connections": 5,
 	}
 
-	db := newRedshift(true)
+	db := newRedshift()
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -128,7 +121,7 @@ func TestRedshift_NewUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := newRedshift(true)
+	db := newRedshift()
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -200,7 +193,7 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := newRedshift(true)
+	db := newRedshift()
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -305,7 +298,7 @@ func TestRedshift_DeleteUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := newRedshift(true)
+	db := newRedshift()
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -396,14 +389,14 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 	dbUser := "vaultstatictest-" + fmt.Sprintf("%s", uid)
 	createTestPGUser(t, connURL, dbUser, "1Password", testRoleStaticCreate)
 
-	db := newRedshift(true)
+	db := newRedshift()
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	const password1 = "MyTemporaryRootPassword1!"
-	const password2 = "MyTemporaryRootPassword2!"
+	const password1 = "MyTemporaryUserPassword1!"
+	const password2 = "MyTemporaryUserPassword2!"
 
 	updateReq := dbplugin.UpdateUserRequest{
 		Username: dbUser,
@@ -440,98 +433,6 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 
 	if err := testCredsExist(t, url, dbUser, password2); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-}
-
-func TestRedshift_UpdateUser_RootPassword(t *testing.T) {
-	// Extra precaution is taken for rotating root creds because it's assumed that this
-	// test will run against a live redshift cluster. It will try to set the password
-	// back to the old password at the end, but only as a best effort.
-	//
-	// To run this test you must pass TEST_ROTATE_ROOT=1
-
-	if os.Getenv(vaultACC) != "1" || os.Getenv("TEST_ROTATE_ROOT") != "1" {
-		t.SkipNow()
-	}
-
-	connURL, url, adminUser, adminPassword, err := redshiftEnv()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-		"username":       adminUser,
-		"password":       adminPassword,
-	}
-
-	db := newRedshift(true)
-
-	connProducer := db.SQLConnectionProducer
-
-	_, err = db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !connProducer.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	const tempPassword = "MyTemporaryRootPassword1!"
-	updateReq := dbplugin.UpdateUserRequest{
-		Username: adminUser,
-		Password: &dbplugin.ChangePassword{
-			NewPassword: tempPassword,
-		},
-	}
-	_, err = db.UpdateUser(context.Background(), updateReq)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if err = testCredsExist(t, url, adminUser, tempPassword); err != nil {
-		t.Fatalf("Failed to test new admin user credentials after rotation: %s", err)
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Switch it back at the end to make the test somewhat less destructive.
-	// We re-initialize the whole plugin, which is roughly what the real database
-	// backend does for each operation.
-	connectionDetails = map[string]interface{}{
-		"connection_url": interpolateConnectionURL(url, adminUser, tempPassword),
-		"username":       adminUser,
-		"password":       tempPassword,
-	}
-
-	db = newRedshift(true)
-	_, err = db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	updateReq = dbplugin.UpdateUserRequest{
-		Username: adminUser,
-		Password: &dbplugin.ChangePassword{
-			NewPassword: adminPassword,
-		},
-	}
-	_, err = db.UpdateUser(context.Background(), updateReq)
-	if err != nil {
-		t.Fatalf("Failed to switch password back, err: %v", err)
-	}
-
-	if err = testCredsExist(t, url, adminUser, adminPassword); err != nil {
-		t.Fatalf("Failed to reset admin user credentials after rotation: %s", err)
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
 	}
 }
 

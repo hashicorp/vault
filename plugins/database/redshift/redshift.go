@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -38,25 +38,21 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 var _ dbplugin.Database = (*RedShift)(nil)
 
 // New implements builtinplugins.BuiltinFactory
-// lowerCaseUsername is the reason we wrote this plugin. Redshift implements (mostly)
-// a postgres 8 interface, and part of that is under the hood, it's lowercasing the
-// usernames.
-func New(lowerCaseUsername bool) func() (interface{}, error) {
-	return func() (interface{}, error) {
-		db := newRedshift(lowerCaseUsername)
-		// Wrap the plugin with middleware to sanitize errors
-		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
-		return dbType, nil
-	}
+// Redshift implements (mostly) a postgres 8 interface, and part of that is
+// under the hood, it's lower-casing the usernames.
+func New() (interface{}, error) {
+	db := newRedshift()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	return dbType, nil
 }
 
-func newRedshift(lowercaseUsername bool) *RedShift {
+func newRedshift() *RedShift {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = sqlTypeName
 
 	db := &RedShift{
 		SQLConnectionProducer: connProducer,
-		lowerCaseUsername:     lowercaseUsername,
 	}
 
 	return db
@@ -64,7 +60,7 @@ func newRedshift(lowercaseUsername bool) *RedShift {
 
 // Run instantiates a RedShift object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New(true)()
+	dbType, err := New()
 	if err != nil {
 		return err
 	}
@@ -76,7 +72,6 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 
 type RedShift struct {
 	*connutil.SQLConnectionProducer
-	lowerCaseUsername bool
 }
 
 func (r *RedShift) secretValues() map[string]string {
@@ -129,9 +124,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 		credsutil.RoleName(req.UsernameConfig.RoleName, 8),
 		credsutil.MaxLength(63),
 		credsutil.Separator("-"),
-	}
-	if r.lowerCaseUsername {
-		usernameOpts = append(usernameOpts, credsutil.ToLower())
+		credsutil.ToLower(),
 	}
 
 	username, err := credsutil.GenerateUsername(usernameOpts...)
@@ -139,7 +132,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 		return dbplugin.NewUserResponse{}, err
 	}
 	password := req.Password
-	expirationStr := req.Expiration.UTC().Format("2006-01-02 15:04:05")
+	expirationStr := req.Expiration.Format("2006-01-02 15:04:05")
 
 	// Get the connection
 	db, err := r.getConnection(ctx)
@@ -192,7 +185,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 // Both updates support both default and custom statements.
 func (r *RedShift) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return dbplugin.UpdateUserResponse{}, nil
+		return dbplugin.UpdateUserResponse{}, errors.New("no changes requested")
 	}
 
 	r.Lock()
@@ -213,72 +206,100 @@ func (r *RedShift) UpdateUser(ctx context.Context, req dbplugin.UpdateUserReques
 	}()
 
 	if req.Expiration != nil {
-		renewStmts := req.Expiration.Statements
-		if len(renewStmts.Commands) == 0 {
-			renewStmts.Commands = []string{defaultRenewSQL}
-		}
-
-		expirationStr := req.Expiration.NewExpiration.UTC().Format("2006-01-02 15:04:05")
-
-		for _, stmt := range renewStmts.Commands {
-			for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-				query = strings.TrimSpace(query)
-				if len(query) == 0 {
-					continue
-				}
-
-				m := map[string]string{
-					"name":       req.Username,
-					"expiration": expirationStr,
-				}
-				if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-					return dbplugin.UpdateUserResponse{}, err
-				}
-			}
+		err = updateUserExpiration(ctx, req, tx)
+		if err != nil {
+			return dbplugin.UpdateUserResponse{}, err
 		}
 	}
 
 	if req.Password != nil {
-		username := req.Username
-		password := req.Password.NewPassword
-		if username == "" || password == "" {
-			return dbplugin.UpdateUserResponse{}, errors.New("must provide both username and password")
-		}
-
-		// Check if the role exists
-		var exists bool
-		err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
-		if err != nil && err != sql.ErrNoRows {
+		err = updateUserPassword(ctx, req, tx)
+		if err != nil {
 			return dbplugin.UpdateUserResponse{}, err
 		}
+	}
 
-		// Vault requires the database user already exist, and that the credentials
-		// used to execute the rotation statements has sufficient privileges.
-		statements := req.Password.Statements.Commands
-		if len(statements) == 0 {
-			statements = []string{defaultRotateRootCredentialsSQL}
-		}
-		// Execute each query
-		for _, stmt := range statements {
-			for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-				query = strings.TrimSpace(query)
-				if len(query) == 0 {
-					continue
-				}
+	err = tx.Commit()
+	return dbplugin.UpdateUserResponse{}, err
+}
 
-				m := map[string]string{
-					"name":     username,
-					"username": username,
-					"password": password,
-				}
-				if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-					return dbplugin.UpdateUserResponse{}, err
-				}
+func updateUserExpiration(ctx context.Context, req dbplugin.UpdateUserRequest, tx *sql.Tx) error {
+	if req.Username == "" {
+		return errors.New("must provide a username to update user expiration")
+	}
+	renewStmts := req.Expiration.Statements
+	if len(renewStmts.Commands) == 0 {
+		renewStmts.Commands = []string{defaultRenewSQL}
+	}
+
+	expirationStr := req.Expiration.NewExpiration.Format("2006-01-02 15:04:05")
+
+	for _, stmt := range renewStmts.Commands {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":       req.Username,
+				"username":   req.Username,
+				"expiration": expirationStr,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return err
 			}
 		}
 	}
 
-	return dbplugin.UpdateUserResponse{}, tx.Commit()
+	return nil
+}
+
+func updateUserPassword(ctx context.Context, req dbplugin.UpdateUserRequest, tx *sql.Tx) error {
+	username := req.Username
+	password := req.Password.NewPassword
+	if username == "" || password == "" {
+		return errors.New("must provide both username and a new password to update user password")
+	}
+
+	// Check if the role exists
+	var exists bool
+	err := tx.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		// Server error
+		return err
+	}
+	if err == sql.ErrNoRows || !exists {
+		// Most likely a user error
+		return fmt.Errorf("cannot update password for username %q because it does not exist", username)
+	}
+
+	// Vault requires the database user already exist, and that the credentials
+	// used to execute the rotation statements has sufficient privileges.
+	statements := req.Password.Statements.Commands
+	if len(statements) == 0 {
+		statements = []string{defaultRotateRootCredentialsSQL}
+	}
+	// Execute each query
+	for _, stmt := range statements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // DeleteUser supports both default and custom statements to delete a user.
@@ -345,6 +366,7 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUse
 	}
 
 	if !exists {
+		// No error as Redshift may have deleted the user via TTL before we got to it.
 		return dbplugin.DeleteUserResponse{}, nil
 	}
 

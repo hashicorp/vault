@@ -107,7 +107,7 @@ func newRegistry() *registry {
 			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
 			"mssql-database-plugin":         dbMssql.New,
 			"postgresql-database-plugin":    dbPostgres.New,
-			"redshift-database-plugin":      dbRedshift.New(true),
+			"redshift-database-plugin":      dbRedshift.New,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,
