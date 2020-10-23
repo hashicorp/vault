@@ -10,7 +10,6 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 )
@@ -57,18 +56,6 @@ func new() *CouchbaseDB {
 	}
 
 	return db
-}
-
-// Run instantiates a CouchbaseDB object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	db, err := New()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(db.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 func (c *CouchbaseDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {

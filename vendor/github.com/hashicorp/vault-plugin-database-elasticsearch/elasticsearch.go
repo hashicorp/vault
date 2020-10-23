@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/api"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -21,16 +20,6 @@ var _ dbplugin.Database = (*Elasticsearch)(nil)
 func New() (interface{}, error) {
 	db := &Elasticsearch{}
 	return dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues), nil
-}
-
-// Run starts serving the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	db, err := New()
-	if err != nil {
-		return err
-	}
-	dbplugin.Serve(db.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-	return nil
 }
 
 // Elasticsearch implements dbplugin's Database interface.

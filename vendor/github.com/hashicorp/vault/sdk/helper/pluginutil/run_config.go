@@ -26,6 +26,7 @@ type runConfig struct {
 	hs             plugin.HandshakeConfig
 	logger         log.Logger
 	isMetadataMode bool
+	autoMTLS       bool
 }
 
 func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
@@ -45,7 +46,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	cmd.Env = append(cmd.Env, metadataEnv)
 
 	var clientTLSConfig *tls.Config
-	if !rc.isMetadataMode {
+	if !rc.autoMTLS && !rc.isMetadataMode {
 		// Get a CA TLS Certificate
 		certBytes, key, err := generateCert()
 		if err != nil {
@@ -85,7 +86,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,
 		},
-		AutoMTLS: false,
+		AutoMTLS: rc.autoMTLS,
 	}
 	return clientConfig, nil
 }
@@ -135,6 +136,12 @@ func Logger(logger log.Logger) RunOpt {
 func MetadataMode(isMetadataMode bool) RunOpt {
 	return func(rc *runConfig) {
 		rc.isMetadataMode = isMetadataMode
+	}
+}
+
+func AutoMTLS(autoMTLS bool) RunOpt {
+	return func(rc *runConfig) {
+		rc.autoMTLS = autoMTLS
 	}
 }
 
