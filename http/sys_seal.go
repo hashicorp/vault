@@ -139,11 +139,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 		}
 
 		// Attempt the unseal
-		if core.SealAccess().RecoveryKeySupported() {
-			_, err = core.UnsealWithRecoveryKeys(key)
-		} else {
-			_, err = core.Unseal(key)
-		}
+		_, err = core.Unseal(key)
 		if err != nil {
 			switch {
 			case errwrap.ContainsType(err, new(vault.ErrInvalidKey)):

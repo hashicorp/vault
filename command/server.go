@@ -1100,7 +1100,9 @@ func (c *ServerCommand) Run(args []string) int {
 					Logger: c.logger.Named("shamir"),
 				}),
 			})
-			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
+			var sealInfoKeys []string
+			var sealInfoMap = map[string]string{}
+			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -1116,11 +1118,17 @@ func (c *ServerCommand) Run(args []string) int {
 				})
 			}
 
+			var infoPrefix = ""
 			if configSeal.Disabled {
 				unwrapSeal = seal
+				infoPrefix = "Old "
 			} else {
 				barrierSeal = seal
 				barrierWrapper = wrapper
+			}
+			for _, k := range sealInfoKeys {
+				infoKeys = append(infoKeys, infoPrefix+k)
+				info[infoPrefix+k] = sealInfoMap[k]
 			}
 
 			// Ensure that the seal finalizer is called, even if using verify-only

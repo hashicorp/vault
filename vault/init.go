@@ -417,6 +417,9 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
 
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
 	sealed := c.Sealed()
 	if !sealed {
 		c.Logger().Warn("attempted unseal with stored keys, but vault is already unsealed")
@@ -434,27 +437,22 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	if len(keys) == 0 {
 		return NewNonFatalError(errors.New("stored unseal keys are supported, but none were found"))
 	}
-
-	unsealed := false
-	keysUsed := 0
-	for _, key := range keys {
-		unsealed, err = c.Unseal(key)
-		if err != nil {
-			return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
-		}
-		keysUsed++
-		if unsealed {
-			break
-		}
+	if len(keys) != 1 {
+		return NewNonFatalError(errors.New("expected exactly one stored key"))
 	}
 
-	if !unsealed {
+	err = c.unsealInternal(ctx, keys[0])
+	if err != nil {
+		return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
+	}
+
+	if c.Sealed() {
 		// This most likely means that the user configured Vault to only store a
 		// subset of the required threshold of keys. We still consider this a
 		// "success", since trying again would yield the same result.
-		c.Logger().Warn("vault still sealed after using stored unseal keys", "stored_keys_used", keysUsed)
+		c.Logger().Warn("vault still sealed after using stored unseal key")
 	} else {
-		c.Logger().Info("unsealed with stored keys", "stored_keys_used", keysUsed)
+		c.Logger().Info("unsealed with stored key")
 	}
 
 	return nil
