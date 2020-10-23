@@ -161,6 +161,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 
 			m := map[string]string{
 				"name":       username,
+				"username":   username,
 				"password":   password,
 				"expiration": expirationStr,
 			}
@@ -338,7 +339,8 @@ func (r *RedShift) customDeleteUser(ctx context.Context, req dbplugin.DeleteUser
 			}
 
 			m := map[string]string{
-				"name": req.Username,
+				"name":     req.Username,
+				"username": req.Username,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return dbplugin.DeleteUserResponse{}, err
