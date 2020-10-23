@@ -207,6 +207,7 @@ export default [
       },
       { category: 'caching' },
       { category: 'template' },
+      { category: 'winsvc' },
     ],
   },
   '----------------',
