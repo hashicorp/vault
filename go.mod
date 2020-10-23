@@ -44,7 +44,7 @@ require (
 	github.com/go-ldap/ldap/v3 v3.1.10
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/go-test/deep v1.0.3
+	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
@@ -77,13 +77,13 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
 	github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe
-	github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201022174242-a68fde2bb2b6
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20200921171209-a8c355e565cb
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
-	github.com/hashicorp/vault-plugin-database-couchbase v0.2.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201022222321-52b89dc4ff04
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.6-0.20201022222154-56454997629c
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.3-0.20201022222205-830fcbc5fdd2
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.7.1-0.20201009192637-c613b2a27345
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
@@ -94,7 +94,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
 	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201015192012-a69ee0f65a28
+	github.com/hashicorp/vault/sdk v0.1.14-0.20201022214319-d87657199d4b
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

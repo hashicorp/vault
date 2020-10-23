@@ -320,7 +320,7 @@ github.com/go-ole/go-ole/oleutil
 github.com/go-sql-driver/mysql
 # github.com/go-stack/stack v1.8.0
 github.com/go-stack/stack
-# github.com/go-test/deep v1.0.3
+# github.com/go-test/deep v1.0.7
 github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 github.com/go-yaml/yaml
@@ -510,7 +510,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 # github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201022174242-a68fde2bb2b6
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 github.com/hashicorp/vault-plugin-auth-kerberos
@@ -518,11 +518,11 @@ github.com/hashicorp/vault-plugin-auth-kerberos
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 github.com/hashicorp/vault-plugin-auth-oci
-# github.com/hashicorp/vault-plugin-database-couchbase v0.2.0
+# github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201022222321-52b89dc4ff04
 github.com/hashicorp/vault-plugin-database-couchbase
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.0
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.6-0.20201022222154-56454997629c
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.0
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.3-0.20201022222205-830fcbc5fdd2
 github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
@@ -550,7 +550,7 @@ github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20201015192012-a69ee0f65a28 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20201022214319-d87657199d4b => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
 github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto
@@ -785,6 +785,8 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.0.0-rc9
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
+# github.com/openlyinc/pointy v1.1.2
+github.com/openlyinc/pointy
 # github.com/oracle/oci-go-sdk v12.5.0+incompatible
 github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/common/auth
@@ -961,6 +963,8 @@ go.etcd.io/etcd/raft/quorum
 go.etcd.io/etcd/raft/raftpb
 go.etcd.io/etcd/raft/tracker
 go.etcd.io/etcd/version
+# go.mongodb.org/atlas v0.5.0
+go.mongodb.org/atlas/mongodbatlas
 # go.mongodb.org/mongo-driver v1.4.2
 go.mongodb.org/mongo-driver/bson
 go.mongodb.org/mongo-driver/bson/bsoncodec
