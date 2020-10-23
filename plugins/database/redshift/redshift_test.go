@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 	"testing"
 	"time"
@@ -90,8 +91,12 @@ func TestRedshift_Initialize(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
-	if resp.Config["max_open_connections"] != 73 {
-		t.Fatalf("Expected max_open_connections to be set to 73, but was %v", resp.Config["max_open_connections"])
+	expectedConfig := make(map[string]interface{})
+	for k, v := range connectionDetails {
+		expectedConfig[k] = v
+	}
+	if !reflect.DeepEqual(expectedConfig, resp.Config) {
+		t.Fatalf("Expected config %+v, but was %v", expectedConfig, resp.Config)
 	}
 	if db.MaxOpenConnections != 73 {
 		t.Fatalf("Expected max_open_connections to be set to 73, but was %d", db.MaxOpenConnections)
