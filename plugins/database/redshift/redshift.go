@@ -132,7 +132,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 		return dbplugin.NewUserResponse{}, err
 	}
 	password := req.Password
-	expirationStr := req.Expiration.Format("2006-01-02 15:04:05")
+	expirationStr := req.Expiration.Format("2006-01-02 15:04:05-0700")
 
 	// Get the connection
 	db, err := r.getConnection(ctx)
@@ -232,7 +232,7 @@ func updateUserExpiration(ctx context.Context, req dbplugin.UpdateUserRequest, t
 		renewStmts.Commands = []string{defaultRenewSQL}
 	}
 
-	expirationStr := req.Expiration.NewExpiration.Format("2006-01-02 15:04:05")
+	expirationStr := req.Expiration.NewExpiration.Format("2006-01-02 15:04:05-0700")
 
 	for _, stmt := range renewStmts.Commands {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
