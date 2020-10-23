@@ -371,7 +371,7 @@ func migratePost14(t *testing.T, storage teststorage.ReusableStorage, cluster *v
 	}
 	leader := cluster.Cores[leaderIdx]
 
-	// Wait for migration to occur on one of the 2 unsealed nodes
+	// Wait for migration to occur on the leader
 	awaitMigration(t, leader.Client)
 
 	var appliedIndex uint64
@@ -386,10 +386,10 @@ func migratePost14(t *testing.T, storage teststorage.ReusableStorage, cluster *v
 		teststorage.CloseRaftStorage(t, cluster, 0)
 	}
 
-	opts.UnwrapSealFunc = nil
-	// Bring core 0 back up
+	// Bring core 0 back up; we still have the seal migration config in place,
+	// but now that migration has been performed we should be able to unseal
+	// with the new seal and without using the `migrate` unseal option.
 	cluster.StartCore(t, 0, opts)
-	// Depending on timing, the seal may already have been migrated.
 	unseal(t, cluster.Cores[0].Client, unsealKeys)
 
 	// Write a new secret

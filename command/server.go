@@ -1578,7 +1578,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	if !core.IsInSealMigration() {
+	if !core.IsInSealMigrationMode() {
 		go func() {
 			for {
 				err := core.UnsealWithStoredKeys(context.Background())
