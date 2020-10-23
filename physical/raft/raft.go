@@ -130,6 +130,14 @@ type LeaderJoinInfo struct {
 	// via 'leader_api_addr'.
 	AutoJoin string `json:"auto_join"`
 
+	// AutoJoinScheme defines the optional URI protocol scheme for addresses
+	// discovered via auto-join.
+	AutoJoinScheme string `json:"auto_join_scheme"`
+
+	// AutoJoinPort defines the optional port used for addressed discovered via
+	// auto-join.
+	AutoJoinPort uint `json:"auto_join_port"`
+
 	// LeaderAPIAddr is the address of the leader node to connect to
 	LeaderAPIAddr string `json:"leader_api_addr"`
 
@@ -186,6 +194,10 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 	for i, info := range leaderInfos {
 		if len(info.AutoJoin) != 0 && len(info.LeaderAPIAddr) != 0 {
 			return nil, errors.New("cannot provide both a leader_api_addr and auto_join")
+		}
+
+		if info.AutoJoinScheme != "" && (info.AutoJoinScheme != "http" && info.AutoJoinScheme != "https") {
+			return nil, fmt.Errorf("invalid scheme '%s'; must either be http or https", info.AutoJoinScheme)
 		}
 
 		info.Retry = true
