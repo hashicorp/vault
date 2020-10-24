@@ -9,7 +9,6 @@ import (
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/api"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -61,29 +60,6 @@ func new(legacy bool) *MySQL {
 		mySQLConnectionProducer: connProducer,
 		legacy:                  legacy,
 	}
-}
-
-// Run instantiates a MySQL object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	return runCommon(false, apiTLSConfig)
-}
-
-// Run instantiates a MySQL object, and runs the RPC server for the plugin
-func RunLegacy(apiTLSConfig *api.TLSConfig) error {
-	return runCommon(true, apiTLSConfig)
-}
-
-func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
-	var f func() (interface{}, error)
-	f = New(legacy)
-	dbType, err := f()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 func (m *MySQL) Type() (string, error) {
