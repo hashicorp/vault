@@ -84,8 +84,18 @@ var (
 			},
 		}
 	}
+	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
+		return nil
+	}
+	handleSetupPluginReload = func(*Core) error {
+		return nil
+	}
 
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
+
+	wrapHandleRaftRemovePeer = func(b *SystemBackend) framework.OperationFunc {
+		return b.handleRaftRemovePeerUpdate()
+	}
 )
 
 // tuneMount is used to set config on a mount point

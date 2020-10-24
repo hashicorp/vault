@@ -2045,7 +2045,7 @@ type IssuerCredentials struct {
 type IssuerParameters struct {
 	// Name - Name of the referenced issuer object or reserved names; for example, 'Self' or 'Unknown'.
 	Name *string `json:"name,omitempty"`
-	// CertificateType - Type of certificate to be requested from the issuer provider.
+	// CertificateType - Certificate type as supported by the provider (optional); for example 'OV-SSL', 'EV-SSL'
 	CertificateType *string `json:"cty,omitempty"`
 	// CertificateTransparency - Indicates if the certificates generated under this policy should be published to certificate transparency logs.
 	CertificateTransparency *bool `json:"cert_transparency,omitempty"`

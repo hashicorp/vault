@@ -53,3 +53,7 @@ func TestParseEntropy(t *testing.T) {
 func TestConfigRaftRetryJoin(t *testing.T) {
 	testConfigRaftRetryJoin(t)
 }
+
+func TestParseSeals(t *testing.T) {
+	testParseSeals(t)
+}

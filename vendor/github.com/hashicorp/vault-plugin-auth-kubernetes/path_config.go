@@ -7,10 +7,16 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"io/ioutil"
 
 	"github.com/briankassouf/jose/jws"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+var (
+	localCACertPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	localJWTPath    = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 // pathConfig returns the path configuration for CRUD operations on the backend
@@ -57,6 +63,22 @@ extracted. Not every installation of Kuberentes exposes these keys.`,
 					Name: "JWT Issuer",
 				},
 			},
+			"disable_iss_validation": {
+				Type:        framework.TypeBool,
+				Description: "Disable JWT issuer validation. Allows to skip ISS validation.",
+				Default:     false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Disable JWT Issuer Validation",
+				},
+			},
+			"disable_local_ca_jwt": {
+				Type:        framework.TypeBool,
+				Description: "Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod",
+				Default:     false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Disable use of local CA and service account JWT",
+				},
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathConfigWrite,
@@ -79,10 +101,12 @@ func (b *kubeAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reque
 		// Create a map of data to be returned
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"kubernetes_host":    config.Host,
-				"kubernetes_ca_cert": config.CACert,
-				"pem_keys":           config.PEMKeys,
-				"issuer":             config.Issuer,
+				"kubernetes_host":        config.Host,
+				"kubernetes_ca_cert":     config.CACert,
+				"pem_keys":               config.PEMKeys,
+				"issuer":                 config.Issuer,
+				"disable_iss_validation": config.DisableISSValidation,
+				"disable_local_ca_jwt":   config.DisableLocalCAJwt,
 			},
 		}
 
@@ -97,14 +121,30 @@ func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("no host provided"), nil
 	}
 
+	disableLocalJWT := data.Get("disable_local_ca_jwt").(bool)
+	localCACert := []byte{}
+	localTokenReviewer := []byte{}
+	if !disableLocalJWT {
+		localCACert, _ = ioutil.ReadFile(localCACertPath)
+		localTokenReviewer, _ = ioutil.ReadFile(localJWTPath)
+	}
 	pemList := data.Get("pem_keys").([]string)
 	caCert := data.Get("kubernetes_ca_cert").(string)
 	issuer := data.Get("issuer").(string)
+	disableIssValidation := data.Get("disable_iss_validation").(bool)
 	if len(pemList) == 0 && len(caCert) == 0 {
-		return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
+		if len(localCACert) > 0 {
+			caCert = string(localCACert)
+		} else {
+			return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
+		}
 	}
 
 	tokenReviewer := data.Get("token_reviewer_jwt").(string)
+	if !disableLocalJWT && len(tokenReviewer) == 0 && len(localTokenReviewer) > 0 {
+		tokenReviewer = string(localTokenReviewer)
+	}
+
 	if len(tokenReviewer) > 0 {
 		// Validate it's a JWT
 		_, err := jws.ParseJWT([]byte(tokenReviewer))
@@ -114,12 +154,14 @@ func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Requ
 	}
 
 	config := &kubeConfig{
-		PublicKeys:       make([]interface{}, len(pemList)),
-		PEMKeys:          pemList,
-		Host:             host,
-		CACert:           caCert,
-		TokenReviewerJWT: tokenReviewer,
-		Issuer:           issuer,
+		PublicKeys:           make([]interface{}, len(pemList)),
+		PEMKeys:              pemList,
+		Host:                 host,
+		CACert:               caCert,
+		TokenReviewerJWT:     tokenReviewer,
+		Issuer:               issuer,
+		DisableISSValidation: disableIssValidation,
+		DisableLocalCAJwt:    disableLocalJWT,
 	}
 
 	var err error
@@ -157,6 +199,12 @@ type kubeConfig struct {
 	TokenReviewerJWT string `json:"token_reviewer_jwt"`
 	// Issuer is the claim that specifies who issued the token
 	Issuer string `json:"issuer"`
+	// DisableISSValidation is optional parameter to allow to skip ISS validation
+	DisableISSValidation bool `json:"disable_iss_validation"`
+	// DisableLocalJWT is an optional parameter to disable defaulting to using
+	// the local CA cert and service account jwt when running in a Kubernetes
+	// pod
+	DisableLocalCAJwt bool `json:"disable_local_ca_jwt"`
 }
 
 // PasrsePublicKeyPEM is used to parse RSA and ECDSA public keys from PEMs

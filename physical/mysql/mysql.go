@@ -15,8 +15,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 
 	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
@@ -59,15 +61,21 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		return nil, err
 	}
 
-	database, ok := conf["database"]
-	if !ok {
+	database := conf["database"]
+	if database == "" {
 		database = "vault"
 	}
-	table, ok := conf["table"]
-	if !ok {
+	table := conf["table"]
+	if table == "" {
 		table = "vault"
 	}
-	dbTable := "`" + database + "`.`" + table + "`"
+
+	err = validateDBTable(database, table)
+	if err != nil {
+		return nil, err
+	}
+
+	dbTable := fmt.Sprintf("`%s`.`%s`", database, table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -191,6 +199,67 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	return m, nil
+}
+
+// validateDBTable to prevent SQL injection attacks. This ensures that the database and table names only have valid
+// characters in them. MySQL allows for more characters that this will allow, but there isn't an easy way of
+// representing the full Unicode Basic Multilingual Plane to check against.
+// https://dev.mysql.com/doc/refman/5.7/en/identifiers.html
+func validateDBTable(db, table string) (err error) {
+	merr := &multierror.Error{}
+	merr = multierror.Append(merr, wrapErr("invalid database: %w", validate(db)))
+	merr = multierror.Append(merr, wrapErr("invalid table: %w", validate(table)))
+	return merr.ErrorOrNil()
+}
+
+func validate(name string) (err error) {
+	if name == "" {
+		return fmt.Errorf("missing name")
+	}
+	// From: https://dev.mysql.com/doc/refman/5.7/en/identifiers.html
+	// - Permitted characters in quoted identifiers include the full Unicode Basic Multilingual Plane (BMP), except U+0000:
+	//    ASCII: U+0001 .. U+007F
+	//    Extended: U+0080 .. U+FFFF
+	// - ASCII NUL (U+0000) and supplementary characters (U+10000 and higher) are not permitted in quoted or unquoted identifiers.
+	// - Identifiers may begin with a digit but unless quoted may not consist solely of digits.
+	// - Database, table, and column names cannot end with space characters.
+	//
+	// We are explicitly excluding all space characters (it's easier to deal with)
+	// The name will be quoted, so the all-digit requirement doesn't apply
+	runes := []rune(name)
+	validationErr := fmt.Errorf("invalid character found: can only include printable, non-space characters between [0x0001-0xFFFF]")
+	for _, r := range runes {
+		// U+0000 Explicitly disallowed
+		if r == 0x0000 {
+			return fmt.Errorf("invalid character: cannot include 0x0000")
+		}
+		// Cannot be above 0xFFFF
+		if r > 0xFFFF {
+			return fmt.Errorf("invalid character: cannot include any characters above 0xFFFF")
+		}
+		if r == '`' {
+			return fmt.Errorf("invalid character: cannot include '`' character")
+		}
+		if r == '\'' || r == '"' {
+			return fmt.Errorf("invalid character: cannot include quotes")
+		}
+		// We are excluding non-printable characters (not mentioned in the docs)
+		if !unicode.IsPrint(r) {
+			return validationErr
+		}
+		// We are excluding space characters (not mentioned in the docs)
+		if unicode.IsSpace(r) {
+			return validationErr
+		}
+	}
+	return nil
+}
+
+func wrapErr(message string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf(message, err)
 }
 
 func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) {

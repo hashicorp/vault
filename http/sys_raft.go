@@ -12,6 +12,25 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+func handleSysRaftBootstrap(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "POST", "PUT":
+			if core.Sealed() {
+				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"))
+			}
+
+			if err := core.RaftBootstrap(context.Background(), false); err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+
+		default:
+			respondError(w, http.StatusBadRequest, nil)
+		}
+	})
+}
+
 func handleSysRaftJoin(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -48,11 +67,13 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
+			AutoJoin:      req.AutoJoin,
 			LeaderAPIAddr: req.LeaderAPIAddr,
 			TLSConfig:     tlsConfig,
 			Retry:         req.Retry,
 		},
 	}
+
 	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
@@ -70,6 +91,7 @@ type JoinResponse struct {
 }
 
 type JoinRequest struct {
+	AutoJoin         string `json:"auto_join"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`

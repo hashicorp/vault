@@ -104,7 +104,28 @@ $ vault auth enable -plugin-name='jwt' plugin
 Successfully enabled 'plugin' at 'jwt'!
 ```
 
-#### Tests
+### Provider-specific handling
+
+Provider-specific handling can be added by writing an object that conforms to
+one or more interfaces in [provider_config.go](provider_config.go). Some
+interfaces will be required, like [CustomProvider](provider_config.go), and
+others will be invoked if present during the login process (e.g. GroupsFetcher).
+The interfaces themselves will be small (usually a single method) as it is
+expected that the parts of the login that need specialization will be different
+per provider. This pattern allows us to start with a minimal set and add
+interfaces as necessary.
+
+If a custom provider is configured on the backend object and satisfies a given
+interface, the interface will be used during the relevant part of the login
+flow. e.g. after an ID token has been received, the custom provider's
+UserInfoFetcher interface will be used, if present, to fetch and merge
+additional identity data.
+
+The custom handlers will be standalone objects defined in their own file (one
+per provider). They'll be part of the main jwtauth package to avoid potential
+circular import issues.
+
+### Tests
 
 If you are developing this plugin and want to verify it is still
 functioning (and you haven't broken anything else), we recommend

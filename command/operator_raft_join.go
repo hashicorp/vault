@@ -27,13 +27,18 @@ func (c *OperatorRaftJoinCommand) Synopsis() string {
 
 func (c *OperatorRaftJoinCommand) Help() string {
 	helpText := `
-Usage: vault operator raft join [options] <leader-api-addr>
+Usage: vault operator raft join [options] <leader-api-addr|auto-join-configuration>
 
   Join the current node as a peer to the Raft cluster by providing the address
   of the Raft leader node.
 
       $ vault operator raft join "http://127.0.0.2:8200"
 
+  Join the current node as a peer to the Raft cluster by providing cloud auto-join
+  configuration.
+
+      $ vault operator raft join "provider=aws region=eu-west-1 ..."
+			
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
 
@@ -56,21 +61,21 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 		Name:       "leader-ca-cert",
 		Target:     &c.flagLeaderCACert,
 		Completion: complete.PredictNothing,
-		Usage:      "CA cert to communicate with Raft leader.",
+		Usage:      "CA cert to use when verifying the Raft leader certificate.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-client-cert",
 		Target:     &c.flagLeaderClientCert,
 		Completion: complete.PredictNothing,
-		Usage:      "Client cert to to authenticate to Raft leader.",
+		Usage:      "Client cert to use when authenticating with the Raft leader.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-client-key",
 		Target:     &c.flagLeaderClientKey,
 		Completion: complete.PredictNothing,
-		Usage:      "Client key to to authenticate to Raft leader.",
+		Usage:      "Client key to use when authenticating with the Raft leader.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -106,19 +111,16 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
-	leaderAPIAddr := ""
+	leaderInfo := ""
 
 	args = f.Args()
 	switch len(args) {
+	case 0:
+		// No-op: This is acceptable if we're using raft for HA-only
 	case 1:
-		leaderAPIAddr = strings.TrimSpace(args[0])
+		leaderInfo = strings.TrimSpace(args[0])
 	default:
-		c.UI.Error(fmt.Sprintf("Incorrect arguments (expected 1, got %d)", len(args)))
-		return 1
-	}
-
-	if len(leaderAPIAddr) == 0 {
-		c.UI.Error("leader api address is required")
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
 	}
 
@@ -146,14 +148,21 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 2
 	}
 
-	resp, err := client.Sys().RaftJoin(&api.RaftJoinRequest{
-		LeaderAPIAddr:    leaderAPIAddr,
+	joinReq := &api.RaftJoinRequest{
 		LeaderCACert:     leaderCACert,
 		LeaderClientCert: leaderClientCert,
 		LeaderClientKey:  leaderClientKey,
 		Retry:            c.flagRetry,
 		NonVoter:         c.flagNonVoter,
-	})
+	}
+
+	if strings.Contains(leaderInfo, "provider=") {
+		joinReq.AutoJoin = leaderInfo
+	} else {
+		joinReq.LeaderAPIAddr = leaderInfo
+	}
+
+	resp, err := client.Sys().RaftJoin(joinReq)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error joining the node to the Raft cluster: %s", err))
 		return 2

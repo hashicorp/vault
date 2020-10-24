@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"runtime"
 	"sort"
 	"time"
@@ -164,7 +163,7 @@ func NewProcess(pid int32) (*Process, error) {
 	if !exists {
 		return p, ErrorProcessNotRunning
 	}
-	go p.CreateTime()
+	p.CreateTime()
 	return p, nil
 }
 
@@ -265,7 +264,7 @@ func calculatePercent(t1, t2 *cpu.TimesStat, delta float64, numcpu int) float64 
 	}
 	delta_proc := t2.Total() - t1.Total()
 	overall_percent := ((delta_proc / delta) * 100) * float64(numcpu)
-	return math.Min(100, math.Max(0, overall_percent))
+	return overall_percent
 }
 
 // MemoryPercent returns how many percent of the total RAM this process uses
@@ -286,7 +285,7 @@ func (p *Process) MemoryPercentWithContext(ctx context.Context) (float32, error)
 	}
 	used := processMemory.RSS
 
-	return float32(math.Min(100, math.Max(0, (100*float64(used)/float64(total))))), nil
+	return (100 * float32(used) / float32(total)), nil
 }
 
 // CPU_Percent returns how many percent of the CPU time this process uses
@@ -311,5 +310,5 @@ func (p *Process) CPUPercentWithContext(ctx context.Context) (float64, error) {
 		return 0, nil
 	}
 
-	return math.Min(100, math.Max(0, 100*cput.Total()/totalTime)), nil
+	return 100 * cput.Total() / totalTime, nil
 }

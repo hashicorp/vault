@@ -5,11 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/mitchellh/go-testing-interface"
-
 	hclog "github.com/hashicorp/go-hclog"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/mitchellh/go-testing-interface"
 )
 
 // ReusableStorage is a physical backend that can be re-used across
@@ -58,8 +59,7 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 		},
 
 		// No-op
-		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
-		},
+		Cleanup: func(t testing.T, cluster *vault.TestCluster) {},
 	}
 
 	cleanup := func() {
@@ -73,7 +73,7 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 
 // MakeReusableRaftStorage makes a physical raft backend that can be re-used
 // across multiple test clusters in sequence.
-func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (ReusableStorage, StorageCleanup) {
+func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int, addressProvider raftlib.ServerAddressProvider) (ReusableStorage, StorageCleanup) {
 
 	raftDirs := make([]string, numCores)
 	for i := 0; i < numCores; i++ {
@@ -87,17 +87,14 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (Re
 			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
 			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx])
+				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], addressProvider, false)
 			}
 		},
 
 		// Close open files being used by raft.
 		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
-			for _, core := range cluster.Cores {
-				raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
-				if err := raftStorage.Close(); err != nil {
-					t.Fatal(err)
-				}
+			for i := 0; i < len(cluster.Cores); i++ {
+				CloseRaftStorage(t, cluster, i)
 			}
 		},
 	}
@@ -111,16 +108,67 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (Re
 	return storage, cleanup
 }
 
+// CloseRaftStorage closes open files being used by raft.
+func CloseRaftStorage(t testing.T, cluster *vault.TestCluster, idx int) {
+	raftStorage := cluster.Cores[idx].UnderlyingRawStorage.(*raft.RaftBackend)
+	if err := raftStorage.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func MakeReusableRaftHAStorage(t testing.T, logger hclog.Logger, numCores int, bundle *vault.PhysicalBackendBundle) (ReusableStorage, StorageCleanup) {
+	raftDirs := make([]string, numCores)
+	for i := 0; i < numCores; i++ {
+		raftDirs[i] = makeRaftDir(t)
+	}
+
+	storage := ReusableStorage{
+		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
+			opts.KeepStandbysSealed = true
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+				haBundle := makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], nil, true)
+
+				return &vault.PhysicalBackendBundle{
+					Backend:   bundle.Backend,
+					HABackend: haBundle.HABackend,
+				}
+			}
+		},
+
+		// Close open files being used by raft.
+		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
+			for _, core := range cluster.Cores {
+				raftStorage := core.UnderlyingHAStorage.(*raft.RaftBackend)
+				if err := raftStorage.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+		},
+	}
+
+	cleanup := func() {
+		if bundle.Cleanup != nil {
+			bundle.Cleanup()
+		}
+
+		for _, rd := range raftDirs {
+			os.RemoveAll(rd)
+		}
+	}
+
+	return storage, cleanup
+}
+
 func makeRaftDir(t testing.T) string {
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("raft dir: %s", raftDir)
+	//t.Logf("raft dir: %s", raftDir)
 	return raftDir
 }
 
-func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
+func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string, addressProvider raftlib.ServerAddressProvider, ha bool) *vault.PhysicalBackendBundle {
 
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
@@ -134,7 +182,16 @@ func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raft
 		t.Fatal(err)
 	}
 
-	return &vault.PhysicalBackendBundle{
-		Backend: backend,
+	if addressProvider != nil {
+		backend.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 	}
+
+	bundle := new(vault.PhysicalBackendBundle)
+
+	if ha {
+		bundle.HABackend = backend.(physical.HABackend)
+	} else {
+		bundle.Backend = backend
+	}
+	return bundle
 }

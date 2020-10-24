@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -17,7 +16,17 @@ func (b *backend) pathRotateCredentials() *framework.Path {
 	return &framework.Path{
 		Pattern: "rotate-root",
 		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback:                    b.pathRotateCredentialsUpdate,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathRotateCredentialsUpdate,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathRotateCredentialsUpdate,
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -38,7 +47,7 @@ func (b *backend) pathRotateCredentialsUpdate(ctx context.Context, req *logical.
 		return nil, errors.New("the config is currently unset")
 	}
 
-	newPassword, err := util.GeneratePassword(engineConf.PasswordConf.Formatter, engineConf.PasswordConf.Length)
+	newPassword, err := GeneratePassword(ctx, engineConf.PasswordConf, b.System())
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +67,7 @@ func (b *backend) pathRotateCredentialsUpdate(ctx context.Context, req *logical.
 	engineConf.ADConf.BindPassword = newPassword
 
 	// Update the password locally.
-	if pwdStoringErr := storePassword(ctx, req, engineConf); pwdStoringErr != nil {
+	if pwdStoringErr := writeConfig(ctx, req.Storage, engineConf); pwdStoringErr != nil {
 		// We were unable to store the new password locally. We can't continue in this state because we won't be able
 		// to roll any passwords, including our own to get back into a state of working. So, we need to roll back to
 		// the last password we successfully got into storage.
@@ -91,17 +100,6 @@ func (b *backend) rollBackPassword(ctx context.Context, engineConf *configuratio
 	}
 	// Failure after looping.
 	return err
-}
-
-func storePassword(ctx context.Context, req *logical.Request, engineConf *configuration) error {
-	entry, err := logical.StorageEntryJSON(configStorageKey, engineConf)
-	if err != nil {
-		return err
-	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return err
-	}
-	return nil
 }
 
 const pathRotateCredentialsUpdateHelpSyn = `

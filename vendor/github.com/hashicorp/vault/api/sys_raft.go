@@ -16,6 +16,7 @@ type RaftJoinResponse struct {
 
 // RaftJoinRequest represents the parameters consumed by the raft join API
 type RaftJoinRequest struct {
+	AutoJoin         string `json:"auto_join"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`
