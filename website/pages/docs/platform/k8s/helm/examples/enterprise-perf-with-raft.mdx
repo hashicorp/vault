@@ -22,7 +22,7 @@ First, create the primary cluster:
 ```shell
 helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.4.0_ent' \
+  --set='server.image.tag=1.5.4_ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -71,12 +71,11 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-primary-1.vault-primary-internal:8
 With the primary cluster created, next create a secondary cluster.
 
 ```shell
-helm install vault-secondary \
+helm install vault-secondary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.4.0_ent' \
+  --set='server.image.tag=1.5.4_ent' \
   --set='server.ha.enabled=true' \
-  --set='server.ha.raft.enabled=true' \
-  https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
+  --set='server.ha.raft.enabled=true'
 ```
 
 Next, initialize and unseal `vault-secondary-0` pod:

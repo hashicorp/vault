@@ -28,7 +28,7 @@ kerberos.authGSSClientStep(vc, "")
 kerberos_token = kerberos.authGSSClientResponse(vc)
 
 r = requests.post("https://vault.domain:8200/v1/auth/kerberos/login",
-                  json={'authorization': 'Negotiate ' + kerberos_token})
+                  headers={'authorization': 'Negotiate ' + kerberos_token})
 print('Vault token:', r.json()['auth']['client_token'])
 ```
 

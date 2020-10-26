@@ -7,7 +7,6 @@ import ReplicationActions from 'core/mixins/replication-actions';
 import { task } from 'ember-concurrency';
 
 const DEFAULTS = {
-  mode: 'primary',
   token: null,
   id: null,
   loading: false,
@@ -16,10 +15,11 @@ const DEFAULTS = {
   primary_cluster_addr: null,
   ca_file: null,
   ca_path: null,
-  replicationMode: 'dr',
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
+  replicationMode: 'dr',
+  mode: 'primary',
   wizard: service(),
   version: service(),
   didReceiveAttrs() {
@@ -67,11 +67,12 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   },
 
   submit: task(function*() {
-    yield this.submitHandler(...arguments);
-    let wizard = this.get('wizard');
-    wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
+    try {
+      yield this.submitHandler.perform(...arguments);
+    } catch (e) {
+      // do not handle error
+    }
   }),
-
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       this.get('submit').perform(...arguments);

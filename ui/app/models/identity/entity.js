@@ -50,6 +50,6 @@ let Model = IdentityModel.extend({
 });
 
 export default attachCapabilities(Model, {
-  updatePath: apiPath`identity/${'identityType'}/id/${'id'}`,
+  updatePath: apiPath`identity/entity/id/${'id'}`,
   aliasPath: apiPath`identity/entity-alias`,
 });

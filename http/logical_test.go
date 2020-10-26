@@ -281,6 +281,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err := buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -295,6 +296,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo?list=true", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -309,6 +311,12 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("LIST", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
+	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), nil, req)
+	if err != nil || status != 0 {
+		t.Fatal(err)
+	}
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)

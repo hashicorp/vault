@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
@@ -28,7 +29,20 @@ func TestNewServer(t *testing.T) {
 
 func TestServerRun(t *testing.T) {
 	// create http test server
-	ts := httptest.NewServer(http.HandlerFunc(handleRequest))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/kv/myapp/config", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, jsonResponse)
+	})
+	mux.HandleFunc("/v1/kv/myapp/config-bad", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+		fmt.Fprintln(w, `{"errors":[]}`)
+	})
+	mux.HandleFunc("/v1/kv/myapp/perm-denied", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(403)
+		fmt.Fprintln(w, `{"errors":["1 error occurred:\n\t* permission denied\n\n"]}`)
+	})
+
+	ts := httptest.NewServer(mux)
 	defer ts.Close()
 	tmpDir, err := ioutil.TempDir("", "agent-tests")
 	defer os.RemoveAll(tmpDir)
@@ -50,6 +64,7 @@ func TestServerRun(t *testing.T) {
 
 	testCases := map[string]struct {
 		templateMap map[string]*templateTest
+		expectError bool
 	}{
 		"simple": {
 			templateMap: map[string]*templateTest{
@@ -59,6 +74,7 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
+			expectError: false,
 		},
 		"multiple": {
 			templateMap: map[string]*templateTest{
@@ -98,6 +114,38 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
+			expectError: false,
+		},
+		"bad secret": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContentsBad),
+					},
+				},
+			},
+			expectError: true,
+		},
+		"missing key": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents:      pointerutil.StringPtr(templateContentsMissingKey),
+						ErrMissingKey: pointerutil.BoolPtr(true),
+					},
+				},
+			},
+			expectError: true,
+		},
+		"permission denied": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContentsPermDenied),
+					},
+				},
+			},
+			expectError: true,
 		},
 	}
 
@@ -111,7 +159,7 @@ func TestServerRun(t *testing.T) {
 				templatesToRender = append(templatesToRender, templateTest.template)
 			}
 
-			ctx := context.Background()
+			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
 			sc := ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				VaultConf: &config.Vault{
@@ -127,13 +175,29 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
+			server.testingLimitRetry = 3
 
-			go server.Run(ctx, templateTokenCh, templatesToRender)
+			errCh := make(chan error)
+			go func() {
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
+			}()
 
 			// send a dummy value to trigger the internal Runner to query for secret
 			// info
 			templateTokenCh <- "test"
-			<-server.DoneCh
+
+			select {
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
+			case err := <-errCh:
+				if err != nil && !tc.expectError {
+					t.Fatalf("did not expect error, got: %v", err)
+				}
+				if err != nil && tc.expectError {
+					t.Logf("received expected error: %v", err)
+					return
+				}
+			}
 
 			// verify test file exists and has the content we're looking for
 			var fileCount int
@@ -162,10 +226,6 @@ func TestServerRun(t *testing.T) {
 	}
 }
 
-func handleRequest(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, jsonResponse)
-}
-
 var jsonResponse = `
 {
   "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
@@ -192,6 +252,34 @@ var jsonResponse = `
 
 var templateContents = `
 {{ with secret "kv/myapp/config"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsMissingKey = `
+{{ with secret "kv/myapp/config"}}
+{
+{{ if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsBad = `
+{{ with secret "kv/myapp/config-bad"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsPermDenied = `
+{{ with secret "kv/myapp/perm-denied"}}
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}

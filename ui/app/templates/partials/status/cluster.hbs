@@ -62,6 +62,30 @@
             </nav>
             <hr/>
           {{/if}}
+        {{else}}
+          {{#if (has-permission 'status' routeParams='replication')}}
+            <nav class="menu">
+              <p class="menu-label">Replication</p>
+              <ul>
+                {{#if cluster.anyReplicationEnabled}}
+                  <li>
+                    {{#link-to
+                      "vault.cluster.replication-dr-promote.details"
+                      disabled=(not currentToken)
+                      invokeAction=(action onLinkClick)
+                    }}
+                      {{replication-mode-summary
+                        mode="dr"
+                        display='menu'
+                        cluster=cluster
+                      }}
+                    {{/link-to}}
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+            <hr/>
+          {{/if}}
         {{/if}}
       {{/if}}
     {{/unless}}
@@ -128,10 +152,10 @@
             {{/if}}
           </ul>
         {{/if}}
-        {{#if ( and (has-permission 'metrics' routeParams='dashboard') (not cluster.dr.isSecondary) auth.currentToken)}}
+        {{#if ( and (has-permission 'metrics' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
-              {{#link-to 'vault.cluster.metrics' 
+              {{#link-to 'vault.cluster.metrics'
                 invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
               }}
                 <div class="level is-mobile">

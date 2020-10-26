@@ -223,11 +223,3 @@ func KernelVersionWithContext(ctx context.Context) (string, error) {
 	version, err := unix.Sysctl("kern.osrelease")
 	return strings.ToLower(version), err
 }
-
-func SensorsTemperatures() ([]TemperatureStat, error) {
-	return SensorsTemperaturesWithContext(context.Background())
-}
-
-func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, error) {
-	return []TemperatureStat{}, common.ErrNotImplementedError
-}

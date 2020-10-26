@@ -95,7 +95,7 @@ vault.hashicorp.com/role: 'app'
 The first annotation will be rendered to `/vault/secrets/foo` and the second
 annotation will be rendered to `/vault/secrets/bar`.
 
-It's possible to set the file format of the using the annotation. For example the
+It's possible to set the file format of the rendered secret using the annotation. For example the
 following secret will be rendered to `/vault/secrets/foo.txt`:
 
 ```yaml
@@ -170,7 +170,12 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 
 ~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
 
-#### Vault Agent Configuration Map
+### Renewals and Updating Secrets
+
+For more information on when Vault Agent fetches and renews secrets, see the 
+[Agent documentation](/docs/agent/template#renewals-and-updating-secrets).
+
+### Vault Agent Configuration Map
 
 For advanced use cases, it may be required to define Vault Agent configuration
 files to mount instead of using secret and template annotations. The Vault Agent

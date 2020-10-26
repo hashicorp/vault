@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	testPlaintext = "the quick brown fox"
+	testPlaintext = "The quick brown fox"
 )
 
-func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -42,7 +42,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
-func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
 
@@ -64,7 +64,7 @@ func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
 	return b, storage
 }
 
-func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backend {
 	sysView := logical.TestSystemView()
 
 	conf := &logical.BackendConfig{
@@ -85,7 +85,7 @@ func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backe
 	return b
 }
 
-func createBackendWithForceNoCacheWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical.Storage) *backend {
 	sysView := logical.TestSystemView()
 	sysView.CachingDisabledVal = true
 
@@ -930,12 +930,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
-	derBytesOld, err := p.DeriveKey(keyContext, 1, 0)
+	derBytesOld, err := p.GetKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesOld2, err := p.DeriveKey(keyContext, 1, 0)
+	derBytesOld2, err := p.GetKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,12 +949,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatal("expected no upgrade needed")
 	}
 
-	derBytesNew, err := p.DeriveKey(keyContext, 1, 64)
+	derBytesNew, err := p.GetKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesNew2, err := p.DeriveKey(keyContext, 1, 64)
+	derBytesNew2, err := p.GetKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}

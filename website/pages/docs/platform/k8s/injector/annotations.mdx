@@ -7,13 +7,13 @@ description: This section documents the configurable annotations for the Vault A
 
 # Annotations
 
-The following are the available annotations for the injector.  These annotations 
-are organized into two sections: agent and vault.  All of the annotations below 
+The following are the available annotations for the injector. These annotations 
+are organized into two sections: agent and vault. All of the annotations below 
 change the configurations of the Vault Agent containers injected into the pod.
 
 ## Agent Annotations
 
-Agent annotations change the Vault Agent containers templating configuration.  For 
+Agent annotations change the Vault Agent containers templating configuration. For 
 example, agent annotations allow users to define what secrets they want, how to render 
 them, optional commands to run, etc.
 
@@ -32,12 +32,12 @@ them, optional commands to run, etc.
   not needed. Defaults to `vault:1.4.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent 
-  init container first if `true` (last if `false`).  This is useful when other init 
-  containers need pre-populated secrets.  This should be set to a `true` or `false` 
-  value.  Defaults to `false`. 
+  init container first if `true` (last if `false`). This is useful when other init 
+  containers need pre-populated secrets. This should be set to a `true` or `false` 
+  value. Defaults to `false`. 
 
 - `vault.hashicorp.com/agent-inject-command` - configures Vault Agent
-  to run a command after the template has been rendered.  To map a command to a specific 
+  to run a command after the template has been rendered. To map a command to a specific 
   secret, use the same unique secret name: `vault.hashicorp.com/agent-inject-command-SECRET-NAME`.
   For example, if a secret annotation `vault.hashicorp.com/agent-inject-secret-foobar` 
   is configured, `vault.hashicorp.com/agent-inject-command-foobar` would map a command 
@@ -56,31 +56,56 @@ them, optional commands to run, etc.
   unique value provided in `vault.hashicorp.com/agent-inject-secret-`. If not provided,
   a default generic template is used.
 
+- `vault.hashicorp.com/secret-volume-path` - configures where on the filesystem a secret
+  will be rendered. To map a path to a specific secret, use the same unique secret name:
+  `vault.hashicorp.com/secret-volume-path-SECRET-NAME`. For example, if a secret annotation
+  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/secret-volume-path-foobar` would configure where that secret
+  is rendered. If no secret name is provided, this sets the default for all rendered
+  secrets in the pod.
+
+- `vault.hashicorp.com/agent-inject-file` - configures the filename and path
+  in the secrets volume where a Vault secret will be written. This should be used
+  with `vault.hashicorp.com/secret-volume-path`, which mounts a memory volume to
+  the specified path. If `secret-volume-path` is used, the path can be omitted from
+  this value. To map a filename to a specific secret, use the same unique secret name:
+  `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
+  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
+
+- `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at 
+  `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with 
+  auto-auth methods such as approle that require paths to secrets be present.
+
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault 
-  token with other containers in the pod.  This is helpful when other containers 
+  token with other containers in the pod. This is helpful when other containers 
   communicate directly with Vault but require auto-authentication provided by Vault 
-  Agent.  This should be set to a `true` or `false` value.  Defaults to `false`.
+  Agent. This should be set to a `true` or `false` value. Defaults to `false`.
 
 - `vault.hashicorp.com/agent-limits-cpu` - configures the CPU limits on the Vault
-  Agent containers. Defaults to `500m`.
+  Agent containers. Defaults to `500m`. Setting this to an empty string disables
+  CPU limits.
 
 - `vault.hashicorp.com/agent-limits-mem` - configures the memory limits on the Vault
-  Agent containers. Defaults to `128Mi`.
+  Agent containers. Defaults to `128Mi`. Setting this to an empty string disables
+  memory limits.
 
 - `vault.hashicorp.com/agent-requests-cpu` - configures the CPU requests on the
-  Vault Agent containers. Defaults to `250m`.
+  Vault Agent containers. Defaults to `250m`. Setting this to an empty string disables
+  CPU requests.
 
 - `vault.hashicorp.com/agent-requests-mem` - configures the memory requests on the
-  Vault Agent containers. Defaults to `64Mi`.
+  Vault Agent containers. Defaults to `64Mi`. Setting this to an empty string disables
+  memory requests.
 
 - `vault.hashicorp.com/agent-revoke-on-shutdown` - configures whether the sidecar 
-  will revoke it's own token before shutting down.  This setting will only be applied 
-  to the Vault Agent sidecar container.  This should be set to a `true` or `false` 
+  will revoke it's own token before shutting down. This setting will only be applied 
+  to the Vault Agent sidecar container. This should be set to a `true` or `false` 
   value. Defaults to `false`.
 
 - `vault.hashicorp.com/agent-revoke-grace` - configures the grace period, in seconds, 
-  for revoking it's own token before shutting down.  This setting will only be applied
-  to the Vault Agent sidecar container.  Defaults to `5s`.
+  for revoking it's own token before shutting down. This setting will only be applied
+  to the Vault Agent sidecar container. Defaults to `5s`.
 
 - `vault.hashicorp.com/agent-pre-populate` - configures whether an init container
   is included to pre-populate the shared memory volume with secrets prior to the
@@ -92,15 +117,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/preserve-secret-case` - configures Vault Agent to preserve 
   the secret name case when creating the secret files. This should be set to a `true` 
-  or `false` value.  Defaults to `false`.
-
-- `vault.hashicorp.com/secret-volume-path` - configures where on the filesystem a secret 
-  will be rendered.  To map a path to a specific secret, use the same unique secret name: 
-  `vault.hashicorp.com/secret-volume-path-SECRET-NAME`. For example, if a secret annotation 
-  `vault.hashicorp.com/agent-inject-secret-foobar` is configured, 
-  `vault.hashicorp.com/secret-volume-path-foobar` would configure where that secret 
-  is rendered.  If no secret name is provided, this sets the default for all rendered 
-  secrets in the pod.
+  or `false` value. Defaults to `false`.
 
 - `vault.hashicorp.com/agent-run-as-user` - sets the user (uid) to run Vault
   agent as. Also available as a command-line option (`-run-as-user`) or
@@ -126,14 +143,25 @@ them, optional commands to run, etc.
   ~> **Note**: If the first application container in the pod is running as root
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
 
+- `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable 
+  [caching](/docs/agent/caching). Defaults to `false`.
+
+- `vault.hashicorp.com/agent-cache-use-auto-auth-token` - configures Vault Agent cache 
+  to authenticate on behalf of the requester. Set to `force` to enable. Disabled 
+  by default.
+
+- `vault.hashicorp.com/agent-cache-listener-port` - configures Vault Agent cache 
+  listening port. Defaults to `8080`.
+
+
 ## Vault Annotations
 
-Vault annotations change how the Vault Agent containers communicate with Vault.  For 
+Vault annotations change how the Vault Agent containers communicate with Vault. For 
 example, Vault's address, TLS certificates to use, client parameters such as timeouts, 
 etc. 
 
 - `vault.hashicorp.com/auth-path` - configures the auth path for the Kubernetes 
-  auth method.  Defaults to `kubernetes`.
+  auth method. Defaults to `auth/kubernetes`.
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
@@ -155,7 +183,7 @@ etc.
   and accepts value types of `60`, `60s` or `1m`.
 
 - `vault.hashicorp.com/log-level` - configures the verbosity of the Vault Agent 
-  log level.  Default is `info`.
+  log level. Default is `info`.
 
 - `vault.hashicorp.com/namespace` - configures the Vault Enterprise namespace to 
   be used when requesting secrets from Vault.  

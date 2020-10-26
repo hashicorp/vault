@@ -22,10 +22,10 @@ import (
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -56,6 +56,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-prefix/*",
 		"leases/revoke-force/*",
 		"leases/lookup/*",
+		"storage/raft/snapshot-auto/config/*",
 	}
 
 	b := testSystemBackend(t)
@@ -2654,7 +2655,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	// Add another mount
 	me := &MountEntry{
 		Table:   mountTableType,
-		Path:    sanitizeMountPath("kv-v1"),
+		Path:    sanitizePath("kv-v1"),
 		Type:    "kv",
 		Options: map[string]string{"version": "1"},
 	}
@@ -3188,7 +3189,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		policyEntry := storageEntry(t, "testpolicy",

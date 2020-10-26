@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -32,7 +32,8 @@ const (
 	putOp
 	restoreCallbackOp
 
-	chunkingPrefix = "raftchunking/"
+	chunkingPrefix   = "raftchunking/"
+	databaseFilename = "vault.db"
 )
 
 var (
@@ -76,36 +77,19 @@ type FSM struct {
 	logger      log.Logger
 	noopRestore bool
 
+	// applyDelay is used to simulate a slow apply in tests
+	applyDelay time.Duration
+
 	db *bolt.DB
 
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
-	// This is just used in tests to disable to storing the latest indexes and
-	// configs so we can conform to the standard backend tests, which expect to
-	// additional state in the backend.
-	storeLatestState bool
-
 	chunker *raftchunking.ChunkingBatchingFSM
-
-	// testSnapshotRestoreError is used in tests to simulate an error while
-	// restoring a snapshot.
-	testSnapshotRestoreError bool
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
-	path, ok := conf["path"]
-	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
-	}
-
-	dbPath := filepath.Join(path, "vault.db")
-
-	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		return nil, err
-	}
+func NewFSM(path string, logger log.Logger) (*FSM, error) {
 
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
@@ -114,6 +98,53 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	atomic.StoreUint64(latestTerm, 0)
 	atomic.StoreUint64(latestIndex, 0)
 	latestConfig.Store((*ConfigurationValue)(nil))
+
+	f := &FSM{
+		path:   path,
+		logger: logger,
+
+		latestTerm:   latestTerm,
+		latestIndex:  latestIndex,
+		latestConfig: latestConfig,
+	}
+
+	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
+		f:   f,
+		ctx: context.Background(),
+	})
+
+	dbPath := filepath.Join(path, databaseFilename)
+	if err := f.openDBFile(dbPath); err != nil {
+		return nil, errwrap.Wrapf("failed to open bolt file: {{err}}", err)
+	}
+
+	return f, nil
+}
+
+func (f *FSM) getDB() *bolt.DB {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db
+}
+
+// SetFSMDelay adds a delay to the FSM apply. This is used in tests to simulate
+// a slow apply.
+func (r *RaftBackend) SetFSMDelay(delay time.Duration) {
+	r.fsm.l.Lock()
+	r.fsm.applyDelay = delay
+	r.fsm.l.Unlock()
+}
+
+func (f *FSM) openDBFile(dbPath string) error {
+	if len(dbPath) == 0 {
+		return errors.New("can not open empty filename")
+	}
+
+	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return err
+	}
 
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
@@ -125,6 +156,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		if err != nil {
 			return fmt.Errorf("failed to create bucket: %v", err)
 		}
+
 		// Read in our latest index and term and populate it inmemory
 		val := b.Get(latestIndexKey)
 		if val != nil {
@@ -134,8 +166,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 				return err
 			}
 
-			atomic.StoreUint64(latestTerm, latest.Term)
-			atomic.StoreUint64(latestIndex, latest.Index)
+			atomic.StoreUint64(f.latestTerm, latest.Term)
+			atomic.StoreUint64(f.latestIndex, latest.Index)
 		}
 
 		// Read in our latest config and populate it inmemory
@@ -147,64 +179,31 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 				return err
 			}
 
-			latestConfig.Store(&latest)
+			f.latestConfig.Store(&latest)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	storeLatestState := true
-	if _, ok := conf["doNotStoreLatestState"]; ok {
-		storeLatestState = false
-	}
-
-	f := &FSM{
-		path:   conf["path"],
-		logger: logger,
-
-		db:               boltDB,
-		latestTerm:       latestTerm,
-		latestIndex:      latestIndex,
-		latestConfig:     latestConfig,
-		storeLatestState: storeLatestState,
-	}
-
-	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
-		f:   f,
-		ctx: context.Background(),
-	})
-
-	return f, nil
+	f.db = boltDB
+	return nil
 }
 
-// LatestState returns the latest index and configuration values we have seen on
-// this FSM.
-func (f *FSM) LatestState() (*IndexValue, *ConfigurationValue) {
-	return &IndexValue{
-		Term:  atomic.LoadUint64(f.latestTerm),
-		Index: atomic.LoadUint64(f.latestIndex),
-	}, f.latestConfig.Load().(*ConfigurationValue)
+func (f *FSM) Close() error {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Close()
 }
 
-func (f *FSM) witnessIndex(i *IndexValue) {
-	seen, _ := f.LatestState()
-	if seen.Index < i.Index {
-		atomic.StoreUint64(f.latestIndex, i.Index)
-		atomic.StoreUint64(f.latestTerm, i.Term)
+func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
+	latestIndex := &IndexValue{
+		Term:  metadata.Term,
+		Index: metadata.Index,
 	}
-}
-
-func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
-	var indexBytes []byte
-	latestIndex, _ := f.LatestState()
-
-	latestIndex.Index = metadata.Index
-	latestIndex.Term = metadata.Term
-
-	var err error
-	indexBytes, err = proto.Marshal(latestIndex)
+	indexBytes, err := proto.Marshal(latestIndex)
 	if err != nil {
 		return err
 	}
@@ -215,31 +214,54 @@ func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 		return err
 	}
 
-	if f.storeLatestState {
-		err = f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(configBucketName)
-			err := b.Put(latestConfigKey, configBytes)
-			if err != nil {
-				return err
-			}
-
-			err = b.Put(latestIndexKey, indexBytes)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
+	err = db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists(configBucketName)
 		if err != nil {
 			return err
 		}
+
+		err = b.Put(latestConfigKey, configBytes)
+		if err != nil {
+			return err
+		}
+
+		err = b.Put(latestIndexKey, indexBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	err := writeSnapshotMetaToDB(metadata, f.db)
+	if err != nil {
+		return err
 	}
 
 	atomic.StoreUint64(f.latestIndex, metadata.Index)
 	atomic.StoreUint64(f.latestTerm, metadata.Term)
-	f.latestConfig.Store(protoConfig)
+	f.latestConfig.Store(raftConfigurationToProtoConfiguration(metadata.ConfigurationIndex, metadata.Configuration))
 
 	return nil
+}
+
+// LatestState returns the latest index and configuration values we have seen on
+// this FSM.
+func (f *FSM) LatestState() (*IndexValue, *ConfigurationValue) {
+	return &IndexValue{
+		Term:  atomic.LoadUint64(f.latestTerm),
+		Index: atomic.LoadUint64(f.latestIndex),
+	}, f.latestConfig.Load().(*ConfigurationValue)
 }
 
 // Delete deletes the given key from the bolt file.
@@ -351,7 +373,9 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 				keys = append(keys, key)
 			} else {
 				// Add truncated 'folder' paths
-				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
+				if len(keys) == 0 || keys[len(keys)-1] != key[:i+1] {
+					keys = append(keys, string(key[:i+1]))
+				}
 			}
 		}
 
@@ -367,7 +391,6 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	// TODO: should this be a Batch?
 	// Start a write transaction.
 	err := f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)
@@ -446,6 +469,10 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
+	if f.applyDelay > 0 {
+		time.Sleep(f.applyDelay)
+	}
+
 	err = f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)
 		for _, commandRaw := range commands {
@@ -483,7 +510,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			}
 		}
 
-		if f.storeLatestState && len(logIndex) > 0 {
+		if len(logIndex) > 0 {
 			b := tx.Bucket(configBucketName)
 			err = b.Put(latestIndexKey, logIndex)
 			if err != nil {
@@ -596,9 +623,9 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 	f.l.Unlock()
 }
 
-// Restore reads data from the provided reader and writes it into the FSM. It
-// first deletes the existing bucket to clear all existing data, then recreates
-// it so we can copy in the snapshot.
+// Restore installs a new snapshot from the provided reader. It does an atomic
+// rename of the snapshot file into the database filepath. While a restore is
+// happening the FSM is locked and no writes or reads can be performed.
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
 
@@ -606,89 +633,41 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		return nil
 	}
 
-	snapMeta := r.(*boltSnapshotMetadataReader).Metadata()
-
-	protoReader := NewDelimitedReader(r, math.MaxInt32)
-	defer protoReader.Close()
+	snapshotInstaller, ok := r.(*boltSnapshotInstaller)
+	if !ok {
+		return errors.New("expected snapshot installer object")
+	}
 
 	f.l.Lock()
 	defer f.l.Unlock()
 
-	// Delete the existing data bucket and create a new one.
-	f.logger.Debug("snapshot restore: deleting bucket")
-	err := f.db.Update(func(tx *bolt.Tx) error {
-		err := tx.DeleteBucket(dataBucketName)
-		if err != nil {
-			return err
-		}
-
-		_, err = tx.CreateBucket(dataBucketName)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		f.logger.Error("could not restore snapshot: could not clear existing bucket", "error", err)
+	// Close the db file
+	if err := f.db.Close(); err != nil {
+		f.logger.Error("failed to close database file", "error", err)
 		return err
 	}
 
-	// If we are testing a failed snapshot error here.
-	if f.testSnapshotRestoreError {
-		return errors.New("Test error")
+	dbPath := filepath.Join(f.path, databaseFilename)
+
+	f.logger.Info("installing snapshot to FSM")
+
+	// Install the new boltdb file
+	var retErr *multierror.Error
+	if err := snapshotInstaller.Install(dbPath); err != nil {
+		f.logger.Error("failed to install snapshot", "error", err)
+		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to install snapshot database: {{err}}", err))
+	} else {
+		f.logger.Info("snapshot installed")
 	}
 
-	f.logger.Debug("snapshot restore: deleting bucket done")
-	f.logger.Debug("snapshot restore: writing keys")
-
-	var done bool
-	var keys int
-	for !done {
-		err := f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(dataBucketName)
-			s := new(pb.StorageEntry)
-
-			// Commit in batches of 50k. Bolt holds all the data in memory and
-			// doesn't split the pages until commit so we do incremental writes.
-			// This is safe since we have a write lock on the fsm's lock.
-			for i := 0; i < 50000; i++ {
-				err := protoReader.ReadMsg(s)
-				if err != nil {
-					if err == io.EOF {
-						done = true
-						return nil
-					}
-					return err
-				}
-
-				err = b.Put([]byte(s.Key), s.Value)
-				if err != nil {
-					return err
-				}
-				keys += 1
-			}
-
-			return nil
-		})
-		if err != nil {
-			f.logger.Error("could not restore snapshot", "error", err)
-			return err
-		}
-
-		f.logger.Trace("snapshot restore: writing keys", "num_written", keys)
+	// Open the db file. We want to do this regardless of if the above install
+	// worked. If the install failed we should try to open the old DB file.
+	if err := f.openDBFile(dbPath); err != nil {
+		f.logger.Error("failed to open new database file", "error", err)
+		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to open new bolt file: {{err}}", err))
 	}
 
-	f.logger.Debug("snapshot restore: writing keys done")
-
-	// Write the metadata after we have applied all the snapshot data
-	f.logger.Debug("snapshot restore: writing metadata")
-	if err := f.witnessSnapshot(snapMeta); err != nil {
-		f.logger.Error("could not write metadata", "error", err)
-		return err
-	}
-
-	return nil
+	return retErr.ErrorOrNil()
 }
 
 // noopSnapshotter implements the fsm.Snapshot interface. It doesn't do anything
