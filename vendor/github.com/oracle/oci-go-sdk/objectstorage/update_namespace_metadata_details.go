@@ -13,7 +13,7 @@ import (
 )
 
 // UpdateNamespaceMetadataDetails UpdateNamespaceMetadataDetails is used to update the NamespaceMetadata. To update NamespaceMetadata, a user
-// must have NAMESPACE_UPDATE permission.
+// must have OBJECTSTORAGE_NAMESPACE_UPDATE permission.
 type UpdateNamespaceMetadataDetails struct {
 
 	// The updated compartment id for use by an S3 client, if this field is set.

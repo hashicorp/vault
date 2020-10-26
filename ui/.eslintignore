@@ -12,6 +12,7 @@
 /.storybook/
 /.yarn/
 /stories/
+/storybook-static/
 
 # misc
 /coverage/

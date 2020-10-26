@@ -23,6 +23,12 @@ export default Controller.extend({
       }
     },
 
+    updateTtl(path, val) {
+      const model = this.get('model');
+      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
+      set(model, path, valueToSet);
+    },
+
     newModel() {
       const model = this.get('model');
       const roleModel = model.get('role');

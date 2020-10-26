@@ -9,6 +9,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +39,7 @@ type creationBundle struct {
 
 func pathSign(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "sign/" + framework.GenericNameRegex("role"),
+		Pattern: "sign/" + framework.GenericNameWithAtRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathSign,
@@ -133,12 +135,12 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	} else {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -204,7 +206,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 	return response, nil
 }
 
-func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
+func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logical.Request, role *sshRole, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
 	validPrincipals := ""
 	validPrincipalsRaw, ok := data.GetOk("valid_principals")
 	if ok {
@@ -214,7 +216,33 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 	}
 
 	parsedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(validPrincipals, ","), false)
-	allowedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
+	// Build list of allowed Principals from template and static principalsAllowedByRole
+	var allowedPrincipals []string
+	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
+		if role.AllowedUsersTemplate {
+			// Look for templating markers {{ .* }}
+			matched, _ := regexp.MatchString(`^{{.+?}}$`, principal)
+			if matched {
+				if req.EntityID != "" {
+					// Retrieve principal based on template + entityID from request.
+					templatePrincipal, err := framework.PopulateIdentityTemplate(principal, req.EntityID, b.System())
+					if err == nil {
+						// Template returned a principal
+						allowedPrincipals = append(allowedPrincipals, templatePrincipal)
+					} else {
+						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
+					}
+				}
+			} else {
+				// Static principal or err template
+				allowedPrincipals = append(allowedPrincipals, principal)
+			}
+		} else {
+			// Static principal
+			allowedPrincipals = append(allowedPrincipals, principal)
+		}
+	}
+
 	switch {
 	case len(parsedPrincipals) == 0:
 		// There is nothing to process
@@ -222,7 +250,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 	case len(allowedPrincipals) == 0:
 		// User has requested principals to be set, but role is not configured
 		// with any principals
-		return nil, fmt.Errorf("role is not configured to allow any principles")
+		return nil, fmt.Errorf("role is not configured to allow any principals")
 	default:
 		// Role was explicitly configured to allow any principal.
 		if principalsAllowedByRole == "*" {
@@ -230,7 +258,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 		}
 
 		for _, principal := range parsedPrincipals {
-			if !validatePrincipal(allowedPrincipals, principal) {
+			if !validatePrincipal(strutil.RemoveDuplicates(allowedPrincipals, false), principal) {
 				return nil, fmt.Errorf("%v is not a valid value for valid_principals", principal)
 			}
 		}
@@ -470,6 +498,16 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	now := time.Now()
 
+	sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+	}
+
+	// prepare certificate for signing
+	nonce := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce")
+	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
 		Key:             b.PublicKey,
@@ -482,12 +520,22 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 			CriticalOptions: b.CriticalOptions,
 			Extensions:      b.Extensions,
 		},
+		Nonce:        nonce,
+		SignatureKey: sshAlgorithmSigner.PublicKey(),
 	}
 
-	err = certificate.SignCert(rand.Reader, b.Signer)
+	// get bytes to sign; this is based on Certificate.bytesForSigning() from the go ssh lib
+	out := certificate.Marshal()
+	// Drop trailing signature length.
+	certificateBytes := out[:len(out)-4]
+
+	algo := b.Role.AlgorithmSigner
+	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key")
+		return nil, fmt.Errorf("failed to generate signed SSH key: sign error")
 	}
+
+	certificate.Signature = sig
 
 	return certificate, nil
 }

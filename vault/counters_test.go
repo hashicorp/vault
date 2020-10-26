@@ -150,21 +150,24 @@ func TestTokenStore_CountActiveTokens(t *testing.T) {
 		t.Fatalf("expected %d tokens, not %d", 1, count)
 	}
 
-	// Create some service tokens
-	req := &logical.Request{
-		ClientToken: root,
-		Operation:   logical.UpdateOperation,
-		Path:        "create",
-		Data: map[string]interface{}{
-			"ttl": "1h",
-		},
-	}
 	tokens := make([]string, 10)
 	for i := 0; i < 10; i++ {
-		resp, err := c.tokenStore.HandleRequest(rootCtx, req)
+
+		// Create some service tokens
+		req := &logical.Request{
+			ClientToken: root,
+			Operation:   logical.UpdateOperation,
+			Path:        "auth/token/create",
+			Data: map[string]interface{}{
+				"ttl": "1h",
+			},
+		}
+
+		resp, err := c.HandleRequest(rootCtx, req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
 		}
+
 		tokens[i] = resp.Auth.ClientToken
 
 		count = testCountActiveTokens(t, c, root)
@@ -174,11 +177,18 @@ func TestTokenStore_CountActiveTokens(t *testing.T) {
 	}
 
 	// Revoke the service tokens
-	req.Path = "revoke"
-	req.Data = make(map[string]interface{})
 	for i := 0; i < 10; i++ {
-		req.Data["token"] = tokens[i]
-		resp, err := c.tokenStore.HandleRequest(rootCtx, req)
+
+		req := &logical.Request{
+			ClientToken: root,
+			Operation:   logical.UpdateOperation,
+			Path:        "auth/token/revoke",
+			Data: map[string]interface{}{
+				"token": tokens[i],
+			},
+		}
+
+		resp, err := c.HandleRequest(rootCtx, req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
 		}

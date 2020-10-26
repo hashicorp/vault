@@ -21,8 +21,9 @@ var (
 	// changed
 	DefaultWrappingTTL = "5m"
 
-	// The default function used if no other function is set, which honors the
-	// env var and wraps `sys/wrapping/wrap`
+	// The default function used if no other function is set. It honors the env
+	// var to set the wrap TTL. The default wrap TTL will apply when when writing
+	// to `sys/wrapping/wrap` when the env var is not set.
 	DefaultWrappingLookupFunc = func(operation, path string) string {
 		if os.Getenv(EnvVaultWrapTTL) != "" {
 			return os.Getenv(EnvVaultWrapTTL)
@@ -134,9 +135,20 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 		return nil, err
 	}
 
+	return c.write(path, r)
+}
+
+func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
+	r := c.c.NewRequest("PUT", "/v1/"+path)
+	r.BodyBytes = data
+
+	return c.write(path, r)
+}
+
+func (c *Logical) write(path string, request *Request) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.RawRequestWithContext(ctx, request)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

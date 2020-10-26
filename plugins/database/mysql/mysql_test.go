@@ -3,77 +3,35 @@ package mysql
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	stdmysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/ory/dockertest"
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
 
-func prepareMySQLTestContainer(t *testing.T, legacy bool) (cleanup func(), retURL string) {
-	if os.Getenv("MYSQL_URL") != "" {
-		return func() {}, os.Getenv("MYSQL_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	imageVersion := "5.7"
-	if legacy {
-		imageVersion = "5.6"
-	}
-
-	resource, err := pool.Run("mysql", imageVersion, []string{"MYSQL_ROOT_PASSWORD=secret"})
-	if err != nil {
-		t.Fatalf("Could not start local MySQL docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("mysql", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to MySQL docker container: %s", err)
-	}
-
-	return
-}
-
 func TestMySQL_Initialize(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false)
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
 	}
 
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	initReq := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new(false)
+	_, err := db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -93,136 +51,452 @@ func TestMySQL_Initialize(t *testing.T) {
 		"max_open_connections": "5",
 	}
 
-	_, err = db.Init(context.Background(), connectionDetails, true)
+	initReq = dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db = new(false)
+	_, err = db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
 
 func TestMySQL_CreateUser(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false)
-	defer cleanup()
+	t.Run("missing creation statements", func(t *testing.T) {
+		db := new(false)
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
+		password, err := credsutil.RandomAlphaNumeric(32, false)
+		if err != nil {
+			t.Fatalf("unable to generate password: %s", err)
+		}
 
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		createReq := dbplugin.NewUserRequest{
+			UsernameConfig: dbplugin.UsernameMetadata{
+				DisplayName: "test",
+				RoleName:    "test",
+			},
+			Statements: dbplugin.Statements{
+				Commands: []string{},
+			},
+			Password:   password,
+			Expiration: time.Now().Add(time.Minute),
+		}
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test-long-displayname",
-		RoleName:    "test-long-rolename",
-	}
+		userResp, err := db.NewUser(context.Background(), createReq)
+		if err == nil {
+			t.Fatalf("expected err, got nil")
+		}
+		if userResp.Username != "" {
+			t.Fatalf("expected empty username, got [%s]", userResp.Username)
+		}
+	})
 
-	// Test with no configured Creation Statement
-	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
-	if err == nil {
-		t.Fatal("Expected error when no creation statement is provided")
-	}
+	t.Run("non-legacy", func(t *testing.T) {
+		// Shared test container for speed - there should not be any overlap between the tests
+		cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+		defer cleanup()
 
-	statements := dbplugin.Statements{
-		Creation: []string{testMySQLRoleWildCard},
-	}
+		connectionDetails := map[string]interface{}{
+			"connection_url": connURL,
+		}
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		initReq := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+		db := new(false)
+		_, err := db.Initialize(context.Background(), initReq)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
 
-	// Test a second time to make sure usernames don't collide
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		testCreateUser(t, db, connURL)
+	})
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	t.Run("legacy", func(t *testing.T) {
+		// Shared test container for speed - there should not be any overlap between the tests
+		cleanup, connURL := mysqlhelper.PrepareTestContainer(t, true, "secret")
+		defer cleanup()
 
-	// Test with a manually prepare statement
-	statements.Creation = []string{testMySQLRolePreparedStmt}
+		connectionDetails := map[string]interface{}{
+			"connection_url": connURL,
+		}
 
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		initReq := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+		db := new(true)
+		_, err := db.Initialize(context.Background(), initReq)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
 
+		testCreateUser(t, db, connURL)
+	})
 }
 
-func TestMySQL_CreateUser_Legacy(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, true)
-	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+func testCreateUser(t *testing.T, db *MySQL, connURL string) {
+	type testCase struct {
+		createStmts []string
 	}
 
-	db := new(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	tests := map[string]testCase{
+		"create name": {
+			createStmts: []string{`
+				CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+				GRANT SELECT ON *.* TO '{{name}}'@'%';`,
+			},
+		},
+		"create username": {
+			createStmts: []string{`
+				CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+				GRANT SELECT ON *.* TO '{{username}}'@'%';`,
+			},
+		},
+		"prepared statement name": {
+			createStmts: []string{`
+				CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+				set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{name}}'@'%'");
+				PREPARE grantStmt from @grants;
+				EXECUTE grantStmt;
+				DEALLOCATE PREPARE grantStmt;
+				`,
+			},
+		},
+		"prepared statement username": {
+			createStmts: []string{`
+				CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+				set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{username}}'@'%'");
+				PREPARE grantStmt from @grants;
+				EXECUTE grantStmt;
+				DEALLOCATE PREPARE grantStmt;
+				`,
+			},
+		},
 	}
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test-long-displayname",
-		RoleName:    "test-long-rolename",
-	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			password, err := credsutil.RandomAlphaNumeric(32, false)
+			if err != nil {
+				t.Fatalf("unable to generate password: %s", err)
+			}
 
-	// Test with no configured Creation Statement
-	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
-	if err == nil {
-		t.Fatal("Expected error when no creation statement is provided")
-	}
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: dbplugin.Statements{
+					Commands: test.createStmts,
+				},
+				Password:   password,
+				Expiration: time.Now().Add(time.Minute),
+			}
 
-	statements := dbplugin.Statements{
-		Creation: []string{testMySQLRoleWildCard},
-	}
+			userResp, err := db.NewUser(context.Background(), createReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+			if err := mysqlhelper.TestCredsExist(t, connURL, userResp.Username, password); err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+			// Test a second time to make sure usernames don't collide
+			userResp, err = db.NewUser(context.Background(), createReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
 
-	// Test a second time to make sure usernames don't collide
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
+			if err := mysqlhelper.TestCredsExist(t, connURL, userResp.Username, password); err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
+		})
 	}
 }
 
 func TestMySQL_RotateRootCredentials(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false)
-	defer cleanup()
+	type testCase struct {
+		statements []string
+	}
 
-	connURL = strings.Replace(connURL, "root:secret", `{{username}}:{{password}}`, -1)
+	tests := map[string]testCase{
+		"empty statements": {
+			statements: nil,
+		},
+		"default username": {
+			statements: []string{defaultMySQLRotateCredentialsSQL},
+		},
+		"default name": {
+			statements: []string{`
+				ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';`,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+			defer cleanup()
+
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+				"username":       "root",
+				"password":       "secret",
+			}
+
+			// Give a timeout just in case the test decides to be problematic
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new(false)
+			_, err := db.Initialize(context.Background(), initReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			updateReq := dbplugin.UpdateUserRequest{
+				Username: "root",
+				Password: &dbplugin.ChangePassword{
+					NewPassword: "different_sercret",
+					Statements: dbplugin.Statements{
+						Commands: test.statements,
+					},
+				},
+			}
+
+			_, err = db.UpdateUser(ctx, updateReq)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			err = mysqlhelper.TestCredsExist(t, connURL, updateReq.Username, updateReq.Password.NewPassword)
+			if err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
+
+			// verify old password doesn't work
+			if err := mysqlhelper.TestCredsExist(t, connURL, updateReq.Username, "secret"); err == nil {
+				t.Fatalf("Should not be able to connect with initial credentials")
+			}
+
+			err = db.Close()
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+		})
+	}
+}
+
+func TestMySQL_DeleteUser(t *testing.T) {
+	type testCase struct {
+		revokeStmts []string
+	}
+
+	tests := map[string]testCase{
+		"empty statements": {
+			revokeStmts: nil,
+		},
+		"default name": {
+			revokeStmts: []string{defaultMysqlRevocationStmts},
+		},
+		"default username": {
+			revokeStmts: []string{`
+				REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{username}}'@'%'; 
+				DROP USER '{{username}}'@'%'`,
+			},
+		},
+	}
+
+	// Shared test container for speed - there should not be any overlap between the tests
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
-		"username":       "root",
-		"password":       "secret",
 	}
 
-	db := new(MetadataLen, MetadataLen, UsernameLen)
+	initReq := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new(false)
+	_, err := db.Initialize(context.Background(), initReq)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			password, err := credsutil.RandomAlphaNumeric(32, false)
+			if err != nil {
+				t.Fatalf("unable to generate password: %s", err)
+			}
+
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{`
+						CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{name}}'@'%';`,
+					},
+				},
+				Password:   password,
+				Expiration: time.Now().Add(time.Minute),
+			}
+
+			// Give a timeout just in case the test decides to be problematic
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			userResp, err := db.NewUser(ctx, createReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if err := mysqlhelper.TestCredsExist(t, connURL, userResp.Username, password); err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
+
+			deleteReq := dbplugin.DeleteUserRequest{
+				Username: userResp.Username,
+				Statements: dbplugin.Statements{
+					Commands: test.revokeStmts,
+				},
+			}
+			_, err = db.DeleteUser(context.Background(), deleteReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if err := mysqlhelper.TestCredsExist(t, connURL, userResp.Username, password); err == nil {
+				t.Fatalf("Credentials were not revoked!")
+			}
+		})
+	}
+}
+
+func TestMySQL_UpdateUser(t *testing.T) {
+	type testCase struct {
+		rotateStmts []string
+	}
+
+	tests := map[string]testCase{
+		"empty statements": {
+			rotateStmts: nil,
+		},
+		"custom statement name": {
+			rotateStmts: []string{`
+				ALTER USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';`},
+		},
+		"custom statement username": {
+			rotateStmts: []string{`
+				ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';`},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+			defer cleanup()
+
+			// create the database user and verify we can access
+			dbUser := "vaultstatictest"
+			initPassword := "password"
+
+			createStatements := `
+				CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+				GRANT SELECT ON *.* TO '{{name}}'@'%';`
+
+			createTestMySQLUser(t, connURL, dbUser, initPassword, createStatements)
+			if err := mysqlhelper.TestCredsExist(t, connURL, dbUser, initPassword); err != nil {
+				t.Fatalf("Could not connect with credentials: %s", err)
+			}
+
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+			}
+
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			// Give a timeout just in case the test decides to be problematic
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			db := new(false)
+			_, err := db.Initialize(context.Background(), initReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			newPassword, err := credsutil.RandomAlphaNumeric(32, false)
+			if err != nil {
+				t.Fatalf("unable to generate password: %s", err)
+			}
+
+			updateReq := dbplugin.UpdateUserRequest{
+				Username: dbUser,
+				Password: &dbplugin.ChangePassword{
+					NewPassword: newPassword,
+					Statements: dbplugin.Statements{
+						Commands: test.rotateStmts,
+					},
+				},
+			}
+
+			_, err = db.UpdateUser(ctx, updateReq)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			// verify new password works
+			if err := mysqlhelper.TestCredsExist(t, connURL, dbUser, newPassword); err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
+
+			// verify old password doesn't work
+			if err := mysqlhelper.TestCredsExist(t, connURL, dbUser, initPassword); err == nil {
+				t.Fatalf("Should not be able to connect with initial credentials")
+			}
+		})
+	}
+}
+
+func TestMySQL_Initialize_ReservedChars(t *testing.T) {
+	pw := "#secret!%25#{@}"
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, pw)
+	defer cleanup()
+
+	// Revert password set to test replacement by db.Init
+	connURL = strings.ReplaceAll(connURL, pw, "{{password}}")
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"password":       pw,
+	}
+
+	db := new(false)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -232,151 +506,10 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 		t.Fatal("Database should be initialized")
 	}
 
-	newConf, err := db.RotateRootCredentials(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if newConf["password"] == "secret" {
-		t.Fatal("password was not updated")
-	}
-
 	err = db.Close()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-}
-
-func TestMySQL_RevokeUser(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false)
-	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	statements := dbplugin.Statements{
-		Creation: []string{testMySQLRoleWildCard},
-	}
-
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	// Test default revoke statements
-	err = db.RevokeUser(context.Background(), statements, username)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err == nil {
-		t.Fatal("Credentials were not revoked")
-	}
-
-	statements.Creation = []string{testMySQLRoleWildCard}
-	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	// Test custom revoke statements
-	statements.Revocation = []string{testMySQLRevocationSQL}
-	err = db.RevokeUser(context.Background(), statements, username)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err == nil {
-		t.Fatal("Credentials were not revoked")
-	}
-}
-
-func TestMySQL_SetCredentials(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false)
-	defer cleanup()
-
-	// create the database user and verify we can access
-	dbUser := "vaultstatictest"
-	createTestMySQLUser(t, connURL, dbUser, "password", testRoleStaticCreate)
-	if err := testCredsExist(t, connURL, dbUser, "password"); err != nil {
-		t.Fatalf("Could not connect with credentials: %s", err)
-	}
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	newPassword, err := db.GenerateCredentials(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	userConfig := dbplugin.StaticUserConfig{
-		Username: dbUser,
-		Password: newPassword,
-	}
-
-	statements := dbplugin.Statements{
-		Rotation: []string{testRoleStaticRotate},
-	}
-
-	_, _, err = db.SetCredentials(context.Background(), statements, userConfig)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// verify new password works
-	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	// call SetCredentials again, password will change
-	newPassword, _ = db.GenerateCredentials(context.Background())
-	userConfig.Password = newPassword
-	_, _, err = db.SetCredentials(context.Background(), statements, userConfig)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-}
-
-func testCredsExist(t testing.TB, connURL, username, password string) error {
-	// Log in with the new creds
-	connURL = strings.Replace(connURL, "root:secret", fmt.Sprintf("%s:%s", username, password), 1)
-	db, err := sql.Open("mysql", connURL)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	return db.Ping()
 }
 
 func createTestMySQLUser(t *testing.T, connURL, username, password, query string) {
@@ -428,28 +561,3 @@ func createTestMySQLUser(t *testing.T, connURL, username, password, query string
 		stmt.Close()
 	}
 }
-
-const testMySQLRolePreparedStmt = `
-CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
-set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{name}}'@'%'");
-PREPARE grantStmt from @grants;
-EXECUTE grantStmt;
-DEALLOCATE PREPARE grantStmt;
-`
-const testMySQLRoleWildCard = `
-CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
-GRANT SELECT ON *.* TO '{{name}}'@'%';
-`
-const testMySQLRevocationSQL = `
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
-DROP USER '{{name}}'@'%';
-`
-
-const testRoleStaticCreate = `
-CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
-GRANT SELECT ON *.* TO '{{name}}'@'%';
-`
-
-const testRoleStaticRotate = `
-ALTER USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
-`

@@ -37,24 +37,20 @@ module('Acceptance | auth', function(hooks) {
     let backends = supportedAuthBackends();
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth');
+    assert.equal(currentURL(), '/vault/auth?with=token');
     for (let backend of backends.reverse()) {
       await component.selectMethod(backend.type);
-      if (backend.type === 'token') {
-        assert.equal(currentURL(), `/vault/auth`, `has the correct URL for ${backend.type}`);
-      } else {
-        assert.equal(
-          currentURL(),
-          `/vault/auth?with=${backend.type}`,
-          `has the correct URL for ${backend.type}`
-        );
-      }
+      assert.equal(
+        currentURL(),
+        `/vault/auth?with=${backend.type}`,
+        `has the correct URL for ${backend.type}`
+      );
     }
   });
 
   test('it clears token when changing selected auth method', async function(assert) {
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth');
+    assert.equal(currentURL(), '/vault/auth?with=token');
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.equal(component.tokenValue, '', 'it clears the token value when toggling methods');
@@ -69,7 +65,6 @@ module('Acceptance | auth', function(hooks) {
         await component.token('token');
       }
       if (backend.type === 'jwt' || backend.type === 'oidc') {
-        await jwtComponent.jwt('1');
         await jwtComponent.role('test');
       }
       await component.login();
@@ -85,7 +80,6 @@ module('Acceptance | auth', function(hooks) {
       } else if (backend.type === 'jwt' || backend.type === 'oidc') {
         let authReq = this.server.passthroughRequests[this.server.passthroughRequests.length - 2];
         body = JSON.parse(authReq.requestBody);
-        assert.ok(Object.keys(body).includes('jwt'), `${backend.type} includes jwt`);
         assert.ok(Object.keys(body).includes('role'), `${backend.type} includes role`);
       } else {
         assert.ok(Object.keys(body).includes('password'), `${backend.type} includes password`);

@@ -544,9 +544,22 @@ message EntityInfoReply {
 	string err = 2;
 }
 
+message GroupsForEntityReply {
+	repeated logical.Group groups = 1;
+	string err = 2;
+}
+
 message PluginEnvReply {
 	logical.PluginEnvironment plugin_environment = 1;
 	string err = 2;
+}
+
+message GeneratePasswordFromPolicyRequest {
+	string policy_name = 1;
+}
+
+message GeneratePasswordFromPolicyReply {
+	string password = 1;
 }
 
 // SystemView exposes system configuration information in a safe way for plugins
@@ -554,7 +567,7 @@ message PluginEnvReply {
 service SystemView {
   	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	rpc DefaultLeaseTTL(Empty) returns (TTLReply);
-	
+
    	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
@@ -594,6 +607,13 @@ service SystemView {
 
 	// PluginEnv returns Vault environment information used by plugins
 	rpc PluginEnv(Empty) returns (PluginEnvReply);
+
+	// GroupsForEntity returns the group membership information for the given
+	// entity id
+	rpc GroupsForEntity(EntityInfoArgs) returns (GroupsForEntityReply);
+
+	// GeneratePasswordFromPolicy generates a password from an existing password policy
+	rpc GeneratePasswordFromPolicy(GeneratePasswordFromPolicyRequest) returns (GeneratePasswordFromPolicyReply);
 }
 
 message Connection {

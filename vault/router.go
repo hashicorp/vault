@@ -416,10 +416,18 @@ func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.Sy
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
-	if !ok {
+	if !ok || raw.(*routeEntry).backend == nil {
 		return nil
 	}
 	return raw.(*routeEntry).backend.System()
+}
+
+func (r *Router) MatchingMountByAPIPath(ctx context.Context, path string) string {
+	me, _, _ := r.matchingMountEntryByPath(ctx, path, true)
+	if me == nil {
+		return ""
+	}
+	return me.Path
 }
 
 // MatchingStoragePrefixByAPIPath the storage prefix for the given api path

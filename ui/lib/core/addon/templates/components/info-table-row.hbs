@@ -1,7 +1,14 @@
 {{#if (or alwaysRender value)}}
-  <div class="column is-one-quarter">
-    <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
-  </div>
+  {{#if label}}
+    <div class="column is-one-quarter">
+      <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
+      {{#if helperText}}
+        <div>
+          <span class="is-label helper-text has-text-grey">{{helperText}}</span>
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
   <div class="column is-flex">
     {{#if (has-block)}}
       {{yield}}
@@ -22,7 +29,20 @@
         /> No
       {{/if}}
     {{else}}
-      <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+      {{#if (eq type 'array')}}
+        <InfoTableItemArray
+          @backend={{backend}}
+          @displayArray={{value}}
+          @isLink={{isLink}}
+          @label={{label}}
+          @modelType={{modelType}}
+          @queryParam={{queryParam}}
+          @viewAll={{viewAll}}
+          @wildcardLabel={{wildcardLabel}}
+        />
+      {{else}}
+        <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+      {{/if}}
     {{/if}}
   </div>
 {{/if}}

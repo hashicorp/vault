@@ -117,7 +117,8 @@ const (
 	// "LimitExceeded".
 	//
 	// The request was rejected because it attempted to create resources beyond
-	// the current AWS account limits. The error message describes the limit exceeded.
+	// the current AWS account limitations. The error message describes the limit
+	// exceeded.
 	ErrCodeLimitExceededException = "LimitExceeded"
 
 	// ErrCodeMalformedCertificateException for service response error code
@@ -161,6 +162,13 @@ const (
 	// The request failed because AWS service role policies can only be attached
 	// to the service-linked role for that service.
 	ErrCodePolicyNotAttachableException = "PolicyNotAttachable"
+
+	// ErrCodeReportGenerationLimitExceededException for service response error code
+	// "ReportGenerationLimitExceeded".
+	//
+	// The request failed because the maximum number of concurrent requests for
+	// this account are already running.
+	ErrCodeReportGenerationLimitExceededException = "ReportGenerationLimitExceeded"
 
 	// ErrCodeServiceFailureException for service response error code
 	// "ServiceFailure".

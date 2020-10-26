@@ -1,0 +1,26 @@
+version = 0
+name = "Count"
+documentation = "Performs a count operation"
+
+[properties]
+enabled = ["read concern", "read preference"]
+retryable = {mode = "once per command", type = "reads"}
+
+[command]
+name = "count"
+parameter = "collection"
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."
+
+[request.query]
+type = "document"
+documentation = "Query determines what results are returned from find."
+
+[response]
+name = "CountResult"
+
+[response.field.n]
+type = "int64"
+documentation = "The number of documents found"

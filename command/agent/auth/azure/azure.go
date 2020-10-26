@@ -74,7 +74,7 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, retData map[string]interface{}, retErr error) {
+func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
 	a.logger.Trace("beginning authentication")
 
 	// Fetch instance data
@@ -126,7 +126,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		"jwt":                 identity.AccessToken,
 	}
 
-	return fmt.Sprintf("%s/login", a.mountPath), data, nil
+	return fmt.Sprintf("%s/login", a.mountPath), nil, data, nil
 }
 
 func (a *azureMethod) NewCreds() chan struct{} {

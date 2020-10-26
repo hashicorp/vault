@@ -69,8 +69,8 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Name:       "id",
 		Target:     &c.flagID,
 		Completion: complete.PredictAnything,
-		Usage: "Value for the token. By default, this is an auto-generated 36 " +
-			"character UUID. Specifying this value requires sudo permissions.",
+		Usage: "Value for the token. By default, this is an auto-generated " +
+			"string. Specifying this value requires sudo permissions.",
 	})
 
 	f.StringVar(&StringVar{
@@ -123,7 +123,7 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Default: false,
 		Usage: "Create the token with no parent. This prevents the token from " +
 			"being revoked when the token which created it expires. Setting this " +
-			"value requires sudo permissions.",
+			"value requires root or sudo permissions.",
 	})
 
 	f.BoolVar(&BoolVar{

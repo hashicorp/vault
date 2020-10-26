@@ -9,14 +9,15 @@ import (
 	"net/url"
 	"sync/atomic"
 
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/errwrap"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
-	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 // InitParams keeps the init function from being littered with too many
@@ -145,7 +146,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// which means both that the shares will be different *AND* there would
 	// need to be a way to actually allow fetching of the generated keys by
 	// operators.
-	if c.SealAccess().StoredKeysSupported() == StoredKeysSupportedGeneric {
+	if c.SealAccess().StoredKeysSupported() == seal.StoredKeysSupportedGeneric {
 		if len(barrierConfig.PGPKeys) > 0 {
 			return nil, fmt.Errorf("PGP keys not supported when storing shares")
 		}
@@ -207,30 +208,20 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, ErrAlreadyInit
 	}
 
-	// If we have clustered storage, set it up now
-	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		parsedClusterAddr, err := url.Parse(c.ClusterAddr())
+	// Bootstrap the raft backend if that's provided as the physical or
+	// HA backend.
+	raftBackend := c.getRaftBackend()
+	if raftBackend != nil {
+		err := c.RaftBootstrap(ctx, true)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
-		}
-		if err := raftStorage.Bootstrap(ctx, []raft.Peer{
-			{
-				ID:      raftStorage.NodeID(),
-				Address: parsedClusterAddr.Host,
-			},
-		}); err != nil {
-			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+			c.logger.Error("failed to bootstrap raft", "error", err)
+			return nil, err
 		}
 
-		if err := raftStorage.SetupCluster(ctx, raft.SetupOpts{
-			StartAsLeader: true,
-		}); err != nil {
-			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
-		}
-
+		// Teardown cluster after bootstrap setup
 		defer func() {
-			if err := raftStorage.TeardownCluster(nil); err != nil {
-				c.logger.Error("failed to stop raft storage", "error", err)
+			if err := raftBackend.TeardownCluster(nil); err != nil {
+				c.logger.Error("failed to stop raft", "error", err)
 			}
 		}()
 	}
@@ -254,7 +245,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	var sealKey []byte
 	var sealKeyShares [][]byte
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == seal.Shamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.Shamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -300,9 +291,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// If we are storing shares, pop them out of the returned results and push
 	// them through the seal
 	switch c.seal.StoredKeysSupported() {
-	case StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirMaster:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(sealKey); err != nil {
+		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
 		}
@@ -311,7 +302,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
 		}
 		results.SecretShares = sealKeyShares
-	case StoredKeysSupportedGeneric:
+	case seal.StoredKeysSupportedGeneric:
 		keysToStore := [][]byte{barrierKey}
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("failed to store keys", "error", err)
@@ -384,15 +375,25 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
 	}
 
-	if err := c.createRaftTLSKeyring(ctx); err != nil {
-		c.logger.Error("failed to create raft TLS keyring", "error", err)
-		return nil, err
+	if raftBackend != nil {
+		if _, err := c.raftCreateTLSKeyring(ctx); err != nil {
+			c.logger.Error("failed to create raft TLS keyring", "error", err)
+			return nil, err
+		}
 	}
 
 	// Prepare to re-seal
 	if err := c.preSeal(); err != nil {
 		c.logger.Error("pre-seal teardown failed", "error", err)
 		return nil, err
+	}
+
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifyInitializedStateChange(true); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("notification of initialization failed", "error", err)
+			}
+		}
 	}
 
 	return results, nil
@@ -407,14 +408,17 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == seal.Shamir {
+	if c.seal.BarrierType() == wrapping.Shamir {
 		return nil
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigration() {
+	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
 
 	sealed := c.Sealed()
 	if !sealed {
@@ -433,27 +437,22 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	if len(keys) == 0 {
 		return NewNonFatalError(errors.New("stored unseal keys are supported, but none were found"))
 	}
-
-	unsealed := false
-	keysUsed := 0
-	for _, key := range keys {
-		unsealed, err = c.Unseal(key)
-		if err != nil {
-			return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
-		}
-		keysUsed++
-		if unsealed {
-			break
-		}
+	if len(keys) != 1 {
+		return NewNonFatalError(errors.New("expected exactly one stored key"))
 	}
 
-	if !unsealed {
+	err = c.unsealInternal(ctx, keys[0])
+	if err != nil {
+		return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
+	}
+
+	if c.Sealed() {
 		// This most likely means that the user configured Vault to only store a
 		// subset of the required threshold of keys. We still consider this a
 		// "success", since trying again would yield the same result.
-		c.Logger().Warn("vault still sealed after using stored unseal keys", "stored_keys_used", keysUsed)
+		c.Logger().Warn("vault still sealed after using stored unseal key")
 	} else {
-		c.Logger().Info("unsealed with stored keys", "stored_keys_used", keysUsed)
+		c.Logger().Info("unsealed with stored key")
 	}
 
 	return nil

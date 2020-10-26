@@ -14,8 +14,17 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
+	jose "gopkg.in/square/go-jose.v2"
+)
+
+const (
+	responseTypeCode     = "code"      // Authorization code flow
+	responseTypeIDToken  = "id_token"  // ID Token for form post
+	responseModeQuery    = "query"     // Response as a redirect with query parameters
+	responseModeFormPost = "form_post" // Response as an HTML Form
 )
 
 func pathConfig(b *jwtAuthBackend) *framework.Path {
@@ -41,6 +50,14 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 					Sensitive: true,
 				},
 			},
+			"oidc_response_mode": {
+				Type:        framework.TypeString,
+				Description: "The response mode to be used in the OAuth2 request. Allowed values are 'query' and 'form_post'.",
+			},
+			"oidc_response_types": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: "The response types to request. Allowed values are 'code' and 'id_token'. Defaults to 'code'.",
+			},
 			"jwks_url": {
 				Type:        framework.TypeString,
 				Description: `JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".`,
@@ -50,7 +67,7 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 			"default_role": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeLowerCaseString,
 				Description: "The default role to use if none is provided during login. If not set, a role is required during login.",
 			},
 			"jwt_validation_pubkeys": {
@@ -64,6 +81,13 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 			"bound_issuer": {
 				Type:        framework.TypeString,
 				Description: "The value against which to match the 'iss' claim in a JWT. Optional.",
+			},
+			"provider_config": {
+				Type:        framework.TypeMap,
+				Description: "Provider-specific configuration. Optional.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Provider Config",
+				},
 			},
 		},
 
@@ -101,22 +125,22 @@ func (b *jwtAuthBackend) config(ctx context.Context, s logical.Storage) (*jwtCon
 		return nil, nil
 	}
 
-	result := &jwtConfig{}
-	if err := entry.DecodeJSON(result); err != nil {
+	config := &jwtConfig{}
+	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
 
-	for _, v := range result.JWTValidationPubKeys {
+	for _, v := range config.JWTValidationPubKeys {
 		key, err := certutil.ParsePublicKeyPEM([]byte(v))
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing public key: {{err}}", err)
 		}
-		result.ParsedJWTPubKeys = append(result.ParsedJWTPubKeys, key)
+		config.ParsedJWTPubKeys = append(config.ParsedJWTPubKeys, key)
 	}
 
-	b.cachedConfig = result
+	b.cachedConfig = config
 
-	return result, nil
+	return config, nil
 }
 
 func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -133,12 +157,15 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"oidc_discovery_url":     config.OIDCDiscoveryURL,
 			"oidc_discovery_ca_pem":  config.OIDCDiscoveryCAPEM,
 			"oidc_client_id":         config.OIDCClientID,
+			"oidc_response_mode":     config.OIDCResponseMode,
+			"oidc_response_types":    config.OIDCResponseTypes,
 			"default_role":           config.DefaultRole,
 			"jwt_validation_pubkeys": config.JWTValidationPubKeys,
 			"jwt_supported_algs":     config.JWTSupportedAlgs,
 			"jwks_url":               config.JWKSURL,
 			"jwks_ca_pem":            config.JWKSCAPEM,
 			"bound_issuer":           config.BoundIssuer,
+			"provider_config":        config.ProviderConfig,
 		},
 	}
 
@@ -151,12 +178,15 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		OIDCDiscoveryCAPEM:   d.Get("oidc_discovery_ca_pem").(string),
 		OIDCClientID:         d.Get("oidc_client_id").(string),
 		OIDCClientSecret:     d.Get("oidc_client_secret").(string),
+		OIDCResponseMode:     d.Get("oidc_response_mode").(string),
+		OIDCResponseTypes:    d.Get("oidc_response_types").([]string),
 		JWKSURL:              d.Get("jwks_url").(string),
 		JWKSCAPEM:            d.Get("jwks_ca_pem").(string),
 		DefaultRole:          d.Get("default_role").(string),
 		JWTValidationPubKeys: d.Get("jwt_validation_pubkeys").([]string),
 		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
+		ProviderConfig:       d.Get("provider_config").(map[string]interface{}),
 	}
 
 	// Run checks on values
@@ -219,12 +249,36 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		return nil, errors.New("unknown condition")
 	}
 
+	// NOTE: the OIDC lib states that if nothing is passed into its config, it
+	// defaults to "RS256". So in the case of a zero value here it won't
+	// default to e.g. "none".
 	for _, a := range config.JWTSupportedAlgs {
 		switch a {
-		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
+		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512, string(jose.EdDSA):
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
 		}
+	}
+
+	// Validate response_types
+	if !strutil.StrListSubset([]string{responseTypeCode, responseTypeIDToken}, config.OIDCResponseTypes) {
+		return logical.ErrorResponse("invalid response_types %v. 'code' and 'id_token' are allowed", config.OIDCResponseTypes), nil
+	}
+
+	// Validate response_mode
+	switch config.OIDCResponseMode {
+	case "", responseModeQuery:
+		if config.hasType(responseTypeIDToken) {
+			return logical.ErrorResponse("query response_mode may not be used with an id_token response_type"), nil
+		}
+	case responseModeFormPost:
+	default:
+		return logical.ErrorResponse("invalid response_mode: %q", config.OIDCResponseMode), nil
+	}
+
+	// Validate provider_config
+	if _, err := NewProviderConfig(config, ProviderMap()); err != nil {
+		return logical.ErrorResponse("invalid provider_config: %s", err), nil
 	}
 
 	entry, err := logical.StorageEntryJSON(configPath, config)
@@ -282,16 +336,19 @@ func (b *jwtAuthBackend) createCAContext(ctx context.Context, caPEM string) (con
 }
 
 type jwtConfig struct {
-	OIDCDiscoveryURL     string   `json:"oidc_discovery_url"`
-	OIDCDiscoveryCAPEM   string   `json:"oidc_discovery_ca_pem"`
-	OIDCClientID         string   `json:"oidc_client_id"`
-	OIDCClientSecret     string   `json:"oidc_client_secret"`
-	JWKSURL              string   `json:"jwks_url"`
-	JWKSCAPEM            string   `json:"jwks_ca_pem"`
-	JWTValidationPubKeys []string `json:"jwt_validation_pubkeys"`
-	JWTSupportedAlgs     []string `json:"jwt_supported_algs"`
-	BoundIssuer          string   `json:"bound_issuer"`
-	DefaultRole          string   `json:"default_role"`
+	OIDCDiscoveryURL     string                 `json:"oidc_discovery_url"`
+	OIDCDiscoveryCAPEM   string                 `json:"oidc_discovery_ca_pem"`
+	OIDCClientID         string                 `json:"oidc_client_id"`
+	OIDCClientSecret     string                 `json:"oidc_client_secret"`
+	OIDCResponseMode     string                 `json:"oidc_response_mode"`
+	OIDCResponseTypes    []string               `json:"oidc_response_types"`
+	JWKSURL              string                 `json:"jwks_url"`
+	JWKSCAPEM            string                 `json:"jwks_ca_pem"`
+	JWTValidationPubKeys []string               `json:"jwt_validation_pubkeys"`
+	JWTSupportedAlgs     []string               `json:"jwt_supported_algs"`
+	BoundIssuer          string                 `json:"bound_issuer"`
+	DefaultRole          string                 `json:"default_role"`
+	ProviderConfig       map[string]interface{} `json:"provider_config"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`
 }
@@ -319,6 +376,16 @@ func (c jwtConfig) authType() int {
 	}
 
 	return unconfigured
+}
+
+// hasType returns whether the list of response types includes the requested
+// type. The default type is 'code' so that special case is handled as well.
+func (c jwtConfig) hasType(t string) bool {
+	if len(c.OIDCResponseTypes) == 0 && t == responseTypeCode {
+		return true
+	}
+
+	return strutil.StrListContains(c.OIDCResponseTypes, t)
 }
 
 const (

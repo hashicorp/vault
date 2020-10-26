@@ -14,12 +14,14 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -284,6 +286,29 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(tokenRevokeOrphanHelp),
 			HelpDescription: strings.TrimSpace(tokenRevokeOrphanHelp),
+		},
+
+		{
+			Pattern: "renew-accessor",
+
+			Fields: map[string]*framework.FieldSchema{
+				"accessor": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Accessor of the token to renew (request body)",
+				},
+				"increment": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Default:     0,
+					Description: "The desired increment in seconds to the token expiration",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: ts.handleUpdateRenewAccessor,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(tokenRenewAccessorHelp),
+			HelpDescription: strings.TrimSpace(tokenRenewAccessorHelp),
 		},
 
 		{
@@ -794,8 +819,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			}
 		}
 
-		if userSelectedID && strings.HasPrefix(entry.ID, "s.") {
-			return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+		if userSelectedID {
+			switch {
+			case strings.HasPrefix(entry.ID, "s."):
+				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+			case strings.Contains(entry.ID, "."):
+				return fmt.Errorf("custom token ID cannot have a '.' in the value")
+			}
 		}
 
 		if !userSelectedID {
@@ -1616,10 +1646,20 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 }
 
 func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	if c.tokenStore == nil {
+		return false, fmt.Errorf("no token store")
+	}
+
 	name := strings.TrimPrefix(path, "auth/token/create/")
 	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
 	if err != nil {
 		return false, err
+	}
+	if roleEntry == nil {
+		return false, fmt.Errorf("unknown role")
 	}
 	return roleEntry.TokenType == logical.TokenTypeBatch, nil
 }
@@ -1779,10 +1819,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				}
 
 				var deletedChildrenCount int64
-				for _, child := range children {
+				for index, child := range children {
 					countParentList++
 					if countParentList%500 == 0 {
-						ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList)
+						percentComplete := float64(index) / float64(len(children)) * 100
+						ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList, "percent_complete", percentComplete)
 					}
 
 					// Look up tainted entries so we can be sure that if this isn't
@@ -1839,10 +1880,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
 			// and delete the accessor as well.
-			for _, saltedAccessor := range saltedAccessorList {
+			for index, saltedAccessor := range saltedAccessorList {
 				countAccessorList++
 				if countAccessorList%500 == 0 {
-					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList)
+					percentComplete := float64(index) / float64(len(saltedAccessorList)) * 100
+					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList, "percent_complete", percentComplete)
 				}
 
 				accessorEntry, err := ts.lookupByAccessor(quitCtx, saltedAccessor, true, true)
@@ -1935,10 +1977,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// Revoke invalid cubbyhole storage keys
-			for _, key := range cubbyholeKeys {
+			for index, key := range cubbyholeKeys {
 				countCubbyholeKeys++
 				if countCubbyholeKeys%500 == 0 {
-					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+					percentComplete := float64(index) / float64(len(cubbyholeKeys)) * 100
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys, "percent_complete", percentComplete)
 				}
 
 				key := strings.TrimSuffix(key, "/")
@@ -2016,6 +2059,54 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 	// Remove the token ID from the response
 	if resp.Data != nil {
 		resp.Data["id"] = ""
+	}
+
+	return resp, nil
+}
+
+func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
+	}
+
+	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the field data required for a lookup call
+	d := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"token": aEntry.TokenID,
+		},
+		Schema: map[string]*framework.FieldSchema{
+			"token": {
+				Type: framework.TypeString,
+			},
+			"increment": {
+				Type: framework.TypeDurationSecond,
+			},
+		},
+	}
+	if inc, ok := data.GetOk("increment"); ok {
+		d.Raw["increment"] = inc
+	}
+
+	resp, err := ts.handleRenew(ctx, req, d)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("failed to lookup the token")
+	}
+	if resp.IsError() {
+		return resp, nil
+	}
+
+	// Remove the token ID from the response
+	if resp.Auth != nil {
+		resp.Auth.ClientToken = ""
 	}
 
 	return resp, nil
@@ -2629,6 +2720,21 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if err := ts.create(ctx, &te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+
+	// Count the successful token creation.
+	ttl_label := metricsutil.TTLBucket(te.TTL)
+	mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
+	ts.core.metricSink.IncrCounterWithLabels(
+		[]string{"token", "creation"},
+		1,
+		[]metrics.Label{
+			metricsutil.NamespaceLabel(ns),
+			{"auth_method", "token"},
+			{"mount_point", mountPointWithoutNs}, // path, not accessor
+			{"creation_ttl", ttl_label},
+			{"token_type", tokenType.String()},
+		},
+	)
 
 	// Generate the response
 	resp.Auth = &logical.Auth{
@@ -3296,6 +3402,303 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	return resp, nil
 }
 
+func suppressRestoreModeError(err error) error {
+	if err != nil {
+		if strings.Contains(err.Error(), ErrInRestoreMode.Error()) {
+			return nil
+		}
+	}
+	return err
+}
+
+// gaugeCollector is responsible for counting the number of tokens by
+// namespace. Separate versions cover the other two counts; this is somewhat
+// less efficient than doing just one pass over the tokens and can
+// be fixed later.
+func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	values := make([]metricsutil.GaugeLabelValues, len(allNamespaces))
+	namespacePosition := make(map[string]int)
+
+	// If we increment the float32 value by 1.0 each time, then we cap out
+	// at around 16 million. So, we should keep a separate integer array
+	// to potentially handle a larger number of tokens.
+	intValues := make([]int, len(allNamespaces))
+	for i, ns := range allNamespaces {
+		values[i].Labels = []metrics.Label{metricsutil.NamespaceLabel(ns)}
+		namespacePosition[ns.ID] = i
+	}
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			// A new namespace could be created while
+			// we're counting, ignore it until the next iteration.
+			pos, ok := namespacePosition[nsID]
+			if ok {
+				intValues[pos] += 1
+			}
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	for i := range values {
+		values[i].Value = float32(intValues[i])
+	}
+	return values, nil
+
+}
+
+func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndPolicy := make(map[string]map[string]int)
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			policyMap, ok := byNsAndPolicy[nsID]
+			if !ok {
+				policyMap = make(map[string]int)
+				byNsAndPolicy[nsID] = policyMap
+			}
+			for _, policy := range auth.Policies {
+				policyMap[policy] = policyMap[policy] + 1
+			}
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// TODO: can we estimate the needed size?
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0)
+	for _, ns := range allNamespaces {
+		for policy, count := range byNsAndPolicy[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"policy", policy},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
+func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndBucket := make(map[string]map[string]int)
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			if auth == nil {
+				return true
+			}
+
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			bucketMap, ok := byNsAndBucket[nsID]
+			if !ok {
+				bucketMap = make(map[string]int)
+				byNsAndBucket[nsID] = bucketMap
+			}
+			bucket := metricsutil.TTLBucket(auth.TTL)
+			// Zero is a special value in this context
+			if auth.TTL == time.Duration(0) {
+				bucket = metricsutil.OverflowBucket
+			}
+
+			bucketMap[bucket] = bucketMap[bucket] + 1
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// 10 different time buckets, at the moment, though many should
+	// be unused.
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0, len(allNamespaces)*10)
+	for _, ns := range allNamespaces {
+		for bucket, count := range byNsAndBucket[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"creation_ttl", bucket},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
+func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	rootContext := namespace.RootContext(ctx)
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndMethod := make(map[string]map[string]int)
+
+	// Cache the prefixes that we find locally rather than
+	// hitting the shared mount table every time
+	prefixTree := radix.New()
+
+	pathToPrefix := func(nsID string, path string) string {
+		ns, err := NamespaceByID(rootContext, nsID, ts.core)
+		if ns == nil || err != nil {
+			return "unknown"
+		}
+		ctx := namespace.ContextWithNamespace(rootContext, ns)
+
+		key := ns.Path + path
+		_, method, ok := prefixTree.LongestPrefix(key)
+		if ok {
+			return method.(string)
+		}
+
+		// Look up the path from the lease within the correct namespace
+		// Need to hold stateLock while accessing the router.
+		ts.core.stateLock.RLock()
+		defer ts.core.stateLock.RUnlock()
+		mountEntry := ts.core.router.MatchingMountEntry(ctx, path)
+		if mountEntry == nil {
+			return "unknown"
+		}
+
+		// mountEntry.Path lacks the "auth/" prefix; perhaps we should
+		// refactor router to provide a method that returns both the matching
+		// path *and* the the mount entry?
+		// Or we could just always add "auth/"?
+		matchingMount := ts.core.router.MatchingMount(ctx, path)
+		if matchingMount == "" {
+			// Shouldn't happen, but a race is possible?
+			return mountEntry.Type
+		}
+
+		key = ns.Path + matchingMount
+		prefixTree.Insert(key, mountEntry.Type)
+		return mountEntry.Type
+	}
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			methodMap, ok := byNsAndMethod[nsID]
+			if !ok {
+				methodMap = make(map[string]int)
+				byNsAndMethod[nsID] = methodMap
+			}
+			method := pathToPrefix(nsID, path)
+			methodMap[method] = methodMap[method] + 1
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// TODO: how can we estimate the needed size?
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0)
+	for _, ns := range allNamespaces {
+		for method, count := range byNsAndMethod[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"auth_method", method},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
 const (
 	tokenTidyHelp = `
 This endpoint performs cleanup tasks that can be run if certain error
@@ -3316,6 +3719,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
 	tokenListRolesHelp       = `This endpoint lists configured roles.`
 	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
+	tokenRenewAccessorHelp   = `This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenLookupHelp          = `This endpoint will lookup a token and its properties.`
 	tokenPathRolesHelp       = `This endpoint allows creating, reading, and deleting roles.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`

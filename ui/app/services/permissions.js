@@ -30,7 +30,8 @@ const API_PATHS = {
     raft: 'sys/storage/raft/configuration',
   },
   metrics: {
-    requests: 'sys/internal/counters/requests',
+    activity: 'sys/internal/counters/activity',
+    config: 'sys/internal/counters/config',
   },
 };
 

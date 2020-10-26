@@ -2,6 +2,9 @@
 package oci
 
 import (
+	"os"
+	"testing"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -9,8 +12,6 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 	"github.com/oracle/oci-go-sdk/objectstorage"
 	"golang.org/x/net/context"
-	"os"
-	"testing"
 )
 
 func TestOCIBackend(t *testing.T) {

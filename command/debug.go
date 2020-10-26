@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/version"
@@ -223,9 +223,9 @@ func (c *DebugCommand) Run(args []string) int {
 	}
 
 	// Initialize the logger for debug output
-	logWriter := &gatedwriter.Writer{Writer: os.Stderr}
+	gatedWriter := gatedwriter.NewWriter(os.Stderr)
 	if c.logger == nil {
-		c.logger = logging.NewVaultLoggerWithWriter(logWriter, hclog.Trace)
+		c.logger = logging.NewVaultLoggerWithWriter(gatedWriter, hclog.Trace)
 	}
 
 	dstOutputFile, err := c.preflight(args)
@@ -246,7 +246,9 @@ func (c *DebugCommand) Run(args []string) int {
 	c.UI.Output("")
 
 	// Release the log gate.
-	logWriter.Flush()
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: os.Stderr,
+	}, gatedWriter)
 
 	// Capture static information
 	c.UI.Info("==> Capturing static information...")
@@ -389,6 +391,13 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 
 	if len(c.flagTargets) == 0 {
 		c.flagTargets = c.defaultTargets()
+	} else {
+		// Check for any invalid targets and ignore them if found
+		invalidTargets := strutil.Difference(c.flagTargets, c.defaultTargets(), true)
+		if len(invalidTargets) != 0 {
+			c.UI.Info(fmt.Sprintf("Ignoring invalid targets: %s", strings.Join(invalidTargets, ", ")))
+			c.flagTargets = strutil.Difference(c.flagTargets, invalidTargets, true)
+		}
 	}
 
 	// Make sure we can talk to the server
@@ -814,7 +823,8 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 			if err != nil {
 				c.captureError("replication-status", err)
 			}
-			if replicationEntry := secret.Data; replicationEntry != nil {
+			if secret != nil && secret.Data != nil {
+				replicationEntry := secret.Data
 				replicationEntry["timestamp"] = time.Now().UTC()
 				c.replicationStatusCollection = append(c.replicationStatusCollection, replicationEntry)
 			}

@@ -2,6 +2,7 @@ package raft
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -16,17 +17,19 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
-
-	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -38,17 +41,20 @@ const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
+var _ physical.HABackend = (*RaftBackend)(nil)
+var _ physical.Lock = (*RaftLock)(nil)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
 	// This is used to reduce disk I/O for the recently committed entries.
 	raftLogCacheSize = 512
 
-	raftState         = "raft/"
-	peersFileName     = "peers.json"
-	snapshotsRetained = 2
+	raftState     = "raft/"
+	peersFileName = "peers.json"
 
 	restoreOpDelayDuration = 5 * time.Second
+
+	defaultMaxEntrySize = uint64(2 * raftchunking.ChunkSize)
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -63,6 +69,11 @@ type RaftBackend struct {
 
 	// raft is the instance of raft we will operate on.
 	raft *raft.Raft
+
+	// raftInitCh is used to block during HA lock acquisition if raft
+	// has not been initialized yet, which can occur if raft is being
+	// used for HA-only.
+	raftInitCh chan struct{}
 
 	// raftNotifyCh is used to receive updates about leadership changes
 	// regarding this node.
@@ -104,6 +115,119 @@ type RaftBackend struct {
 
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
+
+	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
+	// It is suggested to use a value of 2x the Raft chunking size for optimal
+	// performance.
+	maxEntrySize uint64
+}
+
+// LeaderJoinInfo contains information required by a node to join itself as a
+// follower to an existing raft cluster
+type LeaderJoinInfo struct {
+	// AutoJoin defines any cloud auto-join metadata. If supplied, Vault will
+	// attempt to automatically discover peers in addition to what can be provided
+	// via 'leader_api_addr'.
+	AutoJoin string `json:"auto_join"`
+
+	// AutoJoinScheme defines the optional URI protocol scheme for addresses
+	// discovered via auto-join.
+	AutoJoinScheme string `json:"auto_join_scheme"`
+
+	// AutoJoinPort defines the optional port used for addressed discovered via
+	// auto-join.
+	AutoJoinPort uint `json:"auto_join_port"`
+
+	// LeaderAPIAddr is the address of the leader node to connect to
+	LeaderAPIAddr string `json:"leader_api_addr"`
+
+	// LeaderCACert is the CA cert of the leader node
+	LeaderCACert string `json:"leader_ca_cert"`
+
+	// LeaderClientCert is the client certificate for the follower node to
+	// establish client authentication during TLS
+	LeaderClientCert string `json:"leader_client_cert"`
+
+	// LeaderClientKey is the client key for the follower node to establish
+	// client authentication during TLS.
+	LeaderClientKey string `json:"leader_client_key"`
+
+	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// leader node. This should only be provided via Vault's configuration file.
+	LeaderCACertFile string `json:"leader_ca_cert_file"`
+
+	// LeaderClientCertFile is the path on disk to the client certificate file
+	// for the follower node to establish client authentication during TLS. This
+	// should only be provided via Vault's configuration file.
+	LeaderClientCertFile string `json:"leader_client_cert_file"`
+
+	// LeaderClientKeyFile is the path on disk to the client key file for the
+	// follower node to establish client authentication during TLS. This should
+	// only be provided via Vault's configuration file.
+	LeaderClientKeyFile string `json:"leader_client_key_file"`
+
+	// Retry indicates if the join process should automatically be retried
+	Retry bool `json:"-"`
+
+	// TLSConfig for the API client to use when communicating with the leader node
+	TLSConfig *tls.Config `json:"-"`
+}
+
+// JoinConfig returns a list of information about possible leader nodes that
+// this node can join as a follower
+func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
+	config := b.conf["retry_join"]
+	if config == "" {
+		return nil, nil
+	}
+
+	var leaderInfos []*LeaderJoinInfo
+	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
+	}
+
+	if len(leaderInfos) == 0 {
+		return nil, errors.New("invalid retry_join config")
+	}
+
+	for i, info := range leaderInfos {
+		if len(info.AutoJoin) != 0 && len(info.LeaderAPIAddr) != 0 {
+			return nil, errors.New("cannot provide both a leader_api_addr and auto_join")
+		}
+
+		if info.AutoJoinScheme != "" && (info.AutoJoinScheme != "http" && info.AutoJoinScheme != "https") {
+			return nil, fmt.Errorf("invalid scheme '%s'; must either be http or https", info.AutoJoinScheme)
+		}
+
+		info.Retry = true
+		info.TLSConfig, err = parseTLSInfo(info)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node (retry_join index: %d): {{err}}", i), err)
+		}
+	}
+
+	return leaderInfos, nil
+}
+
+// parseTLSInfo is a helper for parses the TLS information, preferring file
+// paths over raw certificate content.
+func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var err error
+	if len(leaderInfo.LeaderCACertFile) != 0 || len(leaderInfo.LeaderClientCertFile) != 0 || len(leaderInfo.LeaderClientKeyFile) != 0 {
+		tlsConfig, err = tlsutil.LoadClientTLSConfig(leaderInfo.LeaderCACertFile, leaderInfo.LeaderClientCertFile, leaderInfo.LeaderClientKeyFile)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0 {
+		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tlsConfig, nil
 }
 
 // EnsurePath is used to make sure a path exists
@@ -116,11 +240,6 @@ func EnsurePath(path string, dir bool) error {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	// Create the FSM.
-	fsm, err := NewFSM(conf, logger.Named("fsm"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create fsm: %v", err)
-	}
 
 	path := os.Getenv(EnvVaultRaftPath)
 	if path == "" {
@@ -131,11 +250,18 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		path = pathFromConfig
 	}
 
+	// Create the FSM.
+	fsm, err := NewFSM(path, logger.Named("fsm"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create fsm: %v", err)
+	}
+
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
 	var log raft.LogStore
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
+
 	var devMode bool
 	if devMode {
 		store := raft.NewInmemStore()
@@ -164,11 +290,19 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, snapshotsRetained, logger.Named("snapshot"), fsm)
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}
 		snap = snapshots
+	}
+
+	if delayRaw, ok := conf["snapshot_delay"]; ok {
+		delay, err := time.ParseDuration(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
+		}
+		snap = newSnapshotStoreDelay(snap, delay)
 	}
 
 	var localID string
@@ -213,17 +347,74 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	maxEntrySize := defaultMaxEntrySize
+	if maxEntrySizeCfg := conf["max_entry_size"]; len(maxEntrySizeCfg) != 0 {
+		i, err := strconv.Atoi(maxEntrySizeCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse 'max_entry_size': %w", err)
+		}
+
+		maxEntrySize = uint64(i)
+	}
+
 	return &RaftBackend{
-		logger:      logger,
-		fsm:         fsm,
-		conf:        conf,
-		logStore:    log,
-		stableStore: stable,
-		snapStore:   snap,
-		dataDir:     path,
-		localID:     localID,
-		permitPool:  physical.NewPermitPool(physical.DefaultParallelOperations),
+		logger:       logger,
+		fsm:          fsm,
+		raftInitCh:   make(chan struct{}),
+		conf:         conf,
+		logStore:     log,
+		stableStore:  stable,
+		snapStore:    snap,
+		dataDir:      path,
+		localID:      localID,
+		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize: maxEntrySize,
 	}, nil
+}
+
+type snapshotStoreDelay struct {
+	wrapped raft.SnapshotStore
+	delay   time.Duration
+}
+
+func (s snapshotStoreDelay) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+	time.Sleep(s.delay)
+	return s.wrapped.Create(version, index, term, configuration, configurationIndex, trans)
+}
+
+func (s snapshotStoreDelay) List() ([]*raft.SnapshotMeta, error) {
+	return s.wrapped.List()
+}
+
+func (s snapshotStoreDelay) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+	return s.wrapped.Open(id)
+}
+
+var _ raft.SnapshotStore = &snapshotStoreDelay{}
+
+func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration) *snapshotStoreDelay {
+	return &snapshotStoreDelay{
+		wrapped: snap,
+		delay:   delay,
+	}
+}
+
+// Close is used to gracefully close all file resources.  N.B. This method
+// should only be called if you are sure the RaftBackend will never be used
+// again.
+func (b *RaftBackend) Close() error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if err := b.fsm.db.Close(); err != nil {
+		return err
+	}
+
+	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -294,7 +485,7 @@ func (b *RaftBackend) SetServerAddressProvider(provider raft.ServerAddressProvid
 }
 
 // Bootstrap prepares the given peers to be part of the raft cluster
-func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
+func (b *RaftBackend) Bootstrap(peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -406,6 +597,13 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 	})
 }
 
+func (b *RaftBackend) HasState() (bool, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return raft.HasExistingState(b.logStore, b.stableStore, b.snapStore)
+}
+
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
 func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
@@ -430,25 +628,33 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return err
 	}
 
+	listenerIsNil := func(cl cluster.ClusterHook) bool {
+		switch {
+		case opts.ClusterListener == nil:
+			return true
+		default:
+			// Concrete type checks
+			switch cl.(type) {
+			case *cluster.Listener:
+				return cl.(*cluster.Listener) == nil
+			}
+		}
+		return false
+	}
+
 	switch {
-	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
+	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case opts.ClusterListener == nil:
+	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
-		// Load the base TLS config from the cluster listener.
-		baseTLSConfig, err := opts.ClusterListener.TLSConfig(ctx)
-		if err != nil {
-			return err
-		}
-
 		// Set the local address and localID in the streaming layer and the raft config.
-		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener.Addr(), baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
 			return err
 		}
@@ -457,6 +663,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			MaxPool:               3,
 			Timeout:               10 * time.Second,
 			ServerAddressProvider: b.serverAddressProvider,
+			Logger:                b.logger.Named("raft-net"),
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
@@ -467,7 +674,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
-	raftNotifyCh := make(chan bool, 1)
+	raftNotifyCh := make(chan bool, 10)
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// If we have a bootstrapConfig set we should bootstrap now.
@@ -480,13 +687,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		if err := raft.BootstrapCluster(raftConfig, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *bootstrapConfig); err != nil {
 			return err
 		}
-		// If we are the only node we should start as the leader.
-		if len(bootstrapConfig.Servers) == 1 {
-			opts.StartAsLeader = true
-		}
 	}
 
-	raftConfig.StartAsLeader = opts.StartAsLeader
 	// Setup the Raft store.
 	b.fsm.SetNoopRestore(true)
 
@@ -501,7 +703,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		b.logger.Info("raft recovery: found new config", "config", recoveryConfig)
+		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
+		// error out to indicate that it isn't allowed.
+		for idx := range recoveryConfig.Servers {
+			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
+			}
+		}
+
+		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
+
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
 			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
@@ -526,6 +737,30 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	if err != nil {
 		return err
 	}
+
+	// If we are expecting to start as leader wait until we win the election.
+	// This should happen quickly since there is only one node in the cluster.
+	// StartAsLeader is only set during init, recovery mode, storage migration,
+	// and tests.
+	if opts.StartAsLeader {
+		for {
+			if raftObj.State() == raft.Leader {
+				break
+			}
+
+			select {
+			case <-ctx.Done():
+				future := raftObj.Shutdown()
+				if future.Error() != nil {
+					return errwrap.Wrapf("shutdown while waiting for leadership: {{err}}", future.Error())
+				}
+
+				return errors.New("shutdown while waiting for leadership")
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+	}
+
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
@@ -537,6 +772,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		opts.ClusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
+	// Close the init channel to signal setup has been completed
+	close(b.raftInitCh)
+
+	b.logger.Trace("finished setting up raft cluster")
 	return nil
 }
 
@@ -548,15 +787,29 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	}
 
 	b.l.Lock()
-	future := b.raft.Shutdown()
+
+	// Perform shutdown only if the raft object is non-nil. The object could be nil
+	// if the node is unsealed but has not joined the peer set.
+	var future raft.Future
+	if b.raft != nil {
+		future = b.raft.Shutdown()
+	}
+
 	b.raft = nil
+
+	// If we're tearing down, then we need to recreate the raftInitCh
+	b.raftInitCh = make(chan struct{})
 	b.l.Unlock()
 
-	return future.Error()
+	if future != nil {
+		return future.Error()
+	}
+
+	return nil
 }
 
-// AppliedIndex returns the latest index applied to the FSM
-func (b *RaftBackend) AppliedIndex() uint64 {
+// CommittedIndex returns the latest index committed to stable storage
+func (b *RaftBackend) CommittedIndex() uint64 {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -564,7 +817,22 @@ func (b *RaftBackend) AppliedIndex() uint64 {
 		return 0
 	}
 
-	return b.raft.AppliedIndex()
+	return b.raft.LastIndex()
+}
+
+// AppliedIndex returns the latest index applied to the FSM
+func (b *RaftBackend) AppliedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.fsm == nil {
+		return 0
+	}
+
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Index
 }
 
 // RemovePeer removes the given peer ID from the raft cluster. If the node is
@@ -655,10 +923,19 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	return ret, nil
 }
 
+// SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
+// response.
+func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal.Access) error {
+	out.Header().Add("Content-Disposition", "attachment")
+	out.Header().Add("Content-Type", "application/gzip")
+
+	return b.Snapshot(out, access)
+}
+
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -674,26 +951,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Acce
 		}
 	}
 
-	snap, err := snapshot.NewWithSealer(b.logger.Named("snapshot"), b.raft, s)
-	if err != nil {
-		return err
-	}
-	defer snap.Close()
-
-	size, err := snap.Size()
-	if err != nil {
-		return err
-	}
-
-	out.Header().Add("Content-Disposition", "attachment")
-	out.Header().Add("Content-Length", fmt.Sprintf("%d", size))
-	out.Header().Add("Content-Type", "application/gzip")
-	_, err = io.Copy(out, snap)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return snapshot.Write(b.logger.Named("snapshot"), b.raft, s, out)
 }
 
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
@@ -701,7 +959,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Acce
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same master key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -748,9 +1006,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 		},
 	}
 
-	b.l.RLock()
 	err := b.applyLog(ctx, command)
-	b.l.RUnlock()
 
 	// Do a best-effort attempt to let the standbys apply the restoreCallbackOp
 	// before we continue.
@@ -788,10 +1044,23 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
-	return b.fsm.Get(ctx, path)
+	entry, err := b.fsm.Get(ctx, path)
+	if entry != nil {
+		valueLen := len(entry.Value)
+		if uint64(valueLen) > b.maxEntrySize {
+			b.logger.Warn(
+				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
+				"size", valueLen, "suggested", b.maxEntrySize,
+			)
+		}
+	}
+
+	return entry, err
 }
 
-// Put inserts an entry in the log for the put operation
+// Put inserts an entry in the log for the put operation. It will return an
+// error if the resulting entry encoding exceeds the configured max_entry_size
+// or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
@@ -872,6 +1141,13 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
+	cmdSize := len(commandBytes)
+	if uint64(cmdSize) > b.maxEntrySize {
+		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
+	}
+
+	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(cmdSize))
+
 	var chunked bool
 	var applyFuture raft.ApplyFuture
 	switch {
@@ -917,10 +1193,10 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	return nil
 }
 
-// HAEnabled is the implemention of the HABackend interface
+// HAEnabled is the implementation of the HABackend interface
 func (b *RaftBackend) HAEnabled() bool { return true }
 
-// HAEnabled is the implemention of the HABackend interface
+// HAEnabled is the implementation of the HABackend interface
 func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	return &RaftLock{
 		key:   key,
@@ -944,12 +1220,21 @@ type RaftLock struct {
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
-		select {
-		case isLeader := <-leaderNotifyCh:
-			if !isLeader {
-				close(leaderLost)
+		for {
+			select {
+			case isLeader := <-leaderNotifyCh:
+				// leaderNotifyCh may deliver a true value initially if this
+				// server is already the leader prior to RaftLock.Lock call
+				// (the true message was already queued). The next message is
+				// always going to be false. The for loop should loop at most
+				// twice.
+				if !isLeader {
+					close(leaderLost)
+					return
+				}
+			case <-stopCh:
+				return
 			}
-		case <-stopCh:
 		}
 	}()
 	return leaderLost
@@ -958,7 +1243,23 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 // Lock blocks until we become leader or are shutdown. It returns a channel that
 // is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	// If not initialized, block until it is
+	if !l.b.Initialized() {
+		select {
+		case <-l.b.raftInitCh:
+		case <-stopCh:
+			return nil, nil
+		}
+
+	}
+
 	l.b.l.RLock()
+
+	// Ensure that we still have a raft instance after grabbing the read lock
+	if l.b.raft == nil {
+		l.b.l.RUnlock()
+		return nil, errors.New("attempted to grab a lock on a nil raft backend")
+	}
 
 	// Cache the notifyCh locally
 	leaderNotifyCh := l.b.raftNotifyCh
@@ -1015,6 +1316,10 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 // Unlock gives up leadership.
 func (l *RaftLock) Unlock() error {
+	if l.b.raft == nil {
+		return nil
+	}
+
 	return l.b.raft.LeadershipTransfer().Error()
 }
 
@@ -1036,7 +1341,7 @@ func (l *RaftLock) Value() (bool, string, error) {
 // sealer implements the snapshot.Sealer interface and is used in the snapshot
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
-	access seal.Access
+	access *seal.Access
 }
 
 // Seal encrypts the data with using the seal access object.
@@ -1044,7 +1349,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 	if s.access == nil {
 		return nil, errors.New("no seal access available")
 	}
-	eblob, err := s.access.Encrypt(ctx, pt)
+	eblob, err := s.access.Encrypt(ctx, pt, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,11 +1363,11 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, errors.New("no seal access available")
 	}
 
-	var eblob physical.EncryptedBlobInfo
+	var eblob wrapping.EncryptedBlobInfo
 	err := proto.Unmarshal(ct, &eblob)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.access.Decrypt(ctx, &eblob)
+	return s.access.Decrypt(ctx, &eblob, nil)
 }

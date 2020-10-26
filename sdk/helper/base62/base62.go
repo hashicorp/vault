@@ -4,8 +4,9 @@ package base62
 
 import (
 	"crypto/rand"
-	uuid "github.com/hashicorp/go-uuid"
 	"io"
+
+	uuid "github.com/hashicorp/go-uuid"
 )
 
 const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"

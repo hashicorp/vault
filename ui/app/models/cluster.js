@@ -46,57 +46,23 @@ export default DS.Model.extend({
   //otherwise the particular mode will have the relevant mode attr through replication-attributes
   mode: attr('string'),
   allReplicationDisabled: and('{dr,performance}.replicationDisabled'),
-
   anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
-
-  stateDisplay(state) {
-    if (!state) {
-      return null;
-    }
-    const defaultDisp = 'Synced';
-    const displays = {
-      'stream-wals': 'Streaming',
-      'merkle-diff': 'Determining sync status',
-      'merkle-sync': 'Syncing',
-    };
-
-    return displays[state] || defaultDisp;
-  },
-
-  drStateDisplay: computed('dr.state', function() {
-    return this.stateDisplay(this.get('dr.state'));
-  }),
-
-  performanceStateDisplay: computed('performance.state', function() {
-    return this.stateDisplay(this.get('performance.state'));
-  }),
-
-  stateGlyph(state) {
-    const glyph = 'check-circled-outline';
-
-    const glyphs = {
-      'stream-wals': 'android-sync',
-      'merkle-diff': 'android-sync',
-      'merkle-sync': null,
-    };
-
-    return glyphs[state] || glyph;
-  },
-
-  drStateGlyph: computed('dr.state', function() {
-    return this.stateGlyph(this.get('dr.state'));
-  }),
-
-  performanceStateGlyph: computed('performance.state', function() {
-    return this.stateGlyph(this.get('performance.state'));
-  }),
 
   dr: fragment('replication-attributes'),
   performance: fragment('replication-attributes'),
   // this service exposes what mode the UI is currently viewing
   // replicationAttrs will then return the relevant `replication-attributes` fragment
   rm: service('replication-mode'),
+  drMode: alias('dr.mode'),
   replicationMode: alias('rm.mode'),
+  replicationModeForDisplay: computed('replicationMode', function() {
+    return this.replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance';
+  }),
+  replicationIsInitializing: computed('dr.mode', 'performance.mode', function() {
+    // a mode of null only happens when a cluster is being initialized
+    // otherwise the mode will be 'disabled', 'primary', 'secondary'
+    return !this.dr.mode || !this.performance.mode;
+  }),
   replicationAttrs: computed('dr.mode', 'performance.mode', 'replicationMode', function() {
     const replicationMode = this.get('replicationMode');
     return replicationMode ? get(this, replicationMode) : null;

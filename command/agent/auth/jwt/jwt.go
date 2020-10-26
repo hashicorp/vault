@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -85,17 +86,17 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return j, nil
 }
 
-func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	j.logger.Trace("beginning authentication")
 
 	j.ingressToken()
 
 	latestToken := j.latestToken.Load().(string)
 	if latestToken == "" {
-		return "", nil, errors.New("latest known jwt is empty, cannot authenticate")
+		return "", nil, nil, errors.New("latest known jwt is empty, cannot authenticate")
 	}
 
-	return fmt.Sprintf("%s/login", j.mountPath), map[string]interface{}{
+	return fmt.Sprintf("%s/login", j.mountPath), nil, map[string]interface{}{
 		"role": j.role,
 		"jwt":  latestToken,
 	}, nil

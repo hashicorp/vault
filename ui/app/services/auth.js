@@ -313,7 +313,7 @@ export default Service.extend({
 
     this.getTokensFromStorage().forEach(key => {
       const data = this.getTokenData(key);
-      if (data && data.policies.includes('root')) {
+      if (data && data.policies && data.policies.includes('root')) {
         this.removeTokenData(key);
       }
     });
@@ -331,6 +331,10 @@ export default Service.extend({
     );
     await this.get('permissions').getPaths.perform();
     return authData;
+  },
+
+  getAuthType() {
+    return this.get('authData.backend.type');
   },
 
   deleteCurrentToken() {

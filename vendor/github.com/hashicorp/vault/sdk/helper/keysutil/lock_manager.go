@@ -346,7 +346,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				return nil, false, fmt.Errorf("convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
-		case KeyType_RSA2048, KeyType_RSA4096:
+		case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 			if req.Derived || req.Convergent {
 				cleanup()
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)

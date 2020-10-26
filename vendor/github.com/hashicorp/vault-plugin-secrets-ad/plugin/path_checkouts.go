@@ -107,10 +107,7 @@ func (b *backend) operationSetCheckOut(ctx context.Context, req *logical.Request
 	// In case of customer issues, we need to make this easy to see and diagnose.
 	b.Logger().Debug(fmt.Sprintf(`%q had no check-outs available`, setName))
 	metrics.IncrCounter([]string{"active directory", "check-out", "unavailable", setName}, 1)
-
-	return logical.RespondWithStatusCode(&logical.Response{
-		Warnings: []string{"No service accounts available for check-out."},
-	}, req, 400)
+	return logical.ErrorResponse("No service accounts available for check-out."), nil
 }
 
 func (b *backend) secretAccessKeys() *framework.Secret {

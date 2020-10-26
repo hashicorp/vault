@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -31,14 +32,14 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return "auth/userpass/login/foo", map[string]interface{}{
+	return "auth/userpass/login/foo", nil, map[string]interface{}{
 		"password": "bar",
 	}, nil
 }
@@ -78,7 +79,10 @@ func TestAuthHandler(t *testing.T) {
 	})
 
 	am := newUserpassTestMethod(t, client)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 
 	// Consume tokens so we don't block
 	stopTime := time.Now().Add(5 * time.Second)
@@ -86,6 +90,11 @@ func TestAuthHandler(t *testing.T) {
 consumption:
 	for {
 		select {
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+			break consumption
 		case <-ah.OutputCh:
 		case <-ah.TemplateTokenCh:
 		// Nothing
@@ -94,8 +103,6 @@ consumption:
 				cancelFunc()
 				closed = true
 			}
-		case <-ah.DoneCh:
-			break consumption
 		}
 	}
 }

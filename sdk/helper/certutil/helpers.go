@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -14,6 +15,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math/big"
 	"net"
 	"net/url"
@@ -167,6 +170,8 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				Certificate: certificates[0],
 				Bytes:       pemBlock.Bytes,
 			})
+		} else if x509.IsEncryptedPEMBlock(pemBlock) {
+			return nil, errutil.UserError{Err: "Encrypted private key given; provide only decrypted private key in the bundle"}
 		}
 	}
 
@@ -303,9 +308,12 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 		if ecPublicKey, ok := rawKey.(*ecdsa.PublicKey); ok {
 			return ecPublicKey, nil
 		}
+		if edPublicKey, ok := rawKey.(ed25519.PublicKey); ok {
+			return edPublicKey, nil
+		}
 	}
 
-	return nil, errors.New("data does not contain any valid RSA or ECDSA public keys")
+	return nil, errors.New("data does not contain any valid public keys")
 }
 
 // addPolicyIdentifiers adds certificate policies extension
@@ -460,6 +468,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	case "rsa":
 		switch keyBits {
 		case 2048:
+		case 3072:
 		case 4096:
 		case 8192:
 		default:
@@ -803,4 +812,51 @@ func SignCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 	result.CAChain = data.SigningBundle.GetCAChain()
 
 	return result, nil
+}
+
+func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
+	pemBlock, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	certs, err := parseCertsPEM(pemBlock)
+	if err != nil {
+		return nil, fmt.Errorf("error reading certs: %s", err)
+	}
+	pool := x509.NewCertPool()
+	for _, cert := range certs {
+		pool.AddCert(cert)
+	}
+	return pool, nil
+}
+
+// parseCertsPEM returns the x509.Certificates contained in the given PEM-encoded byte array
+// Returns an error if a certificate could not be parsed, or if the data does not contain any certificates
+func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
+	ok := false
+	certs := []*x509.Certificate{}
+	for len(pemCerts) > 0 {
+		var block *pem.Block
+		block, pemCerts = pem.Decode(pemCerts)
+		if block == nil {
+			break
+		}
+		// Only use PEM "CERTIFICATE" blocks without extra headers
+		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+			continue
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return certs, err
+		}
+
+		certs = append(certs, cert)
+		ok = true
+	}
+
+	if !ok {
+		return certs, errors.New("data does not contain any valid RSA or ECDSA certificates")
+	}
+	return certs, nil
 }

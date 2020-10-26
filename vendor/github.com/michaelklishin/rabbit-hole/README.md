@@ -4,12 +4,13 @@ This library is a [RabbitMQ HTTP API](https://raw.githack.com/rabbitmq/rabbitmq-
 
 ## Supported Go Versions
 
-Rabbit Hole supports 3 most recent Go releases.
+Rabbit Hole supports the last 2 stable Go versions, as well as the version in development (a.k.a. master).
 
 
 ## Supported RabbitMQ Versions
 
- * RabbitMQ 3.x
+ * RabbitMQ `3.7.x` is the primary target series
+ * Most API functions would work against RabbitMQ `3.6.x` nodes or earlier but those releases are officially out of support
 
 All versions require [RabbitMQ Management UI plugin](https://www.rabbitmq.com/management.html) to be installed and enabled.
 
@@ -22,6 +23,12 @@ APIs. Breaking API changes are not out of the question but not without
 a reasonable version bump.
 
 It is largely (80-90%) feature complete and decently documented.
+
+
+## Change Log
+
+If upgrading from an earlier release, please consult with
+the [change log](https://github.com/michaelklishin/rabbit-hole/blob/master/ChangeLog.md).
 
 
 ## Installation
@@ -238,6 +245,14 @@ resp, err := rmqc.DeleteQueue("/", "a.queue")
 // purges all messages in queue
 resp, err := rmqc.PurgeQueue("/", "a.queue")
 // => *http.Response, err
+
+// synchronises all messages in queue with the rest of mirrors in the cluster
+resp, err := rmqc.SyncQueue("/", "a.queue")
+// => *http.Response, err
+
+// cancels queue synchronisation process
+resp, err := rmqc.CancelSyncQueue("/", "a.queue")
+// => *http.Response, err
 ```
 
 
@@ -335,7 +350,7 @@ rmqc, err := NewTLSClient("https://127.0.0.1:15672", "guest", "guest", transport
 ### Changing Transport Layer
 
 ``` go
-var transport *http.Transport
+var transport http.RoundTripper
 
 ...
 

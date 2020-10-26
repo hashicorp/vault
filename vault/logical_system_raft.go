@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	proto "github.com/golang/protobuf/proto"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault/seal"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -71,6 +71,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/remove-peer",
 
 			Fields: map[string]*framework.FieldSchema{
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
 				"server_id": {
 					Type: framework.TypeString,
 				},
@@ -78,7 +82,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftRemovePeerUpdate(),
+					Callback: wrapHandleRaftRemovePeer(b),
 					Summary:  "Remove a peer from the raft cluster.",
 				},
 			},
@@ -132,13 +136,12 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 func (b *SystemBackend) handleRaftConfigurationGet() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
+		raftBackend := b.Core.getRaftBackend()
+		if raftBackend == nil {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		config, err := raftStorage.GetConfiguration(ctx)
+		config, err := raftBackend.GetConfiguration(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -158,12 +161,12 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
+		raftBackend := b.Core.getRaftBackend()
+		if raftBackend == nil {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		if err := raftStorage.RemovePeer(ctx, serverID); err != nil {
+		if err := raftBackend.RemovePeer(ctx, serverID); err != nil {
 			return nil, err
 		}
 		if b.Core.raftFollowerStates != nil {
@@ -176,23 +179,27 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		_, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
-			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
-		}
-
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		uuid, err := uuid.GenerateRandomBytes(16)
-		if err != nil {
-			return nil, err
+		var answer []byte
+		answerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
+		if !ok {
+			var err error
+			answer, err = uuid.GenerateRandomBytes(16)
+			if err != nil {
+				return nil, err
+			}
+			b.Core.pendingRaftPeers.Store(serverID, answer)
+		} else {
+			answer = answerRaw.([]byte)
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
-		eBlob, err := sealAccess.Encrypt(ctx, uuid)
+
+		eBlob, err := sealAccess.Encrypt(ctx, answer, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +208,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		b.Core.pendingRaftPeers[serverID] = uuid
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
@@ -218,8 +224,8 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 
 func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
+		raftBackend := b.Core.getRaftBackend()
+		if raftBackend == nil {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
@@ -243,14 +249,14 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
-		expectedAnswer, ok := b.Core.pendingRaftPeers[serverID]
+		expectedAnswerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
 		if !ok {
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
-		delete(b.Core.pendingRaftPeers, serverID)
+		b.Core.pendingRaftPeers.Delete(serverID)
 
-		if subtle.ConstantTimeCompare(answer, expectedAnswer) == 0 {
+		if subtle.ConstantTimeCompare(answer, expectedAnswerRaw.([]byte)) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
 
@@ -268,9 +274,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 
 		switch nonVoter {
 		case true:
-			err = raftStorage.AddNonVotingPeer(ctx, serverID, clusterAddr)
+			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
 		default:
-			err = raftStorage.AddPeer(ctx, serverID, clusterAddr)
+			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
 		}
 		if err != nil {
 			return nil, err
@@ -280,10 +286,12 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			b.Core.raftFollowerStates.update(serverID, 0)
 		}
 
-		peers, err := raftStorage.Peers(ctx)
+		peers, err := raftBackend.Peers(ctx)
 		if err != nil {
 			return nil, err
 		}
+
+		b.logger.Info("follower node answered the raft bootstrap challenge", "follower_server_id", serverID)
 
 		return &logical.Response{
 			Data: map[string]interface{}{
@@ -304,7 +312,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 			return nil, errors.New("no writer for request")
 		}
 
-		err := raftStorage.Snapshot(req.ResponseWriter, b.Core.seal.GetAccess())
+		err := raftStorage.SnapshotHTTP(req.ResponseWriter, b.Core.seal.GetAccess())
 		if err != nil {
 			return nil, err
 		}
@@ -337,7 +345,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
 			switch b.Core.seal.BarrierType() {
-			case seal.Shamir:
+			case wrapping.Shamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
@@ -354,7 +362,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			defer cleanup()
 
 			// Grab statelock
-			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh); stopped {
+			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{})); stopped {
 				b.Core.logger.Error("not applying snapshot; shutting down")
 				return
 			}

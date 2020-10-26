@@ -44,6 +44,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 
 	data := map[string]interface{}{
 		"sts_endpoint":               "https://my-custom-sts-endpoint.example.com",
+		"sts_region":                 "us-east-2",
 		"iam_server_id_header_value": "vault_server_identification_314159",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -52,7 +53,6 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		Data:      data,
 		Storage:   storage,
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,8 +75,18 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatalf("expected iam_server_id_header_value: '%#v'; returned iam_server_id_header_value: '%#v'",
 			data["iam_server_id_header_value"], resp.Data["iam_server_id_header_value"])
 	}
+	if resp.Data["sts_endpoint"] != data["sts_endpoint"] {
+		t.Fatalf("expected sts_endpoint: '%#v'; returned sts_endpoint: '%#v'",
+			data["sts_endpoint"], resp.Data["sts_endpoint"])
+	}
+	if resp.Data["sts_region"] != data["sts_region"] {
+		t.Fatalf("expected sts_region: '%#v'; returned sts_region: '%#v'",
+			data["sts_region"], resp.Data["sts_region"])
+	}
 
 	data = map[string]interface{}{
+		"sts_endpoint":               "https://my-custom-sts-endpoint2.example.com",
+		"sts_region":                 "us-west-1",
 		"iam_server_id_header_value": "vault_server_identification_2718281",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -107,5 +117,13 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	if resp.Data["iam_server_id_header_value"] != data["iam_server_id_header_value"] {
 		t.Fatalf("expected iam_server_id_header_value: '%#v'; returned iam_server_id_header_value: '%#v'",
 			data["iam_server_id_header_value"], resp.Data["iam_server_id_header_value"])
+	}
+	if resp.Data["sts_endpoint"] != data["sts_endpoint"] {
+		t.Fatalf("expected sts_endpoint: '%#v'; returned sts_endpoint: '%#v'",
+			data["sts_endpoint"], resp.Data["sts_endpoint"])
+	}
+	if resp.Data["sts_region"] != data["sts_region"] {
+		t.Fatalf("expected sts_region: '%#v'; returned sts_region: '%#v'",
+			data["sts_region"], resp.Data["sts_region"])
 	}
 }

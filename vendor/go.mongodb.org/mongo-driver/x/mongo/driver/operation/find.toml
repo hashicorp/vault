@@ -1,0 +1,105 @@
+version = 0
+name = "Find"
+documentation = "Find performs a find operation."
+response.type = "batch cursor"
+
+[properties]
+enabled = ["collection", "read concern", "read preference", "command monitor", "client session", "cluster clock"]
+retryable = {mode = "once per command", type = "reads"}
+legacy = "find"
+
+[command]
+name = "find"
+parameter = "collection"
+
+[request.filter]
+type = "document"
+constructor = true
+documentation = "Filter determines what results are returned from find."
+
+[request.sort]
+type = "document"
+documentation = "Sort specifies the order in which to return results."
+
+[request.projection]
+type = "document"
+documentation = "Project limits the fields returned for all documents."
+
+[request.hint]
+type = "value"
+documentation = "Hint specifies the index to use."
+
+[request.skip]
+type = "int64"
+documentation = "Skip specifies the number of documents to skip before returning."
+
+[request.limit]
+type = "int64"
+documentation = "Limit sets a limit on the number of documents to return."
+
+[request.batchSize]
+type = "int32"
+documentation = "BatchSize specifies the number of documents to return in every batch."
+
+[request.singleBatch]
+type = "boolean"
+documentation = "SingleBatch specifies whether the results should be returned in a single batch."
+
+[request.comment]
+type = "string"
+documentation = "Comment sets a string to help trace an operation."
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."
+
+[request.max]
+type = "document"
+documentation = "Max sets an exclusive upper bound for a specific index."
+
+[request.min]
+type = "document"
+documentation = "Min sets an inclusive lower bound for a specific index."
+
+[request.returnKey]
+type = "boolean"
+documentation = "ReturnKey when true returns index keys for all result documents."
+
+[request.showRecordID]
+type = "boolean"
+documentation = "ShowRecordID when true adds a $recordId field with the record identifier to returned documents."
+keyName = "showRecordId"
+
+[request.oplogReplay]
+type = "boolean"
+documentation = "OplogReplay when true replays a replica set's oplog."
+
+[request.noCursorTimeout]
+type = "boolean"
+documentation = "NoCursorTimeout when true prevents cursor from timing out after an inactivity period."
+
+[request.tailable]
+type = "boolean"
+documentation = "Tailable keeps a cursor open and resumable after the last data has been retrieved."
+
+[request.awaitData]
+type = "boolean"
+documentation = "AwaitData when true makes a cursor block before returning when no data is available."
+
+[request.allowPartialResults]
+type = "boolean"
+documentation = "AllowPartialResults when true allows partial results to be returned if some shards are down."
+
+[request.allowDiskUse]
+type = "boolean"
+minWireVersionRequired = 4
+documentation = "AllowDiskUse when true allows temporary data to be written to disk during the find command."
+
+[request.collation]
+type = "document"
+minWireVersionRequired = 5
+documentation = "Collation specifies a collation to be used."
+
+[request.snapshot]
+type = "boolean"
+documentation = "Snapshot prevents the cursor from returning a document more than once because of an intervening write operation."

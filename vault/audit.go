@@ -10,6 +10,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -473,7 +474,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 			}
 		}
 
-		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
+		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
 			if auditLogger.IsInfo() {
 				auditLogger.Info("reloading file audit backend", "path", entry.Path)
 			}
@@ -504,6 +505,29 @@ func defaultAuditTable() *MountTable {
 		Type: auditTableType,
 	}
 	return table
+}
+
+type AuditLogger interface {
+	AuditRequest(ctx context.Context, input *logical.LogInput) error
+	AuditResponse(ctx context.Context, input *logical.LogInput) error
+}
+
+type basicAuditor struct {
+	c *Core
+}
+
+func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
+	if b.c.auditBroker == nil {
+		return consts.ErrSealed
+	}
+	return b.c.auditBroker.LogRequest(ctx, input, b.c.auditedHeaders)
+}
+
+func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
+	if b.c.auditBroker == nil {
+		return consts.ErrSealed
+	}
+	return b.c.auditBroker.LogResponse(ctx, input, b.c.auditedHeaders)
 }
 
 type genericAuditor struct {

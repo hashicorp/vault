@@ -3,17 +3,20 @@ module github.com/hashicorp/vault-plugin-auth-azure
 go 1.12
 
 require (
-	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
-	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
-	github.com/Azure/go-autorest v11.7.1+incompatible
+	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
+	github.com/Azure/go-autorest/autorest v0.9.2
+	github.com/Azure/go-autorest/autorest/azure/auth v0.4.0
+	github.com/Azure/go-autorest/autorest/to v0.3.0
+	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/coreos/go-oidc v2.0.0+incompatible
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-hclog v0.8.0
-	github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98
-	github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b
+	github.com/hashicorp/go-hclog v0.12.0
+	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
+	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 // indirect
 )

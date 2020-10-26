@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -15,6 +16,9 @@ type RaftJoinResponse struct {
 
 // RaftJoinRequest represents the parameters consumed by the raft join API
 type RaftJoinRequest struct {
+	AutoJoin         string `json:"auto_join"`
+	AutoJoinScheme   string `json:"auto_join_scheme"`
+	AutoJoinPort     uint   `json:"auto_join_port"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`
@@ -91,8 +95,35 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	// to determine if the body contains error message.
 	var result *Response
 	resp, err := c.c.config.HttpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
 	if resp == nil {
 		return nil
+	}
+
+	// Check for a redirect, only allowing for a single redirect
+	if resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307 {
+		// Parse the updated location
+		respLoc, err := resp.Location()
+		if err != nil {
+			return err
+		}
+
+		// Ensure a protocol downgrade doesn't happen
+		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
+			return fmt.Errorf("redirect would cause protocol downgrade")
+		}
+
+		// Update the request
+		req.URL = respLoc
+
+		// Retry the request
+		resp, err = c.c.config.HttpClient.Do(req)
+		if err != nil {
+			return err
+		}
 	}
 
 	result = &Response{Response: resp}

@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -265,33 +266,93 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 		}
 	}
 
-	aliases := make([]*logical.Alias, len(entity.Aliases))
-	for i, a := range entity.Aliases {
-		alias := &logical.Alias{
-			MountAccessor: a.MountAccessor,
-			Name:          a.Name,
+	aliases := make([]*logical.Alias, 0, len(entity.Aliases))
+	for _, a := range entity.Aliases {
+
+		// Don't return aliases from other namespaces
+		if a.NamespaceID != d.mountEntry.NamespaceID {
+			continue
 		}
+
+		alias := identity.ToSDKAlias(a)
+
 		// MountType is not stored with the entity and must be looked up
 		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
 			alias.MountType = mount.MountType
 		}
 
-		if a.Metadata != nil {
-			alias.Metadata = make(map[string]string, len(a.Metadata))
-			for k, v := range a.Metadata {
-				alias.Metadata[k] = v
-			}
-		}
-
-		aliases[i] = alias
+		aliases = append(aliases, alias)
 	}
 	ret.Aliases = aliases
 
 	return ret, nil
 }
 
+func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, error) {
+	// Requests from token created from the token backend will not have entity information.
+	// Return missing entity instead of error when requesting from MemDB.
+	if entityID == "" {
+		return nil, nil
+	}
+
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+
+	groups, inheritedGroups, err := d.core.identityStore.groupsByEntityID(entityID)
+	if err != nil {
+		return nil, err
+	}
+
+	groups = append(groups, inheritedGroups...)
+
+	logicalGroups := make([]*logical.Group, 0, len(groups))
+	for _, g := range groups {
+		// Don't return groups from other namespaces
+		if g.NamespaceID != d.mountEntry.NamespaceID {
+			continue
+		}
+
+		logicalGroups = append(logicalGroups, identity.ToSDKGroup(g))
+	}
+
+	return logicalGroups, nil
+}
+
 func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
 	return &logical.PluginEnvironment{
 		VaultVersion: version.GetVersion().Version,
 	}, nil
+}
+
+func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
+	if policyName == "" {
+		return "", fmt.Errorf("missing password policy name")
+	}
+
+	// Ensure there's a timeout on the context of some sort
+	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+	}
+
+	policyCfg, err := retrievePasswordPolicy(ctx, d.core.systemBarrierView, policyName)
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve password policy: %w", err)
+	}
+
+	if policyCfg == nil {
+		return "", fmt.Errorf("no password policy found")
+	}
+
+	passPolicy, err := random.ParsePolicy(policyCfg.HCLPolicy)
+	if err != nil {
+		return "", fmt.Errorf("stored password policy is invalid: %w", err)
+	}
+
+	return passPolicy.Generate(ctx, nil)
 }

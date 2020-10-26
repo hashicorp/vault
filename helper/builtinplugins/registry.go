@@ -1,18 +1,19 @@
 package builtinplugins
 
 import (
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+
+	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
+	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
+	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -22,8 +23,6 @@ import (
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-
-	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
 	dbHana "github.com/hashicorp/vault/plugins/database/hana"
 	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
@@ -31,6 +30,9 @@ import (
 	dbMssql "github.com/hashicorp/vault/plugins/database/mssql"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
+	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
@@ -38,6 +40,8 @@ import (
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
+	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
@@ -77,6 +81,7 @@ func newRegistry() *registry {
 			"gcp":        credGcp.Factory,
 			"github":     credGitHub.Factory,
 			"jwt":        credJWT.Factory,
+			"kerberos":   credKerb.Factory,
 			"kubernetes": credKube.Factory,
 			"ldap":       credLdap.Factory,
 			"oci":        credOCI.Factory,
@@ -89,39 +94,44 @@ func newRegistry() *registry {
 		databasePlugins: map[string]BuiltinFactory{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
-			"mysql-database-plugin":        dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen),
-			"mysql-aurora-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
-			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
-			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
+			"mysql-database-plugin":        dbMysql.New(false),
+			"mysql-aurora-database-plugin": dbMysql.New(true),
+			"mysql-rds-database-plugin":    dbMysql.New(true),
+			"mysql-legacy-database-plugin": dbMysql.New(true),
 
-			"postgresql-database-plugin":    dbPostgres.New,
-			"mssql-database-plugin":         dbMssql.New,
 			"cassandra-database-plugin":     dbCass.New,
-			"mongodb-database-plugin":       dbMongo.New,
+			"couchbase-database-plugin":     dbCouchbase.New,
+			"elasticsearch-database-plugin": dbElastic.New,
 			"hana-database-plugin":          dbHana.New,
 			"influxdb-database-plugin":      dbInflux.New,
-			"elasticsearch-database-plugin": dbElastic.New,
+			"mongodb-database-plugin":       dbMongo.New,
+			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
+			"mssql-database-plugin":         dbMssql.New,
+			"postgresql-database-plugin":    dbPostgres.New,
+			"redshift-database-plugin":      dbRedshift.New,
 		},
 		logicalBackends: map[string]logical.Factory{
-			"ad":         logicalAd.Factory,
-			"alicloud":   logicalAlicloud.Factory,
-			"aws":        logicalAws.Factory,
-			"azure":      logicalAzure.Factory,
-			"cassandra":  logicalCass.Factory,
-			"consul":     logicalConsul.Factory,
-			"gcp":        logicalGcp.Factory,
-			"gcpkms":     logicalGcpKms.Factory,
-			"kv":         logicalKv.Factory,
-			"mongodb":    logicalMongo.Factory,
-			"mssql":      logicalMssql.Factory,
-			"mysql":      logicalMysql.Factory,
-			"nomad":      logicalNomad.Factory,
-			"pki":        logicalPki.Factory,
-			"postgresql": logicalPostgres.Factory,
-			"rabbitmq":   logicalRabbit.Factory,
-			"ssh":        logicalSsh.Factory,
-			"totp":       logicalTotp.Factory,
-			"transit":    logicalTransit.Factory,
+			"ad":           logicalAd.Factory,
+			"alicloud":     logicalAlicloud.Factory,
+			"aws":          logicalAws.Factory,
+			"azure":        logicalAzure.Factory,
+			"cassandra":    logicalCass.Factory, // Deprecated
+			"consul":       logicalConsul.Factory,
+			"gcp":          logicalGcp.Factory,
+			"gcpkms":       logicalGcpKms.Factory,
+			"kv":           logicalKv.Factory,
+			"mongodb":      logicalMongo.Factory, // Deprecated
+			"mongodbatlas": logicalMongoAtlas.Factory,
+			"mssql":        logicalMssql.Factory, // Deprecated
+			"mysql":        logicalMysql.Factory, // Deprecated
+			"nomad":        logicalNomad.Factory,
+			"openldap":     logicalOpenLDAP.Factory,
+			"pki":          logicalPki.Factory,
+			"postgresql":   logicalPostgres.Factory, // Deprecated
+			"rabbitmq":     logicalRabbit.Factory,
+			"ssh":          logicalSsh.Factory,
+			"totp":         logicalTotp.Factory,
+			"transit":      logicalTransit.Factory,
 		},
 	}
 

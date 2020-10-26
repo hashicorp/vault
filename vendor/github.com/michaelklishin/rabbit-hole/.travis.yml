@@ -4,10 +4,11 @@ dist: xenial
 language: go
 
 go:
-  - "1.11"
-  - "1.10"
-  - "1.9"
   - tip
+  - "1.12"
+
+env:
+  - GO111MODULE=on
 
 services:
   - rabbitmq

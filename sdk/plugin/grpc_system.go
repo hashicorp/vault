@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
@@ -138,6 +140,20 @@ func (s *gRPCSystemViewClient) EntityInfo(entityID string) (*logical.Entity, err
 	return reply.Entity, nil
 }
 
+func (s *gRPCSystemViewClient) GroupsForEntity(entityID string) ([]*logical.Group, error) {
+	reply, err := s.client.GroupsForEntity(context.Background(), &pb.EntityInfoArgs{
+		EntityID: entityID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if reply.Err != "" {
+		return nil, errors.New(reply.Err)
+	}
+
+	return reply.Groups, nil
+}
+
 func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEnvironment, error) {
 	reply, err := s.client.PluginEnv(ctx, &pb.Empty{})
 	if err != nil {
@@ -145,6 +161,17 @@ func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEn
 	}
 
 	return reply.PluginEnvironment, nil
+}
+
+func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
+	req := &pb.GeneratePasswordFromPolicyRequest{
+		PolicyName: policyName,
+	}
+	resp, err := s.client.GeneratePasswordFromPolicy(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	return resp.Password, nil
 }
 
 type gRPCSystemViewServer struct {
@@ -237,6 +264,18 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 	}, nil
 }
 
+func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.EntityInfoArgs) (*pb.GroupsForEntityReply, error) {
+	groups, err := s.impl.GroupsForEntity(args.EntityID)
+	if err != nil {
+		return &pb.GroupsForEntityReply{
+			Err: pb.ErrToString(err),
+		}, nil
+	}
+	return &pb.GroupsForEntityReply{
+		Groups: groups,
+	}, nil
+}
+
 func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.PluginEnvReply, error) {
 	pluginEnv, err := s.impl.PluginEnv(ctx)
 	if err != nil {
@@ -247,4 +286,21 @@ func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.
 	return &pb.PluginEnvReply{
 		PluginEnvironment: pluginEnv,
 	}, nil
+}
+
+func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, req *pb.GeneratePasswordFromPolicyRequest) (*pb.GeneratePasswordFromPolicyReply, error) {
+	policyName := req.PolicyName
+	if policyName == "" {
+		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.InvalidArgument, "no password policy specified")
+	}
+
+	password, err := s.impl.GeneratePasswordFromPolicy(ctx, policyName)
+	if err != nil {
+		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.Internal, "failed to generate password")
+	}
+
+	resp := &pb.GeneratePasswordFromPolicyReply{
+		Password: password,
+	}
+	return resp, nil
 }

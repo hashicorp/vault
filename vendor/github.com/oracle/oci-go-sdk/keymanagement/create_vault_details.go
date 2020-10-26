@@ -44,11 +44,11 @@ type CreateVaultDetailsVaultTypeEnum string
 
 // Set of constants representing the allowable values for CreateVaultDetailsVaultTypeEnum
 const (
-	CreateVaultDetailsVaultTypePrivate CreateVaultDetailsVaultTypeEnum = "VIRTUAL_PRIVATE"
+	CreateVaultDetailsVaultTypeVirtualPrivate CreateVaultDetailsVaultTypeEnum = "VIRTUAL_PRIVATE"
 )
 
 var mappingCreateVaultDetailsVaultType = map[string]CreateVaultDetailsVaultTypeEnum{
-	"VIRTUAL_PRIVATE": CreateVaultDetailsVaultTypePrivate,
+	"VIRTUAL_PRIVATE": CreateVaultDetailsVaultTypeVirtualPrivate,
 }
 
 // GetCreateVaultDetailsVaultTypeEnumValues Enumerates the set of values for CreateVaultDetailsVaultTypeEnum

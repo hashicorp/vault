@@ -259,10 +259,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	}
 
 	authOpts := &api.EnableAuthOptions{
-		Type:        authType,
-		Description: c.flagDescription,
-		Local:       c.flagLocal,
-		SealWrap:    c.flagSealWrap,
+		Type:                  authType,
+		Description:           c.flagDescription,
+		Local:                 c.flagLocal,
+		SealWrap:              c.flagSealWrap,
 		ExternalEntropyAccess: c.flagExternalEntropyAccess,
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),

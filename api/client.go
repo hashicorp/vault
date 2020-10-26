@@ -32,6 +32,7 @@ const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
+const EnvVaultSRVLookup = "VAULT_SRV_LOOKUP"
 const EnvVaultSkipVerify = "VAULT_SKIP_VERIFY"
 const EnvVaultNamespace = "VAULT_NAMESPACE"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
@@ -49,7 +50,8 @@ const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 // returns an optional string duration to be used for response wrapping (e.g.
 // "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
 // however, end-of-path forward slashes are not trimmed, so must match your
-// called path precisely.
+// called path precisely. Response wrapping will only be used when the return
+// value is not the empty string.
 type WrappingLookupFunc func(operation, path string) string
 
 // Config is used to configure the creation of the client.
@@ -105,6 +107,9 @@ type Config struct {
 	// Note: It is not thread-safe to set this and make concurrent requests
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
+
+	// SRVLookup enables the client to lookup the host through DNS SRV lookup
+	SRVLookup bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -245,6 +250,7 @@ func (c *Config) ReadEnvironment() error {
 	var envInsecure bool
 	var envTLSServerName string
 	var envMaxRetries *uint64
+	var envSRVLookup bool
 	var limit *rate.Limiter
 
 	// Parse the environment variables
@@ -302,6 +308,13 @@ func (c *Config) ReadEnvironment() error {
 			return fmt.Errorf("could not parse VAULT_INSECURE")
 		}
 	}
+	if v := os.Getenv(EnvVaultSRVLookup); v != "" {
+		var err error
+		envSRVLookup, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("could not parse %s", EnvVaultSRVLookup)
+		}
+	}
 
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
@@ -320,6 +333,7 @@ func (c *Config) ReadEnvironment() error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
+	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
 
 	if err := c.ConfigureTLS(t); err != nil {
@@ -534,7 +548,7 @@ func (c *Client) SetOutputCurlString(curl bool) {
 }
 
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
-// for a given operation and path
+// for a given operation and path.
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
@@ -543,7 +557,7 @@ func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 }
 
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
-// for a given operation and path
+// for a given operation and path.
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
@@ -603,7 +617,7 @@ func (c *Client) ClearToken() {
 }
 
 // Headers gets the current set of headers used for requests. This returns a
-// copy; to modify it make modifications locally and use SetHeaders.
+// copy; to modify it call AddHeader or SetHeaders.
 func (c *Client) Headers() http.Header {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
@@ -622,11 +636,19 @@ func (c *Client) Headers() http.Header {
 	return ret
 }
 
-// SetHeaders sets the headers to be used for future requests.
+// AddHeader allows a single header key/value pair to be added
+// in a race-safe fashion.
+func (c *Client) AddHeader(key, value string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.headers.Add(key, value)
+}
+
+// SetHeaders clears all previous headers and uses only the given
+// ones going forward.
 func (c *Client) SetHeaders(headers http.Header) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.headers = headers
 }
 
@@ -690,11 +712,11 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	policyOverride := c.policyOverride
 	c.modifyLock.RUnlock()
 
+	var host = addr.Host
 	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
 	// record and take the highest match; this is not designed for high-availability, just discovery
-	var host string = addr.Host
-	if addr.Port() == "" {
-		// Internet Draft specifies that the SRV record is ignored if a port is given
+	// Internet Draft specifies that the SRV record is ignored if a port is given
+	if addr.Port() == "" && c.config.SRVLookup {
 		_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())
 		if err == nil && len(addrs) > 0 {
 			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
@@ -709,6 +731,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 			Host:   host,
 			Path:   path.Join(addr.Path, requestPath),
 		},
+		Host:        addr.Host,
 		ClientToken: token,
 		Params:      make(map[string][]string),
 	}
@@ -790,10 +813,12 @@ START:
 		return nil, LastOutputStringError
 	}
 
-	var cancel context.CancelFunc
 	if timeout != 0 {
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
+		// Note: we purposefully do not call cancel manually. The reason is
+		// when canceled, the request.Body will EOF when reading due to the way
+		// it streams data in. Cancel will still be run when the timeout is
+		// hit, so this doesn't really harm anything.
+		ctx, _ = context.WithTimeout(ctx, timeout)
 	}
 	req.Request = req.Request.WithContext(ctx)
 

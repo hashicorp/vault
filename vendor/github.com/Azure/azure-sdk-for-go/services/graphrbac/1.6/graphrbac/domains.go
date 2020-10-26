@@ -35,7 +35,8 @@ func NewDomainsClient(tenantID string) DomainsClient {
 	return NewDomainsClientWithBaseURI(DefaultBaseURI, tenantID)
 }
 
-// NewDomainsClientWithBaseURI creates an instance of the DomainsClient client.
+// NewDomainsClientWithBaseURI creates an instance of the DomainsClient client using a custom endpoint.  Use this when
+// interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewDomainsClientWithBaseURI(baseURI string, tenantID string) DomainsClient {
 	return DomainsClient{NewWithBaseURI(baseURI, tenantID)}
 }
@@ -98,8 +99,7 @@ func (client DomainsClient) GetPreparer(ctx context.Context, domainName string) 
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client DomainsClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -107,7 +107,6 @@ func (client DomainsClient) GetSender(req *http.Request) (*http.Response, error)
 func (client DomainsClient) GetResponder(resp *http.Response) (result Domain, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -175,8 +174,7 @@ func (client DomainsClient) ListPreparer(ctx context.Context, filter string) (*h
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client DomainsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -184,7 +182,6 @@ func (client DomainsClient) ListSender(req *http.Request) (*http.Response, error
 func (client DomainsClient) ListResponder(resp *http.Response) (result DomainListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

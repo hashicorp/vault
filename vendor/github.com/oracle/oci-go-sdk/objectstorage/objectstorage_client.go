@@ -250,7 +250,7 @@ func (client ObjectStorageClient) CreateBucket(ctx context.Context, request Crea
 
 // createBucket implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) createBucket(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b/")
+	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b")
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +334,7 @@ func (client ObjectStorageClient) CreatePreauthenticatedRequest(ctx context.Cont
 
 // createPreauthenticatedRequest implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) createPreauthenticatedRequest(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b/{bucketName}/p/")
+	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b/{bucketName}/p")
 	if err != nil {
 		return nil, err
 	}
@@ -353,8 +353,9 @@ func (client ObjectStorageClient) createPreauthenticatedRequest(ctx context.Cont
 }
 
 // DeleteBucket Deletes a bucket if the bucket is already empty. If the bucket is not empty, use
-// DeleteObject first. You also cannot
-// delete a bucket that has a pre-authenticated request associated with that bucket.
+// DeleteObject first. In addition,
+// you cannot delete a bucket that has a multipart upload in progress or a pre-authenticated
+// request associated with that bucket.
 func (client ObjectStorageClient) DeleteBucket(ctx context.Context, request DeleteBucketRequest) (response DeleteBucketResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
@@ -378,7 +379,7 @@ func (client ObjectStorageClient) DeleteBucket(ctx context.Context, request Dele
 
 // deleteBucket implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) deleteBucket(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodDelete, "/n/{namespaceName}/b/{bucketName}/")
+	httpRequest, err := request.HTTPRequest(http.MethodDelete, "/n/{namespaceName}/b/{bucketName}")
 	if err != nil {
 		return nil, err
 	}
@@ -546,7 +547,7 @@ func (client ObjectStorageClient) GetBucket(ctx context.Context, request GetBuck
 
 // getBucket implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) getBucket(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/{namespaceName}/b/{bucketName}/")
+	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/{namespaceName}/b/{bucketName}")
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +594,7 @@ func (client ObjectStorageClient) GetNamespace(ctx context.Context, request GetN
 
 // getNamespace implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) getNamespace(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/")
+	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n")
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +614,7 @@ func (client ObjectStorageClient) getNamespace(ctx context.Context, request comm
 
 // GetNamespaceMetadata Gets the metadata for the Object Storage namespace, which contains defaultS3CompartmentId and
 // defaultSwiftCompartmentId.
-// Any user with the NAMESPACE_READ permission will be able to see the current metadata. If you are
+// Any user with the OBJECTSTORAGE_NAMESPACE_READ permission will be able to see the current metadata. If you are
 // not authorized, talk to an administrator. If you are an administrator who needs to write policies
 // to give users access, see
 // Getting Started with Policies (https://docs.cloud.oracle.com/Content/Identity/Concepts/policygetstarted.htm).
@@ -849,7 +850,7 @@ func (client ObjectStorageClient) HeadBucket(ctx context.Context, request HeadBu
 
 // headBucket implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) headBucket(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodHead, "/n/{namespaceName}/b/{bucketName}/")
+	httpRequest, err := request.HTTPRequest(http.MethodHead, "/n/{namespaceName}/b/{bucketName}")
 	if err != nil {
 		return nil, err
 	}
@@ -937,7 +938,7 @@ func (client ObjectStorageClient) ListBuckets(ctx context.Context, request ListB
 
 // listBuckets implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) listBuckets(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/{namespaceName}/b/")
+	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/{namespaceName}/b")
 	if err != nil {
 		return nil, err
 	}
@@ -1108,7 +1109,7 @@ func (client ObjectStorageClient) ListPreauthenticatedRequests(ctx context.Conte
 
 // listPreauthenticatedRequests implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) listPreauthenticatedRequests(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/{namespaceName}/b/{bucketName}/p/")
+	httpRequest, err := request.HTTPRequest(http.MethodGet, "/n/{namespaceName}/b/{bucketName}/p")
 	if err != nil {
 		return nil, err
 	}
@@ -1347,6 +1348,55 @@ func (client ObjectStorageClient) putObjectLifecyclePolicy(ctx context.Context, 
 	return response, err
 }
 
+// ReencryptBucket Reencrypts the data encryption key of the bucket and objects in the bucket. This is an asynchronous call, the
+// system will start a work request task to reencrypt the data encryption key of the objects and chunks in the bucket.
+// Only the objects created before the time the API call will be reencrypted. The call can take long time depending
+// on how many objects in the bucket and how big the objects are. This API will return a work request id, so the user
+// can use this id to retrieve the status of the work request task.
+// A user can update kmsKeyId of the bucket, and then call this API, so the data encryption key of the bucket and
+// objects in the bucket will be reencryped by the new kmsKeyId. Note that the system doesn't maintain what
+// ksmKeyId is used to encrypt the object, the user has to maintain the mapping if they want.
+func (client ObjectStorageClient) ReencryptBucket(ctx context.Context, request ReencryptBucketRequest) (response ReencryptBucketResponse, err error) {
+	var ociResponse common.OCIResponse
+	policy := common.NoRetryPolicy()
+	if request.RetryPolicy() != nil {
+		policy = *request.RetryPolicy()
+	}
+	ociResponse, err = common.Retry(ctx, request, client.reencryptBucket, policy)
+	if err != nil {
+		if ociResponse != nil {
+			response = ReencryptBucketResponse{RawResponse: ociResponse.HTTPResponse()}
+		}
+		return
+	}
+	if convertedResponse, ok := ociResponse.(ReencryptBucketResponse); ok {
+		response = convertedResponse
+	} else {
+		err = fmt.Errorf("failed to convert OCIResponse into ReencryptBucketResponse")
+	}
+	return
+}
+
+// reencryptBucket implements the OCIOperation interface (enables retrying operations)
+func (client ObjectStorageClient) reencryptBucket(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
+	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b/{bucketName}/actions/reencrypt")
+	if err != nil {
+		return nil, err
+	}
+
+	var response ReencryptBucketResponse
+	var httpResponse *http.Response
+	httpResponse, err = client.Call(ctx, &httpRequest)
+	defer common.CloseBodyIfValid(httpResponse)
+	response.RawResponse = httpResponse
+	if err != nil {
+		return response, err
+	}
+
+	err = common.UnmarshalResponse(httpResponse, &response)
+	return response, err
+}
+
 // RenameObject Rename an object in the given Object Storage namespace.
 func (client ObjectStorageClient) RenameObject(ctx context.Context, request RenameObjectRequest) (response RenameObjectResponse, err error) {
 	var ociResponse common.OCIResponse
@@ -1433,6 +1483,9 @@ func (client ObjectStorageClient) restoreObjects(ctx context.Context, request co
 }
 
 // UpdateBucket Performs a partial or full update of a bucket's user-defined metadata.
+// Use UpdateBucket to move a bucket from one compartment to another within the same tenancy. Supply the compartmentID
+// of the compartment that you want to move the bucket to. For more information about moving resources between compartments,
+// see Moving Resources to a Different Compartment (https://docs.cloud.oracle.com/iaas/Content/Identity/Tasks/managingcompartments.htm#moveRes).
 func (client ObjectStorageClient) UpdateBucket(ctx context.Context, request UpdateBucketRequest) (response UpdateBucketResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
@@ -1456,7 +1509,7 @@ func (client ObjectStorageClient) UpdateBucket(ctx context.Context, request Upda
 
 // updateBucket implements the OCIOperation interface (enables retrying operations)
 func (client ObjectStorageClient) updateBucket(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b/{bucketName}/")
+	httpRequest, err := request.HTTPRequest(http.MethodPost, "/n/{namespaceName}/b/{bucketName}")
 	if err != nil {
 		return nil, err
 	}
@@ -1478,7 +1531,7 @@ func (client ObjectStorageClient) updateBucket(ctx context.Context, request comm
 // compartment of the Oracle Cloud Infrastructure tenancy.
 // You can change the default Swift/Amazon S3 compartmentId designation to a different compartmentId. All
 // subsequent bucket creations will use the new default compartment, but no previously created
-// buckets will be modified. A user must have NAMESPACE_UPDATE permission to make changes to the default
+// buckets will be modified. A user must have OBJECTSTORAGE_NAMESPACE_UPDATE permission to make changes to the default
 // compartments for Amazon S3 and Swift.
 func (client ObjectStorageClient) UpdateNamespaceMetadata(ctx context.Context, request UpdateNamespaceMetadataRequest) (response UpdateNamespaceMetadataResponse, err error) {
 	var ociResponse common.OCIResponse

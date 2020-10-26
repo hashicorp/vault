@@ -1,0 +1,20 @@
+version = 0
+name = "ListIndexes"
+documentation = "ListIndexes performs a listIndexes operation."
+response.type = "batch cursor"
+
+[properties]
+legacy = "listIndexes"
+retryable = {mode = "once per command", type = "reads"}
+
+[command]
+name = "listIndexes"
+parameter = "collection"
+
+[request.batchSize]
+type = "int32"
+documentation = "BatchSize specifies the number of documents to return in every batch."
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."

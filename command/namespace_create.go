@@ -45,7 +45,7 @@ func (c *NamespaceCreateCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceCreateCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return complete.PredictNothing
 }
 
 func (c *NamespaceCreateCommand) AutocompleteFlags() complete.Flags {

@@ -3,8 +3,6 @@
 `triton-go` is a client SDK for Go applications using Joyent's Triton Compute
 and Object Storage (Manta) APIs.
 
-[![Build Status](https://travis-ci.org/joyent/triton-go.svg?branch=master)](https://travis-ci.org/joyent/triton-go) [![Go Report Card](https://goreportcard.com/badge/github.com/joyent/triton-go)](https://goreportcard.com/report/github.com/joyent/triton-go)
-
 The Triton Go SDK is used in the following open source projects.
 
 - [Consul](https://www.consul.io/docs/agent/cloud-auto-join.html#joyent-triton)
@@ -89,6 +87,12 @@ is performed using the [pkg/errors][7] library.
 
 ## Acceptance Tests
 
+_**NOTE:** The tests are not currently well-structured, and depend on many
+hard-coded specifics of the Joyent Public Cloud (JPC) which is being shut down
+in November 2019.  It is likely not possible to run the test suite against a
+local Triton installation at this time, though that is definitely the intended
+test suite target environment for future development._
+
 Acceptance Tests run directly against the Triton API, so you will need either a
 local installation of Triton or an account with Joyent's Public Cloud offering
 in order to run them. The tests create real resources (and thus cost real
@@ -106,7 +110,7 @@ set:
 Additionally, you may set `TRITON_KEY_MATERIAL` to the contents of an unencrypted
 private key. If this is set, the PrivateKeySigner (see above) will be used - if
 not the SSHAgentSigner will be used. You can also set `TRITON_USER` to run the tests
-against an account other than the main Triton account
+against an account other than the main Triton account.
 
 ### Example Run
 

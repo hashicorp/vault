@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"go.uber.org/atomic"
@@ -20,7 +21,7 @@ type generateRecoveryToken struct {
 }
 
 func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	key, err := c.unsealKeyToMasterKey(ctx, combinedKey)
+	key, err := c.unsealKeyToMasterKeyPostUnseal(ctx, combinedKey)
 	if err != nil {
 		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
 	}

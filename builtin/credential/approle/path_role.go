@@ -621,11 +621,6 @@ func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Reque
 
 // pathRoleList is used to list all the Roles registered with the backend.
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	lock := b.roleLock("")
-
-	lock.RLock()
-	defer lock.RUnlock()
-
 	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err

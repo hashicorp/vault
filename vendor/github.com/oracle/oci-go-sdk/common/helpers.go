@@ -204,16 +204,27 @@ func (t *SDKDate) MarshalJSON() (buff []byte, e error) {
 }
 
 // PrivateKeyFromBytes is a helper function that will produce a RSA private
-// key from bytes.
+// key from bytes. This function is deprecated in favour of PrivateKeyFromBytesWithPassword
+// Deprecated
 func PrivateKeyFromBytes(pemData []byte, password *string) (key *rsa.PrivateKey, e error) {
+	if password == nil {
+		return PrivateKeyFromBytesWithPassword(pemData, nil)
+	}
+
+	return PrivateKeyFromBytesWithPassword(pemData, []byte(*password))
+}
+
+// PrivateKeyFromBytesWithPassword is a helper function that will produce a RSA private
+// key from bytes and a password.
+func PrivateKeyFromBytesWithPassword(pemData, password []byte) (key *rsa.PrivateKey, e error) {
 	if pemBlock, _ := pem.Decode(pemData); pemBlock != nil {
 		decrypted := pemBlock.Bytes
 		if x509.IsEncryptedPEMBlock(pemBlock) {
 			if password == nil {
-				e = fmt.Errorf("private_key_password is required for encrypted private keys")
+				e = fmt.Errorf("private key password is required for encrypted private keys")
 				return
 			}
-			if decrypted, e = x509.DecryptPEMBlock(pemBlock, []byte(*password)); e != nil {
+			if decrypted, e = x509.DecryptPEMBlock(pemBlock, password); e != nil {
 				return
 			}
 		}

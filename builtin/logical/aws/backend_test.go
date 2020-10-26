@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -207,7 +208,11 @@ func getAccountID() (string, error) {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := sts.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return "", err
+	}
+	svc := sts.New(sess)
 
 	params := &sts.GetCallerIdentityInput{}
 	res, err := svc.GetCallerIdentity(params)
@@ -240,7 +245,11 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := iam.New(sess)
 	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, awsAccountID)
 
 	params := &iam.CreateRoleInput{
@@ -250,9 +259,7 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 	}
 
 	log.Printf("[INFO] AWS CreateRole: %s", roleName)
-	_, err := svc.CreateRole(params)
-
-	if err != nil {
+	if _, err := svc.CreateRole(params); err != nil {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
@@ -303,14 +310,16 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := iam.New(sess)
 	createUserInput := &iam.CreateUserInput{
 		UserName: aws.String(userName),
 	}
 	log.Printf("[INFO] AWS CreateUser: %s", userName)
-	_, err := svc.CreateUser(createUserInput)
-	if err != nil {
+	if _, err := svc.CreateUser(createUserInput); err != nil {
 		t.Fatalf("AWS CreateUser failed: %v", err)
 	}
 
@@ -349,13 +358,59 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	accessKey.SecretAccessKey = *genAccessKey.SecretAccessKey
 }
 
+// Create an IAM Group and add an inline policy and managed policies if specified
+func createGroup(t *testing.T, groupName string, inlinePolicy string, managedPolicies []string) {
+	awsConfig := &aws.Config{
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
+	}
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := iam.New(sess)
+	createGroupInput := &iam.CreateGroupInput{
+		GroupName: aws.String(groupName),
+	}
+	log.Printf("[INFO] AWS CreateGroup: %s", groupName)
+	if _, err := svc.CreateGroup(createGroupInput); err != nil {
+		t.Fatalf("AWS CreateGroup failed: %v", err)
+	}
+
+	if len(inlinePolicy) > 0 {
+		putPolicyInput := &iam.PutGroupPolicyInput{
+			PolicyDocument: aws.String(inlinePolicy),
+			PolicyName:     aws.String("InlinePolicy"),
+			GroupName:      aws.String(groupName),
+		}
+		_, err = svc.PutGroupPolicy(putPolicyInput)
+		if err != nil {
+			t.Fatalf("AWS PutGroupPolicy failed: %v", err)
+		}
+	}
+
+	for _, mp := range managedPolicies {
+		attachGroupPolicyInput := &iam.AttachGroupPolicyInput{
+			PolicyArn: aws.String(mp),
+			GroupName: aws.String(groupName),
+		}
+		_, err = svc.AttachGroupPolicy(attachGroupPolicyInput)
+		if err != nil {
+			t.Fatalf("AWS AttachGroupPolicy failed, %v", err)
+		}
+	}
+}
+
 func deleteTestRole(roleName string) error {
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	svc := iam.New(sess)
 	listAttachmentsInput := &iam.ListAttachedRolePoliciesInput{
 		RoleName: aws.String(roleName),
 	}
@@ -372,8 +427,7 @@ func deleteTestRole(roleName string) error {
 		}
 		return true
 	}
-	err := svc.ListAttachedRolePoliciesPages(listAttachmentsInput, detacher)
-	if err != nil {
+	if err := svc.ListAttachedRolePoliciesPages(listAttachmentsInput, detacher); err != nil {
 		log.Printf("[WARN] AWS DetachRolePolicy failed: %v", err)
 	}
 
@@ -396,14 +450,16 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	svc := iam.New(sess)
 	userDetachment := &iam.DetachUserPolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
 		UserName:  aws.String(userName),
 	}
-	_, err := svc.DetachUserPolicy(userDetachment)
-	if err != nil {
+	if _, err := svc.DetachUserPolicy(userDetachment); err != nil {
 		log.Printf("[WARN] AWS DetachUserPolicy failed: %v", err)
 		return err
 	}
@@ -434,6 +490,71 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 	_, err = svc.DeleteUser(deleteTestUserInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteUser failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func deleteTestGroup(groupName string) error {
+	awsConfig := &aws.Config{
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
+	}
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	svc := iam.New(sess)
+
+	// Detach any managed group policies
+	getGroupsInput := &iam.ListAttachedGroupPoliciesInput{
+		GroupName: aws.String(groupName),
+	}
+	getGroupsOutput, err := svc.ListAttachedGroupPolicies(getGroupsInput)
+	if err != nil {
+		log.Printf("[WARN] AWS ListAttachedGroupPolicies failed: %v", err)
+		return err
+	}
+	for _, g := range getGroupsOutput.AttachedPolicies {
+		detachGroupInput := &iam.DetachGroupPolicyInput{
+			GroupName: aws.String(groupName),
+			PolicyArn: g.PolicyArn,
+		}
+		if _, err := svc.DetachGroupPolicy(detachGroupInput); err != nil {
+			log.Printf("[WARN] AWS DetachGroupPolicy failed: %v", err)
+			return err
+		}
+	}
+
+	// Remove any inline policies
+	listGroupPoliciesInput := &iam.ListGroupPoliciesInput{
+		GroupName: aws.String(groupName),
+	}
+	listGroupPoliciesOutput, err := svc.ListGroupPolicies(listGroupPoliciesInput)
+	if err != nil {
+		log.Printf("[WARN] AWS ListGroupPolicies failed: %v", err)
+		return err
+	}
+	for _, g := range listGroupPoliciesOutput.PolicyNames {
+		deleteGroupPolicyInput := &iam.DeleteGroupPolicyInput{
+			GroupName:  aws.String(groupName),
+			PolicyName: g,
+		}
+		if _, err := svc.DeleteGroupPolicy(deleteGroupPolicyInput); err != nil {
+			log.Printf("[WARN] AWS DeleteGroupPolicy failed: %v", err)
+			return err
+		}
+	}
+
+	// Delete the group
+	deleteTestGroupInput := &iam.DeleteGroupInput{
+		GroupName: aws.String(groupName),
+	}
+	log.Printf("[INFO] AWS DeleteGroup: %s", groupName)
+	_, err = svc.DeleteGroup(deleteTestGroupInput)
+	if err != nil {
+		log.Printf("[WARN] AWS DeleteGroup failed: %v", err)
 		return err
 	}
 
@@ -490,10 +611,13 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 			oldAccessKey.AccessKeyID = newAccessKeyID
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
-			svc := sts.New(session.New(awsConfig))
+			sess, err := session.NewSession(awsConfig)
+			if err != nil {
+				return err
+			}
+			svc := sts.New(sess)
 			params := &sts.GetCallerIdentityInput{}
-			_, err := svc.GetCallerIdentity(params)
-			if err == nil {
+			if _, err := svc.GetCallerIdentity(params); err == nil {
 				return fmt.Errorf("bad: old credentials succeeded after rotate")
 			}
 			if aerr, ok := err.(awserr.Error); ok {
@@ -556,7 +680,11 @@ func describeInstancesTest(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := ec2.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := ec2.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials work with ec2:DescribeInstances...")
 	return retryUntilSuccess(func() error {
 		_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
@@ -571,7 +699,11 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := ec2.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := ec2.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials don't work with ec2:DescribeAvailabilityZones...")
 	return retryUntilSuccess(func() error {
 		_, err := client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
@@ -595,7 +727,11 @@ func assertCreatedIAMUser(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := iam.New(sess)
 	log.Printf("[WARN] Checking if IAM User is created properly...")
 	userOutput, err := client.GetUser(&iam.GetUserInput{})
 	if err != nil {
@@ -616,7 +752,11 @@ func listIamUsersTest(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := iam.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials work with iam:ListUsers...")
 	return retryUntilSuccess(func() error {
 		_, err := client.ListUsers(&iam.ListUsersInput{})
@@ -631,10 +771,33 @@ func listDynamoTablesTest(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := dynamodb.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := dynamodb.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials work with dynamodb:ListTables...")
 	return retryUntilSuccess(func() error {
 		_, err := client.ListTables(&dynamodb.ListTablesInput{})
+		return err
+	})
+}
+
+func listS3BucketsTest(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := s3.New(sess)
+	log.Printf("[WARN] Verifying that the generated credentials work with s3:ListBuckets...")
+	return retryUntilSuccess(func() error {
+		_, err := client.ListBuckets(&s3.ListBucketsInput{})
 		return err
 	})
 }
@@ -708,6 +871,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"max_sts_ttl":              int64(0),
 				"user_path":                "",
 				"permissions_boundary_arn": "",
+				"iam_groups":               []string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -733,6 +897,20 @@ const testDynamoPolicy = `{
     ]
 }
 `
+
+const testS3Policy = `{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}`
 
 const adminAccessPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
 const ec2PolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
@@ -790,15 +968,17 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	})
 }
 
-func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
+func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
+	groupName := generateUniqueName(t.Name())
 	roleData := map[string]interface{}{
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
+		"iam_groups":      []string{groupName},
 		"credential_type": iamUserCred,
 		"user_path":       "/path/",
 	}
@@ -811,18 +991,72 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"max_sts_ttl":              int64(0),
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
+		"iam_groups":               []string{groupName},
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createGroup(t, groupName, testS3Policy, []string{})
+		},
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadRole(t, "test", expectedRoleData),
-			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser}),
-			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser, listS3BucketsTest}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, listS3BucketsTest}),
+		},
+		Teardown: func() error {
+			return deleteTestGroup(groupName)
+		},
+	})
+}
+
+// Similar to TestBackend_iamUserManagedInlinePoliciesGroups() but managing
+// policies only with groups
+func TestBackend_iamUserGroups(t *testing.T) {
+	t.Parallel()
+	group1Name := generateUniqueName(t.Name())
+	group2Name := generateUniqueName(t.Name())
+	roleData := map[string]interface{}{
+		"iam_groups":      []string{group1Name, group2Name},
+		"credential_type": iamUserCred,
+		"user_path":       "/path/",
+	}
+	expectedRoleData := map[string]interface{}{
+		"policy_document":          "",
+		"policy_arns":              []string(nil),
+		"credential_type":          iamUserCred,
+		"role_arns":                []string(nil),
+		"default_sts_ttl":          int64(0),
+		"max_sts_ttl":              int64(0),
+		"user_path":                "/path/",
+		"permissions_boundary_arn": "",
+		"iam_groups":               []string{group1Name, group2Name},
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createGroup(t, group1Name, testS3Policy, []string{ec2PolicyArn, iamPolicyArn})
+			createGroup(t, group2Name, testDynamoPolicy, []string{})
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadRole(t, "test", expectedRoleData),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser, listS3BucketsTest}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, listS3BucketsTest}),
+		},
+		Teardown: func() error {
+			if err := deleteTestGroup(group1Name); err != nil {
+				return err
+			}
+			return deleteTestGroup(group2Name)
 		},
 	})
 }
@@ -913,6 +1147,63 @@ func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	})
 }
 
+func TestBackend_AssumedRoleWithGroups(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueName(t.Name())
+	groupName := generateUniqueName(t.Name())
+	// This looks a bit curious. The policy document and the role document act
+	// as a logical intersection of policies. The role allows ec2:Describe*
+	// (among other permissions). This policy allows everything BUT
+	// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
+	// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
+	// describeAZs call should fail
+	allowAllButDescribeAzs := `{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"NotAction": "ec2:DescribeAvailabilityZones",
+			"Resource": "*"
+		}
+	]
+}`
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+
+	roleData := map[string]interface{}{
+		"iam_groups":      []string{groupName},
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
+		"credential_type": assumedRoleCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createGroup(t, groupName, allowAllButDescribeAzs, []string{})
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
+			if err := deleteTestGroup(groupName); err != nil {
+				return err
+			}
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
 func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	t.Parallel()
 	userName := generateUniqueName(t.Name())
@@ -939,6 +1230,56 @@ func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
 		},
 		Teardown: func() error {
+			return deleteTestUser(accessKey, userName)
+		},
+	})
+}
+
+func TestBackend_FederationTokenWithGroups(t *testing.T) {
+	t.Parallel()
+	userName := generateUniqueName(t.Name())
+	groupName := generateUniqueName(t.Name())
+	accessKey := &awsAccessKey{}
+
+	// IAM policy where Statement is a single element, not a list
+	iamSingleStatementPolicy := `{
+		"Version": "2012-10-17",
+		"Statement": {
+			"Effect": "Allow",
+			"Action": [
+				"s3:Get*",
+				"s3:List*"
+			],
+			"Resource": "*"
+		}
+	}`
+
+	roleData := map[string]interface{}{
+		"iam_groups":      []string{groupName},
+		"policy_document": iamSingleStatementPolicy,
+		"credential_type": federationTokenCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createUser(t, userName, accessKey)
+			createGroup(t, groupName, "", []string{dynamoPolicyArn})
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized, listS3BucketsTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized, listS3BucketsTest}),
+		},
+		Teardown: func() error {
+			if err := deleteTestGroup(groupName); err != nil {
+				return err
+			}
 			return deleteTestUser(accessKey, userName)
 		},
 	})
@@ -1016,6 +1357,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"max_sts_ttl":              int64(0),
 				"user_path":                "",
 				"permissions_boundary_arn": "",
+				"iam_groups":               []string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1032,6 +1374,65 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 		Path:      "roles/" + vaultRoleName,
 		Data: map[string]interface{}{
 			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, awsRoleName),
+		},
+	}
+}
+
+func TestBackend_iamGroupsCrud(t *testing.T) {
+	t.Parallel()
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteIamGroups(t, "test", []string{"group1", "group2"}),
+			testAccStepReadIamGroups(t, "test", []string{"group1", "group2"}),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadIamGroups(t, "test", []string{}),
+		},
+	})
+}
+
+func testAccStepWriteIamGroups(t *testing.T, name string, groups []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + name,
+		Data: map[string]interface{}{
+			"credential_type": iamUserCred,
+			"iam_groups":      groups,
+		},
+	}
+}
+
+func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if len(groups) == 0 {
+					return nil
+				}
+
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			expected := map[string]interface{}{
+				"policy_arns":              []string(nil),
+				"role_arns":                []string(nil),
+				"policy_document":          "",
+				"credential_type":          iamUserCred,
+				"default_sts_ttl":          int64(0),
+				"max_sts_ttl":              int64(0),
+				"user_path":                "",
+				"permissions_boundary_arn": "",
+				"iam_groups":               groups,
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+			}
+
+			return nil
 		},
 	}
 }

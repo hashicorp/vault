@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
-func pathRotateCredentials(b *databaseBackend) []*framework.Path {
+func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
@@ -21,8 +22,12 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRotateCredentialsUpdate(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.pathRotateRootCredentialsUpdate(),
+					ForwardPerformanceSecondary: true,
+					ForwardPerformanceStandby:   true,
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -37,8 +42,12 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRotateRoleCredentialsUpdate(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.pathRotateRoleCredentialsUpdate(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -47,7 +56,7 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 	}
 }
 
-func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc {
+func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
@@ -59,44 +68,79 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		db, err := b.GetConnection(ctx, req.Storage, name)
+		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
+
+		defer func() {
+			// Close the plugin
+			dbi.closed = true
+			if err := dbi.database.Close(); err != nil {
+				b.Logger().Error("error closing the database plugin connection", "err", err)
+			}
+			// Even on error, still remove the connection
+			delete(b.connections, name)
+		}()
 
 		// Take out the backend lock since we are swapping out the connection
 		b.Lock()
 		defer b.Unlock()
 
 		// Take the write lock on the instance
-		db.Lock()
-		defer db.Unlock()
+		dbi.Lock()
+		defer dbi.Unlock()
 
-		connectionDetails, err := db.RotateRootCredentials(ctx, config.RootCredentialsRotateStatements)
+		// Generate new credentials
+		username := config.ConnectionDetails["username"].(string)
+		oldPassword := config.ConnectionDetails["password"].(string)
+		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
+		if err != nil {
+			return nil, err
+		}
+		config.ConnectionDetails["password"] = newPassword
+
+		// Write a WAL entry
+		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
+			ConnectionName: name,
+			UserName:       username,
+			OldPassword:    oldPassword,
+			NewPassword:    newPassword,
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		config.ConnectionDetails = connectionDetails
-		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+		updateReq := v5.UpdateUserRequest{
+			Username: username,
+			Password: &v5.ChangePassword{
+				NewPassword: newPassword,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
+			},
+		}
+		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user: %w", err)
+		}
+		if newConfigDetails != nil {
+			config.ConnectionDetails = newConfigDetails
+		}
+
+		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
 
-		// Close the plugin
-		db.closed = true
-		if err := db.Database.Close(); err != nil {
-			b.Logger().Error("error closing the database plugin connection", "err", err)
+		err = framework.DeleteWAL(ctx, req.Storage, walID)
+		if err != nil {
+			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
 		}
-		// Even on error, still remove the connection
-		delete(b.connections, name)
-
 		return nil, nil
 	}
 }
+
 func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
@@ -125,6 +169,9 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			RoleName: name,
 			Role:     role,
 		})
+		// if err is not nil, we need to attempt to update the priority and place
+		// this item back on the queue. The err should still be returned at the end
+		// of this method.
 		if err != nil {
 			b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
 			// Update the priority to re-try this rotation and re-add the item to
@@ -132,7 +179,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
 
 			// Preserve the WALID if it was returned
-			if resp.WALID != "" {
+			if resp != nil && resp.WALID != "" {
 				item.Value = resp.WALID
 			}
 		} else {
@@ -144,7 +191,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		return nil, nil
+		// return any err from the setStaticAccount call
+		return nil, err
 	}
 }
 

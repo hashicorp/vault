@@ -360,14 +360,14 @@ func storeSet(ctx context.Context, storage logical.Storage, setName string, set 
 
 const (
 	setHelpSynopsis = `
-Manage sets to build a library of service accounts that can be checked out.
+Build a library of service accounts that can be checked out.
 `
 	setHelpDescription = `
-This endpoint allows you to read, write, and delete individual sets that are used for checking out service accounts.
-Deleting a set can only be performed if all of its service accounts are currently checked in.
+This endpoint allows you to read, write, and delete individual sets of service accounts for check-out.
+Deleting a set of service accounts can only be performed if all its accounts are currently checked in.
 `
 	pathListSetsHelpSyn = `
-List the name of each set currently stored.
+List the name of each set of service accounts currently stored.
 `
 	pathListSetsHelpDesc = `
 To learn which service accounts are being managed by Vault, list the set names using

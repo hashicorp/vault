@@ -132,12 +132,12 @@ func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Stora
 		return nil, err
 	}
 
-	iamAdmin, err := b.IAMClient(s)
+	iamAdmin, err := b.IAMAdminClient(s)
 	if err != nil {
 		return nil, err
 	}
 
-	iamHandle := iamutil.GetIamHandle(httpC, useragent.String())
+	apiHandle := iamutil.GetApiHandle(httpC, useragent.String())
 
 	oldAccount := rs.AccountId
 	oldBindings := rs.Bindings
@@ -162,7 +162,7 @@ func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Stora
 		binds = newBinds
 		rs.Bindings = newBinds
 	}
-	walIds, err := rs.updateIamPolicies(ctx, s, b.iamResources, iamHandle, binds)
+	walIds, err := rs.updateIamPolicies(ctx, s, b.resources, apiHandle, binds)
 	if err != nil {
 		tryDeleteWALs(ctx, s, oldWals...)
 		return nil, err
@@ -194,7 +194,7 @@ func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Stora
 
 	// Return any errors as warnings so user knows immediate cleanup failed
 	warnings := make([]string, 0)
-	if errs := b.removeBindings(ctx, iamHandle, oldAccount.EmailOrId, oldBindings); errs != nil {
+	if errs := b.removeBindings(ctx, apiHandle, oldAccount.EmailOrId, oldBindings); errs != nil {
 		warnings = make([]string, len(errs.Errors), len(errs.Errors)+2)
 		for idx, err := range errs.Errors {
 			warnings[idx] = fmt.Sprintf("unable to immediately delete old binding (WAL cleanup entry has been added): %v", err)
@@ -217,7 +217,7 @@ func (b *backend) saveRoleSetWithNewTokenKey(ctx context.Context, s logical.Stor
 		return "", fmt.Errorf("a key is not saved or used for non-access-token role set '%s'", rs.Name)
 	}
 
-	iamAdmin, err := b.IAMClient(s)
+	iamAdmin, err := b.IAMAdminClient(s)
 	if err != nil {
 		return "", err
 	}
@@ -358,7 +358,7 @@ func (rs *RoleSet) newKeyForTokenGen(ctx context.Context, s logical.Storage, iam
 	return walId, nil
 }
 
-func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, enabledIamResources iamutil.IamResourceParser, iamHandle *iamutil.IamHandle, rb ResourceBindings) ([]string, error) {
+func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, enabledResources iamutil.ResourceParser, apiHandle *iamutil.ApiHandle, rb ResourceBindings) ([]string, error) {
 	wals := make([]string, 0, len(rb))
 	for rName, roles := range rb {
 		walId, err := framework.PutWAL(ctx, s, walTypeIamPolicy, &walIamPolicy{
@@ -374,12 +374,12 @@ func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, ena
 			return wals, err
 		}
 
-		resource, err := enabledIamResources.Parse(rName)
+		resource, err := enabledResources.Parse(rName)
 		if err != nil {
 			return wals, err
 		}
 
-		p, err := iamHandle.GetIamPolicy(ctx, resource)
+		p, err := resource.GetIamPolicy(ctx, apiHandle)
 		if err != nil {
 			return wals, err
 		}
@@ -392,7 +392,7 @@ func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, ena
 			continue
 		}
 
-		if _, err := iamHandle.SetIamPolicy(ctx, resource, newP); err != nil {
+		if _, err := resource.SetIamPolicy(ctx, apiHandle, newP); err != nil {
 			return wals, err
 		}
 		wals = append(wals, walId)

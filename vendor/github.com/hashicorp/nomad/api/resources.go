@@ -86,11 +86,13 @@ func (r *Resources) Merge(other *Resources) {
 type Port struct {
 	Label string
 	Value int `mapstructure:"static"`
+	To    int `mapstructure:"to"`
 }
 
 // NetworkResource is used to describe required network
 // resources of a given task.
 type NetworkResource struct {
+	Mode          string
 	Device        string
 	CIDR          string
 	IP            string
@@ -103,6 +105,14 @@ func (n *NetworkResource) Canonicalize() {
 	if n.MBits == nil {
 		n.MBits = intToPtr(10)
 	}
+}
+
+func (n *NetworkResource) HasPorts() bool {
+	if n == nil {
+		return false
+	}
+
+	return len(n.ReservedPorts)+len(n.DynamicPorts) > 0
 }
 
 // NodeDeviceResource captures a set of devices sharing a common

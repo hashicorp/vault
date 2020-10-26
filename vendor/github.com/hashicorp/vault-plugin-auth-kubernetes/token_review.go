@@ -28,7 +28,7 @@ type tokenReviewResult struct {
 
 // This exists so we can use a mock TokenReview when running tests
 type tokenReviewer interface {
-	Review(string) (*tokenReviewResult, error)
+	Review(string, []string) (*tokenReviewResult, error)
 }
 
 type tokenReviewFactory func(*kubeConfig) tokenReviewer
@@ -44,7 +44,7 @@ func tokenReviewAPIFactory(config *kubeConfig) tokenReviewer {
 	}
 }
 
-func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
+func (t *tokenReviewAPI) Review(jwt string, aud []string) (*tokenReviewResult, error) {
 
 	client := cleanhttp.DefaultClient()
 
@@ -64,7 +64,8 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	// Create the TokenReview Object and marshal it into json
 	trReq := &authv1.TokenReview{
 		Spec: authv1.TokenReviewSpec{
-			Token: jwt,
+			Token:     jwt,
+			Audiences: aud,
 		},
 	}
 	trJSON, err := json.Marshal(trReq)
@@ -73,7 +74,7 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	}
 
 	// Build the request to the token review API
-	url := fmt.Sprintf("%s/apis/authentication.k8s.io/v1/tokenreviews", t.config.Host)
+	url := fmt.Sprintf("%s/apis/authentication.k8s.io/v1/tokenreviews", strings.TrimSuffix(t.config.Host, "/"))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(trJSON))
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ func parseResponse(resp *http.Response) (*authv1.TokenReview, error) {
 		return nil, kubeerrors.NewGenericServerResponse(resp.StatusCode, "POST", schema.GroupResource{}, "", strings.TrimSpace(string(body)), 0, true)
 	}
 
-	// If we can succesfully Unmarshal into a status object that means there is
+	// If we can successfully Unmarshal into a status object that means there is
 	// an error to return
 	errStatus := &metav1.Status{}
 	err = json.Unmarshal(body, errStatus)
@@ -187,7 +188,7 @@ func mockTokenReviewFactory(name, namespace, UID string) tokenReviewFactory {
 	}
 }
 
-func (t *mockTokenReview) Review(jwt string) (*tokenReviewResult, error) {
+func (t *mockTokenReview) Review(jwt string, aud []string) (*tokenReviewResult, error) {
 	return &tokenReviewResult{
 		Name:      t.saName,
 		Namespace: t.saNamespace,

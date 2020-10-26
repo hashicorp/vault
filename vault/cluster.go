@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -186,6 +185,10 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		modified = true
 	}
 
+	// This is the first point at which the stored (or newly generated)
+	// cluster name is known.
+	c.metricSink.SetDefaultClusterName(cluster.Name)
+
 	if cluster.ID == "" {
 		c.logger.Debug("cluster ID not found, generating new")
 		// Generate a clusterID
@@ -302,7 +305,16 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	c.logger.Debug("starting cluster listeners")
 
-	c.clusterListener.Store(cluster.NewListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener")))
+	networkLayer := c.clusterNetworkLayer
+
+	if networkLayer == nil {
+		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
+	}
+
+	c.clusterListener.Store(cluster.NewListener(networkLayer,
+		c.clusterCipherSuites,
+		c.logger.Named("cluster-listener"),
+		5*c.clusterHeartbeatInterval))
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {
@@ -310,8 +322,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	}
 	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addrs()[0]))
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
+
+	if len(c.ClusterAddr()) != 0 {
+		if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -339,8 +358,7 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("stopping cluster listeners")
 
 	clusterListener.Stop()
-	var nilCL *cluster.Listener
-	c.clusterListener.Store(nilCL)
+	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	c.logger.Info("cluster listeners successfully shut down")
 }
@@ -354,38 +372,4 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
-}
-
-// getGRPCDialer is used to return a dialer that has the correct TLS
-// configuration. Otherwise gRPC tries to be helpful and stomps all over our
-// NextProtos.
-func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
-	return func(addr string, timeout time.Duration) (net.Conn, error) {
-		clusterListener := c.getClusterListener()
-		if clusterListener == nil {
-			return nil, errors.New("clustering disabled")
-		}
-
-		tlsConfig, err := clusterListener.TLSConfig(ctx)
-		if err != nil {
-			c.logger.Error("failed to get tls configuration", "error", err)
-			return nil, err
-		}
-		if serverName != "" {
-			tlsConfig.ServerName = serverName
-		}
-		if caCert != nil {
-			pool := x509.NewCertPool()
-			pool.AddCert(caCert)
-			tlsConfig.RootCAs = pool
-			tlsConfig.ClientCAs = pool
-		}
-		c.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
-
-		tlsConfig.NextProtos = []string{alpnProto}
-		dialer := &net.Dialer{
-			Timeout: timeout,
-		}
-		return tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
-	}
 }
