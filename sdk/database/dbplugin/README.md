@@ -14,6 +14,11 @@ previous interface:
 4. It had a function that was no longer being used as it had been deprecated in a previous version
    but never removed.
 
+Prior to Vault 1.6, the Database interface is version 4 (with other versions in older versions of
+Vault). The new version introduced in Vault 1.6 is version 5. This distinction was not exposed in
+previous iterations of the Database interface as the previous versions were additive to the
+interface. Since version 5 is an overhaul of the interface, this distinction needed to be made.
+
 We highly recommend that you upgrade any version 4 database plugins to version 5 as version 4 is
 considered deprecated and support for it will be removed in a future release. Version 5 plugins
 will not function with Vault prior to Vault 1.6.
