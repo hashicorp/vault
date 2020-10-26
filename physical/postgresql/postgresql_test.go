@@ -7,10 +7,9 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
 )
@@ -19,11 +18,11 @@ func TestPostgreSQLBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	// Use docker as pg backend if no url is provided via environment variables
-	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = prepareTestContainer(t, logger)
+		cleanup, u := postgresql.PrepareTestContainer(t, "11.1")
 		defer cleanup()
+		connURL = u
 	}
 
 	table := os.Getenv("PGTABLE")
@@ -178,7 +177,18 @@ func TestConnectionURL(t *testing.T) {
 // Similar to testHABackend, but using internal implementation details to
 // trigger the lock failure scenario by setting the lock renew period for one
 // of the locks to a higher value than the lock TTL.
+const maxTries = 3
+
 func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
+	for tries := 1; tries <= maxTries; tries++ {
+		// Try this several times.  If the test environment is too slow the lock can naturally lapse
+		if attemptLockTTLTest(t, ha, tries) {
+			break
+		}
+	}
+}
+
+func attemptLockTTLTest(t *testing.T, ha physical.HABackend, tries int) bool {
 	// Set much smaller lock times to speed up the test.
 	lockTTL := 3
 	renewInterval := time.Second * 1
@@ -200,6 +210,7 @@ func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 		lock.ttlSeconds = lockTTL
 
 		// Attempt to lock
+		lockTime := time.Now()
 		leaderCh, err = lock.Lock(nil)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -208,12 +219,19 @@ func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 			t.Fatalf("failed to get leader ch")
 		}
 
+		if tries == 1 {
+			time.Sleep(3 * time.Second)
+		}
 		// Check the value
 		held, val, err := lock.Value()
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		if !held {
+			if tries < maxTries && time.Since(lockTime) > (time.Second*time.Duration(lockTTL)) {
+				//Our test environment is slow enough that we failed this, retry
+				return false
+			}
 			t.Fatalf("should be held")
 		}
 		if val != "bar" {
@@ -240,6 +258,7 @@ func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 		})
 
 		// Attempt to lock should work
+		lockTime := time.Now()
 		leaderCh2, err := lock2.Lock(stopCh)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -255,19 +274,23 @@ func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 			t.Fatalf("err: %v", err)
 		}
 		if !held {
+			if tries < maxTries && time.Since(lockTime) > (time.Second*time.Duration(lockTTL)) {
+				//Our test environment is slow enough that we failed this, retry
+				return false
+			}
 			t.Fatalf("should be held")
 		}
 		if val != "baz" {
 			t.Fatalf("bad value: %v", val)
 		}
 	}
-
 	// The first lock should have lost the leader channel
 	select {
 	case <-time.After(longRenewInterval * 2):
 		t.Fatalf("original lock did not have its leader channel closed.")
 	case <-leaderCh:
 	}
+	return true
 }
 
 // Verify that once Unlock is called, we don't keep trying to renew the original
@@ -359,47 +382,6 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 
 	// Cleanup
 	newLock.Unlock()
-}
-
-func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
-	// If environment variable is set, use this connectionstring without starting docker container
-	if os.Getenv("PGURL") != "" {
-		return func() {}, os.Getenv("PGURL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-	// using 11.1 which is currently latest, use hard version for stability of tests
-	resource, err := pool.Run("postgres", "11.1", []string{})
-	if err != nil {
-		t.Fatalf("Could not start docker Postgres: %s", err)
-	}
-
-	retConnString = fmt.Sprintf("postgres://postgres@localhost:%v/postgres?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	// Provide a test function to the pool to test if docker instance service is up.
-	// We try to setup a pg backend as test for successful connect
-	// exponential backoff-retry, because the dockerinstance may not be able to accept
-	// connections yet, test by trying to setup a postgres backend, max-timeout is 60s
-	if err := pool.Retry(func() error {
-		var err error
-		_, err = NewPostgreSQLBackend(map[string]string{
-			"connection_url": retConnString,
-		}, logger)
-		return err
-
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to docker: %s", err)
-	}
-
-	return cleanup, retConnString
 }
 
 func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {

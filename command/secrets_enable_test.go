@@ -11,6 +11,8 @@ import (
 )
 
 var (
+	// logicalBackendAdjustmentFactor is set to 1 for the database backend
+	// which is a plugin but not found in go.mod files
 	logicalBackendAdjustmentFactor = 1
 )
 
@@ -216,7 +218,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		// backends are found by walking the directory, which includes the database backend,
 		// however, the plugins registry omits that one
 		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+logicalBackendAdjustmentFactor {
-			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1, len(backends))
+			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+logicalBackendAdjustmentFactor, len(backends))
 		}
 
 		for _, b := range backends {

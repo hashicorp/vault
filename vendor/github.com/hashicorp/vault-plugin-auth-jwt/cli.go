@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 )
 
 const defaultMount = "oidc"
@@ -73,13 +74,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 	role := m["role"]
 
-	authURL, err := fetchAuthURL(c, role, mount, callbackPort, callbackMethod, callbackHost)
+	authURL, clientNonce, err := fetchAuthURL(c, role, mount, callbackPort, callbackMethod, callbackHost)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set up callback handler
-	http.HandleFunc("/oidc/callback", callbackHandler(c, mount, doneCh))
+	http.HandleFunc("/oidc/callback", callbackHandler(c, mount, clientNonce, doneCh))
 
 	listener, err := net.Listen("tcp", listenAddress+":"+port)
 	if err != nil {
@@ -112,7 +113,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 }
 
-func callbackHandler(c *api.Client, mount string, doneCh chan<- loginResp) http.HandlerFunc {
+func callbackHandler(c *api.Client, mount string, clientNonce string, doneCh chan<- loginResp) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var response string
 		var secret *api.Secret
@@ -126,9 +127,10 @@ func callbackHandler(c *api.Client, mount string, doneCh chan<- loginResp) http.
 		// Pull any parameters from either the body or query parameters.
 		// FormValue prioritizes body values, if found.
 		data := map[string][]string{
-			"state":    {req.FormValue("state")},
-			"code":     {req.FormValue("code")},
-			"id_token": {req.FormValue("id_token")},
+			"state":        {req.FormValue("state")},
+			"code":         {req.FormValue("code")},
+			"id_token":     {req.FormValue("id_token")},
+			"client_nonce": {clientNonce},
 		}
 
 		// If this is a POST, then the form_post response_mode is being used and the flow
@@ -158,17 +160,23 @@ func callbackHandler(c *api.Client, mount string, doneCh chan<- loginResp) http.
 	}
 }
 
-func fetchAuthURL(c *api.Client, role, mount, callbackport string, callbackMethod string, callbackHost string) (string, error) {
+func fetchAuthURL(c *api.Client, role, mount, callbackport string, callbackMethod string, callbackHost string) (string, string, error) {
 	var authURL string
+
+	clientNonce, err := base62.Random(20)
+	if err != nil {
+		return "", "", err
+	}
 
 	data := map[string]interface{}{
 		"role":         role,
 		"redirect_uri": fmt.Sprintf("%s://%s:%s/oidc/callback", callbackMethod, callbackHost, callbackport),
+		"client_nonce": clientNonce,
 	}
 
 	secret, err := c.Logical().Write(fmt.Sprintf("auth/%s/oidc/auth_url", mount), data)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if secret != nil {
@@ -176,10 +184,10 @@ func fetchAuthURL(c *api.Client, role, mount, callbackport string, callbackMetho
 	}
 
 	if authURL == "" {
-		return "", fmt.Errorf("Unable to authorize role %q. Check Vault logs for more information.", role)
+		return "", "", fmt.Errorf("Unable to authorize role %q. Check Vault logs for more information.", role)
 	}
 
-	return authURL, nil
+	return authURL, clientNonce, nil
 }
 
 // isWSL tests if the binary is being run in Windows Subsystem for Linux

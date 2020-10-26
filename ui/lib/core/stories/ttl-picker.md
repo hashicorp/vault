@@ -1,8 +1,13 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in lib/core/addon/components/ttl-picker.js. To make changes, first edit that file and run "yarn gen-story-md ttl-picker" to re-generate the content.-->
 
 ## TtlPicker
-`TtlPicker` components are used to expand and collapse content with a toggle.
+`TtlPicker` components are used to set the time to live.
+This version is being deprecated and replaced by `TtlPicker2` which is an automatic-width version that
+automatically recalculates the time value when unit is updated unless time has been changed recently.
+Once all instances of TtlPicker are replaced with TtlPicker2, this component will be removed and
+TtlPicker2 will be renamed to TtlPicker.
 
+**Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -21,7 +26,7 @@
 
 **See**
 
-- [Uses of TtlPicker](https://github.com/hashicorp/vault/search?l=Handlebars&q=TtlPicker)
-- [TtlPicker Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/ttl-picker.js)
+- [Uses of TtlPicker](https://github.com/hashicorp/vault/search?l=Handlebars&q=TtlPicker+OR+ttl-picker)
+- [TtlPicker Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/ttl-picker.js)
 
 ---

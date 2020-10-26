@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
+	jose "gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -66,7 +67,7 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 			"default_role": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeLowerCaseString,
 				Description: "The default role to use if none is provided during login. If not set, a role is required during login.",
 			},
 			"jwt_validation_pubkeys": {
@@ -80,6 +81,13 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 			"bound_issuer": {
 				Type:        framework.TypeString,
 				Description: "The value against which to match the 'iss' claim in a JWT. Optional.",
+			},
+			"provider_config": {
+				Type:        framework.TypeMap,
+				Description: "Provider-specific configuration. Optional.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Provider Config",
+				},
 			},
 		},
 
@@ -157,6 +165,7 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"jwks_url":               config.JWKSURL,
 			"jwks_ca_pem":            config.JWKSCAPEM,
 			"bound_issuer":           config.BoundIssuer,
+			"provider_config":        config.ProviderConfig,
 		},
 	}
 
@@ -177,6 +186,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		JWTValidationPubKeys: d.Get("jwt_validation_pubkeys").([]string),
 		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
+		ProviderConfig:       d.Get("provider_config").(map[string]interface{}),
 	}
 
 	// Run checks on values
@@ -239,9 +249,12 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		return nil, errors.New("unknown condition")
 	}
 
+	// NOTE: the OIDC lib states that if nothing is passed into its config, it
+	// defaults to "RS256". So in the case of a zero value here it won't
+	// default to e.g. "none".
 	for _, a := range config.JWTSupportedAlgs {
 		switch a {
-		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
+		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512, string(jose.EdDSA):
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
 		}
@@ -261,6 +274,11 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	case responseModeFormPost:
 	default:
 		return logical.ErrorResponse("invalid response_mode: %q", config.OIDCResponseMode), nil
+	}
+
+	// Validate provider_config
+	if _, err := NewProviderConfig(config, ProviderMap()); err != nil {
+		return logical.ErrorResponse("invalid provider_config: %s", err), nil
 	}
 
 	entry, err := logical.StorageEntryJSON(configPath, config)
@@ -318,18 +336,19 @@ func (b *jwtAuthBackend) createCAContext(ctx context.Context, caPEM string) (con
 }
 
 type jwtConfig struct {
-	OIDCDiscoveryURL     string   `json:"oidc_discovery_url"`
-	OIDCDiscoveryCAPEM   string   `json:"oidc_discovery_ca_pem"`
-	OIDCClientID         string   `json:"oidc_client_id"`
-	OIDCClientSecret     string   `json:"oidc_client_secret"`
-	OIDCResponseMode     string   `json:"oidc_response_mode"`
-	OIDCResponseTypes    []string `json:"oidc_response_types"`
-	JWKSURL              string   `json:"jwks_url"`
-	JWKSCAPEM            string   `json:"jwks_ca_pem"`
-	JWTValidationPubKeys []string `json:"jwt_validation_pubkeys"`
-	JWTSupportedAlgs     []string `json:"jwt_supported_algs"`
-	BoundIssuer          string   `json:"bound_issuer"`
-	DefaultRole          string   `json:"default_role"`
+	OIDCDiscoveryURL     string                 `json:"oidc_discovery_url"`
+	OIDCDiscoveryCAPEM   string                 `json:"oidc_discovery_ca_pem"`
+	OIDCClientID         string                 `json:"oidc_client_id"`
+	OIDCClientSecret     string                 `json:"oidc_client_secret"`
+	OIDCResponseMode     string                 `json:"oidc_response_mode"`
+	OIDCResponseTypes    []string               `json:"oidc_response_types"`
+	JWKSURL              string                 `json:"jwks_url"`
+	JWKSCAPEM            string                 `json:"jwks_ca_pem"`
+	JWTValidationPubKeys []string               `json:"jwt_validation_pubkeys"`
+	JWTSupportedAlgs     []string               `json:"jwt_supported_algs"`
+	BoundIssuer          string                 `json:"bound_issuer"`
+	DefaultRole          string                 `json:"default_role"`
+	ProviderConfig       map[string]interface{} `json:"provider_config"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`
 }

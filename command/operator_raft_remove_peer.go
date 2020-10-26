@@ -13,17 +13,19 @@ var _ cli.CommandAutocomplete = (*OperatorRaftRemovePeerCommand)(nil)
 
 type OperatorRaftRemovePeerCommand struct {
 	*BaseCommand
+
+	flagDRToken string
 }
 
 func (c *OperatorRaftRemovePeerCommand) Synopsis() string {
-	return "Removes a node from the raft cluster"
+	return "Removes a node from the Raft cluster"
 }
 
 func (c *OperatorRaftRemovePeerCommand) Help() string {
 	helpText := `
 Usage: vault operator raft remove-peer <server_id>
 
-  Removes a node from the raft cluster.
+  Removes a node from the Raft cluster.
 
 	  $ vault operator raft remove-peer node1
 
@@ -34,6 +36,17 @@ Usage: vault operator raft remove-peer <server_id>
 
 func (c *OperatorRaftRemovePeerCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "dr-token",
+		Target:     &c.flagDRToken,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage:      "DR operation token used to authorize this request (if a DR secondary node).",
+	})
+
 	return set
 }
 
@@ -76,7 +89,8 @@ func (c *OperatorRaftRemovePeerCommand) Run(args []string) int {
 	}
 
 	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
-		"server_id": serverID,
+		"server_id":          serverID,
+		"dr_operation_token": c.flagDRToken,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error removing the peer from raft cluster: %s", err))

@@ -1,5 +1,25 @@
 # go-test/deep Changelog
 
+## v1.0.7 released 2020-07-11
+
+* Fixed issue #39: Confusing diff when comparing distinct types with the same name (PR #44)
+
+## v1.0.6 released 2020-04-21
+
+* Added `NilMapsAreEmpty` variable which causes a nil map to equal an empty map (PR #43) (@yalegko)
+
+## v1.0.5 released 2020-01-16
+
+* Added `NilSlicesAreEmpty` variable which causes a nil slice to be equal to an empty slice (PR #27) (@Anaminus)
+
+## v1.0.4 released 2019-09-15
+
+* Added \`deep:"-"\` structure field tag to ignore field (PR #38) (@flga)
+
+## v1.0.3 released 2019-08-18
+
+* Fixed issue #31: panic on typed primitives that implement error interface
+
 ## v1.0.2 released 2019-07-14
 
 * Enabled Go module (@radeksimko)

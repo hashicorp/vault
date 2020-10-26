@@ -69,6 +69,8 @@ To limit authorization to a set of email addresses:
 }
 ```
 
+Bound claims can optionally be configured with globs. See the [API documentation](/api-docs/auth/jwt#bound_claims_type) for more details.
+
 ### Claims as Metadata
 
 Data from claims can be copied into the resulting auth token and alias metadata by configuring `claim_mappings`. This role
@@ -90,7 +92,7 @@ Note: the metadata key name "role" is reserved and may not be used for claim map
 
 ### Claim specifications and JSON Pointer
 
-Some parameters (e.g. `bound_claims` and `groups_claim`) are used to point to data within the JWT. If
+Some parameters (e.g. `bound_claims`, `groups_claim`, `claim_mappings`) are used to point to data within the JWT. If
 the desired key is at the top of level of the JWT, the name can be provided directly. If it is nested at a
 lower level, a JSON Pointer may be used.
 
@@ -109,7 +111,7 @@ Assume the following JSON data to be referenced:
 A parameter of `"division"` will reference "North America", as this is a top level key. A parameter
 `"/groups/primary"` uses JSON Pointer syntax to reference "Engineering" at a lower level. Any valid
 JSON Pointer can be used as a selector. Refer to the
-[JSON Pointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax
+[JSON Pointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax.
 
 ## OIDC Authentication
 
@@ -159,7 +161,7 @@ they must be added as query parameters, for example:
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault login -method=oidc port=8400 role=test
 
 Complete the login via your OIDC provider. Launching browser to:
@@ -170,10 +172,16 @@ Complete the login via your OIDC provider. Launching browser to:
 The browser will open to the generated URL to complete the provider's login. The
 URL may be entered manually if the browser cannot be automatically opened.
 
-The callback listener may be customized with the following optional parameters:
+The callback listener may be customized with the following optional parameters. These are typically
+not required to be set:
 
-- `callbackhost` (default: "localhost")
+- `mount` (default: "oidc")
+- `listenaddress` (default: "localhost")
 - `port` (default: 8250)
+- `callbackhost` (default: "localhost")
+- `callbackmethod` (default: "http")
+- `callbackport` (default: value set for `port`). This value is used in the `redirect_uri`, whereas
+  `port` is the localhost port that the listener is using. These two may be different in advanced setups.
 
 ### OIDC Provider Configuration
 
@@ -186,6 +194,23 @@ collection of provider configuration steps has been collected to help get starte
 
 This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
 why things aren't working. Some tips for setting up OIDC:
+
+- If a role parameter (e.g. `bound_claims`) requires a map value, it can't be set individually using
+  the Vault CLI. In these cases the best approach is to write the entire configuration as a single
+  JSON object:
+
+```text
+vault write auth/oidc/role/demo -<<EOF
+{
+  "user_claim": "sub",
+  "bound_audiences": "abc123",
+  "role_type": "oidc",
+  "policies": "demo",
+  "ttl": "1h",
+  "bound_claims": { "groups": ["mygroup/mysubgroup"] }
+}
+EOF
+```
 
 - Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
 - Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
@@ -205,10 +230,13 @@ why things aren't working. Some tips for setting up OIDC:
   `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
 
 - As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt#verbose_oidc_logging) role
-  option is available which will log the received OIDC token if debug-level logging is enabled. This can
+  option is available which will log the received OIDC token to the _server_ logs if debug-level logging is enabled. This can
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
   used in production.
+- Azure requires some additional configuration when a user is a member of more
+  than 200 groups, described in [Azure-specific handling
+  configuration](/docs/auth/jwt_oidc_providers#azure-specific-handling-configuration)
 
 ## JWT Authentication
 
@@ -220,7 +248,7 @@ only needs to validate the provided JWT.
 The default path is `/jwt`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault write auth/jwt/login role=demo jwt=...
 ```
 
@@ -229,7 +257,7 @@ $ vault write auth/jwt/login role=demo jwt=...
 The default endpoint is `auth/jwt/login`. If this auth method was enabled
 at a different path, use that value instead of `jwt`.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"jwt": "your_jwt", "role": "demo"}' \

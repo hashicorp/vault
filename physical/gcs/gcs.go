@@ -71,15 +71,23 @@ type Backend struct {
 	// chunkSize is the chunk size to use for requests.
 	chunkSize int
 
-	// client is the underlying API client for talking to gcs.
-	client *storage.Client
+	// client is the API client and permitPool is the allowed concurrent uses of
+	// the client.
+	client     *storage.Client
+	permitPool *physical.PermitPool
 
 	// haEnabled indicates if HA is enabled.
 	haEnabled bool
 
-	// logger and permitPool are internal constructs
-	logger     log.Logger
-	permitPool *physical.PermitPool
+	// haClient is the API client. This is managed separately from the main client
+	// because a flood of requests should not block refreshing the TTLs on the
+	// lock.
+	//
+	// This value will be nil if haEnabled is false.
+	haClient *storage.Client
+
+	// logger is an internal logger.
+	logger log.Logger
 }
 
 // NewBackend constructs a Google Cloud Storage backend with the given
@@ -115,6 +123,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	chunkSize = chunkSize * 1024
 
 	// HA configuration
+	haClient := (*storage.Client)(nil)
 	haEnabled := false
 	haEnabledStr := os.Getenv(envHAEnabled)
 	if haEnabledStr == "" {
@@ -125,6 +134,15 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+		}
+	}
+	if haEnabled {
+		logger.Debug("creating client")
+		var err error
+		ctx := context.Background()
+		haClient, err = storage.NewClient(ctx, option.WithUserAgent(useragent.String()))
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create HA storage client: {{err}}", err)
 		}
 	}
 
@@ -140,30 +158,24 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		"ha_enabled", haEnabled,
 		"max_parallel", maxParallel,
 	)
+
 	logger.Debug("creating client")
-
-	// Client
-	opts := []option.ClientOption{option.WithUserAgent(useragent.String())}
-	if credentialsFile := c["credentials_file"]; credentialsFile != "" {
-		logger.Warn("specifying credentials_file as an option is " +
-			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
-			"variable or instance credentials instead.")
-		opts = append(opts, option.WithCredentialsFile(credentialsFile))
-	}
-
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx, opts...)
+	client, err := storage.NewClient(ctx, option.WithUserAgent(useragent.String()))
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create storage client: {{err}}", err)
 	}
 
 	return &Backend{
 		bucket:     bucket,
-		haEnabled:  haEnabled,
 		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
-		logger:     logger,
+
+		haEnabled: haEnabled,
+		haClient:  haClient,
+
+		logger: logger,
 	}, nil
 }
 

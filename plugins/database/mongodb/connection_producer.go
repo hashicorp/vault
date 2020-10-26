@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -49,57 +48,6 @@ type writeConcern struct {
 	J        bool   // Sync via the journal if present
 }
 
-func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	_, err := c.Init(ctx, conf, verifyConnection)
-	return err
-}
-
-// Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.RawConfig = conf
-
-	err := mapstructure.WeakDecode(conf, c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(c.ConnectionURL) == 0 {
-		return nil, fmt.Errorf("connection_url cannot be empty")
-	}
-
-	writeOpts, err := c.getWriteConcern()
-	if err != nil {
-		return nil, err
-	}
-
-	authOpts, err := c.getTLSAuth()
-	if err != nil {
-		return nil, err
-	}
-
-	c.ConnectionURL = c.getConnectionURL()
-	c.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
-
-	// Set initialized to true at this point since all fields are set,
-	// and the connection can be established at a later time.
-	c.Initialized = true
-
-	if verifyConnection {
-		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-
-		if err := c.client.Ping(ctx, readpref.Primary()); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-	}
-
-	return conf, nil
-}
-
 // Connection creates or returns an existing a database connection. If the session fails
 // on a ping check, the session will be closed and then re-created.
 // This method does not lock the mutex and it is intended that this is the callers
@@ -117,19 +65,27 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}
 		_ = c.client.Disconnect(ctx)
 	}
 
-	if c.clientOptions == nil {
-		c.clientOptions = options.Client()
-	}
-	c.clientOptions.SetSocketTimeout(1 * time.Minute)
-	c.clientOptions.SetConnectTimeout(1 * time.Minute)
-
-	var err error
-	opts := c.clientOptions.ApplyURI(c.ConnectionURL)
-	c.client, err = mongo.Connect(ctx, opts)
+	connURL := c.getConnectionURL()
+	client, err := createClient(ctx, connURL, c.clientOptions)
 	if err != nil {
 		return nil, err
 	}
+	c.client = client
 	return c.client, nil
+}
+
+func createClient(ctx context.Context, connURL string, clientOptions *options.ClientOptions) (client *mongo.Client, err error) {
+	if clientOptions == nil {
+		clientOptions = options.Client()
+	}
+	clientOptions.SetSocketTimeout(1 * time.Minute)
+	clientOptions.SetConnectTimeout(1 * time.Minute)
+
+	client, err = mongo.Connect(ctx, options.MergeClientOptions(options.Client().ApplyURI(connURL), clientOptions))
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // Close terminates the database connection.
@@ -150,8 +106,8 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func (c *mongoDBConnectionProducer) secretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *mongoDBConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
 		c.Password: "[password]",
 	}
 }

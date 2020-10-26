@@ -24,13 +24,13 @@ Main Vault categories for partners to integrate with include:
 
 **Authentication Methods**: Authentication (or Auth) methods are components in Vault that perform authentication and are responsible for assigning identity along with a set of policies to a user. Vault supports multiple auth methods/identity models to better support your business use case. You can find more information about Vault Auth Methods [here](/docs/auth/).
 
-**Runtime Integrations**: Plugin backends are components in Vault that can be implemented separately from Vault's built-in features. Runtime integrations are sometimes referred to a Direct Application Integration. These backends can be either authentication, secrets engines or other security features. You can find more information about Vault Direct Application Integration [here](https://learn.hashicorp.com/vault/developer/sm-app-integration).
+**Runtime Integrations**: Plugin backends are components in Vault that can be implemented separately from Vault's built-in features. Runtime integrations are sometimes referred to a Direct Application Integration. These backends can be either authentication, secrets engines or other security features. You can find more information about Vault Direct Application Integration [here](https://learn.hashicorp.com/tutorials/vault/application-integration).
 
 **Audit/Monitoring & Compliance**: Audit/Monitoring and Compliance are components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors. Vault supports multiple audit devices to support your business use case. You can find more information about Vault Audit Devices [here](/docs/audit/).
 
 HSM (Hardware Security Module) integrations provide an added level of security and compliance. The HSM communicates with Vault using the PKCS#11 protocol thereby resulting in the integration to primarily involve verification of the operation of the functionality. You can find more information about Vault HSM [here](/docs/enterprise/hsm).
 
-**Secrets Engines**: Secrets engine are components which store, generate, or encrypt data. Secrets engines are provided some set of data, that take some action on that data, and then return a result. Some secrets engines store and read data, like encrypted in-memory data structure, other secrets engines connect to other services. Examples of secrets engines include Identity modules of Cloud providers like AWS, Azure IAM models, Cloud (LDAP), database or key management. You can find more information about Vault Secrets Engines here.
+**Secrets Engines**: Secrets engine are components which store, generate, or encrypt data. Secrets engines are provided some set of data, that take some action on that data, and then return a result. Some secrets engines store and read data, like encrypted in-memory data structure, other secrets engines connect to other services. Examples of secrets engines include Identity modules of Cloud providers like AWS, Azure IAM models, Cloud (LDAP), database or key management. You can find more information about Vault Secrets Engines [here](/docs/secrets/).
 
 ## Development Process
 
@@ -59,7 +59,7 @@ While not mandatory, HashiCorp encourages vendors to sign and MNDA (Mutual Non-D
 
 In an effort to support our self-serve model we’ve included links to resources, documentation, examples and best practices to guide you through the Vault integration development and testing process.
 
-- [Writing vendor extension guide](https://learn.hashicorp.com/vault#operations-and-development)
+- [Writing vendor extension guide](https://learn.hashicorp.com/vault)
 - Sample development implemented by a [partner](https://www.hashicorp.com/integrations/venafi/vault/)
 - Example vendor extensions for reference: [Aqua](https://www.hashicorp.com/integrations/aqua-security/vault/), [Demisto](https://www.demisto.com/integrations/?_sf_s=hashicorp)
 - Contributing to Vault [guidelines](https://github.com/hashicorp/vault/blob/master/CONTRIBUTING.md)
@@ -82,7 +82,7 @@ Runtime Integration
 
 - [Plugins documentation](/docs/internals/plugins)
 - [Guide to building Vault plugin backends](/guides/operations/plugin-backends)
-- [Vault Direct Application Integration](https://learn.hashicorp.com/vault?track=getting-started#getting-started)
+- [Vault Direct Application Integration](https://learn.hashicorp.com/tutorials/vault/application-integration)
 
 Audit, Monitoring & Compliance Integration
 

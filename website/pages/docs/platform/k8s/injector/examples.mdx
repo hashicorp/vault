@@ -17,14 +17,27 @@ using higher level constructs such as deployments, jobs or statefulsets.
 ## Before Using the Vault Agent Injector
 
 Before applying Vault Agent injection annotations to pods, the following requirements
-should be satisfied:
+should be satisfied.
 
-- the master Kubernetes nodes can receive traffic from worker nodes on port `8080`,
+### Connectivity
+
+- the Kubernetes API can connect to the Vault Agent injector service on port `443`, and
+  the injector can connect to the Kubernetes API,
+- Vault can connect to the Kubernetes API,
+- Pods in the Kubernetes cluster can connect to Vault.
+
+~> Note: The Kubernetes API typically runs on the master nodes, and the Vault Agent injector
+   on a worker node in a Kubernetes cluster. <br/><br/>
+   On Kubernetes clusters that have aggregator routing enabled (ex. [GKE private
+   clusters](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#add_firewall_rules)),
+   the Kubernetes API will connect directly to the injector service endpoint,
+   which is on port `8080`.
+
+### Kubernetes and Vault Configuration
 - Kubernetes auth method should be configured and enabled in Vault,
 - Pod should have a service account,
 - desired secrets exist within Vault,
 - the service account should be bound to a Vault role with a policy enabling access to desired secrets.
-
 
 For more information on configuring the Vault Kubernetes auth method,
 [see the official documentation](/docs/auth/kubernetes#configuration).
@@ -232,4 +245,46 @@ data:
       "client_cert" = "/vault/tls/client.crt"
       "client_key" = "/vault/tls/client.key"
     }
+```
+
+## Environment Variable Example
+
+The following example demonstrates how templates can be used to create environment 
+variables.  A template should be created that exports a Vault secret as an environment 
+variable and the application container should source those files during startup.
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "web"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/web"
+        # Environment variable export template
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{ with secret "secret/data/web" -}}
+            export api_key="{{ .Data.data.payments_api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: alpine:latest
+          args: ["sh", "-c", "source /vault/secrets/config && <entrypoint script>"]
+          ports:
+            - containerPort: 9090
 ```

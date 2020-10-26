@@ -66,19 +66,19 @@ token accordingly.
 
 #### Enable AliCloud authentication in Vault.
 
-```
+```shell-session
 $ vault auth enable alicloud
 ```
 
 #### Configure the policies on the role.
 
-```
+```shell-session
 $ vault write auth/alicloud/role/dev-role arn='acs:ram::5138828231865461:role/dev-role'
 ```
 
 #### Perform the login operation
 
-```
+```shell-session
 $ vault write auth/alicloud/login \
         role=dev-role \
         identity_request_url=$IDENTITY_REQUEST_URL_BASE_64 \
@@ -88,7 +88,7 @@ $ vault write auth/alicloud/login \
 For the RAM auth method, generating the signed request is a non-standard
 operation. The Vault CLI supports generating this for you:
 
-```
+```shell-session
 $ vault login -method=alicloud access_key=... secret_key=... security_token=... region=...
 ```
 

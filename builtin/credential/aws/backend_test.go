@@ -1813,3 +1813,13 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 
 	return renewReq
 }
+
+func TestGeneratePartitionToRegionMap(t *testing.T) {
+	m := generatePartitionToRegionMap()
+	if m["aws"].ID() != "us-east-1" {
+		t.Fatal("expected us-east-1 but received " + m["aws"].ID())
+	}
+	if m["aws-us-gov"].ID() != "us-gov-west-1" {
+		t.Fatal("expected us-gov-west-1 but received " + m["aws-us-gov"].ID())
+	}
+}

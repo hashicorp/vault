@@ -28,6 +28,7 @@ const (
 	errLoginFailed       = "Vault login failed."
 	errNoResponse        = "No response from provider."
 	errTokenVerification = "Token verification failed."
+	errNotOIDCFlow       = "OIDC login is not configured for this mount"
 
 	noCode = "no_code"
 )
@@ -40,6 +41,10 @@ type oidcState struct {
 	redirectURI string
 	code        string
 	idToken     string
+
+	// clientNonce is used between Vault and the client/application (e.g. CLI) making the request,
+	// and is unrelated to the OIDC nonce above. It is optional.
+	clientNonce string
 }
 
 func pathOIDC(b *jwtAuthBackend) []*framework.Path {
@@ -54,6 +59,9 @@ func pathOIDC(b *jwtAuthBackend) []*framework.Path {
 					Type: framework.TypeString,
 				},
 				"id_token": {
+					Type: framework.TypeString,
+				},
+				"client_nonce": {
 					Type: framework.TypeString,
 				},
 			},
@@ -85,6 +93,10 @@ func pathOIDC(b *jwtAuthBackend) []*framework.Path {
 				"redirect_uri": {
 					Type:        framework.TypeString,
 					Description: "The OAuth redirect_uri to use in the authorization URL.",
+				},
+				"client_nonce": {
+					Type:        framework.TypeString,
+					Description: "Optional client-provided nonce that must match during callback, if present.",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -156,6 +168,14 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	state := b.verifyState(stateID)
 	if state == nil {
 		return logical.ErrorResponse(errLoginFailed + " Expired or missing OAuth state."), nil
+	}
+
+	clientNonce := d.Get("client_nonce").(string)
+
+	// If a client_nonce was provided at the start of the auth process as part of the auth_url
+	// request, require that it is present and matching during the callback phase.
+	if state.clientNonce != "" && clientNonce != state.clientNonce {
+		return logical.ErrorResponse("invalid client_nonce"), nil
 	}
 
 	roleName := state.rolename
@@ -325,7 +345,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if config.authType() != OIDCFlow {
-		return logical.ErrorResponse("OIDC login is not configured for this mount"), nil
+		return logical.ErrorResponse(errNotOIDCFlow), nil
 	}
 
 	roleName := d.Get("role").(string)
@@ -340,6 +360,8 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	if redirectURI == "" {
 		return logical.ErrorResponse("missing redirect_uri"), nil
 	}
+
+	clientNonce := d.Get("client_nonce").(string)
 
 	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
@@ -381,7 +403,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 		Scopes:       scopes,
 	}
 
-	stateID, nonce, err := b.createState(roleName, redirectURI)
+	stateID, nonce, err := b.createState(roleName, redirectURI, clientNonce)
 	if err != nil {
 		logger.Warn("error generating OAuth state", "error", err)
 		return resp, nil
@@ -421,7 +443,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 // createState make an expiring state object, associated with a random state ID
 // that is passed throughout the OAuth process. A nonce is also included in the
 // auth process, and for simplicity will be identical in length/format as the state ID.
-func (b *jwtAuthBackend) createState(rolename, redirectURI string) (string, string, error) {
+func (b *jwtAuthBackend) createState(rolename, redirectURI, clientNonce string) (string, string, error) {
 	// Get enough bytes for 2 160-bit IDs (per rfc6749#section-10.10)
 	bytes, err := uuid.GenerateRandomBytes(2 * 20)
 	if err != nil {
@@ -435,6 +457,7 @@ func (b *jwtAuthBackend) createState(rolename, redirectURI string) (string, stri
 		rolename:    rolename,
 		nonce:       nonce,
 		redirectURI: redirectURI,
+		clientNonce: clientNonce,
 	})
 
 	return stateID, nonce, nil

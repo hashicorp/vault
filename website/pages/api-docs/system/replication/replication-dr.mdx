@@ -24,7 +24,7 @@ This is an authenticated endpoint.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/dr/status
 ```
@@ -38,10 +38,19 @@ primary, it will look something like:
 {
   "data": {
     "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-    "known_secondaries": [],
+    "known_secondaries": ["3"],
     "last_wal": 241,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
-    "mode": "primary"
+    "mode": "primary",
+    "secondaries": [
+      {
+        "api_address": "https://127.0.0.1:49264",
+        "cluster_address": "https://127.0.0.1:49267",
+        "connection_status": "connected",
+        "last_heartbeat": "2020-06-10T15:40:47-07:00",
+        "node_id": "3"
+      }
+    ]
   }
 }
 ```
@@ -59,6 +68,14 @@ secondary, it will look something like:
     "last_remote_wal": 241,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "secondary",
+    "primaries": [
+      {
+        "api_address": "https://127.0.0.1:49244",
+        "cluster_address": "https://127.0.0.1:8201",
+        "connection_status": "connected",
+        "last_heartbeat": "2020-06-10T15:40:46-07:00"
+      }
+    ],
     "primary_cluster_addr": "https://127.0.0.1:8201",
     "secondary_id": "3",
     "state": "stream-wals"
@@ -91,7 +108,7 @@ must be promoted).
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -112,7 +129,7 @@ DR replication set without wiping local storage.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -134,7 +151,7 @@ will require a wipe of the underlying storage.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -174,7 +191,7 @@ identifier can later be used to revoke a DR secondary's access.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -225,7 +242,7 @@ connect again unless given a new activation token.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -247,7 +264,7 @@ needing to make an API call to the primary during activation.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -294,7 +311,7 @@ token.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -349,7 +366,7 @@ result in data loss!
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -377,6 +394,30 @@ $ curl \
   "warnings": null,
   "auth": null
 }
+```
+
+## Disable DR Secondary
+
+This endpoint disables DR replication entirely on the cluster. The cluster will no
+longer be able to connect to the DR primary.
+
+!> Re-enabling this node as a DR primary or secondary will change its cluster ID;
+in the secondary case this means a wipe of the underlying storage when connected
+to a primary, and in the primary case, secondaries connecting back to the
+cluster (even if they have connected before) will require a wipe of the
+underlying storage.
+
+| Method | Path                                    |
+| :----- | :-------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/disable` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/disable
 ```
 
 ## Update DR Secondary's Primary
@@ -425,7 +466,7 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -451,7 +492,7 @@ attempt.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
@@ -494,7 +535,7 @@ generation attempt can take place at a time.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
@@ -526,7 +567,7 @@ progress made. This must be called to change the OTP or PGP key being used.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request DELETE \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
@@ -561,7 +602,7 @@ nonce must be provided with each call.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     --data @payload.json \
@@ -608,7 +649,7 @@ and therefore should be deleted when it is no longer needed.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

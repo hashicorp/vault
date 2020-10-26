@@ -138,6 +138,11 @@ func (ba *BearerAuthorizer) WithAuthorization() PrepareDecorator {
 	}
 }
 
+// TokenProvider returns OAuthTokenProvider so that it can be used for authorization outside the REST.
+func (ba *BearerAuthorizer) TokenProvider() adal.OAuthTokenProvider {
+	return ba.tokenProvider
+}
+
 // BearerAuthorizerCallbackFunc is the authentication callback signature.
 type BearerAuthorizerCallbackFunc func(tenantID, resource string) (*BearerAuthorizer, error)
 
@@ -171,20 +176,21 @@ func (bacb *BearerAuthorizerCallback) WithAuthorization() PrepareDecorator {
 				removeRequestBody(&rCopy)
 
 				resp, err := bacb.sender.Do(&rCopy)
-				if err == nil && resp.StatusCode == 401 {
-					defer resp.Body.Close()
-					if hasBearerChallenge(resp) {
-						bc, err := newBearerChallenge(resp)
+				if err != nil {
+					return r, err
+				}
+				DrainResponseBody(resp)
+				if resp.StatusCode == 401 && hasBearerChallenge(resp.Header) {
+					bc, err := newBearerChallenge(resp.Header)
+					if err != nil {
+						return r, err
+					}
+					if bacb.callback != nil {
+						ba, err := bacb.callback(bc.values[tenantID], bc.values["resource"])
 						if err != nil {
 							return r, err
 						}
-						if bacb.callback != nil {
-							ba, err := bacb.callback(bc.values[tenantID], bc.values["resource"])
-							if err != nil {
-								return r, err
-							}
-							return Prepare(r, ba.WithAuthorization())
-						}
+						return Prepare(r, ba.WithAuthorization())
 					}
 				}
 			}
@@ -194,8 +200,8 @@ func (bacb *BearerAuthorizerCallback) WithAuthorization() PrepareDecorator {
 }
 
 // returns true if the HTTP response contains a bearer challenge
-func hasBearerChallenge(resp *http.Response) bool {
-	authHeader := resp.Header.Get(bearerChallengeHeader)
+func hasBearerChallenge(header http.Header) bool {
+	authHeader := header.Get(bearerChallengeHeader)
 	if len(authHeader) == 0 || strings.Index(authHeader, bearer) < 0 {
 		return false
 	}
@@ -206,8 +212,8 @@ type bearerChallenge struct {
 	values map[string]string
 }
 
-func newBearerChallenge(resp *http.Response) (bc bearerChallenge, err error) {
-	challenge := strings.TrimSpace(resp.Header.Get(bearerChallengeHeader))
+func newBearerChallenge(header http.Header) (bc bearerChallenge, err error) {
+	challenge := strings.TrimSpace(header.Get(bearerChallengeHeader))
 	trimmedChallenge := challenge[len(bearer)+1:]
 
 	// challenge is a set of key=value pairs that are comma delimited
@@ -330,7 +336,7 @@ func (mt multiTenantSPTAuthorizer) WithAuthorization() PrepareDecorator {
 			for i := range auxTokens {
 				auxTokens[i] = fmt.Sprintf("Bearer %s", auxTokens[i])
 			}
-			return Prepare(r, WithHeader(headerAuxAuthorization, strings.Join(auxTokens, "; ")))
+			return Prepare(r, WithHeader(headerAuxAuthorization, strings.Join(auxTokens, ", ")))
 		})
 	}
 }

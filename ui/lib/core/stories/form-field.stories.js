@@ -11,7 +11,7 @@ const createAttr = (name, type, options) => {
   };
 };
 
-storiesOf('Form/FormField/', module)
+storiesOf('Forms/FormField', module)
   .add(
     `FormField|string`,
     () => ({

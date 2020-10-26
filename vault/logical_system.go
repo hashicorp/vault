@@ -18,17 +18,17 @@ import (
 	"sync"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/physical/raft"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -40,6 +40,7 @@ import (
 )
 
 const maxBytes = 128 * 1024
+const globalScope = "global"
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -99,6 +100,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-prefix/*",
 				"leases/revoke-force/*",
 				"leases/lookup/*",
+				"storage/raft/snapshot-auto/config/*",
 			},
 
 			Unauthenticated: []string{
@@ -112,6 +114,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/performance/status",
 				"replication/dr/status",
 				"replication/dr/secondary/promote",
+				"replication/dr/secondary/disable",
+				"replication/dr/secondary/recover",
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
@@ -158,14 +162,23 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
 
-	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
+	}
+
+	// If the node is in a DR secondary cluster, we need to allow the ability to
+	// remove a Raft peer without being authenticated by instead providing a DR
+	// operation token.
+	if core.IsDRSecondary() {
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -432,6 +445,11 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("plugin").(string)
 	pluginMounts := d.Get("mounts").([]string)
+	scope := d.Get("scope").(string)
+
+	if scope != "" && scope != globalScope {
+		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
+	}
 
 	if pluginName != "" && len(pluginMounts) > 0 {
 		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
@@ -452,7 +470,20 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		}
 	}
 
-	return nil, nil
+	r := logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}
+
+	if scope == globalScope {
+		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
+	}
+	return &r, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -750,7 +781,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Get all the options
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
@@ -933,7 +964,7 @@ func handleErrorNoReadOnlyForward(
 // handleUnmount is used to unmount a path
 func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -1028,6 +1059,12 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return handleError(err)
 	}
 
+	// Update quotas with the new path
+	if err := b.Core.quotaManager.HandleRemount(ctx, ns.Path, sanitizePath(fromPath), sanitizePath(toPath)); err != nil {
+		b.Core.logger.Error("failed to update quotas after remount", "ns_path", ns.Path, "from_path", fromPath, "to_path", toPath, "error", err)
+		return handleError(err)
+	}
+
 	return nil, nil
 }
 
@@ -1059,7 +1096,7 @@ func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Re
 
 // handleTuneReadCommon returns the config settings of a path
 func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (*logical.Response, error) {
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	sysView := b.Core.router.MatchingSystemView(ctx, path)
 	if sysView == nil {
@@ -1145,7 +1182,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
@@ -1715,7 +1752,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Get all the options
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -1856,7 +1893,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 // handleDisableAuth is used to disable a credential backend
 func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -2064,6 +2101,183 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 	}
 }
 
+type passwordPolicyConfig struct {
+	HCLPolicy string `json:"policy"`
+}
+
+func getPasswordPolicyKey(policyName string) string {
+	return fmt.Sprintf("password_policy/%s", policyName)
+}
+
+const (
+	minPasswordLength = 4
+	maxPasswordLength = 100
+)
+
+// handlePoliciesPasswordSet saves/updates password policies
+func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	rawPolicy := data.Get("policy").(string)
+	if rawPolicy == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy")
+	}
+
+	// Optionally decode base64 string
+	decodedPolicy, err := base64.StdEncoding.DecodeString(rawPolicy)
+	if err == nil {
+		rawPolicy = string(decodedPolicy)
+	}
+
+	// Parse the policy to ensure that it's valid
+	policy, err := random.ParsePolicy(rawPolicy)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("invalid password policy: %s", err))
+	}
+
+	if policy.Length > maxPasswordLength || policy.Length < minPasswordLength {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
+	}
+
+	// Generate some passwords to ensure that we're confident that the policy isn't impossible
+	timeout := 1 * time.Second
+	genCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	attempts := 10
+	failed := 0
+	for i := 0; i < attempts; i++ {
+		_, err = policy.Generate(genCtx, nil)
+		if err != nil {
+			failed++
+		}
+	}
+
+	if failed == attempts {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
+	}
+
+	if failed > 0 {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("failed to generate passwords %d times out of %d attempts in %s - is the policy too restrictive?", failed, attempts, timeout))
+	}
+
+	cfg := passwordPolicyConfig{
+		HCLPolicy: rawPolicy,
+	}
+	entry, err := logical.StorageEntryJSON(getPasswordPolicyKey(policyName), cfg)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("unable to save password policy: %s", err))
+	}
+
+	err = req.Storage.Put(ctx, entry)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to save policy to storage backend: %s", err))
+	}
+
+	return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+}
+
+// handlePoliciesPasswordGet retrieves a password policy if it exists
+func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	cfg, err := retrievePasswordPolicy(ctx, req.Storage, policyName)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, "failed to retrieve password policy")
+	}
+	if cfg == nil {
+		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"policy": cfg.HCLPolicy,
+		},
+	}
+
+	return resp, nil
+}
+
+// retrievePasswordPolicy retrieves a password policy from the logical storage
+func retrievePasswordPolicy(ctx context.Context, storage logical.Storage, policyName string) (policyCfg *passwordPolicyConfig, err error) {
+	entry, err := storage.Get(ctx, getPasswordPolicyKey(policyName))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	policyCfg = &passwordPolicyConfig{}
+	err = json.Unmarshal(entry.Value, &policyCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal stored data: %w", err)
+	}
+
+	return policyCfg, nil
+}
+
+// handlePoliciesPasswordDelete deletes a password policy if it exists
+func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	err := req.Storage.Delete(ctx, getPasswordPolicyKey(policyName))
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to delete password policy: %s", err))
+	}
+
+	return nil, nil
+}
+
+// handlePoliciesPasswordGenerate generates a password from the specified password policy
+func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	cfg, err := retrievePasswordPolicy(ctx, req.Storage, policyName)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, "failed to retrieve password policy")
+	}
+	if cfg == nil {
+		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
+	}
+
+	policy, err := random.ParsePolicy(cfg.HCLPolicy)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			"stored password policy configuration failed to parse")
+	}
+
+	password, err := policy.Generate(ctx, nil)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to generate password from policy: %s", err))
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"password": password,
+		},
+	}
+	return resp, nil
+}
+
 // handleAuditTable handles the "audit" endpoint to provide the audit table
 func (b *SystemBackend) handleAuditTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.auditLock.RLock()
@@ -2094,7 +2308,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("the \"input\" parameter is empty"), nil
 	}
 
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	hash, err := b.Core.auditBroker.GetHash(ctx, path, input)
 	if err != nil {
@@ -2404,6 +2618,11 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 		Data: map[string]interface{}{},
 	}
 
+	if len(response) == 0 {
+		resp.Data[logical.HTTPStatusCode] = 204
+		return resp, nil
+	}
+
 	// Most of the time we want to just send over the marshalled HTTP bytes.
 	// However there is a sad separate case: if the original response was using
 	// bare values we need to use those or else what comes back is garbled.
@@ -2449,13 +2668,9 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 		return resp, nil
 	}
 
-	if len(response) == 0 {
-		resp.Data[logical.HTTPStatusCode] = 204
-	} else {
-		resp.Data[logical.HTTPStatusCode] = 200
-		resp.Data[logical.HTTPRawBody] = []byte(response)
-		resp.Data[logical.HTTPContentType] = "application/json"
-	}
+	resp.Data[logical.HTTPStatusCode] = 200
+	resp.Data[logical.HTTPRawBody] = []byte(response)
+	resp.Data[logical.HTTPContentType] = "application/json"
 
 	return resp, nil
 }
@@ -2512,6 +2727,87 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 		format = metricsutil.FormatFromRequest(req)
 	}
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
+}
+
+func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	ll := data.Get("log_level").(string)
+	w := req.ResponseWriter
+
+	if ll == "" {
+		ll = "info"
+	}
+	logLevel := log.LevelFromString(ll)
+
+	if logLevel == log.NoLevel {
+		return logical.ErrorResponse("unknown log level"), nil
+	}
+
+	flusher, ok := w.ResponseWriter.(http.Flusher)
+	if !ok {
+		return logical.ErrorResponse("streaming not supported"), nil
+	}
+
+	isJson := b.Core.LogFormat() == "json"
+	logger := b.Core.Logger().(log.InterceptLogger)
+
+	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
+		Level:      logLevel,
+		JSONFormat: isJson,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	logCh := mon.Start()
+	defer mon.Stop()
+
+	if logCh == nil {
+		return nil, fmt.Errorf("error trying to start a monitor that's already been started")
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	// 0 byte write is needed before the Flush call so that if we are using
+	// a gzip stream it will go ahead and write out the HTTP response header
+	_, err = w.Write([]byte(""))
+	if err != nil {
+		return nil, fmt.Errorf("error seeding flusher: %w", err)
+	}
+
+	flusher.Flush()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	// Stream logs until the connection is closed.
+	for {
+		select {
+		// Periodically check for the seal status and return if core gets
+		// marked as sealed.
+		case <-ticker.C:
+			if b.Core.Sealed() {
+				// We still return the error, but this will be ignored upstream
+				// due to the fact that we've already sent a response by
+				// writing the header and flushing the writer above.
+				_, err = fmt.Fprint(w, "core received sealed state change, ending monitor session")
+				if err != nil {
+					return nil, fmt.Errorf("error checking seal state: %w", err)
+				}
+			}
+		case <-ctx.Done():
+			return nil, nil
+		case l := <-logCh:
+			// We still return the error, but this will be ignored upstream
+			// due to the fact that we've already sent a response by
+			// writing the header and flushing the writer above.
+			_, err = fmt.Fprint(w, string(l))
+			if err != nil {
+				return nil, fmt.Errorf("error streaming monitor output: %w", err)
+			}
+
+			flusher.Flush()
+		}
+	}
 }
 
 // handleHostInfo collects and returns host-related information, which includes
@@ -2955,7 +3251,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, "")
 		if err != nil {
 			b.Core.mountsLock.RUnlock()
 			return nil, err
@@ -2981,7 +3278,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, credentialRoutePrefix)
 		if err != nil {
 			b.Core.authLock.RUnlock()
 			return nil, err
@@ -3013,7 +3311,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if path == "" {
 		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
 	}
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
@@ -3036,13 +3334,15 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if filtered {
 		return errResp, logical.ErrPermissionDenied
 	}
-
 	resp := &logical.Response{
 		Data: mountInfo(me),
 	}
 	resp.Data["path"] = me.Path
+
+	fullMountPath := ns.Path + me.Path
 	if ns.ID != me.Namespace().ID {
 		resp.Data["path"] = me.Namespace().Path + me.Path
+		fullMountPath = ns.Path + me.Namespace().Path + me.Path
 	}
 
 	// Load the ACL policies so we can walk the prefix for this mount
@@ -3059,7 +3359,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return nil, logical.ErrPermissionDenied
 	}
 
-	if !hasMountAccess(ctx, acl, ns.Path+me.Path) {
+	if !hasMountAccess(ctx, acl, fullMountPath) {
 		return errResp, logical.ErrPermissionDenied
 	}
 
@@ -3329,7 +3629,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	return resp, nil
 }
 
-func sanitizeMountPath(path string) string {
+func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
@@ -3398,7 +3698,7 @@ This path responds to the following HTTP methods.
         Sets the header value for the UI.
     DELETE /<header>
         Clears the header value for UI.
-        
+
     LIST /
         List the headers configured for the UI.
         `,
@@ -3763,6 +4063,11 @@ or delete a policy.
 
 	"policy-enforcement-level": {
 		`The enforcement level to apply to the policy.`,
+		"",
+	},
+
+	"password-policy-name": {
+		`The name of the password policy.`,
 		"",
 	},
 

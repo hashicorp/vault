@@ -23,7 +23,7 @@ attempt.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
 ```
@@ -76,7 +76,7 @@ recovery token generation attempt can take place at a time.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
@@ -109,7 +109,7 @@ used.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request DELETE \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
@@ -147,7 +147,7 @@ only in memory and thus will only be valid until the next restart.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     --data @payload.json \

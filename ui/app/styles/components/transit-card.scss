@@ -9,10 +9,11 @@
 
 .transit-card {
   border-radius: $radius;
-  box-shadow: 0 0 0 1px rgba($grey-dark, 0.3), $box-shadow-middle;
+  box-shadow: 0 0 0 1px rgba($grey-light, 0.4);
   display: grid;
   grid-template-columns: 0.45fr 2fr;
   padding: $spacing-m;
+  border: none;
 
   .transit-icon {
     justify-self: center;

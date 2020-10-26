@@ -21,7 +21,7 @@ This endpoint returns an HTML page listing the available profiles.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/
@@ -38,7 +38,7 @@ separated by NUL bytes.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/cmdline
@@ -54,7 +54,7 @@ This endpoint returns stack traces of all current goroutines.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/goroutine
@@ -70,7 +70,7 @@ This endpoint returns a sampling of memory allocations of live object.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/heap
@@ -93,7 +93,7 @@ if not specified.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/profile
@@ -109,7 +109,7 @@ This endpoint returns the program counters listed in the request.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/symbol
@@ -132,7 +132,7 @@ specified.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/trace

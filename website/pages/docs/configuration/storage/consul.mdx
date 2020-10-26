@@ -73,7 +73,9 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
   register itself with Consul.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
-  requests to Consul.
+  requests to Consul.  Make sure that your Consul agents are configured to
+  support this level of parallelism, see
+  [http_max_conns_per_client](https://www.consul.io/docs/agent/options.html#http_max_conns_per_client).
 
 - `path` `(string: "vault/")` – Specifies the path in Consul's key-value store
   where Vault data will be stored.

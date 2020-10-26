@@ -357,8 +357,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator raft configuration": func() (cli.Command, error) {
-			return &OperatorRaftConfigurationCommand{
+		"operator raft list-peers": func() (cli.Command, error) {
+			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -439,6 +439,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"plugin register": func() (cli.Command, error) {
 			return &PluginRegisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload": func() (cli.Command, error) {
+			return &PluginReloadCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload-status": func() (cli.Command, error) {
+			return &PluginReloadStatusCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -660,6 +670,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"kv metadata delete": func() (cli.Command, error) {
 			return &KVMetadataDeleteCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"monitor": func() (cli.Command, error) {
+			return &MonitorCommand{
+				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 	}

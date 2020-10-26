@@ -27,7 +27,7 @@ func (m *Message) rawMessage() (rawMessage, error) {
 
 	if len(m.Headers) > 0 {
 		var headers bytes.Buffer
-		if err := encodeHeaders(&headers, m.Headers); err != nil {
+		if err := EncodeHeaders(&headers, m.Headers); err != nil {
 			return rawMessage{}, err
 		}
 		raw.Headers = headers.Bytes()
@@ -55,6 +55,20 @@ func (m *Message) rawMessage() (rawMessage, error) {
 	raw.CRC = hash.Sum32()
 
 	return raw, nil
+}
+
+// Clone returns a deep copy of the message.
+func (m Message) Clone() Message {
+	var payload []byte
+	if m.Payload != nil {
+		payload = make([]byte, len(m.Payload))
+		copy(payload, m.Payload)
+	}
+
+	return Message{
+		Headers: m.Headers.Clone(),
+		Payload: payload,
+	}
 }
 
 type messagePrelude struct {

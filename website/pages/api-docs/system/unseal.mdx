@@ -7,7 +7,7 @@ description: The `/sys/unseal` endpoint is used to unseal the Vault.
 
 # `/sys/unseal`
 
-The `/sys/seal-unseal` endpoint is used to unseal the Vault.
+The `/sys/unseal` endpoint is used to unseal the Vault.
 
 ## Submit Unseal Key
 
@@ -45,7 +45,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     --data @payload.json \

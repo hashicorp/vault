@@ -42,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
 	"github.com/posener/complete"
 )
 
@@ -344,13 +345,14 @@ func (c *AgentCommand) Run(args []string) int {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
-					Logger:  c.logger.Named("sink.file"),
-					Config:  sc.Config,
-					Client:  client,
-					WrapTTL: sc.WrapTTL,
-					DHType:  sc.DHType,
-					DHPath:  sc.DHPath,
-					AAD:     sc.AAD,
+					Logger:    c.logger.Named("sink.file"),
+					Config:    sc.Config,
+					Client:    client,
+					WrapTTL:   sc.WrapTTL,
+					DHType:    sc.DHType,
+					DeriveKey: sc.DeriveKey,
+					DHPath:    sc.DHPath,
+					AAD:       sc.AAD,
 				}
 				s, err := file.NewFileSink(config)
 				if err != nil {
@@ -410,9 +412,25 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
-	// Output the header that the server has started
+	// Warn if cache _and_ cert auto-auth is enabled but certificates were not
+	// provided in the auto_auth.method["cert"].config stanza.
+	if config.Cache != nil && (config.AutoAuth != nil && config.AutoAuth.Method != nil && config.AutoAuth.Method.Type == "cert") {
+		_, okCertFile := config.AutoAuth.Method.Config["client_cert"]
+		_, okCertKey := config.AutoAuth.Method.Config["client_key"]
+
+		// If neither of these exists in the cert stanza, agent will use the
+		// certs from the vault stanza.
+		if !okCertFile && !okCertKey {
+			c.UI.Warn(wrapAtLength("WARNING! Cache is enabled and using the same certificates " +
+				"from the 'cert' auto-auth method specified in the 'vault' stanza. Consider " +
+				"specifying certificate information in the 'cert' auto-auth's config stanza."))
+		}
+
+	}
+
+	// Output the header that the agent has started
 	if !c.flagCombineLogs {
-		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
 	// Inform any tests that the server is ready
@@ -482,15 +500,8 @@ func (c *AgentCommand) Run(args []string) int {
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
 			muxHandler := cacheHandler
-			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
-				switch v {
-				case true:
-					muxHandler = verifyRequestHeader(muxHandler)
-				case false /* noop */ :
-				default:
-					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
-					return 1
-				}
+			if lnConfig.RequireRequestHeader {
+				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
 			// Create a muxer and add paths relevant for the lease cache layer
@@ -536,7 +547,21 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	var g run.Group
+
+	// This run group watches for signal termination
+	g.Add(func() error {
+		for {
+			select {
+			case <-c.ShutdownCh:
+				c.UI.Output("==> Vault agent shutdown triggered")
+				return nil
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	}, func(error) {})
+
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -547,14 +572,12 @@ func (c *AgentCommand) Run(args []string) int {
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 		})
-		ahDoneCh = ah.DoneCh
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
 			ExitAfterAuth: exitAfterAuth,
 		})
-		ssDoneCh = ss.DoneCh
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
@@ -564,11 +587,46 @@ func (c *AgentCommand) Run(args []string) int {
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
-		tsDoneCh = ts.DoneCh
 
-		go ah.Run(ctx, method)
-		go ss.Run(ctx, ah.OutputCh, sinks)
-		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+		g.Add(func() error {
+			return ah.Run(ctx, method)
+		}, func(error) {
+			cancelFunc()
+		})
+
+		g.Add(func() error {
+			err := ss.Run(ctx, ah.OutputCh, sinks)
+			c.logger.Info("sinks finished, exiting")
+
+			// Start goroutine to drain from ah.OutputCh from this point onward
+			// to prevent ah.Run from being blocked.
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ah.OutputCh:
+					}
+				}
+			}()
+
+			// Wait until templates are rendered
+			if len(config.Templates) > 0 {
+				<-ts.DoneCh
+			}
+
+			return err
+		}, func(error) {
+			cancelFunc()
+		})
+
+		g.Add(func() error {
+			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+		}, func(error) {
+			cancelFunc()
+			ts.Stop()
+		})
+
 	}
 
 	// Server configuration output
@@ -599,27 +657,10 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	select {
-	case <-ssDoneCh:
-		// This will happen if we exit-on-auth
-		c.logger.Info("sinks finished, exiting")
-		// allow any templates to be rendered
-		if tsDoneCh != nil {
-			<-tsDoneCh
-		}
-	case <-c.ShutdownCh:
-		c.UI.Output("==> Vault agent shutdown triggered")
-		cancelFunc()
-		if ahDoneCh != nil {
-			<-ahDoneCh
-		}
-		if ssDoneCh != nil {
-			<-ssDoneCh
-		}
-
-		if tsDoneCh != nil {
-			<-tsDoneCh
-		}
+	if err := g.Run(); err != nil {
+		c.logger.Error("runtime error encountered", "error", err)
+		c.UI.Error("Error encountered during run, refer to logs for more details.")
+		return 1
 	}
 
 	return 0

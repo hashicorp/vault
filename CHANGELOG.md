@@ -1,4 +1,445 @@
-## 1.4 Beta1 (February 20th, 2020)
+## Next
+
+CHANGES:
+
+* agent: Agent now properly returns a non-zero exit code on error, such as one due to template rendering failure. Using `error_on_missing_key` in the template config will cause agent to immediately exit on failure. In order to make agent properly exit due to continuous failure from template rendering errors, the old behavior of indefinitely restarting the template server is now changed to exit once the default retry attempt of 12 times (with exponential backoff) gets exhausted. [[GH-9670](https://github.com/hashicorp/vault/pull/9670)]  
+
+FEATURES:
+
+* **Couchbase Secrets**: Vault can now manage static and dynamic credentials for Couchbase. [[GH-9664](https://github.com/hashicorp/vault/pull/9664)]
+
+IMPROVEMENTS:
+
+* approle: Role names can now be referenced in templated policies through the `approle.metadata.role_name` property [[GH-9529](https://github.com/hashicorp/vault/pull/9529)]
+* auth/aws: Improve logic check on wildcard `BoundIamPrincipalARNs` and include role name on error messages on check failure [[GH-10036](https://github.com/hashicorp/vault/pull/10036)]
+* auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
+* auth/jwt: Adding EdDSA (ed25519) to supported algorithms [[GH-129](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/129)]
+* secrets/transit: fix missing plaintext in bulk decrypt response [[GH-9991](https://github.com/hashicorp/vault/pull/9991)]
+* command/server: Delay informational messages in -dev mode until logs have settled. [[GH-9702](https://github.com/hashicorp/vault/pull/9702)]
+* command/server: Add environment variable support for `disable_mlock`. [[GH-9931](https://github.com/hashicorp/vault/pull/9931)]
+* core/metrics: Add metrics for storage cache [[GH_10079](https://github.com/hashicorp/vault/pull/10079)]
+* core/metrics: Add metrics for leader status [[GH 10147](https://github.com/hashicorp/vault/pull/10147)]
+* sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
+* secrets/database: Added support for password policies to all databases [[GH-9641](https://github.com/hashicorp/vault/pull/9641),
+  [and more](https://github.com/hashicorp/vault/pulls?q=is%3Apr+is%3Amerged+dbpw)]
+* secrets/database/cassandra: Added support for static credential rotation [[GH-10051](https://github.com/hashicorp/vault/pull/10051)]
+* secrets/database/elasticsearch: Added support for static credential rotation [[GH-19](https://github.com/hashicorp/vault-plugin-database-elasticsearch/pull/19)]
+* secrets/database/hanadb: Added support for root credential & static credential rotation [[GH-10142](https://github.com/hashicorp/vault/pull/10142)]
+* secrets/database/hanadb: Default password generation now includes dashes. Custom statements may need to be updated
+  to include quotes around the password field [[GH-10142](https://github.com/hashicorp/vault/pull/10142)]
+* secrets/database/influxdb: Added support for static credential rotation [[GH-10118](https://github.com/hashicorp/vault/pull/10118)]
+* secrets/database/mongodbatlas: Added support for root credential rotation [[GH-14](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/14)]
+* secrets/database/mongodbatlas: Support scopes field in creations statements for MongoDB Atlas database plugin [[GH-15](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/15)]
+* seal/awskms: Add logging during awskms auto-unseal [[GH-9794](https://github.com/hashicorp/vault/pull/9794)]
+* storage/azure: Update SDK library to use [azure-storage-blob-go](https://github.com/Azure/azure-storage-blob-go) since previous library has been deprecated. [[GH-9577](https://github.com/hashicorp/vault/pull/9577/)]
+* secrets/ad: `rotate-root` now supports POST requests like other secret engines [[GH-70](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/70)]
+* ui: Add ui functionality for the Transform Secret Engine.
+
+BUG FIXES:
+
+* auth/jwt: Fix bug preventing config edit UI from rendering [[GH-141](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/141)]
+* cli: Don't open or overwrite a raft snapshot file on an unsuccessful `vault operator raft snapshot` [[GH-9894](https://github.com/hashicorp/vault/pull/9894)]
+* core: Implement constant time version of shamir GF(2^8) math [[GH-9932](https://github.com/hashicorp/vault/pull/9932)]
+* core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
+* core: Fix race involved in enabling certain features via a license change
+* identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
+* secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
+* secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
+* ui: Mask LDAP bindpass while typing [[GH-10087](https://github.com/hashicorp/vault/pull/10087)]
+* ui: Update language in promote dr modal flow [[GH-10155](https://github.com/hashicorp/vault/pull/10155)]
+
+## 1.5.5
+### October 21, 2020
+
+IMPROVEMENTS:
+
+* auth/aws, core/seal, secret/aws: Set default IMDS timeouts to match AWS SDK [[GH-10133](https://github.com/hashicorp/vault/pull/10133)]
+
+BUG FIXES:
+
+* auth/aws: Restrict region selection when in the aws-us-gov partition to avoid IAM errors [[GH-9947](https://github.com/hashicorp/vault/pull/9947)]
+* core (enterprise): Allow operators to add and remove (Raft) peers in a DR secondary cluster using Integrated Storage.
+* core (enterprise): Add DR operation token to the remove peer API and CLI command (when DR secondary).
+* core (enterprise): Fix deadlock in handling EGP policies
+* core (enterprise): Fix extraneous error messages in DR Cluster
+* secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
+* secrets/ad: Fix bug where `password_policy` setting was not using correct key when `ad/config` was read [[GH-71](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/71)]
+
+## 1.5.4
+### September 24th, 2020
+
+SECURITY:
+
+* Batch Token Expiry: We addressed an issue where batch token leases could outlive their TTL because we were not scheduling the expiration time correctly. This vulnerability affects Vault OSS and Vault Enterprise 1.0 and newer and is fixed in 1.4.7 and 1.5.4 (CVE-2020-25816).
+
+IMPROVEMENTS:
+
+* secrets/pki: Handle expiration of a cert not in storage as a success [[GH-9880](https://github.com/hashicorp/vault/pull/9880)]
+* auth/kubernetes: Add an option to disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod [[GH-97]](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/97)
+* secrets/gcp: Add check for 403 during rollback to prevent repeated deletion calls [[GH-97](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/97)]
+* core: Disable usage metrics collection on performance standby nodes. [[GH-9966](https://github.com/hashicorp/vault/pull/9966)]
+* credential/aws: Added X-Amz-Content-Sha256 as a default STS request header [[GH-10009](https://github.com/hashicorp/vault/pull/10009)]
+
+BUG FIXES:
+
+* agent: Fix `disable_fast_negotiation` not being set on the auth method when configured by user. [[GH-9892](https://github.com/hashicorp/vault/pull/9892)]
+* core (enterprise): Fix hang when cluster-wide plugin reload cleanup is slow on unseal
+* core (enterprise): Fix an error in cluster-wide plugin reload cleanup following such a reload
+* core: Fix crash when metrics collection encounters zero-length keys in KV store [[GH-9811](https://github.com/hashicorp/vault/pull/9881)]
+* mfa (enterprise): Fix incorrect handling of PingID responses that could result in auth requests failing
+* replication (enterprise): Improve race condition when using a newly created token on a performance standby node
+* replication (enterprise): Only write failover cluster addresses if they've changed
+* ui: fix bug where dropdown for identity/entity management is not reflective of actual policy [[GH-9958](https://github.com/hashicorp/vault/pull/9958)]
+
+## 1.5.3
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing
+
+## 1.5.2.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.5.2
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.5.2 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.2)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+
+## 1.5.1
+### August 20th, 2020
+
+SECURITY:
+
+* When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using Vault Agent with cert auto-auth and caching enabled, under certain circumstances, clients without permission to access agent's token may retrieve the token without login credentials. This vulnerability affects Vault Agent 1.1.0 and newer and is fixed in 1.5.1 (CVE-2020-17455)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.5.1 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.1)
+
+CHANGES:
+
+* pki: The tidy operation will now remove revoked certificates if the parameter `tidy_revoked_certs` is set to `true`. This will result in certificate entries being immediately removed, as opposed to awaiting until its NotAfter time. Note that this only affects certificates that have been already revoked. [[GH-9609](https://github.com/hashicorp/vault/pull/9609)]
+
+IMPROVEMENTS:
+
+* auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
+* auth/jwt: Add EdDSA to supported algorithms. [[GH-129](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/129)]
+* secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords. [[GH-9740](https://github.com/hashicorp/vault/pull/9740)]
+* pki: Add a `allowed_domains_template` parameter that enables the use of identity templating within the `allowed_domains` parameter. [[GH-8509](https://github.com/hashicorp/vault/pull/8509)]
+* secret/azure: Use write-ahead-logs to cleanup any orphaned Service Principals [[GH-9773](https://github.com/hashicorp/vault/pull/9773)]
+* ui: Wrap TTL option on transit engine export action is updated to a new component. [[GH-9632](https://github.com/hashicorp/vault/pull/9632)]
+* ui: Wrap Tool uses newest version of TTL Picker component. [[GH-9691](https://github.com/hashicorp/vault/pull/9691)]
+
+BUG FIXES:
+
+* secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
+* replication (enterprise): Fix status API output incorrectly stating replication is in `idle` state.
+* replication (enterprise): Use PrimaryClusterAddr if it's been set
+* core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
+* core: Seal migration using the new minimal-downtime strategy didn't work properly with performance standbys. [[GH-9690](https://github.com/hashicorp/vault/pull/9690)]
+* core: Vault failed to start when there were non-string values in seal configuration [[GH-9555](https://github.com/hashicorp/vault/pull/9555)]
+* core: Handle a trailing slash in the API address used for enabling replication
+
+## 1.5.0
+### July 21st, 2020
+
+CHANGES:
+
+* audit: Token TTL and issue time are now provided in the auth portion of audit logs. [[GH-9091](https://github.com/hashicorp/vault/pull/9091)]
+* auth/gcp: Changes the default name of the entity alias that gets created to be the role ID for both IAM and GCE authentication. [[GH-99](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/99)]
+* core: Remove the addition of newlines to parsed configuration when using integer/boolean values [[GH-8928](https://github.com/hashicorp/vault/pull/8928)]
+* cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
+* storage/gcs: The `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+  or default credentials may be used instead [[GH-9424](https://github.com/hashicorp/vault/pull/9424)]
+* storage/raft: The storage configuration now accepts a new `max_entry_size` config that will limit
+  the total size in bytes of any entry committed via raft. It defaults to `"1048576"` (1MiB). [[GH-9027](https://github.com/hashicorp/vault/pull/9027)]
+* token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
+  The final generated token value may contain periods, such as the `s.` prefix for service token 
+  indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
+* token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
+
+FEATURES:
+
+* **Monitoring**: We have released a Splunk App [9] for Enterprise customers. The app is accompanied by an updated monitoring guide and a few new metrics to enable OSS users to effectively monitor Vault.
+* **Password Policies**: Allows operators to customize how passwords are generated for select secret engines (OpenLDAP, Active Directory, Azure, and RabbitMQ).
+* **Replication UI Improvements**: We have redesigned the replication UI to highlight the state and relationship between primaries and secondaries and improved management workflows, enabling a more holistic understanding of multiple Vault clusters.
+* **Resource Quotas**: As of 1.5, Vault supports specifying a quota to rate limit requests on OSS and Enterprise. Enterprise customers also have access to set quotas on the number of leases that can be generated on a path.
+* **OpenShift Support**: We have updated the Helm charts to allow users to install Vault onto their OpenShift clusters.
+* **Seal Migration**: We have made updates to allow migrations from auto unseal to Shamir unseal on Enterprise.
+* **AWS Auth Web Identity Support**: We've added support for AWS Web Identities, which will be used in the credentials chain if present.
+* **Vault Monitor**: Similar to the monitor command for Consul and Nomad, we have added the ability for Vault to stream logs from other Vault servers at varying log levels.
+* **AWS Secrets Groups Support**: IAM users generated by Vault may now be added to IAM Groups.
+* **Integrated Storage as HA Storage**: In Vault 1.5, it is possible to use Integrated Storage as HA Storage with a different storage backend as regular storage.
+* **OIDC Auth Provider Extensions**: We've added support to OIDC Auth to incorporate IdP-specific extensions. Currently this includes expanded Azure AD groups support.
+* **GCP Secrets**: Support BigQuery dataset ACLs in absence of IAM endpoints.
+* **KMIP**: Add support for signing client certificates requests (CSRs) rather than having them be generated entirely within Vault.
+
+IMPROVEMENTS:
+
+* audit: Replication status requests are no longer audited. [[GH-8877](https://github.com/hashicorp/vault/pull/8877)]
+* audit: Added mount_type field to requests and responses. [[GH-9167](https://github.com/hashicorp/vault/pull/9167)]
+* auth/aws: Add support for Web Identity credentials [[GH-7738](https://github.com/hashicorp/vault/pull/7738)]
+* auth/jwt: Support users that are members of more than 200 groups on Azure [[GH-120](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/120)]
+* auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
+* auth/kubernetes: Allow disabling `iss` validation [[GH-91](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/91)]
+* auth/kubernetes: Try reading the ca.crt and TokenReviewer JWT from the default service account [[GH-83](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/83)]
+* cli: Support reading TLS parameters from file for the `vault operator raft join` command. [[GH-9060](https://github.com/hashicorp/vault/pull/9060)]
+* cli: Add a new subcommand, `vault monitor`, for tailing server logs in the console. [[GH-8477](https://github.com/hashicorp/vault/pull/8477)]
+* core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
+* core: Added Password Policies for user-configurable password generation [[GH-8637](https://github.com/hashicorp/vault/pull/8637)]
+* core: New telemetry metrics covering token counts, token creation, KV secret counts, lease creation. [[GH-9239](https://github.com/hashicorp/vault/pull/9239)] [[GH-9250](https://github.com/hashicorp/vault/pull/9250)] [[GH-9244](https://github.com/hashicorp/vault/pull/9244)] [[GH-9052](https://github.com/hashicorp/vault/pull/9052)]
+* physical/gcs: The storage backend now uses a dedicated client for HA lock updates to prevent lock table update failures when flooded by other client requests. [[GH-9424](https://github.com/hashicorp/vault/pull/9424)]
+* physical/spanner: The storage backend now uses a dedicated client for HA lock updates to prevent lock table update failures when flooded by other client requests. [[GH-9423](https://github.com/hashicorp/vault/pull/9423)]
+* plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
+* plugin (enterprise): Add a scope field to plugin reload, which when global, reloads the plugin anywhere in a cluster. [[GH-9347](https://github.com/hashicorp/vault/pull/9347)] 
+* sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
+* secrets/aws: Add iam_groups parameter to role create/update [[GH-8811](https://github.com/hashicorp/vault/pull/8811)]
+* secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-11](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/11)]
+* secrets/database: Add static role rotation for MSSQL database plugin [[GH-9062](https://github.com/hashicorp/vault/pull/9062)]
+* secrets/database: Allow InfluxDB to use insecure TLS without cert bundle [[GH-8778](https://github.com/hashicorp/vault/pull/8778)]
+* secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
+* secrets/pki: Allow 3072-bit RSA keys [[GH-8343](https://github.com/hashicorp/vault/pull/8343)]
+* secrets/ssh: Add a CA-mode role option to specify signing algorithm [[GH-9096](https://github.com/hashicorp/vault/pull/9096)]
+* secrets/ssh: The [Vault SSH Helper](https://github.com/hashicorp/vault-ssh-helper) can now be configured to reference a mount in a namespace [[GH-44](https://github.com/hashicorp/vault-ssh-helper/pull/44)]
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* secrets/transit: Improving transit batch encrypt and decrypt latencies [[GH-8775](https://github.com/hashicorp/vault/pull/8775)]
+* sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
+* ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
+* ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
+* ui: Add replication dashboards.  Improve replication management workflows. [[GH-8705]](https://github.com/hashicorp/vault/pull/8705).
+* ui: Update alert banners to match design systems black text. [[GH-9463]](https://github.com/hashicorp/vault/pull/9463).
+
+BUG FIXES:
+
+* auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-7](https://github.com/hashicorp/vault-plugin-auth-oci/pull/7)]
+* core: Extend replicated cubbyhole fix in 1.4.0 to cover case where a performance primary is also a DR primary [[GH-9148](https://github.com/hashicorp/vault/pull/9148)]
+* replication (enterprise): Use the PrimaryClusterAddr if it's been set
+* seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
+* sentinel: fix panic due to concurrent map access when rules iterate over metadata maps
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9186](https://github.com/hashicorp/vault/pull/9186)]
+* secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+* secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9129](https://github.com/hashicorp/vault/pull/9129)]
+* secrets/database: Fix parsing of multi-line PostgreSQL statements [[GH-8512](https://github.com/hashicorp/vault/pull/8512)]
+* secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-90](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/90)]
+* secrets/kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
+* ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
+* ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
+* ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
+
+## 1.4.7.1
+### October 15th, 2020
+### Enterprise Only
+
+BUG FIXES:
+* replication (enterprise): Fix panic when old filter path evaluation fails
+
+## 1.4.7
+### September 24th, 2020
+
+SECURITY:
+
+* Batch Token Expiry: We addressed an issue where batch token leases could outlive their TTL because we were not scheduling the expiration time correctly. This vulnerability affects Vault OSS and Vault Enterprise 1.0 and newer and is fixed in 1.4.7 and 1.5.4 (CVE-2020-25816).
+
+IMPROVEMENTS:
+
+* secret/azure: Use write-ahead-logs to cleanup any orphaned Service Principals [[GH-9773](https://github.com/hashicorp/vault/pull/9773)]
+
+BUG FIXES:
+* replication (enterprise): Don't stop replication if old filter path evaluation fails
+
+## 1.4.6
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing [[GH-9824](https://github.com/hashicorp/vault/pull/9824)]
+
+## 1.4.5.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.4.5
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.4.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.5)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+
+## 1.4.4
+### August 20th, 2020
+
+SECURITY:
+
+* When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.4.4 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.4)
+
+BUG FIXES:
+
+* auth/okta: fix bug introduced in 1.4.0: only 200 external groups were fetched even if user belonged to more [[GH-9580](https://github.com/hashicorp/vault/pull/9580)]
+* seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
+* secrets/aws: Fix possible issue creating access keys when using Performance Standbys  [[GH-9606](https://github.com/hashicorp/vault/pull/9606)]
+
+IMPROVEMENTS:
+* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
+* ui: Add transit key algorithms aes128-gcm96, ecdsa-p384, ecdsa-p521 to the UI. [[GH-9070](https://github.com/hashicorp/vault/pull/9070)] & [[GH-9520](https://github.com/hashicorp/vault/pull/9520)]
+
+## 1.4.3
+### July 2nd, 2020
+
+IMPROVEMENTS:
+
+* auth/aws: Add support for Web Identity credentials [[GH-9251](https://github.com/hashicorp/vault/pull/9251)]
+* auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
+* core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
+* secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-9311](https://github.com/hashicorp/vault/pull/9311)]
+* physical/mysql: Require TLS or plaintext flagging in MySQL configuration [[GH-9012](https://github.com/hashicorp/vault/pull/9012)]
+* ui: Link to the Vault Changelog in the UI footer [[GH-9216](https://github.com/hashicorp/vault/pull/9216)]
+
+BUG FIXES:
+
+* agent: Restart template server when it shuts down [[GH-9200](https://github.com/hashicorp/vault/pull/9200)]
+* auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-9278](https://github.com/hashicorp/vault/pull/9278)]
+* replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9207](https://github.com/hashicorp/vault/pull/9207)]
+* secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9208](https://github.com/hashicorp/vault/pull/9208)]
+* secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-9277](https://github.com/hashicorp/vault/pull/9277)]
+
+
+## 1.4.2 (May 21st, 2020)
+
+SECURITY:
+* core: Proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4.0 and 1.4.1, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+* secrets/gcp: Fix a regression in 1.4.0 where the system TTLs were being used instead of the configured backend TTLs for dynamic service accounts. This vulnerability is CVE-2020-12757. [[GH-85](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/85)]
+
+IMPROVEMENTS:
+
+* storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
+  `leader_client_key_file` parameters to read and parse TLS certificate information from paths on disk.
+  Existing non-path based parameters will continue to work, but their values will need to be provided as a 
+  single-line string with newlines delimited by `\n`.  [[GH-8894](https://github.com/hashicorp/vault/pull/8894)]
+* storage/raft: The `vault status` CLI command and the `sys/leader` API now contain the committed and applied
+  raft indexes. [[GH-9011](https://github.com/hashicorp/vault/pull/9011)]
+  
+BUG FIXES:
+
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.4.1 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* auth/ldap: Fix 1.4.0 regression that could result in auth failures when LDAP auth config includes upndomain. [[GH-9041](https://github.com/hashicorp/vault/pull/9041)]
+* secrets/ad: Forward rotation requests from standbys to active clusters [[GH-66](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/66)]
+* secrets/database: Prevent generation of usernames that are not allowed by the MongoDB Atlas API [[GH-9](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/9)]
+* secrets/database: Return an error if a manual rotation of static account credentials fails [[GH-9035](https://github.com/hashicorp/vault/pull/9035)]
+* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9028](https://github.com/hashicorp/vault/pull/9028)]
+* secrets/transform (enterprise): Fix panic that could occur when accessing cached template entries, such as a requests
+  that accessed templates directly or indirectly from a performance standby node.
+* serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
+  the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
+  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)]
+* storage/raft: Advertise the configured cluster address to the rest of the nodes in the raft cluster. This fixes
+  an issue where a node advertising 0.0.0.0 is not using a unique hostname. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
+* storage/raft: Fix panic when multiple nodes attempt to join the cluster at once. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
+* sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
+  with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
+  [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
+* ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
+
+## 1.4.1 (April 30th, 2020)
+
+CHANGES: 
+
+* auth/aws: The default set of metadata fields added in 1.4.1 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+* storage/raft: Disallow `ha_storage` to be specified if `raft` is set as the `storage` type. [[GH-8707](https://github.com/hashicorp/vault/pull/8707)]
+
+IMPROVEMENTS:
+
+* auth/aws: The set of metadata stored during login is now configurable [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+* auth/aws: Improve region selection to avoid errors seen if the account hasn't enabled some newer AWS regions [[GH-8679](https://github.com/hashicorp/vault/pull/8679)]
+* auth/azure: Enable login from Azure VMs with user-assigned identities [[GH-33](https://github.com/hashicorp/vault-plugin-auth-azure/pull/33)]
+* auth/gcp: The set of metadata stored during login is now configurable [[GH-92](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/92)]
+* auth/gcp: The type of alias name used during login is now configurable [[GH-95](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/95)]
+* auth/ldap: Improve error messages during LDAP operation failures [[GH-8740](https://github.com/hashicorp/vault/pull/8740)]
+* identity: Add a batch delete API for identity entities [[GH-8785]](https://github.com/hashicorp/vault/pull/8785)
+* identity: Improve performance of logins when no group updates are needed [[GH-8795]](https://github.com/hashicorp/vault/pull/8795)
+* metrics: Add `vault.identity.num_entities` metric [[GH-8816]](https://github.com/hashicorp/vault/pull/8816)
+* secrets/kv: Allow `delete-version-after` to be reset to 0 via the CLI [[GH-8635](https://github.com/hashicorp/vault/pull/8635)]
+* secrets/rabbitmq: Improve error handling and reporting [[GH-8619](https://github.com/hashicorp/vault/pull/8619)]
+* ui: Provide One Time Password during Operation Token generation process [[GH-8630]](https://github.com/hashicorp/vault/pull/8630)
+
+BUG FIXES:
+
+* auth/okta: Fix MFA regression (introduced in [GH-8143](https://github.com/hashicorp/vault/pull/8143)) from 1.4.0 [[GH-8807](https://github.com/hashicorp/vault/pull/8807)]
+* auth/userpass: Fix upgrade value for `token_bound_cidrs` being ignored due to incorrect key provided [[GH-8826](https://github.com/hashicorp/vault/pull/8826/files)]
+* config/seal: Fix segfault when seal block is removed [[GH-8517](https://github.com/hashicorp/vault/pull/8517)]
+* core: Fix an issue where users attempting to build Vault could receive Go module checksum errors [[GH-8770](https://github.com/hashicorp/vault/pull/8770)]
+* core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
+  Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
+  [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
+* core: Always rewrite the .vault-token file as part of a `vault login` to ensure permissions and ownership are set correctly [[GH-8867](https://github.com/hashicorp/vault/pull/8867)]
+* database/mongodb: Fix context deadline error that may result due to retry attempts on failed commands
+  [[GH-8863](https://github.com/hashicorp/vault/pull/8863)]
+* http: Fix superflous call messages from the http package on logs caused by missing returns after
+  `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
+* namespace (enterprise): Fix namespace listing to return `key_info` when a scoping namespace is also provided. 
+* seal/gcpkms: Fix panic that could occur if all seal parameters were provided via environment
+  variables [[GH-8840](https://github.com/hashicorp/vault/pull/8840)]
+* storage/raft: Fix memory allocation and incorrect metadata tracking issues with snapshots [[GH-8793](https://github.com/hashicorp/vault/pull/8793)]
+* storage/raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
+* storage/raft: Handle errors returned from the API during snapshot operations [[GH-8861](https://github.com/hashicorp/vault/pull/8861)]
+* sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
+
+## 1.4.0 (April 7th, 2020)
+
+CHANGES:
+
+* cli: The raft configuration command has been renamed to list-peers to avoid
+  confusion.
 
 FEATURES:
 
@@ -10,19 +451,24 @@ FEATURES:
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
 * **Redshift Database Secrets Engine**: The database secrets engine now supports static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
-* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).  
+* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).
+* **Transform Secrets Engine (Enterprise)**: A new secrets engine that handles secure data transformation and tokenization against provided input value.
+* **Integrated Storage**: Promoted out of beta and into general availability for both open-source and enterprise workloads.
 
 IMPROVEMENTS:
 
 * agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [[GH-8101](https://github.com/hashicorp/vault/pull/8101)]
+* api: Restore and fix DNS SRV Lookup [[GH-8520](https://github.com/hashicorp/vault/pull/8520)]
 * audit: HMAC http_raw_body in audit log; this ensures that large authenticated Prometheus metrics responses get
   replaced with short HMAC values [[GH-8130](https://github.com/hashicorp/vault/pull/8130)]
 * audit: Generate-root, generate-recovery-token, and generate-dr-operation-token requests and responses are now audited. [[GH-8301](https://github.com/hashicorp/vault/pull/8301)]
 * auth/aws: Reduce the number of simultaneous STS client credentials needed  [[GH-8161](https://github.com/hashicorp/vault/pull/8161)]
+* auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [[GH-80](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/80) & [GH-86](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/86)]
 * auth/jwt: Bound claims may be optionally configured using globs [[GH-89](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/89)]
 * auth/jwt: Timeout during OIDC CLI login if process doesn't complete within 2 minutes [[GH-97](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/97)]
 * auth/jwt: Add support for the `form_post` response mode [[GH-98](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/98)]
+* auth/jwt: add optional client_nonce to authorization flow [[GH-104](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/104)]
 * auth/okta: Upgrade okta sdk lib, which should improve handling of groups [[GH-8143](https://github.com/hashicorp/vault/pull/8143)]
 * aws: Add support for v2 of the instance metadata service (see [issue 7924](https://github.com/hashicorp/vault/issues/7924) for all linked PRs)
 * core: Separate out service discovery interface from storage interface to allow
@@ -32,9 +478,10 @@ IMPROVEMENTS:
 * core: Allow tls_min_version to be set to TLS 1.3 [[GH-8305](https://github.com/hashicorp/vault/pull/8305)]
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
+* metrics/prometheus: improve performance with high volume of metrics updates [[GH-8507](https://github.com/hashicorp/vault/pull/8507)]
 * replication (enterprise): Fix race condition causing clusters with high throughput writes to sometimes
   fail to enter streaming-wal mode
-* replication (enterprise): Secondary clusters can now perfrom an extra gRPC call to all nodes in a primary 
+* replication (enterprise): Secondary clusters can now perform an extra gRPC call to all nodes in a primary 
   cluster in an attempt to resolve the active node's address
 * replication (enterprise): The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
   and `connection_state` values
@@ -57,20 +504,30 @@ IMPROVEMENTS:
 * storage/raft: Nodes in the raft cluster can all be given possible leader
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
+* storage/raft: Fix a potential deadlock that could occur on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
+* storage/raft: Refresh TLS keyring on snapshot restore [[GH-8546](https://github.com/hashicorp/vault/pull/8546)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
 * ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
+* ui: Add refresh Namespace list on the Namespace dropdown, and redesign of Namespace dropdown menu [[GH-8442](https://github.com/hashicorp/vault/pull/8442)]
+* ui: Update transit actions to codeblocks & automatically encode plaintext unless indicated [[GH-8462](https://github.com/hashicorp/vault/pull/8462)]
+* ui: Display the results of transit key actions in a modal window [[GH-8462](https://github.com/hashicorp/vault/pull/8575)]
+* ui: Transit key version styling updates & ability to copy key from dropdown [[GH-8480](https://github.com/hashicorp/vault/pull/8480)]
 
 BUG FIXES:
 
 * agent: Fix issue where TLS options are ignored for agent template feature [[GH-7889](https://github.com/hashicorp/vault/pull/7889)]
+* auth/jwt: Use lower case role names for `default_role` to match the `role` case convention [[GH-100](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/100)]
 * auth/ldap: Fix a bug where the UPNDOMAIN parameter was wrongly used to lookup the group
   membership of the given user [[GH-6325]](https://github.com/hashicorp/vault/pull/8333)
 * cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
 * cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
-* replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
+* metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
+* replication (enterprise): Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* replication (enterprise): Unmounting a dynamic secrets backend could sometimes lead to replication errors.  Change the order of operations to prevent that.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
-* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
+* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/database/mysql: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
@@ -83,21 +540,110 @@ BUG FIXES:
 * ui: Fix broken popup menu on the transit secrets list page [[GH-8348](https://github.com/hashicorp/vault/pull/8348)]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
+* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
+## 1.3.10
+### August 27th, 2020
 
-## 1.3.3 (Unreleased)
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
 
 BUG FIXES:
 
+* auth/aws: Made header handling for IAM authentication more robust
+
+## 1.3.9.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.3.9
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.3.9 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.9)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+## 1.3.8
+### August 20th, 2020
+
+SECURITY:
+
+* When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.3.8 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.8)
+
+## 1.3.7
+### July 2nd, 2020
+
+BUG FIXES:
+
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9363](https://github.com/hashicorp/vault/pull/9363)]
+
+## 1.3.6 (May 21st, 2020)
+
+SECURITY:
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4 and 1.4.1, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+
+BUG FIXES:
+
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.3.5 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* replication: Fix mount filter bug that allowed replication filters to hide local mounts on a performance secondary
+
+## 1.3.5 (April 28th, 2020)
+
+CHANGES: 
+
+* auth/aws: The default set of metadata fields added in 1.3.2 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+
+IMPROVEMENTS:
+
+* auth/aws: The set of metadata stored during login is now configurable [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+
+## 1.3.4 (March 19th, 2020)
+
+SECURITY:
+
+* A vulnerability was identified in Vault and Vault Enterprise such that, under certain circumstances,  an Entity's Group membership may inadvertently include Groups the Entity no longer has permissions to. This vulnerability, CVE-2020-10660, affects Vault and Vault Enterprise versions 0.9.0 and newer, and is fixed in 1.3.4. [[GH-8606](https://github.com/hashicorp/vault/pull/8606)]
+* A vulnerability was identified in Vault Enterprise such that, under certain circumstances, existing nested-path policies may give access to Namespaces created after-the-fact. This vulnerability, CVE-2020-10661, affects Vault Enterprise versions 0.11 and newer, and is fixed in 1.3.4.
+
+## 1.3.3 (March 5th, 2020)
+
+BUG FIXES:
+
+* approle: Fix excessive locking during tidy, which could potentially block new approle logins for long enough to cause an outage [[GH-8418](https://github.com/hashicorp/vault/pull/8418)]
 * cli: Fix issue where Raft snapshots from standby nodes created an empty backup file [[GH-8097](https://github.com/hashicorp/vault/pull/8097)]
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
-* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
+* kmip: role read now returns tls_client_ttl
+* kmip: fix panic when templateattr not provided in rekey request
+* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8300](https://github.com/hashicorp/vault/pull/8300)]
 * storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8356](https://github.com/hashicorp/vault/pull/8356)]
-* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 * ui: Fix missing License menu item [[GH-8230](https://github.com/hashicorp/vault/pull/8230)]
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [[GH-8218](https://github.com/hashicorp/vault/pull/8218)]
 * ui: Fix bug where KMIP details were not shown in the UI Wizard [[GH-8255](https://github.com/hashicorp/vault/pull/8255)]
+* ui: Show Error messages on Auth Configuration page when you hit permission errors [[GH-8500](https://github.com/hashicorp/vault/pull/8500)]
+* ui: Remove duplicate form inputs for the GitHub config [[GH-8519](https://github.com/hashicorp/vault/pull/8519)]
+* ui: Correct HMAC capitalization [[GH-8528](https://github.com/hashicorp/vault/pull/8528)]
+* ui: Fix danger message in DR [[GH-8555](https://github.com/hashicorp/vault/pull/8555)]
+* ui: Fix certificate field for LDAP config [[GH-8573](https://github.com/hashicorp/vault/pull/8573)]
 
 ## 1.3.2 (January 22nd, 2020)
 
@@ -108,13 +654,13 @@ SECURITY:
    vulnerability, CVE-2020-7220, affects Vault Enterprise 0.11.0 and newer.
 
 IMPROVEMENTS:
- * auth/aws: Add aws metadata to identity alias [[GH-7975](https://github.com/hashicorp/vault/pull/7975)]
+ * auth/aws: Add aws metadata to identity alias [[GH-7985](https://github.com/hashicorp/vault/pull/7985)]
  * auth/kubernetes: Allow both names and namespaces to be set to "*" [[GH-78](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/78)]
 
 BUG FIXES:
 
 * auth/azure: Fix Azure compute client to use correct base URL [[GH-8072](https://github.com/hashicorp/vault/pull/8072)]
-* auth/ldap: Fix renewal of tokens without cofigured policies that are
+* auth/ldap: Fix renewal of tokens without configured policies that are
   generated by an LDAP login [[GH-8072](https://github.com/hashicorp/vault/pull/8072)]
 * auth/okta: Fix renewal of tokens without configured policies that are
   generated by an Okta login [[GH-8072](https://github.com/hashicorp/vault/pull/8072)]
@@ -239,6 +785,7 @@ FEATURES:
    details. [[GH-6957](https://github.com/hashicorp/vault/pull/6957)]
  * **Filtered Paths Replication (Enterprise)**: Based on the predecessor Filtered Mount Replication,
    Filtered Paths Replication allows now filtering of namespaces in addition to mounts.
+   With this feature, Filtered Mount Replication should be considered deprecated.
  * **Token Renewal via Accessor**: Tokens can now be renewed via the accessor value through
    the new `auth/token/renew-accessor` endpoint if the caller's token has
    permission to access that endpoint.
@@ -337,6 +884,56 @@ BUG FIXES:
  * ui: fix an error when initializing from the UI using PGP keys [[GH-7542](https://github.com/hashicorp/vault/pull/7542)]
  * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [[GH-7685](https://github.com/hashicorp/vault/pull/7685)]
  * ui: Ensure that items in the top navigation link to pages that users have access to [[GH-7590](https://github.com/hashicorp/vault/pull/7590)]
+
+## 1.2.7
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+
+## 1.2.6.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.2.6
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.2.6 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.6)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+## 1.2.5
+### August 20th, 2020
+
+SECURITY:
+
+ * When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+ * When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.2.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.5)
+  
+BUG FIXES:
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
 
 ## 1.2.4 (November 7th, 2019)
 

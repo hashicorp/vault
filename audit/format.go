@@ -106,6 +106,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			EntityID:                  auth.EntityID,
 			RemainingUses:             req.ClientTokenRemainingUses,
 			TokenType:                 auth.TokenType.String(),
+			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
 
 		Request: &AuditRequest{
@@ -113,6 +114,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
+			MountType:           req.MountType,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -125,6 +127,10 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
+	}
+
+	if !auth.IssueTime.IsZero() {
+		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
 
 	if req.WrapInfo != nil {
@@ -212,6 +218,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			NumUses:                   resp.Auth.NumUses,
 			EntityID:                  resp.Auth.EntityID,
 			TokenType:                 resp.Auth.TokenType.String(),
+			TokenTTL:                  int64(resp.Auth.TTL.Seconds()),
+		}
+		if !resp.Auth.IssueTime.IsZero() {
+			respAuth.TokenIssueTime = resp.Auth.IssueTime.Format(time.RFC3339)
 		}
 	}
 
@@ -258,6 +268,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			RemainingUses:             req.ClientTokenRemainingUses,
 			EntityID:                  auth.EntityID,
 			TokenType:                 auth.TokenType.String(),
+			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
 
 		Request: &AuditRequest{
@@ -265,6 +276,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
+			MountType:           req.MountType,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -279,16 +291,20 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
-			Auth:     respAuth,
-			Secret:   respSecret,
-			Data:     resp.Data,
-			Warnings: resp.Warnings,
-			Redirect: resp.Redirect,
-			WrapInfo: respWrapInfo,
-			Headers:  resp.Headers,
+			MountType: req.MountType,
+			Auth:      respAuth,
+			Secret:    respSecret,
+			Data:      resp.Data,
+			Warnings:  resp.Warnings,
+			Redirect:  resp.Redirect,
+			WrapInfo:  respWrapInfo,
+			Headers:   resp.Headers,
 		},
 	}
 
+	if !auth.IssueTime.IsZero() {
+		respEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
+	}
 	if req.WrapInfo != nil {
 		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
@@ -323,6 +339,7 @@ type AuditRequest struct {
 	ID                            string                 `json:"id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
+	MountType                     string                 `json:"mount_type,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
@@ -336,13 +353,14 @@ type AuditRequest struct {
 }
 
 type AuditResponse struct {
-	Auth     *AuditAuth             `json:"auth,omitempty"`
-	Secret   *AuditSecret           `json:"secret,omitempty"`
-	Data     map[string]interface{} `json:"data,omitempty"`
-	Warnings []string               `json:"warnings,omitempty"`
-	Redirect string                 `json:"redirect,omitempty"`
-	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string    `json:"headers,omitempty"`
+	Auth      *AuditAuth             `json:"auth,omitempty"`
+	MountType string                 `json:"mount_type,omitempty"`
+	Secret    *AuditSecret           `json:"secret,omitempty"`
+	Data      map[string]interface{} `json:"data,omitempty"`
+	Warnings  []string               `json:"warnings,omitempty"`
+	Redirect  string                 `json:"redirect,omitempty"`
+	WrapInfo  *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers   map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
@@ -359,6 +377,8 @@ type AuditAuth struct {
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	EntityID                  string              `json:"entity_id,omitempty"`
 	TokenType                 string              `json:"token_type,omitempty"`
+	TokenTTL                  int64               `json:"token_ttl,omitempty"`
+	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
 }
 
 type AuditSecret struct {

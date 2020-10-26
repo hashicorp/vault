@@ -19,7 +19,7 @@ This endpoints lists all the namespaces.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     -X LIST \
@@ -47,7 +47,7 @@ This endpoint creates a namespace at the givent path.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -64,7 +64,7 @@ This endpoint deletes a namespace at the specified path.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -81,7 +81,7 @@ This endpoint get the metadata for the given namespace path.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/namespaces/ns1

@@ -6,6 +6,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -32,9 +33,12 @@ func TestSysMetricsUnauthenticated(t *testing.T) {
 	// Setup new custom listener with unauthenticated metrics access
 	ln, addr = TestListener(t)
 	props := &vault.HandlerProperties{
-		Core:                         core,
-		MaxRequestSize:               DefaultMaxRequestSize,
-		UnauthenticatedMetricsAccess: true,
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			Telemetry: configutil.ListenerTelemetry{
+				UnauthenticatedMetricsAccess: true,
+			},
+		},
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
 	defer ln.Close()

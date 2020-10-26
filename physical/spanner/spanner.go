@@ -64,6 +64,9 @@ var (
 
 	// metricPut is the key for the metric for measuring a Put call.
 	metricPut = []string{"spanner", "put"}
+
+	// metricTxn is the key for the metric for measuring a Transaction call.
+	metricTxn = []string{"spanner", "txn"}
 )
 
 // Backend implements physical.Backend and describes the steps necessary to
@@ -76,18 +79,26 @@ type Backend struct {
 	// table is the name of the table in the database.
 	table string
 
+	// client is the API client and permitPool is the allowed concurrent uses of
+	// the client.
+	client     *spanner.Client
+	permitPool *physical.PermitPool
+
 	// haTable is the name of the table to use for HA in the database.
 	haTable string
 
 	// haEnabled indicates if high availability is enabled. Default: true.
 	haEnabled bool
 
-	// client is the underlying API client for talking to spanner.
-	client *spanner.Client
+	// haClient is the API client. This is managed separately from the main client
+	// because a flood of requests should not block refreshing the TTLs on the
+	// lock.
+	//
+	// This value will be nil if haEnabled is false.
+	haClient *spanner.Client
 
-	// logger and permitPool are internal constructs.
-	logger     log.Logger
-	permitPool *physical.PermitPool
+	// logger is the internal logger.
+	logger log.Logger
 }
 
 // NewBackend creates a new Google Spanner storage backend with the given
@@ -124,6 +135,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	// HA configuration
+	haClient := (*spanner.Client)(nil)
 	haEnabled := false
 	haEnabledStr := os.Getenv(envHAEnabled)
 	if haEnabledStr == "" {
@@ -134,6 +146,17 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+		}
+	}
+	if haEnabled {
+		logger.Debug("creating HA client")
+		var err error
+		ctx := context.Background()
+		haClient, err = spanner.NewClient(ctx, database,
+			option.WithUserAgent(useragent.String()),
+		)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create HA client: {{err}}", err)
 		}
 	}
 
@@ -150,8 +173,8 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		"haTable", haTable,
 		"maxParallel", maxParallel,
 	)
-	logger.Debug("creating client")
 
+	logger.Debug("creating client")
 	ctx := context.Background()
 	client, err := spanner.NewClient(ctx, database,
 		option.WithUserAgent(useragent.String()),
@@ -161,14 +184,16 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	return &Backend{
-		database:  database,
-		table:     table,
-		haEnabled: haEnabled,
-		haTable:   haTable,
-
+		database:   database,
+		table:      table,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
-		logger:     logger,
+
+		haEnabled: haEnabled,
+		haTable:   haTable,
+		haClient:  haClient,
+
+		logger: logger,
 	}, nil
 }
 
@@ -193,7 +218,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 
 // Get fetches an entry. If there is no entry, this function returns nil.
 func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	defer metrics.MeasureSince(metricList, time.Now())
+	defer metrics.MeasureSince(metricGet, time.Now())
 
 	// Pooling
 	b.permitPool.Acquire()
@@ -293,6 +318,8 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 // Transaction runs multiple entries via a single transaction.
 func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
+	defer metrics.MeasureSince(metricTxn, time.Now())
+
 	// Quit early if we can
 	if len(txns) == 0 {
 		return nil

@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -254,7 +253,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	fmt.Printf("resp is:\n%#v", resp)
+	//fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{

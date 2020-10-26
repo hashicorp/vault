@@ -79,6 +79,7 @@ func (e *testEnv) AddProgrammaticAPIKeyRole(t *testing.T) {
 func (e *testEnv) AddProgrammaticAPIKeyRoleWithProjectIDAndOrgID(t *testing.T) {
 	roles := []string{"ORG_MEMBER"}
 	projectRoles := []string{"GROUP_READ_ONLY"}
+	ips := []string{"192.168.1.1", "192.168.1.2"}
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-programmatic-key",
@@ -88,6 +89,7 @@ func (e *testEnv) AddProgrammaticAPIKeyRoleWithProjectIDAndOrgID(t *testing.T) {
 			"project_id":      e.ProjectID,
 			"roles":           roles,
 			"project_roles":   projectRoles,
+			"ip_addresses":    ips,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -210,6 +212,25 @@ func (e *testEnv) AddProgrammaticAPIKeyRoleWithProjectID(t *testing.T) {
 	}
 }
 
+func (e *testEnv) AddProgrammaticAPIKeyRoleWithProjectIDWithTTL(t *testing.T) {
+	roles := []string{"ORG_MEMBER"}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-programmatic-key",
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"roles":      roles,
+			"project_id": e.ProjectID,
+			"ttl":        "20s",
+			"max_ttl":    "60s",
+		},
+	}
+	resp, err := e.Backend.HandleRequest(e.Context, req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	}
+}
+
 func (e *testEnv) ReadProgrammaticAPIKeyRule(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -247,6 +268,19 @@ func (e *testEnv) CheckLease(t *testing.T) {
 	}
 }
 
+func (e *testEnv) CheckExtendedLease(t *testing.T) {
+	ttl := int(e.MostRecentSecret.TTL.Seconds())
+	maxTTL := int(e.MostRecentSecret.MaxTTL.Seconds())
+	wantedMaxTTL := 60
+
+	if ttl != wantedMaxTTL {
+		t.Fatal(fmt.Sprintf("ttl=%d, wanted=%d", ttl, wantedMaxTTL))
+	}
+	if maxTTL != wantedMaxTTL {
+		t.Fatal(fmt.Sprintf("maxTTL=%d, wanted=%d", ttl, wantedMaxTTL))
+	}
+}
+
 func (e *testEnv) RenewProgrammaticAPIKeys(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.RenewOperation,
@@ -254,6 +288,28 @@ func (e *testEnv) RenewProgrammaticAPIKeys(t *testing.T) {
 		Secret:    e.MostRecentSecret,
 		Data: map[string]interface{}{
 			"lease_id": "foo",
+		},
+	}
+	resp, err := e.Backend.HandleRequest(e.Context, req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Secret != e.MostRecentSecret {
+		t.Fatalf("expected %+v but got %+v", e.MostRecentSecret, resp.Secret)
+	}
+}
+
+func (e *testEnv) RenewProgrammaticAPIKeysWithExtendedLease(t *testing.T) {
+	req := &logical.Request{
+		Operation: logical.RenewOperation,
+		Storage:   e.Storage,
+		Secret:    e.MostRecentSecret,
+		Data: map[string]interface{}{
+			"lease_id":  "foo",
+			"increment": "180s",
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
