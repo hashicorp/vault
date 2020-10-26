@@ -120,6 +120,11 @@ func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
 			return i.pathGroupIDUpdate()(ctx, req, d)
 		}
 
+		_, ok = d.GetOk("name")
+		if ok {
+			return i.pathGroupNameUpdate()(ctx, req, d)
+		}
+
 		i.groupLock.Lock()
 		defer i.groupLock.Unlock()
 
