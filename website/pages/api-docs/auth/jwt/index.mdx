@@ -43,6 +43,7 @@ set.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256]. ([Available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/coreos/go-oidc/jose.go#L7) + EdDSA)
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
 - `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include Azure; the options are described in each provider's section in [OIDC Provider Setup](/docs/auth/jwt_oidc_providers)
+- `namespace_in_state` `(bool: false)` - Pass namespace in the state parameter instead of as a separate query parameter. With this setting the allowed redirect URL in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it.
 
 ### Sample Payload
 
