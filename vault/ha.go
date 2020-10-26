@@ -551,7 +551,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		if err == nil {
 			c.standby = false
 			c.leaderUUID = uuid
-			c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 1, nil)
+			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
 
 		close(continueCh)
@@ -599,7 +599,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Mark as standby
 			c.standby = true
 			c.leaderUUID = ""
-			c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 0, nil)
+			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
 			// Seal
 			if err := c.preSeal(); err != nil {

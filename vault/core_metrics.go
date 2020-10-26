@@ -44,9 +44,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 			// Refresh the standby gauge, on all nodes
 			if standby, _ := c.Standby(); standby {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 0, nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 			} else {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 1, nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 			}
 
 		case <-writeTimer:
