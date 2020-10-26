@@ -15,7 +15,8 @@ previous interface:
    but never removed.
 
 We highly recommend that you upgrade any version 4 database plugins to version 5 as version 4 is
-considered deprecated and support for it will be removed in a future release.
+considered deprecated and support for it will be removed in a future release. Version 5 plugins
+will not function with Vault prior to Vault 1.6.
 
 The new interface is roughly modeled after a [gRPC](https://grpc.io/) interface. It has improved
 future compatibility by not requiring changes to the interface definition to add additional data
@@ -25,9 +26,11 @@ function call.
 ### Upgrading your custom database
 
 Vault 1.6 supports both version 4 and version 5 database plugins. The support for version 4
-plugins will be removed in a future release. To determine if a plugin is using version 4 or
-version 5, the following is a list of changes in no particular order that you can check against
-your plugin to determine the version:
+plugins will be removed in a future release. Version 5 database plugins will not function with
+Vault prior to version 1.6. If you upgrade your database plugins, ensure that you are only using
+Vault 1.6 or later. To determine if a plugin is using version 4 or version 5, the following is a
+list of changes in no particular order that you can check against your plugin to determine
+the version:
 
 1. The import path for version 4 is `github.com/hashicorp/vault/sdk/database/dbplugin`
    whereas the import path for version 5 is `github.com/hashicorp/vault/sdk/database/dbplugin/v5`
