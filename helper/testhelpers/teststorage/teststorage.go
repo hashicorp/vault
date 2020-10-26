@@ -80,6 +80,10 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 }
 
 func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	return MakeRaftBackendWithConf(t, coreIdx, logger, nil)
+}
+
+func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]string) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
@@ -96,6 +100,9 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 		"path":                   raftDir,
 		"node_id":                nodeID,
 		"performance_multiplier": "8",
+	}
+	for k, v := range extraConf {
+		conf[k] = v
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))

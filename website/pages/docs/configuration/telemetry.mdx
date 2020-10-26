@@ -149,7 +149,7 @@ These `telemetry` parameters apply to
 [prometheus](https://prometheus.io).
 
 - `prometheus_retention_time` `(string: "24h")` - Specifies the amount of time that
-  Prometheus metrics are retained in memory.
+  Prometheus metrics are retained in memory. Setting this to 0 will disable Prometheus telemetry. 
 - `disable_hostname` `(bool: false)` - It is recommended to also enable the option
   `disable_hostname` to avoid having prefixed metrics with hostname.
 

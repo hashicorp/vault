@@ -37,7 +37,9 @@ func NewServicePrincipalsClient(tenantID string) ServicePrincipalsClient {
 	return NewServicePrincipalsClientWithBaseURI(DefaultBaseURI, tenantID)
 }
 
-// NewServicePrincipalsClientWithBaseURI creates an instance of the ServicePrincipalsClient client.
+// NewServicePrincipalsClientWithBaseURI creates an instance of the ServicePrincipalsClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
 func NewServicePrincipalsClientWithBaseURI(baseURI string, tenantID string) ServicePrincipalsClient {
 	return ServicePrincipalsClient{NewWithBaseURI(baseURI, tenantID)}
 }
@@ -107,8 +109,7 @@ func (client ServicePrincipalsClient) CreatePreparer(ctx context.Context, parame
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) CreateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateResponder handles the response to the Create request. The method always
@@ -116,7 +117,6 @@ func (client ServicePrincipalsClient) CreateSender(req *http.Request) (*http.Res
 func (client ServicePrincipalsClient) CreateResponder(resp *http.Response) (result ServicePrincipal, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -182,8 +182,7 @@ func (client ServicePrincipalsClient) DeletePreparer(ctx context.Context, object
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -191,7 +190,6 @@ func (client ServicePrincipalsClient) DeleteSender(req *http.Request) (*http.Res
 func (client ServicePrincipalsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -256,8 +254,7 @@ func (client ServicePrincipalsClient) GetPreparer(ctx context.Context, objectID 
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) GetSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -265,7 +262,6 @@ func (client ServicePrincipalsClient) GetSender(req *http.Request) (*http.Respon
 func (client ServicePrincipalsClient) GetResponder(resp *http.Response) (result ServicePrincipal, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -339,8 +335,7 @@ func (client ServicePrincipalsClient) ListPreparer(ctx context.Context, filter s
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) ListSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -348,7 +343,6 @@ func (client ServicePrincipalsClient) ListSender(req *http.Request) (*http.Respo
 func (client ServicePrincipalsClient) ListResponder(resp *http.Response) (result ServicePrincipalListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -430,8 +424,7 @@ func (client ServicePrincipalsClient) ListKeyCredentialsPreparer(ctx context.Con
 // ListKeyCredentialsSender sends the ListKeyCredentials request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) ListKeyCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListKeyCredentialsResponder handles the response to the ListKeyCredentials request. The method always
@@ -439,7 +432,6 @@ func (client ServicePrincipalsClient) ListKeyCredentialsSender(req *http.Request
 func (client ServicePrincipalsClient) ListKeyCredentialsResponder(resp *http.Response) (result KeyCredentialListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -505,8 +497,7 @@ func (client ServicePrincipalsClient) ListNextPreparer(ctx context.Context, next
 // ListNextSender sends the ListNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) ListNextSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListNextResponder handles the response to the ListNext request. The method always
@@ -514,7 +505,6 @@ func (client ServicePrincipalsClient) ListNextSender(req *http.Request) (*http.R
 func (client ServicePrincipalsClient) ListNextResponder(resp *http.Response) (result ServicePrincipalListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -581,8 +571,7 @@ func (client ServicePrincipalsClient) ListOwnersPreparer(ctx context.Context, ob
 // ListOwnersSender sends the ListOwners request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) ListOwnersSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListOwnersResponder handles the response to the ListOwners request. The method always
@@ -590,7 +579,6 @@ func (client ServicePrincipalsClient) ListOwnersSender(req *http.Request) (*http
 func (client ServicePrincipalsClient) ListOwnersResponder(resp *http.Response) (result DirectoryObjectListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -693,8 +681,7 @@ func (client ServicePrincipalsClient) ListPasswordCredentialsPreparer(ctx contex
 // ListPasswordCredentialsSender sends the ListPasswordCredentials request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) ListPasswordCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListPasswordCredentialsResponder handles the response to the ListPasswordCredentials request. The method always
@@ -702,7 +689,6 @@ func (client ServicePrincipalsClient) ListPasswordCredentialsSender(req *http.Re
 func (client ServicePrincipalsClient) ListPasswordCredentialsResponder(resp *http.Response) (result PasswordCredentialListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -771,8 +757,7 @@ func (client ServicePrincipalsClient) UpdatePreparer(ctx context.Context, object
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) UpdateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateResponder handles the response to the Update request. The method always
@@ -780,7 +765,6 @@ func (client ServicePrincipalsClient) UpdateSender(req *http.Request) (*http.Res
 func (client ServicePrincipalsClient) UpdateResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -848,8 +832,7 @@ func (client ServicePrincipalsClient) UpdateKeyCredentialsPreparer(ctx context.C
 // UpdateKeyCredentialsSender sends the UpdateKeyCredentials request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) UpdateKeyCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateKeyCredentialsResponder handles the response to the UpdateKeyCredentials request. The method always
@@ -857,7 +840,6 @@ func (client ServicePrincipalsClient) UpdateKeyCredentialsSender(req *http.Reque
 func (client ServicePrincipalsClient) UpdateKeyCredentialsResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -925,8 +907,7 @@ func (client ServicePrincipalsClient) UpdatePasswordCredentialsPreparer(ctx cont
 // UpdatePasswordCredentialsSender sends the UpdatePasswordCredentials request. The method will close the
 // http.Response Body if it receives an error.
 func (client ServicePrincipalsClient) UpdatePasswordCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdatePasswordCredentialsResponder handles the response to the UpdatePasswordCredentials request. The method always
@@ -934,7 +915,6 @@ func (client ServicePrincipalsClient) UpdatePasswordCredentialsSender(req *http.
 func (client ServicePrincipalsClient) UpdatePasswordCredentialsResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp

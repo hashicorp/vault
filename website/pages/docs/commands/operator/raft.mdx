@@ -45,6 +45,22 @@ Usage: vault operator raft join [options] <leader-api-addr>
 	  $ vault operator raft join "http://127.0.0.2:8200"
 ```
 
+The `join` command also allows operators to specify cloud auto-join configuration
+instead of a static IP address or hostname. When provided, Vault will attempt to
+automatically discover and resolve potential leader addresses based on the provided
+auto-join configuration.
+
+By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
+Operators may override these through the `--auto-join-scheme` and `--auto-join-port`
+CLI flags respectively.
+
+```text
+Usage: vault operator raft join [options] <auto-join-configuration>
+  Join the current node as a peer to the Raft cluster by providing cloud auto-join
+  metadata configuration.
+    $ vault operator raft join "provider=aws region=eu-west-1 ..."
+```
+
 ### Parameters
 
 The following flags are available for the `operator raft join` command.

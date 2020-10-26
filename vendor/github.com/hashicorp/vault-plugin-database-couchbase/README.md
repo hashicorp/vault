@@ -10,10 +10,6 @@ The plugin supports the generation of static and dynamic user roles and root cre
 
 ## Build
 
-For Linux/AMD64, pre-built binaries can be found at [the releases page](https://releases.hashicorp.com/vault-plugin-database-couchbase/) (built with the Couchbase Go SDK version 2.1.1)
-
-For other platforms, there are not currently pre-built binaries available.
-
 To build this package for any platform you will need to clone this repository and cd into the repo directory and `go build -o couchbase-database-plugin ./cmd/couchbase-database-plugin/`. To test `go test` will execute a set of basic tests against against the docker.io/couchbase/server-sandbox:6.5.0 couchbase database image. To test against different sandbox images, for example 5.5.1, set the `COUCHBASE_VERSION=5.5.1` environment variable. If you want to run the tests against a local couchbase installation or an already running couchbase container, set the environment variable `COUCHBASE_HOST` before executing. **Note** you will need to align the Administrator username, password and bucket_name with the pre-set values in the `couchbase_test.go` file. Set VAULT_ACC to execute all of the tests. A subset of tests can be run using the command `go test -run TestDriver/Init` for example.
 
 ## Installation

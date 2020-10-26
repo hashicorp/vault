@@ -18,6 +18,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/operation"
@@ -167,10 +168,12 @@ func (db *Database) processRunCommand(ctx context.Context, cmd interface{},
 	return operation.NewCommand(runCmdDoc).
 		Session(sess).CommandMonitor(db.client.monitor).
 		ServerSelector(readSelect).ClusterClock(db.client.clock).
-		Database(db.name).Deployment(db.client.deployment).ReadConcern(db.readConcern).Crypt(db.client.crypt), sess, nil
+		Database(db.name).Deployment(db.client.deployment).ReadConcern(db.readConcern).
+		Crypt(db.client.crypt).ReadPreference(ro.ReadPreference), sess, nil
 }
 
-// RunCommand executes the given command against the database.
+// RunCommand executes the given command against the database. This function does not obey the Database's read
+// preference. To specify a read preference, the RunCmdOptions.ReadPreference option must be used.
 //
 // The runCommand parameter must be a document for the command to be executed. It cannot be nil.
 // This must be an order-preserving type such as bson.D. Map types such as bson.M are not valid.
@@ -189,16 +192,19 @@ func (db *Database) RunCommand(ctx context.Context, runCommand interface{}, opts
 	}
 
 	err = op.Execute(ctx)
+	// RunCommand can be used to run a write, thus execute may return a write error
+	_, convErr := processWriteError(err)
 	return &SingleResult{
-		err: replaceErrors(err),
+		err: convErr,
 		rdr: bson.Raw(op.Result()),
 		reg: db.registry,
 	}
 }
 
 // RunCommandCursor executes the given command against the database and parses the response as a cursor. If the command
-// being executed does not return a cursor (e.g. insert), the command will be executed on the server and an error
-// will be returned because the server response cannot be parsed as a cursor.
+// being executed does not return a cursor (e.g. insert), the command will be executed on the server and an error will
+// be returned because the server response cannot be parsed as a cursor. This function does not obey the Database's read
+// preference. To specify a read preference, the RunCmdOptions.ReadPreference option must be used.
 //
 // The runCommand parameter must be a document for the command to be executed. It cannot be nil.
 // This must be an order-preserving type such as bson.D. Map types such as bson.M are not valid.
@@ -429,6 +435,139 @@ func (db *Database) Watch(ctx context.Context, pipeline interface{},
 		registry:       db.registry,
 		streamType:     DatabaseStream,
 		databaseName:   db.Name(),
+		crypt:          db.client.crypt,
 	}
 	return newChangeStream(ctx, csConfig, pipeline, opts...)
+}
+
+// CreateCollection executes a create command to explicitly create a new collection with the specified name on the
+// server. If the collection being created already exists, this method will return a mongo.CommandError. This method
+// requires driver version 1.4.0 or higher.
+//
+// The opts parameter can be used to specify options for the operation (see the options.CreateCollectionOptions
+// documentation).
+func (db *Database) CreateCollection(ctx context.Context, name string, opts ...*options.CreateCollectionOptions) error {
+	cco := options.MergeCreateCollectionOptions(opts...)
+	op := operation.NewCreate(name)
+
+	if cco.Capped != nil {
+		op.Capped(*cco.Capped)
+	}
+	if cco.Collation != nil {
+		op.Collation(bsoncore.Document(cco.Collation.ToDocument()))
+	}
+	if cco.DefaultIndexOptions != nil {
+		idx, doc := bsoncore.AppendDocumentStart(nil)
+		if cco.DefaultIndexOptions.StorageEngine != nil {
+			storageEngine, err := transformBsoncoreDocument(db.registry, cco.DefaultIndexOptions.StorageEngine)
+			if err != nil {
+				return err
+			}
+
+			doc = bsoncore.AppendDocumentElement(doc, "storageEngine", storageEngine)
+		}
+		doc, err := bsoncore.AppendDocumentEnd(doc, idx)
+		if err != nil {
+			return err
+		}
+
+		op.IndexOptionDefaults(doc)
+	}
+	if cco.MaxDocuments != nil {
+		op.Max(*cco.MaxDocuments)
+	}
+	if cco.SizeInBytes != nil {
+		op.Size(*cco.SizeInBytes)
+	}
+	if cco.StorageEngine != nil {
+		storageEngine, err := transformBsoncoreDocument(db.registry, cco.StorageEngine)
+		if err != nil {
+			return err
+		}
+		op.StorageEngine(storageEngine)
+	}
+	if cco.ValidationAction != nil {
+		op.ValidationAction(*cco.ValidationAction)
+	}
+	if cco.ValidationLevel != nil {
+		op.ValidationLevel(*cco.ValidationLevel)
+	}
+	if cco.Validator != nil {
+		validator, err := transformBsoncoreDocument(db.registry, cco.Validator)
+		if err != nil {
+			return err
+		}
+		op.Validator(validator)
+	}
+
+	return db.executeCreateOperation(ctx, op)
+}
+
+// CreateView executes a create command to explicitly create a view on the server. See
+// https://docs.mongodb.com/manual/core/views/ for more information about views. This method requires driver version >=
+// 1.4.0 and MongoDB version >= 3.4.
+//
+// The viewName parameter specifies the name of the view to create.
+//
+// The viewOn parameter specifies the name of the collection or view on which this view will be created
+//
+// The pipeline parameter specifies an aggregation pipeline that will be exececuted against the source collection or
+// view to create this view.
+//
+// The opts parameter can be used to specify options for the operation (see the options.CreateViewOptions
+// documentation).
+func (db *Database) CreateView(ctx context.Context, viewName, viewOn string, pipeline interface{},
+	opts ...*options.CreateViewOptions) error {
+
+	pipelineArray, _, err := transformAggregatePipelinev2(db.registry, pipeline)
+	if err != nil {
+		return err
+	}
+
+	op := operation.NewCreate(viewName).
+		ViewOn(viewOn).
+		Pipeline(pipelineArray)
+	cvo := options.MergeCreateViewOptions(opts...)
+	if cvo.Collation != nil {
+		op.Collation(bsoncore.Document(cvo.Collation.ToDocument()))
+	}
+
+	return db.executeCreateOperation(ctx, op)
+}
+
+func (db *Database) executeCreateOperation(ctx context.Context, op *operation.Create) error {
+	sess := sessionFromContext(ctx)
+	if sess == nil && db.client.sessionPool != nil {
+		var err error
+		sess, err = session.NewClientSession(db.client.sessionPool, db.client.id, session.Implicit)
+		if err != nil {
+			return err
+		}
+		defer sess.EndSession()
+	}
+
+	err := db.client.validSession(sess)
+	if err != nil {
+		return err
+	}
+
+	wc := db.writeConcern
+	if sess.TransactionRunning() {
+		wc = nil
+	}
+	if !writeconcern.AckWrite(wc) {
+		sess = nil
+	}
+
+	selector := makePinnedSelector(sess, db.writeSelector)
+	op = op.Session(sess).
+		WriteConcern(wc).
+		CommandMonitor(db.client.monitor).
+		ServerSelector(selector).
+		ClusterClock(db.client.clock).
+		Database(db.name).
+		Deployment(db.client.deployment).
+		Crypt(db.client.crypt)
+
+	return replaceErrors(op.Execute(ctx))
 }

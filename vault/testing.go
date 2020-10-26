@@ -295,10 +295,6 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
 
-func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
-	return core.UnsealWithRecoveryKeys(key)
-}
-
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
@@ -830,6 +826,7 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
+	t.Helper()
 	var keys [][]byte
 	if core.seal.RecoveryKeySupported() {
 		keys = c.RecoveryKeys
@@ -844,6 +841,7 @@ func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
 }
 
 func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.T, core *TestClusterCore) {
+	t.Helper()
 	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -1018,12 +1016,13 @@ type TestClusterOptions struct {
 	// do not clash with any other explicitly assigned ports in other tests.
 	BaseClusterListenPort int
 
-	NumCores int
-	SealFunc func() Seal
-	Logger   log.Logger
-	TempDir  string
-	CACert   []byte
-	CAKey    *ecdsa.PrivateKey
+	NumCores       int
+	SealFunc       func() Seal
+	UnwrapSealFunc func() Seal
+	Logger         log.Logger
+	TempDir        string
+	CACert         []byte
+	CAKey          *ecdsa.PrivateKey
 	// PhysicalFactory is used to create backends.
 	// The int argument is the index of the core within the cluster, i.e. first
 	// core in cluster will have 0, second 1, etc.
@@ -1409,6 +1408,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.LicensingConfig = base.LicensingConfig
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
+		coreConfig.MetricSink = base.MetricSink
 		coreConfig.SecureRandomReader = base.SecureRandomReader
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 
@@ -1700,6 +1700,9 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	// if opts.SealFunc is provided, use that to generate a seal for the config instead
 	if opts != nil && opts.SealFunc != nil {
 		localConfig.Seal = opts.SealFunc()
+	}
+	if opts != nil && opts.UnwrapSealFunc != nil {
+		localConfig.UnwrapSeal = opts.UnwrapSealFunc()
 	}
 
 	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
@@ -2025,7 +2028,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
-	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
+	return dbMysql.New(false), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins.

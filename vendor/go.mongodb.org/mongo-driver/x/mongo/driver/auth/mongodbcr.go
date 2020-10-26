@@ -16,7 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/operation"
 )
 
@@ -45,7 +44,7 @@ type MongoDBCRAuthenticator struct {
 // Auth authenticates the connection.
 //
 // The MONGODB-CR authentication mechanism is deprecated in MongoDB 4.0.
-func (a *MongoDBCRAuthenticator) Auth(ctx context.Context, _ description.Server, conn driver.Connection) error {
+func (a *MongoDBCRAuthenticator) Auth(ctx context.Context, cfg *Config) error {
 
 	db := a.DB
 	if db == "" {
@@ -53,7 +52,10 @@ func (a *MongoDBCRAuthenticator) Auth(ctx context.Context, _ description.Server,
 	}
 
 	doc := bsoncore.BuildDocumentFromElements(nil, bsoncore.AppendInt32Element(nil, "getnonce", 1))
-	cmd := operation.NewCommand(doc).Database(db).Deployment(driver.SingleConnectionDeployment{conn})
+	cmd := operation.NewCommand(doc).
+		Database(db).
+		Deployment(driver.SingleConnectionDeployment{cfg.Connection}).
+		ClusterClock(cfg.ClusterClock)
 	err := cmd.Execute(ctx)
 	if err != nil {
 		return newError(err, MONGODBCR)
@@ -75,7 +77,10 @@ func (a *MongoDBCRAuthenticator) Auth(ctx context.Context, _ description.Server,
 		bsoncore.AppendStringElement(nil, "nonce", getNonceResult.Nonce),
 		bsoncore.AppendStringElement(nil, "key", a.createKey(getNonceResult.Nonce)),
 	)
-	cmd = operation.NewCommand(doc).Database(db).Deployment(driver.SingleConnectionDeployment{conn})
+	cmd = operation.NewCommand(doc).
+		Database(db).
+		Deployment(driver.SingleConnectionDeployment{cfg.Connection}).
+		ClusterClock(cfg.ClusterClock)
 	err = cmd.Execute(ctx)
 	if err != nil {
 		return newError(err, MONGODBCR)

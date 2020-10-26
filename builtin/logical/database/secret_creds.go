@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -65,11 +65,11 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			// to ensure the database credential does not expire before the lease
 			expireTime = expireTime.Add(5 * time.Second)
 
-			updateReq := newdbplugin.UpdateUserRequest{
+			updateReq := v5.UpdateUserRequest{
 				Username: username,
-				Expiration: &newdbplugin.ChangeExpiration{
+				Expiration: &v5.ChangeExpiration{
 					NewExpiration: expireTime,
-					Statements: newdbplugin.Statements{
+					Statements: v5.Statements{
 						Commands: role.Statements.Renewal,
 					},
 				},
@@ -104,7 +104,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		}
 
 		var dbName string
-		var statements dbplugin.Statements
+		var statements v4.Statements
 
 		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
@@ -148,9 +148,9 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		dbi.RLock()
 		defer dbi.RUnlock()
 
-		deleteReq := newdbplugin.DeleteUserRequest{
+		deleteReq := v5.DeleteUserRequest{
 			Username: username,
-			Statements: newdbplugin.Statements{
+			Statements: v5.Statements{
 				Commands: statements.Revocation,
 			},
 		}
