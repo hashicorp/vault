@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
+	jose "gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -86,11 +87,6 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Description: "Provider-specific configuration. Optional.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Provider Config",
-					Value: map[string]interface{}{
-						"provider":               "gsuite",
-						"fetch_groups":           true,
-						"gsuite_service_account": "ey4921...",
-					},
 				},
 			},
 		},
@@ -258,7 +254,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	// default to e.g. "none".
 	for _, a := range config.JWTSupportedAlgs {
 		switch a {
-		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
+		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512, string(jose.EdDSA):
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
 		}

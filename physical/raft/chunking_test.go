@@ -81,7 +81,7 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 
 	t.Log("tearing down cluster")
 	require.NoError(b.TeardownCluster(nil))
-	require.NoError(b.fsm.db.Close())
+	require.NoError(b.fsm.getDB().Close())
 	require.NoError(b.stableStore.(*raftboltdb.BoltStore).Close())
 
 	t.Log("starting new backend")
@@ -191,6 +191,15 @@ func TestRaft_Chunking_AppliedIndex(t *testing.T) {
 	// Lower the size for tests
 	raftchunking.ChunkSize = 1024
 	val, err := uuid.GenerateRandomBytes(3 * raftchunking.ChunkSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write a value to fastforward the index
+	err = raft.Put(context.Background(), &physical.Entry{
+		Key:   "key",
+		Value: []byte("test"),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
