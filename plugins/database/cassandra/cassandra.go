@@ -7,7 +7,6 @@ import (
 
 	"github.com/gocql/gocql"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/api"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -43,18 +42,6 @@ func new() *Cassandra {
 	return &Cassandra{
 		cassandraConnectionProducer: connProducer,
 	}
-}
-
-// Run instantiates a Cassandra object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 // Type returns the TypeName for this backend

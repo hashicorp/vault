@@ -11,13 +11,16 @@ FEATURES:
 IMPROVEMENTS:
 
 * approle: Role names can now be referenced in templated policies through the `approle.metadata.role_name` property [[GH-9529](https://github.com/hashicorp/vault/pull/9529)]
+* auth/aws: Improve logic check on wildcard `BoundIamPrincipalARNs` and include role name on error messages on check failure [[GH-10036](https://github.com/hashicorp/vault/pull/10036)]
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
+* auth/jwt: Adding EdDSA (ed25519) to supported algorithms [[GH-129](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/129)]
 * secrets/transit: fix missing plaintext in bulk decrypt response [[GH-9991](https://github.com/hashicorp/vault/pull/9991)]
 * command/server: Delay informational messages in -dev mode until logs have settled. [[GH-9702](https://github.com/hashicorp/vault/pull/9702)]
 * command/server: Add environment variable support for `disable_mlock`. [[GH-9931](https://github.com/hashicorp/vault/pull/9931)]
 * core/metrics: Add metrics for storage cache [[GH_10079](https://github.com/hashicorp/vault/pull/10079)]
 * core/metrics: Add metrics for leader status [[GH 10147](https://github.com/hashicorp/vault/pull/10147)]
 * sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
+* secrets/database: Support scopes field in creations statements for MongoDB Atlas database plugin [[GH-15](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/15)]
 * seal/awskms: Add logging during awskms auto-unseal [[GH-9794](https://github.com/hashicorp/vault/pull/9794)]
 * storage/azure: Update SDK library to use [azure-storage-blob-go](https://github.com/Azure/azure-storage-blob-go) since previous library has been deprecated. [[GH-9577](https://github.com/hashicorp/vault/pull/9577/)]
 * secrets/ad: `rotate-root` now supports POST requests like other secret engines [[GH-70](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/70)]
@@ -25,6 +28,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* auth/jwt: Fix bug preventing config edit UI from rendering [[GH-141](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/141)]
 * cli: Don't open or overwrite a raft snapshot file on an unsuccessful `vault operator raft snapshot` [[GH-9894](https://github.com/hashicorp/vault/pull/9894)]
 * core: Implement constant time version of shamir GF(2^8) math [[GH-9932](https://github.com/hashicorp/vault/pull/9932)]
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
