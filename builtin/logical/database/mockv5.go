@@ -6,7 +6,6 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
@@ -26,13 +25,13 @@ func New() (interface{}, error) {
 }
 
 // Run instantiates a MongoDB object, and runs the RPC server for the plugin
-func RunV5(apiTLSConfig *api.TLSConfig) error {
+func RunV5() error {
 	dbType, err := New()
 	if err != nil {
 		return err
 	}
 
-	v5.Serve(dbType.(v5.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	v5.Serve(dbType.(v5.Database))
 
 	return nil
 }

@@ -188,7 +188,7 @@ func (d *Decoder) decode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag 
 		return d.decodeNumber(av.N, v, fieldTag)
 	case av.NS != nil:
 		return d.decodeNumberSet(av.NS, v)
-	case av.S != nil: // DynamoDB does not allow for empty strings, so we do not consider the length or EnableEmptyCollections flag here
+	case av.S != nil:
 		return d.decodeString(av.S, v, fieldTag)
 	case av.SS != nil:
 		return d.decodeStringSet(av.SS, v)

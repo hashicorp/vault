@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
@@ -23,6 +24,7 @@ import (
 
 // CreateIndexes performs a createIndexes operation.
 type CreateIndexes struct {
+	commitQuorum bsoncore.Value
 	indexes      bsoncore.Document
 	maxTimeMS    *int64
 	session      *session.Client
@@ -87,7 +89,7 @@ func NewCreateIndexes(indexes bsoncore.Document) *CreateIndexes {
 // Result returns the result of executing this operation.
 func (ci *CreateIndexes) Result() CreateIndexesResult { return ci.result }
 
-func (ci *CreateIndexes) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server) error {
+func (ci *CreateIndexes) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
 	var err error
 	ci.result, err = buildCreateIndexesResult(response, srvr)
 	return err
@@ -116,6 +118,12 @@ func (ci *CreateIndexes) Execute(ctx context.Context) error {
 
 func (ci *CreateIndexes) command(dst []byte, desc description.SelectedServer) ([]byte, error) {
 	dst = bsoncore.AppendStringElement(dst, "createIndexes", ci.collection)
+	if ci.commitQuorum.Type != bsontype.Type(0) {
+		if desc.WireVersion == nil || !desc.WireVersion.Includes(9) {
+			return nil, errors.New("the 'commitQuorum' command parameter requires a minimum server wire version of 9")
+		}
+		dst = bsoncore.AppendValueElement(dst, "commitQuorum", ci.commitQuorum)
+	}
 	if ci.indexes != nil {
 		dst = bsoncore.AppendArrayElement(dst, "indexes", ci.indexes)
 	}
@@ -123,6 +131,18 @@ func (ci *CreateIndexes) command(dst []byte, desc description.SelectedServer) ([
 		dst = bsoncore.AppendInt64Element(dst, "maxTimeMS", *ci.maxTimeMS)
 	}
 	return dst, nil
+}
+
+// The number of data-bearing members of a replica set, including the primary, that must complete the index builds
+// successfully before the primary marks the indexes as ready. This should either be a string or int32 value.
+//
+func (ci *CreateIndexes) CommitQuorum(commitQuorum bsoncore.Value) *CreateIndexes {
+	if ci == nil {
+		ci = new(CreateIndexes)
+	}
+
+	ci.commitQuorum = commitQuorum
+	return ci
 }
 
 // An array containing index specification documents for the indexes being created.
