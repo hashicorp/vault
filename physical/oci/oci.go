@@ -73,7 +73,6 @@ type Backend struct {
 
 func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	bucketName := conf["bucket_name"]
-
 	if bucketName == "" {
 		return nil, errors.New("missing bucket name")
 	}
