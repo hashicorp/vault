@@ -63,7 +63,6 @@ var (
 
 type Backend struct {
 	client         *objectstorage.ObjectStorageClient
-	region         string
 	bucketName     string
 	logger         log.Logger
 	permitPool     *physical.PermitPool
@@ -73,7 +72,6 @@ type Backend struct {
 }
 
 func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	region     := conf["region"]
 	bucketName := conf["bucket_name"]
 
 	if bucketName == "" {
@@ -127,9 +125,10 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 		return nil, errwrap.Wrapf("failed creating NewObjectStorageClientWithConfigurationProvider: {{err}}", err)
 	}
 
+	region := conf["region"]
 	if region != "" {
 		objectStorageClient.SetRegion(region)
-        }
+	}
 
 	logger.Debug("configuration",
 		"bucket_name", bucketName,
@@ -142,7 +141,6 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 
 	return &Backend{
 		client:         &objectStorageClient,
-		region:         region,
 		bucketName:     bucketName,
 		logger:         logger,
 		permitPool:     physical.NewPermitPool(MaxNumberOfPermits),
