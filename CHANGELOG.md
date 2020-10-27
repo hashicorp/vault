@@ -34,7 +34,8 @@ IMPROVEMENTS:
 * seal/awskms: Add logging during awskms auto-unseal [[GH-9794](https://github.com/hashicorp/vault/pull/9794)]
 * storage/azure: Update SDK library to use [azure-storage-blob-go](https://github.com/Azure/azure-storage-blob-go) since previous library has been deprecated. [[GH-9577](https://github.com/hashicorp/vault/pull/9577/)]
 * secrets/ad: `rotate-root` now supports POST requests like other secret engines [[GH-70](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/70)]
-* ui: Add ui functionality for the Transform Secret Engine.
+* ui: Add ui functionality for the Transform Secret Engine [[GH-9665](https://github.com/hashicorp/vault/pull/9665)]
+* ui: Pricing metrics dashboard [[GH-10049](https://github.com/hashicorp/vault/pull/10049)]
 
 BUG FIXES:
 
@@ -48,6 +49,7 @@ BUG FIXES:
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 * ui: Mask LDAP bindpass while typing [[GH-10087](https://github.com/hashicorp/vault/pull/10087)]
 * ui: Update language in promote dr modal flow [[GH-10155](https://github.com/hashicorp/vault/pull/10155)]
+* ui: Update language on replication primary dashboard for clarity [[GH-10205](https://github.com/hashicorp/vault/pull/10217)]
 
 ## 1.5.5
 ### October 21, 2020
