@@ -49,6 +49,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 1, nil)
 			}
 
+			// Refresh gauge metrics that are looped
+			c.cachedGaugeMetricsEmitter()
+
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
 				// Go through the loop again, this time the stop channel case
@@ -424,4 +427,20 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 	}
 
 	return values, nil
+}
+
+func (c *Core) cachedGaugeMetricsEmitter() {
+	if c.metricsHelper == nil {
+		return
+	}
+
+	loopMetrics := &c.metricsHelper.LoopMetrics.Metrics
+
+	emit := func(key interface{}, value interface{}) bool {
+		metricValue := value.(metricsutil.GaugeMetric)
+		c.metricSink.SetGaugeWithLabels(metricValue.Key, metricValue.Value, metricValue.Labels)
+		return true
+	}
+
+	loopMetrics.Range(emit)
 }
