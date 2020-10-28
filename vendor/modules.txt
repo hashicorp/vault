@@ -21,7 +21,7 @@ cloud.google.com/go/spanner/apiv1
 cloud.google.com/go/storage
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
-# github.com/Azure/azure-pipeline-go v0.2.2
+# github.com/Azure/azure-pipeline-go v0.2.3
 github.com/Azure/azure-pipeline-go/pipeline
 # github.com/Azure/azure-sdk-for-go v44.0.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute
@@ -30,7 +30,7 @@ github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/network/mgmt/2015-06-15/network
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/azure-storage-blob-go v0.10.0
+# github.com/Azure/azure-storage-blob-go v0.11.0
 github.com/Azure/azure-storage-blob-go/azblob
 # github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 github.com/Azure/go-ansiterm
@@ -726,7 +726,7 @@ github.com/lib/pq/scram
 github.com/linode/linodego
 # github.com/mattn/go-colorable v0.1.6
 github.com/mattn/go-colorable
-# github.com/mattn/go-ieproxy v0.0.0-20190702010315-6dee0af9227d
+# github.com/mattn/go-ieproxy v0.0.1
 github.com/mattn/go-ieproxy
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
@@ -1093,7 +1093,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+# golang.org/x/sys v0.0.0-20200828194041-157a740278f4
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
