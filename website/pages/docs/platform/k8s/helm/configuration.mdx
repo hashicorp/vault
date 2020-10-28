@@ -239,17 +239,16 @@ and consider if they're appropriate for your deployment.
 
       - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
 
-
-    ```yaml
-    readinessProbe:
-      enabled: true
-      path: /v1/sys/health?standbyok=true
-      failureThreshold: 2
-      initialDelaySeconds: 5
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-    ```
+      ```yaml
+      readinessProbe:
+        enabled: true
+        path: /v1/sys/health?standbyok=true
+        failureThreshold: 2
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 3
+      ```
 
     - `livelinessProbes` - Values that configure the liveliness probe for the Vault pods.
 
@@ -267,16 +266,16 @@ and consider if they're appropriate for your deployment.
 
       - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
 
-    ```yaml
-    livelinessProbe:
-      enabled: true
-      path: /v1/sys/health?standbyok=true
-      initialDelaySeconds: 60
-      failureThreshold: 2
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-    ```
+      ```yaml
+      livelinessProbe:
+        enabled: true
+        path: /v1/sys/health?standbyok=true
+        initialDelaySeconds: 60
+        failureThreshold: 2
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 3
+      ```
 
     - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
 
