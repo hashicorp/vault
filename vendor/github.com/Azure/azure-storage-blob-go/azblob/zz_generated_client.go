@@ -10,7 +10,7 @@ import (
 
 const (
 	// ServiceVersion specifies the version of the operations used in this package.
-	ServiceVersion = "2019-02-02"
+	ServiceVersion = "2019-12-12"
 )
 
 // managementClient is the base client for Azblob.

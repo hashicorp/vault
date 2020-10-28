@@ -16,7 +16,7 @@ type Claims interface {
 // https://tools.ietf.org/html/rfc7519#section-4.1
 // See examples for how to use this with your own claim types
 type StandardClaims struct {
-	Audience  string `json:"aud,omitempty"`
+	Audience  []string `json:"aud,omitempty"`
 	ExpiresAt int64  `json:"exp,omitempty"`
 	Id        string `json:"jti,omitempty"`
 	IssuedAt  int64  `json:"iat,omitempty"`
@@ -90,15 +90,17 @@ func (c *StandardClaims) VerifyNotBefore(cmp int64, req bool) bool {
 
 // ----- helpers
 
-func verifyAud(aud string, cmp string, required bool) bool {
-	if aud == "" {
+func verifyAud(aud []string, cmp string, required bool) bool {
+	if len(aud) == 0 {
 		return !required
 	}
-	if subtle.ConstantTimeCompare([]byte(aud), []byte(cmp)) != 0 {
-		return true
-	} else {
-		return false
+
+	for _, a := range aud {
+		if subtle.ConstantTimeCompare([]byte(a), []byte(cmp)) != 0 {
+			return true
+		}
 	}
+	return false
 }
 
 func verifyExp(exp int64, now int64, required bool) bool {

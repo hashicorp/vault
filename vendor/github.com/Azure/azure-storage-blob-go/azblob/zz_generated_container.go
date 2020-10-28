@@ -259,14 +259,18 @@ func (client containerClient) changeLeaseResponder(resp pipeline.Response) (pipe
 // Containers, Blobs, and Metadata for more information. access is specifies whether data in the container may be
 // accessed publicly and the level of access requestID is provides a client-generated, opaque value with a 1 KB
 // character limit that is recorded in the analytics logs when storage analytics logging is enabled.
-func (client containerClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, access PublicAccessType, requestID *string) (*ContainerCreateResponse, error) {
+// defaultEncryptionScope is optional.  Version 2019-07-07 and later.  Specifies the default encryption scope to set on
+// the container and use for all future writes. preventEncryptionScopeOverride is optional.  Version 2019-07-07 and
+// newer.  If true, prevents any request from specifying a different encryption scope than the scope set on the
+// container.
+func (client containerClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, access PublicAccessType, requestID *string, defaultEncryptionScope *string, preventEncryptionScopeOverride *bool) (*ContainerCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPreparer(timeout, metadata, access, requestID)
+	req, err := client.createPreparer(timeout, metadata, access, requestID, defaultEncryptionScope, preventEncryptionScopeOverride)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +282,7 @@ func (client containerClient) Create(ctx context.Context, timeout *int32, metada
 }
 
 // createPreparer prepares the Create request.
-func (client containerClient) createPreparer(timeout *int32, metadata map[string]string, access PublicAccessType, requestID *string) (pipeline.Request, error) {
+func (client containerClient) createPreparer(timeout *int32, metadata map[string]string, access PublicAccessType, requestID *string, defaultEncryptionScope *string, preventEncryptionScopeOverride *bool) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -300,6 +304,12 @@ func (client containerClient) createPreparer(timeout *int32, metadata map[string
 	req.Header.Set("x-ms-version", ServiceVersion)
 	if requestID != nil {
 		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	if defaultEncryptionScope != nil {
+		req.Header.Set("x-ms-default-encryption-scope", *defaultEncryptionScope)
+	}
+	if preventEncryptionScopeOverride != nil {
+		req.Header.Set("x-ms-deny-encryption-scope-override", strconv.FormatBool(*preventEncryptionScopeOverride))
 	}
 	return req, nil
 }
@@ -879,6 +889,70 @@ func (client containerClient) renewLeaseResponder(resp pipeline.Response) (pipel
 	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ContainerRenewLeaseResponse{rawResponse: resp.Response()}, err
+}
+
+// Restore restores a previously-deleted container.
+//
+// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+// Timeouts for Blob Service Operations.</a> requestID is provides a client-generated, opaque value with a 1 KB
+// character limit that is recorded in the analytics logs when storage analytics logging is enabled.
+// deletedContainerName is optional.  Version 2019-12-12 and laster.  Specifies the name of the deleted container to
+// restore. deletedContainerVersion is optional.  Version 2019-12-12 and laster.  Specifies the version of the deleted
+// container to restore.
+func (client containerClient) Restore(ctx context.Context, timeout *int32, requestID *string, deletedContainerName *string, deletedContainerVersion *string) (*ContainerRestoreResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.restorePreparer(timeout, requestID, deletedContainerName, deletedContainerVersion)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.restoreResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*ContainerRestoreResponse), err
+}
+
+// restorePreparer prepares the Restore request.
+func (client containerClient) restorePreparer(timeout *int32, requestID *string, deletedContainerName *string, deletedContainerVersion *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	params.Set("restype", "container")
+	params.Set("comp", "undelete")
+	req.URL.RawQuery = params.Encode()
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	if deletedContainerName != nil {
+		req.Header.Set("x-ms-deleted-container-name", *deletedContainerName)
+	}
+	if deletedContainerVersion != nil {
+		req.Header.Set("x-ms-deleted-container-version", *deletedContainerVersion)
+	}
+	return req, nil
+}
+
+// restoreResponder handles the response to the Restore request.
+func (client containerClient) restoreResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK, http.StatusCreated)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &ContainerRestoreResponse{rawResponse: resp.Response()}, err
 }
 
 // SetAccessPolicy sets the permissions for the specified container. The permissions indicate whether blobs in a
