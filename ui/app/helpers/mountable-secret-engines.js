@@ -6,6 +6,7 @@ export const KMIP = {
   type: 'kmip',
   category: 'generic',
   requiredFeature: 'KMIP',
+  requiredModule: 'ADP',
 };
 
 export const TRANSFORM = {
@@ -14,6 +15,16 @@ export const TRANSFORM = {
   type: 'transform',
   category: 'generic',
   requiredFeature: 'Transform Secrets Engine',
+  requiredModule: 'ADP',
+};
+
+export const KMS = {
+  displayName: 'Key Management',
+  value: 'keymgmt',
+  type: 'keymgmt',
+  category: 'generic',
+  requiredFeature: 'Key Management Secrets Engine',
+  requiredModule: 'ADP',
 };
 
 const MOUNTABLE_SECRET_ENGINES = [

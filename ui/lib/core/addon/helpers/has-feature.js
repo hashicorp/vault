@@ -14,6 +14,7 @@ const POSSIBLE_FEATURES = [
   'Namespaces',
   'KMIP',
   'Transform Secrets Engine',
+  'Key Management Secrets Engine',
 ];
 
 export function hasFeature(featureName, features) {
