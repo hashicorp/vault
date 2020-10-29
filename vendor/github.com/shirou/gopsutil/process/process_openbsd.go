@@ -221,6 +221,14 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 
 	return gids, nil
 }
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	k, err := p.getKProc()
+	if err != nil {
+		return nil, err
+	}
+
+	return k.Groups, nil
+}
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())
 }

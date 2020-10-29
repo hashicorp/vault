@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -311,7 +312,23 @@ func CountsWithContext(ctx context.Context, logical bool) (int, error) {
 		}
 		return ret, nil
 	}
-	// physical cores https://github.com/giampaolo/psutil/blob/d01a9eaa35a8aadf6c519839e987a49d8be2d891/psutil/_pslinux.py#L628
+	// physical cores
+	// https://github.com/giampaolo/psutil/blob/122174a10b75c9beebe15f6c07dcf3afbe3b120d/psutil/_pslinux.py#L621-L629
+	var threadSiblingsLists = make(map[string]bool)
+	if files, err := filepath.Glob(common.HostSys("devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list")); err == nil {
+		for _, file := range files {
+			lines, err := common.ReadLines(file)
+			if err != nil || len(lines) != 1 {
+				continue
+			}
+			threadSiblingsLists[lines[0]] = true
+		}
+		ret := len(threadSiblingsLists)
+		if ret != 0 {
+			return ret, nil
+		}
+	}
+	// https://github.com/giampaolo/psutil/blob/122174a10b75c9beebe15f6c07dcf3afbe3b120d/psutil/_pslinux.py#L631-L652
 	filename := common.HostProc("cpuinfo")
 	lines, err := common.ReadLines(filename)
 	if err != nil {
