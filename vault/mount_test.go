@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -440,7 +441,80 @@ func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 		}
 	}
 }
+func TestCore_RemountConcurrent(t *testing.T) {
+	c2, _, _ := TestCoreUnsealed(t)
+	noop := &NoopBackend{}
+	c2.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return noop, nil
+	}
 
+	// Mount the noop backend
+	mount1 := &MountEntry{
+		Table: mountTableType,
+		Path:  "test1/",
+		Type:  "noop",
+	}
+
+	if err := c2.mount(namespace.RootContext(nil), mount1); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	mount2 := &MountEntry{
+		Table: mountTableType,
+		Path:  "test2/",
+		Type:  "noop",
+	}
+	if err := c2.mount(namespace.RootContext(nil), mount2); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	mount3 := &MountEntry{
+		Table: mountTableType,
+		Path:  "test3/",
+		Type:  "noop",
+	}
+
+	if err := c2.mount(namespace.RootContext(nil), mount3); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := c2.remount(namespace.RootContext(nil), "test1", "foo", true)
+		if err != nil {
+			t.Logf("err: %v", err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
+		if err != nil {
+			t.Logf("err: %v", err)
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
+		if err != nil {
+			t.Logf("err: %v", err)
+		}
+	}()
+	wg.Wait()
+
+	c2MountMap := map[string]interface{}{}
+	for _, v := range c2.mounts.Entries {
+		
+		if _, ok := c2MountMap[v.Path]; ok {
+		t.Fatalf("duplicated mount path found at %s", v.Path)
+		}
+		c2MountMap[v.Path] = v
+	}
+}
 func TestCore_Remount(t *testing.T) {
 	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
 	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
