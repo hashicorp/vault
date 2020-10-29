@@ -69,5 +69,6 @@ func GetRegion(configuredRegion string) (string, error) {
 	if err != nil {
 		return "", errwrap.Wrapf("unable to retrieve region from instance metadata: {{err}}", err)
 	}
+
 	return region, nil
 }

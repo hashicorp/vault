@@ -1468,8 +1468,14 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
 
+		coreConfig.ActivityLogConfig = base.ActivityLogConfig
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
+	if coreConfig.ClusterName == "" {
+		coreConfig.ClusterName = t.Name()
+	}
+
 	if coreConfig.ClusterName == "" {
 		coreConfig.ClusterName = t.Name()
 	}
@@ -1764,6 +1770,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		metrics.DefaultInmemSignal(inm)
 		localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
 	}
+	if opts != nil && opts.CoreMetricSinkProvider != nil {
+		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
+	}
+
 	if opts != nil && opts.CoreMetricSinkProvider != nil {
 		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
 	}
