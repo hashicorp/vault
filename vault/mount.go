@@ -10,8 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -123,6 +125,49 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
+// tableMetrics is responsible for setting gauge metrics for
+// mount table storage sizes (in bytes) and mount table num
+// entries. It does this via setGaugeWithLabels. It then
+// saves these metrics in a cache for regular reporting in
+// a loop, via AddGaugeLoopMetric.
+
+// Note that the reported storage sizes are pre-encryption
+// sizes. Currently barrier uses aes-gcm for encryption, which
+// preserves plaintext size, adding a constant of 30 bytes of
+// padding, which is negligable and subject to change, and thus
+// not accounted for.
+func (c *Core) tableMetrics(entryCount int, isLocal bool, isAuth bool, compressedTable []byte) {
+	if c.metricsHelper == nil {
+		// do nothing if metrics are not initialized
+		return
+	}
+	typeAuthLabelMap := map[bool]metrics.Label{
+		true:  metrics.Label{Name: "type", Value: "auth"},
+		false: metrics.Label{Name: "type", Value: "logical"},
+	}
+
+	typeLocalLabelMap := map[bool]metrics.Label{
+		true:  metrics.Label{Name: "local", Value: "true"},
+		false: metrics.Label{Name: "local", Value: "false"},
+	}
+
+	c.metricSink.SetGaugeWithLabels(metricsutil.LogicalTableSizeName,
+		float32(entryCount), []metrics.Label{typeAuthLabelMap[isAuth],
+			typeLocalLabelMap[isLocal]})
+
+	c.metricsHelper.AddGaugeLoopMetric(metricsutil.LogicalTableSizeName,
+		float32(entryCount), []metrics.Label{typeAuthLabelMap[isAuth],
+			typeLocalLabelMap[isLocal]})
+
+	c.metricSink.SetGaugeWithLabels(metricsutil.PhysicalTableSizeName,
+		float32(len(compressedTable)), []metrics.Label{typeAuthLabelMap[isAuth],
+			typeLocalLabelMap[isLocal]})
+
+	c.metricsHelper.AddGaugeLoopMetric(metricsutil.PhysicalTableSizeName,
+		float32(len(compressedTable)), []metrics.Label{typeAuthLabelMap[isAuth],
+			typeLocalLabelMap[isLocal]})
+}
+
 // shallowClone returns a copy of the mount table that
 // keeps the MountEntry locations, so as not to invalidate
 // other locations holding pointers. Care needs to be taken
@@ -132,6 +177,7 @@ func (t *MountTable) shallowClone() *MountTable {
 		Type:    t.Type,
 		Entries: make([]*MountEntry, len(t.Entries)),
 	}
+
 	for i, e := range t.Entries {
 		mt.Entries[i] = e
 	}
@@ -220,7 +266,7 @@ type MountEntry struct {
 	Options               map[string]string `json:"options"`                 // Backend options
 	Local                 bool              `json:"local"`                   // Local mounts are not replicated or affected by replication
 	SealWrap              bool              `json:"seal_wrap"`               // Whether to wrap CSPs
-	ExternalEntropyAccess bool              `json:"external_entropy_access"` // Whether to allow external entropy source access
+	ExternalEntropyAccess bool              `json:"external_entropy_access,omitempty"` // Whether to allow external entropy source access
 	Tainted               bool              `json:"tainted,omitempty"`       // Set as a Write-Ahead flag for unmount/remount
 	NamespaceID           string            `json:"namespace_id"`
 
@@ -236,15 +282,15 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
-	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl,omitempty" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl,omitempty" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache              bool                  `json:"force_no_cache,omitempty" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
-	TokenType                 logical.TokenType     `json:"token_type" structs:"token_type" mapstructure:"token_type"`
+	TokenType                 logical.TokenType     `json:"token_type,omitempty" structs:"token_type" mapstructure:"token_type"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -915,6 +961,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			c.logger.Error("failed to decompress and/or decode the mount table", "error", err)
 			return err
 		}
+		c.tableMetrics(len(mountTable.Entries), false, false, raw.Value)
 		c.mounts = mountTable
 	}
 
@@ -932,6 +979,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			return err
 		}
 		if localMountTable != nil && len(localMountTable.Entries) > 0 {
+			c.tableMetrics(len(localMountTable.Entries), true, false, raw.Value)
 			c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
 		}
 	}
@@ -1056,12 +1104,12 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		}
 	}
 
-	writeTable := func(mt *MountTable, path string) error {
+	writeTable := func(mt *MountTable, path string) ([]byte, error) {
 		// Encode the mount table into JSON and compress it (lzw).
 		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
 		if err != nil {
 			c.logger.Error("failed to encode or compress mount table", "error", err)
-			return err
+			return nil, err
 		}
 
 		// Create an entry
@@ -1073,34 +1121,46 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		// Write to the physical backend
 		if err := c.barrier.Put(ctx, entry); err != nil {
 			c.logger.Error("failed to persist mount table", "error", err)
-			return err
+			return nil, err
 		}
-		return nil
+		return compressedBytes, nil
 	}
 
 	var err error
+	var compressedBytes []byte
 	switch {
 	case local == nil:
 		// Write non-local mounts
-		err := writeTable(nonLocalMounts, coreMountConfigPath)
+		compressedBytes, err := writeTable(nonLocalMounts, coreMountConfigPath)
 		if err != nil {
 			return err
 		}
+		c.tableMetrics(len(nonLocalMounts.Entries), false, false, compressedBytes)
 
 		// Write local mounts
-		err = writeTable(localMounts, coreLocalMountConfigPath)
+		compressedBytes, err = writeTable(localMounts, coreLocalMountConfigPath)
 		if err != nil {
 			return err
 		}
+		c.tableMetrics(len(localMounts.Entries), true, false, compressedBytes)
+
 	case *local:
 		// Write local mounts
-		err = writeTable(localMounts, coreLocalMountConfigPath)
+		compressedBytes, err = writeTable(localMounts, coreLocalMountConfigPath)
+		if err != nil {
+			return err
+		}
+		c.tableMetrics(len(localMounts.Entries), true, false, compressedBytes)
 	default:
 		// Write non-local mounts
-		err = writeTable(nonLocalMounts, coreMountConfigPath)
+		compressedBytes, err = writeTable(nonLocalMounts, coreMountConfigPath)
+		if err != nil {
+			return err
+		}
+		c.tableMetrics(len(nonLocalMounts.Entries), false, false, compressedBytes)
 	}
 
-	return err
+	return nil
 }
 
 // setupMounts is invoked after we've loaded the mount table to

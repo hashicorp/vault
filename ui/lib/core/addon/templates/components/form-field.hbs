@@ -74,6 +74,7 @@
       @inputValue={{get model valuePath}}
       @helpText={{attr.options.helpText}}
       @subText={{attr.options.subText}}
+      @wildcardLabel={{attr.options.wildcardLabel}}
       @label={{labelString}}
       @subLabel={{attr.options.subLabel}}
       @fallbackComponent={{attr.options.fallbackComponent}}
@@ -128,8 +129,7 @@
   }}
 {{else if (eq attr.options.sensitive true)}}
   <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
-    @onChange={{action (action "setAndBroadcast" valuePath)}} />
-
+    @onChange={{action (action "setAndBroadcast" valuePath)}} @maskWhileTyping={{if (eq attr.name "bindpass") true}}/>
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}

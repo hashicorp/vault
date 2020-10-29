@@ -38,7 +38,7 @@ func NewEndSessions(sessionIDs bsoncore.Document) *EndSessions {
 	}
 }
 
-func (es *EndSessions) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server) error {
+func (es *EndSessions) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
 	var err error
 	return err
 }

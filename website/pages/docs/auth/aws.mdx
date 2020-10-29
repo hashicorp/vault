@@ -300,6 +300,19 @@ method.
       "Effect": "Allow",
       "Action": ["sts:AssumeRole"],
       "Resource": ["arn:aws:iam::<AccountId>:role/<VaultRole>"]
+    },
+    {
+      "Sid": "ManageOwnAccessKeys",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:GetAccessKeyLastUsed",
+        "iam:GetUser",
+        "iam:ListAccessKeys",
+        "iam:UpdateAccessKey"
+      ],
+      "Resource": "arn:aws:iam::*:user/${aws:username}"
     }
   ]
 }
@@ -559,6 +572,10 @@ Policy](#recommended-vault-iam-policy) except it doesn't need any further
 
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
 for the IAM Role to be assumed.
+
+### AWS Instance Metadata Timeout
+
+@include 'partials/aws-imds-timeout.mdx'
 
 ## Authentication
 

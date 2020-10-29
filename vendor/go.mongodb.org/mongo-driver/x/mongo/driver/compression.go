@@ -13,6 +13,7 @@ import (
 	"io"
 
 	"github.com/golang/snappy"
+	"github.com/klauspost/compress/zstd"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/wiremessage"
 )
 
@@ -24,8 +25,8 @@ type CompressionOpts struct {
 	UncompressedSize int32
 }
 
-// CompressPlayoad takes a byte slice and compresses it according to the options passed
-func CompressPlayoad(in []byte, opts CompressionOpts) ([]byte, error) {
+// CompressPayload takes a byte slice and compresses it according to the options passed
+func CompressPayload(in []byte, opts CompressionOpts) ([]byte, error) {
 	switch opts.Compressor {
 	case wiremessage.CompressorNoOp:
 		return in, nil
@@ -47,7 +48,21 @@ func CompressPlayoad(in []byte, opts CompressionOpts) ([]byte, error) {
 		}
 		return b.Bytes(), nil
 	case wiremessage.CompressorZstd:
-		return zstdCompress(in, opts.ZstdLevel)
+		var b bytes.Buffer
+		w, err := zstd.NewWriter(&b, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(opts.ZstdLevel)))
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(w, bytes.NewBuffer(in))
+		if err != nil {
+			_ = w.Close()
+			return nil, err
+		}
+		err = w.Close()
+		if err != nil {
+			return nil, err
+		}
+		return b.Bytes(), nil
 	default:
 		return nil, fmt.Errorf("unknown compressor ID %v", opts.Compressor)
 	}
@@ -73,7 +88,17 @@ func DecompressPayload(in []byte, opts CompressionOpts) ([]byte, error) {
 		}
 		return uncompressed, nil
 	case wiremessage.CompressorZstd:
-		return zstdDecompress(in, opts.UncompressedSize)
+		w, err := zstd.NewReader(bytes.NewBuffer(in))
+		if err != nil {
+			return nil, err
+		}
+		defer w.Close()
+		var b bytes.Buffer
+		_, err = io.Copy(&b, w)
+		if err != nil {
+			return nil, err
+		}
+		return b.Bytes(), nil
 	default:
 		return nil, fmt.Errorf("unknown compressor ID %v", opts.Compressor)
 	}

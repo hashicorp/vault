@@ -15,26 +15,84 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
 func raftCluster(t testing.TB) *vault.TestCluster {
-	var conf vault.CoreConfig
+	conf := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
-	cluster := vault.NewTestCluster(t, &conf, &opts)
+	teststorage.RaftBackendSetup(conf, &opts)
+	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
 }
 
+func TestRaft_RetryAutoJoin(t *testing.T) {
+	t.Parallel()
+
+	var (
+		conf vault.CoreConfig
+
+		opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	)
+
+	teststorage.RaftBackendSetup(&conf, &opts)
+
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	leaderCore := cluster.Cores[0]
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			AutoJoin:  "provider=aws region=eu-west-1 tag_key=consul tag_value=tag access_key_id=a secret_access_key=a",
+			TLSConfig: leaderCore.TLSConfig,
+			Retry:     true,
+		},
+	}
+
+	{
+		// expected to pass but not join as we're not actually discovering leader addresses
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		require.NoError(t, err)
+	}
+
+	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+		"core-0": true,
+	})
+}
+
 func TestRaft_Retry_Join(t *testing.T) {
+	t.Parallel()
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -90,7 +148,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 		cluster.UnsealCore(t, core)
 	}
 
-	verifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -98,6 +156,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 }
 
 func TestRaft_Join(t *testing.T) {
+	t.Parallel()
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -160,6 +219,7 @@ func TestRaft_Join(t *testing.T) {
 }
 
 func TestRaft_RemovePeer(t *testing.T) {
+	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -171,7 +231,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	verifyRaftPeers(t, client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -184,7 +244,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	verifyRaftPeers(t, client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 	})
@@ -196,12 +256,13 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	verifyRaftPeers(t, client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
 }
 
 func TestRaft_Configuration(t *testing.T) {
+	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -248,6 +309,7 @@ func TestRaft_Configuration(t *testing.T) {
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
+	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -259,6 +321,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI(t *testing.T) {
+	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -691,6 +754,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
+	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -810,40 +874,4 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 	}
 
 	b.Run("256b", func(b *testing.B) { bench(b, 25) })
-}
-
-func verifyRaftPeers(t *testing.T, client *api.Client, expected map[string]bool) {
-	t.Helper()
-
-	resp, err := client.Logical().Read("sys/storage/raft/configuration")
-	if err != nil {
-		t.Fatalf("error reading raft config: %v", err)
-	}
-
-	if resp == nil || resp.Data == nil {
-		t.Fatal("missing response data")
-	}
-
-	config, ok := resp.Data["config"].(map[string]interface{})
-	if !ok {
-		t.Fatal("missing config in response data")
-	}
-
-	servers, ok := config["servers"].([]interface{})
-	if !ok {
-		t.Fatal("missing servers in response data config")
-	}
-
-	// Iterate through the servers and remove the node found in the response
-	// from the expected collection
-	for _, s := range servers {
-		server := s.(map[string]interface{})
-		delete(expected, server["node_id"].(string))
-	}
-
-	// If the collection is non-empty, it means that the peer was not found in
-	// the response.
-	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
-	}
 }

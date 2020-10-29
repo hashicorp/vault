@@ -69,6 +69,7 @@ const Model = DS.Model.extend({
     label: 'Template', // TODO: make this required for making a transformation
     models: ['transform/template'],
     selectLimit: 1,
+    onlyAllowExisting: true,
     subLabel: 'Template Name',
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
@@ -79,6 +80,7 @@ const Model = DS.Model.extend({
     fallbackComponent: 'string-list',
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
+    wildcardLabel: 'role',
   }),
   transformAttrs: computed('type', function() {
     if (this.type === 'masking') {
@@ -89,9 +91,12 @@ const Model = DS.Model.extend({
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
   }),
+
+  backend: attr('string', {
+    readOnly: true,
+  }),
 });
 
 export default attachCapabilities(Model, {
-  // TODO: Update to dynamic backend name
-  updatePath: apiPath`transform/transformation/${'id'}`,
+  updatePath: apiPath`${'backend'}/transformation/${'id'}`,
 });

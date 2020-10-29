@@ -119,6 +119,7 @@ export default [
         category: 'mfa',
         content: ['duo', 'okta', 'pingid', 'totp'],
       },
+      'monitor',
       'mounts',
       'namespaces',
       'plugins-reload-backend',

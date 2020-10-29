@@ -5,14 +5,17 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
+	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAuth_ReadOnlyViewDuringMount(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	c.credentialBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		err := config.StorageView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
@@ -37,14 +40,85 @@ func TestAuth_ReadOnlyViewDuringMount(t *testing.T) {
 	}
 }
 
+func TestAuthMountMetrics(t *testing.T) {
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c.credentialBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+	mountKeyName := "core.mount_table.num_entries.type|auth||local|false||"
+	mountMetrics := &c.metricsHelper.LoopMetrics.Metrics
+	loadMetric, ok := mountMetrics.Load(mountKeyName)
+	var numEntriesMetric metricsutil.GaugeMetric = loadMetric.(metricsutil.GaugeMetric)
+
+	// 1 default nonlocal auth backend
+	if !ok || numEntriesMetric.Value != 1 {
+		t.Fatalf("Auth values should be: %+v", numEntriesMetric)
+	}
+
+	me := &MountEntry{
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.enableCredential(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	mountMetrics = &c.metricsHelper.LoopMetrics.Metrics
+	loadMetric, ok = mountMetrics.Load(mountKeyName)
+	numEntriesMetric = loadMetric.(metricsutil.GaugeMetric)
+	if !ok || numEntriesMetric.Value != 2 {
+		t.Fatalf("mount metrics for num entries do not match true values")
+	}
+	if len(numEntriesMetric.Key) != 3 ||
+		numEntriesMetric.Key[0] != "core" ||
+		numEntriesMetric.Key[1] != "mount_table" ||
+		numEntriesMetric.Key[2] != "num_entries" {
+		t.Fatalf("mount metrics for num entries have wrong key")
+	}
+	if len(numEntriesMetric.Labels) != 2 ||
+		numEntriesMetric.Labels[0].Name != "type" ||
+		numEntriesMetric.Labels[0].Value != "auth" ||
+		numEntriesMetric.Labels[1].Name != "local" ||
+		numEntriesMetric.Labels[1].Value != "false" {
+		t.Fatalf("mount metrics for num entries have wrong labels")
+	}
+	mountSizeKeyName := "core.mount_table.size.type|auth||local|false||"
+	loadMetric, ok = mountMetrics.Load(mountSizeKeyName)
+	sizeMetric := loadMetric.(metricsutil.GaugeMetric)
+
+	if !ok {
+		t.Fatalf("mount metrics for size do not match exist")
+	}
+	if len(sizeMetric.Key) != 3 ||
+		sizeMetric.Key[0] != "core" ||
+		sizeMetric.Key[1] != "mount_table" ||
+		sizeMetric.Key[2] != "size" {
+		t.Fatalf("mount metrics for size have wrong key")
+	}
+	if len(sizeMetric.Labels) != 2 ||
+		sizeMetric.Labels[0].Name != "type" ||
+		sizeMetric.Labels[0].Value != "auth" ||
+		sizeMetric.Labels[1].Name != "local" ||
+		sizeMetric.Labels[1].Value != "false" {
+		t.Fatalf("mount metrics for size have wrong labels")
+	}
+}
+
 func TestCore_DefaultAuthTable(t *testing.T) {
-	c, keys, _ := TestCoreUnsealed(t)
+	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
 	verifyDefaultAuthTable(t, c.auth)
 
 	// Start a second core with same physical
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -67,7 +141,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 }
 
 func TestCore_EnableCredential(t *testing.T) {
-	c, keys, _ := TestCoreUnsealed(t)
+	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{
 			BackendType: logical.TypeCredential,
@@ -89,9 +163,13 @@ func TestCore_EnableCredential(t *testing.T) {
 		t.Fatalf("missing mount, match: %q", match)
 	}
 
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -122,7 +200,7 @@ func TestCore_EnableCredential(t *testing.T) {
 // entries, and that upon reading the entries from both are recombined
 // correctly
 func TestCore_EnableCredential_Local(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{
 			BackendType: logical.TypeCredential,
@@ -211,7 +289,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 }
 
 func TestCore_EnableCredential_twice_409(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{
 			BackendType: logical.TypeCredential,
@@ -241,7 +319,7 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 }
 
 func TestCore_EnableCredential_Token(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	me := &MountEntry{
 		Table: credentialTableType,
 		Path:  "foo",
@@ -254,7 +332,7 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 }
 
 func TestCore_DisableCredential(t *testing.T) {
-	c, keys, _ := TestCoreUnsealed(t)
+	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{
 			BackendType: logical.TypeCredential,
@@ -286,9 +364,13 @@ func TestCore_DisableCredential(t *testing.T) {
 		t.Fatalf("backend present")
 	}
 
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -311,7 +393,7 @@ func TestCore_DisableCredential(t *testing.T) {
 }
 
 func TestCore_DisableCredential_Protected(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	err := c.disableCredential(namespace.RootContext(nil), "token")
 	if err.Error() != "token credential backend cannot be disabled" {
 		t.Fatalf("err: %v", err)
@@ -323,7 +405,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Login:       []string{"login"},
 		BackendType: logical.TypeCredential,
 	}
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
@@ -394,7 +476,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 }
 
 func TestDefaultAuthTable(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 	table := c.defaultAuthTable()
 	verifyDefaultAuthTable(t, table)
 }
@@ -432,7 +514,7 @@ func TestCore_CredentialInitialize(t *testing.T) {
 				BackendType: logical.TypeCredential,
 			}, false}
 
-		c, _, _ := TestCoreUnsealed(t)
+		c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 			return backend, nil
 		}
@@ -457,7 +539,7 @@ func TestCore_CredentialInitialize(t *testing.T) {
 				BackendType: logical.TypeCredential,
 			}, false}
 
-		c, _, _ := TestCoreUnsealed(t)
+		c, _, _, _ := TestCoreUnsealedWithMetrics(t)
 		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 			return backend, nil
 		}

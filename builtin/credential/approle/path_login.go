@@ -287,7 +287,8 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		},
 		Metadata: metadata,
 		Alias: &logical.Alias{
-			Name: role.RoleID,
+			Name:     role.RoleID,
+			Metadata: metadata,
 		},
 	}
 	role.PopulateTokenAuth(auth)
