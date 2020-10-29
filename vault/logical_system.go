@@ -1018,7 +1018,12 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 }
 
 func validateMountPath(p string) error {
+	hasSuffix := strings.HasSuffix(p, "/")
 	s := path.Clean(p)
+	// Retain the trailing slash if it was provided
+	if hasSuffix {
+		s = s + "/"
+	}
 	if p != s {
 		return fmt.Errorf("path '%v' does not match cleaned path '%v'", p, s)
 	}
