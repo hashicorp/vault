@@ -176,10 +176,10 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		t.Fatal("failed to unmarshal:", err)
 	}
 	for _, gauge := range data.Gauges {
-		if gauge.Name == "core.leader" {
+		if gauge.Name == "core.active" {
 			coreLeaderMetric = true
 			if gauge.Value != 1 {
-				t.Errorf("metric incorrectly reports leader status")
+				t.Errorf("metric incorrectly reports active status")
 			}
 		}
 		if gauge.Name == "core.unsealed" {
@@ -216,10 +216,10 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		coreLeaderMetric = false
 		coreUnsealMetric = false
 		for _, gauge := range data.Gauges {
-			if gauge.Name == "core.leader" {
+			if gauge.Name == "core.active" {
 				coreLeaderMetric = true
 				if gauge.Value != 1 {
-					t.Errorf("metric incorrectly reports leader status")
+					t.Errorf("metric incorrectly reports active status")
 				}
 			}
 			if gauge.Name == "core.unsealed" {
