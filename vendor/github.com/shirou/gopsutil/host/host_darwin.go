@@ -9,10 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
-	"sync/atomic"
-	"time"
 	"unsafe"
 
 	"github.com/shirou/gopsutil/internal/common"
@@ -23,107 +20,20 @@ import (
 // from utmpx.h
 const USER_PROCESS = 7
 
-func Info() (*InfoStat, error) {
-	return InfoWithContext(context.Background())
-}
-
-func InfoWithContext(ctx context.Context) (*InfoStat, error) {
-	ret := &InfoStat{
-		OS:             runtime.GOOS,
-		PlatformFamily: "darwin",
-	}
-
-	hostname, err := os.Hostname()
-	if err == nil {
-		ret.Hostname = hostname
-	}
-
-	kernelVersion, err := KernelVersionWithContext(ctx)
-	if err == nil {
-		ret.KernelVersion = kernelVersion
-	}
-
-	kernelArch, err := kernelArch()
-	if err == nil {
-		ret.KernelArch = kernelArch
-	}
-
-	platform, family, pver, err := PlatformInformation()
-	if err == nil {
-		ret.Platform = platform
-		ret.PlatformFamily = family
-		ret.PlatformVersion = pver
-	}
-
-	system, role, err := Virtualization()
-	if err == nil {
-		ret.VirtualizationSystem = system
-		ret.VirtualizationRole = role
-	}
-
-	boot, err := BootTime()
-	if err == nil {
-		ret.BootTime = boot
-		ret.Uptime = uptime(boot)
-	}
-
-	procs, err := process.Pids()
-	if err == nil {
-		ret.Procs = uint64(len(procs))
-	}
-
+func HostIDWithContext(ctx context.Context) (string, error) {
 	uuid, err := unix.Sysctl("kern.uuid")
-	if err == nil && uuid != "" {
-		ret.HostID = strings.ToLower(uuid)
+	if err != nil {
+		return "", err
 	}
-
-	return ret, nil
+	return strings.ToLower(uuid), err
 }
 
-// cachedBootTime must be accessed via atomic.Load/StoreUint64
-var cachedBootTime uint64
-
-func BootTime() (uint64, error) {
-	return BootTimeWithContext(context.Background())
-}
-
-func BootTimeWithContext(ctx context.Context) (uint64, error) {
-	// https://github.com/AaronO/dashd/blob/222e32ef9f7a1f9bea4a8da2c3627c4cb992f860/probe/probe_darwin.go
-	t := atomic.LoadUint64(&cachedBootTime)
-	if t != 0 {
-		return t, nil
-	}
-	value, err := unix.Sysctl("kern.boottime")
+func numProcs(ctx context.Context) (uint64, error) {
+	procs, err := process.PidsWithContext(ctx)
 	if err != nil {
 		return 0, err
 	}
-	bytes := []byte(value[:])
-	var boottime uint64
-	boottime = uint64(bytes[0]) + uint64(bytes[1])*256 + uint64(bytes[2])*256*256 + uint64(bytes[3])*256*256*256
-
-	atomic.StoreUint64(&cachedBootTime, boottime)
-
-	return boottime, nil
-}
-
-func uptime(boot uint64) uint64 {
-	return uint64(time.Now().Unix()) - boot
-}
-
-func Uptime() (uint64, error) {
-	return UptimeWithContext(context.Background())
-}
-
-func UptimeWithContext(ctx context.Context) (uint64, error) {
-	boot, err := BootTimeWithContext(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return uptime(boot), nil
-}
-
-func Users() ([]UserStat, error) {
-	return UsersWithContext(context.Background())
+	return uint64(len(procs)), nil
 }
 
 func UsersWithContext(ctx context.Context) ([]UserStat, error) {
@@ -170,10 +80,6 @@ func UsersWithContext(ctx context.Context) ([]UserStat, error) {
 
 }
 
-func PlatformInformation() (string, string, string, error) {
-	return PlatformInformationWithContext(context.Background())
-}
-
 func PlatformInformationWithContext(ctx context.Context) (string, string, string, error) {
 	platform := ""
 	family := ""
@@ -207,16 +113,8 @@ func PlatformInformationWithContext(ctx context.Context) (string, string, string
 	return platform, family, pver, nil
 }
 
-func Virtualization() (string, string, error) {
-	return VirtualizationWithContext(context.Background())
-}
-
 func VirtualizationWithContext(ctx context.Context) (string, string, error) {
 	return "", "", common.ErrNotImplementedError
-}
-
-func KernelVersion() (string, error) {
-	return KernelVersionWithContext(context.Background())
 }
 
 func KernelVersionWithContext(ctx context.Context) (string, error) {
