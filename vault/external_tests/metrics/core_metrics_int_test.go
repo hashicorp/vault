@@ -16,18 +16,16 @@ import (
 )
 
 func TestMountTableMetrics(t *testing.T) {
-	inm := metrics.NewInmemSink(time.Minute, time.Minute*10)
-	clusterSink := metricsutil.NewClusterMetricSink("mycluster", inm)
-	clusterSink.GaugeInterval = time.Second
+	clusterName := "mycluster"
 	conf := &vault.CoreConfig{
 		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inm, true),
-		MetricSink:      clusterSink,
+		ClusterName:     clusterName,
 	}
 	cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
-		KeepStandbysSealed: false,
-		HandlerFunc:        vaulthttp.Handler,
-		NumCores:           2,
+		KeepStandbysSealed:     false,
+		HandlerFunc:            vaulthttp.Handler,
+		NumCores:               2,
+		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
 	})
 
 	cluster.Start()
@@ -129,19 +127,26 @@ func gaugeConditionCheck(comparator string, compareVal int, compareToVal int) er
 	return nil
 }
 
+func testMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
+		clusterSink.GaugeInterval = gaugeInterval
+		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
+	}
+}
+
 func TestLeaderReElectionMetrics(t *testing.T) {
-	inm := metrics.NewInmemSink(time.Minute, time.Minute*10)
-	clusterSink := metricsutil.NewClusterMetricSink("mycluster", inm)
-	clusterSink.GaugeInterval = time.Second
+	clusterName := "mycluster"
 	conf := &vault.CoreConfig{
 		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inm, true),
-		MetricSink:      clusterSink,
+		ClusterName:     clusterName,
 	}
 	cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
-		KeepStandbysSealed: false,
-		HandlerFunc:        vaulthttp.Handler,
-		NumCores:           2,
+		KeepStandbysSealed:     false,
+		HandlerFunc:            vaulthttp.Handler,
+		NumCores:               2,
+		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
 	})
 
 	cluster.Start()
