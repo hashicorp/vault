@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -120,7 +121,7 @@ type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
 func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *leaseEntry) {
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		releasePermit := func() {}
-		if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" && m.revokePermitPool != nil {
+		if m.revokePermitPool != nil {
 			m.revokePermitPool.Acquire()
 			releasePermit = m.revokePermitPool.Release
 		}
@@ -169,6 +170,18 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
+	var permitPool *physical.PermitPool
+	if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" {
+		permitPoolSize := 50
+		permitPoolSizeRaw, err := strconv.Atoi(os.Getenv("VAULT_16_REVOKE_PERMITPOOL"))
+		if err == nil && permitPoolSizeRaw > 0 {
+			permitPoolSize = permitPoolSizeRaw
+		}
+
+		permitPool = physical.NewPermitPool(permitPoolSize)
+
+	}
+
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -196,7 +209,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
-		revokePermitPool:    physical.NewPermitPool(50),
+		revokePermitPool:    permitPool,
 	}
 	*exp.restoreMode = 1
 
