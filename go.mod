@@ -10,8 +10,9 @@ require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.6.0
-	github.com/Azure/azure-storage-blob-go v0.10.0
-	github.com/Azure/go-autorest/autorest v0.11.0
+	github.com/Azure/azure-storage-blob-go v0.11.0
+	github.com/Azure/go-autorest/autorest v0.11.10
+	github.com/Azure/go-autorest/autorest/adal v0.9.5
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -136,7 +137,7 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.3.0
-	github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
+	github.com/shirou/gopsutil v2.20.9+incompatible
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
@@ -146,7 +147,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.2
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04

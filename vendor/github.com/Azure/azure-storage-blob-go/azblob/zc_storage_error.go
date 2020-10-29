@@ -79,7 +79,7 @@ func (e *storageError) Error() string {
 // Temporary returns true if the error occurred due to a temporary condition (including an HTTP status of 500 or 503).
 func (e *storageError) Temporary() bool {
 	if e.response != nil {
-		if (e.response.StatusCode == http.StatusInternalServerError) || (e.response.StatusCode == http.StatusServiceUnavailable) {
+		if (e.response.StatusCode == http.StatusInternalServerError) || (e.response.StatusCode == http.StatusServiceUnavailable) || (e.response.StatusCode == http.StatusBadGateway) {
 			return true
 		}
 	}

@@ -42,7 +42,8 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `accountName` `(string: <required>)` – Specifies the Azure Storage account
   name.
 
-- `accountKey` `(string: <required>)` – Specifies the Azure Storage account key.
+- `accountKey` `(string: <optional>)` – Specifies the Azure Storage account key,
+   if left empty, uses managed identity auth.
 
 - `container` `(string: <required>)` – Specifies the Azure Storage Blob
   container name.

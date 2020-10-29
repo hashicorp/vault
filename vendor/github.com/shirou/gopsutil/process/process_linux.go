@@ -228,6 +228,14 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 	return p.gids, nil
 }
 
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	err := p.fillFromStatusWithContext(ctx)
+	if err != nil {
+		return []int32{}, err
+	}
+	return p.groups, nil
+}
+
 // Terminal returns a terminal which is associated with the process.
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())
@@ -576,7 +584,8 @@ func (p *Process) MemoryMapsWithContext(ctx context.Context, grouped bool) (*[]M
 			if len(field) < 2 {
 				continue
 			}
-			v := strings.Trim(field[1], " kB") // remove last "kB"
+			v := strings.Trim(field[1], "kB") // remove last "kB"
+			v = strings.TrimSpace(v)
 			t, err := strconv.ParseUint(v, 10, 64)
 			if err != nil {
 				return m, err
@@ -610,11 +619,11 @@ func (p *Process) MemoryMapsWithContext(ctx context.Context, grouped bool) (*[]M
 
 	blocks := make([]string, 16)
 	for _, line := range lines {
-		field := strings.Split(line, " ")
-		if strings.HasSuffix(field[0], ":") == false {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && !strings.HasSuffix(fields[0], ":") {
 			// new block section
 			if len(blocks) > 0 {
-				g, err := getBlock(field, blocks)
+				g, err := getBlock(fields, blocks)
 				if err != nil {
 					return &ret, err
 				}
@@ -1013,6 +1022,16 @@ func (p *Process) fillFromStatusWithContext(ctx context.Context) error {
 					return err
 				}
 				p.gids = append(p.gids, int32(v))
+			}
+		case "Groups":
+			groups := strings.Fields(value)
+			p.groups = make([]int32, 0, len(groups))
+			for _, i := range groups {
+				v, err := strconv.ParseInt(i, 10, 32)
+				if err != nil {
+					return err
+				}
+				p.groups = append(p.groups, int32(v))
 			}
 		case "Threads":
 			v, err := strconv.ParseInt(value, 10, 32)
