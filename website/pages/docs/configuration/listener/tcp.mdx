@@ -188,6 +188,33 @@ listener "tcp" {
 }
 ```
 
+### Listening on all IPv6 & IPv4 Interfaces
+
+This example shows Vault listening on all IPv4 & IPv6 interfaces including localhost.
+
+```hcl
+listener "tcp" {
+  address         = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+```
+
+### Listening to specific IPv6 address
+
+This example shows Vault only using IPv6 and binding to the interface with the IP address: `2001:1c04:90d:1c00:a00:27ff:fefa:58ec`
+
+```hcl
+listener "tcp" {
+  address         = "[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
+  cluster_address = "[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+}
+
+# Advertise the non-loopback interface
+api_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
+cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+```
+
+
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
 [api-addr]: /docs/configuration#api_addr
 [cluster-addr]: /docs/configuration#cluster_addr
