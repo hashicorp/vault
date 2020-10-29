@@ -44,9 +44,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 			// Refresh the standby gauge, on all nodes
 			if standby, _ := c.Standby(); standby {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 0, nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 			} else {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "leader"}, 1, nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 			}
 
 			// Refresh gauge metrics that are looped
@@ -58,7 +58,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				// should trigger
 				continue
 			}
-			if c.perfStandby { // already have lock here, don't re-acquire
+			if c.perfStandby { // already have lock here, do not re-acquire
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
