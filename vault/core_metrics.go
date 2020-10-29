@@ -55,7 +55,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				// should trigger
 				continue
 			}
-			if c.perfStandby { // already have lock here, don't re-acquire
+			if c.perfStandby { // already have lock here, do not re-acquire
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
