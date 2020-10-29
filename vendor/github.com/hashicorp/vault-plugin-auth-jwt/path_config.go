@@ -89,6 +89,14 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 					Name: "Provider Config",
 				},
 			},
+			"namespace_in_state": {
+				Type:        framework.TypeBool,
+				Description: "Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Namespace in OIDC state",
+					Value: true,
+				},
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -166,6 +174,7 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"jwks_ca_pem":            config.JWKSCAPEM,
 			"bound_issuer":           config.BoundIssuer,
 			"provider_config":        config.ProviderConfig,
+			"namespace_in_state":     config.NamespaceInState,
 		},
 	}
 
@@ -187,6 +196,23 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
 		ProviderConfig:       d.Get("provider_config").(map[string]interface{}),
+	}
+
+	// Check if the config already exists, to determine if this is a create or
+	// an update, since req.Operation is always 'update' in this handler, and
+	// there's no existence check defined.
+	existingConfig, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if nsInState, ok := d.GetOk("namespace_in_state"); ok {
+		config.NamespaceInState = nsInState.(bool)
+	} else if existingConfig == nil {
+		// new configs default to true
+		config.NamespaceInState = true
+	} else {
+		// maintain the existing value
+		config.NamespaceInState = existingConfig.NamespaceInState
 	}
 
 	// Run checks on values
@@ -349,6 +375,7 @@ type jwtConfig struct {
 	BoundIssuer          string                 `json:"bound_issuer"`
 	DefaultRole          string                 `json:"default_role"`
 	ProviderConfig       map[string]interface{} `json:"provider_config"`
+	NamespaceInState     bool                   `json:"namespace_in_state"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`
 }
