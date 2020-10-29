@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -105,6 +106,8 @@ type ExpirationManager struct {
 	logLeaseExpirations bool
 	expireFunc          ExpireLeaseStrategy
 
+	revokePermitPool *physical.PermitPool
+
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
 	// request. This value should only be set by tests.
@@ -116,6 +119,12 @@ type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
 // revokeIDFunc is invoked when a given ID is expired
 func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *leaseEntry) {
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
+		releasePermit := func() {}
+		if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" && m.revokePermitPool != nil {
+			m.revokePermitPool.Acquire()
+			releasePermit = m.revokePermitPool.Release
+		}
+
 		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
 		revokeCtx = namespace.ContextWithNamespace(revokeCtx, le.namespace)
 
@@ -131,10 +140,12 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 		select {
 		case <-m.quitCh:
 			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			releasePermit()
 			cancel()
 			return
 		case <-m.quitContext.Done():
 			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			releasePermit()
 			cancel()
 			return
 		default:
@@ -143,6 +154,7 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 		m.coreStateLock.RLock()
 		err := m.Revoke(revokeCtx, le.LeaseID)
 		m.coreStateLock.RUnlock()
+		releasePermit()
 		cancel()
 		if err == nil {
 			return
@@ -184,6 +196,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
+		revokePermitPool:    physical.NewPermitPool(50),
 	}
 	*exp.restoreMode = 1
 
