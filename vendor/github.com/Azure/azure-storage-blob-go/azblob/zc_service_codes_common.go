@@ -114,6 +114,8 @@ const (
 	// ServiceCodeResourceNotFound means the specified resource does not exist (404).
 	ServiceCodeResourceNotFound ServiceCodeType = "ResourceNotFound"
 
+	ServiceCodeNoAuthenticationInformation ServiceCodeType = "NoAuthenticationInformation"
+
 	// ServiceCodeServerBusy means the server is currently unable to receive requests. Please retry your request or Ingress/egress is over the account limit or operations per second is over the account limit (503).
 	ServiceCodeServerBusy ServiceCodeType = "ServerBusy"
 
