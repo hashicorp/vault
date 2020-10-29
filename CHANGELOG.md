@@ -20,6 +20,7 @@ IMPROVEMENTS:
 * command/server: Add environment variable support for `disable_mlock`. [[GH-9931](https://github.com/hashicorp/vault/pull/9931)]
 * core/metrics: Add metrics for storage cache [[GH_10079](https://github.com/hashicorp/vault/pull/10079)]
 * core/metrics: Add metrics for leader status [[GH 10147](https://github.com/hashicorp/vault/pull/10147)]
+* physical/azure: Add the ability to use Azure Instance Metadata Service to set the credentials for Azure Blob storage on the backend. [[GH-10189](https://github.com/hashicorp/vault/pull/10189)]
 * sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
 * secrets/database: Added support for password policies to all databases [[GH-9641](https://github.com/hashicorp/vault/pull/9641),
   [and more](https://github.com/hashicorp/vault/pulls?q=is%3Apr+is%3Amerged+dbpw)]
