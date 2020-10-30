@@ -1048,6 +1048,8 @@ type TestClusterOptions struct {
 	// RaftAddressProvider should only be specified if the underlying physical
 	// storage is Raft.
 	RaftAddressProvider raftlib.ServerAddressProvider
+
+	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 }
 
 var DefaultNumCores = 3
@@ -1412,6 +1414,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.MetricSink = base.MetricSink
 		coreConfig.SecureRandomReader = base.SecureRandomReader
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
+		coreConfig.ClusterName = base.ClusterName
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1465,7 +1468,16 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
 
+		coreConfig.ActivityLogConfig = base.ActivityLogConfig
+
 		testApplyEntBaseConfig(coreConfig, base)
+	}
+	if coreConfig.ClusterName == "" {
+		coreConfig.ClusterName = t.Name()
+	}
+
+	if coreConfig.ClusterName == "" {
+		coreConfig.ClusterName = t.Name()
 	}
 
 	if coreConfig.ClusterHeartbeatInterval == 0 {
@@ -1757,6 +1769,13 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 		metrics.DefaultInmemSignal(inm)
 		localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
+	}
+	if opts != nil && opts.CoreMetricSinkProvider != nil {
+		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
+	}
+
+	if opts != nil && opts.CoreMetricSinkProvider != nil {
+		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
 	}
 
 	c, err := NewCore(&localConfig)

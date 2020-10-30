@@ -532,6 +532,8 @@ type Core struct {
 	quotaManager *quotas.Manager
 
 	clusterHeartbeatInterval time.Duration
+
+	activityLogConfig ActivityLogCoreConfig
 }
 
 // CoreConfig is used to parameterize a core
@@ -631,6 +633,9 @@ type CoreConfig struct {
 	ClusterNetworkLayer cluster.NetworkLayer
 
 	ClusterHeartbeatInterval time.Duration
+
+	// Activity log controls
+	ActivityLogConfig ActivityLogCoreConfig
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -770,9 +775,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted:        new(uint32),
 		raftJoinDoneCh:           make(chan struct{}),
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
+		activityLogConfig:        conf.ActivityLogConfig,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
-
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 
@@ -2060,6 +2065,9 @@ func (c *Core) preSeal() error {
 	}
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping expiration: {{err}}", err))
+	}
+	if err := c.stopActivityLog(); err != nil {
+		result = multierror.Append(result, errwrap.Wrapf("error stopping activity log: {{err}}", err))
 	}
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down credentials: {{err}}", err))
