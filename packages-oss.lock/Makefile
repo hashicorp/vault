@@ -161,6 +161,21 @@ package-meta:
 		echo "$$COMMAND"; \
 		$(SHELL) "$$COMMAND"
 
+# package-meta expects PACKAGE_SPEC_ID to already be set, use this in CI.
+package-meta-all:
+	@$(call DIRTY_SOURCE_WARNING,WRITING DIRTY METADATA FOR DIRTY PACKAGES)
+	@PACKAGE_SPEC_IDS="$$($(call QUERY_LOCK,.packages[] | .packagespecid))"; \
+		COUNT=$$(echo $$PACKAGE_SPEC_IDS | wc -w | xargs); \
+		echo "==> Writing $$COUNT packages' metadata..."; \
+		for PACKAGE_SPEC_ID in $$PACKAGE_SPEC_IDS; do \
+			export PACKAGE_SPEC_ID; \
+			FILE="$(PACKAGE_SOURCE_ID)-$${PACKAGE_SPEC_ID}.zip.meta.json"; \
+			OUT="$(PACKAGE_STORE)/$$FILE"; \
+			COMMAND="$(call QUERY_PACKAGESPEC_BY_ID,env.PACKAGE_SPEC_ID,.) > $$OUT"; \
+			echo "$$COMMAND"; \
+			$(SHELL) "$$COMMAND"; \
+		done
+
 # aliases writes all alias symlinks for packages in the package store that
 # match the current LOCKFILE and PRODUCT_REVISION. It does not cause a new build.
 # If the package store contains no matchin binaries, then this does nothing.
