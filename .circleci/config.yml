@@ -1061,7 +1061,7 @@ jobs:
         - .buildcache/archives/08-warm-go-build-vendor-cache-760cd45f95dcdbec5318705331a0aedf6f0b813b.tar.gz
   test-go-remote-docker:
     docker:
-    - image: circleci/golang:1.14.7-stretch
+    - image: circleci/golang:1.15.3-buster
     resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1293,7 +1293,7 @@ jobs:
         - .buildcache/archives/08-warm-go-build-vendor-cache-282990ba92770ec199d835955fbceb18fbb4319c.tar.gz
   test-go-race:
     docker:
-    - image: circleci/golang:1.15.3-stretch
+    - image: circleci/golang:1.15.3-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1811,7 +1811,7 @@ jobs:
         - .buildcache/archives/08-warm-go-build-vendor-cache-27c64188811d5b42afb14085b4142a7fb68b408d.tar.gz
   test-go:
     docker:
-    - image: circleci/golang:1.15.3-stretch
+    - image: circleci/golang:1.15.3-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -2579,7 +2579,7 @@ jobs:
         command: make ci-verify
   test-go-race-remote-docker:
     docker:
-    - image: circleci/golang:1.15.3-stretch
+    - image: circleci/golang:1.15.3-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
