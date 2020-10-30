@@ -72,10 +72,12 @@ done
 # Fetch everything from these remotes, ignore errors.
 git remote update || true
 
+BRANCH_ESCAPED="$(sed -E -e 's/\./\\./g' -e 's/\+/\\+/g' -e 's/\//\\\//g' <<< "$BRANCH")"
+
 # Determine which remotes the branch is on.
 declare -A BRANCH_REMOTES
 for R in "${!REMOTES[@]}"; do
-	if git branch -a | grep -E "^[[:space:]]*remotes/$R/$BRANCH\$"; then
+	if git branch -a | grep -E "^[[:space:]]*remotes/$R/$BRANCH_ESCAPED\$"; then
 		TARGET_REMOTE="$R"
 		BRANCH_REMOTES[$R]=1
 	fi
