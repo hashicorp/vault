@@ -41,7 +41,7 @@ export PACKAGE_SPEC_ID LAYER_SPEC_ID PRODUCT_REVISION PRODUCT_VERSION
 # PASSTHROUGH_TARGETS are convenience aliases for targets defined in $(LOCKDIR)/Makefile
 PASSTHROUGH_TARGETS := \
 	build package-contents copy-package-contents build-all \
-	aliases meta package package-meta \
+	aliases meta package package-meta package-meta-all \
 	build-ci watch-ci \
 	stage-config stage custom-build custom-build-config\
 	list-custom-builds \
@@ -58,7 +58,7 @@ $(PASSTHROUGH_TARGETS) $(LOCAL_TARGETS): SHELL := $(PACKAGESPEC_SHELL)
 $(PASSTHROUGH_TARGETS):
 	@PRODUCT_REPO_ROOT="$(call RUN,git rev-parse --show-toplevel)" $(MAKE) -C $(LOCKDIR) $@
 
-# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
+# packages regenerates build and CI config using packagespec. This is only for
 # internal HashiCorp use, as it has dependencies not available externally.
 .PHONY: packages
 packages:
@@ -67,17 +67,8 @@ packages:
 		echo "Note: packagespec is only available to HashiCorp employees at present."; \
 		exit 1; \
 	}
-	@packagespec lock
-	@$(MAKE) $(PACKAGESPEC_CIRCLECI_CONFIG)
+	@packagespec lock -circleciconfig="$(PACKAGESPEC_CIRCLECI_CONFIG)"
+	@$(MAKE) packagespec-circleci-config
 
-CIRCLECI_PRIMARY_TPL := .packagespec/templates/circleci-primary.yml.tpl
-
-$(PACKAGESPEC_CIRCLECI_CONFIG): $(LOCKFILE) $(CIRCLECI_PRIMARY_TPL)
-	@\
-		echo "==> Updating $(PACKAGESPEC_CIRCLECI_CONFIG)..."; \
-		mkdir -p "$(dir $@)"; \
-		cat $< | gomplate -f $(CIRCLECI_PRIMARY_TPL) -d 'lock-file=stdin://?type=application/yaml' > $@; \
-		$(PACKAGESPEC_HOOK_POST_CI_CONFIG)
-
-# This target is needed by packagespec, do not remove.
-packagespec-circleci-config: $(PACKAGESPEC_CIRCLECI_CONFIG)
+packagespec-circleci-config:
+	@$(PACKAGESPEC_HOOK_POST_CI_CONFIG)
