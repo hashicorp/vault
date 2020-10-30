@@ -33,7 +33,7 @@ set.
 - `oidc_discovery_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used.
 - `oidc_client_id` `(string: <optional>)` - The OAuth Client ID from the provider for OIDC roles.
 - `oidc_client_secret` `(string: <optional>)` - The OAuth Client Secret from the provider for OIDC roles.
-- `oidc_response_mode` `(string: <optional>)` - The response mode to be used in the OAuth2 request. Allowed values are "query" and "form_post". Defaults to "query".
+- `oidc_response_mode` `(string: <optional>)` - The response mode to be used in the OAuth2 request. Allowed values are "query" and "form_post". Defaults to "query". If using Vault namespaces, and oidc_response_mode is "form_post", then "namespace_in_state" should be set to false.
 - `oidc_response_types` `(comma-separated string, or array of strings: <optional>)` - The response types to request. Allowed values are "code" and "id_token". Defaults to "code".
   Note: "id_token" may only be used if "oidc_response_mode" is set to "form_post".
 - `jwks_url` `(string: <optional>)` - JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".
@@ -43,7 +43,7 @@ set.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256]. ([Available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/coreos/go-oidc/jose.go#L7) + EdDSA)
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
 - `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include Azure; the options are described in each provider's section in [OIDC Provider Setup](/docs/auth/jwt_oidc_providers)
-- `namespace_in_state` `(bool: false)` - Pass namespace in the state parameter instead of as a separate query parameter. With this setting the allowed redirect URL in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it.
+- `namespace_in_state` `(bool: true)` - Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.
 
 ### Sample Payload
 
