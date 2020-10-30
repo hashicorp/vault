@@ -942,9 +942,15 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
 func (c *Core) setupActivityLog(ctx context.Context) error {
-	view := c.systemBarrierView.SubView(activitySubPath)
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
+
+	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
+		logger.Info("activity log disabled via environment variable")
+		return nil
+	}
+
+	view := c.systemBarrierView.SubView(activitySubPath)
 
 	manager, err := NewActivityLog(c, logger, view, c.metricSink)
 	if err != nil {
