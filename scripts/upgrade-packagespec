@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+# VERSION is the packagespec version to upgrade to.
+VERSION="$1"
+BRANCH="$2"
+
+if [ -z "$VERSION" ]; then
+	echo "usage: $0 <packagespec version> <branch name>"
+	exit 1
+fi
+if [ -z "$BRANCH" ]; then
+	echo "usage: $0 <packagespec version> <branch name>"
+	exit 1
+fi
+
+set -euo pipefail
+
+declare -A REMOTES
+
+# url_remotes lists remotes along with their push URLs, where they are
+# filesystem paths (i.e. do not start with / or . ).
+url_remotes() { git remote -v | grep -F "(push)" | sed -E 's/[[:space:]]+\(push\)//g' | grep -Ev "\t(/|\.)"; }
+for R in $(url_remotes | cut -f1); do
+	REMOTES[$R]="$(url_remotes | grep -E "^$R\t" | cut -f2)"
+done
+
+for R in "${!REMOTES[@]}"; do
+	echo "Remote: $R = ${REMOTES[$R]}"
+done
+
+TEMP=".upgrade-packagespec"
+mkdir -p "$TEMP"
+echo "*" > "$TEMP/.gitignore"
+CLONEDIR="$TEMP/product-repo"
+if ! [ -d "$CLONEDIR/.git" ]; then
+	git clone . "$CLONEDIR"
+fi
+cd "$CLONEDIR"
+echo "==> WORKING IN TEMP DIR: $CLONEDIR"
+git reset --hard
+
+# Remove existing remotes
+for R in $(git remote); do git remote rm "$R"; done
+
+# Add remotes from original checkout dir
+for R in "${!REMOTES[@]}"; do
+	git remote add "$R" "${REMOTES[$R]}"
+done
+
+# Fetch everything from these remotes, ignore errors.
+git remote update || true
+
+# Determine which remotes the branch is on.
+declare -A BRANCH_REMOTES
+for R in "${!REMOTES[@]}"; do
+	if git branch -a | grep -E "^[[:space:]]*remotes/$R/$BRANCH\$"; then
+		TARGET_REMOTE="$R"
+		BRANCH_REMOTES[$R]=1
+	fi
+done
+
+COUNT="${#BRANCH_REMOTES[@]}"
+if [ "$COUNT" -ne "1" ]; then
+	echo "==> ERROR: Branch $BRANCH found on $COUNT remotes; want exactly 1"
+	exit 1
+fi
+
+# Checkout the target update branch.
+git checkout "$BRANCH"
+git reset --hard "$TARGET_REMOTE/$BRANCH"
+
+NEW_BRANCH="packagespec$VERSION/$BRANCH"
+git checkout -B "$NEW_BRANCH" "$BRANCH"
+
+COMMAND="packagespec upgrade -version $VERSION"
+echo "==> Running $COMMAND"
+$COMMAND
+
+git add .circleci/ packages*.lock packagespec*
+git commit -m "$COMMAND"
+
+git push -u "$TARGET_REMOTE" "$NEW_BRANCH"
+
+echo "==> All done: upgrade pushed to branch $NEW_BRANCH on ${REMOTES[$TARGET_REMOTE]}"
