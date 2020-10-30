@@ -142,6 +142,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		APIAddr:     "top_level_api_addr",
 		ClusterAddr: "top_level_cluster_addr",
 	}
+	addExpectedEntConfig(expected, []string{})
+
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
@@ -226,6 +228,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 	}
+	addExpectedEntConfig(expected, []string{"http"})
+
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
@@ -429,6 +433,9 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 	}
+
+	addExpectedEntConfig(expected, []string{})
+
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
@@ -506,6 +513,9 @@ func testLoadConfigFile_json(t *testing.T) {
 		DisableSealWrap:      true,
 		DisableSealWrapRaw:   true,
 	}
+
+	addExpectedEntConfig(expected, []string{})
+
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
@@ -564,6 +574,9 @@ func testLoadConfigDir(t *testing.T) {
 		MaxLeaseTTL:     10 * time.Hour,
 		DefaultLeaseTTL: 10 * time.Hour,
 	}
+
+	addExpectedEntConfig(expected, []string{"http"})
+
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
@@ -654,8 +667,11 @@ func testConfig_Sanitized(t *testing.T) {
 			"stackdriver_project_id":                 "",
 			"stackdriver_debug_logs":                 false,
 			"statsd_address":                         "bar",
-			"statsite_address":                       ""},
+			"statsite_address":                       "",
+		},
 	}
+
+	addExpectedEntSanitizedConfig(expected, []string{"http"})
 
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {

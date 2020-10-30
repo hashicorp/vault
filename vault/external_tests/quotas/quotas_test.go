@@ -127,7 +127,7 @@ func waitForRemovalOrTimeout(c *api.Client, path string, tick, to time.Duration)
 	}
 }
 
-func TestQuotas_RateLimitQuota_DupName(t *testing.T) {
+func TestQuotas_RateLimit_DupName(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
