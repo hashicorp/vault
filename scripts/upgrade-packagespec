@@ -1,5 +1,27 @@
 #!/usr/bin/env bash
 
+# This script takes 2 positional args:
+#
+#   1: The version of packagespec to upgrade a branch to (e.g. 1.2.3)
+#   2: The target branch to upgrade.
+#
+# It works in a temp directory, so does not interfere with your work tree
+# or git index or config.
+#
+# It does this:
+#
+#   1. Inspects your remote config for URL remotes.
+#   2. Clone this directory into a temp dir.
+#   3. Sets the remotes in the clone to match the remotes you have configured.
+#   4. Fetches everything from all remotes.
+#   5. Determines which remote your target branch is on. If it's more than one
+#      remote, then exits with an error as there would be no way to choose.
+#   6. Checks out a new branch named packagespec<version>/<target branch name>
+#   7. Runs packagespec upgrade -version <version>
+#   8. Commits the relevant paths with the message 'packagespec upgrade -version <version>'
+#   9. Pushes the new branch to the same remote as the original branch.
+#   0. Tells you to open a PR.
+
 # VERSION is the packagespec version to upgrade to.
 VERSION="$1"
 BRANCH="$2"
@@ -82,3 +104,5 @@ git commit -m "$COMMAND"
 git push -u "$TARGET_REMOTE" "$NEW_BRANCH"
 
 echo "==> All done: upgrade pushed to branch $NEW_BRANCH on ${REMOTES[$TARGET_REMOTE]}"
+
+echo "==> ACTIONS FOR YOU: Open a PR with base: $BRANCH compare: $NEW_BRANCH"
