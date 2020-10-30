@@ -19,11 +19,23 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel)
 # automatically.
 AUTO_INSTALL_TOOLS ?= NO
 
+define ENSURE_GITIGNORE_ALL
+_ := $(shell cd "$(REPO_ROOT)" && [ -f "$(1)/.gitignore" ] || { mkdir -p "$(1)"; echo '*' > "$(1)/.gitignore"; })
+endef
+
 # CACHE_ROOT is the build cache directory.
 CACHE_ROOT ?= .buildcache
-
-CACHE_GITIGNORE := $(CACHE_ROOT)/.gitignore
-$(shell [ -f $(CACHE_GITIGNORE) ] || { mkdir -p $(CACHE_ROOT); echo '*' > $(CACHE_GITIGNORE); })
+_ := $(call ENSURE_GITIGNORE_ALL,$(CACHE_ROOT))
+# PACKAGES_ROOT holds the package store, as well as other package aliases.
+PACKAGES_ROOT := $(CACHE_ROOT)/packages
+_ := $(call ENSURE_GITIGNORE_ALL,$(PACKAGES_ROOT))
+# PACKAGE_STORE is where we store all the package files themselves
+# addressed by their input hashes.
+PACKAGE_STORE := $(PACKAGES_ROOT)/store
+_ := $(call ENSURE_GITIGNORE_ALL,$(PACKAGE_STORE))
+# BY_ALIAS is where we store alias symlinks to the store.
+BY_ALIAS      := $(PACKAGES_ROOT)/by-alias
+_ := $(call ENSURE_GITIGNORE_ALL,$(BY_ALIAS))
 
 # SPEC is the human-managed description of which packages we are able to build.
 SPEC_FILE_PATTERN := packages*.yml
