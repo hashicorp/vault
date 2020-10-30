@@ -148,6 +148,8 @@ These metrics cover measurement of token, identity, and lease operations, and co
 | `vault.expire.fetch-lease-times`          | Time taken to fetch lease times                                             | ms     | summary |
 | `vault.expire.fetch-lease-times-by-token` | Time taken to fetch lease times by token                                    | ms     | summary |
 | `vault.expire.num_leases`                 | Number of all leases which are eligible for eventual expiry                 | leases | gauge   |
+| `vault.expire.lease_expiration            | Count of lease expirations                                                  | leases | counter |
+| `vault.expire.lease_expiration.error`     | Count of lease expiration errors                                            | errors | counter |
 | `vault.expire.revoke`                     | Time taken to revoke a token                                                | ms     | summary |
 | `vault.expire.revoke-force`               | Time taken to forcibly revoke a token                                       | ms     | summary |
 | `vault.expire.revoke-prefix`              | Time taken to revoke tokens on a prefix                                     | ms     | summary |

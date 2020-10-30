@@ -122,9 +122,13 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		releasePermit := func() {}
 		if m.revokePermitPool != nil {
+			m.logger.Trace("expiring lease; waiting for permit pool")
 			m.revokePermitPool.Acquire()
 			releasePermit = m.revokePermitPool.Release
+			m.logger.Trace("expiring lease; got permit pool")
 		}
+
+		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", le.namespace.ID}})
 
 		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
 		revokeCtx = namespace.ContextWithNamespace(revokeCtx, le.namespace)
@@ -160,6 +164,8 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 		if err == nil {
 			return
 		}
+
+		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", le.namespace.ID}})
 
 		m.logger.Error("failed to revoke lease", "lease_id", le.LeaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
