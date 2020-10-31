@@ -22,7 +22,9 @@ import (
 )
 
 const (
-	logPrefix = "sys/counters/activity/log/"
+	logPrefix          = "sys/counters/activity/log/"
+	activityPrefix     = "sys/counters/activity/"
+	activityConfigPath = "sys/counters/activity/config"
 )
 
 func TestActivityLog_Creation(t *testing.T) {
@@ -98,11 +100,12 @@ func TestActivityLog_Creation(t *testing.T) {
 func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string) {
 	t.Helper()
 
-	if len(a.activeEntities) != len(entityIDs) {
-		t.Fatalf("mismatched number of entities, expected %v got %v", len(entityIDs), a.activeEntities)
+	activeEntities := a.core.GetActiveEntities()
+	if len(activeEntities) != len(entityIDs) {
+		t.Fatalf("mismatched number of entities, expected %v got %v", len(entityIDs), activeEntities)
 	}
 	for _, e := range entityIDs {
-		if _, present := a.activeEntities[e]; !present {
+		if _, present := activeEntities[e]; !present {
 			t.Errorf("entity ID %q is missing", e)
 		}
 	}
@@ -213,8 +216,6 @@ func expectedEntityIDs(t *testing.T, out *activity.EntityActivityLog, ids []stri
 	}
 }
 
-// TODO setup predicate for what we expect (both positive and negative case) for testing
-// factor things out into predicates and actions so test body is compact.
 func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
@@ -964,6 +965,10 @@ func activeEntitiesEqual(t *testing.T, active map[string]struct{}, test []*activ
 func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 	t.Helper()
 
+	a.l.Lock()
+	defer a.l.Unlock()
+	a.fragmentLock.Lock()
+	defer a.fragmentLock.Unlock()
 	a.currentSegment = segmentInfo{
 		startTimestamp: time.Time{}.Unix(),
 		currentEntities: &activity.EntityActivityLog{
@@ -1069,8 +1074,9 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 			t.Errorf("bad data loaded. expected: %v, got: %v for path %q", tc.entities.Entities, a.currentSegment.currentEntities, tc.path)
 		}
 
-		if !activeEntitiesEqual(t, a.activeEntities, tc.entities.Entities) {
-			t.Errorf("bad data loaded into active entites. expected only set of EntityID from %v in %v for path %q", tc.entities.Entities, a.activeEntities, tc.path)
+		activeEntities := core.GetActiveEntities()
+		if !activeEntitiesEqual(t, activeEntities, tc.entities.Entities) {
+			t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v for path %q", tc.entities.Entities, activeEntities, tc.path)
 		}
 
 		a.resetEntitiesInMemory(t)
@@ -1148,8 +1154,12 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range testCases {
 		if tc.refresh {
+			a.l.Lock()
+			a.fragmentLock.Lock()
 			a.activeEntities = make(map[string]struct{})
 			a.currentSegment.startTimestamp = tc.time
+			a.fragmentLock.Unlock()
+			a.l.Unlock()
 		}
 
 		err := a.loadPriorEntitySegment(ctx, time.Unix(tc.time, 0), tc.seqNum)
@@ -1157,8 +1167,9 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 			t.Fatalf("got error loading data for %q: %v", tc.path, err)
 		}
 
-		if !activeEntitiesEqual(t, a.activeEntities, tc.entities.Entities) {
-			t.Errorf("bad data loaded into active entites. expected only set of EntityID from %v in %v for path %q", tc.entities.Entities, a.activeEntities, tc.path)
+		activeEntities := core.GetActiveEntities()
+		if !activeEntitiesEqual(t, activeEntities, tc.entities.Entities) {
+			t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v for path %q", tc.entities.Entities, activeEntities, tc.path)
 		}
 	}
 }
@@ -1258,13 +1269,15 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 
 }
 
-func setupActivityRecordsInStorage(t *testing.T, includeEntities, includeTokens bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
+// :base: is the timestamp to start from for the setup logic (use to simulate newest log from past or future)
+// entity records returned include [0] data from a previous month and [1:] data from the current month
+// token counts returned are from the current month
+func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities, includeTokens bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
 	t.Helper()
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
-	now := time.Now().UTC()
-	monthsAgo := now.AddDate(0, -3, 0)
+	monthsAgo := base.AddDate(0, -3, 0)
 
 	var entityRecords []*activity.EntityRecord
 	if includeEntities {
@@ -1309,8 +1322,8 @@ func setupActivityRecordsInStorage(t *testing.T, includeEntities, includeTokens 
 		}
 
 		writeToStorage(t, core, logPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData1)
-		writeToStorage(t, core, logPrefix+"entity/"+fmt.Sprint(now.Unix())+"/0", entityData2)
-		writeToStorage(t, core, logPrefix+"entity/"+fmt.Sprint(now.Unix())+"/1", entityData3)
+		writeToStorage(t, core, logPrefix+"entity/"+fmt.Sprint(base.Unix())+"/0", entityData2)
+		writeToStorage(t, core, logPrefix+"entity/"+fmt.Sprint(base.Unix())+"/1", entityData3)
 	}
 
 	var tokenRecords map[string]uint64
@@ -1329,14 +1342,14 @@ func setupActivityRecordsInStorage(t *testing.T, includeEntities, includeTokens 
 			t.Fatalf(err.Error())
 		}
 
-		writeToStorage(t, core, logPrefix+"directtokens/"+fmt.Sprint(now.Unix())+"/0", tokenData)
+		writeToStorage(t, core, logPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
 	}
 
 	return a, entityRecords, tokenRecords
 }
 
 func TestActivityLog_refreshFromStoredLog(t *testing.T) {
-	a, expectedEntityRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, true, true)
+	a, expectedEntityRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 	a.enabled = true
 
 	var wg sync.WaitGroup
@@ -1361,46 +1374,15 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 		t.Errorf("bad activity token counts loaded. expected: %v got: %v", expectedTokenCounts, a.currentSegment.tokenCount.CountByNamespaceID)
 	}
 
-	if !activeEntitiesEqual(t, a.activeEntities, expectedActive.Entities) {
+	activeEntities := a.core.GetActiveEntities()
+	if !activeEntitiesEqual(t, activeEntities, expectedActive.Entities) {
 		// we expect activeEntities to be loaded for the entire month
-		t.Errorf("bad data loaded into active entites. expected only set of EntityID from %v in %v", expectedActive.Entities, a.activeEntities)
-	}
-}
-
-func TestActivityLog_refreshFromStoredLogOnStandby(t *testing.T) {
-	a, expectedEntityRecords, _ := setupActivityRecordsInStorage(t, true, true)
-	a.enabled = true
-	a.core.perfStandby = true
-
-	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
-	if err != nil {
-		t.Fatalf("got error loading stored activity logs: %v", err)
-	}
-	wg.Wait()
-
-	expectedActive := &activity.EntityActivityLog{
-		Entities: expectedEntityRecords[1:],
-	}
-	if !activeEntitiesEqual(t, a.activeEntities, expectedActive.Entities) {
-		// we expect activeEntities to be loaded for the entire month
-		t.Errorf("bad data loaded into active entites. expected only set of EntityID from %v in %v", expectedActive.Entities, a.activeEntities)
-	}
-
-	// we expect nothing to be loaded to a.currentSegment (other than startTimestamp for end of month checking)
-	if len(a.currentSegment.currentEntities.Entities) > 0 {
-		t.Errorf("currentSegment entities should not be populated. got: %v", a.currentSegment.currentEntities)
-	}
-	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
-		t.Errorf("currentSegment token counts should not be populated. got: %v", a.currentSegment.tokenCount.CountByNamespaceID)
-	}
-	if a.currentSegment.entitySequenceNumber != 0 {
-		t.Errorf("currentSegment sequence number should be 0. got: %v", a.currentSegment.entitySequenceNumber)
+		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Entities, activeEntities)
 	}
 }
 
 func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testing.T) {
-	a, expectedEntityRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, true, true)
+	a, expectedEntityRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 	a.enabled = true
 
 	var wg sync.WaitGroup
@@ -1424,14 +1406,15 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 		t.Errorf("bad activity token counts loaded. expected: %v got: %v", expectedTokenCounts, a.currentSegment.tokenCount.CountByNamespaceID)
 	}
 
-	if !activeEntitiesEqual(t, a.activeEntities, expected.Entities) {
+	activeEntities := a.core.GetActiveEntities()
+	if !activeEntitiesEqual(t, activeEntities, expected.Entities) {
 		// we only expect activeEntities to be loaded for the newest segment (for the current month)
-		t.Errorf("bad data loaded into active entites. expected only set of EntityID from %v in %v", expected.Entities, a.activeEntities)
+		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expected.Entities, activeEntities)
 	}
 }
 
 func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
-	a, _, _ := setupActivityRecordsInStorage(t, true, true)
+	a, _, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 
 	var wg sync.WaitGroup
 	ctx, cancelFn := context.WithCancel(context.Background())
@@ -1444,7 +1427,7 @@ func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
 }
 
 func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
-	a, expectedEntityRecords, _ := setupActivityRecordsInStorage(t, true, false)
+	a, expectedEntityRecords, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, false)
 	a.enabled = true
 
 	var wg sync.WaitGroup
@@ -1464,8 +1447,9 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 		// we expect all segments for the current month to be loaded
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, a.currentSegment.currentEntities)
 	}
-	if !activeEntitiesEqual(t, a.activeEntities, expectedActive.Entities) {
-		t.Errorf("bad data loaded into active entites. expected only set of EntityID from %v in %v", expectedActive.Entities, a.activeEntities)
+	activeEntities := a.core.GetActiveEntities()
+	if !activeEntitiesEqual(t, activeEntities, expectedActive.Entities) {
+		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Entities, activeEntities)
 	}
 
 	// we expect no tokens
@@ -1475,7 +1459,7 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 }
 
 func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
-	a, _, expectedTokenCounts := setupActivityRecordsInStorage(t, false, true)
+	a, _, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), false, true)
 	a.enabled = true
 
 	var wg sync.WaitGroup
@@ -1493,21 +1477,37 @@ func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
 	if len(a.currentSegment.currentEntities.Entities) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentEntities)
 	}
-	if len(a.activeEntities) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.activeEntities)
+	activeEntities := a.core.GetActiveEntities()
+	if len(activeEntities) > 0 {
+		t.Errorf("expected no active entity segment to be loaded. got: %v", activeEntities)
 	}
 }
 
-func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
-	a, _, _ := setupActivityRecordsInStorage(t, false, false)
-	a.enabled = true
+// verify current segment refreshed with non-nil empty components and the :expectedStart: timestamp
+// note: if :verifyTimeNotZero: is true, ignore :expectedStart: and just make sure the timestamp
+// isn't 0
+func expectCurrentSegmentRefreshed(t *testing.T, a *ActivityLog, expectedStart int64, verifyTimeNotZero bool) {
+	t.Helper()
 
-	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
-	if err != nil {
-		t.Fatalf("got error loading stored activity logs: %v", err)
+	a.l.RLock()
+	defer a.l.RUnlock()
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+	if a.currentSegment.currentEntities == nil {
+		t.Fatalf("expected non-nil currentSegment.currentEntities")
 	}
-	wg.Wait()
+	if a.currentSegment.currentEntities.Entities == nil {
+		t.Errorf("expected non-nil currentSegment.currentEntities.Entities")
+	}
+	if a.activeEntities == nil {
+		t.Errorf("expected non-nil activeEntities")
+	}
+	if a.currentSegment.tokenCount == nil {
+		t.Fatalf("expected non-nil currentSegment.tokenCount")
+	}
+	if a.currentSegment.tokenCount.CountByNamespaceID == nil {
+		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
+	}
 
 	if len(a.currentSegment.currentEntities.Entities) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentEntities)
@@ -1518,6 +1518,103 @@ func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
 	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
 		t.Errorf("expected no token counts to be loaded. got: %v", a.currentSegment.tokenCount.CountByNamespaceID)
 	}
+
+	if verifyTimeNotZero {
+		if a.currentSegment.startTimestamp == 0 {
+			t.Error("bad start timestamp. expected no reset but timestamp was reset")
+		}
+	} else if a.currentSegment.startTimestamp != expectedStart {
+		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentSegment.startTimestamp)
+	}
+}
+
+func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
+	now := time.Now().UTC()
+	a, _, _ := setupActivityRecordsInStorage(t, now, false, false)
+	a.enabled = true
+
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(context.Background(), &wg)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+
+	expectCurrentSegmentRefreshed(t, a, now.Unix(), false)
+}
+
+func TestActivityLog_refreshFromStoredLogTwoMonthsPrevious(t *testing.T) {
+	// test what happens when the most recent data is from month M-2 (or earlier - same effect)
+	now := time.Now().UTC()
+	twoMonthsAgoStart := timeutil.StartOfPreviousMonth(timeutil.StartOfPreviousMonth(now))
+	a, _, _ := setupActivityRecordsInStorage(t, twoMonthsAgoStart, true, true)
+	a.enabled = true
+
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(context.Background(), &wg)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+
+	expectCurrentSegmentRefreshed(t, a, now.Unix(), false)
+}
+
+func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
+	// test what happens when most recent data is from month M-1
+	// we expect to load the data from the previous month so that the activeFragmentWorker
+	// can handle end of month rotations
+	monthStart := timeutil.StartOfMonth(time.Now().UTC())
+	oneMonthAgoStart := timeutil.StartOfPreviousMonth(monthStart)
+	a, expectedEntityRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, oneMonthAgoStart, true, true)
+	a.enabled = true
+
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(context.Background(), &wg)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+
+	expectedActive := &activity.EntityActivityLog{
+		Entities: expectedEntityRecords[1:],
+	}
+	expectedCurrent := &activity.EntityActivityLog{
+		Entities: expectedEntityRecords[2:],
+	}
+	if !entityRecordsEqual(t, a.currentSegment.currentEntities.Entities, expectedCurrent.Entities) {
+		// we only expect the newest entity segment to be loaded (for the current month)
+		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, a.currentSegment.currentEntities)
+	}
+	if !reflect.DeepEqual(a.currentSegment.tokenCount.CountByNamespaceID, expectedTokenCounts) {
+		// we expect all token counts to be loaded
+		t.Errorf("bad activity token counts loaded. expected: %v got: %v", expectedTokenCounts, a.currentSegment.tokenCount.CountByNamespaceID)
+	}
+
+	activeEntities := a.core.GetActiveEntities()
+	if !activeEntitiesEqual(t, activeEntities, expectedActive.Entities) {
+		// we expect activeEntities to be loaded for the entire month
+		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Entities, activeEntities)
+	}
+}
+
+func TestActivityLog_refreshFromStoredLogNextMonth(t *testing.T) {
+	t.Skip("works on enterprise, fails on oss (oss boots with activity log disabled)")
+
+	// test what happens when most recent data is from month M+1
+	nextMonthStart := timeutil.StartOfNextMonth(time.Now().UTC())
+	a, _, _ := setupActivityRecordsInStorage(t, nextMonthStart, true, true)
+	a.enabled = true
+
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(context.Background(), &wg)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+
+	// we can't know exactly what the timestamp should be set to, just that it shouldn't be zero
+	expectCurrentSegmentRefreshed(t, a, time.Now().Unix(), true)
 }
 
 func TestActivityLog_IncludeNamespace(t *testing.T) {
@@ -1685,21 +1782,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 	}
 
 	expectMissingSegment(t, core, path)
-	if a.currentSegment.startTimestamp != 0 {
-		t.Errorf("bad startTimestamp, expected 0 got %v", a.currentSegment.startTimestamp)
-	}
-	if len(a.currentSegment.currentEntities.Entities) != 0 {
-		t.Errorf("expected empty currentEntities, got %v", a.currentSegment.currentEntities.Entities)
-	}
-	if len(a.currentSegment.tokenCount.CountByNamespaceID) != 0 {
-		t.Errorf("expected empty tokens, got %v", a.currentSegment.tokenCount.CountByNamespaceID)
-	}
-	if len(a.activeEntities) != 0 {
-		t.Errorf("expected empty activeEntities, got %v", a.activeEntities)
-	}
-	if a.fragment != nil {
-		t.Errorf("expected nil fragment")
-	}
+	expectCurrentSegmentRefreshed(t, a, 0, false)
 
 	// enable (if not already) which force-writes an empty segment
 	enableRequest()
