@@ -8,7 +8,8 @@ CHANGES:
 FEATURES:
 
 * **Couchbase Secrets**: Vault can now manage static and dynamic credentials for Couchbase. [[GH-9664](https://github.com/hashicorp/vault/pull/9664)]
-
+* Vault now counts the number of active entities (and non-entity tokens) per month and makes this information available via the "Metrics" section of the UI.
+I
 IMPROVEMENTS:
 
 * auth/approle: Role names can now be referenced in templated policies through the `approle.metadata.role_name` property [[GH-9529](https://github.com/hashicorp/vault/pull/9529)]

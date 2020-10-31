@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+func StartOfPreviousMonth(t time.Time) time.Time {
+	year, month, _ := t.Date()
+	return time.Date(year, month, 1, 0, 0, 0, 0, t.Location()).AddDate(0, -1, 0)
+}
+
 func StartOfMonth(t time.Time) time.Time {
 	year, month, _ := t.Date()
 	return time.Date(year, month, 1, 0, 0, 0, 0, t.Location())
@@ -99,8 +104,8 @@ func InRange(t, start, end time.Time) bool {
 		(t.Equal(end) || t.Before(end))
 }
 
-// Used when a storage path has the form <timestamp>/,
-// where timestamp is a Unix timestamp.
+// ParseTimeFromPath returns a UTC time from a path of the form '<timestamp>/',
+// where <timestamp> is a Unix timestamp
 func ParseTimeFromPath(path string) (time.Time, error) {
 	elems := strings.Split(path, "/")
 	if len(elems) == 1 {
