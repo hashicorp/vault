@@ -271,6 +271,8 @@ jobs:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
+    environment:
+    - JOBS: 2
   build-common-layers:
     machine:
       image: ubuntu-1604:202007-01
@@ -551,6 +553,8 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
+    environment:
+    - JOBS: 2
   linux_arm_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -647,6 +651,8 @@ jobs:
           export PATH="${PWD}"/bin:${PATH}
           make test-ui-browserstack
         name: Run Browserstack Tests
+    environment:
+    - JOBS: 2
   darwin_386_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
