@@ -10,18 +10,18 @@ go-machine:
   working_directory: /go/src/github.com/hashicorp/vault
 node:
   docker:
-    - image: node:10-buster
-      environment:
-        JOBS: 2
+    - image: docker.mirror.hashicorp.services/node:10-buster
+  environment:
+    JOBS: 2
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /go/src/github.com/hashicorp/vault
 python:
   docker:
-    - image: python:3-alpine
+    - image: docker.mirror.hashicorp.services/python:3-alpine
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /go/src/github.com/hashicorp/vault
 alpine:
   docker:
-    - image: alpine:3.10.2
+    - image: docker.mirror.hashicorp.services/alpine:3.10.2
   shell: /bin/sh
   working_directory: /go/src/github.com/hashicorp/vault
