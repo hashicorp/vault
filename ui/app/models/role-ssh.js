@@ -37,6 +37,7 @@ const CA_FIELDS = [
   'allowUserKeyIds',
   'keyIdFormat',
   'notBeforeDuration',
+  'algorithmSigner',
 ];
 
 export default Model.extend({
@@ -116,6 +117,9 @@ export default Model.extend({
   }),
   keyIdFormat: attr('string', {
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
+  }),
+  algorithmSigner: attr('string', {
+    helpText: 'When supplied, this value specifies a signing algorithm for the key',
   }),
 
   showFields: computed('keyType', function () {
