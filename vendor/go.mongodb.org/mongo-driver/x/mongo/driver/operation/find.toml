@@ -90,6 +90,11 @@ documentation = "AwaitData when true makes a cursor block before returning when 
 type = "boolean"
 documentation = "AllowPartialResults when true allows partial results to be returned if some shards are down."
 
+[request.allowDiskUse]
+type = "boolean"
+minWireVersionRequired = 4
+documentation = "AllowDiskUse when true allows temporary data to be written to disk during the find command."
+
 [request.collation]
 type = "document"
 minWireVersionRequired = 5

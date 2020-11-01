@@ -30,6 +30,16 @@ type ClusterMetricSink struct {
 	Sink metrics.MetricSink
 }
 
+type Metrics interface {
+	SetGaugeWithLabels(key []string, val float32, labels []Label)
+	IncrCounterWithLabels(key []string, val float32, labels []Label)
+	AddSampleWithLabels(key []string, val float32, labels []Label)
+	AddDurationWithLabels(key []string, d time.Duration, labels []Label)
+	MeasureSinceWithLabels(key []string, start time.Time, labels []Label)
+}
+
+var _ Metrics = &ClusterMetricSink{}
+
 // Convenience alias
 type Label = metrics.Label
 

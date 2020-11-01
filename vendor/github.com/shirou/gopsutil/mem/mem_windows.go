@@ -42,6 +42,7 @@ func VirtualMemoryWithContext(ctx context.Context) (*VirtualMemoryStat, error) {
 	ret := &VirtualMemoryStat{
 		Total:       memInfo.ullTotalPhys,
 		Available:   memInfo.ullAvailPhys,
+		Free:        memInfo.ullAvailPhys,
 		UsedPercent: float64(memInfo.dwMemoryLoad),
 	}
 

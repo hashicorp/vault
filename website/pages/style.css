@@ -29,7 +29,6 @@
 @import '~@hashicorp/react-vertical-text-block-list/dist/style.css';
 
 /* Global Components - Transpiled */
-@import '~@hashicorp/react-mega-nav/style.css';
 
 /* Local Components */
 @import '../components/before-after-diagram/style.css';

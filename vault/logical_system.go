@@ -11,12 +11,14 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -100,6 +102,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-prefix/*",
 				"leases/revoke-force/*",
 				"leases/lookup/*",
+				"storage/raft/snapshot-auto/config/*",
 			},
 
 			Unauthenticated: []string{
@@ -164,6 +167,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -171,6 +175,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
+	}
+
+	// If the node is in a DR secondary cluster, we need to allow the ability to
+	// remove a Raft peer without being authenticated by instead providing a DR
+	// operation token.
+	if core.IsDRSecondary() {
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -1007,6 +1018,29 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	return nil, nil
 }
 
+func validateMountPath(p string) error {
+	hasSuffix := strings.HasSuffix(p, "/")
+	s := path.Clean(p)
+	// Retain the trailing slash if it was provided
+	if hasSuffix {
+		s = s + "/"
+	}
+	if p != s {
+		return fmt.Errorf("path '%v' does not match cleaned path '%v'", p, s)
+	}
+
+	// Check URL path for non-printable characters
+	idx := strings.IndexFunc(p, func(c rune) bool {
+		return !unicode.IsPrint(c)
+	})
+
+	if idx != -1 {
+		return errors.New("path cannot contain non-printable characters")
+	}
+
+	return nil
+}
+
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1023,6 +1057,10 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(
 				"both 'from' and 'to' path must be specified as a string"),
 			logical.ErrInvalidRequest
+	}
+
+	if err = validateMountPath(toPath); err != nil {
+		return handleError(fmt.Errorf("'to' %v", err))
 	}
 
 	entry := b.Core.router.MatchingMountEntry(ctx, fromPath)
@@ -4353,5 +4391,13 @@ This path responds to the following HTTP methods.
 		`Information about the host instance that this Vault server is running on.
 		The information that gets collected includes host hardware information, and CPU,
 		disk, and memory utilization`,
+	},
+	"activity-query": {
+		"Query the historical count of clients.",
+		"Query the historical count of clients.",
+	},
+	"activity-config": {
+		"Control the collection and reporting of client counts.",
+		"Control the collection and reporting of client counts.",
 	},
 }

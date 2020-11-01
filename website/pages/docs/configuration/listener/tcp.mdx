@@ -83,16 +83,16 @@ advertise the correct address to other nodes.
   insecure communication.
 
 - `tls_cert_file` `(string: <required-if-enabled>, reloads-on-SIGHUP)` –
-  Specifies the path to the certificate for TLS. To configure the listener to
-  use a CA certificate, concatenate the primary certificate and the CA
+  Specifies the path to the certificate for TLS. It requires a PEM-encoded file. 
+  To configure the listener to use a CA certificate, concatenate the primary certificate and the CA
   certificate together. The primary certificate should appear first in the
   combined file. On `SIGHUP`, the path set here _at Vault startup_ will be used
   for reloading the certificate; modifying this value while Vault is running
   will have no effect for `SIGHUP`s.
 
 - `tls_key_file` `(string: <required-if-enabled>, reloads-on-SIGHUP)` –
-  Specifies the path to the private key for the certificate. If the key file
-  is encrypted, you will be prompted to enter the passphrase on server startup.
+  Specifies the path to the private key for the certificate. It requires a PEM-encoded file.
+  If the key file is encrypted, you will be prompted to enter the passphrase on server startup.
   The passphrase must stay the same between key files when reloading your
   configuration using `SIGHUP`. On `SIGHUP`, the path set here _at Vault
   startup_ will be used for reloading the certificate; modifying this value
@@ -187,6 +187,33 @@ listener "tcp" {
   }
 }
 ```
+
+### Listening on all IPv6 & IPv4 Interfaces
+
+This example shows Vault listening on all IPv4 & IPv6 interfaces including localhost.
+
+```hcl
+listener "tcp" {
+  address         = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+```
+
+### Listening to specific IPv6 address
+
+This example shows Vault only using IPv6 and binding to the interface with the IP address: `2001:1c04:90d:1c00:a00:27ff:fefa:58ec`
+
+```hcl
+listener "tcp" {
+  address         = "[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
+  cluster_address = "[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+}
+
+# Advertise the non-loopback interface
+api_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
+cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+```
+
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
 [api-addr]: /docs/configuration#api_addr
