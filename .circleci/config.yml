@@ -952,7 +952,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.14.7-stretch \
+              testcontainer circleci/golang:1.15.3-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -1167,7 +1167,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.14.7-stretch \
+              testcontainer circleci/golang:1.15.3-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -1633,7 +1633,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.14.7-stretch \
+              testcontainer circleci/golang:1.15.3-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -1779,7 +1779,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.14.7-stretch \
+              testcontainer circleci/golang:1.15.3-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -2340,7 +2340,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.14.7-stretch \
+              testcontainer circleci/golang:1.15.3-stretch \
               tail -f /dev/null
 
             # Run tests
