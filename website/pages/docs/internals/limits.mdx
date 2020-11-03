@@ -59,7 +59,7 @@ Specifying distinct per-mount options, or using long mount point paths, can
 increase the space required per mount.
 
 The number of mount points can be monitored by reading the 
-[`sys/auth`](/api-docs/system/audit) and [`sys/mounts`](/api-docs/system/mounts) 
+[`sys/auth`](/api-docs/system/auth) and [`sys/mounts`](/api-docs/system/mounts) 
 endpoints from the root namespace and similar sub-paths for namespaces 
 respectively, like: `namespace1/sys/auth`, `namespace1/sys/mounts`, etc.
 
@@ -277,5 +277,4 @@ The current number of unexpired leases can be monitored via the
 The Transform secret engine obeys the [FF3-1 minimum and maximum sizes
 on the length of an input](/docs/secrets/transform#input-limits), which
 are a function of the alphabet size.
-
 
