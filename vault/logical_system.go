@@ -141,6 +141,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 			LocalStorage: []string{
 				expirationSubPath,
+				countersSubPath,
 			},
 		},
 	}
