@@ -1,5 +1,9 @@
 ## Next
 
+NOTE:
+
+Binaries for 32-bit macOS (i.e. the `darwin_386` build) will no longer be published. This target was dropped in the latest version of the Go compiler.
+
 CHANGES:
 
 * agent: Agent now properly returns a non-zero exit code on error, such as one due to template rendering failure. Using `error_on_missing_key` in the template config will cause agent to immediately exit on failure. In order to make agent properly exit due to continuous failure from template rendering errors, the old behavior of indefinitely restarting the template server is now changed to exit once the default retry attempt of 12 times (with exponential backoff) gets exhausted. [[GH-9670](https://github.com/hashicorp/vault/pull/9670)]  
@@ -9,7 +13,7 @@ FEATURES:
 
 * **Couchbase Secrets**: Vault can now manage static and dynamic credentials for Couchbase. [[GH-9664](https://github.com/hashicorp/vault/pull/9664)]
 * Vault now counts the number of active entities (and non-entity tokens) per month and makes this information available via the "Metrics" section of the UI.
-I
+
 IMPROVEMENTS:
 
 * auth/approle: Role names can now be referenced in templated policies through the `approle.metadata.role_name` property [[GH-9529](https://github.com/hashicorp/vault/pull/9529)]
