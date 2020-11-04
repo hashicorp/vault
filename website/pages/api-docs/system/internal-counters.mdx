@@ -139,12 +139,14 @@ A "non-entity token" is a token with no attached entity ID.
 
 A time period may be specified; otherwise it reports on a default reporting period, such as the
 previous twelve calendar months. Reports are only available with month granularity, after each month
-has completed. The response includes the actual time period covered, if a query covers more time, or
-less time, than requested.
+has completed. The response includes the actual time period covered, which may not excactly match
+the query parameters due to the monthly granularity of the data, or missing months in the requested
+time range.
 
-All namespaces will be included, that are children of the namespace where the request was made.
-
+The response will include all child namespaces of the namespace in which the request was made.
 If some namespace has subsequently been deleted, its path will be listed as "deleted namespace :ID:".
+Deleted namespaces are reported only for queries in the root namespace, because the information about
+the namespace path is unknown.
 
 This endpoint was added in Vault 1.6.
 
@@ -240,12 +242,15 @@ counts are enabled on Enterprise builds and disabled on OSS builds. Disabling th
 discard any data recorded for that month, but does not delete previous months.
 - `retention_months` `(integer: 24)` - The number of months of history to retain.
 
+Any missing parameters are left at their existing value.
+
 ### Sample Payload
 
 ```json
 {
   "enabled" : "enable",
-  "default_report_months" : 12
+  "default_report_months" : 3,
+  "retention_months" : 12
 }
 ```
 
