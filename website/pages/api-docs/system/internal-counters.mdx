@@ -154,6 +154,15 @@ This endpoint was added in Vault 1.6.
 | :----- | :-------------------------------- |
 | `GET`  | `/sys/internal/counters/activity` |
 
+### Parameters
+
+- `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
+period for which client counts will be reported. If no start time is specified, the `default_report_months`
+prior to the `end_time` will be used.
+- `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time.  Specifies the end of the period
+for which client counts will be reported.  If no end time is specified, the end of the previous calendar
+month will be used.
+
 ### Sample Request
 
 ```shell-session
@@ -223,8 +232,6 @@ $ curl \
     --request GET \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z 
 ```
-
-Times must be given as RFC3339 timestamps; both `start_time` and `end_time` are optional.
 
 ## Update the Client Count Configuration
 
