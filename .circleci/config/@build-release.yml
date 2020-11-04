@@ -187,9 +187,6 @@ jobs:
           command: mkdir -p .buildcache && echo "*" > .buildcache/.gitignore
           name: Ignore .buildcache
       - restore_cache:
-          key: package-4d5c8238521df42de23b52310a3415cb695d4fb2-{{checksum ".buildcache/cache-keys/package-4d5c8238521df42de23b52310a3415cb695d4fb2"}}
-          name: Restore package cache
-      - restore_cache:
           key: package-83aaf1a9b14f45042b699ab313455cd2b4ee9fb1-{{checksum ".buildcache/cache-keys/package-83aaf1a9b14f45042b699ab313455cd2b4ee9fb1"}}
           name: Restore package cache
       - restore_cache:
@@ -244,95 +241,22 @@ jobs:
           command: ls -lahR .buildcache
           name: List Build Cache
       - run:
-          command: cp packages*.lock/pkgs.yml lockfile-d4738432dabd028a.yml
+          command: cp packages*.lock/pkgs.yml lockfile-439e958000af378a.yml
           name: Update Lockfile Name
       - run:
-          command: tar -czf packages-d4738432dabd028a.tar.gz .buildcache/packages lockfile-d4738432dabd028a.yml
+          command: tar -czf packages-439e958000af378a.tar.gz .buildcache/packages lockfile-439e958000af378a.yml
           name: Create Raw Package Tarball
       - run:
-          command: tar -czf meta-d4738432dabd028a.tar.gz .buildcache/packages/store/*.json lockfile-d4738432dabd028a.yml
+          command: tar -czf meta-439e958000af378a.tar.gz .buildcache/packages/store/*.json lockfile-439e958000af378a.yml
           name: Create Metadata Tarball
       - store_artifacts:
-          path: lockfile-d4738432dabd028a.yml
+          path: lockfile-439e958000af378a.yml
       - store_artifacts:
-          path: packages-d4738432dabd028a.tar.gz
+          path: packages-439e958000af378a.tar.gz
       - store_artifacts:
-          path: meta-d4738432dabd028a.tar.gz
+          path: meta-439e958000af378a.tar.gz
       - store_artifacts:
           path: .buildcache/packages
-  darwin_386_package:
-    executor: builder
-    steps:
-      - setup_remote_docker:
-          version: 19.03.12
-          docker_layer_caching: false
-      - add_ssh_keys:
-          fingerprints:
-            - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-      - checkout:
-          path: .
-      - run:
-          command: make -C packages*.lock write-package-cache-key
-          name: Write package cache key
-      - restore_cache:
-          key: package-4d5c8238521df42de23b52310a3415cb695d4fb2-{{checksum ".buildcache/cache-keys/package-4d5c8238521df42de23b52310a3415cb695d4fb2"}}
-          name: Restore package cache
-      - run:
-          command: |2
-
-            if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-              echo "No package found, continuing with build."
-              exit 0
-            fi
-            echo "Package already cached, skipping build."
-            circleci-agent step halt
-          name: Check cache status
-      - run:
-          command: make -C packages*.lock write-builder-cache-keys
-          name: Write builder layer cache keys
-      - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
-          keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
-            - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
-            - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
-            - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
-            - install-yarn_bbaf_{{checksum ".buildcache/cache-keys/install-yarn-bbaf7b58ff71fac3d054dba364ea5aa9169cf9f7"}}
-            - set-workdir_f573_{{checksum ".buildcache/cache-keys/set-workdir-f57397d33d7a62ba66ebcc200ecf774e5b8bda25"}}
-            - install-go-tools_93ff_{{checksum ".buildcache/cache-keys/install-go-tools-93ff4bda3b82e8d26d9ed37fb2b8843639dd4761"}}
-            - install-go_8dde_{{checksum ".buildcache/cache-keys/install-go-8dde98d41082e5612aa95b0984d75c52c11c2802"}}
-            - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-          name: 'Restore Builder Image Cache: copy-source'
-      - run:
-          command: make -C packages*.lock load-builder-cache
-          name: Load whatever builder cache we have (if any) into the Docker daemon
-          no_output_timeout: 30m
-      - run:
-          command: |2-
-
-            KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-            eval "$(ssh-agent -s)"
-            if [ -f "$KEYFILE" ]; then
-              ssh-add "$KEYFILE"
-            else
-              echo "==> INFO: SSH key for github.com not found"
-              echo "    Attempts to access private repositories from within"
-              echo "    the build will fail, e.g. for private go modules, or"
-              echo "    attempts to directly clone private repositories."
-            fi
-
-            make -C packages*.lock package
-          name: Compile Package
-      - run:
-          command: ls -lahR .buildcache/packages
-          name: List packages
-      - save_cache:
-          paths:
-            - .buildcache/packages/store
-          key: package-4d5c8238521df42de23b52310a3415cb695d4fb2-{{checksum ".buildcache/cache-keys/package-4d5c8238521df42de23b52310a3415cb695d4fb2"}}
-          name: Save package cache
-    environment:
-      PACKAGE_SPEC_ID: 4d5c8238521df42de23b52310a3415cb695d4fb2
   darwin_amd64_package:
     executor: builder
     steps:
@@ -364,9 +288,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -437,9 +361,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -510,9 +434,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -583,9 +507,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -656,9 +580,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -729,9 +653,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -802,9 +726,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -875,9 +799,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -948,9 +872,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1021,9 +945,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1094,9 +1018,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1167,9 +1091,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1240,9 +1164,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1313,9 +1237,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1386,9 +1310,9 @@ jobs:
           command: make -C packages*.lock write-builder-cache-keys
           name: Write builder layer cache keys
       - restore_cache:
-          key: copy-source_4fbd_{{checksum ".buildcache/cache-keys/copy-source-4fbd883dbd1ea85319e94369ecd85de99f7ec129"}}
+          key: copy-source_06ef_{{checksum ".buildcache/cache-keys/copy-source-06ef506e66bbcb20bd02ee09a472afa30f5f1fdc"}}
           keys:
-            - warm-go-build-vendor-cache_2d2f_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-2d2f851f7fd3b3d15efa5eddfb198a2fc0fee7c2"}}
+            - warm-go-build-vendor-cache_934a_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-934adbf0c61d08f133350a0d6a25bb0d173fea84"}}
             - build-static-assets_c16c_{{checksum ".buildcache/cache-keys/build-static-assets-c16c92ba6efaac1d8ce78e253494d5990e673532"}}
             - build-ui_d410_{{checksum ".buildcache/cache-keys/build-ui-d4103be58748b6e071db728cbd54220aa1e4326e"}}
             - ui-dependencies_91f5_{{checksum ".buildcache/cache-keys/ui-dependencies-91f59cc67fec4697ade6f0c892970ba7bd23e0a8"}}
@@ -1429,15 +1353,14 @@ jobs:
     environment:
       PACKAGE_SPEC_ID: ad5e8d34df02b5ad2dd18d56208d1806c3f2a721
 workflows:
-  build-d4738432dabd028a:
+  build-439e958000af378a:
     jobs:
       - build-common-layers: {}
-      - darwin_386_package:
+      - darwin_amd64_package:
           requires:
             - build-common-layers
       - bundle-releases:
           requires:
-            - darwin_386_package
             - darwin_amd64_package
             - freebsd_386_package
             - freebsd_amd64_package
@@ -1453,9 +1376,6 @@ workflows:
             - solaris_amd64_package
             - windows_386_package
             - windows_amd64_package
-      - darwin_amd64_package:
-          requires:
-            - build-common-layers
       - freebsd_386_package:
           requires:
             - build-common-layers
