@@ -9,14 +9,16 @@ import (
 type serviceWindows struct{}
 
 func init() {
-	interactive, err := wsvc.IsAnInteractiveSession()
+	inService, err := wsvc.IsWindowsService()
 	if err != nil {
 		panic(err)
 	}
+
 	// Cannot run as a service when running interactively
-	if interactive {
+	if !inService {
 		return
 	}
+
 	go wsvc.Run("", serviceWindows{})
 }
 
