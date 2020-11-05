@@ -12,7 +12,7 @@
     "@hashicorp/react-docs-sidenav": "^3.2.5",
     "@hashicorp/react-enterprise-alert": "^2.1.0",
     "@hashicorp/react-global-styles": "^4.4.0",
-    "@hashicorp/react-hashi-stack-menu": "^1.0.7",
+    "@hashicorp/react-hashi-stack-menu": "^1.0.8",
     "@hashicorp/react-head": "^1.1.1",
     "@hashicorp/react-hero": "3.1.2",
     "@hashicorp/react-image": "^2.0.1",
