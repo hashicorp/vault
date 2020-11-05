@@ -5,6 +5,7 @@ export default TransformBase.extend({
 
   init() {
     this._super(...arguments);
+    if (!this.model) return;
     this.set('initialRoles', this.model.allowed_roles);
   },
 
