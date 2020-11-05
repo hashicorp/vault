@@ -102,7 +102,6 @@ build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/has
 # The fully expanded set of packages are written to packages.lock. That file
 # is a useful data source for building CI/CD pipelines.
 packages:
-  - inputs: { GOOS: darwin, GOARCH: 386 }
   - inputs: { GOOS: darwin, GOARCH: amd64 }
   - inputs: { GOOS: freebsd, GOARCH: 386 }
   - inputs: { GOOS: freebsd, GOARCH: amd64 }
