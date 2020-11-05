@@ -39,7 +39,8 @@ export default [
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
-      'resource-quotas'
+      'resource-quotas',
+      'client-count'	
     ],
   },
   {
