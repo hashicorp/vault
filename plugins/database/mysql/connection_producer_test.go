@@ -124,7 +124,7 @@ ssl-key=/etc/mysql/server-key.pem`
 
 	// //////////////////////////////////////////////////////
 	// Test
-	mysql := new(25, 25, 25)
+	mysql := new(false)
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,

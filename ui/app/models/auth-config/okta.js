@@ -20,7 +20,7 @@ export default AuthConfig.extend({
   bypassOktaMfa: attr('boolean', {
     defaultValue: false,
     helpText:
-      "Useful if Vault's built-in MFA mechanisms. Will also cause certain other statuses to be ignored, such as PASSWORD_EXPIRED",
+      "Useful if using Vault's built-in MFA mechanisms. Will also cause certain other statuses to be ignored, such as PASSWORD_EXPIRED",
   }),
 
   fieldGroups: computed('newFields', function() {

@@ -35,6 +35,12 @@ export const expandOpenApiProps = function(props) {
       defaultValue: value || null,
     };
 
+    if (type === 'object' && !!value) {
+      attrDefn.defaultValue = () => {
+        return value;
+      };
+    }
+
     if (sensitive) {
       attrDefn.sensitive = true;
     }

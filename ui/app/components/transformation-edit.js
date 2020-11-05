@@ -78,6 +78,16 @@ export default TransformBase.extend({
     });
   },
 
+  isWildcard(role) {
+    if (typeof role === 'string') {
+      return role.indexOf('*') >= 0;
+    }
+    if (role && role.id) {
+      return role.id.indexOf('*') >= 0;
+    }
+    return false;
+  },
+
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();
@@ -88,7 +98,7 @@ export default TransformBase.extend({
         const initialRoles = this.initialRoles || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]
-          .filter(r => r.indexOf('*') < 0) // TODO: expand wildcards into included roles instead
+          .filter(r => !this.isWildcard(r)) // TODO: expand wildcards into included roles instead
           .map(role => {
             if (initialRoles.indexOf(role) < 0) {
               return {

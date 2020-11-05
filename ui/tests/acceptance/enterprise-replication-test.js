@@ -4,7 +4,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import { dateFormat } from 'core/helpers/date-format';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
@@ -217,7 +216,8 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   });
 
   test('add secondary and navigate through token generation modal', async function(assert) {
-    const secondaryName = 'firstSecondary';
+    const secondaryNameFirst = 'firstSecondary';
+    const secondaryNameSecond = 'secondSecondary';
     await visit('/vault/replication');
 
     // enable perf replication
@@ -227,26 +227,30 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await pollCluster(this.owner);
     await settled();
 
-    // add a secondary
+    // add a secondary with default TTL
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-secondary-add]');
-    await fillIn('[data-test-replication-secondary-id]', secondaryName);
+    await fillIn('[data-test-replication-secondary-id]', secondaryNameFirst);
     await click('[data-test-secondary-add]');
     await pollCluster(this.owner);
 
     // checks on secondary token modal
     assert.dom('#modal-wormhole').exists();
-    const today = new Date();
-    today.setMinutes(today.getMinutes() + 30); // add default 30 min TTL to current date to return expires
-    const dateFormatted = dateFormat([today, 'MMM DD, YYYY hh:mm:ss A']);
-    const modalDate = document.querySelector('[data-test-row-value="Expires"]').innerText;
-    // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, checking the string before the seconds.
-    assert.equal(
-      dateFormatted.slice(0, 18),
-      modalDate.slice(0, 18),
-      'shows the correct expiration date and in the correct format'
-    );
+    let modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+    assert.equal(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
+    await click('[data-test-modal-background]');
+    await settled();
+    // add another secondary not using the default ttl
+    await click('[data-test-secondary-add]');
+    await fillIn('[data-test-replication-secondary-id]', secondaryNameSecond);
+    await click('[data-test-toggle-input]');
+    await fillIn('[data-test-ttl-value]', 3);
+    await click('[data-test-secondary-add]');
+    await pollCluster(this.owner);
+
+    let modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+    assert.equal(modalTtl, '180s', 'shows the correct TTL of 180s');
     await click('[data-test-modal-background]');
     await settled();
     // confirm you were redirected to the secondaries page
@@ -257,7 +261,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     );
     assert
       .dom('[data-test-secondary-name]')
-      .includesText(secondaryName, 'it displays the secondary in the list of secondaries');
+      .includesText(secondaryNameFirst, 'it displays the secondary in the list of secondaries');
   });
 
   test('render performance and dr primary and navigate to details page', async function(assert) {

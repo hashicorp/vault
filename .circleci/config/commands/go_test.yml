@@ -14,7 +14,7 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "circleci/golang:1.14.7-stretch"
+    default: "circleci/golang:1.15.3-buster"
   use_docker:
     type: boolean
     default: false
@@ -74,6 +74,13 @@ steps:
 
         # Create a docker network for our testcontainer
         if [ $USE_DOCKER == 1 ]; then
+          # Despite the fact that we're using a circleci image (thus getting the
+          # version they chose for the docker cli) and that we're specifying a
+          # docker version to use for the remote docker instances, we occasionally
+          # see "client version too new, max supported version 1.39" errors for
+          # reasons unclear.
+          export DOCKER_API_VERSION=1.39
+
           export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
             TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)

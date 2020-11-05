@@ -67,6 +67,7 @@ const ModelExport = Model.extend({
     label: 'Template', // TODO: make this required for making a transformation
     models: ['transform/template'],
     selectLimit: 1,
+    onlyAllowExisting: true,
     subLabel: 'Template Name',
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',

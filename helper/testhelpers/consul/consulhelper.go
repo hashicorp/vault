@@ -48,17 +48,19 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		config = `datacenter = "test" acl_default_policy = "deny" acl_datacenter = "test" acl_master_token = "test"`
 	}
 
+	repo := os.Getenv("CONSUL_DOCKER_REPO")
+	if repo == "" {
+		repo = "consul"
+	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "consul",
-		ImageTag:  version,
-		Cmd:       []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config},
-		Ports:     []string{"8500/tcp"},
-		// TODO auth untested on this branch
-		Repository:   os.Getenv("CONSUL_DOCKER_REPO"),
-		AuthUsername: os.Getenv("CONSUL_DOCKER_USERNAME"),
-		AuthPassword: os.Getenv("CONSUL_DOCKER_PASSWORD"),
+		ContainerName: "consul",
+		ImageRepo:     repo,
+		ImageTag:      version,
+		Cmd:           []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config},
+		Ports:         []string{"8500/tcp"},
+		AuthUsername:  os.Getenv("CONSUL_DOCKER_USERNAME"),
+		AuthPassword:  os.Getenv("CONSUL_DOCKER_PASSWORD"),
 	})
-
 	if err != nil {
 		t.Fatalf("Could not start docker Consul: %s", err)
 	}

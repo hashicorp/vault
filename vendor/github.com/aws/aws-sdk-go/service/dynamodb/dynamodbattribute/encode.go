@@ -208,12 +208,18 @@ type Encoder struct {
 	MarshalOptions
 
 	// Empty strings, "", will be marked as NULL AttributeValue types.
-	// Empty strings are not valid values for DynamoDB. Will not apply
-	// to lists, sets, or maps. Use the struct tag `omitemptyelem`
+	// Will not apply to lists, sets, or maps. Use the struct tag `omitemptyelem`
 	// to skip empty (zero) values in lists, sets and maps.
 	//
 	// Enabled by default.
 	NullEmptyString bool
+
+	// Empty byte slices, len([]byte{}) == 0, will be marked as NULL AttributeValue types.
+	// Will not apply to lists, sets, or maps. Use the struct tag `omitemptyelem`
+	// to skip empty (zero) values in lists, sets and maps.
+	//
+	// Enabled by default.
+	NullEmptyByteSlice bool
 }
 
 // NewEncoder creates a new Encoder with default configuration. Use
@@ -223,7 +229,8 @@ func NewEncoder(opts ...func(*Encoder)) *Encoder {
 		MarshalOptions: MarshalOptions{
 			SupportJSONTags: true,
 		},
-		NullEmptyString: true,
+		NullEmptyString:    true,
+		NullEmptyByteSlice: true,
 	}
 	for _, o := range opts {
 		o(e)
@@ -363,7 +370,7 @@ func (e *Encoder) encodeSlice(av *dynamodb.AttributeValue, v reflect.Value, fiel
 		reflect.Copy(slice, v)
 
 		b := slice.Bytes()
-		if (v.Kind() == reflect.Slice && v.IsNil()) || (len(b) == 0 && !e.EnableEmptyCollections) {
+		if (v.Kind() == reflect.Slice && v.IsNil()) || (len(b) == 0 && !e.EnableEmptyCollections && e.NullEmptyByteSlice) {
 			encodeNull(av)
 			return nil
 		}
