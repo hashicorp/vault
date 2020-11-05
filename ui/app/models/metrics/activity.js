@@ -1,7 +1,7 @@
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 
-export default DS.Model.extend({
-  total: DS.attr('object'),
-  endTime: DS.attr('string'),
-  startTime: DS.attr('string'),
+export default Model.extend({
+  total: attr('object'),
+  endTime: attr('string'),
+  startTime: attr('string'),
 });

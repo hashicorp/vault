@@ -1,12 +1,10 @@
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 
-const { attr } = DS;
-
-const M = DS.Model.extend({
+const M = Model.extend({
   queriesAvailable: attr('boolean'),
   defaultReportMonths: attr('number', {
     label: 'Default display',
