@@ -192,6 +192,16 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 		}
 
+		// Disallow creation of new quota that has properties similar to an
+		// existing quota.
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
+		if err != nil {
+			return nil, err
+		}
+		if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
+			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
+		}
+
 		// If a quota already exists, fetch and update it.
 		quota, err := b.Core.quotaManager.QuotaByName(qType, name)
 		if err != nil {
@@ -200,16 +210,6 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			// Disallow creation of new quota that has properties similar to an
-			// existing quota.
-			quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
-			if err != nil {
-				return nil, err
-			}
-			if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
-				return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
-			}
-
 			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
