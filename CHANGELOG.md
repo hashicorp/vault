@@ -1,5 +1,12 @@
 ## Next
 
+## 1.6.0 RC
+### November 4th, 2020
+
+NOTE:
+
+Binaries for 32-bit macOS (i.e. the `darwin_386` build) will no longer be published. This target was dropped in the latest version of the Go compiler.
+
 CHANGES:
 
 * agent: Agent now properly returns a non-zero exit code on error, such as one due to template rendering failure. Using `error_on_missing_key` in the template config will cause agent to immediately exit on failure. In order to make agent properly exit due to continuous failure from template rendering errors, the old behavior of indefinitely restarting the template server is now changed to exit once the default retry attempt of 12 times (with exponential backoff) gets exhausted. [[GH-9670](https://github.com/hashicorp/vault/pull/9670)]  
@@ -8,6 +15,13 @@ CHANGES:
 FEATURES:
 
 * **Couchbase Secrets**: Vault can now manage static and dynamic credentials for Couchbase. [[GH-9664](https://github.com/hashicorp/vault/pull/9664)]
+* **Expanded Password Policy Support**: Custom password policies are now supported for all database engines.
+* **Integrated Storage Auto Snapshots (Enterprise)**: This feature enables an operator to schedule snapshots of the integrated storage backend and ensure those snapshots are persisted elsewhere.
+* **Integrated Storage Cloud Auto Join**: This feature for integrated storage enables Vault nodes running in the cloud to automatically discover and join a Vault cluster via operator-supplied metadata.
+* **Key Management Secrets Engine (Enterprise; Tech Preview)**: This new secret engine allows securely distributing and managing keys to Azure cloud KMS services.
+* **Seal Migration**: With Vault 1.6, we will support migrating from an auto unseal mechanism to a different mechanism of the same type. For example, if you were using an AWS KMS key to automatically unseal, you can now migrate to a different AWS KMS key.
+* **Tokenization (Enterprise; Tech Preview)**: Tokenization supports creating irreversible “tokens” from sensitive data. Tokens can be used in less secure environments, protecting the original data.
+* **Vault Client Count**: Vault now counts the number of active entities (and non-entity tokens) per month and makes this information available via the "Metrics" section of the UI.
 
 IMPROVEMENTS:
 
