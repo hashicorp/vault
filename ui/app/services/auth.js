@@ -209,7 +209,6 @@ export default Service.extend({
   },
 
   getTokenData(token) {
-    console.log(this.storage(token).getItem(token), '🃏 token passed to getTokenData');
     return this.storage(token).getItem(token);
   },
 
@@ -359,7 +358,6 @@ export default Service.extend({
   currentToken: computed('currentTokenName', function() {
     const name = this.currentTokenName;
     const data = name && this.getTokenData(name);
-    console.log(name, 'Name', data, 'data');
     // data.token is undefined so that's why it returns current token undefined
     return name && data ? data.token : null;
   }),

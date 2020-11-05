@@ -7,7 +7,6 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
-import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const storeStub = Service.extend({
   callArgs: null,

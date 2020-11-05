@@ -83,7 +83,7 @@
     "ember-cli-flash": "^1.7.2",
     "ember-cli-htmlbars": "^5.2.0",
     "ember-cli-inject-live-reload": "^2.0.2",
-    "ember-cli-page-object": "^1.15.3",
+    "ember-cli-page-object": "^1.17.0",
     "ember-cli-pretender": "^3.1.1",
     "ember-cli-sass": "^10.0.1",
     "ember-cli-sri": "meirish/ember-cli-sri#rooturl",

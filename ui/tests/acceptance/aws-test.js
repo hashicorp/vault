@@ -70,6 +70,7 @@ module('Acceptance | aws secret backend', function(hooks) {
 
     // save the role
     await click('[data-test-role-aws-create]');
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/secrets/${path}/show/${roleName}`,
@@ -83,6 +84,7 @@ module('Acceptance | aws secret backend', function(hooks) {
 
     //and delete
     await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
+    await settled();
     await click(`[data-test-aws-role-delete="${roleName}"]`);
 
     await click(`[data-test-confirm-button]`);

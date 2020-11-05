@@ -7756,7 +7756,7 @@ ember-cli-normalize-entity-name@^1.0.0:
   dependencies:
     silent-error "^1.0.0"
 
-ember-cli-page-object@^1.15.3:
+ember-cli-page-object@^1.17.0:
   version "1.17.3"
   resolved "https://registry.yarnpkg.com/ember-cli-page-object/-/ember-cli-page-object-1.17.3.tgz#d3758e60fe7375571aafd2c545951cbc46898cfe"
   integrity sha512-Y/zyvBLUxE+6h9DLdyOsY1lh3vmYPcCqN5OEEJS3xMxXzpkEfHnOjhbkhFPp68DielDltrVQHeAhDyUiQwEmxQ==
