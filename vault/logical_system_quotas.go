@@ -191,7 +191,6 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
 		}
-
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
 		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
@@ -210,6 +209,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
+
 			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
