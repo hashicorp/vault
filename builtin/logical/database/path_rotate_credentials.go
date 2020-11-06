@@ -68,8 +68,8 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		rootUsername := config.ConnectionDetails["username"].(string)
-		if rootUsername == "" {
+		rootUsername, ok := config.ConnectionDetails["username"].(string)
+		if !ok || rootUsername == "" {
 			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
 		}
 
