@@ -194,16 +194,19 @@ These metrics relate to rate limit and lease count quotas. Each metric comes wit
 
 These metrics relate to internal operations on Merkle Trees and Write Ahead Logs (WAL)
 
-| Metric                        | Description                                                                 | Unit | Type    |
-| :---------------------------- | :-------------------------------------------------------------------------- | :--- | :------ |
-| `vault.merkle.flushDirty`     | Time taken to flush any dirty pages to cold storage                         | ms   | summary |
-| `vault.merkle.saveCheckpoint` | Time taken to save the checkpoint                                           | ms   | summary |
-| `vault.wal.deleteWALs`        | Time taken to delete a Write Ahead Log (WAL)                                | ms   | summary |
-| `vault.wal.gc.deleted`        | Number of Write Ahead Logs (WAL) deleted during each garbage collection run | WAL  | gauge |
-| `vault.wal.gc.total`          | Total Number of Write Ahead Logs (WAL) on disk                              | WAL  | gauge |
-| `vault.wal.loadWAL`           | Time taken to load a Write Ahead Log (WAL)                                  | ms   | summary |
-| `vault.wal.persistWALs`       | Time taken to persist a Write Ahead Log (WAL)                               | ms   | summary |
-| `vault.wal.flushReady`        | Time taken to flush a ready Write Ahead Log (WAL) to storage                | ms   | summary |
+| Metric                                  | Description                                                                 | Unit | Type    |
+| :-------------------------------------- | :-------------------------------------------------------------------------- | :--- | :------ |
+| `vault.merkle.flushDirty`               | Time taken to flush any dirty pages to cold storage                         | ms   | summary |
+| `vault.merkle.flushDirty.num_pages`     | Number of pages flushed                                                     | pages | gauge  |
+| `vault.merkle.saveCheckpoint`           | Time taken to save the checkpoint                                           | ms   | summary |
+| `vault.merkle.saveCheckpoint.num_dirty` | Number of dirty pages at checkpoint                                         | pages | gauge  |
+| `vault.wal.deleteWALs`                  | Time taken to delete a Write Ahead Log (WAL)                                | ms   | summary |
+| `vault.wal.gc.deleted`                  | Number of Write Ahead Logs (WAL) deleted during each garbage collection run | WAL  | gauge |
+| `vault.wal.gc.total`                    | Total Number of Write Ahead Logs (WAL) on disk                              | WAL  | gauge |
+| `vault.wal.loadWAL`                     | Time taken to load a Write Ahead Log (WAL)                                  | ms   | summary |
+| `vault.wal.persistWALs`                 | Time taken to persist a Write Ahead Log (WAL)                               | ms   | summary |
+| `vault.wal.flushReady`                  | Time taken to flush a ready Write Ahead Log (WAL) to storage                | ms   | summary |
+| `vault.wal.flushReady.queue_len`        | Size of the write queue in the WAL system                                   | WAL  | summary |
 
 ## Replication Metrics
 
