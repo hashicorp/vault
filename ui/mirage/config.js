@@ -1,7 +1,7 @@
 export default function() {
   this.namespace = 'v1';
 
-  this.get('sys/internal/counters/activity', function(db, request) {
+  this.get('sys/internal/counters/activity', function(db) {
     let data = {};
     const firstRecord = db['metrics/activities'].first();
     if (firstRecord) {
