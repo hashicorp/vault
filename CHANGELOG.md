@@ -1,5 +1,9 @@
 ## Next
 
+BUG FIXES:
+
+* core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
+
 ## 1.6.0 RC
 ### November 4th, 2020
 
