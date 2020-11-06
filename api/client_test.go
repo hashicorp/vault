@@ -400,22 +400,8 @@ func TestClone(t *testing.T) {
 	if client1.OutputCurlString() != client2.OutputCurlString() {
 		t.Fatalf("outputCurlString doesn't match: %v vs %v", client1.OutputCurlString(), client2.OutputCurlString())
 	}
-	if client1.AgentAddress() != client2.AgentAddress() {
-		t.Fatalf("agentAddress doesn't match: %v vs %v", client1.AgentAddress(), client2.AgentAddress())
-	}
 	if client1.SRVLookup() != client2.SRVLookup() {
 		t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
-	}
-
-	// test AgentAddress separately since that will overwrite Address
-	client1.SetAgentAddress("http://lol.com:1234")
-	client3, err := client1.Clone()
-	if err != nil {
-		t.Fatalf("Clone failed: %v", err)
-	}
-
-	if client3.Address() != "http://lol.com:1234" {
-		t.Fatalf("AgentAddress should've overwritten Address but it didn't: %v vs %v", client1.AgentAddress(), client3.Address())
 	}
 }
 

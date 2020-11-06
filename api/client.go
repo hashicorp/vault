@@ -530,24 +530,6 @@ func (c *Client) MaxRetries() int {
 	return c.config.MaxRetries
 }
 
-func (c *Client) SetAgentAddress(address string) {
-	c.modifyLock.RLock()
-	defer c.modifyLock.RUnlock()
-	c.config.modifyLock.Lock()
-	defer c.config.modifyLock.Unlock()
-
-	c.config.AgentAddress = address
-}
-
-func (c *Client) AgentAddress() string {
-	c.modifyLock.RLock()
-	defer c.modifyLock.RUnlock()
-	c.config.modifyLock.RLock()
-	defer c.config.modifyLock.RUnlock()
-
-	return c.config.AgentAddress
-}
-
 func (c *Client) SetSRVLookup(srv bool) {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
