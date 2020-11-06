@@ -15,8 +15,8 @@ description: |-
 **This endpoint requires sudo capability.**
 
 This endpoint creates or updates a named configuration.  Each configuration
-has an interval controlling how often snapshots are taken, a destination to
-which to write the snapshots, as well as a retention policy governing when
+has an interval controlling how often snapshots are taken, a destination
+where the snapshots are written, as well as a retention policy governing when
 older snapshots get deleted.
 
 Note that for cloud storage types, you can either provide credentials explicitly
@@ -70,7 +70,7 @@ other mechanisms to provide access to cloud resources.
 - `aws_s3_endpoint` `(string)` - AWS endpoint.  This is typically only set when
   using a non-AWS S3 implementation like Minio.
 
-- `aws_s3_disable_tls` `(string)` - Disable TLS for the S3 endpoint.  This
+- `aws_s3_disable_tls` `(boolean)` - Disable TLS for the S3 endpoint.  This
   should only be used for testing purposes, typically in conjunction with
   `aws_s3_endpoint`.
 
