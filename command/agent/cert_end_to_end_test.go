@@ -459,9 +459,11 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 
 	// Set the intermediate CA cert as a trusted certificate in the backend
 	_, err = client.Logical().Write("auth/cert/certs/myvault-dot-com", map[string]interface{}{
-		"display_name": "myvault.com",
-		"policies":     "default",
-		"certificate":  intermediateCertPEM,
+		"display_name":  "myvault.com",
+		"policies":      "default",
+		"certificate":   intermediateCertPEM,
+		"token_ttl":     "5s",
+		"token_max_ttl": "5s",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -557,27 +559,34 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	// timeout duration.
 	defer cancel()
 
-	// Read the token from the sink
-	timeout := time.Now().Add(5 * time.Second)
-	for {
-		if time.Now().After(timeout) {
-			t.Fatal("did not find a written token after timeout")
-		}
-
-		// Attempt to read the sink file until we get a token or the timeout is
-		// reached.
-		val, err := ioutil.ReadFile(out)
-		if err == nil {
-			os.Remove(out)
-			if len(val) == 0 {
-				t.Fatal("written token was empty")
+	checkToken := func() {
+		// Read the token from the sink
+		timeout := time.Now().Add(5 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("did not find a written token after timeout")
 			}
 
-			t.Logf("sink token: %s", val)
+			// Attempt to read the sink file until we get a token or the timeout is
+			// reached.
+			val, err := ioutil.ReadFile(out)
+			if err == nil {
+				os.Remove(out)
+				if len(val) == 0 {
+					t.Fatal("written token was empty")
+				}
 
-			break
+				t.Logf("sink token: %s", val)
+
+				break
+			}
+
+			time.Sleep(250 * time.Millisecond)
 		}
-
-		time.Sleep(250 * time.Millisecond)
 	}
+	checkToken()
+
+	// Make sure it can be renewed
+	time.Sleep(5 * time.Second)
+	checkToken()
 }
