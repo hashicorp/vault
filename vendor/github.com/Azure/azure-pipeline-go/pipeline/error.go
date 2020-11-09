@@ -49,6 +49,9 @@ func (e *ErrorNode) Error(msg string) string {
 // Cause returns the error that preceded this error.
 func (e *ErrorNode) Cause() error { return e.cause }
 
+// Unwrap provides compatibility for Go 1.13 error chains.
+func (e *ErrorNode) Unwrap() error { return e.cause }
+
 // Temporary returns true if the error occurred due to a temporary condition.
 func (e ErrorNode) Temporary() bool {
 	type temporary interface {

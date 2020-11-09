@@ -10,6 +10,7 @@ import (
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+
 	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
@@ -107,7 +108,7 @@ func newRegistry() *registry {
 			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
 			"mssql-database-plugin":         dbMssql.New,
 			"postgresql-database-plugin":    dbPostgres.New,
-			"redshift-database-plugin":      dbRedshift.New(true),
+			"redshift-database-plugin":      dbRedshift.New,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,

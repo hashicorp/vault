@@ -250,22 +250,11 @@ func TestBackend_PluginMain_MockV4(t *testing.T) {
 }
 
 func TestBackend_PluginMain_MockV5(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-
-	args := []string{"--ca-cert=" + caPEM}
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	RunV5(apiClientMeta.GetTLSConfig())
+	RunV5()
 }
 
 func assertNoRespData(t *testing.T, resp *logical.Response) {

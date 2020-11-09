@@ -168,9 +168,10 @@ func fetchAuthURL(c *api.Client, role, mount, callbackport string, callbackMetho
 		return "", "", err
 	}
 
+	redirectURI := fmt.Sprintf("%s://%s:%s/oidc/callback", callbackMethod, callbackHost, callbackport)
 	data := map[string]interface{}{
 		"role":         role,
-		"redirect_uri": fmt.Sprintf("%s://%s:%s/oidc/callback", callbackMethod, callbackHost, callbackport),
+		"redirect_uri": redirectURI,
 		"client_nonce": clientNonce,
 	}
 
@@ -184,7 +185,7 @@ func fetchAuthURL(c *api.Client, role, mount, callbackport string, callbackMetho
 	}
 
 	if authURL == "" {
-		return "", "", fmt.Errorf("Unable to authorize role %q. Check Vault logs for more information.", role)
+		return "", "", fmt.Errorf("Unable to authorize role %q with redirect_uri %q. Check Vault logs for more information.", role, redirectURI)
 	}
 
 	return authURL, clientNonce, nil

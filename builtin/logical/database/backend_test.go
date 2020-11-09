@@ -12,13 +12,13 @@ import (
 
 	"github.com/go-test/deep"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -41,6 +41,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	})
 	cluster.Start()
 	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
@@ -53,44 +54,29 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 }
 
 func TestBackend_PluginMain_Postgres(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
+	dbType, err := postgresql.New()
+	if err != nil {
+		t.Fatalf("Failed to initialize postgres: %s", err)
 	}
 
-	args := []string{"--ca-cert=" + caPEM}
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	postgresql.Run(apiClientMeta.GetTLSConfig())
+	v5.Serve(dbType.(v5.Database))
 }
 
 func TestBackend_PluginMain_Mongo(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-
-	args := []string{"--ca-cert=" + caPEM}
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	err := mongodb.Run(apiClientMeta.GetTLSConfig())
+	dbType, err := mongodb.New()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to initialize mongodb: %s", err)
 	}
+
+	v5.Serve(dbType.(v5.Database))
 }
 
 func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
@@ -98,21 +84,12 @@ func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 		return
 	}
 
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-
-	args := []string{"--ca-cert=" + caPEM}
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	err := mongodbatlas.Run(apiClientMeta.GetTLSConfig())
+	dbType, err := mongodbatlas.New()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to initialize mongodbatlas: %s", err)
 	}
+
+	v5.Serve(dbType.(v5.Database))
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -121,14 +98,14 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	backend := &databaseBackend{}
 
 	roleExpected := &roleEntry{
-		Statements: dbplugin.Statements{
+		Statements: v4.Statements{
 			CreationStatements: "test",
 			Creation:           []string{"test"},
 		},
 	}
 
 	entry, err := logical.StorageEntryJSON("role/test", &roleEntry{
-		Statements: dbplugin.Statements{
+		Statements: v4.Statements{
 			CreationStatements: "test",
 		},
 	})
@@ -857,14 +834,14 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		expected := dbplugin.Statements{
+		expected := v4.Statements{
 			Creation:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
 			Rollback:   []string{},
 			Renewal:    []string{},
 		}
 
-		actual := dbplugin.Statements{
+		actual := v4.Statements{
 			Creation:   resp.Data["creation_statements"].([]string),
 			Revocation: resp.Data["revocation_statements"].([]string),
 			Rollback:   resp.Data["rollback_statements"].([]string),
@@ -916,14 +893,14 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		expected := dbplugin.Statements{
+		expected := v4.Statements{
 			Creation:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
 			Rollback:   []string{},
 			Renewal:    []string{},
 		}
 
-		actual := dbplugin.Statements{
+		actual := v4.Statements{
 			Creation:   resp.Data["creation_statements"].([]string),
 			Revocation: resp.Data["revocation_statements"].([]string),
 			Rollback:   resp.Data["rollback_statements"].([]string),
@@ -979,14 +956,14 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		expected := dbplugin.Statements{
+		expected := v4.Statements{
 			Creation:   []string{strings.TrimSpace(testRole), strings.TrimSpace(testRole)},
 			Rollback:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL), strings.TrimSpace(defaultRevocationSQL)},
 			Renewal:    []string{strings.TrimSpace(defaultRevocationSQL)},
 		}
 
-		actual := dbplugin.Statements{
+		actual := v4.Statements{
 			Creation:   resp.Data["creation_statements"].([]string),
 			Revocation: resp.Data["revocation_statements"].([]string),
 			Rollback:   resp.Data["rollback_statements"].([]string),

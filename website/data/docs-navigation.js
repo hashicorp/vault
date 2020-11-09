@@ -39,7 +39,8 @@ export default [
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
-      'resource-quotas'
+      'resource-quotas',
+      'client-count'	
     ],
   },
   {
@@ -152,7 +153,7 @@ export default [
       'path-help',
       {
         category: 'plugin',
-        content: ['deregister', 'info', 'list', 'register'],
+        content: ['deregister', 'info', 'list', 'register', 'reload'],
       },
       {
         category: 'policy',
