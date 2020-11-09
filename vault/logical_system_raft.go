@@ -7,15 +7,14 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-
 	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -72,6 +71,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/remove-peer",
 
 			Fields: map[string]*framework.FieldSchema{
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
 				"server_id": {
 					Type: framework.TypeString,
 				},
@@ -79,7 +82,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftRemovePeerUpdate(),
+					Callback: wrapHandleRaftRemovePeer(b),
 					Summary:  "Remove a peer from the raft cluster.",
 				},
 			},
@@ -309,7 +312,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 			return nil, errors.New("no writer for request")
 		}
 
-		err := raftStorage.Snapshot(req.ResponseWriter, b.Core.seal.GetAccess())
+		err := raftStorage.SnapshotHTTP(req.ResponseWriter, b.Core.seal.GetAccess())
 		if err != nil {
 			return nil, err
 		}
@@ -359,7 +362,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			defer cleanup()
 
 			// Grab statelock
-			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh); stopped {
+			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{})); stopped {
 				b.Core.logger.Error("not applying snapshot; shutting down")
 				return
 			}

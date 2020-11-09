@@ -11,7 +11,8 @@ import (
 // ProviderMap returns a map of provider names to custom types
 func ProviderMap() map[string]CustomProvider {
 	return map[string]CustomProvider{
-		"azure": &AzureProvider{},
+		"azure":  &AzureProvider{},
+		"gsuite": &GSuiteProvider{},
 	}
 }
 
@@ -46,6 +47,11 @@ func NewProviderConfig(jc *jwtConfig, providerMap map[string]CustomProvider) (Cu
 		return nil, fmt.Errorf("error initializing %q provider_config: %s", provider, err)
 	}
 	return newCustomProvider, nil
+}
+
+// UserInfoFetcher - Optional support for custom user info handling
+type UserInfoFetcher interface {
+	FetchUserInfo(*jwtAuthBackend, map[string]interface{}, *jwtRole) error
 }
 
 // GroupsFetcher - Optional support for custom groups handling

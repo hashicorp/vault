@@ -58,7 +58,7 @@ func (c *Command) Execute(ctx context.Context) error {
 		CommandFn: func(dst []byte, desc description.SelectedServer) ([]byte, error) {
 			return append(dst, c.command[4:len(c.command)-1]...), nil
 		},
-		ProcessResponseFn: func(resp bsoncore.Document, srvr driver.Server, desc description.Server) error {
+		ProcessResponseFn: func(resp bsoncore.Document, srvr driver.Server, desc description.Server, currIndex int) error {
 			c.result = resp
 			c.srvr = srvr
 			c.desc = desc

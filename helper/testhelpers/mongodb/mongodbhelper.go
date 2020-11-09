@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"gopkg.in/mgo.v2"
 )
 
@@ -24,55 +25,51 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), retURL 
 
 // PrepareTestContainerWithDatabase configures a test container with a given
 // database name, to test non-test/admin database configurations
-func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (cleanup func(), retURL string) {
+func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (func(), string) {
 	if os.Getenv("MONGODB_URL") != "" {
 		return func() {}, os.Getenv("MONGODB_URL")
 	}
 
-	pool, err := dockertest.NewPool("")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo: "mongo",
+		ImageTag:  version,
+		Ports:     []string{"27017/tcp"},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("could not start docker mongo: %s", err)
 	}
 
-	resource, err := pool.Run("mongo", version, []string{})
-	if err != nil {
-		t.Fatalf("Could not start local mongo docker container: %s", err)
-	}
-
-	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		connURL := fmt.Sprintf("mongodb://%s:%d", host, port)
+		if dbName != "" {
+			connURL = fmt.Sprintf("%s/%s", connURL, dbName)
 		}
-	}
-
-	retURL = fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
-	if dbName != "" {
-		retURL = fmt.Sprintf("%s/%s", retURL, dbName)
-	}
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		dialInfo, err := ParseMongoURL(retURL)
+		dialInfo, err := ParseMongoURL(connURL)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		session, err := mgo.DialWithInfo(dialInfo)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer session.Close()
+
 		session.SetSyncTimeout(1 * time.Minute)
 		session.SetSocketTimeout(1 * time.Minute)
-		return session.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to mongo docker container: %s", err)
+		err = session.Ping()
+		if err != nil {
+			return nil, err
+		}
+
+		return docker.NewServiceURLParse(connURL)
+	})
+
+	if err != nil {
+		t.Fatalf("could not start docker mongo: %s", err)
 	}
 
-	return
+	return svc.Cleanup, svc.Config.URL().String()
 }
 
 // ParseMongoURL will parse a connection string and return a configured dialer

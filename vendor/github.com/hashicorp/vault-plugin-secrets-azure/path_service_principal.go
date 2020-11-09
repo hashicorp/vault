@@ -77,7 +77,7 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 	if role.ApplicationObjectID != "" {
 		resp, err = b.createStaticSPSecret(ctx, client, roleName, role)
 	} else {
-		resp, err = b.createSPSecret(ctx, client, roleName, role)
+		resp, err = b.createSPSecret(ctx, req.Storage, client, roleName, role)
 	}
 
 	if err != nil {
@@ -91,9 +91,10 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 }
 
 // createSPSecret generates a new App/Service Principal.
-func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, roleName string, role *roleEntry) (*logical.Response, error) {
+func (b *azureSecretBackend) createSPSecret(ctx context.Context, s logical.Storage, c *client, roleName string, role *roleEntry) (*logical.Response, error) {
 	// Create the App, which is the top level object to be tracked in the secret
-	// and deleted upon revocation. If any subsequent step fails, the App is deleted.
+	// and deleted upon revocation. If any subsequent step fails, the App will be
+	// deleted as part of WAL rollback.
 	app, err := c.createApp(ctx)
 	if err != nil {
 		return nil, err
@@ -101,24 +102,36 @@ func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, role
 	appID := to.String(app.AppID)
 	appObjID := to.String(app.ObjectID)
 
+	// Write a WAL entry in case the SP create process doesn't complete
+	walID, err := framework.PutWAL(ctx, s, walAppKey, &walApp{
+		AppID:      appID,
+		AppObjID:   appObjID,
+		Expiration: time.Now().Add(maxWALAge),
+	})
+	if err != nil {
+		return nil, errwrap.Wrapf("error writing WAL: {{err}}", err)
+	}
+
 	// Create a service principal associated with the new App
 	sp, password, err := c.createSP(ctx, app, spExpiration)
 	if err != nil {
-		c.deleteApp(ctx, appObjID)
 		return nil, err
 	}
 
 	// Assign Azure roles to the new SP
 	raIDs, err := c.assignRoles(ctx, sp, role.AzureRoles)
 	if err != nil {
-		c.deleteApp(ctx, appObjID)
 		return nil, err
 	}
 
 	// Assign Azure group memberships to the new SP
 	if err := c.addGroupMemberships(ctx, sp, role.AzureGroups); err != nil {
-		c.deleteApp(ctx, appObjID)
 		return nil, err
+	}
+
+	// SP is fully created so delete the WAL
+	if err := framework.DeleteWAL(ctx, s, walID); err != nil {
+		return nil, errwrap.Wrapf("error deleting WAL: {{err}}", err)
 	}
 
 	data := map[string]interface{}{

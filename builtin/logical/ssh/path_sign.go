@@ -250,7 +250,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	case len(allowedPrincipals) == 0:
 		// User has requested principals to be set, but role is not configured
 		// with any principals
-		return nil, fmt.Errorf("role is not configured to allow any principles")
+		return nil, fmt.Errorf("role is not configured to allow any principals")
 	default:
 		// Role was explicitly configured to allow any principal.
 		if principalsAllowedByRole == "*" {
@@ -530,9 +530,6 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	certificateBytes := out[:len(out)-4]
 
 	algo := b.Role.AlgorithmSigner
-	if algo == "" {
-		algo = ssh.SigAlgoRSA
-	}
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key: sign error")

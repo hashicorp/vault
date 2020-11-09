@@ -34,6 +34,10 @@ telemetry {
   maximum_gauge_cardinality = 100
 }
 
+sentinel {
+  additional_enabled_modules = ["http"]
+}
+
 seal "awskms" {
   region     = "us-east-1"
   access_key = "AKIAIOSFODNN7EXAMPLE"
@@ -46,3 +50,4 @@ cluster_name = "testcluster"
 pid_file = "./pidfile"
 raw_storage_endpoint = true
 disable_sealwrap = true
+disable_sentinel_trace = true

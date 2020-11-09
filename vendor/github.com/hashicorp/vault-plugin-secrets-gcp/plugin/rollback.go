@@ -222,7 +222,7 @@ func (b *backend) deleteServiceAccount(ctx context.Context, iamAdmin *iam.Servic
 	}
 
 	_, err := iamAdmin.Projects.ServiceAccounts.Delete(account.ResourceName()).Do()
-	if err != nil && !isGoogleAccountNotFoundErr(err) {
+	if err != nil && (!isGoogleAccountNotFoundErr(err) || !isGoogleAccountUnauthorizedErr(err)) {
 		return errwrap.Wrapf("unable to delete service account: {{err}}", err)
 	}
 	return nil
@@ -283,6 +283,10 @@ func tryDeleteWALs(ctx context.Context, s logical.Storage, walIds ...string) {
 
 func isGoogleAccountNotFoundErr(err error) bool {
 	return isGoogleApiErrorWithCodes(err, 404)
+}
+
+func isGoogleAccountUnauthorizedErr(err error) bool {
+	return isGoogleApiErrorWithCodes(err, 403)
 }
 
 func isGoogleAccountKeyNotFoundErr(err error) bool {

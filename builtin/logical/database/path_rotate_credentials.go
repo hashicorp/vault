@@ -5,16 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
-func pathRotateCredentials(b *databaseBackend) []*framework.Path {
+func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
@@ -27,7 +24,7 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.pathRotateCredentialsUpdate(),
+					Callback:                    b.pathRotateRootCredentialsUpdate(),
 					ForwardPerformanceSecondary: true,
 					ForwardPerformanceStandby:   true,
 				},
@@ -59,7 +56,7 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 	}
 }
 
-func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc {
+func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
@@ -71,15 +68,20 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		db, err := b.GetConnection(ctx, req.Storage, name)
+		rootUsername, ok := config.ConnectionDetails["username"].(string)
+		if !ok || rootUsername == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
+		}
+
+		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
 
 		defer func() {
 			// Close the plugin
-			db.closed = true
-			if err := db.Database.Close(); err != nil {
+			dbi.closed = true
+			if err := dbi.database.Close(); err != nil {
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
 			// Even on error, still remove the connection
@@ -91,13 +93,12 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		defer b.Unlock()
 
 		// Take the write lock on the instance
-		db.Lock()
-		defer db.Unlock()
+		dbi.Lock()
+		defer dbi.Unlock()
 
 		// Generate new credentials
-		userName := config.ConnectionDetails["username"].(string)
 		oldPassword := config.ConnectionDetails["password"].(string)
-		newPassword, err := db.GenerateCredentials(ctx)
+		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +107,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		// Write a WAL entry
 		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
 			ConnectionName: name,
-			UserName:       userName,
+			UserName:       rootUsername,
 			OldPassword:    oldPassword,
 			NewPassword:    newPassword,
 		})
@@ -114,37 +115,32 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		// Attempt to use SetCredentials for the root credential rotation
-		statements := dbplugin.Statements{Rotation: config.RootCredentialsRotateStatements}
-		userConfig := dbplugin.StaticUserConfig{
-			Username: userName,
-			Password: newPassword,
+		updateReq := v5.UpdateUserRequest{
+			Username: rootUsername,
+			Password: &v5.ChangePassword{
+				NewPassword: newPassword,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
+			},
 		}
-		if _, _, err := db.SetCredentials(ctx, statements, userConfig); err != nil {
-			if status.Code(err) == codes.Unimplemented {
-				// Fall back to using RotateRootCredentials if unimplemented
-				config.ConnectionDetails, err = db.RotateRootCredentials(ctx,
-					config.RootCredentialsRotateStatements)
-			}
-			if err != nil {
-				return nil, err
-			}
+		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user: %w", err)
+		}
+		if newConfigDetails != nil {
+			config.ConnectionDetails = newConfigDetails
 		}
 
-		// Update storage with the new root credentials
-		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
 
-		// Delete the WAL entry after successfully rotating root credentials
-		if err := framework.DeleteWAL(ctx, req.Storage, walID); err != nil {
+		err = framework.DeleteWAL(ctx, req.Storage, walID)
+		if err != nil {
 			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
 		}
-
 		return nil, nil
 	}
 }

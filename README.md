@@ -56,13 +56,13 @@ Documentation, Getting Started, and Certification Exams
 Documentation is available on the [Vault website](https://www.vaultproject.io/docs/).
 
 If you're new to Vault and want to get started with security automation, please
-check out our [Getting Started guides](https://learn.hashicorp.com/vault?track=getting-started#getting-started)
-on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault?track=getting-started#operations-and-development)
+check out our [Getting Started guides](https://learn.hashicorp.com/collections/vault/getting-started)
+on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault)
 to continue your learning.
 
 Show off your Vault knowledge by passing a certification exam. Visit the
 [certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
-for information about exams and find [study materials](https://learn.hashicorp.com/vault/certification/vault-associate)
+for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
 on HashiCorp's learning platform.
 
 Developing Vault
@@ -70,7 +70,7 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine. Go version
-1.13.7+ is *required*.
+1.15.3+ is *required*.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
