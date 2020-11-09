@@ -1238,6 +1238,13 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 		DefaultReportMonths: 12,
 	})
 
+	// On enterprise, a segment will be created, and
+	// disabling it will trigger deletion, so wait
+	// for that deletion to finish.
+	// (Alternatively, we could ensure that the next segment
+	// uses a different timestamp by waiting 1 second.)
+	a.WaitForDeletion()
+
 	// Go through request to ensure config is persisted
 	req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 	req.Storage = sysView
