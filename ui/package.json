@@ -115,7 +115,7 @@
     "ember-svg-jar": "^2.1.0",
     "ember-template-lint": "^2.14.0",
     "ember-test-selectors": "^2.1.0",
-    "ember-truth-helpers": "^3.0.0",
+    "ember-truth-helpers": "^2.1.0",
     "ember-wormhole": "^0.5.5",
     "escape-string-regexp": "^2.0.0",
     "eslint": "^7.12.1",
