@@ -66,11 +66,11 @@
 {{else}}
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics-config-table>
     {{#each infoRows as |item|}}
-      {{info-table-row
-        label=item.label
-        helperText=item.helperText
-        value=(get model item.valueKey)
-      }}
+      <InfoTableRow
+        @label={{item.label}}
+        @helperText={{item.helperText}}
+        @value={{get model item.valueKey}}
+      />
     {{/each}}
   </div>
 {{/if}}

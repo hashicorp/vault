@@ -1,4 +1,3 @@
-import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, find, click } from '@ember/test-helpers';
@@ -28,7 +27,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
   };
 
   const generateModel = overrides => {
-    return new EmberObject({
+    return {
       enabled: 'On',
       retentionMonths: 24,
       defaultReportMonths: 12,
@@ -40,7 +39,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
       changedAttributes: () => ({}),
       save: () => {},
       ...overrides,
-    });
+    };
   };
 
   hooks.beforeEach(function() {

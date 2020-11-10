@@ -22,6 +22,7 @@ export default Component.extend({
   currentUserEntityId: alias('auth.authData.entity_id'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function() {
+    if (!this.model.requestEntity) return false;
     return this.currentUserEntityId === this.model.requestEntity.id;
   }),
 
