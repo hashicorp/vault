@@ -1,5 +1,9 @@
 ## Next
 
+BUG FIXES:
+
+* core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
+
 ## 1.6.0 RC
 ### November 4th, 2020
 
@@ -473,7 +477,7 @@ FEATURES:
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
 * **Redshift Database Secrets Engine**: The database secrets engine now supports static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
 * **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).
-* **Transform Secrets Engine (Enterprise)**: A new secrets engine that handles secure data transformation and tokenization against provided input value.
+* **Transform Secrets Engine (Enterprise)**: A new secrets engine that handles secure data transformations against provided input values.
 * **Integrated Storage**: Promoted out of beta and into general availability for both open-source and enterprise workloads.
 
 IMPROVEMENTS:

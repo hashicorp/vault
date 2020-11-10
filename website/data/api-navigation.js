@@ -38,6 +38,7 @@ export default [
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
+      { category: 'key-management' },
       { category: 'kmip' },
       {
         category: 'kv',

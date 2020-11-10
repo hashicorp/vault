@@ -153,7 +153,7 @@ export default [
       'path-help',
       {
         category: 'plugin',
-        content: ['deregister', 'info', 'list', 'register'],
+        content: ['deregister', 'info', 'list', 'register', 'reload'],
       },
       {
         category: 'policy',
@@ -238,6 +238,7 @@ export default [
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
+      { category: 'key-management' },
       { category: 'kmip' },
       {
         category: 'kv',

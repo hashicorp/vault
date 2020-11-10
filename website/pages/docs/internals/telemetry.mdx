@@ -429,6 +429,21 @@ themselves are unable to keep up with the load.
 lower than 200ms, leader > 0 and candidate == 0. Deviations from this might
 indicate flapping leadership.
 
+## Integrated Raft Storage Automated Snapshots
+
+These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-raft-snapshots).
+
+| Metric                                          | Description                                                                                                   | Unit  | Type    |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :---  | :------ |
+| `vault.autosnapshots.total.snapshot.size`		| For storage_type=local, space on disk used by saved snapshots                                                 | bytes      | gauge |
+| `vault.autosnapshots.percent.maxspace.used`	| For storage_type=local, percent used of maximum allocated space                                               | percentage | gauge |
+| `vault.autosnapshots.save.errors`				| Increments whenever an error occurs trying to save a snapshot                                                 | n/a        | counter |
+| `vault.autosnapshots.save.duration`			| Measures the time taken saving a snapshot                                                                     | ms         | summary |
+| `vault.autosnapshots.last.success.time`		| Epoch time (seconds since 1970/01/01) of last successful snapshot save                                        | n/a        | gauge |
+| `vault.autosnapshots.snapshot.size`			| Measures the size in bytes of snapshots                                                                       | bytes      | summary |
+| `vault.autosnapshots.rotate.duration`			| Measures the time taken to rotate (i.e. delete) old snapshots to satisfy configured retention                 | ms         | summary |
+| `vault.autosnapshots.snapshots.in.storage`	| Number of snapshots in storage                                                                                | n/a        | gauge |
+
 ## Metric Labels
 
 | Metric                                          | Description                                                                | Example                            |
@@ -442,6 +457,7 @@ indicate flapping leadership.
 | `secret_engine`                                 | The [secret engine][secrets-engine] type.                                  | `aws`                              |
 | `token_type`                                    | Identifies whether the token is a batch token or a service token.          | `service`                          |
 | `peer_id`                                       | Unique identifier of a peer.                                               | `node-1`                           |
+| `snapshot_config_name`                          | For automated snapshots, the name of the configuration                     | `config1`                          |
 
 [secrets-engines]: /docs/secrets
 [storage-backends]: /docs/configuration/storage
