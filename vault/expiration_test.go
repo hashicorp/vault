@@ -33,11 +33,6 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	return c.expiration
 }
 
-func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, _, _ := TestCoreUnsealedBackend(t, backend)
-	return c, c.expiration
-}
-
 func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
