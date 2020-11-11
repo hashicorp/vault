@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -58,8 +59,24 @@ func (p *Process) NameWithContext(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	name := common.IntToString(k.Comm[:])
 
-	return common.IntToString(k.Comm[:]), nil
+	if len(name) >= 15 {
+		cmdlineSlice, err := p.CmdlineSliceWithContext(ctx)
+		if err != nil {
+			return "", err
+		}
+		if len(cmdlineSlice) > 0 {
+			extendedName := filepath.Base(cmdlineSlice[0])
+			if strings.HasPrefix(extendedName, p.name) {
+				name = extendedName
+			} else {
+				name = cmdlineSlice[0]
+			}
+		}
+	}
+
+	return name, nil
 }
 func (p *Process) Tgid() (int32, error) {
 	return 0, common.ErrNotImplementedError
@@ -212,6 +229,20 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 	gids = append(gids, int32(k.Rgid), int32(k.Ngroups), int32(k.Svgid))
 
 	return gids, nil
+}
+
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	k, err := p.getKProc()
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make([]int32, k.Ngroups)
+	for i := int16(0); i < k.Ngroups; i++ {
+		groups[i] = int32(k.Groups[i])
+	}
+
+	return groups, nil
 }
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())

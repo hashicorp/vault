@@ -75,10 +75,15 @@ function run_tests() {
 	else
 		sleep 1s
 		go test -tags "cassandra gocql_debug" -timeout=5m -race $args
+
+		ccm clear
+		ccm start --wait-for-binary-proto
+		sleep 1s
+
 		go test -tags "integration gocql_debug" -timeout=5m -race $args
 
 		ccm clear
-		ccm start
+		ccm start --wait-for-binary-proto
 		sleep 1s
 
 		go test -tags "ccm gocql_debug" -timeout=5m -race $args

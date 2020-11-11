@@ -12,10 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shirou/gopsutil/internal/common"
 	"golang.org/x/sys/unix"
@@ -31,52 +29,7 @@ type LSB struct {
 // from utmp.h
 const USER_PROCESS = 7
 
-func Info() (*InfoStat, error) {
-	return InfoWithContext(context.Background())
-}
-
-func InfoWithContext(ctx context.Context) (*InfoStat, error) {
-	ret := &InfoStat{
-		OS: runtime.GOOS,
-	}
-
-	hostname, err := os.Hostname()
-	if err == nil {
-		ret.Hostname = hostname
-	}
-
-	platform, family, version, err := PlatformInformation()
-	if err == nil {
-		ret.Platform = platform
-		ret.PlatformFamily = family
-		ret.PlatformVersion = version
-	}
-	kernelVersion, err := KernelVersion()
-	if err == nil {
-		ret.KernelVersion = kernelVersion
-	}
-
-	kernelArch, err := kernelArch()
-	if err == nil {
-		ret.KernelArch = kernelArch
-	}
-
-	system, role, err := Virtualization()
-	if err == nil {
-		ret.VirtualizationSystem = system
-		ret.VirtualizationRole = role
-	}
-
-	boot, err := BootTime()
-	if err == nil {
-		ret.BootTime = boot
-		ret.Uptime = uptime(boot)
-	}
-
-	if numProcs, err := common.NumProcs(); err == nil {
-		ret.Procs = numProcs
-	}
-
+func HostIDWithContext(ctx context.Context) (string, error) {
 	sysProductUUID := common.HostSys("class/dmi/id/product_uuid")
 	machineID := common.HostEtc("machine-id")
 	procSysKernelRandomBootID := common.HostProc("sys/kernel/random/boot_id")
@@ -86,8 +39,7 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 	case common.PathExists(sysProductUUID):
 		lines, err := common.ReadLines(sysProductUUID)
 		if err == nil && len(lines) > 0 && lines[0] != "" {
-			ret.HostID = strings.ToLower(lines[0])
-			break
+			return strings.ToLower(lines[0]), nil
 		}
 		fallthrough
 	// Fallback on GNU Linux systems with systemd, readable by everyone
@@ -95,48 +47,34 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 		lines, err := common.ReadLines(machineID)
 		if err == nil && len(lines) > 0 && len(lines[0]) == 32 {
 			st := lines[0]
-			ret.HostID = fmt.Sprintf("%s-%s-%s-%s-%s", st[0:8], st[8:12], st[12:16], st[16:20], st[20:32])
-			break
+			return fmt.Sprintf("%s-%s-%s-%s-%s", st[0:8], st[8:12], st[12:16], st[16:20], st[20:32]), nil
 		}
 		fallthrough
 	// Not stable between reboot, but better than nothing
 	default:
 		lines, err := common.ReadLines(procSysKernelRandomBootID)
 		if err == nil && len(lines) > 0 && lines[0] != "" {
-			ret.HostID = strings.ToLower(lines[0])
+			return strings.ToLower(lines[0]), nil
 		}
 	}
 
-	return ret, nil
+	return "", nil
 }
 
-// BootTime returns the system boot time expressed in seconds since the epoch.
-func BootTime() (uint64, error) {
-	return BootTimeWithContext(context.Background())
+func numProcs(ctx context.Context) (uint64, error) {
+	return common.NumProcs()
 }
 
 func BootTimeWithContext(ctx context.Context) (uint64, error) {
 	return common.BootTimeWithContext(ctx)
 }
 
-func uptime(boot uint64) uint64 {
-	return uint64(time.Now().Unix()) - boot
-}
-
-func Uptime() (uint64, error) {
-	return UptimeWithContext(context.Background())
-}
-
 func UptimeWithContext(ctx context.Context) (uint64, error) {
-	boot, err := BootTime()
-	if err != nil {
+	sysinfo := &unix.Sysinfo_t{}
+	if err := unix.Sysinfo(sysinfo); err != nil {
 		return 0, err
 	}
-	return uptime(boot), nil
-}
-
-func Users() ([]UserStat, error) {
-	return UsersWithContext(context.Background())
+	return uint64(sysinfo.Uptime), nil
 }
 
 func UsersWithContext(ctx context.Context) ([]UserStat, error) {
@@ -236,12 +174,7 @@ func getLSB() (*LSB, error) {
 	return ret, nil
 }
 
-func PlatformInformation() (platform string, family string, version string, err error) {
-	return PlatformInformationWithContext(context.Background())
-}
-
 func PlatformInformationWithContext(ctx context.Context) (platform string, family string, version string, err error) {
-
 	lsb, err := getLSB()
 	if err != nil {
 		lsb = &LSB{}
@@ -280,7 +213,7 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 				platform = "debian"
 			}
 			contents, err := common.ReadLines(common.HostEtc("debian_version"))
-			if err == nil {
+			if err == nil && len(contents) > 0 && contents[0] != "" {
 				version = contents[0]
 			}
 		}
@@ -315,7 +248,7 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 	} else if common.PathExists(common.HostEtc("alpine-release")) {
 		platform = "alpine"
 		contents, err := common.ReadLines(common.HostEtc("alpine-release"))
-		if err == nil && len(contents) > 0 {
+		if err == nil && len(contents) > 0 && contents[0] != "" {
 			version = contents[0]
 		}
 	} else if common.PathExists(common.HostEtc("os-release")) {
@@ -368,10 +301,6 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 
 	return platform, family, version, nil
 
-}
-
-func KernelVersion() (version string, err error) {
-	return KernelVersionWithContext(context.Background())
 }
 
 func KernelVersionWithContext(ctx context.Context) (version string, err error) {
@@ -432,16 +361,8 @@ func getSusePlatform(contents []string) string {
 	return "suse"
 }
 
-func Virtualization() (string, string, error) {
-	return VirtualizationWithContext(context.Background())
-}
-
 func VirtualizationWithContext(ctx context.Context) (string, string, error) {
 	return common.VirtualizationWithContext(ctx)
-}
-
-func SensorsTemperatures() ([]TemperatureStat, error) {
-	return SensorsTemperaturesWithContext(context.Background())
 }
 
 func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, error) {
@@ -459,6 +380,38 @@ func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, err
 		}
 	}
 	var warns Warnings
+
+	if len(files) == 0 { // handle distributions without hwmon, like raspbian #391, parse legacy thermal_zone files
+		files, err = filepath.Glob(common.HostSys("/class/thermal/thermal_zone*/"))
+		if err != nil {
+			return temperatures, err
+		}
+		for _, file := range files {
+			// Get the name of the temperature you are reading
+			name, err := ioutil.ReadFile(filepath.Join(file, "type"))
+			if err != nil {
+				warns.Add(err)
+				continue
+			}
+			// Get the temperature reading
+			current, err := ioutil.ReadFile(filepath.Join(file, "temp"))
+			if err != nil {
+				warns.Add(err)
+				continue
+			}
+			temperature, err := strconv.ParseInt(strings.TrimSpace(string(current)), 10, 64)
+			if err != nil {
+				warns.Add(err)
+				continue
+			}
+
+			temperatures = append(temperatures, TemperatureStat{
+				SensorKey:   strings.TrimSpace(string(name)),
+				Temperature: float64(temperature) / 1000.0,
+			})
+		}
+		return temperatures, warns.Reference()
+	}
 
 	// example directory
 	// device/           temp1_crit_alarm  temp2_crit_alarm  temp3_crit_alarm  temp4_crit_alarm  temp5_crit_alarm  temp6_crit_alarm  temp7_crit_alarm

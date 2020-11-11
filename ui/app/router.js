@@ -17,7 +17,8 @@ Router.map(function() {
       this.route('license');
       this.route('metrics', function() {
         this.route('index', { path: '/' });
-        this.route('http-requests');
+        this.route('config');
+        this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
@@ -127,7 +128,9 @@ Router.map(function() {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
-      this.route('replication-dr-promote');
+      this.route('replication-dr-promote', function() {
+        this.route('details');
+      });
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }

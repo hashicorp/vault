@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -53,6 +53,7 @@ type sshRole struct {
 	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
 	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
 	AllowedUserKeyLengths  map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
+	AlgorithmSigner        string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -331,6 +332,16 @@ func pathRoles(b *backend) *framework.Path {
                                 If set, allows the enforcement of key types and minimum key sizes to be signed.
                                 `,
 			},
+			"algorithm_signer": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				When supplied, this value specifies a signing algorithm for the key. Possible values: 
+				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
+				`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Signing Algorithm",
+				},
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -466,7 +477,21 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyOptionSpecs:  keyOptionSpecs,
 		}
 	} else if keyType == KeyTypeCA {
-		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), d)
+		algorithmSigner := ""
+		algorithmSignerRaw, ok := d.GetOk("algorithm_signer")
+		if ok {
+			algorithmSigner = algorithmSignerRaw.(string)
+			switch algorithmSigner {
+			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
+			case "":
+				// This case is valid, and the sign operation will use the signer's
+				// default algorithm.
+			default:
+				return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
+			}
+		}
+
+		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), algorithmSigner, d)
 		if errorResponse != nil {
 			return errorResponse, nil
 		}
@@ -486,7 +511,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	return nil, nil
 }
 
-func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework.FieldData) (*sshRole, *logical.Response) {
+func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *framework.FieldData) (*sshRole, *logical.Response) {
 	ttl := time.Duration(data.Get("ttl").(int)) * time.Second
 	maxTTL := time.Duration(data.Get("max_ttl").(int)) * time.Second
 	role := &sshRole{
@@ -503,6 +528,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		AllowUserKeyIDs:        data.Get("allow_user_key_ids").(bool),
 		KeyIDFormat:            data.Get("key_id_format").(string),
 		KeyType:                KeyTypeCA,
+		AlgorithmSigner:        signer,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -594,6 +620,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_critical_options": role.DefaultCriticalOptions,
 			"default_extensions":       role.DefaultExtensions,
 			"allowed_user_key_lengths": role.AllowedUserKeyLengths,
+			"algorithm_signer":         role.AlgorithmSigner,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{

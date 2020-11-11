@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
 
 const (
@@ -27,94 +26,77 @@ const (
 	testTags        = "administrator"
 	testVHosts      = `{"/": {"configure": ".*", "write": ".*", "read": ".*"}}`
 	testVHostTopics = `{"/": {"amq.topic": {"write": ".*", "read": ".*"}}}`
+
+	roleName = "web"
 )
 
-func prepareRabbitMQTestContainer(t *testing.T) (func(), string, int) {
+func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 	if os.Getenv(envRabbitMQConnectionURI) != "" {
-		return func() {}, os.Getenv(envRabbitMQConnectionURI), 0
+		return func() {}, os.Getenv(envRabbitMQConnectionURI)
 	}
 
-	pool, err := dockertest.NewPool("")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "rabbitmq",
+		ImageTag:      "3-management",
+		ContainerName: "rabbitmq",
+		Ports:         []string{"15672/tcp"},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("could not start docker rabbitmq: %s", err)
 	}
 
-	runOpts := &dockertest.RunOptions{
-		Repository: "rabbitmq",
-		Tag:        "3-management",
-	}
-	resource, err := pool.RunWithOptions(runOpts)
-	if err != nil {
-		t.Fatalf("Could not start local rabbitmq docker container: %s", err)
-	}
-
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	port, _ := strconv.Atoi(resource.GetPort("15672/tcp"))
-	address := fmt.Sprintf("http://127.0.0.1:%d", port)
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		rmqc, err := rabbithole.NewClient(address, "guest", "guest")
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		connURL := fmt.Sprintf("http://%s:%d", host, port)
+		rmqc, err := rabbithole.NewClient(connURL, "guest", "guest")
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		_, err = rmqc.Overview()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to rabbitmq docker container: %s", err)
+		return docker.NewServiceURLParse(connURL)
+	})
+	if err != nil {
+		t.Fatalf("could not start docker rabbitmq: %s", err)
 	}
-	return cleanup, address, port
+	return svc.Cleanup, svc.Config.URL().String()
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, b, uri, "web"),
+			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
 
 }
 
 func TestBackend_returnsErrs(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			{
 				Operation: logical.CreateOperation,
-				Path:      "roles/web",
+				Path:      fmt.Sprintf("roles/%s", roleName),
 				Data: map[string]interface{}{
 					"tags":         testTags,
 					"vhosts":       `{"invalid":{"write": ".*", "read": ".*"}}`,
@@ -123,7 +105,7 @@ func TestBackend_returnsErrs(t *testing.T) {
 			},
 			{
 				Operation: logical.ReadOperation,
-				Path:      "creds/web",
+				Path:      fmt.Sprintf("creds/%s", roleName),
 				ErrorOk:   true,
 			},
 		},
@@ -131,24 +113,47 @@ func TestBackend_returnsErrs(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
-			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", "", "", ""),
+			testAccStepReadRole(t, roleName, testTags, testVHosts, testVHostTopics),
+			testAccStepDeleteRole(t, roleName),
+			testAccStepReadRole(t, roleName, "", "", ""),
+		},
+	})
+}
+
+func TestBackend_roleWithPasswordPolicy(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	backendConfig := logical.TestBackendConfig()
+	passGen := func() (password string, err error) {
+		return base62.Random(30)
+	}
+	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", passGen)
+	b, _ := Factory(context.Background(), backendConfig)
+
+	cleanup, uri := prepareRabbitMQTestContainer(t)
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, uri, "testpolicy"),
+			testAccStepRole(t),
+			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
 }
@@ -161,7 +166,7 @@ func testAccPreCheckFunc(t *testing.T, uri string) func() {
 	}
 }
 
-func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, uri string, passwordPolicy string) logicaltest.TestStep {
 	username := os.Getenv(envRabbitMQUsername)
 	if len(username) == 0 {
 		username = "guest"
@@ -175,9 +180,10 @@ func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"connection_uri": uri,
-			"username":       username,
-			"password":       password,
+			"connection_uri":  uri,
+			"username":        username,
+			"password":        password,
+			"password_policy": passwordPolicy,
 		},
 	}
 }
@@ -185,7 +191,7 @@ func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/web",
+		Path:      fmt.Sprintf("roles/%s", roleName),
 		Data: map[string]interface{}{
 			"tags":         testTags,
 			"vhosts":       testVHosts,

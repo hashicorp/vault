@@ -56,6 +56,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	}
 	err = raw.Setup(ctx, conf)
 	if err != nil {
+		raw.Cleanup(ctx)
 		return nil, err
 	}
 	// Get SpecialPaths and BackendType
@@ -108,6 +109,7 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	}
 	err = nb.Setup(ctx, b.config)
 	if err != nil {
+		nb.Cleanup(ctx)
 		return err
 	}
 

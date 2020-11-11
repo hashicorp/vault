@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -73,13 +73,13 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		}
 
 		// Get the Database object
-		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		dbi, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}
 
-		db.RLock()
-		defer db.RUnlock()
+		dbi.RLock()
+		defer dbi.RUnlock()
 
 		ttl, _, err := framework.CalculateTTL(b.System(), 0, role.DefaultTTL, 0, role.MaxTTL, 0, time.Time{})
 		if err != nil {
@@ -90,27 +90,44 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		usernameConfig := dbplugin.UsernameConfig{
-			DisplayName: req.DisplayName,
-			RoleName:    name,
+		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate password: %w", err)
 		}
 
-		// Create the user
-		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
+		newUserReq := v5.NewUserRequest{
+			UsernameConfig: v5.UsernameMetadata{
+				DisplayName: req.DisplayName,
+				RoleName:    name,
+			},
+			Statements: v5.Statements{
+				Commands: role.Statements.Creation,
+			},
+			RollbackStatements: v5.Statements{
+				Commands: role.Statements.Rollback,
+			},
+			Password:   password,
+			Expiration: expiration,
+		}
+
+		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
+		newUserResp, password, err := dbi.database.NewUser(ctx, newUserReq)
 		if err != nil {
-			b.CloseIfShutdown(db, err)
+			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
 
-		resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
-			"username": username,
+		respData := map[string]interface{}{
+			"username": newUserResp.Username,
 			"password": password,
-		}, map[string]interface{}{
-			"username":              username,
+		}
+		internal := map[string]interface{}{
+			"username":              newUserResp.Username,
 			"role":                  name,
 			"db_name":               role.DBName,
 			"revocation_statements": role.Statements.Revocation,
-		})
+		}
+		resp := b.Secret(SecretCredsType).Response(respData, internal)
 		resp.Secret.TTL = role.DefaultTTL
 		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil

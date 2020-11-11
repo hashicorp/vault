@@ -22,10 +22,10 @@ import (
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -56,6 +56,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-prefix/*",
 		"leases/revoke-force/*",
 		"leases/lookup/*",
+		"storage/raft/snapshot-auto/config/*",
 	}
 
 	b := testSystemBackend(t)
@@ -712,6 +713,38 @@ func TestSystemBackend_remount_system(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != `cannot remount "sys/"` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_clean(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = "foo//bar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path 'foo//bar' does not match cleaned path 'foo/bar'` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_nonPrintable(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = "foo\nbar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path cannot contain non-printable characters` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -2654,7 +2687,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	// Add another mount
 	me := &MountEntry{
 		Table:   mountTableType,
-		Path:    sanitizeMountPath("kv-v1"),
+		Path:    sanitizePath("kv-v1"),
 		Type:    "kv",
 		Options: map[string]string{"version": "1"},
 	}
@@ -3188,7 +3221,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		policyEntry := storageEntry(t, "testpolicy",

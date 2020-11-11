@@ -250,7 +250,8 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 ```json
 {
   "default_lease_ttl": 1800,
-  "max_lease_ttl": 86400
+  "max_lease_ttl": 86400,
+  "audit_non_hmac_request_keys": ["client_nonce"]
 }
 ```
 

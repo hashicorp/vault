@@ -61,9 +61,9 @@ func (c *DynamoDB) BatchGetItemRequest(input *BatchGetItemInput) (req *request.R
 
 	output = &BatchGetItemOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -282,9 +282,9 @@ func (c *DynamoDB) BatchWriteItemRequest(input *BatchWriteItemInput) (req *reque
 
 	output = &BatchWriteItemOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -476,9 +476,9 @@ func (c *DynamoDB) CreateBackupRequest(input *CreateBackupInput) (req *request.R
 
 	output = &CreateBackupOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -636,9 +636,9 @@ func (c *DynamoDB) CreateGlobalTableRequest(input *CreateGlobalTableInput) (req 
 
 	output = &CreateGlobalTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -670,7 +670,7 @@ func (c *DynamoDB) CreateGlobalTableRequest(input *CreateGlobalTableInput) (req 
 // relationship between two or more DynamoDB tables with the same table name
 // in the provided Regions.
 //
-// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// This operation only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
 // of global tables.
 //
 // If you want to add a new replica table to a global table, each of the following
@@ -691,6 +691,14 @@ func (c *DynamoDB) CreateGlobalTableRequest(input *CreateGlobalTableInput) (req 
 //    * The global secondary indexes must have the same name.
 //
 //    * The global secondary indexes must have the same hash key and sort key
+//    (if present).
+//
+// If local secondary indexes are specified, then the following conditions must
+// also be met:
+//
+//    * The local secondary indexes must have the same name.
+//
+//    * The local secondary indexes must have the same hash key and sort key
 //    (if present).
 //
 // Write capacity settings should be set consistently across your replica tables
@@ -796,9 +804,9 @@ func (c *DynamoDB) CreateTableRequest(input *CreateTableInput) (req *request.Req
 
 	output = &CreateTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -933,9 +941,9 @@ func (c *DynamoDB) DeleteBackupRequest(input *DeleteBackupInput) (req *request.R
 
 	output = &DeleteBackupOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1060,9 +1068,9 @@ func (c *DynamoDB) DeleteItemRequest(input *DeleteItemInput) (req *request.Reque
 
 	output = &DeleteItemOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1204,9 +1212,9 @@ func (c *DynamoDB) DeleteTableRequest(input *DeleteTableInput) (req *request.Req
 
 	output = &DeleteTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1348,9 +1356,9 @@ func (c *DynamoDB) DescribeBackupRequest(input *DescribeBackupInput) (req *reque
 
 	output = &DescribeBackupOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1457,9 +1465,9 @@ func (c *DynamoDB) DescribeContinuousBackupsRequest(input *DescribeContinuousBac
 
 	output = &DescribeContinuousBackupsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1807,9 +1815,9 @@ func (c *DynamoDB) DescribeGlobalTableRequest(input *DescribeGlobalTableInput) (
 
 	output = &DescribeGlobalTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1839,8 +1847,10 @@ func (c *DynamoDB) DescribeGlobalTableRequest(input *DescribeGlobalTableInput) (
 //
 // Returns information about the specified global table.
 //
-// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
-// of global tables.
+// This operation only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// of global tables. If you are using global tables Version 2019.11.21 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V2.html)
+// you can use DescribeTable (https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DescribeTable.html)
+// instead.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1917,9 +1927,9 @@ func (c *DynamoDB) DescribeGlobalTableSettingsRequest(input *DescribeGlobalTable
 
 	output = &DescribeGlobalTableSettingsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -1949,7 +1959,7 @@ func (c *DynamoDB) DescribeGlobalTableSettingsRequest(input *DescribeGlobalTable
 //
 // Describes Region-specific settings for a global table.
 //
-// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// This operation only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
 // of global tables.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -2027,9 +2037,9 @@ func (c *DynamoDB) DescribeLimitsRequest(input *DescribeLimitsInput) (req *reque
 
 	output = &DescribeLimitsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -2188,9 +2198,9 @@ func (c *DynamoDB) DescribeTableRequest(input *DescribeTableInput) (req *request
 
 	output = &DescribeTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -2311,7 +2321,7 @@ func (c *DynamoDB) DescribeTableReplicaAutoScalingRequest(input *DescribeTableRe
 //
 // Describes auto scaling settings across replicas of the global table at once.
 //
-// This method only applies to Version 2019.11.21 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V2.html)
+// This operation only applies to Version 2019.11.21 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V2.html)
 // of global tables.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -2390,9 +2400,9 @@ func (c *DynamoDB) DescribeTimeToLiveRequest(input *DescribeTimeToLiveInput) (re
 
 	output = &DescribeTimeToLiveOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -2498,9 +2508,9 @@ func (c *DynamoDB) GetItemRequest(input *GetItemInput) (req *request.Request, ou
 
 	output = &GetItemOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -2626,9 +2636,9 @@ func (c *DynamoDB) ListBackupsRequest(input *ListBackupsInput) (req *request.Req
 
 	output = &ListBackupsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -2880,9 +2890,9 @@ func (c *DynamoDB) ListGlobalTablesRequest(input *ListGlobalTablesInput) (req *r
 
 	output = &ListGlobalTablesOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -2912,7 +2922,7 @@ func (c *DynamoDB) ListGlobalTablesRequest(input *ListGlobalTablesInput) (req *r
 //
 // Lists all global tables that have a replica in the specified Region.
 //
-// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// This operation only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
 // of global tables.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -2993,9 +3003,9 @@ func (c *DynamoDB) ListTablesRequest(input *ListTablesInput) (req *request.Reque
 
 	output = &ListTablesOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -3151,9 +3161,9 @@ func (c *DynamoDB) ListTagsOfResourceRequest(input *ListTagsOfResourceInput) (re
 
 	output = &ListTagsOfResourceOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -3263,9 +3273,9 @@ func (c *DynamoDB) PutItemRequest(input *PutItemInput) (req *request.Request, ou
 
 	output = &PutItemOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -3325,9 +3335,15 @@ func (c *DynamoDB) PutItemRequest(input *PutItemInput) (req *request.Request, ou
 //    * PutItem in the AWS SDK for Ruby V2 (http://docs.aws.amazon.com/goto/SdkForRubyV2/dynamodb-2012-08-10/PutItem)
 //
 // When you add an item, the primary key attributes are the only required attributes.
-// Attribute values cannot be null. String and Binary type attributes must have
-// lengths greater than zero. Set type attributes cannot be empty. Requests
-// with empty values will be rejected with a ValidationException exception.
+// Attribute values cannot be null.
+//
+// Empty String and Binary attribute values are allowed. Attribute values of
+// type String and Binary must have a length greater than zero if the attribute
+// is used as a key attribute for a table or index. Set type attributes cannot
+// be empty.
+//
+// Invalid Requests with empty values will be rejected with a ValidationException
+// exception.
 //
 // To prevent a new item from replacing an existing item, use a conditional
 // expression that contains the attribute_not_exists function with the name
@@ -3443,9 +3459,9 @@ func (c *DynamoDB) QueryRequest(input *QueryInput) (req *request.Request, output
 
 	output = &QueryOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -3663,9 +3679,9 @@ func (c *DynamoDB) RestoreTableFromBackupRequest(input *RestoreTableFromBackupIn
 
 	output = &RestoreTableFromBackupOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -3811,9 +3827,9 @@ func (c *DynamoDB) RestoreTableToPointInTimeRequest(input *RestoreTableToPointIn
 
 	output = &RestoreTableToPointInTimeOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -3987,9 +4003,9 @@ func (c *DynamoDB) ScanRequest(input *ScanInput) (req *request.Request, output *
 
 	output = &ScanOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -4188,9 +4204,9 @@ func (c *DynamoDB) TagResourceRequest(input *TagResourceInput) (req *request.Req
 	output = &TagResourceOutput{}
 	req = c.newRequest(op, input, output)
 	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -4321,9 +4337,9 @@ func (c *DynamoDB) TransactGetItemsRequest(input *TransactGetItemsInput) (req *r
 
 	output = &TransactGetItemsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -4548,9 +4564,9 @@ func (c *DynamoDB) TransactWriteItemsRequest(input *TransactWriteItemsInput) (re
 
 	output = &TransactWriteItemsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -4817,9 +4833,9 @@ func (c *DynamoDB) UntagResourceRequest(input *UntagResourceInput) (req *request
 	output = &UntagResourceOutput{}
 	req = c.newRequest(op, input, output)
 	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -4948,9 +4964,9 @@ func (c *DynamoDB) UpdateContinuousBackupsRequest(input *UpdateContinuousBackups
 
 	output = &UpdateContinuousBackupsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -5152,9 +5168,9 @@ func (c *DynamoDB) UpdateGlobalTableRequest(input *UpdateGlobalTableInput) (req 
 
 	output = &UpdateGlobalTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -5288,9 +5304,9 @@ func (c *DynamoDB) UpdateGlobalTableSettingsRequest(input *UpdateGlobalTableSett
 
 	output = &UpdateGlobalTableSettingsOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -5420,9 +5436,9 @@ func (c *DynamoDB) UpdateItemRequest(input *UpdateItemInput) (req *request.Reque
 
 	output = &UpdateItemOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -5558,9 +5574,9 @@ func (c *DynamoDB) UpdateTableRequest(input *UpdateTableInput) (req *request.Req
 
 	output = &UpdateTableOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -5709,7 +5725,7 @@ func (c *DynamoDB) UpdateTableReplicaAutoScalingRequest(input *UpdateTableReplic
 //
 // Updates auto scaling settings on your global tables at once.
 //
-// This method only applies to Version 2019.11.21 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V2.html)
+// This operation only applies to Version 2019.11.21 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V2.html)
 // of global tables.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -5807,9 +5823,9 @@ func (c *DynamoDB) UpdateTimeToLiveRequest(input *UpdateTimeToLiveInput) (req *r
 
 	output = &UpdateTimeToLiveOutput{}
 	req = c.newRequest(op, input, output)
-	// if a custom endpoint is provided for the request,
-	// we skip endpoint discovery workflow
-	if req.Config.Endpoint == nil {
+	// if custom endpoint for the request is set to a non empty string,
+	// we skip the endpoint discovery workflow.
+	if req.Config.Endpoint == nil || *req.Config.Endpoint == "" {
 		if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
 			de := discovererDescribeEndpoints{
 				Required:      false,
@@ -13564,6 +13580,10 @@ type PutItemInput struct {
 	// types for those attributes must match those of the schema in the table's
 	// attribute definition.
 	//
+	// Empty String and Binary attribute values are allowed. Attribute values of
+	// type String and Binary must have a length greater than zero if the attribute
+	// is used as a key attribute for a table or index.
+	//
 	// For more information about primary keys, see Primary Key (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html#HowItWorks.CoreComponents.PrimaryKey)
 	// in the Amazon DynamoDB Developer Guide.
 	//
@@ -19865,6 +19885,15 @@ const (
 	AttributeActionDelete = "DELETE"
 )
 
+// AttributeAction_Values returns all elements of the AttributeAction enum
+func AttributeAction_Values() []string {
+	return []string{
+		AttributeActionAdd,
+		AttributeActionPut,
+		AttributeActionDelete,
+	}
+}
+
 const (
 	// BackupStatusCreating is a BackupStatus enum value
 	BackupStatusCreating = "CREATING"
@@ -19876,6 +19905,15 @@ const (
 	BackupStatusAvailable = "AVAILABLE"
 )
 
+// BackupStatus_Values returns all elements of the BackupStatus enum
+func BackupStatus_Values() []string {
+	return []string{
+		BackupStatusCreating,
+		BackupStatusDeleted,
+		BackupStatusAvailable,
+	}
+}
+
 const (
 	// BackupTypeUser is a BackupType enum value
 	BackupTypeUser = "USER"
@@ -19886,6 +19924,15 @@ const (
 	// BackupTypeAwsBackup is a BackupType enum value
 	BackupTypeAwsBackup = "AWS_BACKUP"
 )
+
+// BackupType_Values returns all elements of the BackupType enum
+func BackupType_Values() []string {
+	return []string{
+		BackupTypeUser,
+		BackupTypeSystem,
+		BackupTypeAwsBackup,
+	}
+}
 
 const (
 	// BackupTypeFilterUser is a BackupTypeFilter enum value
@@ -19901,6 +19948,16 @@ const (
 	BackupTypeFilterAll = "ALL"
 )
 
+// BackupTypeFilter_Values returns all elements of the BackupTypeFilter enum
+func BackupTypeFilter_Values() []string {
+	return []string{
+		BackupTypeFilterUser,
+		BackupTypeFilterSystem,
+		BackupTypeFilterAwsBackup,
+		BackupTypeFilterAll,
+	}
+}
+
 const (
 	// BillingModeProvisioned is a BillingMode enum value
 	BillingModeProvisioned = "PROVISIONED"
@@ -19908,6 +19965,14 @@ const (
 	// BillingModePayPerRequest is a BillingMode enum value
 	BillingModePayPerRequest = "PAY_PER_REQUEST"
 )
+
+// BillingMode_Values returns all elements of the BillingMode enum
+func BillingMode_Values() []string {
+	return []string{
+		BillingModeProvisioned,
+		BillingModePayPerRequest,
+	}
+}
 
 const (
 	// ComparisonOperatorEq is a ComparisonOperator enum value
@@ -19950,6 +20015,25 @@ const (
 	ComparisonOperatorBeginsWith = "BEGINS_WITH"
 )
 
+// ComparisonOperator_Values returns all elements of the ComparisonOperator enum
+func ComparisonOperator_Values() []string {
+	return []string{
+		ComparisonOperatorEq,
+		ComparisonOperatorNe,
+		ComparisonOperatorIn,
+		ComparisonOperatorLe,
+		ComparisonOperatorLt,
+		ComparisonOperatorGe,
+		ComparisonOperatorGt,
+		ComparisonOperatorBetween,
+		ComparisonOperatorNotNull,
+		ComparisonOperatorNull,
+		ComparisonOperatorContains,
+		ComparisonOperatorNotContains,
+		ComparisonOperatorBeginsWith,
+	}
+}
+
 const (
 	// ConditionalOperatorAnd is a ConditionalOperator enum value
 	ConditionalOperatorAnd = "AND"
@@ -19957,6 +20041,14 @@ const (
 	// ConditionalOperatorOr is a ConditionalOperator enum value
 	ConditionalOperatorOr = "OR"
 )
+
+// ConditionalOperator_Values returns all elements of the ConditionalOperator enum
+func ConditionalOperator_Values() []string {
+	return []string{
+		ConditionalOperatorAnd,
+		ConditionalOperatorOr,
+	}
+}
 
 const (
 	// ContinuousBackupsStatusEnabled is a ContinuousBackupsStatus enum value
@@ -19966,6 +20058,14 @@ const (
 	ContinuousBackupsStatusDisabled = "DISABLED"
 )
 
+// ContinuousBackupsStatus_Values returns all elements of the ContinuousBackupsStatus enum
+func ContinuousBackupsStatus_Values() []string {
+	return []string{
+		ContinuousBackupsStatusEnabled,
+		ContinuousBackupsStatusDisabled,
+	}
+}
+
 const (
 	// ContributorInsightsActionEnable is a ContributorInsightsAction enum value
 	ContributorInsightsActionEnable = "ENABLE"
@@ -19973,6 +20073,14 @@ const (
 	// ContributorInsightsActionDisable is a ContributorInsightsAction enum value
 	ContributorInsightsActionDisable = "DISABLE"
 )
+
+// ContributorInsightsAction_Values returns all elements of the ContributorInsightsAction enum
+func ContributorInsightsAction_Values() []string {
+	return []string{
+		ContributorInsightsActionEnable,
+		ContributorInsightsActionDisable,
+	}
+}
 
 const (
 	// ContributorInsightsStatusEnabling is a ContributorInsightsStatus enum value
@@ -19991,6 +20099,17 @@ const (
 	ContributorInsightsStatusFailed = "FAILED"
 )
 
+// ContributorInsightsStatus_Values returns all elements of the ContributorInsightsStatus enum
+func ContributorInsightsStatus_Values() []string {
+	return []string{
+		ContributorInsightsStatusEnabling,
+		ContributorInsightsStatusEnabled,
+		ContributorInsightsStatusDisabling,
+		ContributorInsightsStatusDisabled,
+		ContributorInsightsStatusFailed,
+	}
+}
+
 const (
 	// GlobalTableStatusCreating is a GlobalTableStatus enum value
 	GlobalTableStatusCreating = "CREATING"
@@ -20004,6 +20123,16 @@ const (
 	// GlobalTableStatusUpdating is a GlobalTableStatus enum value
 	GlobalTableStatusUpdating = "UPDATING"
 )
+
+// GlobalTableStatus_Values returns all elements of the GlobalTableStatus enum
+func GlobalTableStatus_Values() []string {
+	return []string{
+		GlobalTableStatusCreating,
+		GlobalTableStatusActive,
+		GlobalTableStatusDeleting,
+		GlobalTableStatusUpdating,
+	}
+}
 
 const (
 	// IndexStatusCreating is a IndexStatus enum value
@@ -20019,6 +20148,16 @@ const (
 	IndexStatusActive = "ACTIVE"
 )
 
+// IndexStatus_Values returns all elements of the IndexStatus enum
+func IndexStatus_Values() []string {
+	return []string{
+		IndexStatusCreating,
+		IndexStatusUpdating,
+		IndexStatusDeleting,
+		IndexStatusActive,
+	}
+}
+
 const (
 	// KeyTypeHash is a KeyType enum value
 	KeyTypeHash = "HASH"
@@ -20027,6 +20166,14 @@ const (
 	KeyTypeRange = "RANGE"
 )
 
+// KeyType_Values returns all elements of the KeyType enum
+func KeyType_Values() []string {
+	return []string{
+		KeyTypeHash,
+		KeyTypeRange,
+	}
+}
+
 const (
 	// PointInTimeRecoveryStatusEnabled is a PointInTimeRecoveryStatus enum value
 	PointInTimeRecoveryStatusEnabled = "ENABLED"
@@ -20034,6 +20181,14 @@ const (
 	// PointInTimeRecoveryStatusDisabled is a PointInTimeRecoveryStatus enum value
 	PointInTimeRecoveryStatusDisabled = "DISABLED"
 )
+
+// PointInTimeRecoveryStatus_Values returns all elements of the PointInTimeRecoveryStatus enum
+func PointInTimeRecoveryStatus_Values() []string {
+	return []string{
+		PointInTimeRecoveryStatusEnabled,
+		PointInTimeRecoveryStatusDisabled,
+	}
+}
 
 const (
 	// ProjectionTypeAll is a ProjectionType enum value
@@ -20045,6 +20200,15 @@ const (
 	// ProjectionTypeInclude is a ProjectionType enum value
 	ProjectionTypeInclude = "INCLUDE"
 )
+
+// ProjectionType_Values returns all elements of the ProjectionType enum
+func ProjectionType_Values() []string {
+	return []string{
+		ProjectionTypeAll,
+		ProjectionTypeKeysOnly,
+		ProjectionTypeInclude,
+	}
+}
 
 const (
 	// ReplicaStatusCreating is a ReplicaStatus enum value
@@ -20062,6 +20226,17 @@ const (
 	// ReplicaStatusActive is a ReplicaStatus enum value
 	ReplicaStatusActive = "ACTIVE"
 )
+
+// ReplicaStatus_Values returns all elements of the ReplicaStatus enum
+func ReplicaStatus_Values() []string {
+	return []string{
+		ReplicaStatusCreating,
+		ReplicaStatusCreationFailed,
+		ReplicaStatusUpdating,
+		ReplicaStatusDeleting,
+		ReplicaStatusActive,
+	}
+}
 
 // Determines the level of detail about provisioned throughput consumption that
 // is returned in the response:
@@ -20087,6 +20262,15 @@ const (
 	ReturnConsumedCapacityNone = "NONE"
 )
 
+// ReturnConsumedCapacity_Values returns all elements of the ReturnConsumedCapacity enum
+func ReturnConsumedCapacity_Values() []string {
+	return []string{
+		ReturnConsumedCapacityIndexes,
+		ReturnConsumedCapacityTotal,
+		ReturnConsumedCapacityNone,
+	}
+}
+
 const (
 	// ReturnItemCollectionMetricsSize is a ReturnItemCollectionMetrics enum value
 	ReturnItemCollectionMetricsSize = "SIZE"
@@ -20094,6 +20278,14 @@ const (
 	// ReturnItemCollectionMetricsNone is a ReturnItemCollectionMetrics enum value
 	ReturnItemCollectionMetricsNone = "NONE"
 )
+
+// ReturnItemCollectionMetrics_Values returns all elements of the ReturnItemCollectionMetrics enum
+func ReturnItemCollectionMetrics_Values() []string {
+	return []string{
+		ReturnItemCollectionMetricsSize,
+		ReturnItemCollectionMetricsNone,
+	}
+}
 
 const (
 	// ReturnValueNone is a ReturnValue enum value
@@ -20112,6 +20304,17 @@ const (
 	ReturnValueUpdatedNew = "UPDATED_NEW"
 )
 
+// ReturnValue_Values returns all elements of the ReturnValue enum
+func ReturnValue_Values() []string {
+	return []string{
+		ReturnValueNone,
+		ReturnValueAllOld,
+		ReturnValueUpdatedOld,
+		ReturnValueAllNew,
+		ReturnValueUpdatedNew,
+	}
+}
+
 const (
 	// ReturnValuesOnConditionCheckFailureAllOld is a ReturnValuesOnConditionCheckFailure enum value
 	ReturnValuesOnConditionCheckFailureAllOld = "ALL_OLD"
@@ -20119,6 +20322,14 @@ const (
 	// ReturnValuesOnConditionCheckFailureNone is a ReturnValuesOnConditionCheckFailure enum value
 	ReturnValuesOnConditionCheckFailureNone = "NONE"
 )
+
+// ReturnValuesOnConditionCheckFailure_Values returns all elements of the ReturnValuesOnConditionCheckFailure enum
+func ReturnValuesOnConditionCheckFailure_Values() []string {
+	return []string{
+		ReturnValuesOnConditionCheckFailureAllOld,
+		ReturnValuesOnConditionCheckFailureNone,
+	}
+}
 
 const (
 	// SSEStatusEnabling is a SSEStatus enum value
@@ -20137,6 +20348,17 @@ const (
 	SSEStatusUpdating = "UPDATING"
 )
 
+// SSEStatus_Values returns all elements of the SSEStatus enum
+func SSEStatus_Values() []string {
+	return []string{
+		SSEStatusEnabling,
+		SSEStatusEnabled,
+		SSEStatusDisabling,
+		SSEStatusDisabled,
+		SSEStatusUpdating,
+	}
+}
+
 const (
 	// SSETypeAes256 is a SSEType enum value
 	SSETypeAes256 = "AES256"
@@ -20144,6 +20366,14 @@ const (
 	// SSETypeKms is a SSEType enum value
 	SSETypeKms = "KMS"
 )
+
+// SSEType_Values returns all elements of the SSEType enum
+func SSEType_Values() []string {
+	return []string{
+		SSETypeAes256,
+		SSETypeKms,
+	}
+}
 
 const (
 	// ScalarAttributeTypeS is a ScalarAttributeType enum value
@@ -20155,6 +20385,15 @@ const (
 	// ScalarAttributeTypeB is a ScalarAttributeType enum value
 	ScalarAttributeTypeB = "B"
 )
+
+// ScalarAttributeType_Values returns all elements of the ScalarAttributeType enum
+func ScalarAttributeType_Values() []string {
+	return []string{
+		ScalarAttributeTypeS,
+		ScalarAttributeTypeN,
+		ScalarAttributeTypeB,
+	}
+}
 
 const (
 	// SelectAllAttributes is a Select enum value
@@ -20170,6 +20409,16 @@ const (
 	SelectCount = "COUNT"
 )
 
+// Select_Values returns all elements of the Select enum
+func Select_Values() []string {
+	return []string{
+		SelectAllAttributes,
+		SelectAllProjectedAttributes,
+		SelectSpecificAttributes,
+		SelectCount,
+	}
+}
+
 const (
 	// StreamViewTypeNewImage is a StreamViewType enum value
 	StreamViewTypeNewImage = "NEW_IMAGE"
@@ -20183,6 +20432,16 @@ const (
 	// StreamViewTypeKeysOnly is a StreamViewType enum value
 	StreamViewTypeKeysOnly = "KEYS_ONLY"
 )
+
+// StreamViewType_Values returns all elements of the StreamViewType enum
+func StreamViewType_Values() []string {
+	return []string{
+		StreamViewTypeNewImage,
+		StreamViewTypeOldImage,
+		StreamViewTypeNewAndOldImages,
+		StreamViewTypeKeysOnly,
+	}
+}
 
 const (
 	// TableStatusCreating is a TableStatus enum value
@@ -20207,6 +20466,19 @@ const (
 	TableStatusArchived = "ARCHIVED"
 )
 
+// TableStatus_Values returns all elements of the TableStatus enum
+func TableStatus_Values() []string {
+	return []string{
+		TableStatusCreating,
+		TableStatusUpdating,
+		TableStatusDeleting,
+		TableStatusActive,
+		TableStatusInaccessibleEncryptionCredentials,
+		TableStatusArchiving,
+		TableStatusArchived,
+	}
+}
+
 const (
 	// TimeToLiveStatusEnabling is a TimeToLiveStatus enum value
 	TimeToLiveStatusEnabling = "ENABLING"
@@ -20220,3 +20492,13 @@ const (
 	// TimeToLiveStatusDisabled is a TimeToLiveStatus enum value
 	TimeToLiveStatusDisabled = "DISABLED"
 )
+
+// TimeToLiveStatus_Values returns all elements of the TimeToLiveStatus enum
+func TimeToLiveStatus_Values() []string {
+	return []string{
+		TimeToLiveStatusEnabling,
+		TimeToLiveStatusDisabling,
+		TimeToLiveStatusEnabled,
+		TimeToLiveStatusDisabled,
+	}
+}

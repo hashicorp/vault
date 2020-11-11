@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -11,6 +12,25 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/vault"
 )
+
+func handleSysRaftBootstrap(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "POST", "PUT":
+			if core.Sealed() {
+				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"))
+			}
+
+			if err := core.RaftBootstrap(context.Background(), false); err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+
+		default:
+			respondError(w, http.StatusBadRequest, nil)
+		}
+	})
+}
 
 func handleSysRaftJoin(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,13 +66,22 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
+	if req.AutoJoinScheme != "" && (req.AutoJoinScheme != "http" && req.AutoJoinScheme != "https") {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme))
+		return
+	}
+
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
-			LeaderAPIAddr: req.LeaderAPIAddr,
-			TLSConfig:     tlsConfig,
-			Retry:         req.Retry,
+			AutoJoin:       req.AutoJoin,
+			AutoJoinScheme: req.AutoJoinScheme,
+			AutoJoinPort:   req.AutoJoinPort,
+			LeaderAPIAddr:  req.LeaderAPIAddr,
+			TLSConfig:      tlsConfig,
+			Retry:          req.Retry,
 		},
 	}
+
 	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
@@ -70,6 +99,9 @@ type JoinResponse struct {
 }
 
 type JoinRequest struct {
+	AutoJoin         string `json:"auto_join"`
+	AutoJoinScheme   string `json:"auto_join_scheme"`
+	AutoJoinPort     uint   `json:"auto_join_port"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`

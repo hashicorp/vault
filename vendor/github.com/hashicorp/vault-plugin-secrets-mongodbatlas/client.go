@@ -6,8 +6,9 @@ import (
 
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mongodb/go-client-mongodb-atlas/mongodbatlas"
+	"go.mongodb.org/atlas/mongodbatlas"
 )
 
 func (b *Backend) clientMongo(ctx context.Context, s logical.Storage) (*mongodbatlas.Client, error) {
@@ -23,6 +24,17 @@ func (b *Backend) clientMongo(ctx context.Context, s logical.Storage) (*mongodba
 	if err != nil {
 		return nil, err
 	}
+
+	pluginEnv, err := b.system.PluginEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if pluginEnv != nil {
+		client.UserAgent = useragent.PluginString(pluginEnv, "mongodbatlas-secrets")
+	} else {
+		client.UserAgent = useragent.String()
+	}
+
 	b.client = client
 
 	return b.client, nil
