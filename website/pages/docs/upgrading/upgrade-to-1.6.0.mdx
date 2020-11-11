@@ -12,6 +12,17 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.6.0 compared to 1.5. Please read it carefully.
 
+## Go Version
+Vault 1.6.0 is built with Go 1.15. Please review the [Go Release
+Notes](https://golang.org/doc/go1.15) for full details. A few items of
+particular note:
+
+* Go 1.15 has dropped support for 32-bit binaries on macOS, iOS, iPadOS,
+  watchOS, and tvOS, and Vault is no longer issuing darwin_386 binaries
+* Go 1.15 no longer treats the `CommonName` field on X.509 certificates as a
+  host name. X.509 certificates should be validated and potentially regenerated
+  before upgrading if they do not have Subject Alternative Names.
+
 ## Transform Secrets Engine Storage Upgrade
 
 The Transform Secrets Engine (Enterprise only) will automatically upgrade the
