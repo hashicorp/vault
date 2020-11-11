@@ -134,7 +134,7 @@ seal will require that the KMS key be accessible during the migration.
 ~> **NOTE**: Seal migration from KMS seal to KMS seal of same kind is not
 currently supported. We plan to support this officially in a future release.
 
-### Migration post Vault 1.4.0
+### Migration post Vault 1.5.1
 
 These steps are common for seal migrations between any supported kinds and for
 any storage backend.
@@ -185,7 +185,7 @@ any storage backend.
    new seal information. Standby nodes can be restarted right away and the active
    node can be restarted upon a leadership change.
 
-### Migration pre 1.4
+### Migration pre 1.5.1
 
 #### Migration From Shamir to Auto Unseal
 

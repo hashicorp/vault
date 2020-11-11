@@ -39,7 +39,8 @@ export default [
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
-      'resource-quotas'
+      'resource-quotas',
+      'client-count'
     ],
   },
   {
@@ -152,7 +153,7 @@ export default [
       'path-help',
       {
         category: 'plugin',
-        content: ['deregister', 'info', 'list', 'register'],
+        content: ['deregister', 'info', 'list', 'register', 'reload'],
       },
       {
         category: 'policy',
@@ -237,6 +238,7 @@ export default [
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
+      { category: 'key-management' },
       { category: 'kmip' },
       {
         category: 'kv',
@@ -294,6 +296,9 @@ export default [
   {
     category: 'plugin',
   },
+  {
+    category: 'plugin-portal',
+  },
   '----------------',
   {
     category: 'what-is-vault',
@@ -331,7 +336,7 @@ export default [
                   'enterprise-with-raft',
                   'enterprise-dr-with-raft',
                   'enterprise-perf-with-raft',
-                  'enterprise-best-practice',
+                  'injector-tls',
                 ],
               },
             ],
@@ -380,14 +385,27 @@ export default [
       'upgrade-to-1.2.0',
       'upgrade-to-1.2.1',
       'upgrade-to-1.2.4',
+      'upgrade-to-1.2.5',
+      'upgrade-to-1.2.6',
+      'upgrade-to-1.2.7',
       'upgrade-to-1.3.0',
       'upgrade-to-1.3.2',
       'upgrade-to-1.3.3',
       'upgrade-to-1.3.4',
       'upgrade-to-1.3.5',
+      'upgrade-to-1.3.8',
+      'upgrade-to-1.3.9',
+      'upgrade-to-1.3.10',
       'upgrade-to-1.4.0',
       'upgrade-to-1.4.1',
+      'upgrade-to-1.4.4',
+      'upgrade-to-1.4.5',
+      'upgrade-to-1.4.6',
       'upgrade-to-1.5.0',
+      'upgrade-to-1.5.1',
+      'upgrade-to-1.5.2',
+      'upgrade-to-1.5.3',
+      'upgrade-to-1.6.0',
     ],
   },
   '----------------',
@@ -395,6 +413,7 @@ export default [
     category: 'release-notes',
     content: [
       '1.5.0',
+      '1.6.0',
     ],
   },
   '----------------',

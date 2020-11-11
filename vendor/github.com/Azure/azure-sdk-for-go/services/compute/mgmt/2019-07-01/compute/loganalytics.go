@@ -36,7 +36,8 @@ func NewLogAnalyticsClient(subscriptionID string) LogAnalyticsClient {
 	return NewLogAnalyticsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewLogAnalyticsClientWithBaseURI creates an instance of the LogAnalyticsClient client.
+// NewLogAnalyticsClientWithBaseURI creates an instance of the LogAnalyticsClient client using a custom endpoint.  Use
+// this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewLogAnalyticsClientWithBaseURI(baseURI string, subscriptionID string) LogAnalyticsClient {
 	return LogAnalyticsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -103,9 +104,8 @@ func (client LogAnalyticsClient) ExportRequestRateByIntervalPreparer(ctx context
 // ExportRequestRateByIntervalSender sends the ExportRequestRateByInterval request. The method will close the
 // http.Response Body if it receives an error.
 func (client LogAnalyticsClient) ExportRequestRateByIntervalSender(req *http.Request) (future LogAnalyticsExportRequestRateByIntervalFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
@@ -118,7 +118,6 @@ func (client LogAnalyticsClient) ExportRequestRateByIntervalSender(req *http.Req
 func (client LogAnalyticsClient) ExportRequestRateByIntervalResponder(resp *http.Response) (result LogAnalyticsOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -188,9 +187,8 @@ func (client LogAnalyticsClient) ExportThrottledRequestsPreparer(ctx context.Con
 // ExportThrottledRequestsSender sends the ExportThrottledRequests request. The method will close the
 // http.Response Body if it receives an error.
 func (client LogAnalyticsClient) ExportThrottledRequestsSender(req *http.Request) (future LogAnalyticsExportThrottledRequestsFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
@@ -203,7 +201,6 @@ func (client LogAnalyticsClient) ExportThrottledRequestsSender(req *http.Request
 func (client LogAnalyticsClient) ExportThrottledRequestsResponder(resp *http.Response) (result LogAnalyticsOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/vault/activity";
+
+package activity;
+
+// EntityRecord is generated the first time an entity is active
+// each month.
+message EntityRecord {
+	string entity_id = 1;
+	string namespace_id = 2;
+	// using the Timestamp type would cost us an extra
+	// 4 bytes per record to store nanoseconds.
+	int64 timestamp = 3;
+}
+
+message LogFragment {
+	// hostname (or node ID?) where the fragment originated,
+	// used for debugging.
+	string originating_node = 1;
+
+	// active entities not yet in a log segment
+	repeated EntityRecord entities = 2;
+
+	// token counts not yet in a log segment,
+	// indexed by namespace ID
+	map<string,uint64> non_entity_tokens = 3;
+}
+
+message EntityActivityLog {
+	repeated EntityRecord entities = 1;
+}
+
+message TokenCount {
+	map<string,uint64> count_by_namespace_id = 1;
+}
+
+message LogFragmentResponse {
+}

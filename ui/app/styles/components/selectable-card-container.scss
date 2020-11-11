@@ -15,13 +15,6 @@
     grid-template-columns: 2fr;
   }
 
-  .grid-item-http {
-    grid-column-start: 1;
-    grid-column-end: 2;
-    grid-row-start: 1;
-    grid-row-end: 3;
-  }
-
   .selectable-card.is-grid-container {
     display: grid;
     grid-template-columns: 2fr 0.5fr;
