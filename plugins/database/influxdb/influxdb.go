@@ -107,6 +107,7 @@ func (i *Influxdb) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (re
 			// err can be nil with response.Error() being not nil, so both need to be handled
 			merr := multierror.Append(err, response.Error())
 			if merr.ErrorOrNil() != nil {
+				// Attempt rollback only when the response has an error
 				if response != nil && response.Error() != nil {
 					attemptRollback(cli, username, rollbackIFQL)
 				}
@@ -139,9 +140,7 @@ func attemptRollback(cli influx.Client, username string, rollbackStatements []st
 			// err can be nil with response.Error() being not nil, so both need to be handled
 			merr := multierror.Append(err, response.Error())
 			if merr.ErrorOrNil() != nil {
-				if response != nil && response.Error() != nil {
-					return merr.ErrorOrNil()
-				}
+				return merr.ErrorOrNil()
 			}
 		}
 	}
