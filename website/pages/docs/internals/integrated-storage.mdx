@@ -32,6 +32,13 @@ Raft is a consensus algorithm that is based on
 to Paxos, Raft is designed to have fewer states and a simpler, more
 understandable algorithm.
 
+Raft is a complex protocol and will not be covered here in detail (for those who
+desire a more comprehensive treatment, the full specification is available in this
+[paper](https://raft.github.io/raft.pdf)). We will, however, attempt to provide
+a high level description which may be useful for building a mental model.
+
+#### Terminology
+
 There are a few key terms to know when discussing Raft:
 
 - Log - The primary unit of work in a Raft system is a log entry. The problem
@@ -64,10 +71,7 @@ There are a few key terms to know when discussing Raft:
   the [High Avaibility docs](/docs/internals/high-availability#design-overview)
   for more information.
 
-Raft is a complex protocol and will not be covered here in detail (for those who
-desire a more comprehensive treatment, the full specification is available in this
-[paper](https://raft.github.io/raft.pdf)). We will, however, attempt to provide
-a high level description which may be useful for building a mental model.
+#### Node States
 
 Raft nodes are always in one of three states: follower, candidate, or leader. All
 nodes initially start out as a follower. In this state, nodes can accept log entries
@@ -75,6 +79,8 @@ from a leader and cast votes. If no entries are received for some time, nodes
 self-promote to the candidate state. In the candidate state, nodes request votes from
 their peers. If a candidate receives a quorum of votes, then it is promoted to a leader.
 The leader must accept new log entries and replicate to all the other followers.
+
+#### Writing Logs
 
 Once a cluster has a leader, it is able to accept new log entries. A client can
 request that a leader append a new log entry (from Raft's perspective, a log entry
@@ -84,6 +90,8 @@ _committed_, it can be _applied_ to a finite state machine. The finite state mac
 is application specific; in Vault's case, we use
 [BoltDB](https://github.com/etcd-io/bbolt) to maintain cluster state. Vault's writes
 block until it is both _committed_ and _applied_.
+
+#### Compacting Logs
 
 Obviously, it would be undesirable to allow a replicated log to grow in an unbounded
 fashion. Raft provides a mechanism by which the current state is snapshotted and the
@@ -95,6 +103,8 @@ disk usage while also minimizing the time spent replaying logs. One of the advan
 using BoltDB is that it allows Vault's snapshots to be very light weight. Since
 Vault's data is already persisted to disk in BoltDB the snapshot process just
 needs to truncate the raft logs.
+
+#### Quorum
 
 Consensus is fault-tolerant while a cluster has quorum.
 If a quorum of nodes is unavailable, it is impossible to process log entries or reason
@@ -110,6 +120,8 @@ of 5 can tolerate 2 node failures. The recommended configuration is to either
 run 3 or 5 Vault servers per cluster. This maximizes availability without
 greatly sacrificing performance. The [deployment table](#deployment-table) below
 summarizes the potential cluster size options and the fault tolerance of each.
+
+#### Performance
 
 In terms of performance, Raft is comparable to Paxos. Assuming stable leadership,
 committing a log entry requires a single round trip to half of the cluster.
@@ -191,3 +203,22 @@ failure scenario.
     </tr>
   </tbody>
 </table>
+
+### Quorum Management
+
+As soon as a node joins a Raft cluster, it attempts to catch up on the data that
+has been applied on the nodes in the rest of the cluster. While in this state,
+the node cannot vote but is counted for purposes of quorum. If a number of new
+nodes have joined the cluster at a similar time, and they exceed the failure
+tolerance of the cluster, quorum can be lost and the cluster can fail.
+
+As an example, say you have the following:
+
+* A 3 node cluster with a fair amount of data (failure tolerance: 1)
+* 3 new nodes attempt to join the cluster at the same time
+* Now, you have a 6 node cluster with a failure tolerance of 2, but all 3 new
+  nodes are still catching up, so quorum has been lost
+
+For this reason, we recommend ensuring new nodes have Raft indexes that are
+close to the leader before adding additional nodes. Raft indexes are visible via
+`vault status`.
