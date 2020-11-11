@@ -40,7 +40,7 @@ export default [
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
-      'client-count'	
+      'client-count'
     ],
   },
   {
@@ -412,6 +412,7 @@ export default [
     category: 'release-notes',
     content: [
       '1.5.0',
+      '1.6.0',
     ],
   },
   '----------------',
