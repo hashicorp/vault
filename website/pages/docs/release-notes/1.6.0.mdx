@@ -19,7 +19,7 @@ requirements for data irreversibility (PCI-DSS, GDPR, etc.). This feature is bei
 the following new features:
 * **Cloud auto-join** provides support for Vault nodes to automatically discover and join a cluster via specified cloud
 metadata. This is particularly useful when IP addresses are not static.
-* **Automated snapshots** provides in-built Vault functionality for automated snapshots that takes snapshots of the
+* **Automated snapshots** provides built-in Vault functionality for automated snapshots that takes snapshots of the
 state of the Vault servers and saves them locally, or pushes them to an optional remote storage service.
 
 **UI improvements**
@@ -29,7 +29,7 @@ state of the Vault servers and saves them locally, or pushes them to an optional
 * **Improvements to Vault Usage UI** to show new metrics for “active clients”, “unique entities” and “active direct
 tokens” that help with understanding Vault usage
 
-**Support for seal migration** for all use cases to migrate from any to any unseal interface (including auto-unseal to auto-unseal)
+**Support for seal migration** for all use cases to migrate from any to any unseal interface (including auto-unseal to auto-unseal of the same type)
 
 **Key Management Secrets Engine in Tech Preview (Enterprise ADP Module Only)** - A new Key Management Secrets Engine to
 help manage and securely distribute keys to various cloud KMS services. This feature is being released in Tech Preview
@@ -48,4 +48,3 @@ to be used in conjunction with Microsoft’s Azure Key Vault.
 so we will no longer be issuing `darwin_386` builds of Vault.
 
 For more detailed information, please refer to the [Changelog](https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#160).
-
