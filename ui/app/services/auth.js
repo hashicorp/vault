@@ -69,7 +69,7 @@ export default Service.extend({
   },
 
   setCluster(clusterId) {
-    this.activeCluster = clusterId;
+    this.set('activeCluster', clusterId);
   },
 
   ajax(url, method, options) {
@@ -118,7 +118,7 @@ export default Service.extend({
     let now = this.now();
     const ttl = resp.ttl || resp.lease_duration;
     const tokenExpirationEpoch = now + ttl * 1e3;
-    this.expirationCalcTS = now;
+    this.set('expirationCalcTS', now);
     return {
       ttl,
       tokenExpirationEpoch,
@@ -194,8 +194,8 @@ export default Service.extend({
       data.displayName = get(this.getTokenData(tokenName) || {}, 'displayName');
     }
     tokens.addObject(tokenName);
-    this.tokens = tokens;
-    this.allowExpiration = false;
+    this.set('tokens', tokens);
+    this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
     return resolve({
       namespace: currentNamespace || data.userRootNamespace,
@@ -346,7 +346,7 @@ export default Service.extend({
   deleteToken(tokenName) {
     const tokenNames = this.tokens.without(tokenName);
     this.removeTokenData(tokenName);
-    this.tokens = tokenNames;
+    this.set('tokens', tokenNames);
   },
 
   // returns the key for the token to use
