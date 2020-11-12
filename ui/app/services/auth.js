@@ -334,6 +334,7 @@ export default Service.extend({
   },
 
   getAuthType() {
+    if (!this.authData) return;
     return this.authData.backend.type;
   },
 
