@@ -25,11 +25,15 @@ module('Acceptance | userpass secret backend', function(hooks) {
 
     // enable the first userpass method with one username
     await enablePage.enable('userpass', path1);
+    await settled();
     await click('[data-test-save-config="true"]');
+    await settled();
     await visit(`/vault/access/${path1}/item/user/create`);
+    await settled();
     await fillIn('[data-test-input="username"]', user1);
     await fillIn('[data-test-textarea]', user1);
     await click('[data-test-save-config="true"]');
+    await settled();
 
     // enable the first userpass method with one username
     await visit(`/vault/settings/auth/enable`);
