@@ -41,7 +41,7 @@ export default [
       'recovery-mode',
       'resource-quotas',
       'client-count',
-      'transform',
+      'transform'
     ],
   },
   {
