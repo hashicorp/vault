@@ -90,6 +90,7 @@ BUG FIXES:
 * core (enterprise): Fix extraneous error messages in DR Cluster
 * secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
 * secrets/ad: Fix bug where `password_policy` setting was not using correct key when `ad/config` was read [[GH-71](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/71)]
+* ui: Fix issue with listing roles and methods on the same auth methods with different names [[GH-10122](https://github.com/hashicorp/vault/pull/10122)]
 
 ## 1.5.4
 ### September 24th, 2020
