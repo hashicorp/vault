@@ -425,6 +425,7 @@ export default [
         category: 'hsm',
         content: ['behavior', 'security'],
       },
+      { category: 'automated-raft-snapshots' },
       { category: 'lease-count-quotas' },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
