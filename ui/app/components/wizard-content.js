@@ -19,6 +19,7 @@ export default Component.extend({
     'tutorialState',
     'wizard.{featureComponent,featureMachineHistory}',
     function() {
+      if (!this.tutorialComponent) return;
       return (
         this.tutorialComponent.includes('active') &&
         (this.tutorialState.includes('init.active') ||
