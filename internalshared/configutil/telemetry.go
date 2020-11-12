@@ -141,13 +141,14 @@ type Telemetry struct {
 	StackdriverDebugLogs bool `hcl:"stackdriver_debug_logs"`
 
 	// How often metrics for lease expiry will be aggregated
-	LeaseMetricsEpsilon time.Duration `hcl:lease_metrics_epsilon`
+	LeaseMetricsEpsilon    time.Duration
+	LeaseMetricsEpsilonRaw interface{} `hcl:"lease_metrics_epsilon"`
 
 	// Number of buckets by time that will be used in lease aggregation
-	NumLeaseMetricsTimeBuckets int `hcl:num_lease_metrics_buckets`
+	NumLeaseMetricsTimeBuckets int `hcl:"num_lease_metrics_buckets"`
 
 	// Whether or not telemetry should add labels for namespaces
-	LeaseMetricsNameSpaceLabels bool `hcl:add_lease_metrics_namespace_labels`
+	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
 }
 
 func (t *Telemetry) GoString() string {
@@ -197,8 +198,18 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 	if result.Telemetry.MaximumGaugeCardinality == 0 {
 		result.Telemetry.MaximumGaugeCardinality = MaximumGaugeCardinalityDefault
 	}
-	var defaultDuration time.Duration
-	if result.Telemetry.LeaseMetricsEpsilon == defaultDuration {
+
+	if result.Telemetry.LeaseMetricsEpsilonRaw != nil {
+		if result.Telemetry.LeaseMetricsEpsilonRaw == "none" {
+			result.Telemetry.LeaseMetricsEpsilonRaw = 0
+		} else {
+			var err error
+			if result.Telemetry.LeaseMetricsEpsilon, err = parseutil.ParseDurationSecond(result.Telemetry.LeaseMetricsEpsilonRaw); err != nil {
+				return err
+			}
+			result.Telemetry.LeaseMetricsEpsilonRaw = nil
+		}
+	} else {
 		result.Telemetry.LeaseMetricsEpsilon = LeaseMetricsEpsilonDefault
 	}
 
