@@ -732,6 +732,19 @@ func (a *ActivityLog) deleteLogWorker(startTimestamp int64, whenDone chan struct
 	close(whenDone)
 }
 
+func (a *ActivityLog) WaitForDeletion() {
+	a.l.Lock()
+	// May be nil, if never set
+	doneCh := a.deleteDone
+	a.l.Unlock()
+	if doneCh != nil {
+		select {
+		case <-doneCh:
+			break
+		}
+	}
+}
+
 // refreshFromStoredLog loads the appropriate entities/tokencounts for active and performance standbys
 // the most recent segment is loaded synchronously, and older segments are loaded in the background
 // this function expects stateLock to be held

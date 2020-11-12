@@ -38,6 +38,7 @@ export default [
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
+      { category: 'key-management' },
       { category: 'kmip' },
       {
         category: 'kv',
@@ -146,7 +147,7 @@ export default [
       'step-down',
       {
         category: 'storage',
-        content: ['raft'],
+        content: ['raft', 'raftautosnapshots'],
       },
       'tools',
       'unseal',
