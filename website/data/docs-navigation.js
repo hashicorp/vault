@@ -40,7 +40,8 @@ export default [
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
-      'client-count'
+      'client-count',
+      'transform',
     ],
   },
   {
