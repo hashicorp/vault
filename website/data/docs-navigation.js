@@ -426,6 +426,7 @@ export default [
         category: 'hsm',
         content: ['behavior', 'security'],
       },
+      { category: 'automated-integrated-storage-snapshots' },
       { category: 'lease-count-quotas' },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
