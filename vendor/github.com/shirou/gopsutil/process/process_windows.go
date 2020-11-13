@@ -18,6 +18,10 @@ import (
 )
 
 var (
+	modntdll             = windows.NewLazySystemDLL("ntdll.dll")
+	procNtResumeProcess  = modntdll.NewProc("NtResumeProcess")
+	procNtSuspendProcess = modntdll.NewProc("NtSuspendProcess")
+
 	modpsapi                     = windows.NewLazySystemDLL("psapi.dll")
 	procGetProcessMemoryInfo     = modpsapi.NewProc("GetProcessMemoryInfo")
 	procGetProcessImageFileNameW = modpsapi.NewProc("GetProcessImageFileNameW")
@@ -51,10 +55,10 @@ type SystemProcessInformation struct {
 
 type systemProcessorInformation struct {
 	ProcessorArchitecture uint16
-	ProcessorLevel uint16
-	ProcessorRevision uint16
-	Reserved uint16
-	ProcessorFeatureBits uint16
+	ProcessorLevel        uint16
+	ProcessorRevision     uint16
+	Reserved              uint16
+	ProcessorFeatureBits  uint16
 }
 
 type systemInfo struct {
@@ -405,6 +409,11 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 	var gids []int32
 	return gids, common.ErrNotImplementedError
 }
+
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	var groups []int32
+	return groups, common.ErrNotImplementedError
+}
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())
 }
@@ -680,14 +689,39 @@ func (p *Process) Suspend() error {
 }
 
 func (p *Process) SuspendWithContext(ctx context.Context) error {
-	return common.ErrNotImplementedError
+	c, err := windows.OpenProcess(windows.PROCESS_SUSPEND_RESUME, false, uint32(p.Pid))
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(c)
+
+	r1, _, _ := procNtSuspendProcess.Call(uintptr(unsafe.Pointer(c)))
+	if r1 != 0 {
+		// See https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55
+		return fmt.Errorf("NtStatus='0x%.8X'", r1)
+	}
+
+	return nil
 }
+
 func (p *Process) Resume() error {
 	return p.ResumeWithContext(context.Background())
 }
 
 func (p *Process) ResumeWithContext(ctx context.Context) error {
-	return common.ErrNotImplementedError
+	c, err := windows.OpenProcess(windows.PROCESS_SUSPEND_RESUME, false, uint32(p.Pid))
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(c)
+
+	r1, _, _ := procNtResumeProcess.Call(uintptr(unsafe.Pointer(c)))
+	if r1 != 0 {
+		// See https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55
+		return fmt.Errorf("NtStatus='0x%.8X'", r1)
+	}
+
+	return nil
 }
 
 func (p *Process) Terminate() error {
@@ -853,7 +887,7 @@ func is32BitProcess(procHandle syscall.Handle) bool {
 }
 
 func getProcessCommandLine(pid int32) (string, error) {
-	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION | windows.PROCESS_VM_READ, false, uint32(pid))
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION|windows.PROCESS_VM_READ, false, uint32(pid))
 	if err == windows.ERROR_ACCESS_DENIED || err == windows.ERROR_INVALID_PARAMETER {
 		return "", nil
 	}
@@ -897,14 +931,14 @@ func getProcessCommandLine(pid int32) (string, error) {
 	}
 
 	if procIs32Bits {
-		buf := readProcessMemory(syscall.Handle(h), procIs32Bits, pebAddress + uint64(16), 4)
+		buf := readProcessMemory(syscall.Handle(h), procIs32Bits, pebAddress+uint64(16), 4)
 		if len(buf) != 4 {
 			return "", errors.New("cannot locate process user parameters")
 		}
 		userProcParams := uint64(buf[0]) | (uint64(buf[1]) << 8) | (uint64(buf[2]) << 16) | (uint64(buf[3]) << 24)
 
 		//read CommandLine field from PRTL_USER_PROCESS_PARAMETERS
-		remoteCmdLine := readProcessMemory(syscall.Handle(h), procIs32Bits, userProcParams + uint64(64), 8)
+		remoteCmdLine := readProcessMemory(syscall.Handle(h), procIs32Bits, userProcParams+uint64(64), 8)
 		if len(remoteCmdLine) != 8 {
 			return "", errors.New("cannot read cmdline field")
 		}
@@ -925,15 +959,15 @@ func getProcessCommandLine(pid int32) (string, error) {
 			return convertUTF16ToString(cmdLine), nil
 		}
 	} else {
-		buf := readProcessMemory(syscall.Handle(h), procIs32Bits, pebAddress + uint64(32), 8)
+		buf := readProcessMemory(syscall.Handle(h), procIs32Bits, pebAddress+uint64(32), 8)
 		if len(buf) != 8 {
 			return "", errors.New("cannot locate process user parameters")
 		}
-		userProcParams := uint64(buf[0]) |	(uint64(buf[1]) << 8) | (uint64(buf[2]) << 16) | (uint64(buf[3]) << 24) |
+		userProcParams := uint64(buf[0]) | (uint64(buf[1]) << 8) | (uint64(buf[2]) << 16) | (uint64(buf[3]) << 24) |
 			(uint64(buf[4]) << 32) | (uint64(buf[5]) << 40) | (uint64(buf[6]) << 48) | (uint64(buf[7]) << 56)
 
 		//read CommandLine field from PRTL_USER_PROCESS_PARAMETERS
-		remoteCmdLine := readProcessMemory(syscall.Handle(h), procIs32Bits, userProcParams + uint64(112), 16)
+		remoteCmdLine := readProcessMemory(syscall.Handle(h), procIs32Bits, userProcParams+uint64(112), 16)
 		if len(remoteCmdLine) != 16 {
 			return "", errors.New("cannot read cmdline field")
 		}
@@ -968,7 +1002,7 @@ func convertUTF16ToString(src []byte) string {
 
 	srcIdx := 0
 	for i := 0; i < srcLen; i++ {
-		codePoints[i] = uint16(src[srcIdx]) | uint16(src[srcIdx + 1] << 8)
+		codePoints[i] = uint16(src[srcIdx]) | uint16(src[srcIdx+1])<<8
 		srcIdx += 2
 	}
 	return syscall.UTF16ToString(codePoints)

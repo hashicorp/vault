@@ -10,17 +10,18 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/oklog/run"
 )
@@ -70,6 +71,16 @@ func (c *Core) PerfStandby() bool {
 	perfStandby := c.perfStandby
 	c.stateLock.RUnlock()
 	return perfStandby
+}
+
+// StandbyStates is meant as a way to avoid some extra locking on the very
+// common sys/health check.
+func (c *Core) StandbyStates() (standby, perfStandby bool) {
+	c.stateLock.RLock()
+	standby = c.standby
+	perfStandby = c.perfStandby
+	c.stateLock.RUnlock()
+	return
 }
 
 // Leader is used to get the current active leader
@@ -551,6 +562,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		if err == nil {
 			c.standby = false
 			c.leaderUUID = uuid
+			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
 
 		close(continueCh)
@@ -598,6 +610,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Mark as standby
 			c.standby = true
 			c.leaderUUID = ""
+			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
 			// Seal
 			if err := c.preSeal(); err != nil {

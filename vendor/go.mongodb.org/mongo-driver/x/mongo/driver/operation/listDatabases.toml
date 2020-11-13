@@ -21,6 +21,10 @@ documentation = "Filter determines what results are returned from listDatabases.
 type = "boolean"
 documentation = "NameOnly specifies whether to only return database names."
 
+[request.authorizedDatabases]
+type = "boolean"
+documentation = "AuthorizedDatabases specifies whether to only return databases which the user is authorized to use."
+
 [response]
 name = "ListDatabasesResult"
 

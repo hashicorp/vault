@@ -6,6 +6,8 @@
 
 // Package bson is a library for reading, writing, and manipulating BSON. BSON is a binary serialization format used to
 // store documents and make remote procedure calls in MongoDB. The BSON specification is located at https://bsonspec.org.
+// The BSON library handles marshalling and unmarshalling of values through a configurable codec system. For a description
+// of the codec system and examples of registering custom codecs, see the bsoncodec package.
 //
 // Raw BSON
 //
@@ -65,11 +67,13 @@
 //       5. uint8 and uint16 marshal to a BSON int32.
 //       6. uint, uint32, and uint64 marshal to a BSON int32 if the value is between math.MinInt32 and math.MaxInt32,
 //       inclusive, and BSON int64 otherwise.
+//       7. BSON null and undefined values will unmarshal into the zero value of a field (e.g. unmarshalling a BSON null or
+//       undefined value into a string will yield the empty string.).
 //
 // Structs
 //
-// Structs can be marshalled/unmarshalled to/from BSON. When transforming structs to/from BSON, the following rules
-// apply:
+// Structs can be marshalled/unmarshalled to/from BSON or Extended JSON. When transforming structs to/from BSON or Extended
+// JSON, the following rules apply:
 //
 //     1. Only exported fields in structs will be marshalled or unmarshalled.
 //
@@ -85,12 +89,15 @@
 //     5. When unmarshalling, a field of type interface{} will follow the D/M type mappings listed above. BSON documents
 //     unmarshalled into an interface{} field will be unmarshalled as a D.
 //
-// The following struct tags can be used to configure behavior:
+// The encoding of each struct field can be customized by the "bson" struct tag.
+// The tag gives the name of the field, possibly followed by a comma-separated list of options.
+// The name may be empty in order to specify options without overriding the default field name. The following options can be used
+// to configure behavior:
 //
 //     1. omitempty: If the omitempty struct tag is specified on a field, the field will not be marshalled if it is set to
 //     the zero value. By default, a struct field is only considered empty if the field's type implements the Zeroer
 //     interface and the IsZero method returns true. Struct fields of types that do not implement Zeroer are always
-//     marshalled as embedded documents.
+//     marshalled as embedded documents. This tag should be used for all slice and map values.
 //
 //     2. minsize: If the minsize struct tag is specified on a field of type int64, uint, uint32, or uint64 and the value of
 //     the field can fit in a signed int32, the field will be serialized as a BSON int32 rather than a BSON int64. For other

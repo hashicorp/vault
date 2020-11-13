@@ -39,7 +39,9 @@ export default [
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
-      'resource-quotas'
+      'resource-quotas',
+      'client-count',
+      'transform'
     ],
   },
   {
@@ -152,7 +154,7 @@ export default [
       'path-help',
       {
         category: 'plugin',
-        content: ['deregister', 'info', 'list', 'register'],
+        content: ['deregister', 'info', 'list', 'register', 'reload'],
       },
       {
         category: 'policy',
@@ -237,6 +239,7 @@ export default [
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
+      { category: 'key-management' },
       { category: 'kmip' },
       {
         category: 'kv',
@@ -403,6 +406,7 @@ export default [
       'upgrade-to-1.5.1',
       'upgrade-to-1.5.2',
       'upgrade-to-1.5.3',
+      'upgrade-to-1.6.0',
     ],
   },
   '----------------',
@@ -410,6 +414,7 @@ export default [
     category: 'release-notes',
     content: [
       '1.5.0',
+      '1.6.0',
     ],
   },
   '----------------',
@@ -421,6 +426,7 @@ export default [
         category: 'hsm',
         content: ['behavior', 'security'],
       },
+      { category: 'automated-integrated-storage-snapshots' },
       { category: 'lease-count-quotas' },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
