@@ -2,12 +2,15 @@ package command
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"github.com/ryanuber/columnize"
 )
 
 var _ cli.Command = (*OperatorUsageCommand)(nil)
@@ -119,13 +122,17 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	c.outputTimestamps(resp.Data)
 
 	out := []string{
-		"Namespace path | Distinct entities | Non-Entity tokens | Clients",
+		"Namespace path | Distinct entities | Non-Entity tokens | Active clients",
 	}
 
-	out = c.addNamespacesToOutput(out, resp.Data)
+	out = append(out, c.namespacesOutput(resp.Data)...)
+
 	out = c.addTotalToOutput(out, resp.Data)
 
-	c.UI.Output(tableOutput(out, nil))
+	colConfig := columnize.DefaultConfig()
+	colConfig.Empty = " " // Do not show n/a on intentional blank lines
+	colConfig.Glue = "   "
+	c.UI.Output(tableOutput(out, colConfig))
 	return 0
 }
 
@@ -135,35 +142,145 @@ func (c *OperatorUsageCommand) outputTimestamps(data map[string]interface{}) {
 		data["end_time"].(string)))
 }
 
-func (c *OperatorUsageCommand) addNamespacesToOutput(out []string, data map[string]interface{}) []string {
-	byNs := data["by_namespace"].([]interface{})
+type UsageCommandNamespace struct {
+	formattedLine string
+	sortOrder     string
 
-	// TODO: provide a function in the API module for doing this conversion?
-	for _, rawVal := range byNs {
-		val := rawVal.(map[string]interface{})
-		namespacePath := val["namespace_path"].(string)
-		counts := val["counts"].(map[string]interface{})
+	// Sort order:
+	// -- root first
+	// -- namespaces in lexicographic order
+	// -- deleted namespace "xxxxx" last
+}
 
-		// TODO: check errors
-		entityCount, _ := counts["distinct_entities"].(json.Number).Int64()
-		tokenCount, _ := counts["non_entity_tokens"].(json.Number).Int64()
-		clientCount, _ := counts["clients"].(json.Number).Int64()
-		if namespacePath == "" {
-			namespacePath = "[root]"
-		}
-		out = append(out, fmt.Sprintf("%s | %d | %d | %d", namespacePath, entityCount, tokenCount, clientCount))
+type UsageResponse struct {
+	namespacePath string
+	entityCount   int64
+	tokenCount    int64
+	clientCount   int64
+}
+
+func jsonNumberOK(m map[string]interface{}, key string) (int64, bool) {
+	val, ok := m[key].(json.Number)
+	if !ok {
+		return 0, false
 	}
+	intVal, err := val.Int64()
+	if err != nil {
+		return 0, false
+	}
+	return intVal, true
+}
+
+// TODO: provide a function in the API module for doing this conversion?
+func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageResponse, error) {
+	var ret UsageResponse
+
+	val, ok := rawVal.(map[string]interface{})
+	if !ok {
+		return ret, errors.New("value is not a map")
+	}
+
+	ret.namespacePath, ok = val["namespace_path"].(string)
+	if !ok {
+		return ret, errors.New("bad namespace path")
+	}
+
+	counts, ok := val["counts"].(map[string]interface{})
+	if !ok {
+		return ret, errors.New("missing counts")
+	}
+
+	ret.entityCount, ok = jsonNumberOK(counts, "distinct_entities")
+	if !ok {
+		return ret, errors.New("missing distinct_entities")
+	}
+
+	ret.tokenCount, ok = jsonNumberOK(counts, "non_entity_tokens")
+	if !ok {
+		return ret, errors.New("missing non_entity_tokens")
+	}
+
+	ret.clientCount, ok = jsonNumberOK(counts, "clients")
+	if !ok {
+		return ret, errors.New("missing clients")
+	}
+
+	return ret, nil
+
+}
+
+func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []string {
+	byNs, ok := data["by_namespace"].([]interface{})
+	if !ok {
+		c.UI.Error("missing namespace breakdown in response")
+		return nil
+	}
+
+	nsOut := make([]UsageCommandNamespace, 0, len(byNs))
+
+	for _, rawVal := range byNs {
+		val, err := c.parseNamespaceCount(rawVal)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("malformed namespace in response: %v", err))
+			continue
+		}
+
+		sortOrder := "1" + val.namespacePath
+		if val.namespacePath == "" {
+			val.namespacePath = "[root]"
+			sortOrder = "0"
+		} else if strings.HasPrefix(val.namespacePath, "deleted namespace") {
+			sortOrder = "2" + val.namespacePath
+		}
+
+		formattedLine := fmt.Sprintf("%s | %d | %d | %d",
+			val.namespacePath, val.entityCount, val.tokenCount, val.clientCount)
+		nsOut = append(nsOut, UsageCommandNamespace{
+			formattedLine: formattedLine,
+			sortOrder:     sortOrder,
+		})
+	}
+
+	sort.Slice(nsOut, func(i, j int) bool {
+		return nsOut[i].sortOrder < nsOut[j].sortOrder
+	})
+
+	out := make([]string, len(nsOut))
+	for i := range nsOut {
+		out[i] = nsOut[i].formattedLine
+	}
+
 	return out
 }
 
 func (c *OperatorUsageCommand) addTotalToOutput(out []string, data map[string]interface{}) []string {
 	// blank line separating it from namespaces
-	out = append(out, " - | - | - | - ")
+	out = append(out, "  |  |  |  ")
 
-	total := data["total"].(map[string]interface{})
-	entityCount, _ := total["distinct_entities"].(json.Number).Int64()
-	tokenCount, _ := total["non_entity_tokens"].(json.Number).Int64()
-	clientCount, _ := total["clients"].(json.Number).Int64()
-	out = append(out, fmt.Sprintf("Total | %d | %d | %d", entityCount, tokenCount, clientCount))
+	total, ok := data["total"].(map[string]interface{})
+	if !ok {
+		c.UI.Error("missing total in response")
+		return out
+	}
+
+	entityCount, ok := jsonNumberOK(total, "distinct_entities")
+	if !ok {
+		c.UI.Error("missing distinct_entities in total")
+		return out
+	}
+
+	tokenCount, ok := jsonNumberOK(total, "non_entity_tokens")
+	if !ok {
+		c.UI.Error("missing non_entity_tokens in total")
+		return out
+	}
+	clientCount, ok := jsonNumberOK(total, "clients")
+	if !ok {
+		c.UI.Error("missing clients in total")
+		return out
+	}
+
+	out = append(out, fmt.Sprintf("Total | %d | %d | %d",
+		entityCount, tokenCount, clientCount))
 	return out
 }
