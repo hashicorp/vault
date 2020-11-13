@@ -4,8 +4,8 @@ BUG FIXES:
 
 * core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
 
-## 1.6.0 RC
-### November 4th, 2020
+## 1.6.0
+### November 11th, 2020
 
 NOTE:
 
@@ -72,6 +72,7 @@ BUG FIXES:
 * ui: Mask LDAP bindpass while typing [[GH-10087](https://github.com/hashicorp/vault/pull/10087)]
 * ui: Update language in promote dr modal flow [[GH-10155](https://github.com/hashicorp/vault/pull/10155)]
 * ui: Update language on replication primary dashboard for clarity [[GH-10205](https://github.com/hashicorp/vault/pull/10217)]
+* core: Fix bug where updating an existing path quota could introduce a conflict. [[GH-10285](https://github.com/hashicorp/vault/pull/10285)]
 
 ## 1.5.5
 ### October 21, 2020
@@ -89,6 +90,7 @@ BUG FIXES:
 * core (enterprise): Fix extraneous error messages in DR Cluster
 * secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
 * secrets/ad: Fix bug where `password_policy` setting was not using correct key when `ad/config` was read [[GH-71](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/71)]
+* ui: Fix issue with listing roles and methods on the same auth methods with different names [[GH-10122](https://github.com/hashicorp/vault/pull/10122)]
 
 ## 1.5.4
 ### September 24th, 2020
