@@ -46,6 +46,7 @@ type HandlerProperties struct {
 	Core                  *Core
 	ListenerConfig        *configutil.Listener
 	DisablePrintableCheck bool
+	DisableOpenTelemetry  bool
 	RecoveryMode          bool
 	RecoveryToken         *uberAtomic.String
 }

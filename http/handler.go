@@ -188,7 +188,10 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	}
 
 	// And finally wrap the handler with tracing
-	tracingHandler := otelhttp.NewHandler(printablePathCheckHandler, "api")
+	tracingHandler := printablePathCheckHandler
+	if !props.DisableOpenTelemetry {
+		tracingHandler = otelhttp.NewHandler(printablePathCheckHandler, "api")
+	}
 
 	return tracingHandler
 }
