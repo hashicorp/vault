@@ -8,13 +8,17 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 )
 
 var (
-	retryableCodes          = []int32{11600, 11602, 10107, 13435, 13436, 189, 91, 7, 6, 89, 9001}
+	retryableCodes          = []int32{11600, 11602, 10107, 13435, 13436, 189, 91, 7, 6, 89, 9001, 262}
 	nodeIsRecoveringCodes   = []int32{11600, 11602, 13436, 189, 91}
 	notMasterCodes          = []int32{10107, 13435}
 	nodeIsShuttingDownCodes = []int32{11600, 91}
+
+	unknownReplWriteConcernCode   = int32(79)
+	unsatisfiableWriteConcernCode = int32(100)
 )
 
 var (
@@ -24,6 +28,8 @@ var (
 	TransientTransactionError = "TransientTransactionError"
 	// NetworkError is an error label for network errors.
 	NetworkError = "NetworkError"
+	// RetryableWriteError is an error lable for retryable write errors.
+	RetryableWriteError = "RetryableWriteError"
 	// ErrCursorNotFound is the cursor not found error for legacy find operations.
 	ErrCursorNotFound = errors.New("cursor not found")
 	// ErrUnacknowledgedWrite is returned from functions that have an unacknowledged
@@ -38,11 +44,17 @@ var (
 type QueryFailureError struct {
 	Message  string
 	Response bsoncore.Document
+	Wrapped  error
 }
 
 // Error implements the error interface.
 func (e QueryFailureError) Error() string {
 	return fmt.Sprintf("%s: %v", e.Message, e.Response)
+}
+
+// Unwrap returns the underlying error.
+func (e QueryFailureError) Unwrap() error {
+	return e.Wrapped
 }
 
 // ResponseError is an error parsing the response to a command.
@@ -68,6 +80,7 @@ func (e ResponseError) Error() string {
 type WriteCommandError struct {
 	WriteConcernError *WriteConcernError
 	WriteErrors       WriteErrors
+	Labels            []string
 }
 
 // UnsupportedStorageEngine returns whether or not the WriteCommandError comes from a retryable write being attempted
@@ -90,7 +103,16 @@ func (wce WriteCommandError) Error() string {
 }
 
 // Retryable returns true if the error is retryable
-func (wce WriteCommandError) Retryable() bool {
+func (wce WriteCommandError) Retryable(wireVersion *description.VersionRange) bool {
+	for _, label := range wce.Labels {
+		if label == RetryableWriteError {
+			return true
+		}
+	}
+	if wireVersion != nil && wireVersion.Max >= 9 {
+		return false
+	}
+
 	if wce.WriteConcernError == nil {
 		return false
 	}
@@ -100,10 +122,12 @@ func (wce WriteCommandError) Retryable() bool {
 // WriteConcernError is a write concern failure that occurred as a result of a
 // write operation.
 type WriteConcernError struct {
-	Name    string
-	Code    int64
-	Message string
-	Details bsoncore.Document
+	Name            string
+	Code            int64
+	Message         string
+	Details         bsoncore.Document
+	Labels          []string
+	TopologyVersion *description.TopologyVersion
 }
 
 func (wce WriteConcernError) Error() string {
@@ -119,9 +143,6 @@ func (wce WriteConcernError) Retryable() bool {
 		if wce.Code == int64(code) {
 			return true
 		}
-	}
-	if strings.Contains(wce.Message, "not master") || strings.Contains(wce.Message, "node is recovering") {
-		return true
 	}
 
 	return false
@@ -186,11 +207,12 @@ func (we WriteErrors) Error() string {
 
 // Error is a command execution error from the database.
 type Error struct {
-	Code    int32
-	Message string
-	Labels  []string
-	Name    string
-	Wrapped error
+	Code            int32
+	Message         string
+	Labels          []string
+	Name            string
+	Wrapped         error
+	TopologyVersion *description.TopologyVersion
 }
 
 // UnsupportedStorageEngine returns whether e came as a result of an unsupported storage engine
@@ -206,6 +228,11 @@ func (e Error) Error() string {
 	return e.Message
 }
 
+// Unwrap returns the underlying error.
+func (e Error) Unwrap() error {
+	return e.Wrapped
+}
+
 // HasErrorLabel returns true if the error contains the specified label.
 func (e Error) HasErrorLabel(label string) bool {
 	if e.Labels != nil {
@@ -218,8 +245,8 @@ func (e Error) HasErrorLabel(label string) bool {
 	return false
 }
 
-// Retryable returns true if the error is retryable
-func (e Error) Retryable() bool {
+// RetryableRead returns true if the error is retryable for a read operation
+func (e Error) RetryableRead() bool {
 	for _, label := range e.Labels {
 		if label == NetworkError {
 			return true
@@ -230,8 +257,24 @@ func (e Error) Retryable() bool {
 			return true
 		}
 	}
-	if strings.Contains(e.Message, "not master") || strings.Contains(e.Message, "node is recovering") {
-		return true
+
+	return false
+}
+
+// RetryableWrite returns true if the error is retryable for a write operation
+func (e Error) RetryableWrite(wireVersion *description.VersionRange) bool {
+	for _, label := range e.Labels {
+		if label == NetworkError || label == RetryableWriteError {
+			return true
+		}
+	}
+	if wireVersion != nil && wireVersion.Max >= 9 {
+		return false
+	}
+	for _, code := range retryableCodes {
+		if e.Code == code {
+			return true
+		}
 	}
 
 	return false
@@ -289,6 +332,7 @@ func extractError(rdr bsoncore.Document) error {
 	var code int32
 	var labels []string
 	var ok bool
+	var tv *description.TopologyVersion
 	var wcError WriteCommandError
 	elems, err := rdr.Elements()
 	if err != nil {
@@ -382,6 +426,26 @@ func extractError(rdr bsoncore.Document) error {
 				wcError.WriteConcernError.Details = make([]byte, len(info))
 				copy(wcError.WriteConcernError.Details, info)
 			}
+			if errLabels, exists := doc.Lookup("errorLabels").ArrayOK(); exists {
+				elems, err := errLabels.Elements()
+				if err != nil {
+					continue
+				}
+				for _, elem := range elems {
+					if str, ok := elem.Value().StringValueOK(); ok {
+						labels = append(labels, str)
+					}
+				}
+			}
+		case "topologyVersion":
+			doc, ok := elem.Value().DocumentOK()
+			if !ok {
+				break
+			}
+			version, err := description.NewTopologyVersion(doc)
+			if err == nil {
+				tv = version
+			}
 		}
 	}
 
@@ -391,14 +455,19 @@ func extractError(rdr bsoncore.Document) error {
 		}
 
 		return Error{
-			Code:    code,
-			Message: errmsg,
-			Name:    codeName,
-			Labels:  labels,
+			Code:            code,
+			Message:         errmsg,
+			Name:            codeName,
+			Labels:          labels,
+			TopologyVersion: tv,
 		}
 	}
 
 	if len(wcError.WriteErrors) > 0 || wcError.WriteConcernError != nil {
+		wcError.Labels = labels
+		if wcError.WriteConcernError != nil {
+			wcError.WriteConcernError.TopologyVersion = tv
+		}
 		return wcError
 	}
 

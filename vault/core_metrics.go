@@ -42,13 +42,23 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 			}
 
+			// Refresh the standby gauge, on all nodes
+			if standby, _ := c.Standby(); standby {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
+			}
+
+			// Refresh gauge metrics that are looped
+			c.cachedGaugeMetricsEmitter()
+
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
 				// Go through the loop again, this time the stop channel case
 				// should trigger
 				continue
 			}
-			if c.perfStandby { // already have lock here, don't re-acquire
+			if c.perfStandby { // already have lock here, do not re-acquire
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
@@ -58,8 +68,8 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
-			// Only emit on active node
-			if c.PerfStandby() {
+			// Only emit on active node of cluster that is not a DR cecondary.
+			if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
 				break
 			}
 
@@ -104,6 +114,17 @@ func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.Gau
 		return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
 	}
 	return ts.gaugeCollectorByPolicy(ctx)
+}
+
+func (c *Core) leaseExpiryGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	e := c.expiration
+	metricsConsts := c.MetricSink().TelemetryConsts
+	c.stateLock.RUnlock()
+	if e == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil expiration manager")
+	}
+	return e.leaseAggregationMetrics(ctx, metricsConsts)
 }
 
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -155,6 +176,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			"",
 		},
 		{
+			[]string{"expire", "leases", "by_expiration"},
+			[]metrics.Label{{"gauge", "leases_by_expiration"}},
+			c.leaseExpiryGaugeCollector,
+			"",
+		},
+		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
@@ -186,10 +213,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 		},
 	}
 
-	// Disable collection if configured, or if we're a performance standby.
+	// Disable collection if configured, or if we're a performance standby
+	// node or DR secondary cluster.
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
 		c.logger.Info("usage gauge collection is disabled")
-	} else if !c.PerfStandby() {
+	} else if standby, _ := c.Standby(); !standby && !c.IsDRSecondary() {
 		for _, init := range metricsInit {
 			if init.DisableEnvVar != "" {
 				if os.Getenv(init.DisableEnvVar) != "" {
@@ -417,4 +445,20 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 	}
 
 	return values, nil
+}
+
+func (c *Core) cachedGaugeMetricsEmitter() {
+	if c.metricsHelper == nil {
+		return
+	}
+
+	loopMetrics := &c.metricsHelper.LoopMetrics.Metrics
+
+	emit := func(key interface{}, value interface{}) bool {
+		metricValue := value.(metricsutil.GaugeMetric)
+		c.metricSink.SetGaugeWithLabels(metricValue.Key, metricValue.Value, metricValue.Labels)
+		return true
+	}
+
+	loopMetrics.Range(emit)
 }

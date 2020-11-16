@@ -2,6 +2,16 @@
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
     <pre class="masked-value display-only is-word-break">{{displayValue}}</pre>
+  {{else if maskWhileTyping}}
+    <input
+      autocomplete="off"
+      spellcheck="false"
+      type={{if isMasked "password" "text"}}
+      value={{value}}
+      onchange={{action "updateValue"}}
+      class="input"
+      data-test-input
+    />
   {{else}}
     <textarea class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
       onfocus={{action (mut isFocused) true}} onblur={{action (mut isFocused) false}} onkeydown={{action onKeyDown}}

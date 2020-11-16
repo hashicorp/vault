@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestNameMakeConfig(t *testing.T) {
+func TestMakeConfig(t *testing.T) {
 	type testCase struct {
 		rc runConfig
 
@@ -294,7 +294,6 @@ func TestNameMakeConfig(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			// TODO: Certain fields will need to be checked for existence, not specific value
 			// The following fields are generated, so we just need to check for existence, not specific value
 			// The value must be nilled out before performing a DeepEqual check
 			hsh := config.SecureConfig.Hash

@@ -2,13 +2,12 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
-
-	"database/sql"
 
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/helper/namespace"

@@ -92,7 +92,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Storage:   config.StorageView,
 				Data:      test.configData,
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err := b.HandleRequest(ctx, req)
@@ -113,7 +113,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("rotate-root/%s", test.dbName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -136,7 +136,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 					"max_ttl":     "1m",
 				},
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -156,7 +156,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("creds/%s", dynamicRoleName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -182,7 +182,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 					"rotation_period": "5",
 				},
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -202,7 +202,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("static-creds/%s", staticRoleName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -250,22 +250,11 @@ func TestBackend_PluginMain_MockV4(t *testing.T) {
 }
 
 func TestBackend_PluginMain_MockV5(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-
-	args := []string{"--ca-cert=" + caPEM}
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	RunV5(apiClientMeta.GetTLSConfig())
+	RunV5()
 }
 
 func assertNoRespData(t *testing.T, resp *logical.Response) {
