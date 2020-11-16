@@ -998,13 +998,18 @@ func (c *ServerCommand) Run(args []string) int {
 
 		// Construct and register an export pipeline using the Jaeger
 		// exporter and a span processor.
-		flush, err := jaeger.InstallNewPipeline(jaeger.WithAgentEndpoint("localhost:6831", nil))
+		flush, err := jaeger.InstallNewPipeline(
+			jaeger.WithAgentEndpoint("localhost:6831"),
+			jaeger.WithProcess(jaeger.Process{
+				ServiceName: "Vault",
+			}))
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to initialize stdout export pipeline: %v", err))
 			return 1
 		}
 
 		defer flush()
+
 		global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(b3.B3{}, propagators.TraceContext{}, propagators.Baggage{}))
 	}
 

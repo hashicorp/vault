@@ -1,6 +1,6 @@
 # Google Cloud Client Libraries for Go
 
-[![GoDoc](https://pkg.go.dev/cloud.google.com/go?status.svg)](https://pkg.go.dev/cloud.google.com/go)
+[![GoDoc](https://godoc.org/cloud.google.com/go?status.svg)](https://pkg.go.dev/cloud.google.com/go)
 
 Go packages for [Google Cloud Platform](https://cloud.google.com) services.
 
@@ -127,8 +127,7 @@ client, err := storage.NewClient(ctx, option.WithTokenSource(tokenSource))
 
 Contributions are welcome. Please, see the
 [CONTRIBUTING](https://github.com/GoogleCloudPlatform/google-cloud-go/blob/master/CONTRIBUTING.md)
-document for details. We're using Gerrit for our code reviews. Please don't open pull
-requests against this repo, new pull requests will be automatically closed.
+document for details.
 
 Please note that this project is released with a Contributor Code of Conduct.
 By participating in this project you agree to abide by its terms.

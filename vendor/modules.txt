@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.56.0
+# cloud.google.com/go v0.65.0
 cloud.google.com/go
 cloud.google.com/go/civil
 cloud.google.com/go/compute/metadata
@@ -17,7 +17,7 @@ cloud.google.com/go/monitoring/apiv3
 cloud.google.com/go/spanner
 cloud.google.com/go/spanner/admin/instance/apiv1
 cloud.google.com/go/spanner/apiv1
-# cloud.google.com/go/storage v1.6.0
+# cloud.google.com/go/storage v1.10.0
 cloud.google.com/go/storage
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
@@ -60,8 +60,6 @@ github.com/Azure/go-autorest/tracing
 github.com/BurntSushi/toml
 # github.com/DataDog/datadog-go v3.2.0+incompatible
 github.com/DataDog/datadog-go/statsd
-# github.com/DataDog/sketches-go v0.0.1
-github.com/DataDog/sketches-go/ddsketch
 # github.com/Jeffail/gabs v1.1.1
 github.com/Jeffail/gabs
 # github.com/Masterminds/semver v1.4.2
@@ -103,6 +101,8 @@ github.com/aliyun/alibaba-cloud-sdk-go/services/ram
 github.com/aliyun/alibaba-cloud-sdk-go/services/sts
 # github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 github.com/aliyun/aliyun-oss-go-sdk/oss
+# github.com/apache/thrift v0.13.0
+github.com/apache/thrift/lib/go/thrift
 # github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
@@ -346,14 +346,11 @@ github.com/golang/groupcache/lru
 github.com/golang/protobuf/internal/gengogrpc
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go
-github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
-github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/ptypes/timestamp
-github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
 # github.com/google/go-cmp v0.5.2
@@ -1011,7 +1008,7 @@ go.mongodb.org/mongo-driver/x/mongo/driver/session
 go.mongodb.org/mongo-driver/x/mongo/driver/topology
 go.mongodb.org/mongo-driver/x/mongo/driver/uuid
 go.mongodb.org/mongo-driver/x/mongo/driver/wiremessage
-# go.opencensus.io v0.22.3
+# go.opencensus.io v0.22.4
 go.opencensus.io
 go.opencensus.io/internal
 go.opencensus.io/internal/tagencoding
@@ -1031,12 +1028,13 @@ go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
 # go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.13.0
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
+# go.opentelemetry.io/contrib/propagators v0.13.0
+go.opentelemetry.io/contrib/propagators/b3
 # go.opentelemetry.io/otel v0.13.0
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/api/global
 go.opentelemetry.io/otel/api/global/internal
 go.opentelemetry.io/otel/api/metric
-go.opentelemetry.io/otel/api/metric/metrictest
 go.opentelemetry.io/otel/api/metric/registry
 go.opentelemetry.io/otel/api/trace
 go.opentelemetry.io/otel/codes
@@ -1048,27 +1046,14 @@ go.opentelemetry.io/otel/label
 go.opentelemetry.io/otel/propagators
 go.opentelemetry.io/otel/semconv
 go.opentelemetry.io/otel/unit
-# go.opentelemetry.io/otel/exporters/stdout v0.13.0
-go.opentelemetry.io/otel/exporters/stdout
+# go.opentelemetry.io/otel/exporters/trace/jaeger v0.13.0
+go.opentelemetry.io/otel/exporters/trace/jaeger
+go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger
 # go.opentelemetry.io/otel/sdk v0.13.0
 go.opentelemetry.io/otel/sdk
-go.opentelemetry.io/otel/sdk/export/metric
-go.opentelemetry.io/otel/sdk/export/metric/aggregation
 go.opentelemetry.io/otel/sdk/export/trace
 go.opentelemetry.io/otel/sdk/instrumentation
 go.opentelemetry.io/otel/sdk/internal
-go.opentelemetry.io/otel/sdk/metric
-go.opentelemetry.io/otel/sdk/metric/aggregator
-go.opentelemetry.io/otel/sdk/metric/aggregator/array
-go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch
-go.opentelemetry.io/otel/sdk/metric/aggregator/histogram
-go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue
-go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount
-go.opentelemetry.io/otel/sdk/metric/aggregator/sum
-go.opentelemetry.io/otel/sdk/metric/controller/push
-go.opentelemetry.io/otel/sdk/metric/controller/time
-go.opentelemetry.io/otel/sdk/metric/processor/basic
-go.opentelemetry.io/otel/sdk/metric/selector/simple
 go.opentelemetry.io/otel/sdk/resource
 go.opentelemetry.io/otel/sdk/trace
 go.opentelemetry.io/otel/sdk/trace/internal
@@ -1109,10 +1094,10 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20200302205851-738671d3881b
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/mod v0.2.0
+# golang.org/x/mod v0.3.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200625001655-4c5254603344
+# golang.org/x/net v0.0.0-20200822124328-c89045814202
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -1130,17 +1115,17 @@ golang.org/x/net/ipv6
 golang.org/x/net/proxy
 golang.org/x/net/publicsuffix
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+# golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 golang.org/x/oauth2
 golang.org/x/oauth2/clientcredentials
 golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200828194041-157a740278f4
+# golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -1160,22 +1145,11 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
+# golang.org/x/tools v0.0.0-20200904185747-39188db58858
 golang.org/x/tools/cmd/goimports
-golang.org/x/tools/go/analysis
-golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/astutil
-golang.org/x/tools/go/ast/inspector
-golang.org/x/tools/go/buildutil
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/cgo
 golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/go/loader
-golang.org/x/tools/go/packages
-golang.org/x/tools/go/types/objectpath
-golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/internal/analysisinternal
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
@@ -1184,11 +1158,10 @@ golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
-golang.org/x/tools/internal/packagesinternal
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.29.0
+# google.golang.org/api v0.32.0
 google.golang.org/api/admin/directory/v1
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/compute/v1
@@ -1197,16 +1170,18 @@ google.golang.org/api/googleapi/transport
 google.golang.org/api/iam/v1
 google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
+google.golang.org/api/internal/impersonate
 google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/iterator
 google.golang.org/api/option
 google.golang.org/api/option/internaloption
 google.golang.org/api/storage/v1
+google.golang.org/api/support/bundler
 google.golang.org/api/transport/cert
 google.golang.org/api/transport/grpc
 google.golang.org/api/transport/http
 google.golang.org/api/transport/http/internal/propagation
-# google.golang.org/appengine v1.6.5
+# google.golang.org/appengine v1.6.6
 google.golang.org/appengine
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/app_identity
@@ -1219,7 +1194,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
+# google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/distribution
@@ -1238,7 +1213,7 @@ google.golang.org/genproto/googleapis/spanner/v1
 google.golang.org/genproto/googleapis/type/calendarperiod
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.29.1
+# google.golang.org/grpc v1.31.1 => google.golang.org/grpc v1.29.1
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -1359,36 +1334,6 @@ gopkg.in/square/go-jose.v2/jwt
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.0.1-2020.1.3
-honnef.co/go/tools/arg
-honnef.co/go/tools/cmd/staticcheck
-honnef.co/go/tools/code
-honnef.co/go/tools/config
-honnef.co/go/tools/deprecated
-honnef.co/go/tools/edit
-honnef.co/go/tools/facts
-honnef.co/go/tools/functions
-honnef.co/go/tools/go/types/typeutil
-honnef.co/go/tools/internal/cache
-honnef.co/go/tools/internal/passes/buildir
-honnef.co/go/tools/internal/renameio
-honnef.co/go/tools/internal/robustio
-honnef.co/go/tools/internal/sharedcheck
-honnef.co/go/tools/ir
-honnef.co/go/tools/ir/irutil
-honnef.co/go/tools/lint
-honnef.co/go/tools/lint/lintdsl
-honnef.co/go/tools/lint/lintutil
-honnef.co/go/tools/lint/lintutil/format
-honnef.co/go/tools/loader
-honnef.co/go/tools/pattern
-honnef.co/go/tools/printf
-honnef.co/go/tools/report
-honnef.co/go/tools/simple
-honnef.co/go/tools/staticcheck
-honnef.co/go/tools/stylecheck
-honnef.co/go/tools/unused
-honnef.co/go/tools/version
 # k8s.io/api v0.18.2
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1

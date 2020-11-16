@@ -34,6 +34,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var newServiceMonitoringClientHook clientHook
+
 // ServiceMonitoringCallOptions contains the retry settings for each method of ServiceMonitoringClient.
 type ServiceMonitoringCallOptions struct {
 	CreateService               []gax.CallOption
@@ -163,7 +165,17 @@ type ServiceMonitoringClient struct {
 // Service's monitored resources, its Service-Level Objectives, and a taxonomy
 // of categorized Health Metrics.
 func NewServiceMonitoringClient(ctx context.Context, opts ...option.ClientOption) (*ServiceMonitoringClient, error) {
-	connPool, err := gtransport.DialPool(ctx, append(defaultServiceMonitoringClientOptions(), opts...)...)
+	clientOpts := defaultServiceMonitoringClientOptions()
+
+	if newServiceMonitoringClientHook != nil {
+		hookOpts, err := newServiceMonitoringClientHook(ctx, clientHookParams{})
+		if err != nil {
+			return nil, err
+		}
+		clientOpts = append(clientOpts, hookOpts...)
+	}
+
+	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
 	if err != nil {
 		return nil, err
 	}

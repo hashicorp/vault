@@ -63,7 +63,7 @@ func (p *roundRobinConnPool) NewStream(ctx context.Context, desc *grpc.StreamDes
 	return p.Conn().NewStream(ctx, desc, method, opts...)
 }
 
-// multiError represents errors from mulitple conns in the group.
+// multiError represents errors from multiple conns in the group.
 //
 // TODO: figure out how and whether this is useful to export. End users should
 // not be depending on the transport/grpc package directly, so there might need

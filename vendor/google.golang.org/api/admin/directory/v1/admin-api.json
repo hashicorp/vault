@@ -41,9 +41,6 @@
         "https://www.googleapis.com/auth/admin.directory.group.readonly": {
           "description": "View groups on your domain"
         },
-        "https://www.googleapis.com/auth/admin.directory.notifications": {
-          "description": "View and manage notifications received on your domain"
-        },
         "https://www.googleapis.com/auth/admin.directory.orgunit": {
           "description": "View and manage organization units on your domain"
         },
@@ -89,34 +86,62 @@
       }
     }
   },
-  "basePath": "/admin/directory/v1/",
-  "baseUrl": "https://www.googleapis.com/admin/directory/v1/",
+  "basePath": "",
+  "baseUrl": "https://www.googleapis.com/",
   "batchPath": "batch/admin/directory_v1",
   "canonicalName": "directory",
-  "description": "Manages enterprise resources such as users and groups, administrative notifications, security features, and more.",
+  "description": "Admin SDK lets administrators of enterprise domains to view and manage resources like user, groups etc. It also provides audit and usage reports of domain.",
   "discoveryVersion": "v1",
-  "documentationLink": "https://developers.google.com/admin-sdk/directory/",
-  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/6ejmeqs8pIMfxzC9gWby_uKyvCk\"",
+  "documentationLink": "http://developers.google.com/admin-sdk/",
+  "fullyEncodeReservedExpansion": true,
   "icons": {
-    "x16": "https://www.gstatic.com/images/branding/product/1x/googleg_16dp.png",
-    "x32": "https://www.gstatic.com/images/branding/product/1x/googleg_32dp.png"
+    "x16": "http://www.google.com/images/icons/product/search-16.gif",
+    "x32": "http://www.google.com/images/icons/product/search-32.gif"
   },
   "id": "admin:directory_v1",
   "kind": "discovery#restDescription",
+  "mtlsRootUrl": "https://www.mtls.googleapis.com/",
   "name": "admin",
   "ownerDomain": "google.com",
   "ownerName": "Google",
   "packagePath": "admin",
   "parameters": {
-    "alt": {
-      "default": "json",
-      "description": "Data format for the response.",
+    "$.xgafv": {
+      "description": "V1 error format.",
       "enum": [
-        "json"
+        "1",
+        "2"
       ],
       "enumDescriptions": [
-        "Responses with Content-Type of application/json"
+        "v1 error format",
+        "v2 error format"
       ],
+      "location": "query",
+      "type": "string"
+    },
+    "access_token": {
+      "description": "OAuth access token.",
+      "location": "query",
+      "type": "string"
+    },
+    "alt": {
+      "default": "json",
+      "description": "Data format for response.",
+      "enum": [
+        "json",
+        "media",
+        "proto"
+      ],
+      "enumDescriptions": [
+        "Responses with Content-Type of application/json",
+        "Media download with context-dependent Content-Type",
+        "Responses with Content-Type of application/x-protobuf"
+      ],
+      "location": "query",
+      "type": "string"
+    },
+    "callback": {
+      "description": "JSONP",
       "location": "query",
       "type": "string"
     },
@@ -142,12 +167,17 @@
       "type": "boolean"
     },
     "quotaUser": {
-      "description": "An opaque string that represents a user for quota purposes. Must not exceed 40 characters.",
+      "description": "Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.",
       "location": "query",
       "type": "string"
     },
-    "userIp": {
-      "description": "Deprecated. Please use quotaUser instead.",
+    "uploadType": {
+      "description": "Legacy upload protocol for media (e.g. \"media\", \"multipart\").",
+      "location": "query",
+      "type": "string"
+    },
+    "upload_protocol": {
+      "description": "Upload protocol for media (e.g. \"raw\", \"multipart\").",
       "location": "query",
       "type": "string"
     }
@@ -158,6 +188,7 @@
       "methods": {
         "delete": {
           "description": "Delete an ASP issued by a user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/asps/{codeId}",
           "httpMethod": "DELETE",
           "id": "directory.asps.delete",
           "parameterOrder": [
@@ -179,13 +210,14 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/asps/{codeId}",
+          "path": "admin/directory/v1/users/{userKey}/asps/{codeId}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user.security"
           ]
         },
         "get": {
           "description": "Get information about an ASP issued by a user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/asps/{codeId}",
           "httpMethod": "GET",
           "id": "directory.asps.get",
           "parameterOrder": [
@@ -207,7 +239,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/asps/{codeId}",
+          "path": "admin/directory/v1/users/{userKey}/asps/{codeId}",
           "response": {
             "$ref": "Asp"
           },
@@ -217,6 +249,7 @@
         },
         "list": {
           "description": "List the ASPs issued by a user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/asps",
           "httpMethod": "GET",
           "id": "directory.asps.list",
           "parameterOrder": [
@@ -230,7 +263,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/asps",
+          "path": "admin/directory/v1/users/{userKey}/asps",
           "response": {
             "$ref": "Asps"
           },
@@ -243,13 +276,15 @@
     "channels": {
       "methods": {
         "stop": {
-          "description": "Stop watching resources through this channel",
+          "description": "Stop watching resources through this channel.",
+          "flatPath": "admin/directory_v1/channels/stop",
           "httpMethod": "POST",
           "id": "admin.channels.stop",
-          "path": "/admin/directory_v1/channels/stop",
+          "parameterOrder": [],
+          "parameters": {},
+          "path": "admin/directory_v1/channels/stop",
           "request": {
-            "$ref": "Channel",
-            "parameterName": "resource"
+            "$ref": "Channel"
           },
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user",
@@ -265,6 +300,7 @@
       "methods": {
         "action": {
           "description": "Take action on Chrome OS Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/chromeos/{resourceId}/action",
           "httpMethod": "POST",
           "id": "directory.chromeosdevices.action",
           "parameterOrder": [
@@ -285,7 +321,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/chromeos/{resourceId}/action",
+          "path": "admin/directory/v1/customer/{customerId}/devices/chromeos/{resourceId}/action",
           "request": {
             "$ref": "ChromeOsDeviceAction"
           },
@@ -295,6 +331,7 @@
         },
         "get": {
           "description": "Retrieve Chrome OS Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/chromeos/{deviceId}",
           "httpMethod": "GET",
           "id": "directory.chromeosdevices.get",
           "parameterOrder": [
@@ -317,10 +354,12 @@
             "projection": {
               "description": "Restrict information returned to a set of selected fields.",
               "enum": [
+                "PROJECTION_UNDEFINED",
                 "BASIC",
                 "FULL"
               ],
               "enumDescriptions": [
+                "",
                 "Includes only the basic metadata fields (e.g., deviceId, serialNumber, status, and user)",
                 "Includes all metadata fields"
               ],
@@ -328,7 +367,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/chromeos/{deviceId}",
+          "path": "admin/directory/v1/customer/{customerId}/devices/chromeos/{deviceId}",
           "response": {
             "$ref": "ChromeOsDevice"
           },
@@ -339,6 +378,7 @@
         },
         "list": {
           "description": "Retrieve all Chrome OS Devices of a customer (paginated)",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/chromeos",
           "httpMethod": "GET",
           "id": "directory.chromeosdevices.list",
           "parameterOrder": [
@@ -353,7 +393,7 @@
             },
             "maxResults": {
               "default": "100",
-              "description": "Maximum number of results to return. Max allowed value is 200.",
+              "description": "Maximum number of results to return.",
               "format": "int32",
               "location": "query",
               "minimum": "1",
@@ -362,6 +402,7 @@
             "orderBy": {
               "description": "Column to use for sorting results",
               "enum": [
+                "orderByUndefined",
                 "annotatedLocation",
                 "annotatedUser",
                 "lastSync",
@@ -371,6 +412,7 @@
                 "supportEndDate"
               ],
               "enumDescriptions": [
+                "",
                 "Chromebook location as annotated by the administrator.",
                 "Chromebook user as annotated by administrator.",
                 "Chromebook last sync.",
@@ -395,10 +437,12 @@
             "projection": {
               "description": "Restrict information returned to a set of selected fields.",
               "enum": [
+                "PROJECTION_UNDEFINED",
                 "BASIC",
                 "FULL"
               ],
               "enumDescriptions": [
+                "",
                 "Includes only the basic metadata fields (e.g., deviceId, serialNumber, status, and user)",
                 "Includes all metadata fields"
               ],
@@ -406,17 +450,19 @@
               "type": "string"
             },
             "query": {
-              "description": "Search string in the format provided by this Help Center article.",
+              "description": "Search string in the format given at http://support.google.com/chromeos/a/bin/answer.py?answer=1698333",
               "location": "query",
               "type": "string"
             },
             "sortOrder": {
               "description": "Whether to return results in ascending or descending order. Only of use when orderBy is also used",
               "enum": [
+                "SORT_ORDER_UNDEFINED",
                 "ASCENDING",
                 "DESCENDING"
               ],
               "enumDescriptions": [
+                "",
                 "Ascending order.",
                 "Descending order."
               ],
@@ -424,7 +470,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/chromeos",
+          "path": "admin/directory/v1/customer/{customerId}/devices/chromeos",
           "response": {
             "$ref": "ChromeOsDevices"
           },
@@ -435,6 +481,7 @@
         },
         "moveDevicesToOu": {
           "description": "Move or insert multiple Chrome OS Devices to organizational unit",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/chromeos/moveDevicesToOu",
           "httpMethod": "POST",
           "id": "directory.chromeosdevices.moveDevicesToOu",
           "parameterOrder": [
@@ -455,7 +502,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/chromeos/moveDevicesToOu",
+          "path": "admin/directory/v1/customer/{customerId}/devices/chromeos/moveDevicesToOu",
           "request": {
             "$ref": "ChromeOsMoveDevicesToOu"
           },
@@ -464,7 +511,8 @@
           ]
         },
         "patch": {
-          "description": "Update Chrome OS Device. This method supports patch semantics.",
+          "description": "Patch Chrome OS Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/chromeos/{deviceId}",
           "httpMethod": "PATCH",
           "id": "directory.chromeosdevices.patch",
           "parameterOrder": [
@@ -487,10 +535,12 @@
             "projection": {
               "description": "Restrict information returned to a set of selected fields.",
               "enum": [
+                "PROJECTION_UNDEFINED",
                 "BASIC",
                 "FULL"
               ],
               "enumDescriptions": [
+                "",
                 "Includes only the basic metadata fields (e.g., deviceId, serialNumber, status, and user)",
                 "Includes all metadata fields"
               ],
@@ -498,7 +548,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/chromeos/{deviceId}",
+          "path": "admin/directory/v1/customer/{customerId}/devices/chromeos/{deviceId}",
           "request": {
             "$ref": "ChromeOsDevice"
           },
@@ -511,6 +561,7 @@
         },
         "update": {
           "description": "Update Chrome OS Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/chromeos/{deviceId}",
           "httpMethod": "PUT",
           "id": "directory.chromeosdevices.update",
           "parameterOrder": [
@@ -533,10 +584,12 @@
             "projection": {
               "description": "Restrict information returned to a set of selected fields.",
               "enum": [
+                "PROJECTION_UNDEFINED",
                 "BASIC",
                 "FULL"
               ],
               "enumDescriptions": [
+                "",
                 "Includes only the basic metadata fields (e.g., deviceId, serialNumber, status, and user)",
                 "Includes all metadata fields"
               ],
@@ -544,7 +597,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/chromeos/{deviceId}",
+          "path": "admin/directory/v1/customer/{customerId}/devices/chromeos/{deviceId}",
           "request": {
             "$ref": "ChromeOsDevice"
           },
@@ -561,6 +614,7 @@
       "methods": {
         "get": {
           "description": "Retrieves a customer.",
+          "flatPath": "admin/directory/v1/customers/{customerKey}",
           "httpMethod": "GET",
           "id": "directory.customers.get",
           "parameterOrder": [
@@ -574,7 +628,7 @@
               "type": "string"
             }
           },
-          "path": "customers/{customerKey}",
+          "path": "admin/directory/v1/customers/{customerKey}",
           "response": {
             "$ref": "Customer"
           },
@@ -584,7 +638,8 @@
           ]
         },
         "patch": {
-          "description": "Updates a customer. This method supports patch semantics.",
+          "description": "Patch Customers via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/customers/{customerKey}",
           "httpMethod": "PATCH",
           "id": "directory.customers.patch",
           "parameterOrder": [
@@ -598,7 +653,7 @@
               "type": "string"
             }
           },
-          "path": "customers/{customerKey}",
+          "path": "admin/directory/v1/customers/{customerKey}",
           "request": {
             "$ref": "Customer"
           },
@@ -611,6 +666,7 @@
         },
         "update": {
           "description": "Updates a customer.",
+          "flatPath": "admin/directory/v1/customers/{customerKey}",
           "httpMethod": "PUT",
           "id": "directory.customers.update",
           "parameterOrder": [
@@ -624,7 +680,7 @@
               "type": "string"
             }
           },
-          "path": "customers/{customerKey}",
+          "path": "admin/directory/v1/customers/{customerKey}",
           "request": {
             "$ref": "Customer"
           },
@@ -640,7 +696,8 @@
     "domainAliases": {
       "methods": {
         "delete": {
-          "description": "Deletes a Domain Alias of the customer.",
+          "description": "Deletes a domain Alias of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domainaliases/{domainAliasName}",
           "httpMethod": "DELETE",
           "id": "directory.domainAliases.delete",
           "parameterOrder": [
@@ -661,13 +718,14 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domainaliases/{domainAliasName}",
+          "path": "admin/directory/v1/customer/{customer}/domainaliases/{domainAliasName}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.domain"
           ]
         },
         "get": {
           "description": "Retrieves a domain alias of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domainaliases/{domainAliasName}",
           "httpMethod": "GET",
           "id": "directory.domainAliases.get",
           "parameterOrder": [
@@ -688,7 +746,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domainaliases/{domainAliasName}",
+          "path": "admin/directory/v1/customer/{customer}/domainaliases/{domainAliasName}",
           "response": {
             "$ref": "DomainAlias"
           },
@@ -698,7 +756,8 @@
           ]
         },
         "insert": {
-          "description": "Inserts a Domain alias of the customer.",
+          "description": "Inserts a domain alias of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domainaliases",
           "httpMethod": "POST",
           "id": "directory.domainAliases.insert",
           "parameterOrder": [
@@ -712,7 +771,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domainaliases",
+          "path": "admin/directory/v1/customer/{customer}/domainaliases",
           "request": {
             "$ref": "DomainAlias"
           },
@@ -725,6 +784,7 @@
         },
         "list": {
           "description": "Lists the domain aliases of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domainaliases",
           "httpMethod": "GET",
           "id": "directory.domainAliases.list",
           "parameterOrder": [
@@ -743,7 +803,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domainaliases",
+          "path": "admin/directory/v1/customer/{customer}/domainaliases",
           "response": {
             "$ref": "DomainAliases"
           },
@@ -758,6 +818,7 @@
       "methods": {
         "delete": {
           "description": "Deletes a domain of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domains/{domainName}",
           "httpMethod": "DELETE",
           "id": "directory.domains.delete",
           "parameterOrder": [
@@ -778,13 +839,14 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domains/{domainName}",
+          "path": "admin/directory/v1/customer/{customer}/domains/{domainName}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.domain"
           ]
         },
         "get": {
           "description": "Retrieves a domain of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domains/{domainName}",
           "httpMethod": "GET",
           "id": "directory.domains.get",
           "parameterOrder": [
@@ -805,7 +867,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domains/{domainName}",
+          "path": "admin/directory/v1/customer/{customer}/domains/{domainName}",
           "response": {
             "$ref": "Domains"
           },
@@ -816,6 +878,7 @@
         },
         "insert": {
           "description": "Inserts a domain of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domains",
           "httpMethod": "POST",
           "id": "directory.domains.insert",
           "parameterOrder": [
@@ -829,7 +892,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domains",
+          "path": "admin/directory/v1/customer/{customer}/domains",
           "request": {
             "$ref": "Domains"
           },
@@ -842,6 +905,7 @@
         },
         "list": {
           "description": "Lists the domains of the customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/domains",
           "httpMethod": "GET",
           "id": "directory.domains.list",
           "parameterOrder": [
@@ -855,7 +919,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/domains",
+          "path": "admin/directory/v1/customer/{customer}/domains",
           "response": {
             "$ref": "Domains2"
           },
@@ -870,6 +934,7 @@
       "methods": {
         "delete": {
           "description": "Delete Group",
+          "flatPath": "admin/directory/v1/groups/{groupKey}",
           "httpMethod": "DELETE",
           "id": "directory.groups.delete",
           "parameterOrder": [
@@ -883,13 +948,14 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}",
+          "path": "admin/directory/v1/groups/{groupKey}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.group"
           ]
         },
         "get": {
           "description": "Retrieve Group",
+          "flatPath": "admin/directory/v1/groups/{groupKey}",
           "httpMethod": "GET",
           "id": "directory.groups.get",
           "parameterOrder": [
@@ -903,7 +969,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}",
+          "path": "admin/directory/v1/groups/{groupKey}",
           "response": {
             "$ref": "Group"
           },
@@ -914,9 +980,12 @@
         },
         "insert": {
           "description": "Create Group",
+          "flatPath": "admin/directory/v1/groups",
           "httpMethod": "POST",
           "id": "directory.groups.insert",
-          "path": "groups",
+          "parameterOrder": [],
+          "parameters": {},
+          "path": "admin/directory/v1/groups",
           "request": {
             "$ref": "Group"
           },
@@ -929,8 +998,10 @@
         },
         "list": {
           "description": "Retrieve all groups of a domain or of a user given a userKey (paginated)",
+          "flatPath": "admin/directory/v1/groups",
           "httpMethod": "GET",
           "id": "directory.groups.list",
+          "parameterOrder": [],
           "parameters": {
             "customer": {
               "description": "Immutable ID of the G Suite account. In case of multi-domain, to fetch all groups for a customer, fill this field instead of domain.",
@@ -953,9 +1024,11 @@
             "orderBy": {
               "description": "Column to use for sorting results",
               "enum": [
+                "orderByUndefined",
                 "email"
               ],
               "enumDescriptions": [
+                "",
                 "Email of the group."
               ],
               "location": "query",
@@ -967,17 +1040,19 @@
               "type": "string"
             },
             "query": {
-              "description": "Query string search. Should be of the form \"\". Complete documentation is at https://developers.google.com/admin-sdk/directory/v1/guides/search-groups",
+              "description": "Query string search. Should be of the form \"\". Complete documentation is at https: //developers.google.com/admin-sdk/directory/v1/guides/search-groups",
               "location": "query",
               "type": "string"
             },
             "sortOrder": {
               "description": "Whether to return results in ascending or descending order. Only of use when orderBy is also used",
               "enum": [
+                "SORT_ORDER_UNDEFINED",
                 "ASCENDING",
                 "DESCENDING"
               ],
               "enumDescriptions": [
+                "",
                 "Ascending order.",
                 "Descending order."
               ],
@@ -990,7 +1065,7 @@
               "type": "string"
             }
           },
-          "path": "groups",
+          "path": "admin/directory/v1/groups",
           "response": {
             "$ref": "Groups"
           },
@@ -1000,7 +1075,8 @@
           ]
         },
         "patch": {
-          "description": "Update Group. This method supports patch semantics.",
+          "description": "Patch Groups via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/groups/{groupKey}",
           "httpMethod": "PATCH",
           "id": "directory.groups.patch",
           "parameterOrder": [
@@ -1014,7 +1090,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}",
+          "path": "admin/directory/v1/groups/{groupKey}",
           "request": {
             "$ref": "Group"
           },
@@ -1027,6 +1103,7 @@
         },
         "update": {
           "description": "Update Group",
+          "flatPath": "admin/directory/v1/groups/{groupKey}",
           "httpMethod": "PUT",
           "id": "directory.groups.update",
           "parameterOrder": [
@@ -1040,7 +1117,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}",
+          "path": "admin/directory/v1/groups/{groupKey}",
           "request": {
             "$ref": "Group"
           },
@@ -1057,6 +1134,7 @@
           "methods": {
             "delete": {
               "description": "Remove a alias for the group",
+              "flatPath": "admin/directory/v1/groups/{groupKey}/aliases/{alias}",
               "httpMethod": "DELETE",
               "id": "directory.groups.aliases.delete",
               "parameterOrder": [
@@ -1077,13 +1155,14 @@
                   "type": "string"
                 }
               },
-              "path": "groups/{groupKey}/aliases/{alias}",
+              "path": "admin/directory/v1/groups/{groupKey}/aliases/{alias}",
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.group"
               ]
             },
             "insert": {
               "description": "Add a alias for the group",
+              "flatPath": "admin/directory/v1/groups/{groupKey}/aliases",
               "httpMethod": "POST",
               "id": "directory.groups.aliases.insert",
               "parameterOrder": [
@@ -1097,7 +1176,7 @@
                   "type": "string"
                 }
               },
-              "path": "groups/{groupKey}/aliases",
+              "path": "admin/directory/v1/groups/{groupKey}/aliases",
               "request": {
                 "$ref": "Alias"
               },
@@ -1110,6 +1189,7 @@
             },
             "list": {
               "description": "List all aliases for a group",
+              "flatPath": "admin/directory/v1/groups/{groupKey}/aliases",
               "httpMethod": "GET",
               "id": "directory.groups.aliases.list",
               "parameterOrder": [
@@ -1123,15 +1203,14 @@
                   "type": "string"
                 }
               },
-              "path": "groups/{groupKey}/aliases",
+              "path": "admin/directory/v1/groups/{groupKey}/aliases",
               "response": {
                 "$ref": "Aliases"
               },
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.group",
                 "https://www.googleapis.com/auth/admin.directory.group.readonly"
-              ],
-              "supportsSubscription": true
+              ]
             }
           }
         }
@@ -1141,6 +1220,7 @@
       "methods": {
         "delete": {
           "description": "Remove membership.",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "httpMethod": "DELETE",
           "id": "directory.members.delete",
           "parameterOrder": [
@@ -1161,7 +1241,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/members/{memberKey}",
+          "path": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.group",
             "https://www.googleapis.com/auth/admin.directory.group.member"
@@ -1169,6 +1249,7 @@
         },
         "get": {
           "description": "Retrieve Group Member",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "httpMethod": "GET",
           "id": "directory.members.get",
           "parameterOrder": [
@@ -1189,7 +1270,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/members/{memberKey}",
+          "path": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "response": {
             "$ref": "Member"
           },
@@ -1202,6 +1283,7 @@
         },
         "hasMember": {
           "description": "Checks whether the given user is a member of the group. Membership can be direct or nested.",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/hasMember/{memberKey}",
           "httpMethod": "GET",
           "id": "directory.members.hasMember",
           "parameterOrder": [
@@ -1222,7 +1304,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/hasMember/{memberKey}",
+          "path": "admin/directory/v1/groups/{groupKey}/hasMember/{memberKey}",
           "response": {
             "$ref": "MembersHasMember"
           },
@@ -1235,6 +1317,7 @@
         },
         "insert": {
           "description": "Add user to the specified group.",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/members",
           "httpMethod": "POST",
           "id": "directory.members.insert",
           "parameterOrder": [
@@ -1248,7 +1331,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/members",
+          "path": "admin/directory/v1/groups/{groupKey}/members",
           "request": {
             "$ref": "Member"
           },
@@ -1262,6 +1345,7 @@
         },
         "list": {
           "description": "Retrieve all members in a group (paginated)",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/members",
           "httpMethod": "GET",
           "id": "directory.members.list",
           "parameterOrder": [
@@ -1298,7 +1382,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/members",
+          "path": "admin/directory/v1/groups/{groupKey}/members",
           "response": {
             "$ref": "Members"
           },
@@ -1310,7 +1394,8 @@
           ]
         },
         "patch": {
-          "description": "Update membership of a user in the specified group. This method supports patch semantics.",
+          "description": "Patch Member via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "httpMethod": "PATCH",
           "id": "directory.members.patch",
           "parameterOrder": [
@@ -1331,7 +1416,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/members/{memberKey}",
+          "path": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "request": {
             "$ref": "Member"
           },
@@ -1345,6 +1430,7 @@
         },
         "update": {
           "description": "Update membership of a user in the specified group.",
+          "flatPath": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "httpMethod": "PUT",
           "id": "directory.members.update",
           "parameterOrder": [
@@ -1365,7 +1451,7 @@
               "type": "string"
             }
           },
-          "path": "groups/{groupKey}/members/{memberKey}",
+          "path": "admin/directory/v1/groups/{groupKey}/members/{memberKey}",
           "request": {
             "$ref": "Member"
           },
@@ -1383,6 +1469,7 @@
       "methods": {
         "action": {
           "description": "Take action on Mobile Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/mobile/{resourceId}/action",
           "httpMethod": "POST",
           "id": "directory.mobiledevices.action",
           "parameterOrder": [
@@ -1403,7 +1490,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/mobile/{resourceId}/action",
+          "path": "admin/directory/v1/customer/{customerId}/devices/mobile/{resourceId}/action",
           "request": {
             "$ref": "MobileDeviceAction"
           },
@@ -1414,6 +1501,7 @@
         },
         "delete": {
           "description": "Delete Mobile Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/mobile/{resourceId}",
           "httpMethod": "DELETE",
           "id": "directory.mobiledevices.delete",
           "parameterOrder": [
@@ -1434,13 +1522,14 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/mobile/{resourceId}",
+          "path": "admin/directory/v1/customer/{customerId}/devices/mobile/{resourceId}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.device.mobile"
           ]
         },
         "get": {
           "description": "Retrieve Mobile Device",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/mobile/{resourceId}",
           "httpMethod": "GET",
           "id": "directory.mobiledevices.get",
           "parameterOrder": [
@@ -1457,10 +1546,12 @@
             "projection": {
               "description": "Restrict information returned to a set of selected fields.",
               "enum": [
+                "PROJECTION_UNDEFINED",
                 "BASIC",
                 "FULL"
               ],
               "enumDescriptions": [
+                "",
                 "Includes only the basic metadata fields (e.g., deviceId, model, status, type, and status)",
                 "Includes all metadata fields"
               ],
@@ -1474,7 +1565,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/mobile/{resourceId}",
+          "path": "admin/directory/v1/customer/{customerId}/devices/mobile/{resourceId}",
           "response": {
             "$ref": "MobileDevice"
           },
@@ -1486,6 +1577,7 @@
         },
         "list": {
           "description": "Retrieve all Mobile Devices of a customer (paginated)",
+          "flatPath": "admin/directory/v1/customer/{customerId}/devices/mobile",
           "httpMethod": "GET",
           "id": "directory.mobiledevices.list",
           "parameterOrder": [
@@ -1500,7 +1592,7 @@
             },
             "maxResults": {
               "default": "100",
-              "description": "Maximum number of results to return.",
+              "description": "Maximum number of results to return. Max allowed value is 100.",
               "format": "int32",
               "location": "query",
               "maximum": "100",
@@ -1510,6 +1602,7 @@
             "orderBy": {
               "description": "Column to use for sorting results",
               "enum": [
+                "orderByUndefined",
                 "deviceId",
                 "email",
                 "lastSync",
@@ -1520,6 +1613,7 @@
                 "type"
               ],
               "enumDescriptions": [
+                "",
                 "Mobile Device serial number.",
                 "Owner user email.",
                 "Last policy settings sync date time of the device.",
@@ -1540,10 +1634,12 @@
             "projection": {
               "description": "Restrict information returned to a set of selected fields.",
               "enum": [
+                "PROJECTION_UNDEFINED",
                 "BASIC",
                 "FULL"
               ],
               "enumDescriptions": [
+                "",
                 "Includes only the basic metadata fields (e.g., deviceId, model, status, type, and status)",
                 "Includes all metadata fields"
               ],
@@ -1551,17 +1647,19 @@
               "type": "string"
             },
             "query": {
-              "description": "Search string in the format provided by this Help Center article.",
+              "description": "Search string in the format given at http://support.google.com/a/bin/answer.py?answer=1408863#search",
               "location": "query",
               "type": "string"
             },
             "sortOrder": {
               "description": "Whether to return results in ascending or descending order. Only of use when orderBy is also used",
               "enum": [
+                "SORT_ORDER_UNDEFINED",
                 "ASCENDING",
                 "DESCENDING"
               ],
               "enumDescriptions": [
+                "",
                 "Ascending order.",
                 "Descending order."
               ],
@@ -1569,7 +1667,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/devices/mobile",
+          "path": "admin/directory/v1/customer/{customerId}/devices/mobile",
           "response": {
             "$ref": "MobileDevices"
           },
@@ -1581,176 +1679,11 @@
         }
       }
     },
-    "notifications": {
-      "methods": {
-        "delete": {
-          "description": "Deletes a notification",
-          "httpMethod": "DELETE",
-          "id": "directory.notifications.delete",
-          "parameterOrder": [
-            "customer",
-            "notificationId"
-          ],
-          "parameters": {
-            "customer": {
-              "description": "The unique ID for the customer's G Suite account. The customerId is also returned as part of the Users resource.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            },
-            "notificationId": {
-              "description": "The unique ID of the notification.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            }
-          },
-          "path": "customer/{customer}/notifications/{notificationId}",
-          "scopes": [
-            "https://www.googleapis.com/auth/admin.directory.notifications"
-          ]
-        },
-        "get": {
-          "description": "Retrieves a notification.",
-          "httpMethod": "GET",
-          "id": "directory.notifications.get",
-          "parameterOrder": [
-            "customer",
-            "notificationId"
-          ],
-          "parameters": {
-            "customer": {
-              "description": "The unique ID for the customer's G Suite account. The customerId is also returned as part of the Users resource.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            },
-            "notificationId": {
-              "description": "The unique ID of the notification.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            }
-          },
-          "path": "customer/{customer}/notifications/{notificationId}",
-          "response": {
-            "$ref": "Notification"
-          },
-          "scopes": [
-            "https://www.googleapis.com/auth/admin.directory.notifications"
-          ]
-        },
-        "list": {
-          "description": "Retrieves a list of notifications.",
-          "httpMethod": "GET",
-          "id": "directory.notifications.list",
-          "parameterOrder": [
-            "customer"
-          ],
-          "parameters": {
-            "customer": {
-              "description": "The unique ID for the customer's G Suite account.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            },
-            "language": {
-              "description": "The ISO 639-1 code of the language notifications are returned in. The default is English (en).",
-              "location": "query",
-              "type": "string"
-            },
-            "maxResults": {
-              "description": "Maximum number of notifications to return per page. The default is 100.",
-              "format": "uint32",
-              "location": "query",
-              "type": "integer"
-            },
-            "pageToken": {
-              "description": "The token to specify the page of results to retrieve.",
-              "location": "query",
-              "type": "string"
-            }
-          },
-          "path": "customer/{customer}/notifications",
-          "response": {
-            "$ref": "Notifications"
-          },
-          "scopes": [
-            "https://www.googleapis.com/auth/admin.directory.notifications"
-          ]
-        },
-        "patch": {
-          "description": "Updates a notification. This method supports patch semantics.",
-          "httpMethod": "PATCH",
-          "id": "directory.notifications.patch",
-          "parameterOrder": [
-            "customer",
-            "notificationId"
-          ],
-          "parameters": {
-            "customer": {
-              "description": "The unique ID for the customer's G Suite account.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            },
-            "notificationId": {
-              "description": "The unique ID of the notification.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            }
-          },
-          "path": "customer/{customer}/notifications/{notificationId}",
-          "request": {
-            "$ref": "Notification"
-          },
-          "response": {
-            "$ref": "Notification"
-          },
-          "scopes": [
-            "https://www.googleapis.com/auth/admin.directory.notifications"
-          ]
-        },
-        "update": {
-          "description": "Updates a notification.",
-          "httpMethod": "PUT",
-          "id": "directory.notifications.update",
-          "parameterOrder": [
-            "customer",
-            "notificationId"
-          ],
-          "parameters": {
-            "customer": {
-              "description": "The unique ID for the customer's G Suite account.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            },
-            "notificationId": {
-              "description": "The unique ID of the notification.",
-              "location": "path",
-              "required": true,
-              "type": "string"
-            }
-          },
-          "path": "customer/{customer}/notifications/{notificationId}",
-          "request": {
-            "$ref": "Notification"
-          },
-          "response": {
-            "$ref": "Notification"
-          },
-          "scopes": [
-            "https://www.googleapis.com/auth/admin.directory.notifications"
-          ]
-        }
-      }
-    },
     "orgunits": {
       "methods": {
         "delete": {
           "description": "Remove organizational unit",
+          "flatPath": "admin/directory/v1/customer/{customerId}/orgunits/{orgunitsId}",
           "httpMethod": "DELETE",
           "id": "directory.orgunits.delete",
           "parameterOrder": [
@@ -1767,18 +1700,19 @@
             "orgUnitPath": {
               "description": "Full path of the organizational unit or its ID",
               "location": "path",
-              "repeated": true,
+              "pattern": "^.*$",
               "required": true,
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/orgunits{/orgUnitPath*}",
+          "path": "admin/directory/v1/customer/{customerId}/orgunits/{+orgUnitPath}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.orgunit"
           ]
         },
         "get": {
           "description": "Retrieve organizational unit",
+          "flatPath": "admin/directory/v1/customer/{customerId}/orgunits/{orgunitsId}",
           "httpMethod": "GET",
           "id": "directory.orgunits.get",
           "parameterOrder": [
@@ -1795,12 +1729,12 @@
             "orgUnitPath": {
               "description": "Full path of the organizational unit or its ID",
               "location": "path",
-              "repeated": true,
+              "pattern": "^.*$",
               "required": true,
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/orgunits{/orgUnitPath*}",
+          "path": "admin/directory/v1/customer/{customerId}/orgunits/{+orgUnitPath}",
           "response": {
             "$ref": "OrgUnit"
           },
@@ -1811,6 +1745,7 @@
         },
         "insert": {
           "description": "Add organizational unit",
+          "flatPath": "admin/directory/v1/customer/{customerId}/orgunits",
           "httpMethod": "POST",
           "id": "directory.orgunits.insert",
           "parameterOrder": [
@@ -1824,7 +1759,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/orgunits",
+          "path": "admin/directory/v1/customer/{customerId}/orgunits",
           "request": {
             "$ref": "OrgUnit"
           },
@@ -1837,6 +1772,7 @@
         },
         "list": {
           "description": "Retrieve all organizational units",
+          "flatPath": "admin/directory/v1/customer/{customerId}/orgunits",
           "httpMethod": "GET",
           "id": "directory.orgunits.list",
           "parameterOrder": [
@@ -1858,10 +1794,12 @@
             "type": {
               "description": "Whether to return all sub-organizations or just immediate children",
               "enum": [
+                "typeUndefined",
                 "all",
                 "children"
               ],
               "enumDescriptions": [
+                "",
                 "All sub-organizational units.",
                 "Immediate children only (default)."
               ],
@@ -1869,7 +1807,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/orgunits",
+          "path": "admin/directory/v1/customer/{customerId}/orgunits",
           "response": {
             "$ref": "OrgUnits"
           },
@@ -1879,7 +1817,8 @@
           ]
         },
         "patch": {
-          "description": "Update organizational unit. This method supports patch semantics.",
+          "description": "Patch organization unit via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/customer/{customerId}/orgunits/{orgunitsId}",
           "httpMethod": "PATCH",
           "id": "directory.orgunits.patch",
           "parameterOrder": [
@@ -1896,12 +1835,12 @@
             "orgUnitPath": {
               "description": "Full path of the organizational unit or its ID",
               "location": "path",
-              "repeated": true,
+              "pattern": "^.*$",
               "required": true,
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/orgunits{/orgUnitPath*}",
+          "path": "admin/directory/v1/customer/{customerId}/orgunits/{+orgUnitPath}",
           "request": {
             "$ref": "OrgUnit"
           },
@@ -1914,6 +1853,7 @@
         },
         "update": {
           "description": "Update organizational unit",
+          "flatPath": "admin/directory/v1/customer/{customerId}/orgunits/{orgunitsId}",
           "httpMethod": "PUT",
           "id": "directory.orgunits.update",
           "parameterOrder": [
@@ -1930,12 +1870,12 @@
             "orgUnitPath": {
               "description": "Full path of the organizational unit or its ID",
               "location": "path",
-              "repeated": true,
+              "pattern": "^.*$",
               "required": true,
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/orgunits{/orgUnitPath*}",
+          "path": "admin/directory/v1/customer/{customerId}/orgunits/{+orgUnitPath}",
           "request": {
             "$ref": "OrgUnit"
           },
@@ -1952,6 +1892,7 @@
       "methods": {
         "list": {
           "description": "Retrieves a paginated list of all privileges for a customer.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles/ALL/privileges",
           "httpMethod": "GET",
           "id": "directory.privileges.list",
           "parameterOrder": [
@@ -1965,7 +1906,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles/ALL/privileges",
+          "path": "admin/directory/v1/customer/{customer}/roles/ALL/privileges",
           "response": {
             "$ref": "Privileges"
           },
@@ -1982,6 +1923,7 @@
           "methods": {
             "delete": {
               "description": "Deletes a building.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "httpMethod": "DELETE",
               "id": "directory.resources.buildings.delete",
               "parameterOrder": [
@@ -1990,7 +1932,7 @@
               ],
               "parameters": {
                 "buildingId": {
-                  "description": "The ID of the building to delete.",
+                  "description": "The id of the building to delete.",
                   "location": "path",
                   "required": true,
                   "type": "string"
@@ -2002,13 +1944,14 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/buildings/{buildingId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.resource.calendar"
               ]
             },
             "get": {
               "description": "Retrieves a building.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "httpMethod": "GET",
               "id": "directory.resources.buildings.get",
               "parameterOrder": [
@@ -2029,7 +1972,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/buildings/{buildingId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "response": {
                 "$ref": "Building"
               },
@@ -2040,6 +1983,7 @@
             },
             "insert": {
               "description": "Inserts a building.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/buildings",
               "httpMethod": "POST",
               "id": "directory.resources.buildings.insert",
               "parameterOrder": [
@@ -2050,11 +1994,13 @@
                   "default": "SOURCE_UNSPECIFIED",
                   "description": "Source from which Building.coordinates are derived.",
                   "enum": [
+                    "COORDINATES_SOURCE_UNDEFINED",
                     "CLIENT_SPECIFIED",
                     "RESOLVED_FROM_ADDRESS",
                     "SOURCE_UNSPECIFIED"
                   ],
                   "enumDescriptions": [
+                    "",
                     "Building.coordinates are set to the coordinates included in the request.",
                     "Building.coordinates are automatically populated based on the postal address.",
                     "Defaults to RESOLVED_FROM_ADDRESS if postal address is provided. Otherwise, defaults to CLIENT_SPECIFIED if coordinates are provided."
@@ -2069,7 +2015,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/buildings",
+              "path": "admin/directory/v1/customer/{customer}/resources/buildings",
               "request": {
                 "$ref": "Building"
               },
@@ -2082,6 +2028,7 @@
             },
             "list": {
               "description": "Retrieves a list of buildings for an account.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/buildings",
               "httpMethod": "GET",
               "id": "directory.resources.buildings.list",
               "parameterOrder": [
@@ -2108,7 +2055,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/buildings",
+              "path": "admin/directory/v1/customer/{customer}/resources/buildings",
               "response": {
                 "$ref": "Buildings"
               },
@@ -2118,7 +2065,8 @@
               ]
             },
             "patch": {
-              "description": "Updates a building. This method supports patch semantics.",
+              "description": "Patches a building via Apiary Patch Orchestration.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "httpMethod": "PATCH",
               "id": "directory.resources.buildings.patch",
               "parameterOrder": [
@@ -2127,7 +2075,7 @@
               ],
               "parameters": {
                 "buildingId": {
-                  "description": "The ID of the building to update.",
+                  "description": "The id of the building to update.",
                   "location": "path",
                   "required": true,
                   "type": "string"
@@ -2136,11 +2084,13 @@
                   "default": "SOURCE_UNSPECIFIED",
                   "description": "Source from which Building.coordinates are derived.",
                   "enum": [
+                    "COORDINATES_SOURCE_UNDEFINED",
                     "CLIENT_SPECIFIED",
                     "RESOLVED_FROM_ADDRESS",
                     "SOURCE_UNSPECIFIED"
                   ],
                   "enumDescriptions": [
+                    "",
                     "Building.coordinates are set to the coordinates included in the request.",
                     "Building.coordinates are automatically populated based on the postal address.",
                     "Defaults to RESOLVED_FROM_ADDRESS if postal address is provided. Otherwise, defaults to CLIENT_SPECIFIED if coordinates are provided."
@@ -2155,7 +2105,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/buildings/{buildingId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "request": {
                 "$ref": "Building"
               },
@@ -2168,6 +2118,7 @@
             },
             "update": {
               "description": "Updates a building.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "httpMethod": "PUT",
               "id": "directory.resources.buildings.update",
               "parameterOrder": [
@@ -2176,7 +2127,7 @@
               ],
               "parameters": {
                 "buildingId": {
-                  "description": "The ID of the building to update.",
+                  "description": "The id of the building to update.",
                   "location": "path",
                   "required": true,
                   "type": "string"
@@ -2185,11 +2136,13 @@
                   "default": "SOURCE_UNSPECIFIED",
                   "description": "Source from which Building.coordinates are derived.",
                   "enum": [
+                    "COORDINATES_SOURCE_UNDEFINED",
                     "CLIENT_SPECIFIED",
                     "RESOLVED_FROM_ADDRESS",
                     "SOURCE_UNSPECIFIED"
                   ],
                   "enumDescriptions": [
+                    "",
                     "Building.coordinates are set to the coordinates included in the request.",
                     "Building.coordinates are automatically populated based on the postal address.",
                     "Defaults to RESOLVED_FROM_ADDRESS if postal address is provided. Otherwise, defaults to CLIENT_SPECIFIED if coordinates are provided."
@@ -2204,7 +2157,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/buildings/{buildingId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/buildings/{buildingId}",
               "request": {
                 "$ref": "Building"
               },
@@ -2221,6 +2174,7 @@
           "methods": {
             "delete": {
               "description": "Deletes a calendar resource.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "httpMethod": "DELETE",
               "id": "directory.resources.calendars.delete",
               "parameterOrder": [
@@ -2241,13 +2195,14 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/calendars/{calendarResourceId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.resource.calendar"
               ]
             },
             "get": {
               "description": "Retrieves a calendar resource.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "httpMethod": "GET",
               "id": "directory.resources.calendars.get",
               "parameterOrder": [
@@ -2268,7 +2223,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/calendars/{calendarResourceId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "response": {
                 "$ref": "CalendarResource"
               },
@@ -2279,6 +2234,7 @@
             },
             "insert": {
               "description": "Inserts a calendar resource.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/calendars",
               "httpMethod": "POST",
               "id": "directory.resources.calendars.insert",
               "parameterOrder": [
@@ -2292,7 +2248,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/calendars",
+              "path": "admin/directory/v1/customer/{customer}/resources/calendars",
               "request": {
                 "$ref": "CalendarResource"
               },
@@ -2305,6 +2261,7 @@
             },
             "list": {
               "description": "Retrieves a list of calendar resources for an account.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/calendars",
               "httpMethod": "GET",
               "id": "directory.resources.calendars.list",
               "parameterOrder": [
@@ -2336,12 +2293,12 @@
                   "type": "string"
                 },
                 "query": {
-                  "description": "String query used to filter results. Should be of the form \"field operator value\" where field can be any of supported fields and operators can be any of supported operations. Operators include '=' for exact match and ':' for prefix match or HAS match where applicable. For prefix match, the value should always be followed by a *. Supported fields include generatedResourceName, name, buildingId, featureInstances.feature.name. For example buildingId=US-NYC-9TH AND featureInstances.feature.name:Phone.",
+                  "description": "String query used to filter results. Should be of the form \"field operator value\" where field can be any of supported fields and operators can be any of supported operations. Operators include '=' for exact match, '!=' for mismatch and ':' for prefix match or HAS match where applicable. For prefix match, the value should always be followed by a *. Logical operators NOT and AND are supported (in this order of precedence). Supported fields include generatedResourceName, name, buildingId, floor_name, capacity, featureInstances.feature.name. For example buildingId=US-NYC-9TH AND featureInstances.feature.name:Phone.",
                   "location": "query",
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/calendars",
+              "path": "admin/directory/v1/customer/{customer}/resources/calendars",
               "response": {
                 "$ref": "CalendarResources"
               },
@@ -2351,7 +2308,8 @@
               ]
             },
             "patch": {
-              "description": "Updates a calendar resource.\n\nThis method supports patch semantics, meaning you only need to include the fields you wish to update. Fields that are not present in the request will be preserved. This method supports patch semantics.",
+              "description": "Patches a calendar resource via Apiary Patch Orchestration.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "httpMethod": "PATCH",
               "id": "directory.resources.calendars.patch",
               "parameterOrder": [
@@ -2372,7 +2330,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/calendars/{calendarResourceId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "request": {
                 "$ref": "CalendarResource"
               },
@@ -2384,7 +2342,8 @@
               ]
             },
             "update": {
-              "description": "Updates a calendar resource.\n\nThis method supports patch semantics, meaning you only need to include the fields you wish to update. Fields that are not present in the request will be preserved.",
+              "description": "Updates a calendar resource. This method supports patch semantics, meaning you only need to include the fields you wish to update. Fields that are not present in the request will be preserved.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "httpMethod": "PUT",
               "id": "directory.resources.calendars.update",
               "parameterOrder": [
@@ -2405,7 +2364,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/calendars/{calendarResourceId}",
+              "path": "admin/directory/v1/customer/{customer}/resources/calendars/{calendarResourceId}",
               "request": {
                 "$ref": "CalendarResource"
               },
@@ -2422,6 +2381,7 @@
           "methods": {
             "delete": {
               "description": "Deletes a feature.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "httpMethod": "DELETE",
               "id": "directory.resources.features.delete",
               "parameterOrder": [
@@ -2442,13 +2402,14 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features/{featureKey}",
+              "path": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.resource.calendar"
               ]
             },
             "get": {
               "description": "Retrieves a feature.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "httpMethod": "GET",
               "id": "directory.resources.features.get",
               "parameterOrder": [
@@ -2469,7 +2430,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features/{featureKey}",
+              "path": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "response": {
                 "$ref": "Feature"
               },
@@ -2480,6 +2441,7 @@
             },
             "insert": {
               "description": "Inserts a feature.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features",
               "httpMethod": "POST",
               "id": "directory.resources.features.insert",
               "parameterOrder": [
@@ -2493,7 +2455,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features",
+              "path": "admin/directory/v1/customer/{customer}/resources/features",
               "request": {
                 "$ref": "Feature"
               },
@@ -2506,6 +2468,7 @@
             },
             "list": {
               "description": "Retrieves a list of features for an account.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features",
               "httpMethod": "GET",
               "id": "directory.resources.features.list",
               "parameterOrder": [
@@ -2532,7 +2495,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features",
+              "path": "admin/directory/v1/customer/{customer}/resources/features",
               "response": {
                 "$ref": "Features"
               },
@@ -2542,7 +2505,8 @@
               ]
             },
             "patch": {
-              "description": "Updates a feature. This method supports patch semantics.",
+              "description": "Patches a feature via Apiary Patch Orchestration.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "httpMethod": "PATCH",
               "id": "directory.resources.features.patch",
               "parameterOrder": [
@@ -2563,7 +2527,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features/{featureKey}",
+              "path": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "request": {
                 "$ref": "Feature"
               },
@@ -2576,6 +2540,7 @@
             },
             "rename": {
               "description": "Renames a feature.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features/{oldName}/rename",
               "httpMethod": "POST",
               "id": "directory.resources.features.rename",
               "parameterOrder": [
@@ -2596,7 +2561,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features/{oldName}/rename",
+              "path": "admin/directory/v1/customer/{customer}/resources/features/{oldName}/rename",
               "request": {
                 "$ref": "FeatureRename"
               },
@@ -2606,6 +2571,7 @@
             },
             "update": {
               "description": "Updates a feature.",
+              "flatPath": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "httpMethod": "PUT",
               "id": "directory.resources.features.update",
               "parameterOrder": [
@@ -2626,7 +2592,7 @@
                   "type": "string"
                 }
               },
-              "path": "customer/{customer}/resources/features/{featureKey}",
+              "path": "admin/directory/v1/customer/{customer}/resources/features/{featureKey}",
               "request": {
                 "$ref": "Feature"
               },
@@ -2645,6 +2611,7 @@
       "methods": {
         "delete": {
           "description": "Deletes a role assignment.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roleassignments/{roleAssignmentId}",
           "httpMethod": "DELETE",
           "id": "directory.roleAssignments.delete",
           "parameterOrder": [
@@ -2665,13 +2632,14 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roleassignments/{roleAssignmentId}",
+          "path": "admin/directory/v1/customer/{customer}/roleassignments/{roleAssignmentId}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.rolemanagement"
           ]
         },
         "get": {
           "description": "Retrieve a role assignment.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roleassignments/{roleAssignmentId}",
           "httpMethod": "GET",
           "id": "directory.roleAssignments.get",
           "parameterOrder": [
@@ -2692,7 +2660,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roleassignments/{roleAssignmentId}",
+          "path": "admin/directory/v1/customer/{customer}/roleassignments/{roleAssignmentId}",
           "response": {
             "$ref": "RoleAssignment"
           },
@@ -2703,6 +2671,7 @@
         },
         "insert": {
           "description": "Creates a role assignment.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roleassignments",
           "httpMethod": "POST",
           "id": "directory.roleAssignments.insert",
           "parameterOrder": [
@@ -2716,7 +2685,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roleassignments",
+          "path": "admin/directory/v1/customer/{customer}/roleassignments",
           "request": {
             "$ref": "RoleAssignment"
           },
@@ -2729,6 +2698,7 @@
         },
         "list": {
           "description": "Retrieves a paginated list of all roleAssignments.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roleassignments",
           "httpMethod": "GET",
           "id": "directory.roleAssignments.list",
           "parameterOrder": [
@@ -2765,7 +2735,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roleassignments",
+          "path": "admin/directory/v1/customer/{customer}/roleassignments",
           "response": {
             "$ref": "RoleAssignments"
           },
@@ -2780,6 +2750,7 @@
       "methods": {
         "delete": {
           "description": "Deletes a role.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "httpMethod": "DELETE",
           "id": "directory.roles.delete",
           "parameterOrder": [
@@ -2800,13 +2771,14 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles/{roleId}",
+          "path": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.rolemanagement"
           ]
         },
         "get": {
           "description": "Retrieves a role.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "httpMethod": "GET",
           "id": "directory.roles.get",
           "parameterOrder": [
@@ -2827,7 +2799,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles/{roleId}",
+          "path": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "response": {
             "$ref": "Role"
           },
@@ -2838,6 +2810,7 @@
         },
         "insert": {
           "description": "Creates a role.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles",
           "httpMethod": "POST",
           "id": "directory.roles.insert",
           "parameterOrder": [
@@ -2851,7 +2824,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles",
+          "path": "admin/directory/v1/customer/{customer}/roles",
           "request": {
             "$ref": "Role"
           },
@@ -2864,6 +2837,7 @@
         },
         "list": {
           "description": "Retrieves a paginated list of all the roles in a domain.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles",
           "httpMethod": "GET",
           "id": "directory.roles.list",
           "parameterOrder": [
@@ -2890,7 +2864,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles",
+          "path": "admin/directory/v1/customer/{customer}/roles",
           "response": {
             "$ref": "Roles"
           },
@@ -2900,7 +2874,8 @@
           ]
         },
         "patch": {
-          "description": "Updates a role. This method supports patch semantics.",
+          "description": "Patch role via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "httpMethod": "PATCH",
           "id": "directory.roles.patch",
           "parameterOrder": [
@@ -2921,7 +2896,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles/{roleId}",
+          "path": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "request": {
             "$ref": "Role"
           },
@@ -2934,6 +2909,7 @@
         },
         "update": {
           "description": "Updates a role.",
+          "flatPath": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "httpMethod": "PUT",
           "id": "directory.roles.update",
           "parameterOrder": [
@@ -2954,7 +2930,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customer}/roles/{roleId}",
+          "path": "admin/directory/v1/customer/{customer}/roles/{roleId}",
           "request": {
             "$ref": "Role"
           },
@@ -2971,6 +2947,7 @@
       "methods": {
         "delete": {
           "description": "Delete schema",
+          "flatPath": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "httpMethod": "DELETE",
           "id": "directory.schemas.delete",
           "parameterOrder": [
@@ -2991,13 +2968,14 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/schemas/{schemaKey}",
+          "path": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.userschema"
           ]
         },
         "get": {
           "description": "Retrieve schema",
+          "flatPath": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "httpMethod": "GET",
           "id": "directory.schemas.get",
           "parameterOrder": [
@@ -3018,7 +2996,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/schemas/{schemaKey}",
+          "path": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "response": {
             "$ref": "Schema"
           },
@@ -3029,6 +3007,7 @@
         },
         "insert": {
           "description": "Create schema.",
+          "flatPath": "admin/directory/v1/customer/{customerId}/schemas",
           "httpMethod": "POST",
           "id": "directory.schemas.insert",
           "parameterOrder": [
@@ -3042,7 +3021,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/schemas",
+          "path": "admin/directory/v1/customer/{customerId}/schemas",
           "request": {
             "$ref": "Schema"
           },
@@ -3055,6 +3034,7 @@
         },
         "list": {
           "description": "Retrieve all schemas for a customer",
+          "flatPath": "admin/directory/v1/customer/{customerId}/schemas",
           "httpMethod": "GET",
           "id": "directory.schemas.list",
           "parameterOrder": [
@@ -3068,7 +3048,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/schemas",
+          "path": "admin/directory/v1/customer/{customerId}/schemas",
           "response": {
             "$ref": "Schemas"
           },
@@ -3078,7 +3058,8 @@
           ]
         },
         "patch": {
-          "description": "Update schema. This method supports patch semantics.",
+          "description": "Patch Schema via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "httpMethod": "PATCH",
           "id": "directory.schemas.patch",
           "parameterOrder": [
@@ -3099,7 +3080,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/schemas/{schemaKey}",
+          "path": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "request": {
             "$ref": "Schema"
           },
@@ -3112,6 +3093,7 @@
         },
         "update": {
           "description": "Update schema",
+          "flatPath": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "httpMethod": "PUT",
           "id": "directory.schemas.update",
           "parameterOrder": [
@@ -3132,7 +3114,7 @@
               "type": "string"
             }
           },
-          "path": "customer/{customerId}/schemas/{schemaKey}",
+          "path": "admin/directory/v1/customer/{customerId}/schemas/{schemaKey}",
           "request": {
             "$ref": "Schema"
           },
@@ -3149,6 +3131,7 @@
       "methods": {
         "delete": {
           "description": "Delete all access tokens issued by a user for an application.",
+          "flatPath": "admin/directory/v1/users/{userKey}/tokens/{clientId}",
           "httpMethod": "DELETE",
           "id": "directory.tokens.delete",
           "parameterOrder": [
@@ -3169,13 +3152,14 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/tokens/{clientId}",
+          "path": "admin/directory/v1/users/{userKey}/tokens/{clientId}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user.security"
           ]
         },
         "get": {
           "description": "Get information about an access token issued by a user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/tokens/{clientId}",
           "httpMethod": "GET",
           "id": "directory.tokens.get",
           "parameterOrder": [
@@ -3196,7 +3180,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/tokens/{clientId}",
+          "path": "admin/directory/v1/users/{userKey}/tokens/{clientId}",
           "response": {
             "$ref": "Token"
           },
@@ -3206,6 +3190,7 @@
         },
         "list": {
           "description": "Returns the set of tokens specified user has issued to 3rd party applications.",
+          "flatPath": "admin/directory/v1/users/{userKey}/tokens",
           "httpMethod": "GET",
           "id": "directory.tokens.list",
           "parameterOrder": [
@@ -3219,10 +3204,35 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/tokens",
+          "path": "admin/directory/v1/users/{userKey}/tokens",
           "response": {
             "$ref": "Tokens"
           },
+          "scopes": [
+            "https://www.googleapis.com/auth/admin.directory.user.security"
+          ]
+        }
+      }
+    },
+    "twoStepVerification": {
+      "methods": {
+        "turnOff": {
+          "description": "Turn off 2-Step Verification for user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/twoStepVerification/turnOff",
+          "httpMethod": "POST",
+          "id": "directory.twoStepVerification.turnOff",
+          "parameterOrder": [
+            "userKey"
+          ],
+          "parameters": {
+            "userKey": {
+              "description": "Identifies the user in the API request. The value can be the user's primary email address, alias email address, or unique user ID.",
+              "location": "path",
+              "required": true,
+              "type": "string"
+            }
+          },
+          "path": "admin/directory/v1/users/{userKey}/twoStepVerification/turnOff",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user.security"
           ]
@@ -3233,6 +3243,7 @@
       "methods": {
         "delete": {
           "description": "Delete user",
+          "flatPath": "admin/directory/v1/users/{userKey}",
           "httpMethod": "DELETE",
           "id": "directory.users.delete",
           "parameterOrder": [
@@ -3246,13 +3257,14 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}",
+          "path": "admin/directory/v1/users/{userKey}",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user"
           ]
         },
         "get": {
           "description": "retrieve user",
+          "flatPath": "admin/directory/v1/users/{userKey}",
           "httpMethod": "GET",
           "id": "directory.users.get",
           "parameterOrder": [
@@ -3268,11 +3280,13 @@
               "default": "basic",
               "description": "What subset of fields to fetch for this user.",
               "enum": [
+                "projectionUndefined",
                 "basic",
                 "custom",
                 "full"
               ],
               "enumDescriptions": [
+                "",
                 "Do not include any custom fields for the user.",
                 "Include custom fields from schemas mentioned in customFieldMask.",
                 "Include all fields associated with this user."
@@ -3290,10 +3304,12 @@
               "default": "admin_view",
               "description": "Whether to fetch the ADMIN_VIEW or DOMAIN_PUBLIC view of the user.",
               "enum": [
+                "view_type_undefined",
                 "admin_view",
                 "domain_public"
               ],
               "enumDescriptions": [
+                "",
                 "Fetches the ADMIN_VIEW of the user.",
                 "Fetches the DOMAIN_PUBLIC view of the user."
               ],
@@ -3301,7 +3317,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}",
+          "path": "admin/directory/v1/users/{userKey}",
           "response": {
             "$ref": "User"
           },
@@ -3312,9 +3328,12 @@
         },
         "insert": {
           "description": "create user.",
+          "flatPath": "admin/directory/v1/users",
           "httpMethod": "POST",
           "id": "directory.users.insert",
-          "path": "users",
+          "parameterOrder": [],
+          "parameters": {},
+          "path": "admin/directory/v1/users",
           "request": {
             "$ref": "User"
           },
@@ -3327,8 +3346,10 @@
         },
         "list": {
           "description": "Retrieve either deleted users or all users in a domain (paginated)",
+          "flatPath": "admin/directory/v1/users",
           "httpMethod": "GET",
           "id": "directory.users.list",
+          "parameterOrder": [],
           "parameters": {
             "customFieldMask": {
               "description": "Comma-separated list of schema names. All fields from these schemas are fetched. This should only be set when projection=custom.",
@@ -3345,25 +3366,6 @@
               "location": "query",
               "type": "string"
             },
-            "event": {
-              "description": "Event on which subscription is intended (if subscribing)",
-              "enum": [
-                "add",
-                "delete",
-                "makeAdmin",
-                "undelete",
-                "update"
-              ],
-              "enumDescriptions": [
-                "User Created Event",
-                "User Deleted Event",
-                "User Admin Status Change Event",
-                "User Undeleted Event",
-                "User Updated Event"
-              ],
-              "location": "query",
-              "type": "string"
-            },
             "maxResults": {
               "default": "100",
               "description": "Maximum number of results to return.",
@@ -3376,11 +3378,13 @@
             "orderBy": {
               "description": "Column to use for sorting results",
               "enum": [
+                "orderByUndefined",
                 "email",
                 "familyName",
                 "givenName"
               ],
               "enumDescriptions": [
+                "",
                 "Primary email of the user.",
                 "User's family name.",
                 "User's given name."
@@ -3397,11 +3401,13 @@
               "default": "basic",
               "description": "What subset of fields to fetch for this user.",
               "enum": [
+                "projectionUndefined",
                 "basic",
                 "custom",
                 "full"
               ],
               "enumDescriptions": [
+                "",
                 "Do not include any custom fields for the user.",
                 "Include custom fields from schemas mentioned in customFieldMask.",
                 "Include all fields associated with this user."
@@ -3410,7 +3416,7 @@
               "type": "string"
             },
             "query": {
-              "description": "Query string search. Should be of the form \"\". Complete documentation is at https://developers.google.com/admin-sdk/directory/v1/guides/search-users",
+              "description": "Query string search. Should be of the form \"\". Complete documentation is at https: //developers.google.com/admin-sdk/directory/v1/guides/search-users",
               "location": "query",
               "type": "string"
             },
@@ -3422,10 +3428,12 @@
             "sortOrder": {
               "description": "Whether to return results in ascending or descending order.",
               "enum": [
+                "SORT_ORDER_UNDEFINED",
                 "ASCENDING",
                 "DESCENDING"
               ],
               "enumDescriptions": [
+                "",
                 "Ascending order.",
                 "Descending order."
               ],
@@ -3436,10 +3444,12 @@
               "default": "admin_view",
               "description": "Whether to fetch the ADMIN_VIEW or DOMAIN_PUBLIC view of the user.",
               "enum": [
+                "view_type_undefined",
                 "admin_view",
                 "domain_public"
               ],
               "enumDescriptions": [
+                "",
                 "Fetches the ADMIN_VIEW of the user.",
                 "Fetches the DOMAIN_PUBLIC view of the user."
               ],
@@ -3447,7 +3457,7 @@
               "type": "string"
             }
           },
-          "path": "users",
+          "path": "admin/directory/v1/users",
           "response": {
             "$ref": "Users"
           },
@@ -3455,11 +3465,11 @@
             "https://www.googleapis.com/auth/admin.directory.user",
             "https://www.googleapis.com/auth/admin.directory.user.readonly",
             "https://www.googleapis.com/auth/cloud-platform"
-          ],
-          "supportsSubscription": true
+          ]
         },
         "makeAdmin": {
           "description": "change admin status of a user",
+          "flatPath": "admin/directory/v1/users/{userKey}/makeAdmin",
           "httpMethod": "POST",
           "id": "directory.users.makeAdmin",
           "parameterOrder": [
@@ -3473,7 +3483,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/makeAdmin",
+          "path": "admin/directory/v1/users/{userKey}/makeAdmin",
           "request": {
             "$ref": "UserMakeAdmin"
           },
@@ -3482,7 +3492,8 @@
           ]
         },
         "patch": {
-          "description": "update user. This method supports patch semantics.",
+          "description": "Patch Users via Apiary Patch Orchestration",
+          "flatPath": "admin/directory/v1/users/{userKey}",
           "httpMethod": "PATCH",
           "id": "directory.users.patch",
           "parameterOrder": [
@@ -3496,7 +3507,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}",
+          "path": "admin/directory/v1/users/{userKey}",
           "request": {
             "$ref": "User"
           },
@@ -3507,8 +3518,30 @@
             "https://www.googleapis.com/auth/admin.directory.user"
           ]
         },
+        "signOut": {
+          "description": "Sign a user out of all web and device sessions and reset their sign-in cookies. User will have to sign in by authenticating again.",
+          "flatPath": "admin/directory/v1/users/{userKey}/signOut",
+          "httpMethod": "POST",
+          "id": "directory.users.signOut",
+          "parameterOrder": [
+            "userKey"
+          ],
+          "parameters": {
+            "userKey": {
+              "description": "Identifies the target user in the API request. The value can be the user's primary email address, alias email address, or unique user ID.",
+              "location": "path",
+              "required": true,
+              "type": "string"
+            }
+          },
+          "path": "admin/directory/v1/users/{userKey}/signOut",
+          "scopes": [
+            "https://www.googleapis.com/auth/admin.directory.user.security"
+          ]
+        },
         "undelete": {
           "description": "Undelete a deleted user",
+          "flatPath": "admin/directory/v1/users/{userKey}/undelete",
           "httpMethod": "POST",
           "id": "directory.users.undelete",
           "parameterOrder": [
@@ -3522,7 +3555,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/undelete",
+          "path": "admin/directory/v1/users/{userKey}/undelete",
           "request": {
             "$ref": "UserUndelete"
           },
@@ -3532,6 +3565,7 @@
         },
         "update": {
           "description": "update user",
+          "flatPath": "admin/directory/v1/users/{userKey}",
           "httpMethod": "PUT",
           "id": "directory.users.update",
           "parameterOrder": [
@@ -3545,7 +3579,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}",
+          "path": "admin/directory/v1/users/{userKey}",
           "request": {
             "$ref": "User"
           },
@@ -3558,8 +3592,10 @@
         },
         "watch": {
           "description": "Watch for changes in users list",
+          "flatPath": "admin/directory/v1/users/watch",
           "httpMethod": "POST",
           "id": "directory.users.watch",
+          "parameterOrder": [],
           "parameters": {
             "customFieldMask": {
               "description": "Comma-separated list of schema names. All fields from these schemas are fetched. This should only be set when projection=custom.",
@@ -3572,13 +3608,14 @@
               "type": "string"
             },
             "domain": {
-              "description": "Name of the domain. Fill this field to get users from only this domain. To return all users in a multi-domain fill customer field instead.",
+              "description": "Name of the domain. Fill this field to get users from only this domain. To return all users in a multi-domain fill customer field instead.\"",
               "location": "query",
               "type": "string"
             },
             "event": {
-              "description": "Event on which subscription is intended (if subscribing)",
+              "description": "Event on which subscription is intended",
               "enum": [
+                "eventTypeUnspecified",
                 "add",
                 "delete",
                 "makeAdmin",
@@ -3586,6 +3623,7 @@
                 "update"
               ],
               "enumDescriptions": [
+                "",
                 "User Created Event",
                 "User Deleted Event",
                 "User Admin Status Change Event",
@@ -3607,11 +3645,13 @@
             "orderBy": {
               "description": "Column to use for sorting results",
               "enum": [
+                "orderByUnspecified",
                 "email",
                 "familyName",
                 "givenName"
               ],
               "enumDescriptions": [
+                "",
                 "Primary email of the user.",
                 "User's family name.",
                 "User's given name."
@@ -3628,11 +3668,13 @@
               "default": "basic",
               "description": "What subset of fields to fetch for this user.",
               "enum": [
+                "projectionUnspecified",
                 "basic",
                 "custom",
                 "full"
               ],
               "enumDescriptions": [
+                "",
                 "Do not include any custom fields for the user.",
                 "Include custom fields from schemas mentioned in customFieldMask.",
                 "Include all fields associated with this user."
@@ -3641,7 +3683,7 @@
               "type": "string"
             },
             "query": {
-              "description": "Query string search. Should be of the form \"\". Complete documentation is at https://developers.google.com/admin-sdk/directory/v1/guides/search-users",
+              "description": "Query string search. Should be of the form \"\". Complete documentation is at https: //developers.google.com/admin-sdk/directory/v1/guides/search-users",
               "location": "query",
               "type": "string"
             },
@@ -3653,10 +3695,12 @@
             "sortOrder": {
               "description": "Whether to return results in ascending or descending order.",
               "enum": [
+                "sortOrderUnspecified",
                 "ASCENDING",
                 "DESCENDING"
               ],
               "enumDescriptions": [
+                "",
                 "Ascending order.",
                 "Descending order."
               ],
@@ -3678,10 +3722,9 @@
               "type": "string"
             }
           },
-          "path": "users/watch",
+          "path": "admin/directory/v1/users/watch",
           "request": {
-            "$ref": "Channel",
-            "parameterName": "resource"
+            "$ref": "Channel"
           },
           "response": {
             "$ref": "Channel"
@@ -3690,8 +3733,7 @@
             "https://www.googleapis.com/auth/admin.directory.user",
             "https://www.googleapis.com/auth/admin.directory.user.readonly",
             "https://www.googleapis.com/auth/cloud-platform"
-          ],
-          "supportsSubscription": true
+          ]
         }
       },
       "resources": {
@@ -3699,6 +3741,7 @@
           "methods": {
             "delete": {
               "description": "Remove a alias for the user",
+              "flatPath": "admin/directory/v1/users/{userKey}/aliases/{alias}",
               "httpMethod": "DELETE",
               "id": "directory.users.aliases.delete",
               "parameterOrder": [
@@ -3719,7 +3762,7 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/aliases/{alias}",
+              "path": "admin/directory/v1/users/{userKey}/aliases/{alias}",
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.user",
                 "https://www.googleapis.com/auth/admin.directory.user.alias"
@@ -3727,6 +3770,7 @@
             },
             "insert": {
               "description": "Add a alias for the user",
+              "flatPath": "admin/directory/v1/users/{userKey}/aliases",
               "httpMethod": "POST",
               "id": "directory.users.aliases.insert",
               "parameterOrder": [
@@ -3740,7 +3784,7 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/aliases",
+              "path": "admin/directory/v1/users/{userKey}/aliases",
               "request": {
                 "$ref": "Alias"
               },
@@ -3754,25 +3798,13 @@
             },
             "list": {
               "description": "List all aliases for a user",
+              "flatPath": "admin/directory/v1/users/{userKey}/aliases",
               "httpMethod": "GET",
               "id": "directory.users.aliases.list",
               "parameterOrder": [
                 "userKey"
               ],
               "parameters": {
-                "event": {
-                  "description": "Event on which subscription is intended (if subscribing)",
-                  "enum": [
-                    "add",
-                    "delete"
-                  ],
-                  "enumDescriptions": [
-                    "Alias Created Event",
-                    "Alias Deleted Event"
-                  ],
-                  "location": "query",
-                  "type": "string"
-                },
                 "userKey": {
                   "description": "Email or immutable ID of the user",
                   "location": "path",
@@ -3780,7 +3812,7 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/aliases",
+              "path": "admin/directory/v1/users/{userKey}/aliases",
               "response": {
                 "$ref": "Aliases"
               },
@@ -3789,11 +3821,11 @@
                 "https://www.googleapis.com/auth/admin.directory.user.alias",
                 "https://www.googleapis.com/auth/admin.directory.user.alias.readonly",
                 "https://www.googleapis.com/auth/admin.directory.user.readonly"
-              ],
-              "supportsSubscription": true
+              ]
             },
             "watch": {
-              "description": "Watch for changes in user aliases list",
+              "description": "Watch for changes in users list",
+              "flatPath": "admin/directory/v1/users/{userKey}/aliases/watch",
               "httpMethod": "POST",
               "id": "directory.users.aliases.watch",
               "parameterOrder": [
@@ -3803,10 +3835,12 @@
                 "event": {
                   "description": "Event on which subscription is intended (if subscribing)",
                   "enum": [
+                    "eventUndefined",
                     "add",
                     "delete"
                   ],
                   "enumDescriptions": [
+                    "",
                     "Alias Created Event",
                     "Alias Deleted Event"
                   ],
@@ -3820,10 +3854,9 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/aliases/watch",
+              "path": "admin/directory/v1/users/{userKey}/aliases/watch",
               "request": {
-                "$ref": "Channel",
-                "parameterName": "resource"
+                "$ref": "Channel"
               },
               "response": {
                 "$ref": "Channel"
@@ -3833,8 +3866,7 @@
                 "https://www.googleapis.com/auth/admin.directory.user.alias",
                 "https://www.googleapis.com/auth/admin.directory.user.alias.readonly",
                 "https://www.googleapis.com/auth/admin.directory.user.readonly"
-              ],
-              "supportsSubscription": true
+              ]
             }
           }
         },
@@ -3842,6 +3874,7 @@
           "methods": {
             "delete": {
               "description": "Remove photos for the user",
+              "flatPath": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "httpMethod": "DELETE",
               "id": "directory.users.photos.delete",
               "parameterOrder": [
@@ -3855,13 +3888,14 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/photos/thumbnail",
+              "path": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "scopes": [
                 "https://www.googleapis.com/auth/admin.directory.user"
               ]
             },
             "get": {
               "description": "Retrieve photo of a user",
+              "flatPath": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "httpMethod": "GET",
               "id": "directory.users.photos.get",
               "parameterOrder": [
@@ -3875,7 +3909,7 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/photos/thumbnail",
+              "path": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "response": {
                 "$ref": "UserPhoto"
               },
@@ -3885,7 +3919,8 @@
               ]
             },
             "patch": {
-              "description": "Add a photo for the user. This method supports patch semantics.",
+              "description": "Patch Photo via Apiary Patch Orchestration",
+              "flatPath": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "httpMethod": "PATCH",
               "id": "directory.users.photos.patch",
               "parameterOrder": [
@@ -3899,7 +3934,7 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/photos/thumbnail",
+              "path": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "request": {
                 "$ref": "UserPhoto"
               },
@@ -3912,6 +3947,7 @@
             },
             "update": {
               "description": "Add a photo for the user",
+              "flatPath": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "httpMethod": "PUT",
               "id": "directory.users.photos.update",
               "parameterOrder": [
@@ -3925,7 +3961,7 @@
                   "type": "string"
                 }
               },
-              "path": "users/{userKey}/photos/thumbnail",
+              "path": "admin/directory/v1/users/{userKey}/photos/thumbnail",
               "request": {
                 "$ref": "UserPhoto"
               },
@@ -3944,6 +3980,7 @@
       "methods": {
         "generate": {
           "description": "Generate new backup verification codes for the user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/verificationCodes/generate",
           "httpMethod": "POST",
           "id": "directory.verificationCodes.generate",
           "parameterOrder": [
@@ -3957,13 +3994,14 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/verificationCodes/generate",
+          "path": "admin/directory/v1/users/{userKey}/verificationCodes/generate",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user.security"
           ]
         },
         "invalidate": {
           "description": "Invalidate the current backup verification codes for the user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/verificationCodes/invalidate",
           "httpMethod": "POST",
           "id": "directory.verificationCodes.invalidate",
           "parameterOrder": [
@@ -3977,13 +4015,14 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/verificationCodes/invalidate",
+          "path": "admin/directory/v1/users/{userKey}/verificationCodes/invalidate",
           "scopes": [
             "https://www.googleapis.com/auth/admin.directory.user.security"
           ]
         },
         "list": {
           "description": "Returns the current set of valid backup verification codes for the specified user.",
+          "flatPath": "admin/directory/v1/users/{userKey}/verificationCodes",
           "httpMethod": "GET",
           "id": "directory.verificationCodes.list",
           "parameterOrder": [
@@ -3997,7 +4036,7 @@
               "type": "string"
             }
           },
-          "path": "users/{userKey}/verificationCodes",
+          "path": "admin/directory/v1/users/{userKey}/verificationCodes",
           "response": {
             "$ref": "VerificationCodes"
           },
@@ -4008,7 +4047,7 @@
       }
     }
   },
-  "revision": "20200605",
+  "revision": "20200909",
   "rootUrl": "https://www.googleapis.com/",
   "schemas": {
     "Alias": {
@@ -4016,24 +4055,19 @@
       "id": "Alias",
       "properties": {
         "alias": {
-          "description": "A alias email",
           "type": "string"
         },
         "etag": {
-          "description": "ETag of the resource.",
           "type": "string"
         },
         "id": {
-          "description": "Unique id of the group (Read-only) Unique id of the user (Read-only)",
           "type": "string"
         },
         "kind": {
           "default": "admin#directory#alias",
-          "description": "Kind of resource this is.",
           "type": "string"
         },
         "primaryEmail": {
-          "description": "Group's primary email (Read-only) User's primary email (Read-only)",
           "type": "string"
         }
       },
@@ -4044,26 +4078,23 @@
       "id": "Aliases",
       "properties": {
         "aliases": {
-          "description": "List of alias objects.",
           "items": {
             "type": "any"
           },
           "type": "array"
         },
         "etag": {
-          "description": "ETag of the resource.",
           "type": "string"
         },
         "kind": {
           "default": "admin#directory#aliases",
-          "description": "Kind of resource this is.",
           "type": "string"
         }
       },
       "type": "object"
     },
     "Asp": {
-      "description": "The template that returns individual ASP (Access Code) data.",
+      "description": "The template that returns individual ASP (Access Code) data. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Asp",
       "properties": {
         "codeId": {
@@ -4102,6 +4133,7 @@
       "type": "object"
     },
     "Asps": {
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Asps",
       "properties": {
         "etag": {
@@ -4124,7 +4156,7 @@
       "type": "object"
     },
     "Building": {
-      "description": "JSON template for Building object in Directory API.",
+      "description": "Public API: Resources.buildings",
       "id": "Building",
       "properties": {
         "address": {
@@ -4167,7 +4199,7 @@
       "type": "object"
     },
     "BuildingAddress": {
-      "description": "JSON template for the postal address of a building in Directory API.",
+      "description": "Public API: Resources.buildings",
       "id": "BuildingAddress",
       "properties": {
         "addressLines": {
@@ -4205,7 +4237,7 @@
       "type": "object"
     },
     "BuildingCoordinates": {
-      "description": "JSON template for coordinates of a building in Directory API.",
+      "description": "Public API: Resources.buildings",
       "id": "BuildingCoordinates",
       "properties": {
         "latitude": {
@@ -4222,7 +4254,7 @@
       "type": "object"
     },
     "Buildings": {
-      "description": "JSON template for Building List Response object in Directory API.",
+      "description": "Public API: Resources.buildings",
       "id": "Buildings",
       "properties": {
         "buildings": {
@@ -4249,7 +4281,7 @@
       "type": "object"
     },
     "CalendarResource": {
-      "description": "JSON template for Calendar Resource object in Directory API.",
+      "description": "Public API: Resources.calendars",
       "id": "CalendarResource",
       "properties": {
         "buildingId": {
@@ -4266,6 +4298,7 @@
           "type": "string"
         },
         "featureInstances": {
+          "description": "Instances of features for the calendar resource.",
           "type": "any"
         },
         "floorName": {
@@ -4327,7 +4360,7 @@
       "type": "object"
     },
     "CalendarResources": {
-      "description": "JSON template for Calendar Resource List Response object in Directory API.",
+      "description": "Public API: Resources.calendars",
       "id": "CalendarResources",
       "properties": {
         "etag": {
@@ -4377,7 +4410,6 @@
         },
         "params": {
           "additionalProperties": {
-            "description": "Declares a new parameter by name.",
             "type": "string"
           },
           "description": "Additional parameters controlling delivery channel behavior. Optional.",
@@ -4407,7 +4439,7 @@
       "type": "object"
     },
     "ChromeOsDevice": {
-      "description": "JSON template for Chrome Os Device resource in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "ChromeOsDevice",
       "properties": {
         "activeTimeRanges": {
@@ -4552,7 +4584,7 @@
           "type": "array"
         },
         "dockMacAddress": {
-          "description": "(Read-only) Built-in MAC address for the docking station that the device connected to. Factory sets Media access control address (MAC address) assigned for use by a dock. Currently this is only supported on the Dell Arcada / Sarien devices and the Dell WD19 / WD19TB Docking Station. It is reserved specifically for MAC pass through device policy. The format is twelve (12) hexadecimal digits without any delimiter (uppercase letters). This is only relevant for Dell devices.",
+          "description": "(Read-only) Built-in MAC address for the docking station that the device connected to. Factory sets Media access control address (MAC address) assigned for use by a dock. It is reserved specifically for MAC pass through device policy. The format is twelve (12) hexadecimal digits without any delimiter (uppercase letters). This is only relevant for some devices.",
           "type": "string"
         },
         "etag": {
@@ -4582,15 +4614,16 @@
           "type": "string"
         },
         "lastKnownNetwork": {
-          "description": "Contains last used network (Read-only)",
+          "description": "Contains last known network (Read-only)",
           "items": {
+            "description": "Information for an ip address.",
             "properties": {
               "ipAddress": {
-                "description": "The IP address",
+                "description": "The IP address.",
                 "type": "string"
               },
               "wanIpAddress": {
-                "description": "The WAN IP address",
+                "description": "The WAN IP address.",
                 "type": "string"
               }
             },
@@ -4733,7 +4766,6 @@
       "type": "object"
     },
     "ChromeOsDeviceAction": {
-      "description": "JSON request template for firing actions on ChromeOs Device in Directory Devices API.",
       "id": "ChromeOsDeviceAction",
       "properties": {
         "action": {
@@ -4752,7 +4784,7 @@
       "type": "object"
     },
     "ChromeOsDevices": {
-      "description": "JSON response template for List Chrome OS Devices operation in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "ChromeOsDevices",
       "properties": {
         "chromeosdevices": {
@@ -4779,7 +4811,6 @@
       "type": "object"
     },
     "ChromeOsMoveDevicesToOu": {
-      "description": "JSON request template for moving ChromeOs Device to given OU in Directory Devices API.",
       "id": "ChromeOsMoveDevicesToOu",
       "properties": {
         "deviceIds": {
@@ -4798,7 +4829,7 @@
       "type": "object"
     },
     "Customer": {
-      "description": "JSON template for Customer Resource object in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Customer",
       "properties": {
         "alternateEmail": {
@@ -4843,7 +4874,7 @@
       "type": "object"
     },
     "CustomerPostalAddress": {
-      "description": "JSON template for postal address of a customer.",
+      "description": "STEPLADDER: Generated unstable field number for field 'address_line2' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'address_line3' to avoid collision. (See http://go/stepladder-help#fieldNumber)",
       "id": "CustomerPostalAddress",
       "properties": {
         "addressLine1": {
@@ -4875,7 +4906,7 @@
           "type": "string"
         },
         "postalCode": {
-          "description": "The postal code. A postalCode example is a postal zip code such as 10009. This is in accordance with - http://portablecontacts.net/draft-spec.html#address_element.",
+          "description": "The postal code. A postalCode example is a postal zip code such as 10009. This is in accordance with - http: //portablecontacts.net/draft-spec.html#address_element.",
           "type": "string"
         },
         "region": {
@@ -4886,7 +4917,6 @@
       "type": "object"
     },
     "DomainAlias": {
-      "description": "JSON template for Domain Alias object in Directory API.",
       "id": "DomainAlias",
       "properties": {
         "creationTime": {
@@ -4924,7 +4954,6 @@
       "type": "object"
     },
     "DomainAliases": {
-      "description": "JSON response template to list domain aliases in Directory API.",
       "id": "DomainAliases",
       "properties": {
         "domainAliases": {
@@ -4947,7 +4976,6 @@
       "type": "object"
     },
     "Domains": {
-      "description": "JSON template for Domain object in Directory API.",
       "id": "Domains",
       "properties": {
         "creationTime": {
@@ -4992,7 +5020,6 @@
       "type": "object"
     },
     "Domains2": {
-      "description": "JSON response template to list Domains in Directory API.",
       "id": "Domains2",
       "properties": {
         "domains": {
@@ -5040,7 +5067,7 @@
       "type": "object"
     },
     "FeatureInstance": {
-      "description": "JSON template for a \"feature instance\".",
+      "description": "JSON template for a feature instance.",
       "id": "FeatureInstance",
       "properties": {
         "feature": {
@@ -5051,7 +5078,6 @@
       "type": "object"
     },
     "FeatureRename": {
-      "description": "JSON request template for renaming a feature.",
       "id": "FeatureRename",
       "properties": {
         "newName": {
@@ -5067,7 +5093,7 @@
       "type": "object"
     },
     "Features": {
-      "description": "JSON template for Feature List Response object in Directory API.",
+      "description": "Public API: Resources.features",
       "id": "Features",
       "properties": {
         "etag": {
@@ -5094,7 +5120,7 @@
       "type": "object"
     },
     "Group": {
-      "description": "JSON template for Group resource in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Group",
       "properties": {
         "adminCreated": {
@@ -5154,7 +5180,7 @@
       "type": "object"
     },
     "Groups": {
-      "description": "JSON response template for List Groups operation in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Groups",
       "properties": {
         "etag": {
@@ -5181,7 +5207,6 @@
       "type": "object"
     },
     "Member": {
-      "description": "JSON template for Member resource in Directory API.",
       "id": "Member",
       "properties": {
         "delivery_settings": {
@@ -5197,7 +5222,7 @@
           "type": "string"
         },
         "id": {
-          "description": "The unique ID of the group member. A member id can be used as a member request URI's memberKey. Unique identifier of group (Read-only) Unique identifier of member (Read-only)",
+          "description": "Unique identifier of group (Read-only) Unique identifier of member (Read-only) The unique ID of the group member. A member id can be used as a member request URI's memberKey.",
           "type": "string"
         },
         "kind": {
@@ -5221,7 +5246,6 @@
       "type": "object"
     },
     "Members": {
-      "description": "JSON response template for List Members operation in Directory API.",
       "id": "Members",
       "properties": {
         "etag": {
@@ -5252,7 +5276,7 @@
       "id": "MembersHasMember",
       "properties": {
         "isMember": {
-          "description": "Identifies whether the given user is a member of the group. Membership can be direct or nested.",
+          "description": "Output only. Identifies whether the given user is a member of the group. Membership can be direct or nested.",
           "readOnly": true,
           "type": "boolean"
         }
@@ -5260,7 +5284,6 @@
       "type": "object"
     },
     "MobileDevice": {
-      "description": "JSON template for Mobile Device resource in Directory API.",
       "id": "MobileDevice",
       "properties": {
         "adbStatus": {
@@ -5469,7 +5492,6 @@
       "type": "object"
     },
     "MobileDeviceAction": {
-      "description": "JSON request template for firing commands on Mobile Device in Directory Devices API.",
       "id": "MobileDeviceAction",
       "properties": {
         "action": {
@@ -5485,7 +5507,6 @@
       "type": "object"
     },
     "MobileDevices": {
-      "description": "JSON response template for List Mobile Devices operation in Directory API.",
       "id": "MobileDevices",
       "properties": {
         "etag": {
@@ -5511,86 +5532,8 @@
       },
       "type": "object"
     },
-    "Notification": {
-      "description": "Template for a notification resource.",
-      "id": "Notification",
-      "properties": {
-        "body": {
-          "description": "Body of the notification (Read-only)",
-          "type": "string"
-        },
-        "etag": {
-          "description": "ETag of the resource.",
-          "type": "string"
-        },
-        "fromAddress": {
-          "description": "Address from which the notification is received (Read-only)",
-          "type": "string"
-        },
-        "isUnread": {
-          "annotations": {
-            "required": [
-              "directory.notifications.patch",
-              "directory.notifications.update"
-            ]
-          },
-          "description": "Boolean indicating whether the notification is unread or not.",
-          "type": "boolean"
-        },
-        "kind": {
-          "default": "admin#directory#notification",
-          "description": "The type of the resource.",
-          "type": "string"
-        },
-        "notificationId": {
-          "type": "string"
-        },
-        "sendTime": {
-          "description": "Time at which notification was sent (Read-only)",
-          "format": "date-time",
-          "type": "string"
-        },
-        "subject": {
-          "description": "Subject of the notification (Read-only)",
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "Notifications": {
-      "description": "Template for notifications list response.",
-      "id": "Notifications",
-      "properties": {
-        "etag": {
-          "description": "ETag of the resource.",
-          "type": "string"
-        },
-        "items": {
-          "description": "List of notifications in this page.",
-          "items": {
-            "$ref": "Notification"
-          },
-          "type": "array"
-        },
-        "kind": {
-          "default": "admin#directory#notifications",
-          "description": "The type of the resource.",
-          "type": "string"
-        },
-        "nextPageToken": {
-          "description": "Token for fetching the next page of notifications.",
-          "type": "string"
-        },
-        "unreadNotificationsCount": {
-          "description": "Number of unread notification for the domain.",
-          "format": "int32",
-          "type": "integer"
-        }
-      },
-      "type": "object"
-    },
     "OrgUnit": {
-      "description": "JSON template for Org Unit resource in Directory API.",
+      "description": "JSON template for Org Unit resource in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "OrgUnit",
       "properties": {
         "blockInheritance": {
@@ -5639,7 +5582,7 @@
       "type": "object"
     },
     "OrgUnits": {
-      "description": "JSON response template for List Organization Units operation in Directory API.",
+      "description": "JSON response template for List Organization Units operation in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "OrgUnits",
       "properties": {
         "etag": {
@@ -5662,7 +5605,6 @@
       "type": "object"
     },
     "Privilege": {
-      "description": "JSON template for privilege resource in Directory API.",
       "id": "Privilege",
       "properties": {
         "childPrivileges": {
@@ -5701,7 +5643,6 @@
       "type": "object"
     },
     "Privileges": {
-      "description": "JSON response template for List privileges operation in Directory API.",
       "id": "Privileges",
       "properties": {
         "etag": {
@@ -5724,7 +5665,6 @@
       "type": "object"
     },
     "Role": {
-      "description": "JSON template for role resource in Directory API.",
       "id": "Role",
       "properties": {
         "etag": {
@@ -5788,7 +5728,6 @@
       "type": "object"
     },
     "RoleAssignment": {
-      "description": "JSON template for roleAssignment resource in Directory API.",
       "id": "RoleAssignment",
       "properties": {
         "assignedTo": {
@@ -5819,14 +5758,13 @@
           "type": "string"
         },
         "scopeType": {
-          "description": "The scope in which this role is assigned. Possible values are: \n- CUSTOMER\n- ORG_UNIT",
+          "description": "The scope in which this role is assigned. Possible values are: - CUSTOMER - ORG_UNIT ",
           "type": "string"
         }
       },
       "type": "object"
     },
     "RoleAssignments": {
-      "description": "JSON response template for List roleAssignments operation in Directory API.",
       "id": "RoleAssignments",
       "properties": {
         "etag": {
@@ -5842,7 +5780,7 @@
         },
         "kind": {
           "default": "admin#directory#roleAssignments",
-          "description": "The type of the API resource. This is always admin#directory#roleAssignments.",
+          "description": "The type of the API resource. This is always admin#directory#roleAssignments .",
           "type": "string"
         },
         "nextPageToken": {
@@ -5852,7 +5790,6 @@
       "type": "object"
     },
     "Roles": {
-      "description": "JSON response template for List roles operation in Directory API.",
       "id": "Roles",
       "properties": {
         "etag": {
@@ -5878,7 +5815,7 @@
       "type": "object"
     },
     "Schema": {
-      "description": "JSON template for Schema resource in Directory API.",
+      "description": "JSON template for Schema resource in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Schema",
       "properties": {
         "displayName": {
@@ -5929,7 +5866,7 @@
       "type": "object"
     },
     "SchemaFieldSpec": {
-      "description": "JSON template for FieldSpec resource for Schemas in Directory API.",
+      "description": "JSON template for FieldSpec resource for Schemas in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "SchemaFieldSpec",
       "properties": {
         "displayName": {
@@ -6009,7 +5946,7 @@
       "type": "object"
     },
     "Schemas": {
-      "description": "JSON response template for List Schema operation in Directory API.",
+      "description": "JSON response template for List Schema operation in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Schemas",
       "properties": {
         "etag": {
@@ -6032,7 +5969,7 @@
       "type": "object"
     },
     "Token": {
-      "description": "JSON template for token resource in Directory API.",
+      "description": "JSON template for token resource in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Token",
       "properties": {
         "anonymous": {
@@ -6075,7 +6012,7 @@
       "type": "object"
     },
     "Tokens": {
-      "description": "JSON response template for List tokens operation in Directory API.",
+      "description": "JSON response template for List tokens operation in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Tokens",
       "properties": {
         "etag": {
@@ -6098,19 +6035,20 @@
       "type": "object"
     },
     "User": {
-      "description": "JSON template for User object in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'external_ids' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'relations' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'addresses' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'organizations' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'phones' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'languages' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'posix_accounts' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'ssh_public_keys' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'notes' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'websites' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'locations' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'keywords' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'gender' to avoid collision. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'thumbnail_photo_etag' to avoid collision. (See http://go/stepladder-help#fieldNumber)",
       "id": "User",
       "properties": {
         "addresses": {
+          "description": "Addresses of User",
           "type": "any"
         },
         "agreedToTerms": {
-          "description": "Indicates if user has agreed to terms (Read-only)",
+          "description": "Output only. Indicates if user has agreed to terms (Read-only)",
           "readOnly": true,
           "type": "boolean"
         },
         "aliases": {
-          "description": "List of aliases (Read-only)",
+          "description": "Output only. List of aliases (Read-only)",
           "items": {
             "type": "string"
           },
@@ -6139,7 +6077,7 @@
           "type": "object"
         },
         "customerId": {
-          "description": "CustomerId of User (Read-only)",
+          "description": "Output only. CustomerId of User (Read-only)",
           "readOnly": true,
           "type": "string"
         },
@@ -6149,17 +6087,20 @@
           "type": "string"
         },
         "emails": {
+          "description": "Emails of User",
           "type": "any"
         },
         "etag": {
-          "description": "ETag of the resource.",
+          "description": "Output only. ETag of the resource.",
           "readOnly": true,
           "type": "string"
         },
         "externalIds": {
+          "description": "The external Ids of User *",
           "type": "any"
         },
         "gender": {
+          "description": "Gender of User",
           "type": "any"
         },
         "hashFunction": {
@@ -6171,6 +6112,7 @@
           "type": "string"
         },
         "ims": {
+          "description": "User's Instant Messenger",
           "type": "any"
         },
         "includeInGlobalAddressList": {
@@ -6182,40 +6124,42 @@
           "type": "boolean"
         },
         "isAdmin": {
-          "description": "Boolean indicating if the user is admin (Read-only)",
+          "description": "Output only. Boolean indicating if the user is admin (Read-only)",
           "readOnly": true,
           "type": "boolean"
         },
         "isDelegatedAdmin": {
-          "description": "Boolean indicating if the user is delegated admin (Read-only)",
+          "description": "Output only. Boolean indicating if the user is delegated admin (Read-only)",
           "readOnly": true,
           "type": "boolean"
         },
         "isEnforcedIn2Sv": {
-          "description": "Is 2-step verification enforced (Read-only)",
+          "description": "Output only. Is 2-step verification enforced (Read-only)",
           "readOnly": true,
           "type": "boolean"
         },
         "isEnrolledIn2Sv": {
-          "description": "Is enrolled in 2-step verification (Read-only)",
+          "description": "Output only. Is enrolled in 2-step verification (Read-only)",
           "readOnly": true,
           "type": "boolean"
         },
         "isMailboxSetup": {
-          "description": "Is mailbox setup (Read-only)",
+          "description": "Output only. Is mailbox setup (Read-only)",
           "readOnly": true,
           "type": "boolean"
         },
         "keywords": {
+          "description": "Keywords of User",
           "type": "any"
         },
         "kind": {
           "default": "admin#directory#user",
-          "description": "Kind of resource this is.",
+          "description": "Output only. Kind of resource this is.",
           "readOnly": true,
           "type": "string"
         },
         "languages": {
+          "description": "Languages of User",
           "type": "any"
         },
         "lastLoginTime": {
@@ -6225,6 +6169,7 @@
           "type": "string"
         },
         "locations": {
+          "description": "Locations of User",
           "type": "any"
         },
         "name": {
@@ -6237,7 +6182,7 @@
           "description": "User's name"
         },
         "nonEditableAliases": {
-          "description": "List of non editable aliases (Read-only)",
+          "description": "Output only. List of non editable aliases (Read-only)",
           "items": {
             "type": "string"
           },
@@ -6245,6 +6190,7 @@
           "type": "array"
         },
         "notes": {
+          "description": "Notes of User",
           "type": "any"
         },
         "orgUnitPath": {
@@ -6252,6 +6198,7 @@
           "type": "string"
         },
         "organizations": {
+          "description": "Organizations of User",
           "type": "any"
         },
         "password": {
@@ -6264,9 +6211,11 @@
           "type": "string"
         },
         "phones": {
+          "description": "Phone numbers of User",
           "type": "any"
         },
         "posixAccounts": {
+          "description": "The POSIX accounts of User",
           "type": "any"
         },
         "primaryEmail": {
@@ -6283,13 +6232,15 @@
           "type": "string"
         },
         "recoveryPhone": {
-          "description": "Recovery phone of the user. The phone number must be in the E.164 format, starting with the plus sign (+). Example: +16506661212.",
+          "description": "Recovery phone of the user. The phone number must be in the E.164 format, starting with the plus sign (+). Example: *+16506661212*.",
           "type": "string"
         },
         "relations": {
+          "description": "The Relations of User *",
           "type": "any"
         },
         "sshPublicKeys": {
+          "description": "The SSH public keys of User",
           "type": "any"
         },
         "suspended": {
@@ -6297,21 +6248,22 @@
           "type": "boolean"
         },
         "suspensionReason": {
-          "description": "Suspension reason if user is suspended (Read-only)",
+          "description": "Output only. Suspension reason if user is suspended (Read-only)",
           "readOnly": true,
           "type": "string"
         },
         "thumbnailPhotoEtag": {
-          "description": "ETag of the user's photo (Read-only)",
+          "description": "Output only. ETag of the user's photo (Read-only)",
           "readOnly": true,
           "type": "string"
         },
         "thumbnailPhotoUrl": {
-          "description": "Photo Url of the user (Read-only)",
+          "description": "Output only. Photo Url of the user (Read-only)",
           "readOnly": true,
           "type": "string"
         },
         "websites": {
+          "description": "Websites of User",
           "type": "any"
         }
       },
@@ -6377,7 +6329,7 @@
           "type": "string"
         },
         "sourceIsStructured": {
-          "description": "User supplied address was structured. Structured addresses are NOT supported at this time. You might be able to write structured addresses, but any values will eventually be clobbered.",
+          "description": "User supplied address was structured. Structured addresses are NOT supported at this time. You might be able to write structured addresses but any values will eventually be clobbered.",
           "type": "boolean"
         },
         "streetAddress": {
@@ -6385,7 +6337,7 @@
           "type": "string"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard values of that entry. For example address could be of home, work etc. In addition to the standard type, an entry can have a custom type and can take any value. Such type should have the CUSTOM value as type and also have a customType value.",
+          "description": "Each entry can have a type which indicates standard values of that entry. For example address could be of home work etc. In addition to the standard type an entry can have a custom type and can take any value. Such type should have the CUSTOM value as type and also have a customType value.",
           "type": "string"
         }
       },
@@ -6445,7 +6397,7 @@
       "id": "UserGender",
       "properties": {
         "addressMeAs": {
-          "description": "AddressMeAs. A human-readable string containing the proper way to refer to the profile owner by humans, for example \"he/him/his\" or \"they/them/their\".",
+          "description": "AddressMeAs. A human-readable string containing the proper way to refer to the profile owner by humans for example he/him/his or they/them/their.",
           "type": "string"
         },
         "customGender": {
@@ -6480,11 +6432,11 @@
           "type": "boolean"
         },
         "protocol": {
-          "description": "Protocol used in the instant messenger. It should be one of the values from ImProtocolTypes map. Similar to type, it can take a CUSTOM value and specify the custom name in customProtocol field.",
+          "description": "Protocol used in the instant messenger. It should be one of the values from ImProtocolTypes map. Similar to type it can take a CUSTOM value and specify the custom name in customProtocol field.",
           "type": "string"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard types of that entry. For example instant messengers could be of home, work etc. In addition to the standard type, an entry can have a custom type and can take any value. Such types should have the CUSTOM value as type and also have a customType value.",
+          "description": "Each entry can have a type which indicates standard types of that entry. For example instant messengers could be of home work etc. In addition to the standard type an entry can have a custom type and can take any value. Such types should have the CUSTOM value as type and also have a customType value.",
           "type": "string"
         }
       },
@@ -6499,7 +6451,7 @@
           "type": "string"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard type of that entry. For example, keyword could be of type occupation or outlook. In addition to the standard type, an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a customType value.",
+          "description": "Each entry can have a type which indicates standard type of that entry. For example keyword could be of type occupation or outlook. In addition to the standard type an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a customType value.",
           "type": "string"
         },
         "value": {
@@ -6529,7 +6481,7 @@
       "id": "UserLocation",
       "properties": {
         "area": {
-          "description": "Textual location. This is most useful for display purposes to concisely describe the location. For example, \"Mountain View, CA\", \"Near Seattle\", \"US-NYC-9TH 9A209A\".",
+          "description": "Textual location. This is most useful for display purposes to concisely describe the location. For example 'Mountain View, CA', 'Near Seattle', 'US-NYC-9TH 9A209A.''",
           "type": "string"
         },
         "buildingId": {
@@ -6549,18 +6501,17 @@
           "type": "string"
         },
         "floorSection": {
-          "description": "Floor section. More specific location within the floor. For example, if a floor is divided into sections \"A\", \"B\", and \"C\", this field would identify one of those values.",
+          "description": "Floor section. More specific location within the floor. For example if a floor is divided into sections 'A', 'B' and 'C' this field would identify one of those values.",
           "type": "string"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard types of that entry. For example location could be of types default and desk. In addition to standard type, an entry can have a custom type and can give it any name. Such types should have \"custom\" as type and also have a customType value.",
+          "description": "Each entry can have a type which indicates standard types of that entry. For example location could be of types default and desk. In addition to standard type an entry can have a custom type and can give it any name. Such types should have 'custom' as type and also have a customType value.",
           "type": "string"
         }
       },
       "type": "object"
     },
     "UserMakeAdmin": {
-      "description": "JSON request template for setting/revoking admin status of a user in Directory API.",
       "id": "UserMakeAdmin",
       "properties": {
         "status": {
@@ -6576,7 +6527,6 @@
       "type": "object"
     },
     "UserName": {
-      "description": "JSON template for name of a user in Directory API.",
       "id": "UserName",
       "properties": {
         "familyName": {
@@ -6654,7 +6604,7 @@
           "type": "string"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard types of that entry. For example organization could be of school, work etc. In addition to the standard type, an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a CustomType value.",
+          "description": "Each entry can have a type which indicates standard types of that entry. For example organization could be of school work etc. In addition to the standard type an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a CustomType value.",
           "type": "string"
         }
       },
@@ -6673,7 +6623,7 @@
           "type": "boolean"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard types of that entry. For example phone could be of home_fax, work, mobile etc. In addition to the standard type, an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a customType value.",
+          "description": "Each entry can have a type which indicates standard types of that entry. For example phone could be of home_fax work mobile etc. In addition to the standard type an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a customType value.",
           "type": "string"
         },
         "value": {
@@ -6684,7 +6634,7 @@
       "type": "object"
     },
     "UserPhoto": {
-      "description": "JSON template for Photo object in Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "UserPhoto",
       "properties": {
         "etag": {
@@ -6789,7 +6739,7 @@
           "type": "string"
         },
         "type": {
-          "description": "The relation of the user. Some of the possible values are mother, father, sister, brother, manager, assistant, partner.",
+          "description": "The relation of the user. Some of the possible values are mother father sister brother manager assistant partner.",
           "type": "string"
         },
         "value": {
@@ -6821,7 +6771,6 @@
       "type": "object"
     },
     "UserUndelete": {
-      "description": "JSON request template to undelete a user in Directory API.",
       "id": "UserUndelete",
       "properties": {
         "orgUnitPath": {
@@ -6844,7 +6793,7 @@
           "type": "boolean"
         },
         "type": {
-          "description": "Each entry can have a type which indicates standard types of that entry. For example website could be of home, work, blog etc. In addition to the standard type, an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a customType value.",
+          "description": "Each entry can have a type which indicates standard types of that entry. For example website could be of home work blog etc. In addition to the standard type an entry can have a custom type and can give it any name. Such types should have the CUSTOM value as type and also have a customType value.",
           "type": "string"
         },
         "value": {
@@ -6855,7 +6804,7 @@
       "type": "object"
     },
     "Users": {
-      "description": "JSON response template for List Users operation in Apps Directory API.",
+      "description": "STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "Users",
       "properties": {
         "etag": {
@@ -6886,7 +6835,7 @@
       "type": "object"
     },
     "VerificationCode": {
-      "description": "JSON template for verification codes in Directory API.",
+      "description": "JSON template for verification codes in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "VerificationCode",
       "properties": {
         "etag": {
@@ -6910,7 +6859,7 @@
       "type": "object"
     },
     "VerificationCodes": {
-      "description": "JSON response template for List verification codes operation in Directory API.",
+      "description": "JSON response template for List verification codes operation in Directory API. STEPLADDER: Generated unstable field number for field 'kind'. (See http://go/stepladder-help#fieldNumber) STEPLADDER: Generated unstable field number for field 'etag'. (See http://go/stepladder-help#fieldNumber)",
       "id": "VerificationCodes",
       "properties": {
         "etag": {
@@ -6933,7 +6882,7 @@
       "type": "object"
     }
   },
-  "servicePath": "admin/directory/v1/",
-  "title": "Admin Directory API",
+  "servicePath": "",
+  "title": "Admin SDK",
   "version": "directory_v1"
 }

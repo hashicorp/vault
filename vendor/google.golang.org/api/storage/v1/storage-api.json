@@ -26,7 +26,7 @@
   "description": "Stores and retrieves potentially large, immutable data objects.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/storage/docs/json_api/",
-  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/5Ir-e9ddNPcr5skzvRsSnJlvTYg\"",
+  "etag": "\"-2NioU2H8y8siEzrBOV_qzRI6kQ/sPMqcoPqdFD0a_Hhegm2T9RGrZc\"",
   "icons": {
     "x16": "https://www.google.com/images/icons/product/cloud_storage-16.png",
     "x32": "https://www.google.com/images/icons/product/cloud_storage-32.png"
@@ -3229,7 +3229,7 @@
       }
     }
   },
-  "revision": "20200611",
+  "revision": "20200826",
   "rootUrl": "https://storage.googleapis.com/",
   "schemas": {
     "Bucket": {
@@ -3406,8 +3406,8 @@
                         "type": "string"
                       },
                       "customTimeBefore": {
-                        "description": "A timestamp in RFC 3339 format. This condition is satisfied when the custom time on an object is before this timestamp.",
-                        "format": "date-time",
+                        "description": "A date in RFC 3339 format with only the date part (for instance, \"2013-01-15\"). This condition is satisfied when the custom time on an object is before this date in UTC.",
+                        "format": "date",
                         "type": "string"
                       },
                       "daysSinceCustomTime": {
@@ -3436,8 +3436,8 @@
                         "type": "array"
                       },
                       "noncurrentTimeBefore": {
-                        "description": "A timestamp in RFC 3339 format. This condition is satisfied when the noncurrent time on an object is before this timestamp. This condition is relevant only for versioned objects.",
-                        "format": "date-time",
+                        "description": "A date in RFC 3339 format with only the date part (for instance, \"2013-01-15\"). This condition is satisfied when the noncurrent time on an object is before this date in UTC. This condition is relevant only for versioned objects.",
+                        "format": "date",
                         "type": "string"
                       },
                       "numNewerVersions": {
