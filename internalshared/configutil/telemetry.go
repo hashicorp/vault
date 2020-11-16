@@ -149,6 +149,7 @@ type Telemetry struct {
 
 	// Whether or not telemetry should add labels for namespaces
 	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
+	OpenTelemetryDisable        bool `hcl:"opentelemetry_disable"`
 }
 
 func (t *Telemetry) GoString() string {

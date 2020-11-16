@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -186,7 +187,10 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
 	}
 
-	return printablePathCheckHandler
+	// And finally wrap the handler with tracing
+	tracingHandler := otelhttp.NewHandler(printablePathCheckHandler, "api")
+
+	return tracingHandler
 }
 
 type copyResponseWriter struct {

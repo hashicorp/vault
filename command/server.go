@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"io"
 	"io/ioutil"
 	"net"
@@ -25,6 +26,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -37,7 +39,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -49,6 +50,10 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/propagators"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -987,6 +992,22 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
+
+	if !config.Telemetry.OpenTelemetryDisable {
+		exporter, err := stdout.NewExporter([]stdout.Option{
+			stdout.WithPrettyPrint(),
+		}...)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("failed to initialize stdout export pipeline: %v", err))
+			return 1
+		}
+
+		bsp := sdktrace.NewBatchSpanProcessor(exporter)
+		defer bsp.Shutdown()
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
+		global.SetTracerProvider(tp)
+		global.SetTextMapPropagator(propagators.Baggage{})
+	}
 
 	// Initialize the backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
