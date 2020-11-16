@@ -15,6 +15,7 @@ Router.map(function() {
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
+      this.route('meep'); // NOTE: add query params here, ex: { path: '/:param' }
       this.route('metrics', function() {
         this.route('index', { path: '/' });
         this.route('config');
