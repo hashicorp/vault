@@ -74,7 +74,7 @@ management tool.
 
     ```text
     $ vault write auth/kubernetes/config \
-        token_reviewer_jwt="reviewer_service_account_jwt" \
+        token_reviewer_jwt="<your reviewer service account JWT>" \
         kubernetes_host=https://192.168.99.100:8443 \
         kubernetes_ca_cert=@ca.crt
     ```
