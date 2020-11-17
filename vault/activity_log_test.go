@@ -1536,8 +1536,6 @@ func expectCurrentSegmentRefreshed(t *testing.T, a *ActivityLog, expectedStart i
 }
 
 func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
-	t.Skip("fails on OSS")
-
 	now := time.Now().UTC()
 	a, _, _ := setupActivityRecordsInStorage(t, now, false, false)
 	a.enabled = true
