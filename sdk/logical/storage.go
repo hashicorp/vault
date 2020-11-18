@@ -54,7 +54,7 @@ func (t *TelemetryStorageWrapper) Get(ctx context.Context, s string) (*StorageEn
 
 func (t *TelemetryStorageWrapper) Put(ctx context.Context, entry *StorageEntry) error {
 	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "PUT")
-	span.SetAttributes(label.String("path", entry.Key))
+	span.SetAttributes(label.String("key", entry.Key))
 	defer span.End()
 	return t.storage.Put(ctx, entry)
 }
