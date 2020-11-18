@@ -4,8 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/hashicorp/go-cleanhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger"
+	"go.opentelemetry.io/otel/propagators"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -25,7 +33,7 @@ type VaultUI struct {
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string, outputCurlString bool) {
+func setupEnv(args []string) (retArgs []string, format string, outputCurlString, openTelemetry bool) {
 	var nextArgFormat bool
 
 	for _, arg := range args {
@@ -46,6 +54,11 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 
 		if arg == "-output-curl-string" {
 			outputCurlString = true
+			continue
+		}
+
+		if arg == "-open-telemetry" {
+			openTelemetry = true
 			continue
 		}
 
@@ -73,7 +86,7 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 		format = "table"
 	}
 
-	return args, format, outputCurlString
+	return args, format, outputCurlString, openTelemetry
 }
 
 type RunOptions struct {
@@ -97,7 +110,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	var format string
 	var outputCurlString bool
-	args, format, outputCurlString = setupEnv(args)
+	var openTelemetryEnable bool
+	args, format, outputCurlString, openTelemetryEnable = setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -175,6 +189,30 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		HiddenCommands:             hiddenCommands,
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
+	}
+
+	if openTelemetryEnable {
+		// Construct and register an export pipeline using the Jaeger
+		// exporter and a span processor.
+		flush, err := jaeger.InstallNewPipeline(
+			jaeger.WithAgentEndpoint("localhost:6831"),
+			jaeger.WithProcess(jaeger.Process{
+				ServiceName: "Vault-CLI",
+			}))
+		if err != nil {
+			fmt.Printf("failed to initialize stdout export pipeline: %v", err)
+			return 1
+		}
+
+		defer flush()
+
+		global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(b3.B3{}, propagators.TraceContext{}, propagators.Baggage{}))
+
+		// Replace the default HTTP client with one which propagates tracing context
+		http.DefaultClient = &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}
+		cleanhttp.EnableOpenTelemetry = true
 	}
 
 	exitCode, err := cli.Run()

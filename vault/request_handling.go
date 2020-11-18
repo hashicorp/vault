@@ -4,7 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/trace"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -16,14 +27,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -409,14 +412,7 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	}
 
 	ctx, cancel := context.WithCancel(c.activeContext)
-	go func(ctx context.Context, httpCtx context.Context) {
-		select {
-		case <-ctx.Done():
-		case <-httpCtx.Done():
-			cancel()
-		}
-	}(ctx, httpCtx)
-
+	ctx = mergeContexts(ctx, httpCtx)
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
@@ -430,6 +426,8 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	cancel()
 	return resp, err
 }
+
+const MountEntryContextKey = "mountEntry"
 
 func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namespace, req *logical.Request) (resp *logical.Response, err error) {
 	// Allowing writing to a path ending in / makes it extremely difficult to
@@ -588,6 +586,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
+		}
+		if c.openTelemetryEnabled {
+			var span trace.Span
+			ctx, span = global.Tracer("github.com/hashicorp/vault").Start(ctx, entry.Type)
+			defer span.End()
 		}
 	}
 
@@ -984,6 +987,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
 		}
+		if c.openTelemetryEnabled {
+			var span trace.Span
+			ctx, span = global.Tracer("github.com/hashicorp/vault").Start(ctx, entry.Type)
+			defer span.End()
+		}
 	}
 
 	// Do an unauth check. This will cause EGP policies to be checked
@@ -1341,4 +1349,65 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	}
 
 	return nil
+}
+
+type mergedContext struct {
+	mu      sync.Mutex
+	mainCtx context.Context
+	ctx     context.Context
+	done    chan struct{}
+	err     error
+}
+
+func mergeContexts(mainCtx, ctx context.Context) context.Context {
+	c := &mergedContext{mainCtx: mainCtx, ctx: ctx, done: make(chan struct{})}
+	go c.run()
+	return c
+}
+
+func (c *mergedContext) Done() <-chan struct{} {
+	return c.done
+}
+
+func (c *mergedContext) Err() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.err
+}
+
+func (c *mergedContext) Deadline() (deadline time.Time, ok bool) {
+	var d time.Time
+	d1, ok1 := c.ctx.Deadline()
+	d2, ok2 := c.mainCtx.Deadline()
+	if ok1 && d1.UnixNano() < d2.UnixNano() {
+		d = d1
+	} else if ok2 {
+		d = d2
+	}
+	return d, ok1 || ok2
+}
+
+func (c *mergedContext) Value(key interface{}) interface{} {
+	return c.ctx.Value(key)
+}
+
+func (c *mergedContext) run() {
+	var doneCtx context.Context
+	select {
+	case <-c.mainCtx.Done():
+		doneCtx = c.mainCtx
+	case <-c.ctx.Done():
+		doneCtx = c.ctx
+	case <-c.done:
+		return
+	}
+
+	c.mu.Lock()
+	if c.err != nil {
+		c.mu.Unlock()
+		return
+	}
+	c.err = doneCtx.Err()
+	c.mu.Unlock()
+	close(c.done)
 }

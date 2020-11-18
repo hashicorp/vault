@@ -499,7 +499,8 @@ type Core struct {
 	clusterListener *atomic.Value
 
 	// Telemetry objects
-	metricsHelper *metricsutil.MetricsHelper
+	metricsHelper        *metricsutil.MetricsHelper
+	openTelemetryEnabled bool
 
 	// Stores request counters
 	counters counters
@@ -635,7 +636,8 @@ type CoreConfig struct {
 	ClusterHeartbeatInterval time.Duration
 
 	// Activity log controls
-	ActivityLogConfig ActivityLogCoreConfig
+	ActivityLogConfig    ActivityLogCoreConfig
+	OpenTelemetryEnabled bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -764,6 +766,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		openTelemetryEnabled:         conf.OpenTelemetryEnabled,
 		metricSink:                   conf.MetricSink,
 		secureRandomReader:           conf.SecureRandomReader,
 		rawConfig:                    new(atomic.Value),

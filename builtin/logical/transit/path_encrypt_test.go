@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"reflect"
 	"testing"
 
@@ -698,5 +699,38 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 				t.Errorf("decodeBatchRequestItems unexpected dest value, want: '%v', got: '%v'", expectedDest, gotDest)
 			}
 		})
+	}
+}
+
+func BenchmarkEncrypt1(t *testing.B) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create the policy
+	policyReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/existing_key",
+		Storage:   s,
+	}
+	resp, err = b.HandleRequest(context.Background(), policyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	plaintext := "MGQ2ZTEzMzRhYTc4MTc2YzI2ZjAzN2IwMzNiMWUzODYK" // "the quick brown fox"
+
+	polReq := keysutil.PolicyRequest{
+		Storage: s,
+		Name:    "existing_key",
+	}
+	ctx := context.Background()
+	p, _, err := b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	for i := 0; i < t.N; i++ {
+		_, err = p.Encrypt(1, nil, nil, plaintext)
+		if err != nil {
+			t.Fail()
+		}
 	}
 }

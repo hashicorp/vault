@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"io"
 	"io/ioutil"
 	"os"
@@ -54,6 +55,7 @@ type BaseCommand struct {
 	flagFormat           string
 	flagField            string
 	flagOutputCurlString bool
+	flagOpenTelemetry    bool
 
 	flagMFA []string
 
@@ -103,6 +105,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		if err := config.ConfigureTLS(t); err != nil {
 			return nil, errors.Wrap(err, "failed to setup TLS config")
 		}
+	}
+
+	if c.flagOpenTelemetry {
+		config.HttpClient.Transport = otelhttp.NewTransport(config.HttpClient.Transport)
 	}
 
 	// Build the client
@@ -354,6 +360,13 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default: false,
 				Usage: "Instead of executing the request, print an equivalent cURL " +
 					"command string and exit.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "open-telemetry",
+				Target:  &c.flagOpenTelemetry,
+				Default: false,
+				Usage:   "Enable OpenTelemetry tracing.",
 			})
 
 		}

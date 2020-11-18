@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"io"
 	"io/ioutil"
@@ -1011,6 +1013,12 @@ func (c *ServerCommand) Run(args []string) int {
 		defer flush()
 
 		global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(b3.B3{}, propagators.TraceContext{}, propagators.Baggage{}))
+
+		// Replace the default HTTP client with one which propagates tracing context
+		http.DefaultClient = &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithSpanNameFormatter(formatRequest)),
+		}
+		cleanhttp.EnableOpenTelemetry = true
 	}
 
 	// Initialize the backend
@@ -1211,6 +1219,7 @@ func (c *ServerCommand) Run(args []string) int {
 		MetricsHelper:             metricsHelper,
 		MetricSink:                metricSink,
 		SecureRandomReader:        secureRandomReader,
+		OpenTelemetryEnabled:      !config.Telemetry.OpenTelemetryDisable,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -1954,6 +1963,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func formatRequest(operation string, r *http.Request) string {
+	return fmt.Sprintf("%s %s", operation, r.URL.Path)
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {

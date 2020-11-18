@@ -5,11 +5,14 @@ import (
 	"net/http"
 	"runtime"
 	"time"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
+
+var EnableOpenTelemetry bool
 
 // DefaultTransport returns a new http.Transport with similar default values to
 // http.DefaultTransport, but with idle connections and keepalives disabled.
-func DefaultTransport() *http.Transport {
+func DefaultTransport() http.RoundTripper {
 	transport := DefaultPooledTransport()
 	transport.DisableKeepAlives = true
 	transport.MaxIdleConnsPerHost = -1
@@ -34,6 +37,7 @@ func DefaultPooledTransport() *http.Transport {
 		ExpectContinueTimeout: 1 * time.Second,
 		MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
 	}
+
 	return transport
 }
 
@@ -41,9 +45,16 @@ func DefaultPooledTransport() *http.Transport {
 // http.Client, but with a non-shared Transport, idle connections disabled, and
 // keepalives disabled.
 func DefaultClient() *http.Client {
-	return &http.Client{
-		Transport: DefaultTransport(),
+	hc := &http.Client{
 	}
+	tp := DefaultTransport()
+
+	if EnableOpenTelemetry {
+		hc.Transport = otelhttp.NewTransport(tp)
+	} else {
+		hc.Transport = tp
+	}
+	return hc
 }
 
 // DefaultPooledClient returns a new http.Client with similar default values to

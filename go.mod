@@ -8,6 +8,8 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace google.golang.org/grpc v1.31.1 => google.golang.org/grpc v1.29.1
 
+replace github.com/hashicorp/go-cleanhttp => ../go-cleanhttp
+
 require (
 	cloud.google.com/go v0.65.0
 	cloud.google.com/go/spanner v1.5.1

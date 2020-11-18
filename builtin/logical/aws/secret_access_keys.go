@@ -243,7 +243,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = iamClient.CreateUser(createUserRequest)
+	_, err = iamClient.CreateUserWithContext(ctx, createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
 			iamErr := errwrap.Wrapf("error creating IAM user: {{err}}", err)
@@ -254,7 +254,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, arn := range role.PolicyArns {
 		// Attach existing policy against user
-		_, err = iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
+		_, err = iamClient.AttachUserPolicyWithContext(ctx, &iam.AttachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: aws.String(arn),
 		})
@@ -265,7 +265,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 	if role.PolicyDocument != "" {
 		// Add new inline user policy against user
-		_, err = iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
+		_, err = iamClient.PutUserPolicyWithContext(ctx, &iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
 			PolicyDocument: aws.String(role.PolicyDocument),
@@ -277,7 +277,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, group := range role.IAMGroups {
 		// Add user to IAM groups
-		_, err = iamClient.AddUserToGroup(&iam.AddUserToGroupInput{
+		_, err = iamClient.AddUserToGroupWithContext(ctx, &iam.AddUserToGroupInput{
 			UserName:  aws.String(username),
 			GroupName: aws.String(group),
 		})
@@ -287,7 +287,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the keys
-	keyResp, err := iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
+	keyResp, err := iamClient.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
