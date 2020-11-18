@@ -3660,6 +3660,24 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	return resp, nil
 }
 
+func (b *SystemBackend) handleRevokeEntity(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	eType := d.Get("type").(string)
+	switch eType {
+	case "id":
+	case "name":
+	default:
+		return logical.ErrorResponse("invalid type"), nil
+	}
+
+	eValue := d.Get("value").(string)
+
+	if err := b.Core.expiration.revokeByEntity(ctx, eType, eValue); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"

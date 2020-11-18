@@ -1157,6 +1157,26 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
 		},
+		{
+			Pattern: "leases/revoke-entity",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Default:     "id",
+					Description: "Type of the entity identifying value. Can be 'id' or 'name'",
+				},
+				"value": {
+					Type:        framework.TypeString,
+					Description: "Identifier of the entity. Can be the entity ID or the entity name based on the 'type' field.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRevokeEntity,
+					Summary:  "Revokes all leases issued against the entity.",
+				},
+			},
+		},
 	}
 }
 

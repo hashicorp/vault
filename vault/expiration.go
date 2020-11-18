@@ -13,6 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/identity"
+
+	"github.com/armon/go-radix"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -85,6 +89,9 @@ type ExpirationManager struct {
 	nonexpiring sync.Map
 	leaseCount  int
 	pendingLock sync.RWMutex
+
+	entityToLeasesCache  *radix.Tree
+	leaseToEntitiesCache *radix.Tree
 
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
@@ -190,16 +197,18 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	}
 
 	exp := &ExpirationManager{
-		core:        c,
-		router:      c.router,
-		idView:      view.SubView(leaseViewPrefix),
-		tokenView:   view.SubView(tokenViewPrefix),
-		tokenStore:  c.tokenStore,
-		logger:      logger,
-		pending:     sync.Map{},
-		nonexpiring: sync.Map{},
-		leaseCount:  0,
-		tidyLock:    new(int32),
+		core:                 c,
+		router:               c.router,
+		idView:               view.SubView(leaseViewPrefix),
+		tokenView:            view.SubView(tokenViewPrefix),
+		tokenStore:           c.tokenStore,
+		logger:               logger,
+		pending:              sync.Map{},
+		nonexpiring:          sync.Map{},
+		entityToLeasesCache:  radix.New(),
+		leaseToEntitiesCache: radix.New(),
+		leaseCount:           0,
+		tidyLock:             new(int32),
 
 		uniquePolicies:      make(map[string][]string),
 		emptyUniquePolicies: time.NewTicker(7 * 24 * time.Hour),
@@ -323,11 +332,13 @@ func (m *ExpirationManager) invalidate(key string) {
 				pending.timer.Stop()
 				m.pending.Delete(leaseID)
 				m.leaseCount--
+				m.deleteLeaseFromEntityCache(leaseID)
 
 				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
 					m.logger.Error("failed to update quota on lease invalidation", "error", err)
 					return
 				}
+
 			default:
 				// Handle lease update
 				m.updatePendingInternal(le)
@@ -338,6 +349,7 @@ func (m *ExpirationManager) invalidate(key string) {
 			if le == nil {
 				// If in the nonexpiring map, remove there.
 				m.nonexpiring.Delete(leaseID)
+				m.deleteLeaseFromEntityCache(leaseID)
 				return
 			}
 			// Handle lease creation
@@ -666,6 +678,8 @@ func (m *ExpirationManager) Stop() error {
 		return true
 	})
 	m.uniquePolicies = make(map[string][]string)
+	m.leaseToEntitiesCache = radix.New()
+	m.entityToLeasesCache = radix.New()
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -775,6 +789,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 	}
 	m.nonexpiring.Delete(leaseID)
+	m.deleteLeaseFromEntityCache(leaseID)
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1500,6 +1515,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			// anyway by falling through to the next check.
 			pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 			m.nonexpiring.Store(le.LeaseID, pending)
+			m.addLeaseToEntityCache(le)
 		}
 
 		// if the timer happened to exist, stop the time and delete it from the
@@ -1508,6 +1524,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
+			m.deleteLeaseFromEntityCache(le.LeaseID)
 			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []string{le.LeaseID}); err != nil {
 				m.logger.Error("failed to update quota on lease deletion", "error", err)
 				return
@@ -1540,6 +1557,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 	pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 
 	m.pending.Store(le.LeaseID, pending)
+	m.addLeaseToEntityCache(le)
 
 	if leaseCreated {
 		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
@@ -2112,6 +2130,66 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 
 	m.pending.Range(callback)
 	m.nonexpiring.Range(callback)
+
+	return nil
+}
+
+func (m *ExpirationManager) deleteLeaseFromEntityCache(leaseID string) {
+	walkFn := func(key string, value interface{}) bool {
+		idx := strings.LastIndex(key, "/")
+		leaseID, entityID := key[:idx], key[idx+1:]
+		m.entityToLeasesCache.DeletePrefix(entityID + "/" + leaseID)
+		return false
+	}
+	m.leaseToEntitiesCache.WalkPrefix(leaseID+"/", walkFn)
+	m.leaseToEntitiesCache.DeletePrefix(leaseID + "/")
+}
+
+func (m *ExpirationManager) addLeaseToEntityCache(le *leaseEntry) {
+	if le.Auth.EntityID != "" {
+		m.leaseToEntitiesCache.Insert(le.LeaseID+"/"+le.Auth.EntityID, nil)
+		m.entityToLeasesCache.Insert(le.Auth.EntityID+"/"+le.LeaseID, nil)
+	}
+}
+
+func (m *ExpirationManager) revokeByEntity(ctx context.Context, eType, eValue string) error {
+	entityID := eValue
+	if eType == "name" {
+		var entity *identity.Entity
+		var err error
+		entity, err = m.core.identityStore.MemDBEntityByName(ctx, eValue, false)
+		if err != nil {
+			return err
+		}
+		entityID = entity.ID
+	}
+
+	var existing []string
+	walkFn := func(key string, value interface{}) bool {
+		existing = append(existing, key[strings.Index(key, "/")+1:])
+		return false
+	}
+	m.entityToLeasesCache.WalkPrefix(entityID+"/", walkFn)
+
+	for _, leaseID := range existing {
+		le, err := m.loadEntry(ctx, leaseID)
+		if err != nil {
+			return err
+		}
+
+		if le != nil {
+			le.ExpireTime = time.Now()
+			{
+				m.pendingLock.Lock()
+				if err := m.persistEntry(ctx, le); err != nil {
+					m.pendingLock.Unlock()
+					return err
+				}
+				m.updatePendingInternal(le)
+				m.pendingLock.Unlock()
+			}
+		}
+	}
 
 	return nil
 }
