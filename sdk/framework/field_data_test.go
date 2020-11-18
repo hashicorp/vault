@@ -161,6 +161,20 @@ func TestFieldDataGet(t *testing.T) {
 			false,
 		},
 
+		"map type, string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeMap},
+			},
+			map[string]interface{}{
+				"foo": `{"child": true}`,
+			},
+			"foo",
+			map[string]interface{}{
+				"child": true,
+			},
+			false,
+		},
+
 		"duration type, string value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeDurationSecond},

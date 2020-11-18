@@ -199,6 +199,16 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeMap:
 		var result map[string]interface{}
+
+		// If raw is a string, attempt to unmarshal as JSON into result
+		if s, ok := raw.(string); ok {
+			if err := json.Unmarshal([]byte(s), &result); err != nil {
+				return nil, false, err
+			}
+
+			return result, true, nil
+		}
+
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, false, err
 		}
