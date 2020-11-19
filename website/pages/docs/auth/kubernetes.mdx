@@ -32,7 +32,7 @@ at a different path, use that value instead of `kubernetes`.
 ```shell-session
 $ curl \
     --request POST \
-    --data '{"jwt": "your_service_account_jwt", "role": "demo"}' \
+    --data '{"jwt": "<your service account jwt>", "role": "demo"}' \
     http://127.0.0.1:8200/v1/auth/kubernetes/login
 ```
 
@@ -74,7 +74,7 @@ management tool.
 
     ```text
     $ vault write auth/kubernetes/config \
-        token_reviewer_jwt="reviewer_service_account_jwt" \
+        token_reviewer_jwt="<your reviewer service account JWT>" \
         kubernetes_host=https://192.168.99.100:8443 \
         kubernetes_ca_cert=@ca.crt
     ```

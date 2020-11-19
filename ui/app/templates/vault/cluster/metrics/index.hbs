@@ -6,7 +6,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
+<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
   <nav class="tabs">
     <ul>
       {{#link-to
@@ -16,7 +16,7 @@
       }}
         {{#link-to
           "vault.cluster.metrics.index"
-          data-test-configuration-tab=false
+          data-test-usage-tab=true
         }}
           Vault usage
         {{/link-to}}
@@ -51,6 +51,7 @@
   <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
     {{#if (eq model.config.enabled 'Off')}}
       <AlertBanner
+        data-test-tracking-disabled
         @type="warning"
         @title="Tracking is disabled"
       >
