@@ -12,7 +12,7 @@ var EnableOpenTelemetry bool
 
 // DefaultTransport returns a new http.Transport with similar default values to
 // http.DefaultTransport, but with idle connections and keepalives disabled.
-func DefaultTransport() http.RoundTripper {
+func DefaultTransport() *http.Transport {
 	transport := DefaultPooledTransport()
 	transport.DisableKeepAlives = true
 	transport.MaxIdleConnsPerHost = -1
@@ -51,6 +51,19 @@ func DefaultClient() *http.Client {
 
 	if EnableOpenTelemetry {
 		hc.Transport = otelhttp.NewTransport(tp)
+	} else {
+		hc.Transport = tp
+	}
+	return hc
+}
+
+func NamedClient(name string) *http.Client {
+	hc := &http.Client{
+	}
+	tp := DefaultTransport()
+
+	if EnableOpenTelemetry {
+		hc.Transport = otelhttp.NewTransport(tp, otelhttp.WithSpanOptions())
 	} else {
 		hc.Transport = tp
 	}

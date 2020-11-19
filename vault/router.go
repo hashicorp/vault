@@ -551,7 +551,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 
 	// Attach the storage view for the request
-	req.Storage = re.storageView
+	tsw := logical.NewTelemetryStorageWrapper(re.storageView)
+	req.Storage = tsw
 
 	originalEntityID := req.EntityID
 

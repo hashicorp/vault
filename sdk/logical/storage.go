@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/label"
 )
 
 // ErrReadOnly is returned when a backend does not support
@@ -26,6 +28,42 @@ type Storage interface {
 	Get(context.Context, string) (*StorageEntry, error)
 	Put(context.Context, *StorageEntry) error
 	Delete(context.Context, string) error
+}
+
+type TelemetryStorageWrapper struct {
+	storage Storage
+}
+
+func NewTelemetryStorageWrapper(s Storage) *TelemetryStorageWrapper {
+	return &TelemetryStorageWrapper{storage: s}
+}
+
+func (t *TelemetryStorageWrapper) List(ctx context.Context, s string) ([]string, error) {
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "LIST")
+	span.SetAttributes(label.String("path", s))
+	defer span.End()
+	return t.storage.List(ctx, s)
+}
+
+func (t *TelemetryStorageWrapper) Get(ctx context.Context, s string) (*StorageEntry, error) {
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "GET")
+	span.SetAttributes(label.String("path", s))
+	defer span.End()
+	return t.storage.Get(ctx, s)
+}
+
+func (t *TelemetryStorageWrapper) Put(ctx context.Context, entry *StorageEntry) error {
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "PUT")
+	span.SetAttributes(label.String("key", entry.Key))
+	defer span.End()
+	return t.storage.Put(ctx, entry)
+}
+
+func (t *TelemetryStorageWrapper) Delete(ctx context.Context, s string) error {
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "DELETE")
+	span.SetAttributes(label.String("path", s))
+	defer span.End()
+	return t.storage.Delete(ctx, s)
 }
 
 // StorageEntry is the entry for an item in a Storage implementation.
