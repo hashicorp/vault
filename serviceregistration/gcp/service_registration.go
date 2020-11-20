@@ -47,7 +47,6 @@ type serviceRegistration struct {
 	allUnsealedDNSName  string
 	redirectHost        string
 	redirectPort        int64
-	serviceLock         sync.RWMutex
 	notifyActiveCh      chan struct{}
 	notifySealedCh      chan struct{}
 	notifyPerfStandbyCh chan struct{}
@@ -167,9 +166,6 @@ func (r *serviceRegistration) runEventDemuxer(wait *sync.WaitGroup, shutdownCh <
 							continue
 						}
 
-						r.serviceLock.Lock()
-						defer r.serviceLock.Unlock()
-
 						return
 					}
 				}()
@@ -180,13 +176,48 @@ func (r *serviceRegistration) runEventDemuxer(wait *sync.WaitGroup, shutdownCh <
 		}
 	}
 
-	r.serviceLock.RLock()
-	defer r.serviceLock.RUnlock()
+	// Get the current record set for the managed zone
+	recordSet, err := r.client.ResourceRecordSets.List(r.project, r.managedZone).Do()
+	if err != nil {
+		r.logger.Error("error cleaning up records", "error", err)
+	}
 
-	// TODO: Remove the service record from GCP
-	// if err := r.Client.Agent().ServiceDeregister(registeredServiceID); err != nil {
-	// 	r.logger.Warn("service deregistration failed", "error", err)
-	// }
+	allUnsealed := make(map[string]bool)
+	for _, rs := range recordSet.Rrsets {
+		switch rs.Name {
+		case r.allUnsealedDNSName:
+			for _, d := range rs.Rrdatas {
+				allUnsealed[d] = true
+			}
+		}
+	}
+
+	us := mapKeysToSlice(allUnsealed)
+	delete(allUnsealed, r.redirectHost)
+	change := &dns.Change{
+		Additions: []*dns.ResourceRecordSet{
+			{
+				Name:    r.allUnsealedDNSName,
+				Type:    "A",
+				Ttl:     5,
+				Rrdatas: mapKeysToSlice(allUnsealed),
+			},
+		},
+	}
+	if len(us) > 0 {
+		change.Deletions = []*dns.ResourceRecordSet{
+			{
+				Name:    r.allUnsealedDNSName,
+				Type:    "A",
+				Ttl:     5,
+				Rrdatas: us,
+			},
+		}
+	}
+
+	if _, err := r.client.Changes.Create(r.project, r.managedZone, change).Do(); err != nil {
+		r.logger.Error("error cleaning up records", "error", err)
+	}
 }
 
 func (r *serviceRegistration) reconcileCloudDNS() error {
@@ -207,10 +238,15 @@ func (r *serviceRegistration) reconcileCloudDNS() error {
 	}
 
 	// Get the current active and standby addresses
+	allUnsealed := make(map[string]bool)
 	actives := make(map[string]bool)
 	standbys := make(map[string]bool)
 	for _, rs := range recordSet.Rrsets {
 		switch rs.Name {
+		case r.allUnsealedDNSName:
+			for _, d := range rs.Rrdatas {
+				allUnsealed[d] = true
+			}
 		case r.activeDNSName:
 			for _, d := range rs.Rrdatas {
 				actives[d] = true
@@ -222,7 +258,36 @@ func (r *serviceRegistration) reconcileCloudDNS() error {
 		}
 	}
 
-	change := &dns.Change{}
+	// All unsealed need to be added to a single record
+	if !r.isSealed.Load() {
+		if _, ok := allUnsealed[r.redirectHost]; !ok {
+			us := mapKeysToSlice(allUnsealed)
+			change := &dns.Change{
+				Additions: []*dns.ResourceRecordSet{
+					{
+						Name:    r.allUnsealedDNSName,
+						Type:    "A",
+						Ttl:     5,
+						Rrdatas: append(us, r.redirectHost),
+					},
+				},
+			}
+			if len(us) > 0 {
+				change.Deletions = []*dns.ResourceRecordSet{
+					{
+						Name:    r.allUnsealedDNSName,
+						Type:    "A",
+						Ttl:     5,
+						Rrdatas: us,
+					},
+				}
+			}
+
+			if _, err := r.client.Changes.Create(r.project, r.managedZone, change).Do(); err != nil {
+				return err
+			}
+		}
+	}
 
 	// If this instance is active and unsealed, all current active records
 	// must be deleted and this instance must become the active.
@@ -230,6 +295,7 @@ func (r *serviceRegistration) reconcileCloudDNS() error {
 		r.logger.Info("ACTIVE: Current standbys", "standbys", standbys)
 		r.logger.Info("ACTIVE: Current actives", "actives", actives)
 
+		change := &dns.Change{}
 		change.Additions = []*dns.ResourceRecordSet{
 			{
 				Name:    r.activeDNSName,
@@ -254,9 +320,14 @@ func (r *serviceRegistration) reconcileCloudDNS() error {
 
 		// If this instance was a standby, remove it from standbys
 		if _, ok := standbys[r.redirectHost]; ok {
-			delete(standbys, r.redirectHost)
-			change := &dns.Change{}
+			// Make a copy of standbys for deletions
+			standbysCopy := make([]string, len(standbys))
+			copy(standbysCopy, mapKeysToSlice(standbys))
 
+			// Delete the current active from standbys for additions
+			delete(standbys, r.redirectHost)
+
+			change = &dns.Change{}
 			if len(standbys) > 0 {
 				change.Additions = []*dns.ResourceRecordSet{
 					{
@@ -272,7 +343,7 @@ func (r *serviceRegistration) reconcileCloudDNS() error {
 					Name:    r.standbyDNSName,
 					Type:    "A",
 					Ttl:     5,
-					Rrdatas: []string{r.redirectHost},
+					Rrdatas: standbysCopy,
 				},
 			}
 			if _, err := r.client.Changes.Create(r.project, r.managedZone, change).Do(); err != nil {
@@ -289,6 +360,7 @@ func (r *serviceRegistration) reconcileCloudDNS() error {
 		r.logger.Info("STANDBY: Current actives", "actives", actives)
 
 		// If the instance is not a standby, then add and delete. Otherwise, there is nothing to do.
+		change := &dns.Change{}
 		if _, ok := standbys[r.redirectHost]; !ok {
 			// attempt to delete the active from the standby
 			for k := range actives {
