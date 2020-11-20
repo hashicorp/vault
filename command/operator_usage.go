@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
@@ -50,7 +51,7 @@ func (c *OperatorUsageCommand) Flags() *FlagSets {
 
 	f.TimeVar(&TimeVar{
 		Name:       "start-time",
-		Usage:      "Start of report period (defaults to default_reporting_period before end time.)",
+		Usage:      "Start of report period. Defaults to 'default_reporting_period' before end time.",
 		Target:     &c.flagStartTime,
 		Completion: complete.PredictNothing,
 		Default:    time.Time{},
@@ -58,7 +59,7 @@ func (c *OperatorUsageCommand) Flags() *FlagSets {
 	})
 	f.TimeVar(&TimeVar{
 		Name:       "end-time",
-		Usage:      "End of report period (defaults to end of last month.)",
+		Usage:      "End of report period. Defaults to end of last month.",
 		Target:     &c.flagEndTime,
 		Completion: complete.PredictNothing,
 		Default:    time.Time{},
@@ -105,9 +106,13 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	}
 
 	if resp == nil || resp.Data == nil {
-		c.UI.Warn("No data is available for the given time range.")
+		if c.noReportAvailable(client) {
+			c.UI.Warn("Vault does not have any usage data available. A report will be available\n" +
+				"after the first calendar month in which monitoring is enabled.")
+		} else {
+			c.UI.Warn("No data is available for the given time range.")
+		}
 		// No further output
-		// TODO: report if any data at all is available?
 		return 0
 	}
 
@@ -126,14 +131,43 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	}
 
 	out = append(out, c.namespacesOutput(resp.Data)...)
-
-	out = c.addTotalToOutput(out, resp.Data)
+	out = append(out, c.totalOutput(resp.Data)...)
 
 	colConfig := columnize.DefaultConfig()
 	colConfig.Empty = " " // Do not show n/a on intentional blank lines
 	colConfig.Glue = "   "
 	c.UI.Output(tableOutput(out, colConfig))
 	return 0
+}
+
+// noReportAvailable checks whether we can definitively say that no
+// queries can be answered; if there's an error, just fall back to
+// reporting that the response is empty.
+func (c *OperatorUsageCommand) noReportAvailable(client *api.Client) bool {
+	if c.flagOutputCurlString {
+		// Don't mess up the original query string
+		return false
+	}
+
+	resp, err := client.Logical().Read("sys/internal/counters/config")
+	if err != nil || resp == nil || resp.Data == nil {
+		c.UI.Warn("bad response from config")
+		return false
+	}
+
+	qaRaw, ok := resp.Data["queries_available"]
+	if !ok {
+		c.UI.Warn("no queries_available key")
+		return false
+	}
+
+	qa, ok := qaRaw.(bool)
+	if !ok {
+		c.UI.Warn("wrong type")
+		return false
+	}
+
+	return !qa
 }
 
 func (c *OperatorUsageCommand) outputTimestamps(data map[string]interface{}) {
@@ -253,9 +287,9 @@ func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []s
 	return out
 }
 
-func (c *OperatorUsageCommand) addTotalToOutput(out []string, data map[string]interface{}) []string {
+func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string {
 	// blank line separating it from namespaces
-	out = append(out, "  |  |  |  ")
+	out := []string{"  |  |  |  "}
 
 	total, ok := data["total"].(map[string]interface{})
 	if !ok {
