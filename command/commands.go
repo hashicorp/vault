@@ -66,6 +66,7 @@ import (
 
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
+	gsr "github.com/hashicorp/vault/serviceregistration/gcp"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
 )
 
@@ -164,6 +165,7 @@ var (
 	serviceRegistrations = map[string]sr.Factory{
 		"consul":     csr.NewServiceRegistration,
 		"kubernetes": ksr.NewServiceRegistration,
+		"gcp":        gsr.NewServiceRegistration,
 	}
 )
 
