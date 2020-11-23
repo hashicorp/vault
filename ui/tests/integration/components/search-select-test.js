@@ -162,7 +162,7 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.options.length, 3, 'shows all options');
   });
 
-  test('it adds created item to list items on create and reinserts into drop down on delete', async function(assert) {
+  test('it adds created item to list items on create and removes without adding back to options on delete', async function(assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
@@ -180,7 +180,7 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.selectedOptions.length, 0, 'there are no selected options');
     assert.ok(this.onChange.calledWith([]));
     await clickTrigger();
-    assert.equal(component.options.length, 4, 'shows all options, including created option');
+    assert.equal(component.options.length, 3, 'does not add deleted option back to list');
   });
 
   test('it uses fallback component if endpoint 403s', async function(assert) {
