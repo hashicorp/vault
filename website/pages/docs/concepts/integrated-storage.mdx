@@ -79,7 +79,12 @@ storage "raft" {
 
 Note, in each `retry_join` stanza, you may provide a single `leader_api_addr` or
 `auto_join` value. When a cloud `auto_join` configuration value is provided, Vault
-will automatically attempt to discover and resolve potential Raft leader addresses.
+will use [go-discover](https://github.com/hashicorp/go-discover) to automatically
+attempt to discover and resolve potential Raft leader addresses.
+
+See the go-discover
+[README](https://github.com/hashicorp/go-discover/blob/master/README.md) for
+details on the format of the `auto_join` value.
 
 ```hcl
 storage "raft" {
