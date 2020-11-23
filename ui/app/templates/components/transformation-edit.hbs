@@ -28,15 +28,14 @@
             @horizontalPosition="center"
             as |T|>
             <T.trigger @tabindex="-1">
-              <a
+              <button
               class="toolbar-link"
               aria-disabled="true"
-              {{!-- ARG TODO: come back and double check because added in href blank for linting --}}
               href=""
               disabled
               >
                 Delete transformation
-              </a>
+              </button>
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">
@@ -45,27 +44,24 @@
             </T.content>
           </ToolTip>
         {{else}}
-        <a
+        <button
           class="toolbar-link"
           onclick={{action (mut isDeleteModalActive) true}}
-          {{!-- ARG TODO: come back and double check because added in href blank for linting --}}
-          href=""
+          
         >
           Delete transformation
-        </a>
+        </button>
         {{/if}}
       {{/if}}
       {{#if capabilities.canUpdate }}
         {{#if (gt model.allowed_roles.length 0)}}
-          <a
+          <button
             class="toolbar-link"
             onclick={{action (mut isEditModalActive) true}}
-            href=""
-            {{!-- ARG TODO: come back and double check because added in href blank for linting --}}
             data-test-edit-link
           >
             Edit transformation
-          </a>
+          </button>
         {{else}}
           <ToolbarSecretLink
             @secret={{model.id}}
