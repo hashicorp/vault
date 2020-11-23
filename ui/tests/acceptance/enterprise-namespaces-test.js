@@ -1,4 +1,4 @@
-import { click } from '@ember/test-helpers';
+import { click, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -41,6 +41,7 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
     let nses = ['beep', 'boop', 'bop'];
     for (let [i, ns] of nses.entries()) {
       await createNS(ns);
+      await settled();
       // this is usually triggered when creating a ns in the form, here we'll trigger a reload of the
       // namespaces manually
       await this.owner.lookup('service:namespace').findNamespacesForUser.perform();
@@ -50,11 +51,16 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
       // the namespace path will include all of the namespaces up to this point
       let targetNamespace = nses.slice(0, i + 1).join('/');
       await switchToNS(targetNamespace);
+      await settled();
     }
     await logout.visit();
+    await settled();
     await authPage.visit({ namespace: '/beep/boop' });
+    await settled();
     await authPage.tokenInput('root').submit();
+    await settled();
     await click('[data-test-namespace-toggle]');
+    await settled();
     assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');
     assert
       .dom('[data-test-namespace-link="beep/boop/bop"]')
