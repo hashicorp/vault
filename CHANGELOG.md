@@ -1,9 +1,5 @@
 ## Next
 
-IMPROVEMENTS:
-
-* agent: Agent can now run as a Windows service. [[GH-10231](https://github.com/hashicorp/vault/pull/10231)]
-
 BUG FIXES:
 
 * core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
