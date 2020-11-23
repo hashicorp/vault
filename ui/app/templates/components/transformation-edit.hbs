@@ -31,7 +31,7 @@
               <button
               class="toolbar-link"
               aria-disabled="true"
-              href=""
+              type="button"
               disabled
               >
                 Delete transformation
@@ -47,7 +47,7 @@
         <button
           class="toolbar-link"
           onclick={{action (mut isDeleteModalActive) true}}
-          
+          type="button"
         >
           Delete transformation
         </button>
@@ -58,6 +58,7 @@
           <button
             class="toolbar-link"
             onclick={{action (mut isEditModalActive) true}}
+            type="button"
             data-test-edit-link
           >
             Edit transformation
