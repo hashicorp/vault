@@ -5,7 +5,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 
-module('Acceptance | userpass secret backend | skip', function(hooks) {
+module('Acceptance | userpass secret backend', function(hooks) {
   //  ARG TODO: test occasionally fails
   setupApplicationTest(hooks);
 
@@ -38,17 +38,25 @@ module('Acceptance | userpass secret backend | skip', function(hooks) {
 
     // enable the first userpass method with one username
     await visit(`/vault/settings/auth/enable`);
+    await settled();
     await click('[data-test-mount-type="userpass"]');
+    await settled();
     await click('[data-test-mount-next]');
+    await settled();
     await fillIn('[data-test-input="path"]', path2);
+    await settled();
     await click('[data-test-mount-submit="true"]');
+    await settled();
     await click('[data-test-save-config="true"]');
     await settled();
     await click(`[data-test-auth-backend-link="${path2}"]`);
+    await settled();
     await click('[data-test-create="user"]');
+    await settled();
     await fillIn('[data-test-input="username"]', user2);
     await fillIn('[data-test-textarea]', user2);
     await click('[data-test-save-config="true"]');
+    await settled();
 
     //confirming that the user was created.  There was a bug where the apiPath was not being updated when toggling between auth routes
     assert
@@ -57,6 +65,7 @@ module('Acceptance | userpass secret backend | skip', function(hooks) {
 
     //confirm that the auth method 1 shows the user1.  There was a bug where it was not updated the list when toggling between auth routes
     await visit(`/vault/access/${path1}/item/user`);
+    await settled();
     assert
       .dom('[data-test-list-item-content]')
       .hasText(user1, 'first user created shows in current auth list');
