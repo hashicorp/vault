@@ -155,8 +155,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["context"]; has {
-			val := reflect.ValueOf(v)
-			if !val.IsValid() {
+			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Context = casted
 			} else {
@@ -165,8 +164,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["ciphertext"]; has {
-			val := reflect.ValueOf(v)
-			if !val.IsValid() {
+			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Ciphertext = casted
 			} else {
@@ -174,10 +172,9 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			}
 		}
 
+		// don't allow "null" to be passed in for the plaintext value
 		if v, has := item["plaintext"]; has {
-			val := reflect.ValueOf(v)
-			if !val.IsValid() {
-			} else if casted, ok := v.(string); ok {
+			if casted, ok := v.(string); ok {
 				(*dst)[i].Plaintext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T'", i, item["plaintext"]))
@@ -185,8 +182,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["nonce"]; has {
-			val := reflect.ValueOf(v)
-			if !val.IsValid() {
+			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Nonce = casted
 			} else {
@@ -195,8 +191,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["key_version"]; has {
-			val := reflect.ValueOf(v)
-			if !val.IsValid() {
+			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(int); ok {
 				(*dst)[i].KeyVersion = casted
 			} else {
