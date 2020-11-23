@@ -83,7 +83,7 @@ The number of namespaces can be monitored by querying
 [`sys/namespaces`](/api-docs/system/namespaces).
 
 To estimate the number of namespaces that can be created, divide the mount
-point limit by the larger of of the number of auth mounts per namespace
+point limit by the larger of the number of auth mounts per namespace
 (including `ns_token`) and the number of secret mounts per namespace
 (including `identity` and `sys`.)
 
