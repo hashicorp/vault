@@ -1,0 +1,4 @@
+```release-note:bug
+ui: Fix bug in Transform secret engine when a new role is added and then removed from a transformation
+```
+
