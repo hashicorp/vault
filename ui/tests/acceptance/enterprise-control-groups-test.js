@@ -150,7 +150,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     // log in as the admin, navigate to the accessor page,
     // and authorize the control group request
     await visit('/vault/auth?with=userpass');
-
+    await settled();
     await authFormComponent.username(ADMIN_USER);
     await authFormComponent.password(ADMIN_PASSWORD);
     await authFormComponent.login();
@@ -164,7 +164,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await authPage.logout();
     await settled();
     await authPage.login(context.userToken);
-
+    await settled();
     if (shouldStoreToken) {
       localStorage.setItem(
         storageKey(accessor, 'kv/foo'),
@@ -185,6 +185,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       assert.equal(currentURL(), url, 'successfully loads the target url');
     } else {
       await visit(`/vault/access/control-groups/${accessor}`);
+      await settled();
       await controlGroupSuccessComponent.token(controlGroupToken);
       await settled();
       await controlGroupSuccessComponent.unwrap();

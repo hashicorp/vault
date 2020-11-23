@@ -125,7 +125,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.equal(scopesPage.listItemLinks.length, 1, 'renders a single scope');
   });
 
-  test('it can delete a scope from the list', async function(assert) {
+  skip('it can delete a scope from the list', async function(assert) {
     let { path } = await createScope(this);
     await scopesPage.visit({ backend: path });
     await settled();
