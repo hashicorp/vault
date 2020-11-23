@@ -1,0 +1,58 @@
+---
+layout: docs
+page_title: Vault Agent Windows Service
+sidebar_title: Windows service
+description: >-
+  Vault Agent can be run as a Windows service.
+---
+
+# Vault Agent Windows Service
+
+Vault Agent can be run as a Windows service. In order to do this, you need to register Vault Agent with the Windows
+Service Control Manager using `sc.exe`. After Vault Agent is registered, it can be started like any other Windows
+service.
+
+**Note:** These commands should be run in a PowerShell session with Administrator capabilities.
+
+## Register Vault Agent as a Windows service
+
+Use the [`sc.exe`](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/sc-create) program
+to create a service called "Vault Agent". The `binPath` argument should include the fully qualified path to the Vault
+executable, as well as any arguments required.
+
+```shell-session
+PS C:\Windows\system32> sc.exe create "Vault Agent" binPath= "C:\vault\vault.exe agent -config=\"C:\vault\agent-config.hcl\""
+[SC] CreateService SUCCESS
+```
+
+Note that the spacing after the `=` in `binPath=` is intentional.
+
+If you receive a success message, your service is registered with the service manager.
+
+If you get an error, please verify the path to the binary and check the arguments, by running the contents of
+`binPath=` directly in a PowerShell session and observing the results.
+
+## Start the Vault Agent service
+
+You have two ways to start the service.
+
+- Using the `sc.exe` command.
+- Go to the Windows Service Manager, and look for **Vault Agent** in the service name column. Click the
+`Start` button to start the service.
+
+### Example starting Vault Agent using sc.exe
+
+ ```shell-session
+PS C:\Windows\system32> sc.exe start "Vault Agent"
+
+ SERVICE_NAME: Vault Agent
+       TYPE               : 10  WIN32_OWN_PROCESS
+       STATE              : 4  RUNNING
+                               (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+       WIN32_EXIT_CODE    : 0  (0x0)
+       SERVICE_EXIT_CODE  : 0  (0x0)
+       CHECKPOINT         : 0x0
+       WAIT_HINT          : 0x0
+       PID                : 6548
+       FLAGS              :
+```
