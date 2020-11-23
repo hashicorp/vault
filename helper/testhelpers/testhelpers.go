@@ -139,6 +139,14 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
+func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+	t.Helper()
+	err := AttemptUnsealCore(c, core)
+	if err != nil {
+		t.Fatalf("failed to unseal core: %v", err)
+	}
+}
+
 func AttemptUnsealCores(c *vault.TestCluster) error {
 	for i, core := range c.Cores {
 		err := AttemptUnsealCore(c, core)
@@ -186,7 +194,16 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	deriveStableActiveCore(t, cluster)
+}
+
+func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	return deriveStableActiveCore(t, cluster)
+}
+
+func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	activeCore := DeriveActiveCore(t, cluster)
+	minDuration := time.NewTimer(3 * time.Second)
 
 	for i := 0; i < 30; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
@@ -194,14 +211,26 @@ func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
 			t.Fatal(err)
 		}
 		if !leaderResp.IsSelf {
-			t.Fatal("unstable active node")
+			minDuration.Reset(3 * time.Second)
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+
+	select {
+	case <-minDuration.C:
+	default:
+		if stopped := minDuration.Stop(); stopped {
+			t.Fatal("unstable active node")
+		}
+		// Drain the value
+		<-minDuration.C
+	}
+
+	return activeCore
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		for _, core := range cluster.Cores {
 			leaderResp, err := core.Client.Sys().Leader()
 			if err != nil {
@@ -248,7 +277,7 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 		time.Sleep(time.Second)
 	}
 
-	t.Fatalf("%d cores were not sealed", n)
+	t.Fatalf("%d cores were not unsealed", n)
 }
 
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
@@ -284,6 +313,19 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 
 	t.Fatalf("node did not become active")
 	return nil
+}
+
+func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not become standby")
 }
 
 func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
@@ -344,6 +386,12 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
+// TestRaftServerAddressProvider is a ServerAddressProvider that uses the
+// ClusterAddr() of each node to provide raft addresses.
+//
+// Note that TestRaftServerAddressProvider should only be used in cases where
+// cores that are part of a raft configuration have already had
+// startClusterListener() called (via either unsealing or raft joining).
 type TestRaftServerAddressProvider struct {
 	Cluster *vault.TestCluster
 }
@@ -364,32 +412,32 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
-	leaderCore := cluster.Cores[0]
-	leaderAPI := leaderCore.Client.Address()
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+	leader := cluster.Cores[0]
 
 	// Seal the leader so we can install an address provider
 	{
-		EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
+		EnsureCoreSealed(t, leader)
+		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leader)
+		vault.TestWaitActive(t, leader.Core)
 	}
 
-	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: leaderAPI,
-		TLSConfig:     leaderCore.TLSConfig,
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig,
+		},
 	}
 
-	// Join core1
-	{
-		core := cluster.Cores[1]
+	// Join followers
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
-		}
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)
@@ -398,20 +446,191 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		cluster.UnsealCore(t, core)
 	}
 
-	// Join core2
-	{
-		core := cluster.Cores[2]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
-		}
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+}
 
-		cluster.UnsealCore(t, core)
+// HardcodedServerAddressProvider is a ServerAddressProvider that uses
+// a hardcoded map of raft node addresses.
+//
+// It is useful in cases where the raft configuration is known ahead of time,
+// but some of the cores have not yet had startClusterListener() called (via
+// either unsealing or raft joining), and thus do not yet have a ClusterAddr()
+// assigned.
+type HardcodedServerAddressProvider struct {
+	Entries map[raftlib.ServerID]raftlib.ServerAddress
+}
+
+func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+	if addr, ok := p.Entries[id]; ok {
+		return addr, nil
+	}
+	return "", errors.New("could not find cluster addr")
+}
+
+// NewHardcodedServerAddressProvider is a convenience function that makes a
+// ServerAddressProvider from a given cluster address base port.
+func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.ServerAddressProvider {
+
+	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
+
+	for i := 0; i < numCores; i++ {
+		id := fmt.Sprintf("core-%d", i)
+		addr := fmt.Sprintf("127.0.0.1:%d", baseClusterPort+i)
+		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
 	}
 
-	WaitForNCoresUnsealed(t, cluster, 3)
+	return &HardcodedServerAddressProvider{
+		entries,
+	}
+}
+
+// VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.
+// the correct number of servers, having the correct NodeIDs, and exactly one
+// leader.
+func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
+
+	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	ctx := namespace.RootContext(context.Background())
+	config, err := backend.GetConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+
+	servers := config.Servers
+	if len(servers) != numCores {
+		return fmt.Errorf("Found %d servers, not %d", len(servers), numCores)
+	}
+
+	leaders := 0
+	for i, s := range servers {
+		if s.NodeID != fmt.Sprintf("core-%d", i) {
+			return fmt.Errorf("Found unexpected node ID %q", s.NodeID)
+		}
+		if s.Leader {
+			leaders++
+		}
+	}
+
+	if leaders != 1 {
+		return fmt.Errorf("Found %d leaders", leaders)
+	}
+
+	return nil
+}
+
+func RaftAppliedIndex(core *vault.TestClusterCore) uint64 {
+	return core.UnderlyingRawStorage.(*raft.RaftBackend).AppliedIndex()
+}
+
+func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
+	t.Helper()
+
+	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	for i := 0; i < 30; i++ {
+		if backend.AppliedIndex() >= index {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not apply index")
+}
+
+// AwaitLeader waits for one of the cluster's nodes to become leader.
+func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
+
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+
+		for i, core := range cluster.Cores {
+			if core.Core.Sealed() {
+				continue
+			}
+
+			isLeader, _, _, _ := core.Leader()
+			if isLeader {
+				return i, nil
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return 0, fmt.Errorf("timeout waiting leader")
+}
+
+func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
+	t.Helper()
+
+	stopCh := make(chan struct{})
+	ticker := time.NewTicker(time.Second)
+	var err error
+
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				ticker.Stop()
+				stopCh <- struct{}{}
+				return
+			case <-ticker.C:
+				err = client.Sys().Mount("foo", &api.MountInput{
+					Type: "kv",
+					Options: map[string]string{
+						"version": "1",
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = client.Sys().Unmount("foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}()
+
+	return stopCh
+}
+
+func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
+	t.Helper()
+
+	resp, err := client.Logical().Read("sys/storage/raft/configuration")
+	if err != nil {
+		t.Fatalf("error reading raft config: %v", err)
+	}
+
+	if resp == nil || resp.Data == nil {
+		t.Fatal("missing response data")
+	}
+
+	config, ok := resp.Data["config"].(map[string]interface{})
+	if !ok {
+		t.Fatal("missing config in response data")
+	}
+
+	servers, ok := config["servers"].([]interface{})
+	if !ok {
+		t.Fatal("missing servers in response data config")
+	}
+
+	// Iterate through the servers and remove the node found in the response
+	// from the expected collection
+	for _, s := range servers {
+		server := s.(map[string]interface{})
+		delete(expected, server["node_id"].(string))
+	}
+
+	// If the collection is non-empty, it means that the peer was not found in
+	// the response.
+	if len(expected) != 0 {
+		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+	}
 }

@@ -21,7 +21,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirMaster:
 		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,
 			}),
 		})
@@ -34,7 +34,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		return newSeal
 	case seal.StoredKeysNotSupported:
 		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,
 			}),
 		})

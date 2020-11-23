@@ -9,15 +9,21 @@ import layout from '../templates/components/search-select';
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select-with-create](https://github.com/poteto/ember-cli-flash) used for form elements where options come dynamically from the API.
  * @example
- * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
+ * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @selectLimit={{2}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
  *
  * @param id {String} - The name of the form field
  * @param models {String} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
  * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
- * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
  * @param label {String} - Label for this form field
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
+ * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param [disallowNewItems=false] {Boolean} - Controls whether or not the user can add a new item if none found
+ * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
+ * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
+ * @param [subText] {String} - Text to be displayed below the label
+ * @param [subLabel] {String} - a smaller label below the main Label
+ * @param [wildcardLabel] {String} - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  *
  * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -36,10 +42,12 @@ export default Component.extend({
   inputValue: computed(function() {
     return [];
   }),
-  selectedOptions: null, //list of selected options
-  options: null, //all possible options
+  allOptions: null, // list of options including matched
+  selectedOptions: null, // list of selected options
+  options: null, // all possible options
   shouldUseFallback: false,
   shouldRenderName: false,
+  disallowNewItems: false,
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -59,6 +67,11 @@ export default Component.extend({
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
+    let allOptions = options.toArray().map(option => {
+      return option.id;
+    });
+    this.set('allOptions', allOptions); // used by filter-wildcard helper
+
     let formattedOptions = this.selectedOptions.map(option => {
       let matchingOption = options.findBy('id', option);
       options.removeObject(matchingOption);
@@ -86,7 +99,11 @@ export default Component.extend({
         this.set('shouldRenderName', true);
       }
       try {
-        let options = yield this.store.query(modelType, {});
+        let queryOptions = {};
+        if (this.backend) {
+          queryOptions = { backend: this.backend };
+        }
+        let options = yield this.store.query(modelType, queryOptions);
         this.formatOptions(options);
       } catch (err) {
         if (err.httpStatus === 404) {
@@ -119,7 +136,7 @@ export default Component.extend({
       this.onChange(val);
     },
     createOption(optionId) {
-      let newOption = { name: optionId, id: optionId };
+      let newOption = { name: optionId, id: optionId, new: true };
       this.selectedOptions.pushObject(newOption);
       this.handleChange();
     },
@@ -130,7 +147,9 @@ export default Component.extend({
     },
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
-      this.options.pushObject(selected);
+      if (!selected.new) {
+        this.options.pushObject(selected);
+      }
       this.handleChange();
     },
     constructSuggestion(id) {
@@ -141,6 +160,9 @@ export default Component.extend({
         return !options.some(group => group.options.findBy('id', id));
       }
       let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
+      if (this.disallowNewItems && !existingOption) {
+        return false;
+      }
       return !existingOption;
     },
   },

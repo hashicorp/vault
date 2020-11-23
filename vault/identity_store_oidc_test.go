@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -65,8 +64,9 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Path:      "oidc/role/test-role1",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template": "{\"some-key\":\"some-value\"}",
-			"ttl":      "2h",
+			"template":  "{\"some-key\":\"some-value\"}",
+			"ttl":       "2h",
+			"client_id": "my_custom_id",
 		},
 		Storage: storage,
 	})
@@ -83,7 +83,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		"key":       "test-key",
 		"ttl":       int64(7200),
 		"template":  "{\"some-key\":\"some-value\"}",
-		"client_id": resp.Data["client_id"],
+		"client_id": "my_custom_id",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -253,7 +253,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	fmt.Printf("resp is:\n%#v", resp)
+	//fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{

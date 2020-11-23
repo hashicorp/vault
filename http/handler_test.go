@@ -2,11 +2,14 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -218,6 +221,32 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 
 	if actual != "no-store" {
 		t.Fatalf("bad: Cache-Control. Expected: 'no-store', Actual: %q", actual)
+	}
+}
+
+// TestHandler_MissingToken tests the response / error code if a request comes
+// in with a missing client token. See
+// https://github.com/hashicorp/vault/issues/8377
+func TestHandler_MissingToken(t *testing.T) {
+	// core, _, token := vault.TestCoreUnsealed(t)
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/internal/ui/mounts/cubbyhole", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req.Header.Set(WrapTTLHeaderName, "60s")
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected code 400, got: %d", resp.StatusCode)
 	}
 }
 
@@ -652,7 +681,6 @@ func testNonPrintable(t *testing.T, disable bool) {
 	ln, addr := TestListener(t)
 	props := &vault.HandlerProperties{
 		Core:                  core,
-		MaxRequestSize:        DefaultMaxRequestSize,
 		DisablePrintableCheck: disable,
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
@@ -674,5 +702,66 @@ func testNonPrintable(t *testing.T, disable bool) {
 		testResponseStatus(t, resp, 204)
 	} else {
 		testResponseStatus(t, resp, 400)
+	}
+}
+
+func TestHandler_Parse_Form(t *testing.T) {
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	c := cleanhttp.DefaultClient()
+	c.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: cluster.RootCAs,
+		},
+	}
+
+	values := url.Values{
+		"zip":   []string{"zap"},
+		"abc":   []string{"xyz"},
+		"multi": []string{"first", "second"},
+		"empty": []string{},
+	}
+	req, err := http.NewRequest("POST", cores[0].Client.Address()+"/v1/secret/foo", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Body = ioutil.NopCloser(strings.NewReader(values.Encode()))
+	req.Header.Set("x-vault-token", cluster.RootToken)
+	req.Header.Set("content-type", "application/x-www-form-urlencoded")
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != 204 {
+		t.Fatalf("bad response: %#v\nrequest was: %#v\nurl was: %#v", *resp, *req, req.URL)
+	}
+
+	client := cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	apiResp, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apiResp == nil {
+		t.Fatal("api resp is nil")
+	}
+	expected := map[string]interface{}{
+		"zip":   "zap",
+		"abc":   "xyz",
+		"multi": "first,second",
+	}
+	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }

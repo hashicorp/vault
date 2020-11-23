@@ -7,18 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
-)
-
-var (
-	// Making this a package var allows tests to modify
-	HeartbeatInterval = 5 * time.Second
 )
 
 const (
@@ -66,11 +63,12 @@ type Listener struct {
 
 	networkLayer NetworkLayer
 	cipherSuites []uint16
+	advertise    net.Addr
 	logger       log.Logger
 	l            sync.RWMutex
 }
 
-func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger) *Listener {
+func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
@@ -78,7 +76,7 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 	h2Server := &http2.Server{
 		// Our forwarding connections heartbeat regularly so anything else we
 		// want to go away/get cleaned up pretty rapidly
-		IdleTimeout: 5 * HeartbeatInterval,
+		IdleTimeout: idleTimeout,
 	}
 
 	return &Listener{
@@ -94,7 +92,23 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 	}
 }
 
+func (cl *Listener) SetAdvertiseAddr(addr string) error {
+	u, err := url.ParseRequestURI(addr)
+	if err != nil {
+		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
+	}
+	cl.advertise = &NetAddr{
+		Host: u.Host,
+	}
+
+	return nil
+}
+
 func (cl *Listener) Addr() net.Addr {
+	if cl.advertise != nil {
+		return cl.advertise
+	}
+
 	addrs := cl.Addrs()
 	if len(addrs) == 0 {
 		return nil
@@ -421,4 +435,16 @@ type NetworkLayer interface {
 // NetworkLayerSet is used for returning a slice of layers to a caller.
 type NetworkLayerSet interface {
 	Layers() []NetworkLayer
+}
+
+type NetAddr struct {
+	Host string
+}
+
+func (c *NetAddr) String() string {
+	return c.Host
+}
+
+func (*NetAddr) Network() string {
+	return "tcp"
 }

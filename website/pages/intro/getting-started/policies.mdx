@@ -53,7 +53,7 @@ Do not worry about getting the exact policy format correct. Vault includes a
 command that will format the policy automatically according to specification. It
 also reports on any syntax errors.
 
-```text
+```shell-session
 $ vault policy fmt my-policy.hcl
 ```
 
@@ -69,14 +69,14 @@ secret access.
 To write a policy using the command line, specify the path to a policy file to
 upload.
 
-```text
+```shell-session
 $ vault policy write my-policy my-policy.hcl
 Success! Uploaded policy: my-policy
 ```
 
 Here is an example you can copy-paste in the terminal:
 
-```text
+```shell-session
 $ vault policy write my-policy -<<EOF
 # Normal servers have version 1 of KV mounted by default, so will need these
 # paths:
@@ -100,7 +100,7 @@ EOF
 
 To see the list of policies, run:
 
-```text
+```shell-session
 $ vault policy list
 default
 my-policy
@@ -109,7 +109,7 @@ root
 
 To view the contents of a policy, run:
 
-```text
+```shell-session
 $ vault policy read my-policy
 # Normal servers have version 1 of KV mounted by default, so will need these
 # paths:
@@ -123,7 +123,7 @@ path "secret/*" {
 
 To use the policy, create a token and assign it to that policy:
 
-```text
+```shell-session
 $ vault token create -policy=my-policy
 Key                Value
 ---                -----
@@ -152,7 +152,7 @@ Verify that you can write any data to `secret/`, but only read from
 
 ### Dev servers
 
-```text
+```shell-session
 $ vault kv put secret/bar robot=beepboop
 Key              Value
 ---              -----
@@ -172,7 +172,7 @@ Code: 403. Errors:
 
 ### Non-dev servers
 
-```text
+```shell-session
 $ vault kv put secret/bar robot=beepboop
 Success! Data written to: secret/bar
 
@@ -189,7 +189,7 @@ You also do not have access to `sys` according to the policy, so commands like
 `vault policy list` or `vault secrets list` will not work. Re-authenticate as
 the initial root token to continue:
 
-```text
+```shell-session
 $ vault login <initial-root-token>
 ```
 
@@ -203,7 +203,7 @@ We use the `vault path-help` system with your auth method to determine how the
 mapping is done, since it is specific to each auth method. For example, with
 GitHub, it is done by team using the `map/teams/<team>` path:
 
-```text
+```shell-session
 $ vault write auth/github/map/teams/default value=my-policy
 Success! Data written to: auth/github/map/teams/default
 ```

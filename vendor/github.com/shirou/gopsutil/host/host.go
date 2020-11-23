@@ -1,7 +1,11 @@
 package host
 
 import (
+	"context"
 	"encoding/json"
+	"os"
+	"runtime"
+	"time"
 
 	"github.com/shirou/gopsutil/internal/common"
 )
@@ -51,4 +55,100 @@ func (u UserStat) String() string {
 func (t TemperatureStat) String() string {
 	s, _ := json.Marshal(t)
 	return string(s)
+}
+
+func Info() (*InfoStat, error) {
+	return InfoWithContext(context.Background())
+}
+
+func InfoWithContext(ctx context.Context) (*InfoStat, error) {
+	var err error
+	ret := &InfoStat{
+		OS: runtime.GOOS,
+	}
+
+	ret.Hostname, err = os.Hostname()
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.Platform, ret.PlatformFamily, ret.PlatformVersion, err = PlatformInformationWithContext(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.KernelVersion, err = KernelVersionWithContext(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.KernelArch, err = KernelArch()
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.VirtualizationSystem, ret.VirtualizationRole, err = VirtualizationWithContext(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.BootTime, err = BootTimeWithContext(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.Uptime, err = UptimeWithContext(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.Procs, err = numProcs(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	ret.HostID, err = HostIDWithContext(ctx)
+	if err != nil && err != common.ErrNotImplementedError {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+// BootTime returns the system boot time expressed in seconds since the epoch.
+func BootTime() (uint64, error) {
+	return BootTimeWithContext(context.Background())
+}
+
+func Uptime() (uint64, error) {
+	return UptimeWithContext(context.Background())
+}
+
+func Users() ([]UserStat, error) {
+	return UsersWithContext(context.Background())
+}
+
+func PlatformInformation() (string, string, string, error) {
+	return PlatformInformationWithContext(context.Background())
+}
+
+// HostID returns the unique host ID provided by the OS.
+func HostID() (string, error) {
+	return HostIDWithContext(context.Background())
+}
+
+func Virtualization() (string, string, error) {
+	return VirtualizationWithContext(context.Background())
+}
+
+func KernelVersion() (string, error) {
+	return KernelVersionWithContext(context.Background())
+}
+
+func SensorsTemperatures() ([]TemperatureStat, error) {
+	return SensorsTemperaturesWithContext(context.Background())
+}
+
+func timeSince(ts uint64) uint64 {
+	return uint64(time.Now().Unix()) - ts
 }

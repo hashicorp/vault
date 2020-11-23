@@ -19,14 +19,14 @@ normal get requests.
 
 Delete the latest version of the key "creds":
 
-```text
+```shell-session
 $ vault kv delete secret/creds
 Success! Data deleted (if it existed) at: secret/creds
 ```
 
 **[K/V Version 2]** Delete version 11 of key "creds":
 
-```text
+```shell-session
 $ vault kv delete -versions=11 secret/creds
 Success! Data deleted (if it existed) at: secret/creds
 ```

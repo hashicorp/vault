@@ -34,7 +34,7 @@ repository.
 Vault includes a CLI helper that obtains a signed JWT locally and sends the
 request to Vault. This helper is only available for IAM-type roles.
 
-```text
+```shell-session
 $ vault login -method=gcp \
     role="my-role" \
     service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
@@ -47,7 +47,7 @@ For more usage information, run `vault auth help gcp`.
 
 ### Via the CLI
 
-```text
+```shell-session
 $ vault write -field=token auth/gcp/login \
     role="my-role" \
     jwt="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -57,7 +57,7 @@ See [Generating JWTs](#generating-jwts) for ways to obtain the JWT token.
 
 ### Via the API
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data '{"role":"my-role", "jwt":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \
@@ -87,7 +87,7 @@ management tool.
 
    If you are using instance credentials or want to specify credentials via
    an environment variable, you can skip this step. To learn more, see the
-   [Google Cloud Authentication](#google-cloud-authentication) section below.
+   [Google Cloud Authentication](#authentication) section below.
 
 1. Create a named role:
 
@@ -165,7 +165,6 @@ iam.serviceAccounts.get
 iam.serviceAccountKeys.get
 compute.instances.get
 compute.instanceGroups.list
-compute.instanceGroups.listInstances
 ```
 
 These allow Vault to:
@@ -178,6 +177,9 @@ These allow Vault to:
 - compare bound fields for GCE roles (zone/region, labels, or membership
   in given instance groups)
 
+If you are using Group Aliases as described below, you will also need to add the
+`resourcemanager.projects.get` permission.
+
 #### Permissions For Authenticating Against Vault
 
 Note that the previously mentioned permissions are given to the _Vault servers_.
@@ -187,6 +189,12 @@ must have the following role:
 ```text
 roles/iam.serviceAccountTokenCreator
 ```
+
+!> **WARNING:** Make sure this role is only applied so your service account can
+impersonate itself. If this role is applied GCP project-wide, this will allow the service
+account to impersonate any service account in the GCP project where it resides.
+See [Managing service account impersonation](https://cloud.google.com/iam/docs/impersonating-service-accounts)
+for more information.
 
 ## Group Aliases
 
@@ -205,6 +213,9 @@ will include the following aliases:
 ]
 ```
 
+If you are using a custom role for Vault server, you will need to add the
+`resourcemanager.projects.get` permission to your custom role.
+
 ## Implementation Details
 
 This section describes the implementation details for how Vault communicates
@@ -221,7 +232,7 @@ for IAM service accounts looks like this:
 
 1. The client generates a signed JWT using the IAM
    [`projects.serviceAccounts.signJwt`][signjwt-method] method. For examples of
-   how to do this, see the [Obtaining JWT Tokens](#obtaining-jwt-tokens) section.
+   how to do this, see the [Generating JWTs](#generating-jwts) section.
 
 2. The client sends this signed JWT to Vault along with a role name.
 
@@ -306,7 +317,7 @@ curl \
 
 You can also do this through the (currently beta) gcloud command.
 
-```text
+```shell-session
 $ gcloud beta iam service-accounts sign-jwt $INPUT_JWT_CLAIMS $OUTPUT_JWT_FILE \
     --iam-account=service-account@my-project.iam.gserviceaccount.com \
     --project=my-project

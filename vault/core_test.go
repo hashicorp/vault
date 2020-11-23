@@ -247,6 +247,25 @@ func TestCore_Shutdown(t *testing.T) {
 	}
 }
 
+// verify the channel returned by ShutdownDone is closed after Shutdown
+func TestCore_ShutdownDone(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	doneCh := c.ShutdownDone()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		c.Shutdown()
+	}()
+
+	select {
+	case <-doneCh:
+		if !c.Sealed() {
+			t.Fatalf("shutdown done called prematurely!")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("shutdown notification not received")
+	}
+}
+
 // Attempt to seal bad token
 func TestCore_Seal_BadToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -1231,7 +1250,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1248,6 +1267,7 @@ func TestCore_StepDown(t *testing.T) {
 		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirectOriginal,
 		DisableMlock: true,
+		Logger:       logger.Named("core1"),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1286,6 +1306,7 @@ func TestCore_StepDown(t *testing.T) {
 		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirectOriginal2,
 		DisableMlock: true,
+		Logger:       logger.Named("core2"),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2457,7 +2478,7 @@ type mockServiceRegistration struct {
 	runDiscoveryCount int
 }
 
-func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
 	m.runDiscoveryCount++
 	return nil
 }

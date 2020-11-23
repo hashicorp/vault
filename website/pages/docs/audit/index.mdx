@@ -13,7 +13,7 @@ request/response, the audit log contains _every authenticated_ interaction with
 Vault, including errors.
 
 Multiple audit devices can be enabled and Vault will send the audit logs to
-both. This allows you to not only have a redundant copy, but also a second copy
+all of them. This allows you to not only have a redundant copy, but also a second copy
 in case the first is tampered with.
 
 ## Format
@@ -49,7 +49,7 @@ devices must be enabled by a root user using `vault audit enable`.
 When enabling an audit device, options can be passed to it to configure it.
 For example, the command below enables the file audit device:
 
-```text
+```shell-session
 $ vault audit enable file file_path=/var/log/vault_audit.log
 ```
 

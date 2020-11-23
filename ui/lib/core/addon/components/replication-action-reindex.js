@@ -3,4 +3,5 @@ import layout from '../templates/components/replication-action-reindex';
 
 export default Actions.extend({
   layout,
+  tagName: '',
 });

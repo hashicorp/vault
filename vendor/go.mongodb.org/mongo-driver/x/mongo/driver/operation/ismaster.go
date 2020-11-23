@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
-	"time"
 
-	"go.mongodb.org/mongo-driver/tag"
 	"go.mongodb.org/mongo-driver/version"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
@@ -24,6 +22,9 @@ type IsMaster struct {
 	saslSupportedMechs string
 	d                  driver.Deployment
 	clock              *session.ClusterClock
+	speculativeAuth    bsoncore.Document
+	topologyVersion    *description.TopologyVersion
+	maxAwaitTimeMS     *int64
 
 	res bsoncore.Document
 }
@@ -68,234 +69,27 @@ func (im *IsMaster) Deployment(d driver.Deployment) *IsMaster {
 	return im
 }
 
+// SpeculativeAuthenticate sets the document to be used for speculative authentication.
+func (im *IsMaster) SpeculativeAuthenticate(doc bsoncore.Document) *IsMaster {
+	im.speculativeAuth = doc
+	return im
+}
+
+// TopologyVersion sets the TopologyVersion to be used for heartbeats.
+func (im *IsMaster) TopologyVersion(tv *description.TopologyVersion) *IsMaster {
+	im.topologyVersion = tv
+	return im
+}
+
+// MaxAwaitTimeMS sets the maximum time for the sever to wait for topology changes during a heartbeat.
+func (im *IsMaster) MaxAwaitTimeMS(awaitTime int64) *IsMaster {
+	im.maxAwaitTimeMS = &awaitTime
+	return im
+}
+
 // Result returns the result of executing this operation.
 func (im *IsMaster) Result(addr address.Address) description.Server {
-	desc := description.Server{Addr: addr, CanonicalAddr: addr, LastUpdateTime: time.Now().UTC()}
-	elements, err := im.res.Elements()
-	if err != nil {
-		desc.LastError = err
-		return desc
-	}
-	var ok bool
-	var isReplicaSet, isMaster, hidden, secondary, arbiterOnly bool
-	var msg string
-	var version description.VersionRange
-	var hosts, passives, arbiters []string
-	for _, element := range elements {
-		switch element.Key() {
-		case "arbiters":
-			var err error
-			arbiters, err = im.decodeStringSlice(element, "arbiters")
-			if err != nil {
-				desc.LastError = err
-				return desc
-			}
-		case "arbiterOnly":
-			arbiterOnly, ok = element.Value().BooleanOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'arbiterOnly' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "compression":
-			var err error
-			desc.Compression, err = im.decodeStringSlice(element, "compression")
-			if err != nil {
-				desc.LastError = err
-				return desc
-			}
-		case "electionId":
-			desc.ElectionID, ok = element.Value().ObjectIDOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'electionId' to be a objectID but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "hidden":
-			hidden, ok = element.Value().BooleanOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'hidden' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "hosts":
-			var err error
-			hosts, err = im.decodeStringSlice(element, "hosts")
-			if err != nil {
-				desc.LastError = err
-				return desc
-			}
-		case "ismaster":
-			isMaster, ok = element.Value().BooleanOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'isMaster' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "isreplicaset":
-			isReplicaSet, ok = element.Value().BooleanOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'isreplicaset' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "lastWrite":
-			lastWrite, ok := element.Value().DocumentOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'lastWrite' to be a document but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			dateTime, err := lastWrite.LookupErr("lastWriteDate")
-			if err == nil {
-				dt, ok := dateTime.DateTimeOK()
-				if !ok {
-					desc.LastError = fmt.Errorf("expected 'lastWriteDate' to be a datetime but it's a BSON %s", dateTime.Type)
-					return desc
-				}
-				desc.LastWriteTime = time.Unix(dt/1000, dt%1000*1000000).UTC()
-			}
-		case "logicalSessionTimeoutMinutes":
-			i64, ok := element.Value().AsInt64OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'logicalSessionTimeoutMinutes' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			desc.SessionTimeoutMinutes = uint32(i64)
-		case "maxBsonObjectSize":
-			i64, ok := element.Value().AsInt64OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'maxBsonObjectSize' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			desc.MaxDocumentSize = uint32(i64)
-		case "maxMessageSizeBytes":
-			i64, ok := element.Value().AsInt64OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'maxMessageSizeBytes' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			desc.MaxMessageSize = uint32(i64)
-		case "maxWriteBatchSize":
-			i64, ok := element.Value().AsInt64OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'maxWriteBatchSize' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			desc.MaxBatchCount = uint32(i64)
-		case "me":
-			me, ok := element.Value().StringValueOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'me' to be a string but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			desc.CanonicalAddr = address.Address(me).Canonicalize()
-		case "maxWireVersion":
-			version.Max, ok = element.Value().AsInt32OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'maxWireVersion' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "minWireVersion":
-			version.Min, ok = element.Value().AsInt32OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'minWireVersion' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "msg":
-			msg, ok = element.Value().StringValueOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'msg' to be a string but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "ok":
-			okay, ok := element.Value().AsInt32OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'ok' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			if okay != 1 {
-				desc.LastError = errors.New("not ok")
-				return desc
-			}
-		case "passives":
-			var err error
-			passives, err = im.decodeStringSlice(element, "passives")
-			if err != nil {
-				desc.LastError = err
-				return desc
-			}
-		case "readOnly":
-			desc.ReadOnly, ok = element.Value().BooleanOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'readOnly' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "saslSupportedMechs":
-			var err error
-			desc.SaslSupportedMechs, err = im.decodeStringSlice(element, "saslSupportedMechs")
-			if err != nil {
-				desc.LastError = err
-				return desc
-			}
-		case "secondary":
-			secondary, ok = element.Value().BooleanOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'secondary' to be a boolean but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "setName":
-			desc.SetName, ok = element.Value().StringValueOK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'setName' to be a string but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-		case "setVersion":
-			i64, ok := element.Value().AsInt64OK()
-			if !ok {
-				desc.LastError = fmt.Errorf("expected 'setVersion' to be an integer but it's a BSON %s", element.Value().Type)
-				return desc
-			}
-			desc.SetVersion = uint32(i64)
-		case "tags":
-			m, err := im.decodeStringMap(element, "tags")
-			if err != nil {
-				desc.LastError = err
-				return desc
-			}
-			desc.Tags = tag.NewTagSetFromMap(m)
-		}
-	}
-
-	for _, host := range hosts {
-		desc.Members = append(desc.Members, address.Address(host).Canonicalize())
-	}
-
-	for _, passive := range passives {
-		desc.Members = append(desc.Members, address.Address(passive).Canonicalize())
-	}
-
-	for _, arbiter := range arbiters {
-		desc.Members = append(desc.Members, address.Address(arbiter).Canonicalize())
-	}
-
-	desc.Kind = description.Standalone
-
-	if isReplicaSet {
-		desc.Kind = description.RSGhost
-	} else if desc.SetName != "" {
-		if isMaster {
-			desc.Kind = description.RSPrimary
-		} else if hidden {
-			desc.Kind = description.RSMember
-		} else if secondary {
-			desc.Kind = description.RSSecondary
-		} else if arbiterOnly {
-			desc.Kind = description.RSArbiter
-		} else {
-			desc.Kind = description.RSMember
-		}
-	} else if msg == "isdbgrid" {
-		desc.Kind = description.Mongos
-	}
-
-	desc.WireVersion = &version
-
-	return desc
+	return description.NewServer(addr, im.res)
 }
 
 func (im *IsMaster) decodeStringSlice(element bsoncore.Element, name string) ([]string, error) {
@@ -349,6 +143,9 @@ func (im *IsMaster) handshakeCommand(dst []byte, desc description.SelectedServer
 	if im.saslSupportedMechs != "" {
 		dst = bsoncore.AppendStringElement(dst, "saslSupportedMechs", im.saslSupportedMechs)
 	}
+	if im.speculativeAuth != nil {
+		dst = bsoncore.AppendDocumentElement(dst, "speculativeAuthenticate", im.speculativeAuth)
+	}
 	var idx int32
 	idx, dst = bsoncore.AppendArrayElementStart(dst, "compression")
 	for i, compressor := range im.compressors {
@@ -382,7 +179,21 @@ func (im *IsMaster) handshakeCommand(dst []byte, desc description.SelectedServer
 
 // command appends all necessary command fields.
 func (im *IsMaster) command(dst []byte, _ description.SelectedServer) ([]byte, error) {
-	return bsoncore.AppendInt32Element(dst, "isMaster", 1), nil
+	dst = bsoncore.AppendInt32Element(dst, "isMaster", 1)
+
+	if tv := im.topologyVersion; tv != nil {
+		var tvIdx int32
+
+		tvIdx, dst = bsoncore.AppendDocumentElementStart(dst, "topologyVersion")
+		dst = bsoncore.AppendObjectIDElement(dst, "processId", tv.ProcessID)
+		dst = bsoncore.AppendInt64Element(dst, "counter", tv.Counter)
+		dst, _ = bsoncore.AppendDocumentEnd(dst, tvIdx)
+	}
+	if im.maxAwaitTimeMS != nil {
+		dst = bsoncore.AppendInt64Element(dst, "maxAwaitTimeMS", *im.maxAwaitTimeMS)
+	}
+
+	return dst, nil
 }
 
 // Execute runs this operation.
@@ -391,16 +202,25 @@ func (im *IsMaster) Execute(ctx context.Context) error {
 		return errors.New("an IsMaster must have a Deployment set before Execute can be called")
 	}
 
+	return im.createOperation().Execute(ctx, nil)
+}
+
+// StreamResponse gets the next streaming isMaster response from the server.
+func (im *IsMaster) StreamResponse(ctx context.Context, conn driver.StreamerConnection) error {
+	return im.createOperation().ExecuteExhaust(ctx, conn, nil)
+}
+
+func (im *IsMaster) createOperation() driver.Operation {
 	return driver.Operation{
 		Clock:      im.clock,
 		CommandFn:  im.command,
 		Database:   "admin",
 		Deployment: im.d,
-		ProcessResponseFn: func(response bsoncore.Document, _ driver.Server, _ description.Server) error {
+		ProcessResponseFn: func(response bsoncore.Document, _ driver.Server, _ description.Server, _ int) error {
 			im.res = response
 			return nil
 		},
-	}.Execute(ctx, nil)
+	}
 }
 
 // GetDescription retrieves the server description for the given connection. This function implements the Handshaker
@@ -411,7 +231,7 @@ func (im *IsMaster) GetDescription(ctx context.Context, _ address.Address, c dri
 		CommandFn:  im.handshakeCommand,
 		Deployment: driver.SingleConnectionDeployment{c},
 		Database:   "admin",
-		ProcessResponseFn: func(response bsoncore.Document, _ driver.Server, _ description.Server) error {
+		ProcessResponseFn: func(response bsoncore.Document, _ driver.Server, _ description.Server, _ int) error {
 			im.res = response
 			return nil
 		},

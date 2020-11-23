@@ -10,7 +10,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -30,6 +30,8 @@ type DatabaseConfig struct {
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
 
 	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
+
+	PasswordPolicy string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -114,6 +116,10 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 				page for more information on support and formatting for this 
 				parameter.`,
 			},
+			"password_policy": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Password policy to use when generating passwords.`,
+			},
 		},
 
 		ExistenceCheck: b.connectionExistenceCheck(),
@@ -138,7 +144,7 @@ func (b *databaseBackend) connectionExistenceCheck() framework.ExistenceFunc {
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return false, errors.New("failed to read connection configuration")
+			return false, fmt.Errorf("failed to read connection configuration: %w", err)
 		}
 
 		return entry != nil, nil
@@ -179,7 +185,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, errors.New("failed to read connection configuration")
+			return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 		}
 		if entry == nil {
 			return nil, nil
@@ -201,6 +207,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		delete(config.ConnectionDetails, "password")
+		delete(config.ConnectionDetails, "private_key")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),
@@ -245,7 +252,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, errors.New("failed to read connection configuration")
+			return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 		}
 		if entry != nil {
 			if err := entry.DecodeJSON(config); err != nil {
@@ -274,6 +281,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			config.RootCredentialsRotateStatements = data.Get("root_rotation_statements").([]string)
 		}
 
+		if passwordPolicyRaw, ok := data.GetOk("password_policy"); ok {
+			config.PasswordPolicy = passwordPolicyRaw.(string)
+		}
+
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
 		delete(data.Raw, "name")
@@ -281,11 +292,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "allowed_roles")
 		delete(data.Raw, "verify_connection")
 		delete(data.Raw, "root_rotation_statements")
+		delete(data.Raw, "password_policy")
 
-		// Create a database plugin and initialize it.
-		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
+		id, err := uuid.GenerateUUID()
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
+			return nil, err
 		}
 
 		// If this is an update, take any new values, overwrite what was there
@@ -302,11 +313,22 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			}
 		}
 
-		config.ConnectionDetails, err = db.Init(ctx, config.ConnectionDetails, verifyConnection)
+		// Create a database plugin and initialize it.
+		dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
-			db.Close()
-			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
+			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
+
+		initReq := v5.InitializeRequest{
+			Config:           config.ConnectionDetails,
+			VerifyConnection: verifyConnection,
+		}
+		initResp, err := dbw.Initialize(ctx, initReq)
+		if err != nil {
+			dbw.Close()
+			return logical.ErrorResponse("error creating database object: %s", err), nil
+		}
+		config.ConnectionDetails = initResp.Config
 
 		b.Lock()
 		defer b.Unlock()
@@ -314,23 +336,14 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		// Close and remove the old connection
 		b.clearConnection(name)
 
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
-		}
-
 		b.connections[name] = &dbPluginInstance{
-			Database: db,
+			database: dbw,
 			name:     name,
 			id:       id,
 		}
 
-		// Store it
-		entry, err = logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 
@@ -346,8 +359,28 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			}
 		}
 
+		// If using a legacy DB plugin and set the `password_policy` field, send a warning to the user indicating
+		// the `password_policy` will not be used
+		if dbw.isV4() && config.PasswordPolicy != "" {
+			resp.AddWarning(fmt.Sprintf("%s does not support password policies - upgrade to the latest version of "+
+				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
+		}
+
 		return resp, nil
 	}
+}
+
+func storeConfig(ctx context.Context, storage logical.Storage, name string, config *DatabaseConfig) error {
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+	if err != nil {
+		return fmt.Errorf("unable to marshal object to JSON: %w", err)
+	}
+
+	err = storage.Put(ctx, entry)
+	if err != nil {
+		return fmt.Errorf("failed to save object: %w", err)
+	}
+	return nil
 }
 
 const pathConfigConnectionHelpSyn = `

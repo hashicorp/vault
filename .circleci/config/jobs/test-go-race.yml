@@ -1,10 +1,14 @@
-executor: go-machine
+executor: docker-env-xlarge
+parallelism: 8
 steps:
-  - setup-go
+  - check-branch-name
   - checkout
   - go_test:
       extra_flags: "-race"
+      log_dir: "/tmp/testlogs"
   - store_artifacts:
       path: test-results
   - store_test_results:
       path: test-results
+  - store_artifacts:
+      path: "/tmp/testlogs"

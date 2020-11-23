@@ -86,7 +86,7 @@ user or machine is allowed to access.
 [hcl]: https://github.com/hashicorp/hcl
 
 Here is a very simple policy which grants read capabilities to the path
-"secret/foo":
+`"secret/foo"`:
 
 ```ruby
 path "secret/foo" {
@@ -167,7 +167,7 @@ path "secret/+/+/teamb" {
 
 Vault's architecture is similar to a filesystem. Every action in Vault has a
 corresponding path and capability - even Vault's internal core configuration
-endpoints live under the "sys/" path. Policies define access to these paths and
+endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
 ~> Policy paths are matched using the **most specific path match**. This may be
@@ -178,18 +178,7 @@ policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
-will sanitize request paths to be prefixes. In other words, policy paths
-targeting `list` capability should end with a trailing slash:
-
-```ruby
-path "secret/foo" {
-  capabilities = ["read"]
-}
-
-path "secret/foo/" {
-  capabilities = ["list"]
-}
-```
+will sanitize request paths to be prefixes.
 
 ### Capabilities
 
@@ -225,7 +214,7 @@ In addition to the standard set, there are some capabilities that do not map to
 HTTP verbs.
 
 - `sudo` - Allows access to paths that are _root-protected_. Tokens are not
-  permitted to interact with these paths unless they are have the `sudo`
+  permitted to interact with these paths unless they have the `sudo`
   capability (in addition to the other necessary capabilities for performing
   an operation against that path, such as `read` or `delete`).
 
@@ -249,18 +238,18 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                   | Description                                                             |
-| :--------------------------------------------------------------------- | :---------------------------------------------------------------------- |
-| `identity.entity.id`                                                   | The entity's ID                                                         |
-| `identity.entity.name`                                                 | The entity's name                                                       |
-| `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                   |
-| `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                     |
-| `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                   |
-| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key |
-| `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                   |
-| `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                   |
-| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                    |
-| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                    |
+| Name                                                               | Description                                                             |
+| :----------------------------------------------------------------- | :---------------------------------------------------------------------- |
+| `identity.entity.id`                                               | The entity's ID                                                         |
+| `identity.entity.name`                                             | The entity's name                                                       |
+| `identity.entity.metadata.<metadata key>`                          | Metadata associated with the entity for the given key                   |
+| `identity.entity.aliases.<mount accessor>.id`                      | Entity alias ID for the given mount                                     |
+| `identity.entity.aliases.<mount accessor>.name`                    | Entity alias name for the given mount                                   |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>` | Metadata associated with the alias for the given mount and metadata key |
+| `identity.groups.ids.<group id>.name`                              | The group name for the given group ID                                   |
+| `identity.groups.names.<group name>.id`                            | The group ID for the given group name                                   |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`           | Metadata associated with the group for the given key                    |
+| `identity.groups.names.<group name>.metadata.<metadata key>`       | Metadata associated with the group for the given key                    |
 
 ### Examples
 
@@ -294,6 +283,29 @@ path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7
 unique to the user, whereas names can change over time and can be reused. This
 ensures that if a given user or group name is changed, the policy will be
 mapped to the intended entity or group.
+
+If you want to use the metadata associated with an authentication plugin in your
+templates, you will need to get its _mount accessor_ and access it via the
+`aliases` key.
+
+You can get the mount accessor value using the following command:
+
+```shellsession
+$> vault auth list
+Path           Type          Accessor                    Description
+----           ----          --------                    -----------
+kubernetes/    kubernetes    auth_kubernetes_xxxx        n/a
+token/         token         auth_token_yyyy             token based credentials
+```
+
+The following templated policy allow to read the path associated with the
+Kubernetes service account namespace of the identity:
+
+```ruby
+path "secrets/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.service_account_namespace}}/*" {
+  capabilities = ["read"]
+}
+```
 
 ## Fine-Grained Control
 
@@ -366,6 +378,27 @@ options are:
       allowed_parameters = {
         "bar" = ["zip", "zap"]
         "*"   = []
+      }
+    }
+    ```
+
+  - It's important to note that the use of globbing may result in surprising
+    or unexpected behavior.
+    ```ruby
+    # This allows the user to create or update "secret/foo" with a parameter
+    # named "bar". The values passed to parameter "bar" must start with "baz/"
+    # so values like "baz/quux" are fine. However, values like
+    # "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+    # underlies "secret/foo" might allow comma delimited values for the "bar"
+    # parameter, and if it did, specifying a value like
+    # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
+    # passed along. Seeing values like "wibble" or "wobble" getting passed to
+    # "secret/foo" might surprise someone that expected the allowed_parameters
+    # constraint to only allow values starting with "baz/".
+    path "secret/foo" {
+      capabilities = ["create", "update"]
+      allowed_parameters = {
+        "bar" = ["baz/*"]
       }
     }
     ```
@@ -468,20 +501,20 @@ addition, if paths are merged from different stanzas, the lowest value
 specified for each is the value that will result, in line with the idea of
 keeping token lifetimes as short as possible.
 
-## Builtin Policies
+## Built-in Policies
 
 Vault has two built-in policies: `default` and `root`. This section describes
 the two builtin policies.
 
 ### Default Policy
 
-The `default` policy is a builtin Vault policy that cannot be removed. By
+The `default` policy is a built-in Vault policy that cannot be removed. By
 default, it is attached to all tokens, but may be explicitly excluded at token
 creation time by supporting authentication methods.
 
 The policy contains basic functionality such as the ability for the token to
 look up data about itself and to use its cubbyhole data. However, Vault is not
-proscriptive about its contents. It can be modified to suit your needs; Vault
+prescriptive about its contents. It can be modified to suit your needs; Vault
 will never overwrite your modifications. If you want to stay up-to-date with
 the latest upstream version of the `default` policy, simply read the contents
 of the policy from an up-to-date `dev` server, and write those contents into
@@ -490,19 +523,19 @@ your Vault's `default` policy.
 To view all permissions granted by the default policy on your Vault
 installation, run:
 
-```sh
+```shell-session
 $ vault read sys/policy/default
 ```
 
 To disable attachment of the default policy:
 
-```sh
+```shell-session
 $ vault token create -no-default-policy
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -512,7 +545,7 @@ $ curl \
 
 ### Root Policy
 
-The `root` policy is a builtin Vault policy that can not be modified or removed.
+The `root` policy is a built-in Vault policy that can not be modified or removed.
 Any user associated with this policy becomes a root user. A root user can do
 _anything_ within Vault. As such, it is **highly recommended** that you revoke
 any root tokens before running Vault in production.
@@ -524,13 +557,13 @@ controlled users and authentication should be used.
 
 To revoke a root token, run:
 
-```sh
+```shell-session
 $ vault token revoke "<token>"
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -553,13 +586,13 @@ policies must be uploaded to Vault before they can be used.
 
 To list all registered policies in Vault:
 
-```sh
+```shell-session
 $ vault read sys/policy
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --header "X-Vault-Token: ..." \
   https://vault.hashicorp.rocks/v1/sys/policy
@@ -574,13 +607,13 @@ functionality but formats the output in a special manner.
 Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
 
-```sh
+```shell-session
 $ vault policy write policy-name policy-file.hcl
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -598,13 +631,13 @@ Existing policies may be updated to change permissions via the CLI or via the
 API. To update an existing policy in Vault, follow the same steps as creating a
 policy, but use an existing policy name:
 
-```sh
+```shell-session
 $ vault write sys/policy/my-existing-policy policy=@updated-policy.json
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -616,13 +649,13 @@ $ curl \
 
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
-```sh
+```shell-session
 $ vault delete sys/policy/policy-name
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request DELETE \
   --header "X-Vault-Token: ..." \
@@ -642,7 +675,7 @@ auth method.
 A Vault administrator or someone from the security team would create the user in
 Vault with a list of associated policies:
 
-```sh
+```shell-session
 $ vault write auth/userpass/users/sethvargo \
     password="s3cr3t!" \
     policies="dev-readonly,logs"
@@ -654,7 +687,7 @@ of policies attached.
 
 The user wishing to authenticate would run
 
-```sh
+```shell-session
 $ vault login -method="userpass" username="sethvargo"
 Password (will be hidden): ...
 ```
@@ -667,7 +700,7 @@ authenticated user.
 
 Tokens are associated with their policies at creation time. For example:
 
-```sh
+```shell-session
 $ vault token create -policy=dev-readonly -policy=logs
 ```
 

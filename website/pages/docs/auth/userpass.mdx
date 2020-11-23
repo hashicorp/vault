@@ -23,7 +23,7 @@ same entry.
 
 ### Via the CLI
 
-```text
+```shell-session
 $ vault login -method=userpass \
     username=mitchellh \
     password=foo
@@ -31,7 +31,7 @@ $ vault login -method=userpass \
 
 ### Via the API
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"password": "foo"}' \

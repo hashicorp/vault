@@ -15,12 +15,12 @@ import (
 var (
 	// ErrTemplateContentsAndSource is the error returned when a template
 	// specifies both a "source" and "content" argument, which is not valid.
-	ErrTemplateContentsAndSource = errors.New("template: cannot specify both 'source' and 'content'")
+	ErrTemplateContentsAndSource = errors.New("template: cannot specify both 'source' and 'contents'")
 
 	// ErrTemplateMissingContentsAndSource is the error returned when a template
 	// does not specify either a "source" or "content" argument, which is not
 	// valid.
-	ErrTemplateMissingContentsAndSource = errors.New("template: must specify exactly one of 'source' or 'content'")
+	ErrTemplateMissingContentsAndSource = errors.New("template: must specify exactly one of 'source' or 'contents'")
 )
 
 // Template is the internal representation of an individual template to process.
@@ -46,9 +46,9 @@ type Template struct {
 	// is indexed with a key that does not exist.
 	errMissingKey bool
 
-	// functionBlacklist are functions not permitted to be executed
+	// functionDenylist are functions not permitted to be executed
 	// when we render this template
-	functionBlacklist []string
+	functionDenylist []string
 
 	// sandboxPath adds a prefix to any path provided to the `file` function
 	// and causes an error if a relative path tries to traverse outside that
@@ -72,9 +72,9 @@ type NewTemplateInput struct {
 	LeftDelim  string
 	RightDelim string
 
-	// FunctionBlacklist are functions not permitted to be executed
+	// FunctionDenylist are functions not permitted to be executed
 	// when we render this template
-	FunctionBlacklist []string
+	FunctionDenylist []string
 
 	// SandboxPath adds a prefix to any path provided to the `file` function
 	// and causes an error if a relative path tries to traverse outside that
@@ -104,7 +104,7 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 	t.leftDelim = i.LeftDelim
 	t.rightDelim = i.RightDelim
 	t.errMissingKey = i.ErrMissingKey
-	t.functionBlacklist = i.FunctionBlacklist
+	t.functionDenylist = i.FunctionDenylist
 	t.sandboxPath = i.SandboxPath
 
 	if i.Source != "" {
@@ -175,13 +175,13 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 	tmpl.Delims(t.leftDelim, t.rightDelim)
 
 	tmpl.Funcs(funcMap(&funcMapInput{
-		t:                 tmpl,
-		brain:             i.Brain,
-		env:               i.Env,
-		used:              &used,
-		missing:           &missing,
-		functionBlacklist: t.functionBlacklist,
-		sandboxPath:       t.sandboxPath,
+		t:                tmpl,
+		brain:            i.Brain,
+		env:              i.Env,
+		used:             &used,
+		missing:          &missing,
+		functionDenylist: t.functionDenylist,
+		sandboxPath:      t.sandboxPath,
 	}))
 
 	if t.errMissingKey {
@@ -210,13 +210,13 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 
 // funcMapInput is input to the funcMap, which builds the template functions.
 type funcMapInput struct {
-	t                 *template.Template
-	brain             *Brain
-	env               []string
-	functionBlacklist []string
-	sandboxPath       string
-	used              *dep.Set
-	missing           *dep.Set
+	t                *template.Template
+	brain            *Brain
+	env              []string
+	functionDenylist []string
+	sandboxPath      string
+	used             *dep.Set
+	missing          *dep.Set
 }
 
 // funcMap is the map of template functions to their respective functions.
@@ -237,9 +237,12 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"secret":       secretFunc(i.brain, i.used, i.missing),
 		"secrets":      secretsFunc(i.brain, i.used, i.missing),
 		"service":      serviceFunc(i.brain, i.used, i.missing),
+		"connect":      connectFunc(i.brain, i.used, i.missing),
 		"services":     servicesFunc(i.brain, i.used, i.missing),
 		"tree":         treeFunc(i.brain, i.used, i.missing, true),
 		"safeTree":     safeTreeFunc(i.brain, i.used, i.missing),
+		"caRoots":      connectCARootsFunc(i.brain, i.used, i.missing),
+		"caLeaf":       connectLeafFunc(i.brain, i.used, i.missing),
 
 		// Scratch
 		"scratch": func() *Scratch { return &scratch },
@@ -270,10 +273,12 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"parseInt":        parseInt,
 		"parseJSON":       parseJSON,
 		"parseUint":       parseUint,
+		"parseYAML":       parseYAML,
 		"plugin":          plugin,
 		"regexReplaceAll": regexReplaceAll,
 		"regexMatch":      regexMatch,
 		"replaceAll":      replaceAll,
+		"sha256Hex":       sha256Hex,
 		"timestamp":       timestamp,
 		"toLower":         toLower,
 		"toJSON":          toJSON,
@@ -291,11 +296,13 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"multiply": multiply,
 		"divide":   divide,
 		"modulo":   modulo,
+		"minimum":  minimum,
+		"maximum":  maximum,
 	}
 
-	for _, bf := range i.functionBlacklist {
+	for _, bf := range i.functionDenylist {
 		if _, ok := r[bf]; ok {
-			r[bf] = blacklisted
+			r[bf] = denied
 		}
 	}
 

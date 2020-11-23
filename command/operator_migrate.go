@@ -153,7 +153,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	if c.flagReset {
 		if err := SetStorageMigration(from, false); err != nil {
-			return errwrap.Wrapf("error reseting migration lock: {{err}}", err)
+			return errwrap.Wrapf("error resetting migration lock: {{err}}", err)
 		}
 		return nil
 	}
@@ -169,14 +169,21 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	}
 
 	if migrationStatus != nil {
-		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
+		return fmt.Errorf("storage migration in progress (started: %s)", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetStorageMigration(from, true); err != nil {
-		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
-	}
+	switch config.StorageSource.Type {
+	case "raft":
+		// Raft storage cannot be written to when shutdown. Also the boltDB file
+		// already uses file locking to ensure two processes are not accessing
+		// it.
+	default:
+		if err := SetStorageMigration(from, true); err != nil {
+			return errwrap.Wrapf("error setting migration lock: {{err}}", err)
+		}
 
-	defer SetStorageMigration(from, false)
+		defer SetStorageMigration(from, false)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -252,7 +259,7 @@ func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 		}
-		if err := raftStorage.Bootstrap(context.Background(), []raft.Peer{
+		if err := raftStorage.Bootstrap([]raft.Peer{
 			{
 				ID:      raftStorage.NodeID(),
 				Address: parsedClusterAddr.Host,

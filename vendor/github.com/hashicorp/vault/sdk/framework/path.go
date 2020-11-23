@@ -153,6 +153,22 @@ type OperationProperties struct {
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 
+	// The ForwardPerformance* parameters tell the router to unconditionally forward requests
+	// to this path if the processing node is a performance secondary/standby. This is generally
+	// *not* needed as there is already handling in place to automatically forward requests
+	// that try to write to storage. But there are a few cases where explicit forwarding is needed,
+	// for example:
+	//
+	// * The handler makes requests to other systems (e.g. an external API, database, ...) that
+	//   change external state somehow, and subsequently writes to storage. In this case the
+	//   default forwarding logic could result in multiple mutative calls to the external system.
+	//
+	// * The operation spans multiple requests (e.g. an OIDC callback), in-memory caching used,
+	//   and the same node (and therefore cache) should process both steps.
+	//
+	// If explicit forwarding is needed, it is usually true that forwarding from both performance
+	// standbys and performance secondaries should be enabled.
+	//
 	// ForwardPerformanceStandby indicates that this path should not be processed
 	// on a performance standby node, and should be forwarded to the active node instead.
 	ForwardPerformanceStandby bool
@@ -190,8 +206,8 @@ type DisplayAttributes struct {
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
 
-	// EditType is the type of form field needed for a property
-	// e.g. "textarea" or "file"
+	// EditType is the optional type of form field needed for a property
+	// This is only necessary for a "textarea" or "file"
 	EditType string `json:"editType,omitempty"`
 }
 

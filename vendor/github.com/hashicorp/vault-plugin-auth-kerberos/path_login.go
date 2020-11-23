@@ -111,6 +111,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, d *
 	// The SPNEGOKRB5Authenticate method only calls an inner function if it's
 	// successful. Let's use it to record success, and to retrieve the caller's
 	// identity.
+	username := ""
 	authenticated := false
 	var identity goidentity.Identity
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,15 +129,16 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, d *
 			return
 		}
 		b.Logger().Debug(fmt.Sprintf("identity: %+v", identity))
+		username = identity.UserName()
 
-		// Verify that the realm on the LDAP config is the same as the identity's
+		// Verify that the realm on the LDAP config (if set) is the same as the identity's
 		// realm. The UPNDomain denotes the realm on the LDAP config, and the identity
 		// domain likewise identifies the realm. This is a case sensitive check.
 		// This covers an edge case where, potentially, there has been drift between the LDAP
 		// config's realm and the Kerberos realm. In such a case, it prevents a user from
 		// passing Kerberos authentication, and then extracting group membership, and
 		// therefore policies, from a separate directory.
-		if identity.Domain() != ldapCfg.ConfigEntry.UPNDomain {
+		if ldapCfg.ConfigEntry.UPNDomain != "" && identity.Domain() != ldapCfg.ConfigEntry.UPNDomain {
 			w.WriteHeader(400)
 			_, _ = w.Write([]byte(fmt.Sprintf("identity domain of %q doesn't match LDAP upndomain of %q", identity.Domain(), ldapCfg.ConfigEntry.UPNDomain)))
 			return
@@ -207,7 +209,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, d *
 	}
 	b.Logger().Debug("auth/ldap: User BindDN fetched", "username", identity.UserName(), "binddn", userBindDN)
 
-	userDN, err := ldapClient.GetUserDN(ldapCfg.ConfigEntry, ldapConnection, userBindDN)
+	userDN, err := ldapClient.GetUserDN(ldapCfg.ConfigEntry, ldapConnection, userBindDN, username)
 	if err != nil {
 		return nil, errwrap.Wrapf("unable to get user dn: {{err}}", err)
 	}

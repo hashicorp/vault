@@ -7,20 +7,20 @@ require (
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/gammazero/deque v0.0.0-20190130191400-2afb3858e9c7 // indirect
 	github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56
-	github.com/golang/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/go-hclog v0.9.2
+	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98
-	github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b
+	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
-	golang.org/x/sys v0.0.0-20190514135907-3a4b5fb9f71f // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/api v0.5.0
 	google.golang.org/appengine v1.6.0 // indirect

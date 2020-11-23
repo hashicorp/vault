@@ -16,6 +16,9 @@ type RaftJoinResponse struct {
 
 // RaftJoinRequest represents the parameters consumed by the raft join API
 type RaftJoinRequest struct {
+	AutoJoin         string `json:"auto_join"`
+	AutoJoinScheme   string `json:"auto_join_scheme"`
+	AutoJoinPort     uint   `json:"auto_join_port"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`
@@ -92,6 +95,10 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	// to determine if the body contains error message.
 	var result *Response
 	resp, err := c.c.config.HttpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
 	if resp == nil {
 		return nil
 	}

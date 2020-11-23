@@ -185,6 +185,10 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		modified = true
 	}
 
+	// This is the first point at which the stored (or newly generated)
+	// cluster name is known.
+	c.metricSink.SetDefaultClusterName(cluster.Name)
+
 	if cluster.ID == "" {
 		c.logger.Debug("cluster ID not found, generating new")
 		// Generate a clusterID
@@ -307,7 +311,10 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
 	}
 
-	c.clusterListener.Store(cluster.NewListener(networkLayer, c.clusterCipherSuites, c.logger.Named("cluster-listener")))
+	c.clusterListener.Store(cluster.NewListener(networkLayer,
+		c.clusterCipherSuites,
+		c.logger.Named("cluster-listener"),
+		5*c.clusterHeartbeatInterval))
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {
@@ -317,6 +324,13 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		// If we listened on port 0, record the port the OS gave us.
 		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
+
+	if len(c.ClusterAddr()) != 0 {
+		if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -344,8 +358,7 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("stopping cluster listeners")
 
 	clusterListener.Stop()
-	var nilCL *cluster.Listener
-	c.clusterListener.Store(nilCL)
+	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	c.logger.Info("cluster listeners successfully shut down")
 }

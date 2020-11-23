@@ -339,6 +339,13 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 
 	removePathCheckers(c, entry, viewPath)
 
+	if c.quotaManager != nil {
+		if err := c.quotaManager.HandleBackendDisabling(ctx, ns.Path, path); err != nil {
+			c.logger.Error("failed to update quotas after disabling auth", "path", path, "error", err)
+			return err
+		}
+	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled credential backend", "path", path)
 	}
@@ -418,7 +425,7 @@ func (c *Core) taintCredEntry(ctx context.Context, path string, updateStorage bo
 	// Taint the entry from the auth table
 	// We do this on the original since setting the taint operates
 	// on the entries which a shallow clone shares anyways
-	entry, err := c.auth.setTaint(ctx, strings.TrimPrefix(path, credentialRoutePrefix), true)
+	entry, err := c.auth.setTaint(ctx, strings.TrimPrefix(path, credentialRoutePrefix), true, mountStateUnmounting)
 	if err != nil {
 		return err
 	}
@@ -471,8 +478,10 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 	if c.auth == nil {
 		c.auth = c.defaultAuthTable()
 		needPersist = true
+	} else {
+		// only record tableMetrics if we have loaded something from storge
+		c.tableMetrics(len(c.auth.Entries), false, true, raw.Value)
 	}
-
 	if rawLocal != nil {
 		localAuthTable, err := c.decodeMountTable(ctx, rawLocal.Value)
 		if err != nil {
@@ -481,6 +490,7 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 		}
 		if localAuthTable != nil && len(localAuthTable.Entries) > 0 {
 			c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+			c.tableMetrics(len(localAuthTable.Entries), true, true, rawLocal.Value)
 		}
 	}
 
@@ -572,12 +582,12 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		}
 	}
 
-	writeTable := func(mt *MountTable, path string) error {
+	writeTable := func(mt *MountTable, path string) ([]byte, error) {
 		// Encode the mount table into JSON and compress it (lzw).
 		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
 		if err != nil {
 			c.logger.Error("failed to encode or compress auth mount table", "error", err)
-			return err
+			return nil, err
 		}
 
 		// Create an entry
@@ -589,29 +599,40 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		// Write to the physical backend
 		if err := c.barrier.Put(ctx, entry); err != nil {
 			c.logger.Error("failed to persist auth mount table", "error", err)
-			return err
+			return nil, err
 		}
-		return nil
+		return compressedBytes, nil
 	}
 
 	var err error
+	var compressedBytes []byte
 	switch {
 	case local == nil:
 		// Write non-local mounts
-		err := writeTable(nonLocalAuth, coreAuthConfigPath)
+		compressedBytes, err := writeTable(nonLocalAuth, coreAuthConfigPath)
 		if err != nil {
 			return err
 		}
+		c.tableMetrics(len(nonLocalAuth.Entries), false, true, compressedBytes)
 
 		// Write local mounts
-		err = writeTable(localAuth, coreLocalAuthConfigPath)
+		compressedBytes, err = writeTable(localAuth, coreLocalAuthConfigPath)
 		if err != nil {
 			return err
 		}
+		c.tableMetrics(len(localAuth.Entries), true, true, compressedBytes)
 	case *local:
-		err = writeTable(localAuth, coreLocalAuthConfigPath)
+		compressedBytes, err = writeTable(localAuth, coreLocalAuthConfigPath)
+		if err != nil {
+			return err
+		}
+		c.tableMetrics(len(localAuth.Entries), true, true, compressedBytes)
 	default:
-		err = writeTable(nonLocalAuth, coreAuthConfigPath)
+		compressedBytes, err = writeTable(nonLocalAuth, coreAuthConfigPath)
+		if err != nil {
+			return err
+		}
+		c.tableMetrics(len(nonLocalAuth.Entries), false, true, compressedBytes)
 	}
 
 	return err

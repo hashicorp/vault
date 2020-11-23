@@ -15,7 +15,7 @@ wide variety of environments.
 ## Functionality
 
 Auto-Auth consists of two parts: a Method, which is the authentication method
-that should be used in the current environment; and one or more Sinks, which
+that should be used in the current environment; and any number of Sinks, which
 are locations where the agent should write a token any time the current token
 value has changed.
 
@@ -103,7 +103,7 @@ The top level `auto_auth` block has two configuration entries:
 
 - `method` `(object: required)` - Configuration for the method
 
-- `sinks` `(array of objects: required)` - Configuration for the sinks
+- `sinks` `(array of objects: optional)` - Configuration for the sinks
 
 ### Configuration (Method)
 
@@ -154,6 +154,11 @@ These configuration values are common to all Sinks:
 - `dh_path` `(string: required if dh_type is set)` - The path from which the
   agent should read the client's initial parameters (e.g. curve25519 public
   key).
+
+- `derive_key` `(bool: false)` - If specified, the final encryption key is
+  calculated by using HKDF-SHA256 to derive a key from the calculated shared
+  secret and the two public keys for enhanced security.  This is recommended
+  if backward compatibility isn't a concern.
 
 - `aad` `(string: optional)` - If specified, additional authenticated data to
   use with the AES-GCM encryption of the token. Can be any string, including

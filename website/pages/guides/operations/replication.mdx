@@ -10,7 +10,7 @@ description: Learn how to set up and manage Vault Enterprise Performance Replica
 ~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
 If you're unfamiliar with Vault Replication concepts, please first look at the
-[general information page](/docs/vault-enterprise/replication). More
+[general information page](/docs/enterprise/replication). More
 details can be found in the
 [replication internals](/docs/internals/replication) document.
 
@@ -91,7 +91,7 @@ working with both clusters.
 
 Vault’s performance replication model is intended to allow horizontally scaling Vault’s
 functions rather than to act in a strict Disaster Recovery (DR) capacity. For more information on Vault's disaster recovery replication, look at the
-[general information page](/docs/vault-enterprise/replication).
+[general information page](/docs/enterprise/replication).
 
 As a result, Vault performance replication acts on static items within Vault, meaning
 information that is not part of Vault’s lease-tracking system. In a practical
@@ -172,4 +172,4 @@ Local backend mounts are not replicated and their use will require existing DR
 mechanisms if DR is necessary in your implementation.
 
 If you need true DR, look at the
-[general information page](/docs/vault-enterprise/replication) for information on Vault's disaster recovery replication.
+[general information page](/docs/enterprise/replication) for information on Vault's disaster recovery replication.

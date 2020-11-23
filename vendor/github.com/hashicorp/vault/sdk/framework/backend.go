@@ -623,6 +623,10 @@ func (t FieldType) Zero() interface{} {
 		return []int{}
 	case TypeHeader:
 		return http.Header{}
+	case TypeFloat:
+		return 0.0
+	case TypeTime:
+		return time.Time{}
 	default:
 		panic("unknown type: " + t.String())
 	}

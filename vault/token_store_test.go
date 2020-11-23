@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -228,57 +229,6 @@ func TestTokenStore_Salting(t *testing.T) {
 	}
 	if !strings.HasPrefix(saltedID, "h") {
 		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
-	}
-}
-
-func TestTokenStore_ServiceTokenPrefix(t *testing.T) {
-	c, _, initToken := TestCoreUnsealed(t)
-	ts := c.tokenStore
-
-	// Ensure that a regular service token has a "s." prefix
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
-		ClientToken: initToken,
-		Path:        "create",
-		Operation:   logical.UpdateOperation,
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
-	}
-	if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
-		t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
-	}
-
-	// Ensure that using a custon token ID results in a warning
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
-		ClientToken: initToken,
-		Path:        "create",
-		Operation:   logical.UpdateOperation,
-		Data: map[string]interface{}{
-			"id": "foobar",
-		},
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
-	}
-	expectedWarning := "Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups."
-	if resp.Warnings[0] != expectedWarning {
-		t.Fatalf("expected warning not present")
-	}
-
-	// Ensure that custom token ID having a "s." prefix fails
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
-		ClientToken: initToken,
-		Path:        "create",
-		Operation:   logical.UpdateOperation,
-		Data: map[string]interface{}{
-			"id": "s.foobar",
-		},
-	})
-	if err == nil {
-		t.Fatalf("expected an error")
-	}
-	if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
-		t.Fatalf("expected input error not present in error response")
 	}
 }
 
@@ -651,10 +601,10 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 }
 
 func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
+	testMakeTokenViaCore(t, c, root, client, ttl, "", policy, false, nil)
 }
 
-func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
+func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	if batch {
@@ -664,6 +614,10 @@ func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, polic
 	}
 	req.Data["policies"] = policy
 	req.Data["ttl"] = ttl
+
+	if len(period) != 0 {
+		req.Data["period"] = period
+	}
 
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2170,6 +2124,24 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
+	c, _, root, sink := TestCoreUnsealedWithMetrics(t)
+	ts := c.tokenStore
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["ttl"] = "3h"
+	req.Data["policies"] = []string{"foo"}
+	req.MountPoint = "test/mount"
+
+	resp := testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	expectSingleCount(t, sink, "token.creation")
+}
+
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
@@ -2379,11 +2351,20 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
-	testTokenStore_HandleRequest_Lookup(t, false)
-	testTokenStore_HandleRequest_Lookup(t, true)
+	t.Run("service_token", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, false, false)
+	})
+
+	t.Run("service_token_periodic", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, false, true)
+	})
+
+	t.Run("batch_token", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, true, false)
+	})
 }
 
-func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
+func testTokenStoreHandleRequestLookup(t *testing.T, batch, periodic bool) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	req := logical.TestRequest(t, logical.UpdateOperation, "lookup")
@@ -2424,8 +2405,13 @@ func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
+	period := ""
+	if periodic {
+		period = "3600s"
+	}
+
 	outAuth := new(logical.Auth)
-	testMakeTokenViaCore(t, c, root, "client", "3600s", []string{"foo"}, batch, outAuth)
+	testMakeTokenViaCore(t, c, root, "client", "3600s", period, []string{"foo"}, batch, outAuth)
 
 	tokenType := "service"
 	expID := "client"
@@ -2463,57 +2449,8 @@ func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 		"entity_id":        "",
 		"type":             tokenType,
 	}
-
-	if resp.Data["creation_time"].(int64) == 0 {
-		t.Fatalf("creation time was zero")
-	}
-	delete(resp.Data, "creation_time")
-	if resp.Data["issue_time"].(time.Time).IsZero() {
-		t.Fatal("issue time is default time")
-	}
-	delete(resp.Data, "issue_time")
-	if resp.Data["expire_time"].(time.Time).IsZero() {
-		t.Fatal("expire time is default time")
-	}
-	delete(resp.Data, "expire_time")
-
-	// Depending on timing of the test this may have ticked down, so accept 3599
-	if resp.Data["ttl"].(int64) == 3599 {
-		resp.Data["ttl"] = int64(3600)
-	}
-
-	if diff := deep.Equal(resp.Data, exp); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Test via POST
-	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
-	req.Data = map[string]interface{}{
-		"token": expID,
-	}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	exp = map[string]interface{}{
-		"id":               expID,
-		"accessor":         resp.Data["accessor"],
-		"policies":         []string{"default", "foo"},
-		"path":             "auth/token/create",
-		"meta":             map[string]string(nil),
-		"display_name":     "token",
-		"orphan":           false,
-		"num_uses":         0,
-		"creation_ttl":     int64(3600),
-		"ttl":              int64(3600),
-		"explicit_max_ttl": int64(0),
-		"renewable":        !batch,
-		"entity_id":        "",
-		"type":             tokenType,
+	if periodic {
+		exp["period"] = int64(3600)
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -5632,4 +5569,173 @@ func TestTokenStore_Batch_NoCubbyhole(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("bad: expected error, got %#v", *resp)
 	}
+}
+
+func TestTokenStore_TokenID(t *testing.T) {
+	t.Run("no custom ID provided", func(t *testing.T) {
+		c, _, initToken := TestCoreUnsealed(t)
+		ts := c.tokenStore
+
+		// Ensure that a regular service token has a "s." prefix
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: initToken,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+		if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
+			t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
+		}
+	})
+
+	t.Run("plain custom ID", func(t *testing.T) {
+		core, _, root := TestCoreUnsealed(t)
+		ts := core.tokenStore
+
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: root,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"id": "foobar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+
+		// Ensure that using a custom token ID results in a warning
+		expectedWarning := "Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups."
+		if resp.Warnings[0] != expectedWarning {
+			t.Fatalf("expected warning not present")
+		}
+	})
+
+	t.Run("service token prefix in custom ID", func(t *testing.T) {
+		c, _, initToken := TestCoreUnsealed(t)
+		ts := c.tokenStore
+
+		// Ensure that custom token ID having a "s." prefix fails
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: initToken,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"id": "s.foobar",
+			},
+		})
+		if err == nil {
+			t.Fatalf("expected an error")
+		}
+		if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
+			t.Fatalf("expected input error not present in error response")
+		}
+	})
+
+	t.Run("period in custom ID", func(t *testing.T) {
+		core, _, root := TestCoreUnsealed(t)
+		ts := core.tokenStore
+
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: root,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"id": "foobar.baz",
+			},
+		})
+		if err == nil {
+			t.Fatalf("expected an error")
+		}
+		if resp.Error().Error() != "custom token ID cannot have a '.' in the value" {
+			t.Fatalf("expected input error not present in error response")
+		}
+	})
+}
+
+func expectInGaugeCollection(t *testing.T, expectedLabels map[string]string, expectedValue float32, actual []metricsutil.GaugeLabelValues) {
+	t.Helper()
+
+	for _, glv := range actual {
+		actualLabels := make(map[string]string)
+		for _, l := range glv.Labels {
+			actualLabels[l.Name] = l.Value
+		}
+		if labelsMatch(actualLabels, expectedLabels) {
+			if expectedValue != glv.Value {
+				t.Errorf("expeced %v for %v, got %v", expectedValue, expectedLabels, glv.Value)
+			}
+			return
+		}
+	}
+	t.Errorf("didn't find labels %v", expectedLabels)
+}
+
+func TestTokenStore_Collectors(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	// This helper is defined in expiration.go
+	sampleToken(t, exp, "auth/userpass/login", true, "default")
+	sampleToken(t, exp, "auth/userpass/login", true, "policy23457")
+	sampleToken(t, exp, "auth/token/create", false, "root")
+	sampleToken(t, exp, "auth/github/login", true, "root")
+	sampleToken(t, exp, "auth/github/login", false, "root")
+
+	waitForRestore(t, exp)
+
+	// By namespace:
+	values, err := ts.gaugeCollector(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 1 {
+		t.Errorf("got %v values, expected 1", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root"},
+		5.0,
+		values)
+
+	values, err = ts.gaugeCollectorByPolicy(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 3 {
+		t.Errorf("got %v values, expected 3", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "root"},
+		3.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "default"},
+		1.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "policy23457"},
+		1.0,
+		values)
+
+	values, err = ts.gaugeCollectorByTtl(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 2 {
+		t.Errorf("got %v values, expected 2", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "creation_ttl": "1h"},
+		3.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "creation_ttl": "+Inf"},
+		2.0,
+		values)
+
+	// Need to set up router for this to work, TODO
+	// ts.gaugeCollectorByMethod( ctx )
 }

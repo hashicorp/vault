@@ -36,7 +36,7 @@ $ vault login -method=userpass \
     passcode=111111
 ```
 
-```text
+```shell-session
 $ vault login -method=userpass \
     username=my-username \
     password=test \
@@ -48,7 +48,7 @@ $ vault login -method=userpass \
 The endpoint for the login is the same as for the original method. Additional
 MFA information should be sent in the POST body encoded as JSON.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"password": "test", "passcode": "111111"}' \
@@ -62,7 +62,7 @@ The response is the same as for the original method.
 To enable MFA for a supported method, the MFA type must be set in `mfa_config`.
 For example:
 
-```text
+```shell-session
 $ vault write auth/userpass/mfa_config type=duo
 ```
 
@@ -76,7 +76,7 @@ The Duo MFA type is configured through two paths: `duo/config` and `duo/access`.
 
 `duo/access` contains connection information for the Duo Auth API. To configure:
 
-```text
+```shell-session
 $ vault write auth/[mount]/duo/access \
     host=[host] \
     ikey=[integration key] \
@@ -86,7 +86,7 @@ $ vault write auth/[mount]/duo/access \
 `duo/config` is an optional path that contains general configuration information
 for Duo authentication. To configure:
 
-```text
+```shell-session
 $ vault write auth/[mount]/duo/config \
     user_agent="" \
     username_format="%s"

@@ -422,6 +422,14 @@ func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.Sy
 	return raw.(*routeEntry).backend.System()
 }
 
+func (r *Router) MatchingMountByAPIPath(ctx context.Context, path string) string {
+	me, _, _ := r.matchingMountEntryByPath(ctx, path, true)
+	if me == nil {
+		return ""
+	}
+	return me.Path
+}
+
 // MatchingStoragePrefixByAPIPath the storage prefix for the given api path
 func (r *Router) MatchingStoragePrefixByAPIPath(ctx context.Context, path string) (string, bool) {
 	ns, err := namespace.FromContext(ctx)

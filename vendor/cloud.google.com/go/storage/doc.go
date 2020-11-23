@@ -117,6 +117,33 @@ Objects also have attributes, which you can fetch with Attrs:
     fmt.Printf("object %s has size %d and can be read using %s\n",
         objAttrs.Name, objAttrs.Size, objAttrs.MediaLink)
 
+Listing objects
+
+Listing objects in a bucket is done with the Bucket.Objects method:
+
+    query := &storage.Query{Prefix: ""}
+
+    var names []string
+    it := bkt.Objects(ctx, query)
+    for {
+        attrs, err := it.Next()
+        if err == iterator.Done {
+            break
+        }
+        if err != nil {
+            log.Fatal(err)
+        }
+        names = append(names, attrs.Name)
+    }
+
+If only a subset of object attributes is needed when listing, specifying this
+subset using Query.SetAttrSelection may speed up the listing process:
+
+    query := &storage.Query{Prefix: ""}
+    query.SetAttrSelection([]string{"Name"})
+
+    // ... as before
+
 ACLs
 
 Both objects and buckets have ACLs (Access Control Lists). An ACL is a list of

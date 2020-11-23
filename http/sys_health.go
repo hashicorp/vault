@@ -43,6 +43,7 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 
 func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	code, body, err := getSysHealth(core, r)
+
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
 		respondError(w, code, nil)
@@ -136,8 +137,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	// Check system status
 	sealed := core.Sealed()
-	standby, _ := core.Standby()
-	perfStandby := core.PerfStandby()
+	standby, perfStandby := core.StandbyStates()
 	var replicationState consts.ReplicationState
 	if standby {
 		replicationState = core.ActiveNodeReplicationState()

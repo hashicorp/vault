@@ -70,7 +70,7 @@ Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
 ~> **Note:** Although the configuration file allows you to pass in
-`AWS_ACCESS_KEY_ID` and `AWS_ACCESS_KEY_ID` as part of the seal's parameters, it
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as part of the seal's parameters, it
 is _strongly_ recommended to set these values via environment variables.
 
 AWS authentication values:
@@ -111,6 +111,10 @@ rotation and manual rotation is supported for KMS since the key information is s
 encrypted data. Old keys must not be disabled or deleted and are used to decrypt older data.
 Any new or updated data will be encrypted with the current key defined in the seal configuration
 or set to current under a key alias.
+
+## AWS Instance Metadata Timeout
+
+@include 'partials/aws-imds-timeout.mdx'
 
 ## Learn
 

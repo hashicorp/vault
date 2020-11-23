@@ -21,7 +21,7 @@ import layout from '../templates/components/form-field';
  * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
  * @param [disabled=false] {Boolean} - whether the field is disabled
  * @param [showHelpText=true] {Boolean} - whether to show the tooltip with help text from OpenAPI
- *
+ * @param [subText] {String} - Text to be displayed below the label
  *
  */
 
@@ -31,6 +31,7 @@ export default Component.extend({
   classNames: ['field'],
   disabled: false,
   showHelpText: true,
+  subText: '',
 
   onChange() {},
 
@@ -111,6 +112,12 @@ export default Component.extend({
     setAndBroadcastBool(path, trueVal, falseVal, value) {
       let valueToSet = value === true ? trueVal : falseVal;
       this.send('setAndBroadcast', path, valueToSet);
+    },
+
+    setAndBroadcastTtl(path, value) {
+      const alwaysSendValue = path === 'expiry' || path === 'safetyBuffer';
+      let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+      this.send('setAndBroadcast', path, `${valueToSet}`);
     },
 
     codemirrorUpdated(path, isString, value, codemirror) {

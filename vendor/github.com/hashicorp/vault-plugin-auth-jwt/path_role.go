@@ -18,7 +18,11 @@ import (
 
 var reservedMetadata = []string{"role"}
 
-const claimDefaultLeeway = 150
+const (
+	claimDefaultLeeway    = 150
+	boundClaimsTypeString = "string"
+	boundClaimsTypeGlob   = "glob"
+)
 
 func pathRoleList(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
@@ -49,27 +53,27 @@ func pathRole(b *jwtAuthBackend) *framework.Path {
 				Description: "Type of the role, either 'jwt' or 'oidc'.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenutil.DeprecationText("token_policies"),
 				Deprecated:  true,
 			},
-			"num_uses": &framework.FieldSchema{
+			"num_uses": {
 				Type:        framework.TypeInt,
 				Description: tokenutil.DeprecationText("token_num_uses"),
 				Deprecated:  true,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
-			"period": &framework.FieldSchema{
+			"period": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_period"),
 				Deprecated:  true,
@@ -104,6 +108,11 @@ Defaults to 60 (1 minute) if set to 0 and can be disabled if set to -1.`,
 			"bound_audiences": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of 'aud' claims that are valid for login; any match is sufficient`,
+			},
+			"bound_claims_type": {
+				Type:        framework.TypeString,
+				Description: `How to interpret values in the map of claims/values (which must match for login): allowed values are 'string' or 'glob'`,
+				Default:     boundClaimsTypeString,
 			},
 			"bound_claims": {
 				Type:        framework.TypeMap,
@@ -185,6 +194,7 @@ type jwtRole struct {
 	// Role binding properties
 	BoundAudiences      []string               `json:"bound_audiences"`
 	BoundSubject        string                 `json:"bound_subject"`
+	BoundClaimsType     string                 `json:"bound_claims_type"`
 	BoundClaims         map[string]interface{} `json:"bound_claims"`
 	ClaimMappings       map[string]string      `json:"claim_mappings"`
 	UserClaim           string                 `json:"user_claim"`
@@ -221,6 +231,10 @@ func (b *jwtAuthBackend) role(ctx context.Context, s logical.Storage, name strin
 	// Report legacy roles as type "jwt"
 	if role.RoleType == "" {
 		role.RoleType = "jwt"
+	}
+
+	if role.BoundClaimsType == "" {
+		role.BoundClaimsType = boundClaimsTypeString
 	}
 
 	if role.TokenTTL == 0 && role.TTL > 0 {
@@ -286,6 +300,7 @@ func (b *jwtAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 		"clock_skew_leeway":     int64(role.ClockSkewLeeway.Seconds()),
 		"bound_audiences":       role.BoundAudiences,
 		"bound_subject":         role.BoundSubject,
+		"bound_claims_type":     role.BoundClaimsType,
 		"bound_claims":          role.BoundClaims,
 		"claim_mappings":        role.ClaimMappings,
 		"user_claim":            role.UserClaim,
@@ -426,8 +441,33 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		role.VerboseOIDCLogging = verboseOIDCLoggingRaw.(bool)
 	}
 
+	boundClaimsType := data.Get("bound_claims_type").(string)
+	switch boundClaimsType {
+	case boundClaimsTypeString, boundClaimsTypeGlob:
+		role.BoundClaimsType = boundClaimsType
+	default:
+		return logical.ErrorResponse("invalid 'bound_claims_type': %s", boundClaimsType), nil
+	}
+
 	if boundClaimsRaw, ok := data.GetOk("bound_claims"); ok {
 		role.BoundClaims = boundClaimsRaw.(map[string]interface{})
+
+		if boundClaimsType == boundClaimsTypeGlob {
+			// Check that the claims are all strings
+			for _, claimValues := range role.BoundClaims {
+				claimsValuesList, ok := normalizeList(claimValues)
+
+				if !ok {
+					return logical.ErrorResponse("claim is not a string or list: %v", claimValues), nil
+				}
+
+				for _, claimValue := range claimsValuesList {
+					if _, ok := claimValue.(string); !ok {
+						return logical.ErrorResponse("claim is not a string: %v", claimValue), nil
+					}
+				}
+			}
+		}
 	}
 
 	if claimMappingsRaw, ok := data.GetOk("claim_mappings"); ok {

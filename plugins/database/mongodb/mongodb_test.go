@@ -2,43 +2,52 @@ package mongodb
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
-
-const testMongoDBWriteConcern = `{ "wmode": "majority", "wtimeout": 5000 }`
+const mongoAdminRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
 func TestMongoDB_Initialize(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
+	db := new()
+	defer dbtesting.AssertClose(t, db)
+
+	config := map[string]interface{}{
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	// Make a copy since the original map could be modified by the Initialize call
+	expectedConfig := copyConfig(config)
+
+	req := dbplugin.InitializeRequest{
+		Config:           config,
+		VerifyConnection: true,
+	}
+
+	resp := dbtesting.AssertInitialize(t, db, req)
+
+	if !reflect.DeepEqual(resp.Config, expectedConfig) {
+		t.Fatalf("Actual config: %#v\nExpected config: %#v", resp.Config, expectedConfig)
 	}
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
 	}
 }
 
@@ -46,177 +55,244 @@ func TestMongoDB_CreateUser(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	defer dbtesting.AssertClose(t, db)
 
-	statements := dbplugin.Statements{
-		Creation: []string{testMongoDBRole},
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
 	}
+	dbtesting.AssertInitialize(t, db, initReq)
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
+	password := "myreallysecurepassword"
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{mongoAdminRole},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(time.Minute),
 	}
+	createResp := dbtesting.AssertNewUser(t, db, createReq)
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	assertCredsExist(t, createResp.Username, password, connURL)
 }
 
 func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-		"write_concern":  testMongoDBWriteConcern,
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+			"write_concern":  `{ "wmode": "majority", "wtimeout": 5000 }`,
+		},
+		VerifyConnection: true,
 	}
 
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	defer dbtesting.AssertClose(t, db)
 
-	statements := dbplugin.Statements{
-		Creation: []string{testMongoDBRole},
-	}
+	dbtesting.AssertInitialize(t, db, initReq)
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
+	password := "myreallysecurepassword"
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{mongoAdminRole},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(time.Minute),
 	}
+	createResp := dbtesting.AssertNewUser(t, db, createReq)
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	assertCredsExist(t, createResp.Username, password, connURL)
 }
 
-func TestMongoDB_RevokeUser(t *testing.T) {
+func TestMongoDB_DeleteUser(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	defer dbtesting.AssertClose(t, db)
 
-	statements := dbplugin.Statements{
-		Creation: []string{testMongoDBRole},
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
 	}
+	dbtesting.AssertInitialize(t, db, initReq)
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
+	password := "myreallysecurepassword"
+	createReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{mongoAdminRole},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(time.Minute),
 	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	createResp := dbtesting.AssertNewUser(t, db, createReq)
+	assertCredsExist(t, createResp.Username, password, connURL)
 
 	// Test default revocation statement
-	err = db.RevokeUser(context.Background(), statements, username)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	delReq := dbplugin.DeleteUserRequest{
+		Username: createResp.Username,
 	}
 
-	if err = testCredsExist(t, connURL, username, password); err == nil {
-		t.Fatal("Credentials were not revoked")
-	}
+	dbtesting.AssertDeleteUser(t, db, delReq)
+
+	assertCredsDoNotExist(t, createResp.Username, password, connURL)
 }
 
-func testCredsExist(t testing.TB, connURL, username, password string) error {
-	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
-
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
-	if err != nil {
-		return err
-	}
-	return client.Ping(ctx, readpref.Primary())
-}
-
-func TestMongoDB_SetCredentials(t *testing.T) {
+func TestMongoDB_UpdateUser_Password(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// The docker test method PrepareTestContainer defaults to a database "test"
 	// if none is provided
 	connURL = connURL + "/test"
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	defer dbtesting.AssertClose(t, db)
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
 	}
+	dbtesting.AssertInitialize(t, db, initReq)
 
 	// create the database user in advance, and test the connection
 	dbUser := "testmongouser"
 	startingPassword := "password"
-	testCreateDBUser(t, connURL, "test", dbUser, startingPassword)
-	if err := testCredsExist(t, connURL, dbUser, startingPassword); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	createDBUser(t, connURL, "test", dbUser, startingPassword)
 
-	newPassword, err := db.GenerateCredentials(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	newPassword := "myreallysecurecredentials"
 
-	usernameConfig := dbplugin.StaticUserConfig{
+	updateReq := dbplugin.UpdateUserRequest{
 		Username: dbUser,
-		Password: newPassword,
+		Password: &dbplugin.ChangePassword{
+			NewPassword: newPassword,
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, updateReq)
+
+	assertCredsExist(t, dbUser, newPassword, connURL)
+}
+
+func TestGetTLSAuth(t *testing.T) {
+	ca := certhelpers.NewCert(t,
+		certhelpers.CommonName("certificate authority"),
+		certhelpers.IsCA(true),
+		certhelpers.SelfSign(),
+	)
+	cert := certhelpers.NewCert(t,
+		certhelpers.CommonName("test cert"),
+		certhelpers.Parent(ca),
+	)
+
+	type testCase struct {
+		username   string
+		tlsCAData  []byte
+		tlsKeyData []byte
+
+		expectOpts *options.ClientOptions
+		expectErr  bool
 	}
 
-	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	tests := map[string]testCase{
+		"no TLS data set": {
+			expectOpts: nil,
+			expectErr:  false,
+		},
+		"bad CA": {
+			tlsCAData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"bad key": {
+			tlsKeyData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"good ca": {
+			tlsCAData: cert.Pem,
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.Pem),
+					},
+				),
+			expectErr: false,
+		},
+		"good key": {
+			username:   "unittest",
+			tlsKeyData: cert.CombinedPEM(),
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						Certificates: []tls.Certificate{cert.TLSCert},
+					},
+				).
+				SetAuth(options.Credential{
+					AuthMechanism: "MONGODB-X509",
+					Username:      "unittest",
+				}),
+			expectErr: false,
+		},
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-	// confirm the original creds used to set still work (should be the same)
-	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := new()
+			c.Username = test.username
+			c.TLSCAData = test.tlsCAData
+			c.TLSCertificateKeyData = test.tlsKeyData
 
-	if (dbUser != username) || (newPassword != password) {
-		t.Fatalf("username/password mismatch: (%s)/(%s) vs (%s)/(%s)", dbUser, username, newPassword, password)
+			actual, err := c.getTLSAuth()
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actual, test.expectOpts) {
+				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
+			}
+		})
 	}
 }
 
-func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
+func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.CertPool {
+	t.Helper()
+
+	ok := pool.AppendCertsFromPEM(caPem)
+	if !ok {
+		t.Fatalf("Unable to append cert to cert pool")
+	}
+	return pool
+}
+
+func createDBUser(t testing.TB, connURL, db, username, password string) {
+	t.Helper()
+
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
@@ -230,6 +306,51 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 	}
 	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
 	if result.Err() != nil {
-		t.Fatal(result.Err())
+		t.Fatalf("failed to create user in mongodb: %s", result.Err())
 	}
+
+	assertCredsExist(t, username, password, connURL)
+}
+
+func assertCredsExist(t testing.TB, username, password, connURL string) {
+	t.Helper()
+
+	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
+	if err != nil {
+		t.Fatalf("Failed to connect to mongo: %s", err)
+	}
+
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		t.Fatalf("Failed to ping mongo with user %q: %s", username, err)
+	}
+}
+
+func assertCredsDoNotExist(t testing.TB, username, password, connURL string) {
+	t.Helper()
+
+	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
+	if err != nil {
+		return // Creds don't exist as expected
+	}
+
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		return // Creds don't exist as expected
+	}
+	t.Fatalf("User %q exists and was able to authenticate", username)
+}
+
+func copyConfig(config map[string]interface{}) map[string]interface{} {
+	newConfig := map[string]interface{}{}
+	for k, v := range config {
+		newConfig[k] = v
+	}
+	return newConfig
 }

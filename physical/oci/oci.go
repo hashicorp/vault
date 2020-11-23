@@ -124,8 +124,14 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 		return nil, errwrap.Wrapf("failed creating NewObjectStorageClientWithConfigurationProvider: {{err}}", err)
 	}
 
+	region := conf["region"]
+	if region != "" {
+		objectStorageClient.SetRegion(region)
+	}
+
 	logger.Debug("configuration",
 		"bucket_name", bucketName,
+		"region", region,
 		"namespace_name", namespaceName,
 		"ha_enabled", haEnabled,
 		"lock_bucket_name", lockBucketName,

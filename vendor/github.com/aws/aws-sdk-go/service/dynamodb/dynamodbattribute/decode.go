@@ -174,23 +174,23 @@ func (d *Decoder) decode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag 
 	}
 
 	switch {
-	case len(av.B) != 0 || (av.B != nil && d.EnableEmptyCollections):
+	case av.B != nil:
 		return d.decodeBinary(av.B, v)
 	case av.BOOL != nil:
 		return d.decodeBool(av.BOOL, v)
-	case len(av.BS) != 0 || (av.BS != nil && d.EnableEmptyCollections):
+	case av.BS != nil:
 		return d.decodeBinarySet(av.BS, v)
-	case len(av.L) != 0 || (av.L != nil && d.EnableEmptyCollections):
+	case av.L != nil:
 		return d.decodeList(av.L, v)
-	case len(av.M) != 0 || (av.M != nil && d.EnableEmptyCollections):
+	case av.M != nil:
 		return d.decodeMap(av.M, v)
 	case av.N != nil:
 		return d.decodeNumber(av.N, v, fieldTag)
-	case len(av.NS) != 0 || (av.NS != nil && d.EnableEmptyCollections):
+	case av.NS != nil:
 		return d.decodeNumberSet(av.NS, v)
-	case av.S != nil: // DynamoDB does not allow for empty strings, so we do not consider the length or EnableEmptyCollections flag here
+	case av.S != nil:
 		return d.decodeString(av.S, v, fieldTag)
-	case len(av.SS) != 0 || (av.SS != nil && d.EnableEmptyCollections):
+	case av.SS != nil:
 		return d.decodeStringSet(av.SS, v)
 	}
 
@@ -500,11 +500,8 @@ func (d *Decoder) decodeMap(avMap map[string]*dynamodb.AttributeValue, v reflect
 	} else if v.Kind() == reflect.Struct {
 		fields := unionStructFields(v.Type(), d.MarshalOptions)
 		for k, av := range avMap {
-			if f, ok := fieldByName(fields, k); ok {
-				fv := fieldByIndex(v, f.Index, func(v *reflect.Value) bool {
-					v.Set(reflect.New(v.Type().Elem()))
-					return true // to continue the loop.
-				})
+			if f, ok := fields.FieldByName(k); ok {
+				fv := decoderFieldByIndex(v, f.Index)
 				if err := d.decode(av, fv, f.tag); err != nil {
 					return err
 				}
@@ -612,6 +609,21 @@ func decodeUnixTime(n string) (time.Time, error) {
 	}
 
 	return time.Unix(v, 0), nil
+}
+
+// decoderFieldByIndex finds the field with the provided nested index, allocating
+// embedded parent structs if needed
+func decoderFieldByIndex(v reflect.Value, index []int) reflect.Value {
+	for i, x := range index {
+		if i > 0 && v.Kind() == reflect.Ptr && v.Type().Elem().Kind() == reflect.Struct {
+			if v.IsNil() {
+				v.Set(reflect.New(v.Type().Elem()))
+			}
+			v = v.Elem()
+		}
+		v = v.Field(x)
+	}
+	return v
 }
 
 // indirect will walk a value's interface or pointer value types. Returning
