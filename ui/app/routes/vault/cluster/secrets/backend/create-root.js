@@ -36,7 +36,7 @@ export default EditBase.extend({
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
     if (modelType === 'transform') {
-      modelType = transformModel(transition.queryParams);
+      modelType = transformModel(transition.to.queryParams);
     }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
       if (this.wizard.featureState === 'details' && this.wizard.componentState === 'transit') {
