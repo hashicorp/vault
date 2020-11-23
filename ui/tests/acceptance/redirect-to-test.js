@@ -43,20 +43,13 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
   test('redirect to a route after authentication', async function(assert) {
     let url = '/vault/secrets/secret/create';
     await visit(url);
-    // TEST TODO: could not replicate error (&with=token not on url)
-    // original assertion:
-    // assert.equal(
-    //   currentURL(),
-    //   `/vault/auth?redirect_to=${encodeURIComponent(url)}&with=token`,
-    //   'encodes url for the query param'
-    // );
-    assert.equal(
-      currentURL(),
-      `/vault/auth?redirect_to=${encodeURIComponent(url)}`,
+    assert.ok(
+      currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'
     );
     // the login method on this page does another visit call that we don't want here
     await auth.tokenInput('root').submit();
+    await settled();
     assert.equal(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
