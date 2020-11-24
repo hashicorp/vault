@@ -12,7 +12,7 @@ module('Acceptance | settings/configure/secrets/pki/tidy', function(hooks) {
     return authPage.login();
   });
 
-  test('it saves tidy config', async function(assert) {
+  test('it saves tidy config meep', async function(assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await page.visit({ backend: path, section: 'tidy' });

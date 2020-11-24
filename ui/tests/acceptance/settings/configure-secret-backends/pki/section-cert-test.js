@@ -67,7 +67,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     return path;
   };
 
-  test('cert config: generate', async function(assert) {
+  test('cert config: generate meep', async function(assert) {
     await mountAndNav(assert);
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
@@ -94,7 +94,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  test('cert config: sign intermediate and set signed intermediate', async function(assert) {
+  test('cert config: sign intermediate and set signed intermediate meep', async function(assert) {
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
