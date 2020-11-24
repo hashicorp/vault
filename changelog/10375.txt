@@ -1,0 +1,3 @@
+```release-note:improvement
+core/metrics: New telemetry metrics reporting lease expirations by time interval and namespace 
+```
