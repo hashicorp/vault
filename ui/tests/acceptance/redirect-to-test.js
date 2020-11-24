@@ -67,6 +67,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
       'encodes url for the query param'
     );
     await auth.tokenInput('root').submit();
+    await settled();
     assert.equal(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
