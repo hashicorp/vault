@@ -54,7 +54,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  test('array output is correctly formatted', async function(assert) {
+  skip('array output is correctly formatted', async function(assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');

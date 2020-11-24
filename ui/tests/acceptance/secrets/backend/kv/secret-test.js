@@ -1,4 +1,4 @@
-import { skip, visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import { visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -306,7 +306,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     }
   });
 
-  skip('filter clears on nav', async function(assert) {
+  test('filter clears on nav', async function(assert) {
     // UPGRADE TODO: This test fails because the filter component isn't working correctly
     await consoleComponent.runCommands([
       'vault write sys/mounts/test type=kv',
