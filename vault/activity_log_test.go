@@ -301,7 +301,9 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	a := core.activityLog
 	a.enabled = true
 	// set a nonzero segment
+	a.l.Lock()
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.l.Unlock()
 
 	now := time.Now()
 	ids := []string{"11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "33333333-2222-2222-2222-222222222222"}
