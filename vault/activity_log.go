@@ -120,8 +120,6 @@ type ActivityLog struct {
 	activeEntities map[string]struct{}
 
 	// track metadata and contents of the most recent log segment
-	// currentSegment is currently unprotected by a mutex, because it is updated
-	// only by the worker performing rotation.
 	currentSegment segmentInfo
 
 	// Fragments received from performance standbys

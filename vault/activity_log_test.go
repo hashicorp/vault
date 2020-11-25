@@ -991,7 +991,9 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 	tokenCount := &activity.TokenCount{
 		CountByNamespaceID: tokenRecords,
 	}
+	a.l.Lock()
 	a.currentSegment.tokenCount = tokenCount
+	a.l.Unlock()
 
 	// setup in-storage data to load for testing
 	entityRecords := []*activity.EntityRecord{
