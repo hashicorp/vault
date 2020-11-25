@@ -63,22 +63,26 @@ module('Acceptance | ssh secret backend', function(hooks) {
     const sshPath = `ssh-${now}`;
 
     await enablePage.enable('ssh', sshPath);
+    await settled();
     await click('[data-test-configuration-tab]');
+    await settled();
     await click('[data-test-secret-backend-configure]');
+    await settled();
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
     assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');
 
     // default has generate CA checked so we just submit the form
     await click('[data-test-ssh-input="configure-submit"]');
-
+    await settled();
     assert.ok(findAll('[data-test-ssh-input="public-key"]').length, 'a public key is fetched');
     await click('[data-test-backend-view-link]');
-
+    await settled();
     assert.equal(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
 
     for (let role of ROLES) {
       // create a role
       await click('[ data-test-secret-create]');
+      await settled();
       assert.ok(
         find('[data-test-secret-header]').textContent.includes('SSH role'),
         `${role.type}: renders the create page`
@@ -87,9 +91,11 @@ module('Acceptance | ssh secret backend', function(hooks) {
       await fillIn('[data-test-input="name"]', role.name);
       await fillIn('[data-test-input="keyType"]', role.type);
       await role.fillInCreate();
+      await settled();
 
       // save the role
       await click('[data-test-role-ssh-create]');
+      await settled();
       assert.equal(
         currentURL(),
         `/vault/secrets/${sshPath}/show/${role.name}`,
@@ -98,20 +104,24 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       // sign a key with this role
       await click('[data-test-backend-credentials]');
+      await settled();
       await role.fillInGenerate();
 
       // generate creds
       await click('[data-test-secret-generate]');
+      await settled();
       role.assertAfterGenerate(assert, sshPath);
 
       // click the "Back" button
       await click('[data-test-secret-generate-back]');
+      await settled();
       assert.ok(
         findAll('[data-test-secret-generate-form]').length,
         `${role.type}: back takes you back to the form`
       );
 
       await click('[data-test-secret-generate-cancel]');
+      await settled();
       assert.equal(
         currentURL(),
         `/vault/secrets/${sshPath}/list`,
@@ -124,7 +134,9 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       //and delete
       await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
+      await settled();
       await click(`[data-test-ssh-role-delete="${role.name}"]`);
+      await settled();
       await click(`[data-test-confirm-button]`);
 
       await settled();
