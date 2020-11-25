@@ -445,7 +445,9 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	// enabled check is now inside AddEntityToFragment
 	a.enabled = true
 	// set a nonzero segment
+	a.l.Lock()
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.l.Unlock()
 
 	// Stop timers for test purposes
 	close(a.doneCh)
