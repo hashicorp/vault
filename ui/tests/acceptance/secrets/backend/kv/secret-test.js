@@ -1,4 +1,4 @@
-import { visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import { visit, click, settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -20,7 +20,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create', function(hooks) {
+module('Acceptance | secrets/secret/create meep', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -165,6 +165,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
+    await settled();
     // use visit helper here because ids with / in them get encoded
     await visit('/vault/secrets/secret/list/foo/bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
@@ -321,8 +322,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.secrets.objectAt(0).click();
     await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
     assert.equal(listPage.secrets.length, 3, 'renders three secrets');
-    // UPGRADE TODO: This test fails because the filter component isn't working correctly
-    // assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
+    assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
   });
 
   let setupNoRead = async function(backend, canReadMeta = false) {

@@ -98,7 +98,7 @@ export default Route.extend({
           id: secret,
           backend,
           responsePath: 'data.keys',
-          page: params.page,
+          page: params.page || 1,
           pageFilter: params.pageFilter,
         })
         .then(model => {
