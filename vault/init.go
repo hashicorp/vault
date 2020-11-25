@@ -383,6 +383,8 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	// Prepare to re-seal
+
+	ctxCancel()
 	if err := c.preSeal(); err != nil {
 		c.logger.Error("pre-seal teardown failed", "error", err)
 		return nil, err

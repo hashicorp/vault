@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"reflect"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"go.uber.org/goleak"
 )
 
 var (
@@ -2566,4 +2568,42 @@ func TestCore_ServiceRegistration(t *testing.T) {
 	}); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func TestCore_Shutdown_Leaks(t *testing.T) {
+	// https://github.com/census-instrumentation/opencensus-go/issues/1191
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+
+	// https://github.com/kubernetes/klog/issues/188
+	ignoreKlog := goleak.IgnoreTopFunction("k8s.io/klog.(*loggingT).flushDaemon")
+
+	// https://github.com/armon/go-metrics/pull/121
+	// Won't define an IgnoreTopFunction for time.Sleep, due to this leak:
+	//Goroutine 10 in state sleep, with time.Sleep on top of the stack:
+	//goroutine 10 [sleep]:
+	//time.Sleep(0x3b9aca00)
+	///Users/ncc/go/go1.15.3/src/runtime/time.go:188 +0xbf
+	//github.com/armon/go-metrics.(*Metrics).collectStats(0xc00057d0e0)
+	///Users/ncc/go/pkg/mod/github.com/armon/go-metrics@v0.3.4/metrics.go:230 +0x2f
+	//created by github.com/armon/go-metrics.New
+	///Users/ncc/go/pkg/mod/github.com/armon/go-metrics@v0.3.4/start.go:79 +0x17b
+
+	defer goleak.VerifyNone(t, ignoreOpenCensus, ignoreKlog)
+
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		ClusterHeartbeatInterval: time.Second,
+	})
+	if err := c.Shutdown(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !c.Sealed() {
+		t.Fatal("wasn't sealed")
+	}
+
+	c = nil
+	runtime.GC()
+	// Run again to ensure that go-cache finalizer runs
+	runtime.GC()
+
+	time.Sleep(5 * time.Second)
 }

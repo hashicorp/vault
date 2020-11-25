@@ -1465,7 +1465,11 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 
 func (m *ExpirationManager) uniquePoliciesGc() {
 	for {
-		<-m.emptyUniquePolicies.C
+		select {
+		case <-m.emptyUniquePolicies.C:
+		case <-m.quitContext.Done():
+			return
+		}
 
 		// If the maximum lease is a month, and we blow away the unique
 		// policy cache every week, the pessimal case is 4x larger space
