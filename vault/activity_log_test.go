@@ -221,7 +221,9 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	a := core.activityLog
 	a.enabled = true
 	// set a nonzero segment
+	a.l.Lock()
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.l.Unlock()
 
 	nsIDs := [...]string{"ns1_id", "ns2_id", "ns3_id"}
 	path := fmt.Sprintf("%sdirecttokens/%d/0", logPrefix, a.currentSegment.startTimestamp)
