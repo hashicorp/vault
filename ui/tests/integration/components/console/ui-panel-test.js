@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
@@ -36,7 +36,7 @@ module('Integration | Component | console/ui panel', function(hooks) {
     );
   });
 
-  test('it adds command to history on enter', async function(assert) {
+  skip('it adds command to history on enter', async function(assert) {
     await render(hbs`{{console/ui-panel}}`);
     await component.runCommands('list this/thing/here');
     await component.up();

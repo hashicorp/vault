@@ -1,4 +1,4 @@
-import { currentURL, find, visit } from '@ember/test-helpers';
+import { currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import backendListPage from 'vault/tests/pages/secrets/backends';
@@ -24,6 +24,7 @@ module('Acceptance | settings', function(hooks) {
 
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');
+    await settled();
     assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
 
     await mountSecrets.selectType(type);
@@ -35,10 +36,12 @@ module('Acceptance | settings', function(hooks) {
       .defaultTTLUnit('s')
       .defaultTTLVal(100)
       .submit();
+    await settled();
     assert.ok(
       find('[data-test-flash-message]').textContent.trim(),
       `Successfully mounted '${type}' at '${path}'!`
     );
+    await settled();
     assert.equal(currentURL(), `/vault/secrets`, 'redirects to secrets page');
     let row = backendListPage.rows.filterBy('path', path + '/')[0];
     await row.menu();
