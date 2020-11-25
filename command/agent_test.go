@@ -410,6 +410,197 @@ auto_auth {
 	}
 }
 
+func TestAgent_NamespacePrecedence(t *testing.T) {
+	testFunc := func(t *testing.T, envVar string, configVar string) {
+		myNs := "foo"
+		logger := logging.NewVaultLogger(hclog.Trace)
+		cluster := vault.NewTestCluster(t,
+			&vault.CoreConfig{
+				Logger: logger,
+				CredentialBackends: map[string]logical.Factory{
+					"approle": credAppRole.Factory,
+				},
+			},
+			&vault.TestClusterOptions{
+				HandlerFunc: vaulthttp.Handler,
+			})
+		cluster.Start()
+		defer cluster.Cleanup()
+		vault.TestWaitActive(t, cluster.Cores[0].Core)
+		serverClient := cluster.Cores[0].Client
+
+		// Create our namespace and use it
+		_, err := serverClient.Logical().Write(fmt.Sprintf("sys/namespaces/%s", myNs), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		serverClient.SetNamespace(myNs)
+
+		// Enable the approle auth method
+		req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+		req.BodyBytes = []byte(`{"type": "approle"}`)
+		request(t, serverClient, req, 204)
+
+		// Create a named role
+		req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+		req.BodyBytes = []byte(`{
+		  "secret_id_num_uses": "10",
+		  "secret_id_ttl": "1m",
+		  "token_max_ttl": "1m",
+		  "token_num_uses": "10",
+		  "token_ttl": "1m"
+		}`)
+		request(t, serverClient, req, 204)
+
+		// Fetch the RoleID of the named role
+		req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+		body := request(t, serverClient, req, 200)
+		data := body["data"].(map[string]interface{})
+		roleID := data["role_id"].(string)
+
+		// Get a SecretID issued against the named role
+		req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+		body = request(t, serverClient, req, 200)
+		data = body["data"].(map[string]interface{})
+		secretID := data["secret_id"].(string)
+
+		// Write the RoleID and SecretID to temp files
+		roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+		secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+		sinkPath := makeTempFile(t, "token", "")
+		defer os.Remove(roleIDPath)
+		defer os.Remove(secretIDPath)
+		defer os.Remove(sinkPath)
+
+		// Create a config file
+		var config string
+
+		if configVar == "" {
+			config = `
+auto_auth {
+    method "approle" {
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+    sink "file" {
+        config = {
+            path = "%s"
+        }
+    }
+}
+`
+			config = fmt.Sprintf(config, roleIDPath, secretIDPath, sinkPath)
+		} else {
+			config = `
+auto_auth {
+    method "approle" {
+		namespace = "%s"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+    sink "file" {
+        config = {
+            path = "%s"
+        }
+    }
+}
+`
+			config = fmt.Sprintf(config, configVar, roleIDPath, secretIDPath, sinkPath)
+		}
+		configPath := makeTempFile(t, "config.hcl", config)
+		defer os.Remove(configPath)
+
+		// export the env var
+		if envVar != "" {
+			defer os.Setenv(api.EnvVaultNamespace, os.Getenv(api.EnvVaultNamespace))
+			os.Setenv(api.EnvVaultNamespace, envVar)
+		}
+
+		// create a brand new client, so it will automatically pick up the env var value, if present
+		testClient, err := api.NewClient(serverClient.CloneConfig())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Start the agent
+		ui, cmd := testAgentCommand(t, logger)
+		cmd.client = testClient
+		if err != nil {
+			t.Fatal(err)
+		}
+		cmd.startedCh = make(chan struct{})
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			code := cmd.Run([]string{"-config", configPath})
+			if code != 0 {
+				t.Errorf("non-zero return code when running agent: %d", code)
+				t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+				t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+			}
+			wg.Done()
+		}()
+
+		// defer agent shutdown
+		defer func() {
+			cmd.ShutdownCh <- struct{}{}
+			wg.Wait()
+		}()
+
+		select {
+		case <-cmd.startedCh:
+		case <-time.After(5 * time.Second):
+			t.Errorf("timeout")
+		}
+
+		found := false
+		deadline := time.Now().Add(5 * time.Second)
+		var sinkBytes []byte
+
+		for time.Now().Before(deadline) {
+			sinkBytes, err = ioutil.ReadFile(sinkPath)
+			if err != nil {
+				continue
+			}
+
+			if strings.TrimSpace(string(sinkBytes)) != "" {
+				found = true
+				break
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if err != nil || !found {
+			t.Fatalf("expected a token in the sinkPath, but it's empty. err = %v", err)
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		envVar    string
+		configVar string
+	}{
+		{"both env var and config var", "foo", "bar"},
+		{"only env var", "foo", ""},
+		{"only config var", "", "foo"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testFunc(t, tc.envVar, tc.configVar)
+		})
+	}
+}
+
 func TestAgent_RequireRequestHeader(t *testing.T) {
 	// newApiClient creates an *api.Client.
 	newApiClient := func(addr string, includeVaultRequestHeader bool) *api.Client {
