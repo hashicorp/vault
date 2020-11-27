@@ -10,6 +10,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"io"
 	"net"
 	"net/http"
@@ -26,21 +37,11 @@ import (
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
@@ -505,7 +506,7 @@ type Core struct {
 	counters counters
 
 	// Stores the raft applied index for standby nodes
-	raftFollowerStates *raftFollowerStates
+	raftFollowerStates *raft.RaftFollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
@@ -776,6 +777,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		raftJoinDoneCh:           make(chan struct{}),
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
 		activityLogConfig:        conf.ActivityLogConfig,
+		raftFollowerStates:       raft.NewRaftFollowerStates(),
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)

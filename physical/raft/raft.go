@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -120,6 +121,8 @@ type RaftBackend struct {
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
+
+	followerStates *RaftFollowerStates
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -434,6 +437,9 @@ type RaftServer struct {
 	// Voter is true if this server has a vote in the cluster. This might
 	// be false if the server is staging and still coming online.
 	Voter bool `json:"voter"`
+
+	LastContact  int64  `json:"last_contact_epoch"`
+	AppliedIndex uint64 `json:"applied_index"`
 }
 
 // RaftConfigurationResponse is returned when querying for the current Raft
@@ -481,6 +487,12 @@ func (b *RaftBackend) SetTLSKeyring(keyring *TLSKeyring) error {
 func (b *RaftBackend) SetServerAddressProvider(provider raft.ServerAddressProvider) {
 	b.l.Lock()
 	b.serverAddressProvider = provider
+	b.l.Unlock()
+}
+
+func (b *RaftBackend) SetFollowerStates(states *RaftFollowerStates) {
+	b.l.Lock()
+	b.followerStates = states
 	b.l.Unlock()
 }
 
@@ -876,6 +888,11 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 			Leader:          string(server.ID) == b.NodeID(),
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
+		}
+		if entry.NodeID != b.localID {
+			state := b.followerStates.Get(entry.NodeID)
+			entry.LastContact = state.LastHeartbeat.Unix()
+			entry.AppliedIndex = state.AppliedIndex
 		}
 		config.Servers = append(config.Servers, entry)
 	}
@@ -1370,4 +1387,76 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
+}
+
+type RaftFollowerState struct {
+	AppliedIndex  uint64
+	LastHeartbeat time.Time
+}
+
+type RaftFollowerStates struct {
+	l         sync.RWMutex
+	followers map[string]RaftFollowerState
+}
+
+func NewRaftFollowerStates() *RaftFollowerStates {
+	return &RaftFollowerStates{
+		followers: make(map[string]RaftFollowerState),
+	}
+}
+
+func (s *RaftFollowerStates) Update(nodeID string, appliedIndex uint64) {
+	state := RaftFollowerState{
+		AppliedIndex: appliedIndex,
+	}
+	if appliedIndex > 0 {
+		state.LastHeartbeat = time.Now()
+	}
+
+	s.l.Lock()
+	s.followers[nodeID] = state
+	s.l.Unlock()
+}
+
+func (s *RaftFollowerStates) Clear() {
+	s.l.Lock()
+	for i := range s.followers {
+		delete(s.followers, i)
+	}
+	s.l.Unlock()
+}
+
+func (s *RaftFollowerStates) Delete(nodeID string) {
+	s.l.RLock()
+	delete(s.followers, nodeID)
+	s.l.RUnlock()
+}
+
+func (s *RaftFollowerStates) Get(nodeID string) RaftFollowerState {
+	s.l.RLock()
+	state := s.followers[nodeID]
+	s.l.RUnlock()
+	return state
+}
+
+func (s *RaftFollowerStates) MinIndex() uint64 {
+	var min uint64 = math.MaxUint64
+	minFunc := func(a, b uint64) uint64 {
+		if a > b {
+			return b
+		}
+		return a
+	}
+
+	s.l.RLock()
+	for _, state := range s.followers {
+		min = minFunc(min, state.AppliedIndex)
+	}
+	s.l.RUnlock()
+
+	if min == math.MaxUint64 {
+		return 0
+	}
+
+	return min
 }

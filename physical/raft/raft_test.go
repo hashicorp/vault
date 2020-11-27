@@ -299,7 +299,6 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 }
 
 func TestRaft_HABackend(t *testing.T) {
-	t.Skip()
 	raft, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
 	raft2, dir2 := getRaft(t, false, true)
