@@ -28,11 +28,23 @@ const (
 	mySQLTypeName = "mysql"
 )
 
+// Modern
+// v_  displayname_ metadata_ uuid_time
+// -2- -----14----- ----11--- ----5----
+// ---------------32------------------
+//
+// Legacy
+// v_  displayname_ metadata_ uuid_time
+// -2- -----6------ ----5---- ----3----
+// ---------------16------------------
+
 var (
-	MetadataLen       int = 10
-	LegacyMetadataLen int = 4
-	UsernameLen       int = 32
-	LegacyUsernameLen int = 16
+	DisplayNameLen       int = 13
+	LegacyDisplayNameLen int = 5
+	MetadataLen          int = 10
+	LegacyMetadataLen    int = 4
+	UsernameLen          int = 32
+	LegacyUsernameLen    int = 16
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
@@ -121,11 +133,11 @@ func (m *MySQL) generateUsername(req dbplugin.NewUserRequest) (string, error) {
 	var dispNameLen, roleNameLen, maxLen int
 
 	if m.legacy {
-		dispNameLen = LegacyUsernameLen
+		dispNameLen = LegacyDisplayNameLen
 		roleNameLen = LegacyMetadataLen
 		maxLen = LegacyUsernameLen
 	} else {
-		dispNameLen = UsernameLen
+		dispNameLen = DisplayNameLen
 		roleNameLen = MetadataLen
 		maxLen = UsernameLen
 	}
