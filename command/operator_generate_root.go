@@ -11,10 +11,9 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/password"
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil/root"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -364,36 +363,10 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 		return 2
 	}
 
-	var token string
-	switch status.OTPLength {
-	case 0:
-		// Backwards compat
-		tokenBytes, err := xor.XORBase64(encoded, otp)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error xoring token: %s", err))
-			return 1
-		}
-
-		uuidToken, err := uuid.FormatUUID(tokenBytes)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error formatting base64 token value: %s", err))
-			return 1
-		}
-		token = strings.TrimSpace(uuidToken)
-
-	default:
-		tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
-		if err != nil {
-			c.UI.Error(fmt.Errorf("Error decoding base64'd token: %w", err).Error())
-			return 1
-		}
-
-		tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
-		if err != nil {
-			c.UI.Error(fmt.Errorf("Error xoring token: %w", err).Error())
-			return 1
-		}
-		token = string(tokenBytes)
+	token, err := root.DecodeRootToken(encoded, otp, status.OTPLength)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error decoding root token: %s", err))
+		return 1
 	}
 
 	switch Format(c.UI) {
