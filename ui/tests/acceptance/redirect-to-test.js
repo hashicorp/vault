@@ -26,8 +26,11 @@ const wrappedAuth = async () => {
 
 const setupWrapping = async () => {
   await auth.logout();
+  await settled();
   await auth.visit();
+  await settled();
   await auth.tokenInput('root').submit();
+  await settled();
   let wrappedToken = await wrappedAuth();
   return wrappedToken;
 };
