@@ -1482,7 +1482,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	if coreConfig.ClusterHeartbeatInterval == 0 {
 		// Set this lower so that state populates quickly to standby nodes
-		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
+		coreConfig.ClusterHeartbeatInterval = 1 * time.Second
 	}
 
 	if coreConfig.RawConfig == nil {

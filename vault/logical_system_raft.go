@@ -131,6 +131,18 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
 			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
 		},
+		{
+			Pattern: "storage/raft/autopilot/health",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftAutopilotHealth(),
+					Summary:  "Report on autopilot health status",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-health"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-health"][1]),
+		},
 	}
 }
 
@@ -435,6 +447,27 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 	}
 }
 
+func (b *SystemBackend) handleStorageRaftAutopilotHealth() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftBackend, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		healthy, servers, err := raftBackend.GetAutopilotServerHealth(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"healthy": healthy,
+				"servers": servers,
+			},
+		}, nil
+	}
+}
+
 var sysRaftHelp = map[string][2]string{
 	"raft-bootstrap-challenge": {
 		"Creates a challenge for the new peer to be joined to the raft cluster.",
@@ -458,6 +491,10 @@ var sysRaftHelp = map[string][2]string{
 	},
 	"raft-snapshot-force": {
 		"Force restore a raft cluster snapshot",
+		"",
+	},
+	"raft-autopilot-health": {
+		"Report health status according to autopilot",
 		"",
 	},
 }

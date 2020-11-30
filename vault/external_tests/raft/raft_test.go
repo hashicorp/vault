@@ -308,6 +308,52 @@ func TestRaft_Configuration(t *testing.T) {
 	}
 }
 
+func TestRaft_AutopilotHealth(t *testing.T) {
+	t.Parallel()
+	cluster := raftCluster(t)
+	defer cluster.Cleanup()
+
+	for i, c := range cluster.Cores {
+		if c.Core.Sealed() {
+			t.Fatalf("failed to unseal core %d", i)
+		}
+	}
+
+	client := cluster.Cores[0].Client
+	secret, err := client.Logical().Read("sys/storage/raft/autopilot/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	servers := secret.Data["servers"].([]map[string]interface{})
+	if len(servers) != 3 {
+		t.Fatalf("incorrect number of servers in the configuration")
+	}
+	expected := map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	}
+	for _, server := range servers {
+		nodeID := server["node_id"].(string)
+		leader := server["leader"].(bool)
+		switch nodeID {
+		case "core-0":
+			if !leader {
+				t.Fatalf("expected server to be leader: %#v", server)
+			}
+		default:
+			if leader {
+				t.Fatalf("expected server to not be leader: %#v", server)
+			}
+		}
+
+		delete(expected, nodeID)
+	}
+	if len(expected) != 0 {
+		t.Fatalf("failed to read configuration successfully")
+	}
+}
+
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
 	cluster := raftCluster(t)

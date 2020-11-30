@@ -716,7 +716,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	clusterHeartbeatInterval := conf.ClusterHeartbeatInterval
 	if clusterHeartbeatInterval == 0 {
-		clusterHeartbeatInterval = 5 * time.Second
+		clusterHeartbeatInterval = 1 * time.Second
 	}
 
 	// Setup the core

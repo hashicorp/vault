@@ -155,23 +155,33 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 }
 
 func (c *Core) setupRaftActiveNode(ctx context.Context) error {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil
+	}
+
+	c.logger.Info("starting raft active node")
+	raftBackend.StartAutopilot(c.activeContext)
+
 	c.pendingRaftPeers = &sync.Map{}
+
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 
 func (c *Core) stopRaftActiveNode() {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return
+	}
+
+	c.logger.Info("stopping raft active node")
+	raftBackend.StopAutopilot()
+
 	c.pendingRaftPeers = nil
 	c.stopPeriodicRaftTLSRotate()
 }
 
 func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
-	raftBackend := c.getRaftBackend()
-
-	// No-op if raft is not being used
-	if raftBackend == nil {
-		return nil
-	}
-
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
 
@@ -179,7 +189,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
 	}
 
-	return c.raftTLSRotatePhased(ctx, logger, raftBackend, c.raftTLSRotationStopCh)
+	return c.raftTLSRotatePhased(ctx, logger, c.getRaftBackend(), c.raftTLSRotationStopCh)
 }
 
 // raftTLSRotateDirect will spawn a go routine in charge of periodically

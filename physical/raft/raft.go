@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -123,6 +124,8 @@ type RaftBackend struct {
 	maxEntrySize uint64
 
 	followerStates *RaftFollowerStates
+
+	autopilot *autopilot.Autopilot
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -776,6 +779,9 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
+	delegate := &AutopilotDelegate{b}
+	b.autopilot = autopilot.New(b.raft, delegate, autopilot.WithLogger(b.logger.Named("autopilot")))
+
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
 		opts.ClusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
@@ -789,6 +795,14 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
+}
+
+func (b *RaftBackend) StartAutopilot(ctx context.Context) {
+	b.autopilot.Start(ctx)
+}
+
+func (b *RaftBackend) StopAutopilot() {
+	b.autopilot.Stop()
 }
 
 // TeardownCluster shuts down the raft cluster
@@ -898,6 +912,50 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 	}
 
 	return config, nil
+}
+
+type AutopilotServer struct {
+	NodeID string `json:"node_id"`
+
+	// Address is the IP:port of the server, used for Raft communications
+	Address string `json:"address"`
+
+	// Leader is true if this server is the current cluster leader
+	Leader bool `json:"leader"`
+
+	// Voter is true if this server has a vote in the cluster. This might
+	// be false if the server is staging and still coming online.
+	Voter bool `json:"voter"`
+
+	LastContact time.Duration `json:"last_contact"`
+	LastIndex   uint64        `json:"last_index"`
+	//LastTerm uint64 `json:"last_term"`
+}
+
+func (b *RaftBackend) GetAutopilotServerHealth(ctx context.Context) (bool, []AutopilotServer, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return false, nil, errors.New("raft storage is not initialized")
+	}
+	state := b.autopilot.GetState()
+	var servers []AutopilotServer
+	for _, s := range state.Servers {
+		servers = append(servers, AutopilotServer{
+			NodeID:  string(s.Server.ID),
+			Address: string(s.Server.Address),
+			// Since we only service this request on the active node our node ID
+			// denotes the raft leader.
+			Leader:      string(s.Server.ID) == b.NodeID(),
+			Voter:       s.Server.NodeType == "voter",
+			LastContact: s.Stats.LastContact,
+			LastIndex:   s.Stats.LastIndex,
+			//LastTerm:   s.Stats.LastTerm,
+		})
+	}
+
+	return state.Healthy, servers, nil
 }
 
 // AddPeer adds a new server to the raft cluster
@@ -1459,4 +1517,77 @@ func (s *RaftFollowerStates) MinIndex() uint64 {
 	}
 
 	return min
+}
+
+type AutopilotDelegate struct {
+	*RaftBackend
+}
+
+var _ autopilot.ApplicationIntegration = &AutopilotDelegate{}
+
+func (d *AutopilotDelegate) AutopilotConfig() *autopilot.Config {
+	return &autopilot.Config{
+		CleanupDeadServers:      false,
+		LastContactThreshold:    2 * time.Second,
+		MaxTrailingLogs:         250,
+		MinQuorum:               0,
+		ServerStabilizationTime: 10 * time.Second,
+	}
+}
+
+func (d *AutopilotDelegate) KnownServers() map[raft.ServerID]*autopilot.Server {
+	ret := make(map[raft.ServerID]*autopilot.Server)
+	fstates := d.RaftBackend.followerStates
+	fstates.l.RLock()
+	defer fstates.l.RUnlock()
+	for id := range d.RaftBackend.followerStates.followers {
+		ret[raft.ServerID(id)] = &autopilot.Server{
+			ID:          raft.ServerID(id),
+			Name:        id,
+			Address:     "",
+			NodeStatus:  "alive",
+			Version:     "",
+			Meta:        nil,
+			RaftVersion: 0,
+			NodeType:    "",
+			Ext:         nil,
+		}
+	}
+	return ret
+}
+
+func (d *AutopilotDelegate) FetchServerStats(ctx context.Context, servers map[raft.ServerID]*autopilot.Server) map[raft.ServerID]*autopilot.ServerStats {
+	ret := make(map[raft.ServerID]*autopilot.ServerStats)
+	fstates := d.RaftBackend.followerStates
+	fstates.l.RLock()
+	defer fstates.l.RUnlock()
+	now := time.Now()
+	for id, flw := range d.RaftBackend.followerStates.followers {
+		ret[raft.ServerID(id)] = &autopilot.ServerStats{
+			LastContact: now.Sub(flw.LastHeartbeat),
+			LastTerm:    0,
+			LastIndex:   flw.AppliedIndex,
+		}
+	}
+	return ret
+}
+
+func (d *AutopilotDelegate) NotifyState(state *autopilot.State) {
+	// emit metrics if we are the leader regarding overall healthiness and the failure tolerance
+	//if d.server.raft.State() == raft.Leader {
+	//	metrics.SetGauge([]string{"autopilot", "failure_tolerance"}, float32(state.FailureTolerance))
+	//	if state.Healthy {
+	//		metrics.SetGauge([]string{"autopilot", "healthy"}, 1)
+	//	} else {
+	//		metrics.SetGauge([]string{"autopilot", "healthy"}, 0)
+	//	}
+	//}
+}
+
+func (d *AutopilotDelegate) RemoveFailedServer(srv *autopilot.Server) {
+	//go func() {
+	//	if err := d.server.RemoveFailedNode(srv.Name, false); err != nil {
+	//		d.server.logger.Error("failedto remove server", "name", srv.Name, "id", srv.ID, "error", err)
+	//	}
+	//}()
 }
