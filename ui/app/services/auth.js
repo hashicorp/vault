@@ -226,13 +226,10 @@ export default Service.extend({
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
   }),
 
-  // TODO: come back and fix this.  It needs to constantly check for the expiration hence why it's not computed off any change. Could add tokenExpirationDate
-  // eslint-disable-next-line ember/require-computed-property-dependencies
-  tokenExpired: computed(function() {
+  get tokenExpired() {
     const expiration = this.tokenExpirationDate;
     return expiration ? this.now() >= expiration : null;
-    // TODO: remove volatile, but may have a consequence https://deprecations.emberjs.com/v3.x/#toc_computed-property-volatile
-  }),
+  },
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
     const tokenName = this.currentTokenName;

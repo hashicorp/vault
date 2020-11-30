@@ -48,7 +48,7 @@ export default Fragment.extend({
   lastWAL: attr('number'),
   merkleRoot: attr('string'),
   merkleSyncProgress: attr('object'),
-  syncProgress: computed('state', 'merkleSyncProgress', function() {
+  get syncProgress() {
     const { state, merkleSyncProgress } = this;
     if (state !== 'merkle-sync' || !merkleSyncProgress) {
       return null;
@@ -58,9 +58,7 @@ export default Fragment.extend({
       progress: sync_progress,
       total: sync_total_keys,
     };
-    // TODO: removed .volatile() but may have a consequence https://deprecations.emberjs.com/v3.x/#toc_computed-property-volatile
-    // eslint-disable-next-line ember/no-volatile-computed-properties
-  }),
+  },
 
   syncProgressPercent: computed('syncProgress', function() {
     const syncProgress = this.syncProgress;
