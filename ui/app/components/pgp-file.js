@@ -51,7 +51,7 @@ export default Component.extend({
     // the original as it was only encoded when we used `readAsDataURL`.
     const fileData = decoded.match(BASE_64_REGEX) ? decoded : b64File;
     yield this.onChange(this.index, { value: fileData, fileName: filename });
-  }), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
+  }).withTestWaiter(),
 
   actions: {
     pickedFile(e) {

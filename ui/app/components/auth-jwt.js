@@ -71,8 +71,9 @@ export default Component.extend({
       }
     }
     this.set('role', role);
-  }).restartable(),
-  // .withTestWaiter(),  // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
+  })
+    .restartable()
+    .withTestWaiter(),
 
   handleOIDCError(err) {
     this.onLoading(false);

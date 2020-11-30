@@ -61,8 +61,9 @@ export default Component.extend({
     }
     this.flashMessages.success(message);
     yield this.onSave({ saveType: 'save', model });
-  }).drop(),
-  // .withTestWaiter(),  // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
+  })
+    .drop()
+    .withTestWaiter(),
 
   willDestroy() {
     let model = this.model;

@@ -92,7 +92,7 @@
     "ember-cli-uglify": "^3.0.0",
     "ember-composable-helpers": "^4.3.0",
     "ember-concurrency": "^1.3.0",
-    "ember-concurrency-test-waiter": "^0.4.0",
+    "ember-concurrency-test-waiter": "^0.3.2",
     "ember-copy": "^1.0.0",
     "ember-data": "~3.20.0",
     "ember-data-model-fragments": "5.0.0-beta.0",

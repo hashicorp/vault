@@ -39,7 +39,7 @@ const AuthConfigBase = Component.extend({
     }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
-  }), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
+  }).withTestWaiter(),
 });
 
 AuthConfigBase.reopenClass({
