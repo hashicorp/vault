@@ -97,8 +97,14 @@ func (cl *Listener) SetAdvertiseAddr(addr string) error {
 	if err != nil {
 		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
 	}
-	cl.advertise = &NetAddr{
-		Host: u.Host,
+	if u.Host != "" {
+		cl.advertise = &NetAddr{
+			Host: u.Host,
+		}
+	} else {
+		cl.advertise = &UnixAddr{
+			Path: u.Path,
+		}
 	}
 
 	return nil
@@ -408,7 +414,7 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		}
 
 		tlsConfig.NextProtos = []string{alpn}
-		cl.logger.Debug("creating rpc dialer", "alpn", alpn, "host", tlsConfig.ServerName)
+		cl.logger.Debug("creating rpc dialer", "addr", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
 		return cl.networkLayer.Dial(addr, timeout, tlsConfig)
 	}
@@ -447,4 +453,16 @@ func (c *NetAddr) String() string {
 
 func (*NetAddr) Network() string {
 	return "tcp"
+}
+
+type UnixAddr struct {
+	Path string
+}
+
+func (c *UnixAddr) String() string {
+	return c.Path
+}
+
+func (*UnixAddr) Network() string {
+	return "unix"
 }

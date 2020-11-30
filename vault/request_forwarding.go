@@ -275,7 +275,11 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
-	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
+	addr := clusterURL.Host
+	if addr == "" {
+		addr = clusterURL.Path
+	}
+	c.rpcClientConn, err = grpc.DialContext(dctx, addr,
 		grpc.WithDialer(clusterListener.GetDialerFunc(ctx, consts.RequestForwardingALPN)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{

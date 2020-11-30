@@ -1442,7 +1442,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	clusterAddrs := []*net.TCPAddr{}
+	var clusterAddrs []string
 
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
@@ -1468,7 +1468,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
 					return 1
 				}
-				clusterAddrs = append(clusterAddrs, tcpAddr)
+				clusterAddrs = append(clusterAddrs, tcpAddr.String())
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
@@ -1479,7 +1479,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 					IP:   tcpAddr.IP,
 					Port: tcpAddr.Port + 1,
 				}
-				clusterAddrs = append(clusterAddrs, clusterAddr)
+				clusterAddrs = append(clusterAddrs, clusterAddr.String())
 				addr = clusterAddr.String()
 			}
 			props["cluster address"] = addr
@@ -2090,7 +2090,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
-		info[fmt.Sprintf("node %d api address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
+		info[fmt.Sprintf("node %d api address", i)] = fmt.Sprintf("https://%s", core.Address.String())
 		infoKeys = append(infoKeys, fmt.Sprintf("node %d api address", i))
 	}
 

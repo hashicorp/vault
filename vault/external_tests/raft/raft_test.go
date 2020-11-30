@@ -187,6 +187,28 @@ func TestRaft_Retry_Join(t *testing.T) {
 		"core-1": true,
 		"core-2": true,
 	})
+
+	deadline := time.Now().Add(10 * time.Second)
+	healthy := false
+	for time.Now().Before(deadline) {
+		secret, err := client.Logical().Read("sys/storage/raft/autopilot/health")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Data["healthy"].(bool) {
+			healthy = true
+			break
+		}
+		servers := secret.Data["servers"].([]interface{})
+		for _, server := range servers {
+			t.Logf("%+v", server)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if !healthy {
+		t.Fatal("autopilot never became healthy")
+	}
 }
 
 func TestRaft_Join(t *testing.T) {

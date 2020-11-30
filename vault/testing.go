@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -754,7 +755,7 @@ func (c *TestCluster) Start() {
 	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
-				c.Logger.Info("starting listener for test core", "core", i, "port", ln.Address.Port)
+				c.Logger.Info("starting listener for test core", "core", i, "address", core.Address)
 				go core.Server.Serve(ln)
 			}
 		}
@@ -959,10 +960,10 @@ func SetReplicationFailureMode(core *TestClusterCore, mode uint32) {
 	atomic.StoreUint32(core.Core.replicationFailure, mode)
 }
 
-type TestListener struct {
-	net.Listener
-	Address *net.TCPAddr
-}
+//type TestListener struct {
+//	net.Listener
+//	Address *net.TCPAddr
+//}
 
 type TestClusterCore struct {
 	*Core
@@ -970,7 +971,7 @@ type TestClusterCore struct {
 	Client               *api.Client
 	Handler              http.Handler
 	Address              *net.TCPAddr
-	Listeners            []*TestListener
+	Listeners            []net.Listener
 	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock      *sync.RWMutex
 	Server               *http.Server
@@ -1295,7 +1296,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	// Listener setup
 	//
 	addresses := []*net.TCPAddr{}
-	listeners := [][]*TestListener{}
+	listeners := [][]net.Listener{}
 	servers := []*http.Server{}
 	handlers := []http.Handler{}
 	tlsConfigs := []*tls.Config{}
@@ -1347,10 +1348,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		tlsConfig.BuildNameToCertificate()
 		tlsConfigs = append(tlsConfigs, tlsConfig)
-		lns := []*TestListener{&TestListener{
-			Listener: tls.NewListener(ln, tlsConfig),
-			Address:  ln.Addr().(*net.TCPAddr),
-		},
+		lns := []net.Listener{
+			tls.NewListener(ln, tlsConfig),
 		}
 		listeners = append(listeners, lns)
 		var handler http.Handler = http.NewServeMux()
@@ -1375,12 +1374,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
-		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:        "https://127.0.0.1:0",
-		DisableMlock:       true,
-		EnableUI:           true,
-		EnableRaw:          true,
-		BuiltinRegistry:    NewMockBuiltinRegistry(),
+		// TODO handle unix listener redirectaddr
+		RedirectAddr: fmt.Sprintf("https://127.0.0.1:%d", addresses[0].Port),
+		//ClusterAddr:        "https://127.0.0.1:0",
+		DisableMlock:    true,
+		EnableUI:        true,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
@@ -1513,7 +1513,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfigs := []*CoreConfig{}
 
 	for i := 0; i < numCores; i++ {
-		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], pubKey, addresses)
+		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, pubKey, addresses)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -1527,7 +1527,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Clustering setup
 	for i := 0; i < numCores; i++ {
-		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
+		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, addresses[i], listeners[i], handlers[i])
 	}
 
 	// Create TestClusterCores
@@ -1571,8 +1571,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Assign clients
 	for i := 0; i < numCores; i++ {
-		testCluster.Cores[i].Client =
-			testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
+		testCluster.Cores[i].Client = testCluster.getAPIClient(t, opts, addresses[i].String(), tlsConfigs[i])
 	}
 
 	// Extra Setup
@@ -1666,10 +1665,8 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	if err != nil {
 		t.Fatal(err)
 	}
-	tcc.Listeners = []*TestListener{&TestListener{
-		Listener: tls.NewListener(ln, tcc.TLSConfig),
-		Address:  ln.Addr().(*net.TCPAddr),
-	},
+	tcc.Listeners = []net.Listener{
+		tls.NewListener(ln, tcc.TLSConfig),
 	}
 
 	tcc.Handler = http.NewServeMux()
@@ -1679,7 +1676,11 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	}
 
 	// Create a new Core
-	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey, nil)
+	var addrs []*net.TCPAddr
+	for _, core := range cluster.Cores {
+		addrs = append(addrs, core.Address)
+	}
+	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, cluster.pubKey, addrs)
 	if coreHandler != nil {
 		tcc.Handler = coreHandler
 		tcc.Server.Handler = coreHandler
@@ -1690,25 +1691,23 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.CoreConfig = &localConfig
 	tcc.UnderlyingRawStorage = localConfig.Physical
 
-	cluster.setupClusterListener(
-		t, idx, newCore, tcc.CoreConfig,
-		opts, tcc.Listeners, tcc.Handler)
+	cluster.setupClusterListener(t, idx, newCore, tcc.CoreConfig, opts, nil, tcc.Listeners, tcc.Handler)
 
-	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.TLSConfig)
+	tcc.Client = cluster.getAPIClient(t, opts, tcc.Address.String(), tcc.TLSConfig)
 
 	testAdjustUnderlyingStorage(tcc)
 	testExtraTestCoreSetup(t, cluster.priKey, tcc)
 
 	// Start listeners
 	for _, ln := range tcc.Listeners {
-		tcc.Logger().Info("starting listener for core", "port", ln.Address.Port)
+		tcc.Logger().Info("starting listener for core", "addr", tcc.Address.String())
 		go tcc.Server.Serve(ln)
 	}
 
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey interface{}, addresses []*net.TCPAddr) (func(), *Core, CoreConfig, http.Handler) {
+func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, pubKey interface{}, addresses []*net.TCPAddr) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
@@ -1723,7 +1722,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		firstCoreNumber = opts.FirstCoreNumber
 	}
 
-	localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[0].Address.Port)
+	localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", addresses[0].Port)
 
 	// if opts.SealFunc is provided, use that to generate a seal for the config instead
 	if opts != nil && opts.SealFunc != nil {
@@ -1817,24 +1816,13 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	return cleanupFunc, c, localConfig, handler
 }
 
-func (testCluster *TestCluster) setupClusterListener(
-	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
-	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
+func (testCluster *TestCluster) setupClusterListener(t testing.T, idx int,
+	core *Core, coreConfig *CoreConfig, opts *TestClusterOptions, addr *net.TCPAddr,
+	listeners []net.Listener, handler http.Handler) {
 
-	if coreConfig.ClusterAddr == "" {
-		return
-	}
-
-	clusterAddrGen := func(lns []*TestListener, port int) []*net.TCPAddr {
-		ret := make([]*net.TCPAddr, len(lns))
-		for i, ln := range lns {
-			ret[i] = &net.TCPAddr{
-				IP:   ln.Address.IP,
-				Port: port,
-			}
-		}
-		return ret
-	}
+	//if coreConfig.ClusterAddr == "" {
+	//	return
+	//}
 
 	baseClusterListenPort := 0
 	if opts != nil && opts.BaseClusterListenPort != 0 {
@@ -1844,12 +1832,16 @@ func (testCluster *TestCluster) setupClusterListener(
 		baseClusterListenPort = opts.BaseClusterListenPort
 	}
 
-	port := 0
+	var clusterAddr string
 	if baseClusterListenPort != 0 {
-		port = baseClusterListenPort + idx
+		port := baseClusterListenPort + idx
+		clusterAddr = fmt.Sprintf("%s:%d", addr.IP, port)
+	} else {
+		clusterAddr = filepath.Join(testCluster.TempDir, "clusterListener"+strconv.Itoa(idx))
 	}
-	core.Logger().Info("assigning cluster listener for test core", "core", idx, "port", port)
-	core.SetClusterListenerAddrs(clusterAddrGen(listeners, port))
+	core.Logger().Info("assigning cluster listener for test core", "core", idx, "address", clusterAddr)
+	core.SetClusterListenerAddrs([]string{clusterAddr})
+
 	core.SetClusterHandler(handler)
 }
 
@@ -2008,7 +2000,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 func (testCluster *TestCluster) getAPIClient(
 	t testing.T, opts *TestClusterOptions,
-	port int, tlsConfig *tls.Config) *api.Client {
+	addr string, tlsConfig *tls.Config) *api.Client {
 
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig.Clone()
@@ -2026,7 +2018,7 @@ func (testCluster *TestCluster) getAPIClient(
 	if config.Error != nil {
 		t.Fatal(config.Error)
 	}
-	config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+	config.Address = fmt.Sprintf("https://" + addr)
 	config.HttpClient = client
 	config.MaxRetries = 0
 	apiClient, err := api.NewClient(config)

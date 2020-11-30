@@ -308,7 +308,21 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	networkLayer := c.clusterNetworkLayer
 
 	if networkLayer == nil {
-		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
+		if strings.HasPrefix(c.ClusterAddr(), "unix:") {
+			var addrs []*net.UnixAddr
+			for _, addr := range c.clusterListenerAddrs {
+				unixAddr, _ := net.ResolveUnixAddr("unix", addr)
+				addrs = append(addrs, unixAddr)
+			}
+			networkLayer = cluster.NewUnixLayer(addrs, c.logger.Named("cluster-listener.unix"))
+		} else {
+			var addrs []*net.TCPAddr
+			for _, addr := range c.clusterListenerAddrs {
+				tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+				addrs = append(addrs, tcpAddr)
+			}
+			networkLayer = cluster.NewTCPLayer(addrs, c.logger.Named("cluster-listener.tcp"))
+		}
 	}
 
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
@@ -363,10 +377,15 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("cluster listeners successfully shut down")
 }
 
-func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
+func (c *Core) SetClusterListenerAddrs(addrs []string) {
 	c.clusterListenerAddrs = addrs
 	if c.ClusterAddr() == "" && len(addrs) == 1 {
-		c.clusterAddr.Store(fmt.Sprintf("https://%s", addrs[0].String()))
+		addr := addrs[0]
+		if strings.HasPrefix(addr, "/") {
+			c.clusterAddr.Store("unix://" + addrs[0])
+		} else {
+			c.clusterAddr.Store("https://" + addrs[0])
+		}
 	}
 }
 

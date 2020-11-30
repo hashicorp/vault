@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -403,7 +402,7 @@ type Core struct {
 	// The parsed form of the local cluster cert
 	localClusterParsedCert *atomic.Value
 	// The TCP addresses we should use for clustering
-	clusterListenerAddrs []*net.TCPAddr
+	clusterListenerAddrs []string
 	// The handler to use for request forwarding
 	clusterHandler http.Handler
 	// Write lock used to ensure that we don't have multiple connections adjust

@@ -1019,16 +1019,15 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
-	err = c.startClusterListener(ctx)
-	if err != nil {
-		return errwrap.Wrapf("error starting cluster: {{err}}", err)
-	}
-
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
+
 	clusterAddr := parsedClusterAddr.Host
+	if clusterAddr == "" {
+		clusterAddr = parsedClusterAddr.Path
+	}
 	//if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
 	//	// We are testing and have an address provider, so just create a random
 	//	// addr, it will be overwritten later.
@@ -1066,6 +1065,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
+	err = c.startClusterListener(ctx)
+	if err != nil {
+		return errwrap.Wrapf("error starting cluster: {{err}}", err)
+	}
+
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 	err = raftBackend.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      answerResp.Data.TLSKeyring,
@@ -1096,10 +1100,14 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
+	addr := parsedClusterAddr.Host
+	if addr == "" {
+		addr = parsedClusterAddr.Path
+	}
 	if err := raftBackend.Bootstrap([]raft.Peer{
 		{
 			ID:      raftBackend.NodeID(),
-			Address: parsedClusterAddr.Host,
+			Address: addr,
 		},
 	}); err != nil {
 		return errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
