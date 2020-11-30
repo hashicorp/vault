@@ -1,0 +1,3 @@
+```release-note:bug
+ secrets/transit: allow for null string to be used for optional parameters in encrypt and decrypt
+ ```
