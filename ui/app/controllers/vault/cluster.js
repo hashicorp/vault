@@ -46,7 +46,6 @@ export default Controller.extend({
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
     function() {
-      // ARG TODO something here fix
       if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
         return false;
       }

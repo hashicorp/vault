@@ -169,7 +169,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
-  }), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
+  }).withTestWaiter(), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
 
   fetchMethods: task(function*() {
     let store = this.store;

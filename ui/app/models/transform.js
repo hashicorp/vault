@@ -36,7 +36,7 @@ const TWEAK_SOURCE = [
 const ModelExport = Model.extend({
   useOpenAPI: false,
   name: attr('string', {
-    // TODO: make this required for making a transformation
+    // CBS TODO: make this required for making a transformation
     label: 'Name',
     fieldValue: 'id',
     readOnly: true,
@@ -53,7 +53,7 @@ const ModelExport = Model.extend({
     defaultValue: 'supplied',
     label: 'Tweak source',
     possibleValues: TWEAK_SOURCE,
-    subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // TODO: I do not include the link here.  Need to figure out the best way to approach this.
+    subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // CBS TODO: I do not include the link here.  Need to figure out the best way to approach this.
   }),
   masking_character: attr('string', {
     characterLimit: 1,
@@ -64,7 +64,7 @@ const ModelExport = Model.extend({
   template: attr('array', {
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
-    label: 'Template', // TODO: make this required for making a transformation
+    label: 'Template', // CBS TODO: make this required for making a transformation
     models: ['transform/template'],
     selectLimit: 1,
     onlyAllowExisting: true,

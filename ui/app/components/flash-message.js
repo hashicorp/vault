@@ -1,7 +1,4 @@
-/* eslint-disable no-unused-vars */
-// ARG TODO it wants me to remove get from import but used in computed - double check
-
-import { get, computed } from '@ember/object';
+import { computed } from '@ember/object';
 import FlashMessage from 'ember-cli-flash/components/flash-message';
 
 export default FlashMessage.extend({

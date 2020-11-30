@@ -6,7 +6,6 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 
 module('Acceptance | userpass secret backend', function(hooks) {
-  //  ARG TODO: test occasionally fails
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {

@@ -21,8 +21,7 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    // ARG TODO double check removed get
-    this.namespaceService.findNamespacesForUser.perform();
+    this.namespaceService?.findNamespacesForUser.perform();
   },
 
   didReceiveAttrs() {

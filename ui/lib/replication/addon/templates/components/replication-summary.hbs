@@ -1,4 +1,3 @@
-{{!-- ARG TODO test to make sure this comes up with removal of if not --}}
 {{#unless (has-feature "DR Replication")}}
   {{upgrade-page title="Replication"}}
 {{else if (or cluster.allReplicationDisabled cluster.replicationAttrs.replicationDisabled)}}

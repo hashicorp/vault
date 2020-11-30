@@ -9,14 +9,12 @@ export default EditForm.extend({
     this._super(...arguments);
 
     if (this.model.isNew) {
-      // ARG TODO check after removing this.set
       this.model.operationAll = true;
     }
   },
 
   actions: {
     toggleOperationSpecial(checked) {
-      // ARG TODO check after removing this.set
       this.model.operationNone = !checked;
       this.model.operationAll = checked;
     },

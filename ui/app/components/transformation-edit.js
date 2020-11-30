@@ -99,7 +99,7 @@ export default TransformBase.extend({
         const initialRoles = this.initialRoles || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]
-          .filter(r => !this.isWildcard(r)) // TODO: expand wildcards into included roles instead
+          .filter(r => !this.isWildcard(r)) // CBS TODO: expand wildcards into included roles instead
           .map(role => {
             if (initialRoles.indexOf(role) < 0) {
               return {

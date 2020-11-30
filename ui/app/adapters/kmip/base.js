@@ -40,7 +40,6 @@ export default ApplicationAdapter.extend({
   query(store, type, query) {
     return this.ajax(this.urlForQuery(query, type.modelName), 'GET').then(resp => {
       // remove pagination query items here
-      // ARG TODO double check for linter removed size, page, responsePath, pageFilter as unused
       const { ...modelAttrs } = query;
       resp._requestQuery = modelAttrs;
       return resp;
