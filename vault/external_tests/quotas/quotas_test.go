@@ -127,6 +127,46 @@ func waitForRemovalOrTimeout(c *api.Client, path string, tick, to time.Duration)
 	}
 }
 
+func TestQuotas_RateLimit_DupFactors(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a global rlq
+	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+		"rate": 7.7,
+	})
+	require.NoError(t, err)
+
+	// Create a pki mount rlq
+	_, err = client.Logical().Write("sys/quotas/rate-limit/kv", map[string]interface{}{
+		"path": "pki",
+		"rate": 16.67,
+	})
+	require.NoError(t, err)
+
+	// Attempt to overwrite the pki mount rlq without the path param, making it the global quota
+	_, err = client.Logical().Write("sys/quotas/rate-limit/kv", map[string]interface{}{
+		"rate": 10,
+	})
+	require.Error(t, err)
+
+	// Successfully read the global quota without the conflicting quotas error
+	_, err = client.Logical().Read("sys/quotas/rate-limit/rlq")
+	require.NoError(t, err)
+}
+
 func TestQuotas_RateLimitQuota_DupName(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
