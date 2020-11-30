@@ -359,6 +359,13 @@ func testLayeredACL(t *testing.T, acl *ACL, ns *namespace.Namespace) {
 	}
 }
 
+func TestACL_ParseMalformedPolicy(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, `name{}`)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestACL_PolicyMerge(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
