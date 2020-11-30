@@ -445,7 +445,9 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	// enabled check is now inside AddEntityToFragment
 	a.enabled = true
 	// set a nonzero segment
+	a.l.Lock()
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.l.Unlock()
 
 	// Stop timers for test purposes
 	close(a.doneCh)
@@ -1360,7 +1362,7 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	a.enabled = true
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1395,7 +1397,7 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 	var wg sync.WaitGroup
 	close(a.doneCh)
 
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1427,7 +1429,7 @@ func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	cancelFn()
 
-	err := a.refreshFromStoredLog(ctx, &wg)
+	err := a.refreshFromStoredLog(ctx, &wg, time.Now().UTC())
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context cancelled error, got: %v", err)
 	}
@@ -1438,7 +1440,7 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 	a.enabled = true
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1470,7 +1472,7 @@ func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
 	a.enabled = true
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1541,7 +1543,7 @@ func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
 	a.enabled = true
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, now)
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1558,7 +1560,7 @@ func TestActivityLog_refreshFromStoredLogTwoMonthsPrevious(t *testing.T) {
 	a.enabled = true
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, now)
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1577,7 +1579,7 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	a.enabled = true
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1603,25 +1605,6 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 		// we expect activeEntities to be loaded for the entire month
 		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Entities, activeEntities)
 	}
-}
-
-func TestActivityLog_refreshFromStoredLogNextMonth(t *testing.T) {
-	t.Skip("works on enterprise, fails on oss (oss boots with activity log disabled)")
-
-	// test what happens when most recent data is from month M+1
-	nextMonthStart := timeutil.StartOfNextMonth(time.Now().UTC())
-	a, _, _ := setupActivityRecordsInStorage(t, nextMonthStart, true, true)
-	a.enabled = true
-
-	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(context.Background(), &wg)
-	if err != nil {
-		t.Fatalf("got error loading stored activity logs: %v", err)
-	}
-	wg.Wait()
-
-	// we can't know exactly what the timestamp should be set to, just that it shouldn't be zero
-	expectCurrentSegmentRefreshed(t, a, time.Now().Unix(), true)
 }
 
 func TestActivityLog_IncludeNamespace(t *testing.T) {

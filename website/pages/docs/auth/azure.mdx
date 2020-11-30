@@ -30,7 +30,7 @@ Required Azure API permissions to be granted to Vault user:
 - `Microsoft.Compute/virtualMachines/*/read`
 - `Microsoft.Compute/virtualMachineScaleSets/*/read`
 
-*NOTE:* The above permissions are only required when the associated vm* parameters are used on login.  Please see the [API doc] (https://www.vaultproject.io/api-docs/auth/azure#login) for more details.
+*NOTE:* The above permissions are only required when the associated vm* parameters are used on login.  Please see the [API doc](https://www.vaultproject.io/api-docs/auth/azure#login) for more details.
 
 If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret. MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault.
 
