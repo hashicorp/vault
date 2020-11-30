@@ -221,10 +221,12 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	a := core.activityLog
 	a.enabled = true
 	// set a nonzero segment
+	a.l.Lock()
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	path := fmt.Sprintf("%sdirecttokens/%d/0", logPrefix, a.currentSegment.startTimestamp)
+	a.l.Unlock()
 
 	nsIDs := [...]string{"ns1_id", "ns2_id", "ns3_id"}
-	path := fmt.Sprintf("%sdirecttokens/%d/0", logPrefix, a.currentSegment.startTimestamp)
 
 	for i := 0; i < 3; i++ {
 		a.AddTokenToFragment(nsIDs[0])
@@ -300,8 +302,12 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	a.enabled = true
+
+	a.l.Lock()
 	// set a nonzero segment
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	path := fmt.Sprintf("%sentity/%d/0", logPrefix, a.currentSegment.startTimestamp)
+	a.l.Unlock()
 
 	now := time.Now()
 	ids := []string{"11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "33333333-2222-2222-2222-222222222222"}
@@ -310,7 +316,6 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		now.Add(1 * time.Second).Unix(),
 		now.Add(2 * time.Second).Unix(),
 	}
-	path := fmt.Sprintf("%sentity/%d/0", logPrefix, a.currentSegment.startTimestamp)
 
 	a.AddEntityToFragment(ids[0], "root", times[0])
 	a.AddEntityToFragment(ids[1], "root2", times[1])
@@ -447,14 +452,13 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	// set a nonzero segment
 	a.l.Lock()
 	a.currentSegment.startTimestamp = time.Now().Unix()
+	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", a.currentSegment.startTimestamp)
+	path1 := fmt.Sprintf("sys/counters/activity/log/entity/%d/1", a.currentSegment.startTimestamp)
+	tokenPath := fmt.Sprintf("sys/counters/activity/log/directtokens/%d/0", a.currentSegment.startTimestamp)
 	a.l.Unlock()
 
 	// Stop timers for test purposes
 	close(a.doneCh)
-
-	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", a.currentSegment.startTimestamp)
-	path1 := fmt.Sprintf("sys/counters/activity/log/entity/%d/1", a.currentSegment.startTimestamp)
-	tokenPath := fmt.Sprintf("sys/counters/activity/log/directtokens/%d/0", a.currentSegment.startTimestamp)
 
 	genID := func(i int) string {
 		return fmt.Sprintf("11111111-1111-1111-1111-%012d", i)
@@ -1057,6 +1061,7 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 
 	ctx := context.Background()
 	for _, tc := range testCases {
+		a.l.Lock()
 		err := a.loadCurrentEntitySegment(ctx, time.Unix(tc.time, 0), tc.seqNum)
 		if err != nil {
 			t.Fatalf("got error loading data for %q: %v", tc.path, err)
@@ -1064,7 +1069,6 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 		if !reflect.DeepEqual(a.currentSegment.tokenCount.CountByNamespaceID, tokenCount.CountByNamespaceID) {
 			t.Errorf("this function should not wipe out the in-memory token count")
 		}
-
 		// verify accurate data in in-memory current segment
 		if a.currentSegment.startTimestamp != tc.time {
 			t.Errorf("bad timestamp loaded. expected: %v, got: %v for path %q", tc.time, a.currentSegment.startTimestamp, tc.path)
@@ -1075,6 +1079,7 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 		if !entityRecordsEqual(t, a.currentSegment.currentEntities.Entities, tc.entities.Entities) {
 			t.Errorf("bad data loaded. expected: %v, got: %v for path %q", tc.entities.Entities, a.currentSegment.currentEntities, tc.path)
 		}
+		a.l.Unlock()
 
 		activeEntities := core.GetActiveEntities()
 		if !activeEntitiesEqual(t, activeEntities, tc.entities.Entities) {
