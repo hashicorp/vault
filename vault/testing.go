@@ -827,7 +827,12 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
-	t.Helper()
+	if err := c.UnsealCoreWithError(core); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (c *TestCluster) UnsealCoreWithError(core *TestClusterCore) error {
 	var keys [][]byte
 	if core.seal.RecoveryKeySupported() {
 		keys = c.RecoveryKeys
@@ -836,9 +841,10 @@ func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
 	}
 	for _, key := range keys {
 		if _, err := core.Core.Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
+			return fmt.Errorf("unseal err: %s", err)
 		}
 	}
+	return nil
 }
 
 func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.T, core *TestClusterCore) {
@@ -1029,7 +1035,7 @@ type TestClusterOptions struct {
 	// core in cluster will have 0, second 1, etc.
 	// If the backend is shared across the cluster (i.e. is not Raft) then it
 	// should return nil when coreIdx != 0.
-	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger) *PhysicalBackendBundle
+	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger, addresses []*net.TCPAddr) *PhysicalBackendBundle
 	// FirstCoreNumber is used to assign a unique number to each core within
 	// a multi-cluster setup.
 	FirstCoreNumber   int
@@ -1192,23 +1198,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	if opts != nil && len(opts.CACert) > 0 {
 		caBytes = opts.CACert
 	} else {
-		caCertTemplate := &x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "localhost",
-			},
-			DNSNames:              []string{"localhost"},
-			IPAddresses:           certIPs,
-			KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
-			SerialNumber:          big.NewInt(mathrand.Int63()),
-			NotBefore:             time.Now().Add(-30 * time.Second),
-			NotAfter:              time.Now().Add(262980 * time.Hour),
-			BasicConstraintsValid: true,
-			IsCA:                  true,
-		}
-		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
-		if err != nil {
-			t.Fatal(err)
-		}
+		caBytes, _ = NewCACert(t, certIPs, caKey)
 	}
 	caCert, err := x509.ParseCertificate(caBytes)
 	if err != nil {
@@ -1324,7 +1314,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		addresses = append(addresses, addr)
+		addresses = append(addresses, ln.Addr().(*net.TCPAddr))
 
 		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
 		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
@@ -1523,7 +1513,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfigs := []*CoreConfig{}
 
 	for i := 0; i < numCores; i++ {
-		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], pubKey)
+		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], pubKey, addresses)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -1616,6 +1606,31 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	return &testCluster
 }
 
+func NewCACert(t testing.T, certIPs []net.IP, caKey *ecdsa.PrivateKey) ([]byte, string) {
+	caCertTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "localhost",
+		},
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           certIPs,
+		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
+		SerialNumber:          big.NewInt(mathrand.Int63()),
+		NotBefore:             time.Now().Add(-30 * time.Second),
+		NotAfter:              time.Now().Add(262980 * time.Hour),
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	caCertPEMBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	}
+	return caBytes, string(pem.EncodeToMemory(caCertPEMBlock))
+}
+
 // StopCore performs an orderly shutdown of a core.
 func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	t.Helper()
@@ -1664,7 +1679,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	}
 
 	// Create a new Core
-	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey)
+	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey, nil)
 	if coreHandler != nil {
 		tcc.Handler = coreHandler
 		tcc.Server.Handler = coreHandler
@@ -1693,7 +1708,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey interface{}) (func(), *Core, CoreConfig, http.Handler) {
+func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey interface{}, addresses []*net.TCPAddr) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
@@ -1722,7 +1737,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
 	if opts != nil && opts.PhysicalFactory != nil {
-		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger)
+		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, addresses)
 		switch {
 		case physBundle == nil && coreConfig.Physical != nil:
 		case physBundle == nil && coreConfig.Physical == nil:

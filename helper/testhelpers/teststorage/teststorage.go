@@ -3,6 +3,7 @@ package teststorage
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"time"
 
@@ -79,7 +80,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, addresses []*net.TCPAddr) *vault.PhysicalBackendBundle {
 	return MakeRaftBackendWithConf(t, coreIdx, logger, nil)
 }
 
@@ -120,11 +121,11 @@ func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extr
 // RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
 // and the physical.Backend provided in PhysicalBackendBundler as the storage
 // backend.
-func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger, addresses []*net.TCPAddr) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger, addresses []*net.TCPAddr) *vault.PhysicalBackendBundle {
 		// Call the factory func to create the storage backend
 		physFactory := SharedPhysicalFactory(f)
-		bundle := physFactory(t, coreIdx, logger)
+		bundle := physFactory(t, coreIdx, logger, addresses)
 
 		// This can happen if a shared physical backend is called on a non-0th core.
 		if bundle == nil {
@@ -166,8 +167,8 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 
 type PhysicalBackendBundler func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle
 
-func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger, addresses []*net.TCPAddr) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger, addresses []*net.TCPAddr) *vault.PhysicalBackendBundle {
 		if coreIdx == 0 {
 			return f(t, logger)
 		}

@@ -3,25 +3,34 @@ package rafttests
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/md5"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	testintf "github.com/mitchellh/go-testing-interface"
+
 	"github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
@@ -93,59 +102,84 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 
 func TestRaft_Retry_Join(t *testing.T) {
 	t.Parallel()
-	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
-	opts.SetupFunc = nil
-	cluster := vault.NewTestCluster(t, &conf, &opts)
+
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certIPs := []net.IP{
+		net.IPv6loopback,
+		net.ParseIP("127.0.0.1"),
+	}
+	caBytes, caPEM := vault.NewCACert(t, certIPs, caKey)
+
+	var opts = vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		SkipInit:    true,
+		CAKey:       caKey,
+		CACert:      caBytes,
+		PhysicalFactory: func(t testintf.T, coreIdx int, logger hclog.Logger, addresses []*net.TCPAddr) *vault.PhysicalBackendBundle {
+			var leaderApiAddrs []map[string]string
+			for _, addr := range addresses {
+				leaderApiAddrs = append(leaderApiAddrs, map[string]string{
+					"leader_api_addr": "https://" + addr.String(),
+					"leader_ca_cert":  caPEM,
+				})
+			}
+			retryJoinConfig, err := json.Marshal(leaderApiAddrs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return teststorage.MakeRaftBackendWithConf(t, coreIdx, logger, map[string]string{
+				"performance_multiplier": "1",
+				"retry_join":             string(retryJoinConfig),
+			})
+		},
+	}
+	cluster := vault.NewTestCluster(t, nil, &opts)
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-
-	leaderCore := cluster.Cores[0]
-	leaderAPI := leaderCore.Client.Address()
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
+	client := cluster.Cores[0].Client
+	resp, err := client.Sys().Init(&api.InitRequest{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, keyb64 := range resp.KeysB64 {
+		key, err := base64.StdEncoding.DecodeString(keyb64)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cluster.BarrierKeys = append(cluster.BarrierKeys, key)
+	}
+	cluster.RootToken = resp.RootToken
+	for _, core := range cluster.Cores {
+		core.Client.SetToken(resp.RootToken)
 	}
 
-	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
-			LeaderAPIAddr: leaderAPI,
-			TLSConfig:     leaderCore.TLSConfig,
-			Retry:         true,
-		},
-	}
-
-	{
-		core := cluster.Cores[1]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+	cluster.UnsealCore(t, cluster.Cores[0])
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	for _, core := range cluster.Cores[1:] {
+		err = core.InitiateRetryJoin(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		time.Sleep(2 * time.Second)
-
-		cluster.UnsealCore(t, core)
-	}
-
-	{
-		core := cluster.Cores[2]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		deadline := time.Now().Add(5 * time.Second)
+		var err error
+		for time.Now().Before(deadline) {
+			err = cluster.UnsealCoreWithError(core)
+			if err == nil {
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		time.Sleep(2 * time.Second)
-
-		cluster.UnsealCore(t, core)
 	}
 
 	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{

@@ -5,9 +5,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,12 +22,7 @@ import (
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
@@ -1021,20 +1019,25 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
+	err = c.startClusterListener(ctx)
+	if err != nil {
+		return errwrap.Wrapf("error starting cluster: {{err}}", err)
+	}
+
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
-		// We are testing and have an address provider, so just create a random
-		// addr, it will be overwritten later.
-		var err error
-		clusterAddr, err = uuid.GenerateUUID()
-		if err != nil {
-			return err
-		}
-	}
+	//if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
+	//	// We are testing and have an address provider, so just create a random
+	//	// addr, it will be overwritten later.
+	//	var err error
+	//	clusterAddr, err = uuid.GenerateUUID()
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
 	answerReq := raftInfo.leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
 	if err := answerReq.SetJSONBody(map[string]interface{}{
@@ -1061,11 +1064,6 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
 		return err
-	}
-
-	err = c.startClusterListener(ctx)
-	if err != nil {
-		return errwrap.Wrapf("error starting cluster: {{err}}", err)
 	}
 
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
