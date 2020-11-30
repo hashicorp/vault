@@ -39,28 +39,28 @@ func NewTelemetryStorageWrapper(s Storage) *TelemetryStorageWrapper {
 }
 
 func (t *TelemetryStorageWrapper) List(ctx context.Context, s string) ([]string, error) {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "LIST")
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage LIST")
 	span.SetAttributes(label.String("path", s))
 	defer span.End()
 	return t.storage.List(ctx, s)
 }
 
 func (t *TelemetryStorageWrapper) Get(ctx context.Context, s string) (*StorageEntry, error) {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "GET")
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage GET")
 	span.SetAttributes(label.String("path", s))
 	defer span.End()
 	return t.storage.Get(ctx, s)
 }
 
 func (t *TelemetryStorageWrapper) Put(ctx context.Context, entry *StorageEntry) error {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "PUT")
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage PUT")
 	span.SetAttributes(label.String("key", entry.Key))
 	defer span.End()
 	return t.storage.Put(ctx, entry)
 }
 
 func (t *TelemetryStorageWrapper) Delete(ctx context.Context, s string) error {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "DELETE")
+	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage DELETE")
 	span.SetAttributes(label.String("path", s))
 	defer span.End()
 	return t.storage.Delete(ctx, s)
