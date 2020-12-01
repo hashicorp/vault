@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "HashiCorp",
   "dependencies": {
-    "@hashicorp/nextjs-scripts": "^10.0.2",
+    "@hashicorp/nextjs-scripts": "^13.3.0",
     "@hashicorp/react-button": "^2.2.1",
     "@hashicorp/react-case-study-slider": "^2.1.1",
     "@hashicorp/react-content": "^4.0.0",
@@ -29,7 +29,7 @@
     "imagemin-mozjpeg": "^9.0.0",
     "imagemin-optipng": "^8.0.0",
     "imagemin-svgo": "^8.0.0",
-    "next": "9.4.4",
+    "next": "^9.5.5",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   },
