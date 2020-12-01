@@ -13,7 +13,16 @@
 
 <Toolbar>
   <ToolbarFilters>
-    <NavigateInput @filterFocusDidChange={{action "setFilterFocus"}} @filterDidChange={{action "setFilter"}} @filter={{filter}} @filterMatchesKey={{filterMatchesKey}} @firstPartialMatch={{firstPartialMatch}} @baseKey={{get baseKey "id"}} @shouldNavigateTree={{true}} @mode="leases" @placeholder="Filter leases" />
+    <NavigateInput
+      @filterFocusDidChange={{action "setFilterFocus"}}
+      @filterDidChange={{action "setFilter"}}
+      @filter={{this.filter}}
+      @filterMatchesKey={{filterMatchesKey}}
+      @firstPartialMatch={{firstPartialMatch}}
+      @baseKey={{get baseKey "id"}}
+      @shouldNavigateTree={{true}}
+      @mode="leases"
+      @placeholder="Filter leases" />
      {{#if filterFocused}}
        &nbsp;
        &nbsp;
