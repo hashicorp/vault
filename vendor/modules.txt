@@ -803,6 +803,7 @@ github.com/oracle/oci-go-sdk/common/auth
 github.com/oracle/oci-go-sdk/keymanagement
 github.com/oracle/oci-go-sdk/objectstorage
 # github.com/ory/dockertest v3.3.5+incompatible
+github.com/ory/dockertest
 github.com/ory/dockertest/docker
 github.com/ory/dockertest/docker/opts
 github.com/ory/dockertest/docker/pkg/archive
