@@ -183,6 +183,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
 
   test('it can delete a role from the detail page', async function(assert) {
     let { path, scope, role } = await createRole(this);
+    await settled();
     await rolesPage.visitDetail({ backend: path, scope, role });
     await settled();
     await rolesPage.detailEditLink();

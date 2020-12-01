@@ -82,6 +82,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     let backend = await mount();
     const transformationName = 'foo';
     const roleName = 'foo-role';
+    await settled();
     await transformationsPage.createLink({ backend });
     await settled();
     assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'redirects to create transformation page');
