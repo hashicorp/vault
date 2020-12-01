@@ -10,6 +10,7 @@ import (
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 
 	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
@@ -94,10 +95,10 @@ func newRegistry() *registry {
 		databasePlugins: map[string]BuiltinFactory{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
-			"mysql-database-plugin":        dbMysql.New(false),
-			"mysql-aurora-database-plugin": dbMysql.New(true),
-			"mysql-rds-database-plugin":    dbMysql.New(true),
-			"mysql-legacy-database-plugin": dbMysql.New(true),
+			"mysql-database-plugin":        dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen),
+			"mysql-aurora-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
+			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
+			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 
 			"cassandra-database-plugin":     dbCass.New,
 			"couchbase-database-plugin":     dbCouchbase.New,
