@@ -11,7 +11,7 @@
 
 @import '~@hashicorp/react-button/dist/style.css';
 @import '~@hashicorp/react-case-study-slider/dist/style.css';
-@import '~@hashicorp/react-code-block/dist/style.css';
+@import '~@hashicorp/react-code-block/style.css';
 @import '~@hashicorp/react-consent-manager/dist/style.css';
 @import '~@hashicorp/react-content/dist/style.css';
 @import '~@hashicorp/react-docs-page/dist/style.css';
@@ -23,6 +23,7 @@
 @import '~@hashicorp/react-search/dist/style.css';
 @import '~@hashicorp/react-section-header/dist/style.css';
 @import '~@hashicorp/react-tabs/dist/style.css';
+@import '~@hashicorp/react-text-split/dist/style.css';
 @import '~@hashicorp/react-text-and-content/dist/style.css';
 @import '~@hashicorp/react-toggle/dist/style.css';
 @import '~@hashicorp/react-use-cases/dist/style.css';
