@@ -1,3 +1,0 @@
-```release-note:bug
-core: Fix bug where updating an existing path on a lease count quota could introduce a conflict.
-```
