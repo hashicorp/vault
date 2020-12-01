@@ -143,6 +143,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     // as the requestor, go to the URL that's blocked by the control group
     // and store the values
     await visit(url);
+    await settled();
     accessor = controlGroupComponent.accessor;
     controlGroupToken = controlGroupComponent.token;
     await authPage.logout();
@@ -152,7 +153,9 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await visit('/vault/auth?with=userpass');
     await settled();
     await authFormComponent.username(ADMIN_USER);
+    await settled();
     await authFormComponent.password(ADMIN_PASSWORD);
+    await settled();
     await authFormComponent.login();
     await settled();
     await visit(`/vault/access/control-groups/${accessor}`);
@@ -196,10 +199,12 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
 
   test('it allows the full flow to work with a saved token', async function(assert) {
     await workflow(assert, this, true);
+    await settled();
   });
 
   test('it allows the full flow to work without a saved token', async function(assert) {
     await workflow(assert, this);
+    await settled();
   });
 
   test('it displays the warning in the console when making a request to a Control Group path', async function(assert) {
