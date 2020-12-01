@@ -545,16 +545,24 @@ func (m *Manager) Reset() error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	var err error
-	m.db, err = memdb.NewMemDB(dbSchema())
+	err := m.resetCache()
 	if err != nil {
 		return err
 	}
-
 	m.storage = nil
 	m.ctx = nil
 
 	m.entManager.Reset()
+	return nil
+}
+
+// Must be called with the lock held
+func (m *Manager) resetCache() error {
+	db, err := memdb.NewMemDB(dbSchema())
+	if err != nil {
+		return err
+	}
+	m.db = db
 	return nil
 }
 
@@ -734,6 +742,9 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 		return err
 	}
 	m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
+	if err = m.resetCache(); err != nil {
+		return err
+	}
 
 	// Load the quota rules for all supported types from storage and load it in
 	// the quota manager.
