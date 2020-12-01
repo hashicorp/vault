@@ -295,7 +295,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		}
 
 		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(serverID, 0)
+			b.Core.raftFollowerStates.Update(serverID, 0, 0)
 		}
 
 		peers, err := raftBackend.Peers(ctx)

@@ -5,6 +5,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"io"
 	"io/ioutil"
 	"math"
@@ -25,11 +30,6 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -861,6 +861,21 @@ func (b *RaftBackend) AppliedIndex() uint64 {
 	return indexState.Index
 }
 
+// AppliedIndex returns the latest term applied to the FSM
+func (b *RaftBackend) Term() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.fsm == nil {
+		return 0
+	}
+
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Term
+}
+
 // RemovePeer removes the given peer ID from the raft cluster. If the node is
 // ourselves we will give up leadership.
 func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
@@ -929,7 +944,7 @@ type AutopilotServer struct {
 
 	LastContact time.Duration `json:"last_contact"`
 	LastIndex   uint64        `json:"last_index"`
-	//LastTerm uint64 `json:"last_term"`
+	LastTerm    uint64        `json:"last_term"`
 }
 
 func (b *RaftBackend) GetAutopilotServerHealth(ctx context.Context) (bool, []AutopilotServer, error) {
@@ -951,7 +966,7 @@ func (b *RaftBackend) GetAutopilotServerHealth(ctx context.Context) (bool, []Aut
 			Voter:       s.Server.NodeType == "voter",
 			LastContact: s.Stats.LastContact,
 			LastIndex:   s.Stats.LastIndex,
-			//LastTerm:   s.Stats.LastTerm,
+			LastTerm:    s.Stats.LastTerm,
 		})
 	}
 
@@ -1450,6 +1465,7 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 type RaftFollowerState struct {
 	AppliedIndex  uint64
 	LastHeartbeat time.Time
+	LastTerm      uint64
 }
 
 type RaftFollowerStates struct {
@@ -1463,9 +1479,10 @@ func NewRaftFollowerStates() *RaftFollowerStates {
 	}
 }
 
-func (s *RaftFollowerStates) Update(nodeID string, appliedIndex uint64) {
+func (s *RaftFollowerStates) Update(nodeID string, appliedIndex uint64, term uint64) {
 	state := RaftFollowerState{
 		AppliedIndex: appliedIndex,
+		LastTerm:     term,
 	}
 	if appliedIndex > 0 {
 		state.LastHeartbeat = time.Now()
@@ -1553,6 +1570,19 @@ func (d *AutopilotDelegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         nil,
 		}
 	}
+
+	// Add ourself
+	ret[raft.ServerID(d.localID)] = &autopilot.Server{
+		ID:          raft.ServerID(d.localID),
+		Name:        d.localID,
+		Address:     "",
+		NodeStatus:  "alive",
+		Version:     "",
+		Meta:        nil,
+		RaftVersion: 0,
+		NodeType:    "",
+		Ext:         nil,
+	}
 	return ret
 }
 
@@ -1565,9 +1595,16 @@ func (d *AutopilotDelegate) FetchServerStats(ctx context.Context, servers map[ra
 	for id, flw := range d.RaftBackend.followerStates.followers {
 		ret[raft.ServerID(id)] = &autopilot.ServerStats{
 			LastContact: now.Sub(flw.LastHeartbeat),
-			LastTerm:    0,
+			LastTerm:    flw.LastTerm,
 			LastIndex:   flw.AppliedIndex,
 		}
+	}
+
+	// Add ourself
+	myState, _ := d.fsm.LatestState()
+	ret[raft.ServerID(d.localID)] = &autopilot.ServerStats{
+		LastTerm:  myState.Term,
+		LastIndex: myState.Index,
 	}
 	return ret
 }

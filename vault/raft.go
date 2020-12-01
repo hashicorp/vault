@@ -309,7 +309,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0)
+			followerStates.Update(server.NodeID, 0, 0)
 		}
 	}
 
