@@ -1,5 +1,5 @@
 import { currentRouteName, settled } from '@ember/test-helpers';
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
 import authPage from 'vault/tests/pages/auth';
@@ -103,7 +103,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  skip('cert config: sign intermediate and set signed intermediate', async function(assert) {
+  test('cert config: sign intermediate and set signed intermediate', async function(assert) {
     // TODO confirmed worked, issue with timing.
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
@@ -119,14 +119,16 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.visit({ backend: rootPath });
     await settled();
     await page.form.signIntermediate('Intermediate CA');
+    await settled();
     await page.form.csrField(csrVal).submit();
-
+    await settled();
     intermediateCert = page.form.certificate;
     await page.form.back();
     await settled();
     await page.visit({ backend: intermediatePath });
     await settled();
     await page.form.setSignedIntermediateBtn().signedIntermediate(intermediateCert);
+    await settled();
     await page.form.submit();
     await settled();
     assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');

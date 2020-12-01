@@ -11,8 +11,10 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
+    await settled();
   } else {
     await createItemPage.createItem(itemType);
+    await settled();
   }
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
@@ -63,8 +65,10 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
+    await settled();
   } else {
     await createItemPage.createItem(itemType);
+    await settled();
   }
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;

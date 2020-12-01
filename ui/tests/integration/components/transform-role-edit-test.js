@@ -11,7 +11,7 @@ module('Integration | Component | transform-role-edit', function(hooks) {
 
     await render(hbs`{{transform-role-edit}}`);
 
-    assert.dom(this.element).hasText('');
+    assert.equal(this.element.textContent.trim(), '');
 
     // Template block usage:
     await render(hbs`
@@ -20,6 +20,6 @@ module('Integration | Component | transform-role-edit', function(hooks) {
       {{/transform-role-edit}}
     `);
 
-    assert.dom(this.element).hasText('template block text');
+    assert.equal(this.element.textContent.trim(), 'template block text');
   });
 });
