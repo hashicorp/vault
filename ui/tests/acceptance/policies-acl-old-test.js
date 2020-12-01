@@ -27,6 +27,7 @@ module('Acceptance | policies (old)', function(hooks) {
     assert.dom('[data-test-error]').exists({ count: 1 }, 'renders error messages on save');
     findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,

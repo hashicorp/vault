@@ -1,4 +1,4 @@
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { later } from '@ember/runloop';
@@ -10,7 +10,6 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 const consoleComponent = create(consoleClass);
 
 module('Acceptance | console', function(hooks) {
-  // TODO come back and figure out why this is failing.  Seems to be a race condition
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
@@ -34,8 +33,7 @@ module('Acceptance | console', function(hooks) {
     assert.equal(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
   });
 
-  skip('fullscreen command expands the cli panel', async function(assert) {
-    // TODO figure out why test fails when run as whole suite
+  test('fullscreen command expands the cli panel', async function(assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('fullscreen');
@@ -54,7 +52,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  skip('array output is correctly formatted', async function(assert) {
+  test('array output is correctly formatted', async function(assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');
@@ -68,8 +66,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  skip('number output is correctly formatted', async function(assert) {
-    // TODO come back and figure out why issue here with test
+  test('number output is correctly formatted', async function(assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
@@ -81,8 +78,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  skip('boolean output is correctly formatted', async function(assert) {
-    // TODO come back and figure out why issue here with test
+  test('boolean output is correctly formatted', async function(assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');
