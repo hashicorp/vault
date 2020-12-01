@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Agent can now run as a Windows service.
+```
