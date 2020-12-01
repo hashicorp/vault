@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database: Sanitize `private_key` field when reading database plugin config
+```
