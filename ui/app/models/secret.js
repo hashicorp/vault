@@ -16,8 +16,17 @@ export default DS.Model.extend(KeyMixin, {
   secretKeyAndValue: computed('secretData', function() {
     const data = this.get('secretData');
     return Object.keys(data).map(key => {
-      return { key, value: data[key] };
+      if (this.createdTime){
+        return { key, value: data[key], createdTime: this.createdTime };
+      }
+      else {
+        return { key, value: data[key] };
+      }
     });
+  }),
+
+  dataHasCreatedTime: computed('secretData', function() {
+    return this.secretKeyAndValue[0].createdTime !== undefined && this.secretKeyAndValue[0].createdTime !== "" ;
   }),
 
   dataAsJSONString: computed('secretData', function() {
