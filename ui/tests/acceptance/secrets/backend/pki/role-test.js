@@ -1,5 +1,5 @@
 import { currentRouteName, settled } from '@ember/test-helpers';
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';
@@ -23,7 +23,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     return path;
   };
 
-  skip('it creates a role and redirects', async function(assert) {
+  test('it creates a role and redirects', async function(assert) {
     // UPGRADE TODO: Getting error:
     // Promise rejected before "it creates a role and redirects meep": Assertion Failed: You cannot use the same root element (#ember-testing) multiple times in an Ember.Application
     const path = await mountAndNav(assert);
@@ -70,6 +70,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
     await showPage.deleteRole();
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects to list page');
     assert.ok(listPage.backendIsEmpty, 'no roles listed');
   });

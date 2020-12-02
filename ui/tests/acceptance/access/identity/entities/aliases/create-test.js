@@ -1,4 +1,5 @@
-import { module, skip } from 'qunit';
+import { module, test } from 'qunit';
+import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { testAliasCRUD, testAliasDeleteFromForm } from '../../_shared-alias-tests';
 import authPage from 'vault/tests/pages/auth';
@@ -11,13 +12,15 @@ module('Acceptance | /access/identity/entities/aliases/add', function(hooks) {
     return authPage.login();
   });
 
-  skip('it allows create, list, delete of an entity alias', async function(assert) {
+  test('it allows create, list, delete of an entity alias', async function(assert) {
     let name = `alias-${Date.now()}`;
     await testAliasCRUD(name, 'entities', assert);
+    await settled();
   });
 
-  skip('it allows delete from the edit form', async function(assert) {
+  test('it allows delete from the edit form', async function(assert) {
     let name = `alias-${Date.now()}`;
     await testAliasDeleteFromForm(name, 'entities', assert);
+    await settled();
   });
 });
