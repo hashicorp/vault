@@ -36,25 +36,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return cluster ? cluster.get('id') : null;
   },
 
-  clearNonGlobalModels() {
-    // this method clears all of the ember data cached models except
-    // the model types blacklisted in `globalNamespaceModels`
-    let store = this.store;
-    let modelsToKeep = this.globalNamespaceModels;
-    for (let model of getOwner(this)
-      .lookup('data-adapter:main')
-      .getModelTypes()) {
-      let { name } = model;
-      if (modelsToKeep.includes(name)) {
-        return;
-      }
-      store.unloadAll(name);
-    }
-  },
-
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
-    // this.clearNonGlobalModels(); // ARG TODO: handle this either refresh or find all models.
     this.namespaceService.setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {
