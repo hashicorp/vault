@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -1997,6 +1998,66 @@ func (m *ExpirationManager) emitMetrics() {
 	}
 }
 
+func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts metricsutil.TelemetryConstConfig) ([]metricsutil.GaugeLabelValues, error) {
+	expiryTimes := make(map[metricsutil.LeaseExpiryLabel]int)
+	leaseEpsilon := consts.LeaseMetricsEpsilon
+	nsLabel := consts.LeaseMetricsNameSpaceLabels
+
+	rollingWindow := time.Now().Add(time.Duration(consts.NumLeaseMetricsTimeBuckets) * leaseEpsilon)
+
+	err := m.walkLeases(func(entryID string, expireTime time.Time) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			if entryID == "" {
+				return true
+			}
+			_, nsID := namespace.SplitIDFromString(entryID)
+			if nsID == "" {
+				nsID = "root" // this is what metricsutil.NamespaceLabel does
+			}
+			label := metricsutil.ExpiryBucket(expireTime, leaseEpsilon, rollingWindow, nsID, nsLabel)
+			if label != nil {
+				expiryTimes[*label] += 1
+			}
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0, len(expiryTimes))
+
+	for bucket, count := range expiryTimes {
+		if nsLabel {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{{"expiring", bucket.LabelName}, {"namespace", bucket.LabelNS}},
+					Value:  float32(count),
+				})
+		} else {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{{"expiring", bucket.LabelName}},
+					Value:  float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
 // Callback function type to walk tokens referenced in the expiration
 // manager. Don't want to use leaseEntry here because it's an unexported
 // type (though most likely we would only call this from within the "vault" core package.)
@@ -2023,6 +2084,30 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 			return walkFn(key.(string), lease.Auth, lease.Path)
 		}
 		return true
+	}
+
+	m.pending.Range(callback)
+	m.nonexpiring.Range(callback)
+
+	return nil
+}
+
+// leaseWalkFunction can only be used by the core package.
+type leaseWalkFunction = func(leaseID string, expireTime time.Time) bool
+
+func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
+	if m.inRestoreMode() {
+		return ErrInRestoreMode
+	}
+
+	callback := func(key, value interface{}) bool {
+		p := value.(pendingInfo)
+		if p.cachedLeaseInfo == nil {
+			return true
+		}
+		lease := p.cachedLeaseInfo
+		expireTime := lease.ExpireTime
+		return walkFn(key.(string), expireTime)
 	}
 
 	m.pending.Range(callback)

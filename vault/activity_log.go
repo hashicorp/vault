@@ -657,10 +657,10 @@ func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitG
 
 // Initialize a new current segment, based on the current time.
 // Call with fragmentLock and l held.
-func (a *ActivityLog) startNewCurrentLogLocked() {
+func (a *ActivityLog) startNewCurrentLogLocked(now time.Time) {
 	a.logger.Trace("initializing new log")
 	a.resetCurrentLog()
-	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.currentSegment.startTimestamp = now.Unix()
 }
 
 // Should be called with fragmentLock and l held.
@@ -732,10 +732,23 @@ func (a *ActivityLog) deleteLogWorker(startTimestamp int64, whenDone chan struct
 	close(whenDone)
 }
 
+func (a *ActivityLog) WaitForDeletion() {
+	a.l.Lock()
+	// May be nil, if never set
+	doneCh := a.deleteDone
+	a.l.Unlock()
+	if doneCh != nil {
+		select {
+		case <-doneCh:
+			break
+		}
+	}
+}
+
 // refreshFromStoredLog loads the appropriate entities/tokencounts for active and performance standbys
 // the most recent segment is loaded synchronously, and older segments are loaded in the background
 // this function expects stateLock to be held
-func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGroup) error {
+func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGroup, now time.Time) error {
 	a.l.Lock()
 	defer a.l.Unlock()
 	a.fragmentLock.Lock()
@@ -752,7 +765,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 				// reset the log without updating the timestamp
 				a.resetCurrentLog()
 			} else {
-				a.startNewCurrentLogLocked()
+				a.startNewCurrentLogLocked(now)
 			}
 		}
 
@@ -763,7 +776,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 
 	if !a.enabled {
 		a.logger.Debug("activity log not enabled, skipping refresh from storage")
-		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, time.Now().UTC()) {
+		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, now) {
 			a.logger.Debug("activity log is disabled, cleaning up logs for the current month")
 			go a.deleteLogWorker(mostRecent.Unix(), make(chan struct{}))
 		}
@@ -771,7 +784,6 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 		return nil
 	}
 
-	now := time.Now().UTC()
 	if timeutil.IsPreviousMonth(mostRecent, now) {
 		// no activity logs to load for this month. if we are enabled, interpret
 		// it as having missed the rotation, so let it fall through and load
@@ -792,7 +804,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 			// reset the log without updating the timestamp
 			a.resetCurrentLog()
 		} else {
-			a.startNewCurrentLogLocked()
+			a.startNewCurrentLogLocked(now)
 		}
 
 		return nil
@@ -883,7 +895,7 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 
 	forceSave := false
 	if a.enabled && a.currentSegment.startTimestamp == 0 {
-		a.startNewCurrentLogLocked()
+		a.startNewCurrentLogLocked(time.Now().UTC())
 		// Force a save so we can distinguish between
 		//
 		// Month N-1: present
@@ -962,7 +974,7 @@ func (c *Core) setupActivityLog(ctx context.Context) error {
 	refreshCtx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
 	manager.activityCancel = cancelFunc
 	var wg sync.WaitGroup
-	err = manager.refreshFromStoredLog(refreshCtx, &wg)
+	err = manager.refreshFromStoredLog(refreshCtx, &wg, time.Now().UTC())
 	if err != nil {
 		return err
 	}

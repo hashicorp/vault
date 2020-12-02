@@ -116,6 +116,17 @@ func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.Gau
 	return ts.gaugeCollectorByPolicy(ctx)
 }
 
+func (c *Core) leaseExpiryGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	e := c.expiration
+	metricsConsts := c.MetricSink().TelemetryConsts
+	c.stateLock.RUnlock()
+	if e == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil expiration manager")
+	}
+	return e.leaseAggregationMetrics(ctx, metricsConsts)
+}
+
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	c.stateLock.RLock()
 	ts := c.tokenStore
@@ -162,6 +173,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			[]string{"token", "count", "by_policy"},
 			[]metrics.Label{{"gauge", "token_by_policy"}},
 			c.tokenGaugePolicyCollector,
+			"",
+		},
+		{
+			[]string{"expire", "leases", "by_expiration"},
+			[]metrics.Label{{"gauge", "leases_by_expiration"}},
+			c.leaseExpiryGaugeCollector,
 			"",
 		},
 		{

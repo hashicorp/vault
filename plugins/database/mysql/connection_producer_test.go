@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/ory/dockertest"
+	dockertest "github.com/ory/dockertest/v3"
 )
 
 func Test_addTLStoDSN(t *testing.T) {
@@ -124,7 +124,7 @@ ssl-key=/etc/mysql/server-key.pem`
 
 	// //////////////////////////////////////////////////////
 	// Test
-	mysql := new(false)
+	mysql := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,

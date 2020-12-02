@@ -39,13 +39,16 @@ var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
 	*mySQLConnectionProducer
-	legacy bool
+
+	displayNameLen int
+	roleNameLen    int
+	maxUsernameLen int
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(legacy bool) func() (interface{}, error) {
+func New(displayNameLen int, roleNameLen int, maxUsernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		db := new(legacy)
+		db := newMySQL(displayNameLen, roleNameLen, maxUsernameLen)
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
@@ -53,12 +56,14 @@ func New(legacy bool) func() (interface{}, error) {
 	}
 }
 
-func new(legacy bool) *MySQL {
+func newMySQL(displayNameLen int, roleNameLen int, maxUsernameLen int) *MySQL {
 	connProducer := &mySQLConnectionProducer{}
 
 	return &MySQL{
 		mySQLConnectionProducer: connProducer,
-		legacy:                  legacy,
+		displayNameLen:          displayNameLen,
+		roleNameLen:             roleNameLen,
+		maxUsernameLen:          maxUsernameLen,
 	}
 }
 
@@ -118,22 +123,10 @@ func (m *MySQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplu
 }
 
 func (m *MySQL) generateUsername(req dbplugin.NewUserRequest) (string, error) {
-	var dispNameLen, roleNameLen, maxLen int
-
-	if m.legacy {
-		dispNameLen = LegacyUsernameLen
-		roleNameLen = LegacyMetadataLen
-		maxLen = LegacyUsernameLen
-	} else {
-		dispNameLen = UsernameLen
-		roleNameLen = MetadataLen
-		maxLen = UsernameLen
-	}
-
 	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, dispNameLen),
-		credsutil.RoleName(req.UsernameConfig.RoleName, roleNameLen),
-		credsutil.MaxLength(maxLen),
+		credsutil.DisplayName(req.UsernameConfig.DisplayName, m.displayNameLen),
+		credsutil.RoleName(req.UsernameConfig.RoleName, m.roleNameLen),
+		credsutil.MaxLength(m.maxUsernameLen),
 	)
 	if err != nil {
 		return "", errwrap.Wrapf("error generating username: {{err}}", err)

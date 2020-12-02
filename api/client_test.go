@@ -2,11 +2,13 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -345,16 +347,62 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	client1, err1 := NewClient(nil)
-	if err1 != nil {
-		t.Fatalf("NewClient failed: %v", err1)
-	}
-	client2, err2 := client1.Clone()
-	if err2 != nil {
-		t.Fatalf("Clone failed: %v", err2)
+	client1, err := NewClient(DefaultConfig())
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
 	}
 
-	_ = client2
+	// Set all of the things that we provide setter methods for, which modify config values
+	err = client1.SetAddress("http://example.com:8080")
+	if err != nil {
+		t.Fatalf("SetAddress failed: %v", err)
+	}
+
+	clientTimeout := time.Until(time.Now().AddDate(0, 0, 1))
+	client1.SetClientTimeout(clientTimeout)
+
+	checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		return true, nil
+	}
+	client1.SetCheckRetry(checkRetry)
+
+	client1.SetLimiter(5.0, 10)
+	client1.SetMaxRetries(5)
+	client1.SetOutputCurlString(true)
+	client1.SetSRVLookup(true)
+
+	client2, err := client1.Clone()
+	if err != nil {
+		t.Fatalf("Clone failed: %v", err)
+	}
+
+	if client1.Address() != client2.Address() {
+		t.Fatalf("addresses don't match: %v vs %v", client1.Address(), client2.Address())
+	}
+	if client1.ClientTimeout() != client2.ClientTimeout() {
+		t.Fatalf("timeouts don't match: %v vs %v", client1.ClientTimeout(), client2.ClientTimeout())
+	}
+	if client1.CheckRetry() != nil && client2.CheckRetry() == nil {
+		t.Fatal("checkRetry functions don't match. client2 is nil.")
+	}
+	if (client1.Limiter() != nil && client2.Limiter() == nil) || (client1.Limiter() == nil && client2.Limiter() != nil) {
+		t.Fatalf("limiters don't match: %v vs %v", client1.Limiter(), client2.Limiter())
+	}
+	if client1.Limiter().Limit() != client2.Limiter().Limit() {
+		t.Fatalf("limiter limits don't match: %v vs %v", client1.Limiter().Limit(), client2.Limiter().Limit())
+	}
+	if client1.Limiter().Burst() != client2.Limiter().Burst() {
+		t.Fatalf("limiter bursts don't match: %v vs %v", client1.Limiter().Burst(), client2.Limiter().Burst())
+	}
+	if client1.MaxRetries() != client2.MaxRetries() {
+		t.Fatalf("maxRetries don't match: %v vs %v", client1.MaxRetries(), client2.MaxRetries())
+	}
+	if client1.OutputCurlString() != client2.OutputCurlString() {
+		t.Fatalf("outputCurlString doesn't match: %v vs %v", client1.OutputCurlString(), client2.OutputCurlString())
+	}
+	if client1.SRVLookup() != client2.SRVLookup() {
+		t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
+	}
 }
 
 func TestSetHeadersRaceSafe(t *testing.T) {
