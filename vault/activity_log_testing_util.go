@@ -107,7 +107,6 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 }
 
 // ActiveEntitiesEqual checks that only the set of `test` exists in `active`
-// TODO should this be changed to an expect? observe functionality and see if it makes sense
 func ActiveEntitiesEqual(active map[string]struct{}, test []*activity.EntityRecord) bool {
 	if len(active) != len(test) {
 		return false
