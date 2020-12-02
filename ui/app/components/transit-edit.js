@@ -71,7 +71,7 @@ export default Component.extend(FocusOnInsertMixin, {
     createOrUpdateKey(type, event) {
       event.preventDefault();
 
-      const keyId = this.key.id;
+      const keyId = this.key.id || this.key.name;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(keyId)) {

@@ -26,6 +26,7 @@ export default RESTSerializer.extend({
         payload.keys[version] = payload.keys[version] * 1000;
       }
     }
+    payload.id = payload.name;
     return [payload];
   },
 
@@ -55,7 +56,8 @@ export default RESTSerializer.extend({
         deletion_allowed,
       };
     } else {
-      return this._super(...arguments);
+      snapshot.id = snapshot.attr('name');
+      return this._super(snapshot, requestType);
     }
   },
 });

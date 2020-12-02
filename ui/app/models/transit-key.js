@@ -43,7 +43,11 @@ export default Model.extend({
   type: attr('string', {
     defaultValue: 'aes256-gcm96',
   }),
-  name: attr('string'),
+  name: attr('string', {
+    label: 'Name',
+    fieldValue: 'id',
+    readOnly: true,
+  }),
   deletionAllowed: attr('boolean'),
   derived: attr('boolean'),
   exportable: attr('boolean'),
