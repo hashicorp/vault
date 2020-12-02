@@ -156,3 +156,12 @@ func (a *ActivityLog) GetEntitySequenceNumber() uint64 {
 	defer a.l.RUnlock()
 	return a.currentSegment.entitySequenceNumber
 }
+
+// SetEnable sets the enabled flag on the activity log
+func (a *ActivityLog) SetEnable(enabled bool) {
+	a.l.Lock()
+	defer a.l.Unlock()
+	a.fragmentLock.Lock()
+	defer a.fragmentLock.Unlock()
+	a.enabled = enabled
+}

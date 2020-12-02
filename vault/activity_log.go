@@ -1262,14 +1262,6 @@ func (c *Core) ResetActivityLog() []*activity.LogFragment {
 	return allFragments
 }
 
-func (a *ActivityLog) SetEnable(enabled bool) {
-	a.l.Lock()
-	defer a.l.Unlock()
-	a.fragmentLock.Lock()
-	defer a.fragmentLock.Unlock()
-	a.enabled = enabled
-}
-
 // AddEntityToFragment checks an entity ID for uniqueness and
 // if not already present, adds it to the current fragment.
 // The timestamp is a Unix timestamp *without* nanoseconds, as that
