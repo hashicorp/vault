@@ -129,7 +129,6 @@ func (a *ActivityLog) GetStartTimestamp() int64 {
 }
 
 // SetStartTimestamp sets the start timestamp on an activity log
-// TODO move to ent if only used in those tests
 func (a *ActivityLog) SetStartTimestamp(timestamp int64) {
 	a.l.Lock()
 	defer a.l.Unlock()
