@@ -31,6 +31,10 @@ const (
 	activityConfigKey      = "config"
 	activityIntentLogKey   = "endofmonth"
 
+	// for testing purposes (public as needed)
+	ActivityLogPrefix = "sys/counters/activity/log/"
+	ActivityPrefix    = "sys/counters/activity/"
+
 	// Time to wait on perf standby before sending fragment
 	activityFragmentStandbyTime = 10 * time.Minute
 
@@ -120,8 +124,6 @@ type ActivityLog struct {
 	activeEntities map[string]struct{}
 
 	// track metadata and contents of the most recent log segment
-	// currentSegment is currently unprotected by a mutex, because it is updated
-	// only by the worker performing rotation.
 	currentSegment segmentInfo
 
 	// Fragments received from performance standbys
@@ -132,11 +134,11 @@ type ActivityLog struct {
 	defaultReportMonths int
 	retentionMonths     int
 
-	// cancel function to stop loading entities/tokens from storage to memory
-	activityCancel context.CancelFunc
-
 	// channel closed by delete worker when done
 	deleteDone chan struct{}
+
+	// for testing: is config currently being invalidated. protected by l
+	configInvalidationInProgress bool
 }
 
 // These non-persistent configuration options allow us to disable
@@ -195,21 +197,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		config.RetentionMonths)
 
 	return a, nil
-}
-
-// Return the in-memory activeEntities from an activity log
-func (c *Core) GetActiveEntities() map[string]struct{} {
-	out := make(map[string]struct{})
-
-	c.stateLock.RLock()
-	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.activeEntities {
-		out[k] = v
-	}
-	c.activityLog.fragmentLock.RUnlock()
-	c.stateLock.RUnlock()
-
-	return out
 }
 
 // saveCurrentSegmentToStorage updates the record of Entities or
@@ -637,7 +624,7 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	return nil
 }
 
-// entityBackgroundLoader loads entity activity log records for start_date :t:
+// entityBackgroundLoader loads entity activity log records for start_date `t`
 func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitGroup, t time.Time, seqNums <-chan uint64) {
 	defer wg.Done()
 	for seqNum := range seqNums {
@@ -953,7 +940,7 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 }
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
-func (c *Core) setupActivityLog(ctx context.Context) error {
+func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
 
@@ -971,10 +958,7 @@ func (c *Core) setupActivityLog(ctx context.Context) error {
 	c.activityLog = manager
 
 	// load activity log for "this month" into memory
-	refreshCtx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
-	manager.activityCancel = cancelFunc
-	var wg sync.WaitGroup
-	err = manager.refreshFromStoredLog(refreshCtx, &wg, time.Now().UTC())
+	err = manager.refreshFromStoredLog(manager.core.activeContext, wg, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -1011,10 +995,6 @@ func (c *Core) stopActivityLog() error {
 	if c.activityLog != nil {
 		// Shut down background worker
 		close(c.activityLog.doneCh)
-		// cancel refreshing logs from storage
-		if c.activityLog.activityCancel != nil {
-			c.activityLog.activityCancel()
-		}
 	}
 
 	c.activityLog = nil
@@ -1280,6 +1260,14 @@ func (c *Core) ResetActivityLog() []*activity.LogFragment {
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
 	a.fragmentLock.Unlock()
 	return allFragments
+}
+
+func (a *ActivityLog) SetEnable(enabled bool) {
+	a.l.Lock()
+	defer a.l.Unlock()
+	a.fragmentLock.Lock()
+	defer a.fragmentLock.Unlock()
+	a.enabled = enabled
 }
 
 // AddEntityToFragment checks an entity ID for uniqueness and
