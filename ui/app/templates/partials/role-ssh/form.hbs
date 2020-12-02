@@ -2,23 +2,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{model}} />
     <NamespaceReminder @mode={{mode}} @noun="SSH role" />
-    {{#if model.attrsForKeyType}}
-      {{#with (if (eq model.keyType 'otp') 3 4) as |numRequired|}}
-        {{#each (take numRequired model.attrsForKeyType) as |attr|}}
-          {{#unless (and (eq mode 'edit') (eq attr.name 'name'))}}
-            {{partial "partials/form-field-from-model"}}
-          {{/unless}}
-        {{/each}}
-        <ToggleButton @toggleAttr="showOptions" @toggleTarget={{this}} @openLabel="Hide options" @closedLabel="More options" @data-test-toggle-more="true" />
-        {{#if showOptions}}
-          <div class="box is-marginless">
-            {{#each (drop numRequired model.attrsForKeyType) as |attr|}}
-              {{partial "partials/form-field-from-model"}}
-            {{/each}}
-          </div>
-        {{/if}}
-      {{/with}}
-    {{/if}}
+    {{partial "partials/form-field-groups-loop"}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
