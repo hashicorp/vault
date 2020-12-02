@@ -95,11 +95,13 @@ func (c *Sys) DisableCORS() (*CORSResponse, error) {
 }
 
 type CORSRequest struct {
-	AllowedOrigins string `json:"allowed_origins" mapstructure:"allowed_origins"`
-	Enabled        bool   `json:"enabled" mapstructure:"enabled"`
+	AllowedOrigins []string `json:"allowed_origins" mapstructure:"allowed_origins"`
+	AllowedHeaders []string `json:"allowed_headers" mapstructure:"allowed_headers"`
+	Enabled        bool     `json:"enabled" mapstructure:"enabled"`
 }
 
 type CORSResponse struct {
-	AllowedOrigins string `json:"allowed_origins" mapstructure:"allowed_origins"`
-	Enabled        bool   `json:"enabled" mapstructure:"enabled"`
+	AllowedOrigins []string `json:"allowed_origins" mapstructure:"allowed_origins"`
+	AllowedHeaders []string `json:"allowed_headers" mapstructure:"allowed_headers"`
+	Enabled        bool     `json:"enabled" mapstructure:"enabled"`
 }

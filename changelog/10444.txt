@@ -1,0 +1,4 @@
+```release-note:bug
+api: Fixes issue where the AllowedHeaders parameters was missing in the input/output and the AllowedOrigins was not a slice
+```
+
