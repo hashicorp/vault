@@ -216,5 +216,13 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
 
+	if config.Enabled == "disable" {
+		return &logical.Response{
+			Warnings: []string{
+				"the current monthly segment will be deleted",
+			},
+		}, nil
+	}
+
 	return nil, nil
 }
