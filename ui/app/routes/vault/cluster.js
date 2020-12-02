@@ -2,7 +2,6 @@ import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
-import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import ClusterRoute from 'vault/mixins/cluster-route';
