@@ -45,17 +45,17 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
-				"default_report_months": &framework.FieldSchema{
+				"default_report_months": {
 					Type:        framework.TypeInt,
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
 				},
-				"retention_months": &framework.FieldSchema{
+				"retention_months": {
 					Type:        framework.TypeInt,
 					Default:     24,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
 				},
-				"enabled": &framework.FieldSchema{
+				"enabled": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
