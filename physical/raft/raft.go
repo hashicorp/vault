@@ -780,7 +780,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raftNotifyCh = raftNotifyCh
 
 	delegate := &AutopilotDelegate{b}
-	b.autopilot = autopilot.New(b.raft, delegate, autopilot.WithLogger(b.logger.Named("autopilot")))
+	promoter := &AutopilotPromoter{b}
+	b.autopilot = autopilot.New(b.raft, delegate,
+		autopilot.WithLogger(b.logger.Named("autopilot")),
+		autopilot.WithPromoter(promoter),
+		autopilot.WithReconcileInterval(time.Second),
+	)
 
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
@@ -886,9 +891,7 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 		return errors.New("raft storage is not initialized")
 	}
 
-	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
-
-	return future.Error()
+	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
@@ -984,8 +987,18 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
 
-	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
-	return future.Error()
+	server := &autopilot.Server{
+		ID:          raft.ServerID(peerID),
+		Name:        peerID,
+		Address:     raft.ServerAddress(clusterAddr),
+		NodeStatus:  "",
+		Version:     "",
+		Meta:        nil,
+		RaftVersion: 0,
+		NodeType:    autopilot.NodeVoter,
+		Ext:         nil,
+	}
+	return b.autopilot.AddServer(server)
 }
 
 // Peers returns all the servers present in the raft cluster
@@ -1548,7 +1561,7 @@ func (d *AutopilotDelegate) AutopilotConfig() *autopilot.Config {
 		LastContactThreshold:    2 * time.Second,
 		MaxTrailingLogs:         250,
 		MinQuorum:               0,
-		ServerStabilizationTime: 10 * time.Second,
+		ServerStabilizationTime: 5 * time.Second,
 	}
 }
 
@@ -1627,4 +1640,66 @@ func (d *AutopilotDelegate) RemoveFailedServer(srv *autopilot.Server) {
 	//		d.server.logger.Error("failedto remove server", "name", srv.Name, "id", srv.ID, "error", err)
 	//	}
 	//}()
+}
+
+type AutopilotPromoter struct {
+	*RaftBackend
+}
+
+var _ autopilot.Promoter = &AutopilotPromoter{}
+
+func (a AutopilotPromoter) GetServerExt(config *autopilot.Config, state *autopilot.ServerState) interface{} {
+	// TODO on ent, return whether this server should be a nonvoter
+	return nil
+}
+
+func (a AutopilotPromoter) GetStateExt(config *autopilot.Config, state *autopilot.State) interface{} {
+	// TODO return a description of the leader's view on autopilot state for use in the status endpoint
+	return nil
+}
+
+func (a AutopilotPromoter) GetNodeTypes(config *autopilot.Config, state *autopilot.State) map[raft.ServerID]autopilot.NodeType {
+	ret := make(map[raft.ServerID]autopilot.NodeType)
+	fstates := a.RaftBackend.followerStates
+	fstates.l.RLock()
+	defer fstates.l.RUnlock()
+	for id := range a.RaftBackend.followerStates.followers {
+		ret[raft.ServerID(id)] = autopilot.NodeVoter
+	}
+
+	return ret
+}
+
+func (a AutopilotPromoter) CalculatePromotionsAndDemotions(config *autopilot.Config, state *autopilot.State) autopilot.RaftChanges {
+	//s := &autopilot.StablePromoter{}
+	//return s.CalculatePromotionsAndDemotions(config, state)
+
+	var changes autopilot.RaftChanges
+
+	now := time.Now()
+	minStableDuration := state.ServerStabilizationTime(config)
+	for id, server := range state.Servers {
+		// ignore staging state as they are not ready yet
+		switch server.State {
+		case autopilot.RaftLeader:
+		case autopilot.RaftVoter:
+			a.RaftBackend.logger.Debug("voting server not eligible for promotion", "id", id)
+		case autopilot.RaftNonVoter:
+			stableDuration := time.Now().Sub(server.Health.StableSince)
+			if server.Health.IsStable(now, minStableDuration) {
+				a.RaftBackend.logger.Debug("marking server for promotion", "id", id, "minStable", minStableDuration, "stable", stableDuration)
+				changes.Promotions = append(changes.Promotions, id)
+			} else {
+				a.RaftBackend.logger.Debug("server not eligible for promotion", "id", id, "minStable", minStableDuration, "stable", stableDuration)
+			}
+		default:
+			a.RaftBackend.logger.Debug("server not eligible for promotion", "id", id, "state", server.State)
+		}
+	}
+
+	return changes
+}
+
+func (a AutopilotPromoter) FilterFailedServerRemovals(config *autopilot.Config, _ *autopilot.State, failed *autopilot.FailedServers) *autopilot.FailedServers {
+	return failed
 }

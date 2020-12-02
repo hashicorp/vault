@@ -618,7 +618,9 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	return stopCh
 }
 
-func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
+// VerifyRaftPeers ensures that the expected peers are present in raft config,
+// and returns the number of voters.
+func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) int {
 	t.Helper()
 
 	resp, err := client.Logical().Read("sys/storage/raft/configuration")
@@ -642,14 +644,19 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 
 	// Iterate through the servers and remove the node found in the response
 	// from the expected collection
+	var numVoters int
 	for _, s := range servers {
 		server := s.(map[string]interface{})
 		delete(expected, server["node_id"].(string))
+		if server["voter"].(bool) {
+			numVoters++
+		}
 	}
 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		t.Fatalf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
 	}
+	return numVoters
 }

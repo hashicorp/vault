@@ -162,6 +162,12 @@ func TestRaft_Retry_Join(t *testing.T) {
 
 	cluster.UnsealCore(t, cluster.Cores[0])
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	// Wait 6s before trying to add nodes: the autopilot ServerStabilization
+	// time is 5s, and autopilot.State.ServerStabilizationTime basically
+	// ignores server stabilization for promotion purposes until the autopilot
+	// node has been running for 110% of the ServerStabilization config setting.
+	time.Sleep(6 * time.Second)
 	for _, core := range cluster.Cores[1:] {
 		err = core.InitiateRetryJoin(context.Background())
 		if err != nil {
@@ -182,32 +188,44 @@ func TestRaft_Retry_Join(t *testing.T) {
 		}
 	}
 
-	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+	expectedServers := map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
-	})
+	}
+	numVoters := testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, expectedServers)
+	if numVoters == 3 {
+		t.Fatalf("numVoters==%d but servers have not had time to stabilize", numVoters)
+	}
 
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	healthy := false
 	for time.Now().Before(deadline) {
 		secret, err := client.Logical().Read("sys/storage/raft/autopilot/health")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Data["healthy"].(bool) {
-			healthy = true
-			break
+		//servers := secret.Data["servers"].([]interface{})
+		//for _, server := range servers {
+		//	t.Logf("%+v", server)
+		//}
+
+		healthy = secret.Data["healthy"].(bool)
+		if healthy {
+			numVoters = testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, expectedServers)
+			if numVoters == 3 {
+				break
+			}
 		}
-		servers := secret.Data["servers"].([]interface{})
-		for _, server := range servers {
-			t.Logf("%+v", server)
-		}
+
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	if !healthy {
 		t.Fatal("autopilot never became healthy")
+	}
+	if numVoters != 3 {
+		t.Fatal("never got 3 voters")
 	}
 }
 
