@@ -38,7 +38,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
       name: 'otprole',
       async fillInCreate() {
         await fillIn('[data-test-input="defaultUser"]', 'admin');
-        await click('[data-test-toggle-more]');
+        await click('[data-test-toggle-group="Options"]');
         await fillIn('[data-test-input="cidrList"]', '1.2.3.4/32');
       },
       async fillInGenerate() {
