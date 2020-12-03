@@ -146,7 +146,6 @@ export default Component.extend({
       this.handleChange();
     },
     discardSelection(selected) {
-      if (!this.options) return;
       this.selectedOptions.removeObject(selected);
       if (!selected.new) {
         this.options.pushObject(selected);
