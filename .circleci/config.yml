@@ -784,7 +784,7 @@ jobs:
   test-go-remote-docker:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
-    resource_class: large
+    resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -1450,7 +1450,7 @@ jobs:
   test-go:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
-    resource_class: xlarge
+    resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -1991,7 +1991,7 @@ jobs:
   test-go-race-remote-docker:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
-    resource_class: xlarge
+    resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
