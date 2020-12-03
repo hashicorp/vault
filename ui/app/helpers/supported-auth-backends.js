@@ -10,6 +10,14 @@ const SUPPORTED_AUTH_BACKENDS = [
     formAttributes: ['token'],
   },
   {
+    type: 'unwrap',
+    typeDisplay: 'Unwrap',
+    description: 'Wrapping Token unwrap backend.',
+    tokenPath: 'client_token',
+    displayNamePath: 'metadata.username',
+    formAttributes: ['token'],
+  },
+  {
     type: 'userpass',
     typeDisplay: 'Username',
     description: 'A simple username and password backend.',
