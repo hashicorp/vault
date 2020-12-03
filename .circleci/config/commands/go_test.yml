@@ -6,12 +6,6 @@ parameters:
   log_dir:
     type: string
     default: "/tmp/testlogs"
-  cache_dir:
-    type: string
-    default: /tmp/go-cache
-  save_cache:
-    type: boolean
-    default: false
   go_image:
     type: string
     default: "circleci/golang:1.15.3-buster"
@@ -19,13 +13,6 @@ parameters:
     type: boolean
     default: false
 steps:
-  - run:
-      name: Compute test cache key
-      command: |
-        TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
-  - restore_cache:
-      keys:
-        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -95,13 +82,12 @@ steps:
             tail -f /dev/null
 
           # Run tests
-          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> testcontainer:/tmp/gocache
           docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
           docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
           docker exec -w /go/src/github.com/hashicorp/vault/ \
-            -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+            -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
             testcontainer \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
@@ -113,16 +99,15 @@ steps:
               << parameters.extra_flags >> \
               ${package_names}
         else
-          GOCACHE=<< parameters.cache_dir >> \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              << parameters.extra_flags >> \
-              ${package_names}
+          gotestsum --format=short-verbose \
+            --junitfile test-results/go-test/results.xml \
+            --jsonfile test-results/go-test/results.json \
+            -- \
+            -tags "${GO_TAGS}" \
+            -timeout=60m \
+            -parallel=20 \
+            << parameters.extra_flags >> \
+            ${package_names}
         fi
 
   - when:
@@ -133,12 +118,3 @@ steps:
             when: always
             command: |
               docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-              docker cp testcontainer:/tmp/gocache << parameters.cache_dir >>
-  - when:
-      condition: << parameters.save_cache >>
-      steps:
-        - save_cache:
-            when: always
-            key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
-            paths:
-            - << parameters.cache_dir >>
