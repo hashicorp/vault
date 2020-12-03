@@ -3,8 +3,8 @@
   shape of data at a specific path to hydrate a model with attrs it
   has less (or no) information about.
 */
+import Model from '@ember-data/model';
 import Service from '@ember/service';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { assign } from '@ember/polyfills';
@@ -50,7 +50,7 @@ export default Service.extend({
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       debug(`Creating new Model for ${modelType}`);
-      newModel = DS.Model.extend({});
+      newModel = Model.extend({});
     }
 
     // we don't have an apiPath for dynamic secrets

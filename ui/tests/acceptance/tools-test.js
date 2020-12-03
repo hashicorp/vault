@@ -1,4 +1,4 @@
-import { click, fillIn, find, findAll, currentURL, visit } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentURL, visit, settled } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -41,21 +41,25 @@ module('Acceptance | tools', function(hooks) {
   test('tools functionality', async function(assert) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
+    await settled();
     assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach(action => {
-      assert.ok(find(`[data-test-tools-action-link="${action}"]`), `${action} link renders`);
+      assert.dom(`[data-test-tools-action-link="${action}"]`).exists(`${action} link renders`);
     });
     findAll('.CodeMirror')[0].CodeMirror.setValue(DATA_TO_WRAP);
 
     // wrap
     await click('[data-test-tools-submit]');
+    await settled();
     tokenStore.set(find('[data-test-tools-input="wrapping-token"]').value);
     assert.ok(find('[data-test-tools-input="wrapping-token"]').value, 'has a wrapping token');
 
     //lookup
     await click('[data-test-tools-action-link="lookup"]');
+    await settled();
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await settled();
     let rows = document.querySelectorAll('[data-test-tools="token-lookup-row"]');
     assert.dom(rows[0]).hasText(/Creation path/, 'show creation path row');
     assert.dom(rows[1]).hasText(/Creation time/, 'show creation time row');
@@ -63,8 +67,10 @@ module('Acceptance | tools', function(hooks) {
 
     //rewrap
     await click('[data-test-tools-action-link="rewrap"]');
+    await settled();
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await settled();
     assert.ok(find('[data-test-tools-input="rewrapped-token"]').value, 'has a new re-wrapped token');
     assert.notEqual(
       find('[data-test-tools-input="rewrapped-token"]').value,
@@ -75,21 +81,27 @@ module('Acceptance | tools', function(hooks) {
 
     //unwrap
     await click('[data-test-tools-action-link="unwrap"]');
+    await settled();
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await settled();
     assert.deepEqual(
       JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       JSON.parse(DATA_TO_WRAP),
       'unwrapped data equals input data'
     );
     await click('[data-test-button-details]');
+    await settled();
     await click('[data-test-button-data]');
+    await settled();
     assert.dom('.CodeMirror').exists();
 
     //random
     await click('[data-test-tools-action-link="random"]');
+    await settled();
     assert.dom('[data-test-tools-input="bytes"]').hasValue('32', 'defaults to 32 bytes');
     await click('[data-test-tools-submit]');
+    await settled();
     assert.ok(
       find('[data-test-tools-input="random-bytes"]').value,
       'shows the returned value of random bytes'
@@ -97,16 +109,21 @@ module('Acceptance | tools', function(hooks) {
 
     //hash
     await click('[data-test-tools-action-link="hash"]');
+    await settled();
     await fillIn('[data-test-tools-input="hash-input"]', 'foo');
     await click('[data-test-tools-b64-toggle="input"]');
+    await settled();
     await click('[data-test-tools-submit]');
+    await settled();
     assert
       .dom('[data-test-tools-input="sum"]')
       .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
     await click('[data-test-tools-back]');
+    await settled();
     await fillIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
 
     await click('[data-test-tools-submit]');
+    await settled();
     assert
       .dom('[data-test-tools-input="sum"]')
       .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
@@ -138,10 +155,13 @@ module('Acceptance | tools', function(hooks) {
       });
     });
     await visit('/vault/tools');
+    await settled();
     //unwrap
     await click('[data-test-tools-action-link="unwrap"]');
+    await settled();
     await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
     await click('[data-test-tools-submit]');
+    await settled();
     assert.deepEqual(
       JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       AUTH_RESPONSE.auth,

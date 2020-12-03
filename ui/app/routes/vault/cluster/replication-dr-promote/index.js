@@ -5,6 +5,6 @@ export default Base.extend({
   replicationMode: service(),
   beforeModel() {
     this._super(...arguments);
-    this.get('replicationMode').setMode('dr');
+    this.replicationMode.setMode('dr');
   },
 });

@@ -1,8 +1,8 @@
+import RESTSerializer, { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
+export default RESTSerializer.extend(EmbeddedRecordsMixin, {
   keyForAttribute: function(attr) {
     return decamelize(attr);
   },

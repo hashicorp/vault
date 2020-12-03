@@ -129,8 +129,8 @@ module('Integration | Service | auth', function(hooks) {
     this.server = new Pretender(function() {
       this.get('/v1/auth/token/lookup-self', function(request) {
         let resp = copy(ROOT_TOKEN_RESPONSE, true);
-        resp.id = request.requestHeaders['x-vault-token'];
-        resp.data.id = request.requestHeaders['x-vault-token'];
+        resp.id = request.requestHeaders['X-Vault-Token'];
+        resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
       });
       this.post('/v1/auth/userpass/login/:username', function(request) {
@@ -308,8 +308,8 @@ module('Integration | Service | auth', function(hooks) {
     this.server.map(function() {
       this.get('/v1/auth/token/lookup-self', function(request) {
         let resp = copy(tokenResp, true);
-        resp.id = request.requestHeaders['x-vault-token'];
-        resp.data.id = request.requestHeaders['x-vault-token'];
+        resp.id = request.requestHeaders['X-Vault-Token'];
+        resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
       });
     });

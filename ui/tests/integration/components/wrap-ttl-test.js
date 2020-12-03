@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, find } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 
@@ -24,11 +24,7 @@ module('Integration | Component | wrap ttl', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
     assert.equal(this.lastOnChangeCall, '30m', 'calls onChange with 30m default on first render');
-    // await this.pauseTest();
-    assert.equal(
-      find('label[for="toggle-Wrapresponse"] .ttl-picker-label').textContent.trim(),
-      'Wrap response'
-    );
+    assert.dom('label[for="toggle-Wrapresponse"] .ttl-picker-label').hasText('Wrap response');
   });
 
   test('it nulls out value when you uncheck wrapResponse', async function(assert) {

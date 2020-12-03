@@ -13,9 +13,9 @@
     <div class="control-group">
       <div data-test-requestor-text>
         {{#if model.requestEntity.canRead}}
-          {{#link-to 'vault.cluster.access.identity.show' 'entities' model.requestEntity.id 'details'}}
+          <LinkTo @route="vault.cluster.access.identity.show" @models={{array 'entities' model.requestEntity.id 'details'}}>
             {{requestorName}}
-          {{/link-to}}
+          </LinkTo>
         {{else}}
           {{requestorName}}
         {{/if}}
@@ -47,7 +47,7 @@
           Already approved by
           {{#each model.authorizations as |authorization index|}}
             {{~#if authorization.canRead~}}
-            {{#link-to 'vault.cluster.access.identity.show' 'entities' authorization.id 'details'}}{{authorization.name}}{{/link-to}}
+            <LinkTo @route="vault.cluster.access.identity.show" @models={{array 'entities' authorization.id 'details'}}>{{authorization.name}}</LinkTo>
               {{~else~}}
               {{authorization.name}}
             {{~/if~}}{{#if (lt (inc index) model.authorizations.length)}},{{/if}}
@@ -73,9 +73,9 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if model.canAuthorize}}
         {{#if (or model.approved currentUserHasAuthorized)}}
-          {{#link-to 'vault.cluster.access.control-groups'class="button" data-test-back-link=true}}
+          <LinkTo @route="vault.cluster.access.control-groups" class="button" data-test-back-link={{true}}>
             <Chevron @direction="left" /> Back
-          {{/link-to}}
+          </LinkTo>
         {{else}}
           <button
             type="button"
