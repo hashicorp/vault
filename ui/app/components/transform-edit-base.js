@@ -82,7 +82,6 @@ export default Component.extend(FocusOnInsertMixin, {
     this.persist('destroyRecord', () => {
       this.hasDataChanges();
       callback();
-      // CBS TODO: Investigate what is causing a console error after this point
       this.transitionToRoute(LIST_ROOT_ROUTE, { queryParams: { tab } });
     });
   },

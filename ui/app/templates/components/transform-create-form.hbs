@@ -1,8 +1,7 @@
 <form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{model}} />
-    {{!-- CBS TODO: figure out what this ?? --}}
-    {{!-- <NamespaceReminder @mode={{mode}} @noun="SSH role" /> --}}
+    <NamespaceReminder @mode={{mode}} @noun="transformation" />
     {{#each model.transformFieldAttrs as |attr|}}
       <FormField
         data-test-field
