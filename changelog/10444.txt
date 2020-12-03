@@ -1,4 +1,4 @@
 ```release-note:bug
-api: Fixes issue where the CORS API AllowedHeaders parameter was missing in the input/output and the AllowedOrigins was a string instead of a slice
+api: Fixes CORS API methods that were outdated and invalid
 ```
 
