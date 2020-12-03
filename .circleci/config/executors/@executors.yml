@@ -23,7 +23,16 @@ alpine:
     - image: docker.mirror.hashicorp.services/alpine:3.10.2
   shell: /bin/sh
   working_directory: /go/src/github.com/hashicorp/vault
-docker-env-large:
+docker-env-go-test-remote-docker:
+  resource_class: medium
+  docker:
+    - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
+  environment:
+    GO111MODULE: "off"
+    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+    GO_TAGS: ""
+  working_directory: /go/src/github.com/hashicorp/vault
+docker-env-go-test:
   resource_class: large
   docker:
     - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
@@ -32,7 +41,7 @@ docker-env-large:
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
     GO_TAGS: ""
   working_directory: /go/src/github.com/hashicorp/vault
-docker-env-xlarge:
+docker-env-go-test-race:
   resource_class: xlarge
   docker:
     - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
