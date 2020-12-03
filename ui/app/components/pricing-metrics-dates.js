@@ -69,7 +69,9 @@ export default Component.extend({
     }
   }),
 
-  showResultsWarning: computed('queryEnd', 'queryStart', 'resultEnd', 'resultStart', function() {
+  // We don't want the warning to show when inputs are being updated before query is made
+  /* eslint-disable-next-line ember/require-computed-property-dependencies */
+  showResultsWarning: computed('resultEnd', 'resultStart', function() {
     if (!this.queryStart || !this.queryEnd || !this.resultStart || !this.resultEnd) {
       return false;
     }
