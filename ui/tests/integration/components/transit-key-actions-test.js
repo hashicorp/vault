@@ -7,6 +7,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
+import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -41,16 +42,16 @@ module('Integration | Component | transit key actions', function(hooks) {
       this.storeService = this.owner.lookup('service:store');
     });
   });
-  // ARG this test can't get to work.
-  // test('it requires `key`', async function(assert) {
-  //   let promise = waitForError();
-  //   render(hbs`
-  //     {{transit-key-actions}}
-  //     <div id="modal-wormhole"></div>
-  //   `);
-  //   let err = await promise;
-  //   assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
-  // });
+
+  test('it requires `key`', async function(assert) {
+    let promise = waitForError();
+    render(hbs`
+      {{transit-key-actions}}
+      <div id="modal-wormhole"></div>
+    `);
+    let err = await promise;
+    assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
+  });
 
   test('it renders', async function(assert) {
     this.set('key', { backend: 'transit', supportedActions: ['encrypt'] });
