@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import { inject as service } from '@ember/service';

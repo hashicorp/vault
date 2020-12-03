@@ -19,9 +19,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   modelTypes: computed(function() {
     return ['node', 'secret', 'secret-engine'];
   }),
-  globalNamespaceModels: computed(function() {
-    return ['node', 'cluster'];
-  }),
 
   queryParams: {
     namespaceQueryParam: {
