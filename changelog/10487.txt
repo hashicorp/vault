@@ -1,3 +1,3 @@
 ```release-note:bug
-core (enterprise): Instead of all service tokens, only root tokens are generated with entropy augmentation
+core (enterprise): Limit entropy augmentation during token generation to root tokens.
 ```
