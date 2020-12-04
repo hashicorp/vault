@@ -4,7 +4,7 @@
   (concat
     "vault.cluster.secrets.backend."
     (if item.isFolder "list" "show")
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.id
   class="list-item-row"

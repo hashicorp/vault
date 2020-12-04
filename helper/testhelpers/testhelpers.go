@@ -280,6 +280,25 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Fatalf("%d cores were not unsealed", n)
 }
 
+func SealCores(t testing.T, cluster *vault.TestCluster) {
+	t.Helper()
+	for _, core := range cluster.Cores {
+		if err := core.Shutdown(); err != nil {
+			t.Fatal(err)
+		}
+		timeout := time.Now().Add(3 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("timeout waiting for core to seal")
+			}
+			if core.Sealed() {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 60; i++ {

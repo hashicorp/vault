@@ -1,8 +1,8 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
-import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModelRoute, {
@@ -49,7 +49,7 @@ export default Route.extend(UnloadModelRoute, {
     }
     const modelType = this.modelType(backend.get('type'), section);
     if (!modelType) {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

@@ -30,7 +30,7 @@ func TestMySQL_Initialize(t *testing.T) {
 		VerifyConnection: true,
 	}
 
-	db := new(false)
+	db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -56,7 +56,7 @@ func TestMySQL_Initialize(t *testing.T) {
 		VerifyConnection: true,
 	}
 
-	db = new(false)
+	db = newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err = db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -65,7 +65,7 @@ func TestMySQL_Initialize(t *testing.T) {
 
 func TestMySQL_CreateUser(t *testing.T) {
 	t.Run("missing creation statements", func(t *testing.T) {
-		db := new(false)
+		db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 
 		password, err := credsutil.RandomAlphaNumeric(32, false)
 		if err != nil {
@@ -107,7 +107,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 			VerifyConnection: true,
 		}
 
-		db := new(false)
+		db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 		_, err := db.Initialize(context.Background(), initReq)
 		if err != nil {
 			t.Fatalf("err: %s", err)
@@ -130,7 +130,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 			VerifyConnection: true,
 		}
 
-		db := new(true)
+		db := newMySQL(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
 		_, err := db.Initialize(context.Background(), initReq)
 		if err != nil {
 			t.Fatalf("err: %s", err)
@@ -260,7 +260,7 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 				VerifyConnection: true,
 			}
 
-			db := new(false)
+			db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 			_, err := db.Initialize(context.Background(), initReq)
 			if err != nil {
 				t.Fatalf("err: %s", err)
@@ -335,7 +335,7 @@ func TestMySQL_DeleteUser(t *testing.T) {
 		VerifyConnection: true,
 	}
 
-	db := new(false)
+	db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -444,7 +444,7 @@ func TestMySQL_UpdateUser(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			db := new(false)
+			db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 			_, err := db.Initialize(context.Background(), initReq)
 			if err != nil {
 				t.Fatalf("err: %s", err)
@@ -496,7 +496,7 @@ func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 		"password":       pw,
 	}
 
-	db := new(false)
+	db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

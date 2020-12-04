@@ -1,5 +1,4 @@
-import DS from 'ember-data';
-const { attr } = DS;
+import { attr } from '@ember-data/model';
 import { assign } from '@ember/polyfills';
 import { camelize, capitalize } from '@ember/string';
 

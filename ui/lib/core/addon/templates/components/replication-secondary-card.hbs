@@ -29,7 +29,7 @@
         </h6>
         <AlertInline
           @type="danger"
-          @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again."
+          @message="There has been some transient failure. Your cluster will eventually switch back to connection and try to establish a connection again."
         />
       {{else if (eq connection 'shutdown')}}
         <h6 class="title is-6 has-text-danger" data-test-error>
