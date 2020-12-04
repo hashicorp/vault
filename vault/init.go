@@ -77,7 +77,7 @@ func (c *Core) Initialized(ctx context.Context) (bool, error) {
 		c.logger.Error("barrier init check failed", "error", err)
 		return false, err
 	}
-	if !init {
+	if !init && c.raftInfo == nil {
 		c.logger.Info("security barrier not initialized")
 		return false, nil
 	}

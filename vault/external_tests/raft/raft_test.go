@@ -955,7 +955,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 
 	joinFunc(cluster.Cores[1].Client, false)
 	for i, core := range cluster.Cores {
-		verifyInitStatus(i, i < 1)
+		verifyInitStatus(i, i < 2)
 		if i == 1 {
 			cluster.UnsealCore(t, core)
 			time.Sleep(5 * time.Second)
@@ -965,7 +965,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 
 	joinFunc(cluster.Cores[2].Client, false)
 	for i, core := range cluster.Cores {
-		verifyInitStatus(i, i < 2)
+		verifyInitStatus(i, true)
 		if i == 2 {
 			cluster.UnsealCore(t, core)
 			time.Sleep(5 * time.Second)
