@@ -15,7 +15,7 @@ type PrintTokenCommand struct {
 }
 
 func (c *PrintTokenCommand) Synopsis() string {
-	return "Prints the vault token currenty in use"
+	return "Prints the vault token currently in use"
 }
 
 func (c *PrintTokenCommand) Help() string {

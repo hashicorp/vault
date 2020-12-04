@@ -2,7 +2,6 @@ import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
-import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import ClusterRoute from 'vault/mixins/cluster-route';
@@ -20,9 +19,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   modelTypes: computed(function() {
     return ['node', 'secret', 'secret-engine'];
   }),
-  globalNamespaceModels: computed(function() {
-    return ['node', 'cluster'];
-  }),
 
   queryParams: {
     namespaceQueryParam: {
@@ -36,31 +32,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return cluster ? cluster.get('id') : null;
   },
 
-  clearNonGlobalModels() {
-    // this method clears all of the ember data cached models except
-    // the model types blacklisted in `globalNamespaceModels`
-    let store = this.store;
-    let modelsToKeep = this.get('globalNamespaceModels');
-    for (let model of getOwner(this)
-      .lookup('data-adapter:main')
-      .getModelTypes()) {
-      let { name } = model;
-      if (modelsToKeep.includes(name)) {
-        return;
-      }
-      store.unloadAll(name);
-    }
-  },
-
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
-    this.clearNonGlobalModels();
-    this.get('namespaceService').setNamespace(params.namespaceQueryParam);
+    this.namespaceService.setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {
-      this.get('auth').setCluster(id);
-      await this.get('permissions').getPaths.perform();
-      return this.get('version').fetchFeatures();
+      this.auth.setCluster(id);
+      await this.permissions.getPaths.perform();
+      return this.version.fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
@@ -68,7 +47,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     const id = this.getClusterId(params);
-    return this.get('store').findRecord('cluster', id);
+    return this.store.findRecord('cluster', id);
   },
 
   poll: task(function*() {
@@ -92,11 +71,11 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   afterModel(model, transition) {
     this._super(...arguments);
-    this.get('currentCluster').setCluster(model);
+    this.currentCluster.setCluster(model);
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
-    if (this.get('namespaceService.path') && !this.get('version.hasNamespaces')) {
+    if (this.namespaceService.path && !this.version.hasNamespaces) {
       return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
     return this.transitionToTargetRoute(transition);

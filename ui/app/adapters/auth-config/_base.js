@@ -14,7 +14,7 @@ export default ApplicationAdapter.extend({
 
   buildURL(modelName, id, snapshot) {
     const backendId = id ? id : snapshot.belongsTo('backend').id;
-    let url = `${this.get('namespace')}/${backendId}/config`;
+    let url = `${this.namespace}/${backendId}/config`;
     // aws has a lot more config endpoints
     if (modelName.includes('aws')) {
       url = `${url}/${this.pathForType(modelName)}`;

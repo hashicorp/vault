@@ -14,16 +14,14 @@ export default Component.extend({
   // number of links to show on each side of page
   spread: 2,
   hasNext: computed('page', 'lastPage', function() {
-    return this.get('page') < this.get('lastPage');
+    return this.page < this.lastPage;
   }),
-  hasPrevious: computed('page', 'lastPage', function() {
-    return this.get('page') > 1;
-  }),
+  hasPrevious: gt('page', 1),
 
   segmentLinks: gt('lastPage', 10),
 
-  pageRange: computed('page', 'lastPage', function() {
-    const { spread, page, lastPage } = this.getProperties('spread', 'page', 'lastPage');
+  pageRange: computed('lastPage', 'page', 'spread', function() {
+    const { spread, page, lastPage } = this;
 
     let lower = Math.max(2, page - spread);
     let upper = Math.min(lastPage - 1, lower + spread * 2);

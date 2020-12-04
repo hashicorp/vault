@@ -24,21 +24,13 @@ export default Component.extend(FocusOnInsertMixin, {
   didReceiveAttrs() {
     this._super(...arguments);
     if (
-      (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') ||
-      (this.get('wizard.featureState') === 'role' && this.get('mode') === 'show')
+      (this.wizard.featureState === 'details' && this.mode === 'create') ||
+      (this.wizard.featureState === 'role' && this.mode === 'show')
     ) {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'CONTINUE',
-        this.get('backendType')
-      );
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
     }
-    if (this.get('wizard.featureState') === 'displayRole') {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'NOOP',
-        this.get('backendType')
-      );
+    if (this.wizard.featureState === 'displayRole') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'NOOP', this.backendType);
     }
   },
 
@@ -59,26 +51,26 @@ export default Component.extend(FocusOnInsertMixin, {
     .cancelOn('willDestroyElement'),
 
   transitionToRoute() {
-    this.get('router').transitionTo(...arguments);
+    this.router.transitionTo(...arguments);
   },
 
   onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
+    if (e.keyCode !== keys.ESC || this.mode !== 'show') {
       return;
     }
     this.transitionToRoute(LIST_ROOT_ROUTE);
   },
 
   hasDataChanges() {
-    get(this, 'onDataChange')(get(this, 'model.hasDirtyAttributes'));
+    this.onDataChange(this.model.hasDirtyAttributes);
   },
 
   persist(method, successCallback) {
-    const model = get(this, 'model');
+    const model = this.model;
     return model[method]().then(() => {
       if (!get(model, 'isError')) {
-        if (this.get('wizard.featureState') === 'role') {
-          this.get('wizard').transitionFeatureMachine('role', 'CONTINUE', this.get('backendType'));
+        if (this.wizard.featureState === 'role') {
+          this.wizard.transitionFeatureMachine('role', 'CONTINUE', this.backendType);
         }
         successCallback(model);
       }
@@ -89,7 +81,7 @@ export default Component.extend(FocusOnInsertMixin, {
     createOrUpdate(type, event) {
       event.preventDefault();
 
-      const modelId = this.get('model.id');
+      const modelId = this.model.id;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {
@@ -103,11 +95,11 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     setValue(key, event) {
-      set(get(this, 'model'), key, event.target.checked);
+      set(this.model, key, event.target.checked);
     },
 
     refresh() {
-      this.get('onRefresh')();
+      this.onRefresh();
     },
 
     delete() {
@@ -122,7 +114,7 @@ export default Component.extend(FocusOnInsertMixin, {
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        set(this.get('model'), attr, JSON.parse(val));
+        set(this.model, attr, JSON.parse(val));
       }
     },
   },

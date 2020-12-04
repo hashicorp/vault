@@ -8,12 +8,12 @@
 
 {{#if (or creation_time creation_ttl)}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{info-table-row label="Creation path" value=creation_path data-test-tools="token-lookup-row"}}
-    {{info-table-row label="Creation time" value=creation_time data-test-tools="token-lookup-row"}}
-    {{info-table-row label="Creation TTL" value=creation_ttl data-test-tools="token-lookup-row"}}
+    <InfoTableRow @label="Creation path" @value={{creation_path}} @data-test-tools="token-lookup-row" />
+    <InfoTableRow @label="Creation time" @value={{creation_time}} @data-test-tools="token-lookup-row" />
+    <InfoTableRow @label="Creation TTL" @value={{creation_ttl}} @data-test-tools="token-lookup-row" />
     {{#if expirationDate}}
-      {{info-table-row label="Expiration date" value=expirationDate data-test-tools="token-lookup-row"}}
-      {{info-table-row label="Expires in" value=(date-from-now expirationDate) data-test-tools="token-lookup-row"}}
+      <InfoTableRow @label="Expiration date" @value={{expirationDate}} @data-test-tools="token-lookup-row" />
+      <InfoTableRow @label="Expires in" @value={{date-from-now expirationDate}} @data-test-tools="token-lookup-row" />
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -26,17 +26,11 @@
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
-    {{message-error errors=errors}}
+    <MessageError @errors={{errors}} />
     <div class="field">
       <label for="token" class="is-label">Wrapping token</label>
       <div class="control">
-        {{input
-          value=token
-          class="input"
-          id="token"
-          name="token"
-          data-test-tools-input="wrapping-token"
-        }}
+        <Input @value={{token}} class="input" @id="token" @name="token" data-test-tools-input="wrapping-token" />
       </div>
     </div>
   </div>

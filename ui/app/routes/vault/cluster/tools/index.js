@@ -5,7 +5,7 @@ import { toolsActions } from 'vault/helpers/tools-actions';
 export default Route.extend({
   currentCluster: service(),
   beforeModel(transition) {
-    const currentCluster = this.get('currentCluster.cluster.name');
+    const currentCluster = this.currentCluster.cluster.name;
     const supportedActions = toolsActions();
     if (transition.targetName === this.routeName) {
       transition.abort();
