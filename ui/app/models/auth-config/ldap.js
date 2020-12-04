@@ -1,11 +1,9 @@
+import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 
-import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
-
-const { attr } = DS;
 
 export default AuthConfig.extend({
   useOpenAPI: true,
@@ -13,7 +11,7 @@ export default AuthConfig.extend({
     label: 'Certificate',
     editType: 'textarea',
   }),
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function() {
     let groups = [
       {
         default: ['url'],

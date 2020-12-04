@@ -20,7 +20,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create', function(hooks) {
+module('Acceptance | secrets/secret/create meep', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -165,6 +165,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
+    await settled();
     // use visit helper here because ids with / in them get encoded
     await visit('/vault/secrets/secret/list/foo/bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');

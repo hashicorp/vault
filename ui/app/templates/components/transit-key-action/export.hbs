@@ -27,7 +27,7 @@
     </div>
     <div class="field">
       <div class="b-checkbox">
-        {{input type="checkbox" name="exportVersion" id="exportVersion" class="styled" checked=exportVersion}}
+        <Input @type="checkbox" @name="exportVersion" @id="exportVersion" class="styled" @checked={{exportVersion}} />
         <label for="exportVersion" class="is-label">
           Export a single version
         </label>
@@ -56,7 +56,7 @@
         </div>
       {{/if}}
     </div>
-    {{wrap-ttl onChange=(action (mut wrapTTL))}}
+    <WrapTtl @onChange={{action (mut wrapTTL)}} />
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">

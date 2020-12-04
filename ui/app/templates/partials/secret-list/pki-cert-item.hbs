@@ -2,7 +2,7 @@
   (concat
     "vault.cluster.secrets.backend."
     "show"
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.idForNav
   class="list-item-row"
@@ -12,15 +12,7 @@
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      {{#link-to
-        (concat
-          "vault.cluster.secrets.backend."
-           "show"
-          (if (not item.id) "-root")
-        )
-        item.idForNav
-        class="has-text-black has-text-weight-semibold"
-      }}
+      <LinkTo @route={{concat "vault.cluster.secrets.backend." "show" (unless item.id "-root") }} @model={{item.idForNav}} class="has-text-black has-text-weight-semibold">
       <Icon
         @glyph="file-outline"
         class="has-text-grey-light is-pulled-left"
@@ -28,10 +20,10 @@
       <div class="role-item-details">
         <span class="is-underline">{{if (eq item.id " ") "(self)" (or item.keyWithoutParent item.id)}}</span>
       </div>
-      {{/link-to}}
+      </LinkTo>
     </div>
     <div class="column has-text-right">
-      {{pki-cert-popup item=item}}
+      <PkiCertPopup @item={{item}} />
     </div>
   </div>
 {{/linked-block}}
