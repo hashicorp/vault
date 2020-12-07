@@ -77,9 +77,12 @@ func (c *Core) Initialized(ctx context.Context) (bool, error) {
 		c.logger.Error("barrier init check failed", "error", err)
 		return false, err
 	}
-	if !init && c.raftInfo == nil {
-		c.logger.Info("security barrier not initialized")
-		return false, nil
+	if !init && !c.isRaftUnseal() {
+		rb := c.getRaftBackend()
+		if rb == nil || !rb.Initialized() {
+			c.logger.Info("security barrier not initialized")
+			return false, nil
+		}
 	}
 
 	// Verify the seal configuration
