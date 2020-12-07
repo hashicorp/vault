@@ -1,6 +1,6 @@
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
-import DS from 'ember-data';
 
 const MODEL_FROM_PARAM = {
   entities: 'entity',
@@ -11,7 +11,7 @@ export default Route.extend({
   model(params) {
     let model = MODEL_FROM_PARAM[params.item_type];
     if (!model) {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

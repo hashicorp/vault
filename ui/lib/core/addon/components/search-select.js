@@ -136,7 +136,7 @@ export default Component.extend({
       this.onChange(val);
     },
     createOption(optionId) {
-      let newOption = { name: optionId, id: optionId };
+      let newOption = { name: optionId, id: optionId, new: true };
       this.selectedOptions.pushObject(newOption);
       this.handleChange();
     },
@@ -147,7 +147,9 @@ export default Component.extend({
     },
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
-      this.options.pushObject(selected);
+      if (!selected.new) {
+        this.options.pushObject(selected);
+      }
       this.handleChange();
     },
     constructSuggestion(id) {

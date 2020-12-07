@@ -6,4 +6,4 @@
   </p.levelLeft>
 </PageHeader>
 
-{{identity/edit-form mode="merge" model=model onSave=(perform navAfterSave)}}
+<Identity::EditForm @mode="merge" @model={{model}} @onSave={{perform navAfterSave}} />

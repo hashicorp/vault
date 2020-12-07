@@ -31,6 +31,10 @@ const (
 	activityConfigKey      = "config"
 	activityIntentLogKey   = "endofmonth"
 
+	// for testing purposes (public as needed)
+	ActivityLogPrefix = "sys/counters/activity/log/"
+	ActivityPrefix    = "sys/counters/activity/"
+
 	// Time to wait on perf standby before sending fragment
 	activityFragmentStandbyTime = 10 * time.Minute
 
@@ -120,8 +124,6 @@ type ActivityLog struct {
 	activeEntities map[string]struct{}
 
 	// track metadata and contents of the most recent log segment
-	// currentSegment is currently unprotected by a mutex, because it is updated
-	// only by the worker performing rotation.
 	currentSegment segmentInfo
 
 	// Fragments received from performance standbys
@@ -132,11 +134,11 @@ type ActivityLog struct {
 	defaultReportMonths int
 	retentionMonths     int
 
-	// cancel function to stop loading entities/tokens from storage to memory
-	activityCancel context.CancelFunc
-
 	// channel closed by delete worker when done
 	deleteDone chan struct{}
+
+	// for testing: is config currently being invalidated. protected by l
+	configInvalidationInProgress bool
 }
 
 // These non-persistent configuration options allow us to disable
@@ -195,21 +197,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		config.RetentionMonths)
 
 	return a, nil
-}
-
-// Return the in-memory activeEntities from an activity log
-func (c *Core) GetActiveEntities() map[string]struct{} {
-	out := make(map[string]struct{})
-
-	c.stateLock.RLock()
-	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.activeEntities {
-		out[k] = v
-	}
-	c.activityLog.fragmentLock.RUnlock()
-	c.stateLock.RUnlock()
-
-	return out
 }
 
 // saveCurrentSegmentToStorage updates the record of Entities or
@@ -637,7 +624,7 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	return nil
 }
 
-// entityBackgroundLoader loads entity activity log records for start_date :t:
+// entityBackgroundLoader loads entity activity log records for start_date `t`
 func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitGroup, t time.Time, seqNums <-chan uint64) {
 	defer wg.Done()
 	for seqNum := range seqNums {
@@ -657,10 +644,10 @@ func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitG
 
 // Initialize a new current segment, based on the current time.
 // Call with fragmentLock and l held.
-func (a *ActivityLog) startNewCurrentLogLocked() {
+func (a *ActivityLog) startNewCurrentLogLocked(now time.Time) {
 	a.logger.Trace("initializing new log")
 	a.resetCurrentLog()
-	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.currentSegment.startTimestamp = now.Unix()
 }
 
 // Should be called with fragmentLock and l held.
@@ -748,7 +735,7 @@ func (a *ActivityLog) WaitForDeletion() {
 // refreshFromStoredLog loads the appropriate entities/tokencounts for active and performance standbys
 // the most recent segment is loaded synchronously, and older segments are loaded in the background
 // this function expects stateLock to be held
-func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGroup) error {
+func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGroup, now time.Time) error {
 	a.l.Lock()
 	defer a.l.Unlock()
 	a.fragmentLock.Lock()
@@ -765,7 +752,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 				// reset the log without updating the timestamp
 				a.resetCurrentLog()
 			} else {
-				a.startNewCurrentLogLocked()
+				a.startNewCurrentLogLocked(now)
 			}
 		}
 
@@ -776,7 +763,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 
 	if !a.enabled {
 		a.logger.Debug("activity log not enabled, skipping refresh from storage")
-		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, time.Now().UTC()) {
+		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, now) {
 			a.logger.Debug("activity log is disabled, cleaning up logs for the current month")
 			go a.deleteLogWorker(mostRecent.Unix(), make(chan struct{}))
 		}
@@ -784,7 +771,6 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 		return nil
 	}
 
-	now := time.Now().UTC()
 	if timeutil.IsPreviousMonth(mostRecent, now) {
 		// no activity logs to load for this month. if we are enabled, interpret
 		// it as having missed the rotation, so let it fall through and load
@@ -805,7 +791,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 			// reset the log without updating the timestamp
 			a.resetCurrentLog()
 		} else {
-			a.startNewCurrentLogLocked()
+			a.startNewCurrentLogLocked(now)
 		}
 
 		return nil
@@ -896,7 +882,7 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 
 	forceSave := false
 	if a.enabled && a.currentSegment.startTimestamp == 0 {
-		a.startNewCurrentLogLocked()
+		a.startNewCurrentLogLocked(time.Now().UTC())
 		// Force a save so we can distinguish between
 		//
 		// Month N-1: present
@@ -954,7 +940,7 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 }
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
-func (c *Core) setupActivityLog(ctx context.Context) error {
+func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
 
@@ -972,10 +958,7 @@ func (c *Core) setupActivityLog(ctx context.Context) error {
 	c.activityLog = manager
 
 	// load activity log for "this month" into memory
-	refreshCtx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
-	manager.activityCancel = cancelFunc
-	var wg sync.WaitGroup
-	err = manager.refreshFromStoredLog(refreshCtx, &wg)
+	err = manager.refreshFromStoredLog(manager.core.activeContext, wg, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -1012,10 +995,6 @@ func (c *Core) stopActivityLog() error {
 	if c.activityLog != nil {
 		// Shut down background worker
 		close(c.activityLog.doneCh)
-		// cancel refreshing logs from storage
-		if c.activityLog.activityCancel != nil {
-			c.activityLog.activityCancel()
-		}
 	}
 
 	c.activityLog = nil

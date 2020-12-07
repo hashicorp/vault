@@ -50,6 +50,11 @@ instead of a static IP address or hostname. When provided, Vault will attempt to
 automatically discover and resolve potential leader addresses based on the provided
 auto-join configuration.
 
+Vault uses go-discover to support the auto-join functionality. Please see the
+go-discover
+[README](https://github.com/hashicorp/go-discover/blob/master/README.md) for
+details on the format.
+
 By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
 Operators may override these through the `--auto-join-scheme` and `--auto-join-port`
 CLI flags respectively.

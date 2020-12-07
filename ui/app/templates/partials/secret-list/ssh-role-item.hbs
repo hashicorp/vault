@@ -2,7 +2,7 @@
   (concat
     "vault.cluster.secrets.backend."
     (if (eq item.keyType "ca") "sign" "credentials")
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.id
   class="list-item-row"
@@ -11,15 +11,7 @@
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      {{#link-to
-        (concat
-          "vault.cluster.secrets.backend."
-          (if (eq item.keyType "ca") "sign" "credentials")
-          (if (not item.id) "-root")
-        )
-        item.id
-        class="has-text-black has-text-weight-semibold"
-      }}
+      <LinkTo @route={{concat "vault.cluster.secrets.backend." (if (eq item.keyType "ca") "sign" "credentials") (unless item.id "-root") }} @model={{item.id}} class="has-text-black has-text-weight-semibold">
         <Icon
           @glyph="user-square-outline"
           class="has-text-grey-light is-pulled-left"
@@ -32,7 +24,7 @@
             <span class="has-text-grey is-size-7">Zero-Address</span>
           {{/if}}
         </div>
-      {{/link-to}}
+      </LinkTo>
     </div>
     <div class="column has-text-right">
       {{#if (eq backendType 'ssh')}}

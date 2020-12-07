@@ -1,8 +1,7 @@
-import DS from 'ember-data';
+import { belongsTo } from '@ember-data/model';
 import { assert, debug } from '@ember/debug';
 import { typeOf } from '@ember/utils';
 import { isArray } from '@ember/array';
-const { belongsTo } = DS;
 
 /*
  *

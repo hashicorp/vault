@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
+	"github.com/hashicorp/vault/command/agent/winsvc"
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -557,6 +558,8 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Output("==> Vault agent shutdown triggered")
 				return nil
 			case <-ctx.Done():
+				return nil
+			case <-winsvc.ShutdownChannel():
 				return nil
 			}
 		}
