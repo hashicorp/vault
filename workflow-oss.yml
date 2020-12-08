@@ -1,0 +1,103 @@
+# workflow.yml describes the workflow by which release bundles are tested
+# and promoted through a series of channels.
+
+job_defaults:
+  executor: docker-env-go-test
+  environment:
+    AUTO_INSTALL_TOOLS: "YES"
+    BUILDKIT_PROGRESS: plain
+
+package_sets:
+  linux_amd64:
+    matrix:
+      GOOS: [ linux ]
+      GOARCH: [ amd64 ]
+  darwin_amd64:
+    matrix:
+      GOOS: [ darwin ]
+      GOARCH: [ amd64 ]
+    
+circleci:
+  executors:
+    docker-env-go-test:
+      resource_class: large
+      docker:
+        - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
+      environment:
+        GO111MODULE: "off"
+        CIRCLECI_CLI_VERSION: 0.1.5546
+        GO_TAGS: ""
+      working_directory: /go/src/github.com/hashicorp/vault
+    default-machine:
+      machine:
+        image: ubuntu-1604:202007-01
+      environment:
+        INSTALL_PATH: /home/circleci/bin
+
+stages:
+  - channel: dev
+    branches: ["*"]
+    actions:
+      checks:
+        - phase: Go Tests
+          jobs:
+            - name: Fast Tests
+              command: echo testing
+        - phase: Basic Package Checks
+          job_defaults:
+            package_set: linux_amd64
+          before_each_job:
+            - name: Unzip Package
+              command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
+          jobs:
+            - name: Package Version Check
+              executor: default-machine
+              command: |
+                set -x
+                vault version
+                vault version | grep -F "$PRODUCT_VERSION"
+                vault version | grep -F "$PRODUCT_REVISION"
+              
+  - channel: current
+    branches:
+      - main
+      - release/*.*.x
+    job_defaults:
+      package_set: darwin_amd64
+    actions:
+      checks:
+        - phase: Some More Package Checks
+          before_each_job:
+            - name: Unzip Package
+              command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
+          jobs:
+            - name: packagespec version
+              executor: default-machine
+              command: |
+                set -x
+                vault version
+                vault version | grep -F "$PRODUCT_VERSION"
+                vault version | grep -F "$PRODUCT_REVISION"
+  - channel: stable
+    job_defaults:
+      package_set: linux_amd64
+    actions:
+      checks:
+        - phase: Package Checks Yet Again
+          before_each_job:
+            - name: Unzip Package
+              command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
+          jobs:
+            - command: vault help
+  - channel: staging
+    promote: manual
+    job_defaults:
+      package_set: darwin_amd64
+    actions:
+      checks:
+        - phase: Yet More Binary Tests
+          before_each_job:
+            - name: Unzip Package
+              command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
+          jobs:
+            - command: vault write --help 

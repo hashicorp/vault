@@ -268,6 +268,24 @@ jobs:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
+  Fast Tests:
+    docker:
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    resource_class: large
+    working_directory: /go/src/github.com/hashicorp/vault
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO111MODULE: 'off'
+    - AUTO_INSTALL_TOOLS: 'YES'
+    - BUILDKIT_PROGRESS: plain
+    steps:
+    - checkout:
+        path: .
+    - checkout:
+        path: .
+    - run:
+        command: echo testing
   build-common-layers:
     machine:
       image: ubuntu-1604:202007-01
@@ -2249,4 +2267,7 @@ workflows:
             only:
             - stable-website
         context: vault-docs
+  devchecks:
+    jobs:
+    - Fast Tests
   version: 2
