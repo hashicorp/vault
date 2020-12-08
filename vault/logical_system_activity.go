@@ -156,6 +156,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
+	warnings := make([]string, 0)
+
 	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
@@ -186,8 +188,13 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	{
 		// Parse the enabled setting
 		if enabledRaw, ok := d.GetOk("enabled"); ok {
+			if config.Enabled == "enable" && enabledRaw.(string) == "disable" {
+				warnings = append(warnings, "the current monthly segment will be deleted")
+			}
+
 			config.Enabled = enabledRaw.(string)
 		}
+
 		switch config.Enabled {
 		case "default", "enable", "disable":
 		default:
@@ -216,11 +223,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
 
-	if config.Enabled == "disable" {
+	if len(warnings) > 0 {
 		return &logical.Response{
-			Warnings: []string{
-				"the current monthly segment will be deleted",
-			},
+			Warnings: warnings,
 		}, nil
 	}
 
