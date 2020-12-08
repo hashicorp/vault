@@ -37,10 +37,9 @@ jobs:
     steps:
       - checkout:
           path: .
-      - checkout:
-          path: .
       - run:
           command: echo testing
+          name: Fast Tests
     environment:
       AUTO_INSTALL_TOOLS: "YES"
       BUILDKIT_PROGRESS: plain
@@ -1444,6 +1443,6 @@ workflows:
       - windows_amd64_package:
           requires:
             - build-common-layers
-  devchecks:
+  test:
     jobs:
       - Fast Tests: {}
