@@ -1646,6 +1646,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 	// delete the intent log
 	a.view.Delete(ctx, activityIntentLogKey)
 
+	// emit active entity metrics for the interval (times[0], endTime)
 	for nsID, counts := range byNamespace {
 		a.metrics.SetGaugeWithLabels(
 			[]string{"identity", "entity", "active", "monthly"},
