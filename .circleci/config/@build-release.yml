@@ -17,7 +17,32 @@ executors:
       AUTO_INSTALL_TOOLS: "YES"
       BUILDKIT_PROGRESS: plain
       PRODUCT_REVISION: ""
+  default-machine:
+    machine:
+      image: ubuntu-1604:202007-01
+    environment:
+      INSTALL_PATH: /home/circleci/bin
+  docker-env-go-test:
+    docker:
+      - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    resource_class: large
+    working_directory: /go/src/github.com/hashicorp/vault
+    environment:
+      CIRCLECI_CLI_VERSION: 0.1.5546
+      GO_TAGS: ""
+      GO111MODULE: "off"
 jobs:
+  Fast Tests:
+    executor: docker-env-go-test
+    steps:
+      - checkout:
+          path: .
+      - run:
+          command: echo testing
+          name: Fast Tests
+    environment:
+      AUTO_INSTALL_TOOLS: "YES"
+      BUILDKIT_PROGRESS: plain
   build-common-layers:
     executor: builder-machine
     steps:
@@ -1418,3 +1443,6 @@ workflows:
       - windows_amd64_package:
           requires:
             - build-common-layers
+  test:
+    jobs:
+      - Fast Tests: {}
