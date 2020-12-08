@@ -638,7 +638,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				// Set the key clean up to 0 so it's cleaned immediately. This
 				// will simulate that there are no ways to upgrade to the latest
 				// term.
-				vault.KeyRotateGracePeriod = 0
+				for _, c := range cluster.Cores {
+					c.Core.SetKeyRotateGracePeriod(0)
+				}
 
 				// Rotate
 				err = leaderClient.Sys().Rotate()
