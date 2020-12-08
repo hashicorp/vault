@@ -188,11 +188,11 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	{
 		// Parse the enabled setting
 		if enabledRaw, ok := d.GetOk("enabled"); ok {
-			if config.Enabled == "enable" && enabledRaw.(string) == "disable" {
-				warnings = append(warnings, "the current monthly segment will be deleted")
-			}
+			enabledStr := enabledRaw.(string)
 
-			config.Enabled = enabledRaw.(string)
+			if config.Enabled == "enable" && (enabledStr == "disable" || enabledStr == "default") {
+				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
+			}
 		}
 
 		switch config.Enabled {
