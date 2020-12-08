@@ -59,7 +59,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header") + framework.OptionalParamRegex("multivalue"),
+			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
 			Fields: map[string]*framework.FieldSchema{
 				"header": &framework.FieldSchema{
@@ -72,7 +72,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				"multivalue": &framework.FieldSchema{
 					Type:        framework.TypeString,
-					Description: "Returns multiple values if set",
+					Description: "Returns multiple values if true",
 				},
 			},
 

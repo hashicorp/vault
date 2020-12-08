@@ -2430,10 +2430,14 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	return nil, nil
 }
 
-const multiValueKey = "multivalue"
 func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	header := data.Get("header").(string)
-	multivalue := data.Get(multiValueKey).(string)
+	multivalueRaw := data.Get("multivalue").(string)
+
+	multivalue, err := strconv.ParseBool(multivalueRaw)
+	if err != nil {
+		return nil, fmt.Errorf("wrong argument '%s' for multivalue", multivalueRaw)
+	}
 
 	values, err := b.Core.uiConfig.GetHeader(ctx, header)
 	if err != nil {
@@ -2444,7 +2448,7 @@ func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logi
 	}
 
 	// Return multiple values if specified
-	if multivalue == multiValueKey {
+	if multivalue {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"values": values,
