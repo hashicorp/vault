@@ -69,20 +69,44 @@ func (c *Core) InitializeRecovery(ctx context.Context) error {
 	return nil
 }
 
-// Initialized checks if the Vault is already initialized
+// Initialized checks if the Vault is already initialized.  This means one of
+// two things: either the barrier has been created (with keyring and master key)
+// and the seal config written to storage, or Raft is forming a cluster and a
+// join/bootstrap is in progress.
 func (c *Core) Initialized(ctx context.Context) (bool, error) {
+	// Check the barrier first
+	init, err := c.InitializedLocally(ctx)
+	if err != nil || init {
+		return init, err
+	}
+
+	if c.isRaftUnseal() {
+		return true, nil
+	}
+
+	rb := c.getRaftBackend()
+	if rb != nil && rb.Initialized() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// InitializedLocally checks if the Vault is already initialized from the
+// local node's perspective.  This is the same thing as Initialized, unless
+// using Raft, in which case Initialized may return true (because a peer
+// we're joining to has been initialized) while InitializedLocally returns
+// false (because we're not done bootstrapping raft on the local node).
+func (c *Core) InitializedLocally(ctx context.Context) (bool, error) {
 	// Check the barrier first
 	init, err := c.barrier.Initialized(ctx)
 	if err != nil {
 		c.logger.Error("barrier init check failed", "error", err)
 		return false, err
 	}
-	if !init && !c.isRaftUnseal() {
-		rb := c.getRaftBackend()
-		if rb == nil || !rb.Initialized() {
-			c.logger.Info("security barrier not initialized")
-			return false, nil
-		}
+	if !init {
+		c.logger.Info("security barrier not initialized")
+		return false, nil
 	}
 
 	// Verify the seal configuration
