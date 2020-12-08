@@ -1601,6 +1601,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 			byNamespace[nsID].Tokens += v
 		}
 	}
+
 	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
 
 	for _, startTime := range times {
@@ -1627,6 +1628,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 			EndTime:    endTime,
 			Namespaces: make([]*activity.NamespaceRecord, 0, len(byNamespace)),
 		}
+
 		for nsID, counts := range byNamespace {
 			pq.Namespaces = append(pq.Namespaces, &activity.NamespaceRecord{
 				NamespaceID:     nsID,
@@ -1641,8 +1643,18 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 		}
 	}
 
-	// Delete the intent log
+	// delete the intent log
 	a.view.Delete(ctx, activityIntentLogKey)
+
+	for nsID, counts := range byNamespace {
+		a.metrics.SetGaugeWithLabels(
+			[]string{"identity", "entity", "active", "monthly"},
+			float32(len(counts.Entities)),
+			[]metricsutil.Label{
+				{Name: "namespace", Value: nsID},
+			},
+		)
+	}
 
 	a.logger.Info("finished computing queries", "month", endTime)
 
