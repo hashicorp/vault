@@ -900,14 +900,10 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
-	joinFunc := func(client *api.Client, addClientCerts bool) {
+	joinFunc := func(client *api.Client) {
 		req := &api.RaftJoinRequest{
 			LeaderAPIAddr: leaderAPI,
 			LeaderCACert:  string(cluster.CACertPEM),
-		}
-		if addClientCerts {
-			req.LeaderClientCert = string(cluster.CACertPEM)
-			req.LeaderClientKey = string(cluster.CAKeyPEM)
 		}
 		resp, err := client.Sys().RaftJoin(req)
 		if err != nil {
@@ -953,7 +949,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		verifyInitStatus(i, i < 1)
 	}
 
-	joinFunc(cluster.Cores[1].Client, false)
+	joinFunc(cluster.Cores[1].Client)
 	for i, core := range cluster.Cores {
 		verifyInitStatus(i, i < 2)
 		if i == 1 {
@@ -962,7 +958,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		}
 	}
 
-	joinFunc(cluster.Cores[2].Client, false)
+	joinFunc(cluster.Cores[2].Client)
 	for i, core := range cluster.Cores {
 		verifyInitStatus(i, true)
 		if i == 2 {
