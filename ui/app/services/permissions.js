@@ -65,9 +65,7 @@ export default Service.extend({
     }
 
     try {
-      let resp = yield this.get('store')
-        .adapterFor('permissions')
-        .query();
+      let resp = yield this.store.adapterFor('permissions').query();
       this.setPaths(resp);
       return;
     } catch (err) {
@@ -108,7 +106,7 @@ export default Service.extend({
   },
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.get('namespace').path;
+    const namespace = this.namespace.path;
     if (namespace) {
       return `${namespace}/${pathName}`;
     } else {
@@ -129,7 +127,7 @@ export default Service.extend({
   },
 
   hasMatchingExactPath(pathName, capability) {
-    const exactPaths = this.get('exactPaths');
+    const exactPaths = this.exactPaths;
     if (exactPaths) {
       const prefix = Object.keys(exactPaths).find(path => path.startsWith(pathName));
       const hasMatchingPath = prefix && !this.isDenied(exactPaths[prefix]);
@@ -144,7 +142,7 @@ export default Service.extend({
   },
 
   hasMatchingGlobPath(pathName, capability) {
-    const globPaths = this.get('globPaths');
+    const globPaths = this.globPaths;
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find(k => {
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));

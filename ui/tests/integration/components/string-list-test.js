@@ -1,39 +1,35 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find, findAll, fillIn, triggerKeyEvent } from '@ember/test-helpers';
+import { render, click, fillIn, triggerKeyEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | string list', function(hooks) {
   setupRenderingTest(hooks);
 
   const assertBlank = function(assert) {
-    assert.equal(findAll('[data-test-string-list-input]').length, 1, 'renders 1 input');
-    assert.equal(find('[data-test-string-list-input]').value, '', 'the input is blank');
+    assert.dom('[data-test-string-list-input]').exists({ count: 1 }, 'renders 1 input');
+    assert.dom('[data-test-string-list-input]').hasValue('', 'the input is blank');
   };
 
   const assertFoo = function(assert) {
-    assert.equal(findAll('[data-test-string-list-input]').length, 2, 'renders 2 inputs');
-    assert.equal(find('[data-test-string-list-input="0"]').value, 'foo', 'first input has the inputValue');
-    assert.equal(find('[data-test-string-list-input="1"]').value, '', 'second input is blank');
+    assert.dom('[data-test-string-list-input]').exists({ count: 2 }, 'renders 2 inputs');
+    assert.dom('[data-test-string-list-input="0"]').hasValue('foo', 'first input has the inputValue');
+    assert.dom('[data-test-string-list-input="1"]').hasValue('', 'second input is blank');
   };
 
   const assertFooBar = function(assert) {
-    assert.equal(findAll('[data-test-string-list-input]').length, 3, 'renders 3 inputs');
-    assert.equal(find('[data-test-string-list-input="0"]').value, 'foo');
-    assert.equal(find('[data-test-string-list-input="1"]').value, 'bar');
-    assert.equal(find('[data-test-string-list-input="2"]').value, '', 'last input is blank');
+    assert.dom('[data-test-string-list-input]').exists({ count: 3 }, 'renders 3 inputs');
+    assert.dom('[data-test-string-list-input="0"]').hasValue('foo');
+    assert.dom('[data-test-string-list-input="1"]').hasValue('bar');
+    assert.dom('[data-test-string-list-input="2"]').hasValue('', 'last input is blank');
   };
 
   test('it renders the label', async function(assert) {
     await render(hbs`{{string-list label="foo"}}`);
-    assert.equal(
-      find('[data-test-string-list-label]').textContent.trim(),
-      'foo',
-      'renders the label when provided'
-    );
+    assert.dom('[data-test-string-list-label]').hasText('foo', 'renders the label when provided');
 
     await render(hbs`{{string-list}}`);
-    assert.equal(findAll('[data-test-string-list-label]').length, 0, 'does not render the label');
+    assert.dom('[data-test-string-list-label]').doesNotExist('does not render the label');
     assertBlank(assert);
   });
 
@@ -84,7 +80,7 @@ module('Integration | Component | string list', function(hooks) {
     await render(hbs`{{string-list inputValue=""}}`);
     await fillIn('[data-test-string-list-input="0"]', 'foo');
     await triggerKeyEvent('[data-test-string-list-input="0"]', 'keyup', 14);
-    assert.equal(find('[data-test-string-list-input="0"]').value, 'foo');
+    assert.dom('[data-test-string-list-input="0"]').hasValue('foo');
   });
 
   test('it calls onChange with array when editing', async function(assert) {
@@ -115,8 +111,8 @@ module('Integration | Component | string list', function(hooks) {
     await render(hbs`{{string-list inputValue=inputValue onChange=(action onChange)}}`);
 
     await click('[data-test-string-list-row="0"] [data-test-string-list-button="delete"]');
-    assert.equal(findAll('[data-test-string-list-input]').length, 2, 'renders 2 inputs');
-    assert.equal(find('[data-test-string-list-input="0"]').value, 'bar');
-    assert.equal(find('[data-test-string-list-input="1"]').value, '');
+    assert.dom('[data-test-string-list-input]').exists({ count: 2 }, 'renders 2 inputs');
+    assert.dom('[data-test-string-list-input="0"]').hasValue('bar');
+    assert.dom('[data-test-string-list-input="1"]').hasValue('');
   });
 });

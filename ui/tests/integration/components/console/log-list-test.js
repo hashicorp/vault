@@ -10,7 +10,7 @@ module('Integration | Component | console/log list', function(hooks) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.on('myAction', function(val) { ... });
     const listContent = { keys: ['one', 'two'] };
-    const expectedText = 'Keys\none\ntwo';
+    const expectedText = 'Keys one two';
 
     this.set('content', listContent);
 

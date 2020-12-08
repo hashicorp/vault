@@ -14,7 +14,7 @@ export default Route.extend({
       window.scrollTo(0, 0);
     },
     error(error, transition) {
-      let controlGroup = this.get('controlGroup');
+      let controlGroup = this.controlGroup;
       if (error instanceof ControlGroupError) {
         return controlGroup.handleError(error, transition);
       }
@@ -22,7 +22,7 @@ export default Route.extend({
         controlGroup.unmarkTokenForUnwrap();
       }
 
-      let router = this.get('routing');
+      let router = this.routing;
       //FIXME transition.intent likely needs to be replaced
       let errorURL = transition.intent.url;
       let { name, contexts, queryParams } = transition.intent;
@@ -59,22 +59,22 @@ export default Route.extend({
       return true;
     },
     didTransition() {
-      let wizard = this.get('wizard');
+      let wizard = this.wizard;
 
       if (wizard.get('currentState') !== 'active.feature') {
         return true;
       }
       next(() => {
-        let applicationURL = this.get('routing.currentURL');
-        let activeRoute = this.get('routing.currentRouteName');
+        let applicationURL = this.routing.currentURL;
+        let activeRoute = this.routing.currentRouteName;
 
-        if (this.get('wizard.setURLAfterTransition')) {
+        if (this.wizard.setURLAfterTransition) {
           this.set('wizard.setURLAfterTransition', false);
           this.set('wizard.expectedURL', applicationURL);
           this.set('wizard.expectedRouteName', activeRoute);
         }
-        let expectedRouteName = this.get('wizard.expectedRouteName');
-        if (this.get('routing').isActive(expectedRouteName) === false) {
+        let expectedRouteName = this.wizard.expectedRouteName;
+        if (this.routing.isActive(expectedRouteName) === false) {
           wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
         }
       });

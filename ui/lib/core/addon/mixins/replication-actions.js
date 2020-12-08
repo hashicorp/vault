@@ -12,7 +12,7 @@ export default Mixin.create({
   onDisable() {},
   onPromote() {},
   submitHandler: task(function*(action, clusterMode, data, event) {
-    let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
+    let replicationMode = (data && data.replicationMode) || this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }
@@ -39,7 +39,7 @@ export default Mixin.create({
   save: task(function*(action, replicationMode, clusterMode, data) {
     let resp;
     try {
-      resp = yield this.get('store')
+      resp = yield this.store
         .adapterFor('cluster')
         .replicationAction(action, replicationMode, clusterMode, data);
     } catch (e) {
@@ -49,9 +49,9 @@ export default Mixin.create({
   }).drop(),
 
   submitSuccess: task(function*(resp, action, mode) {
-    const cluster = this.get('cluster');
-    const replicationMode = this.get('selectedReplicationMode') || this.get('replicationMode');
-    const store = this.get('store');
+    const cluster = this.cluster;
+    const replicationMode = this.selectedReplicationMode || this.replicationMode;
+    const store = this.store;
     if (!cluster) {
       return;
     }

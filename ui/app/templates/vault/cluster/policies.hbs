@@ -1,28 +1,28 @@
 {{#if (and (has-feature "Sentinel") (or (has-permission "policies" routeParams="rgp") (has-permission "policies" routeParams="egp")))}}
   <div class="columns">
-    {{#menu-sidebar title="Policies" class="is-3" data-test-sidebar=true}}
+    <MenuSidebar @title="Policies" @class="is-3" @data-test-sidebar={{true}}>
       {{#if (has-permission "policies" routeParams="acl")}}
         <li>
-          {{#link-to "vault.cluster.policies" "acl" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "acl") "is-active")}}
+          <LinkTo @route="vault.cluster.policies" @model="acl" data-test-link={{true}} class={{if (is-active-route "vault.cluster.policies" "acl") "is-active"}}>
             ACL Policies
-          {{/link-to}}
+          </LinkTo>
         </li>
       {{/if}}
       {{#if (has-permission "policies" routeParams="rgp")}}
         <li>
-          {{#link-to "vault.cluster.policies" "rgp" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "rgp") "is-active")}}
+          <LinkTo @route="vault.cluster.policies" @model="rgp" data-test-link={{true}} class={{if (is-active-route "vault.cluster.policies" "rgp") "is-active"}}>
             Role Governing Policies
-          {{/link-to}}
+          </LinkTo>
         </li>
       {{/if}}
       {{#if (has-permission "policies" routeParams="egp")}}
         <li>
-          {{#link-to "vault.cluster.policies" "egp" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "egp") "is-active")}}
+          <LinkTo @route="vault.cluster.policies" @model="egp" data-test-link={{true}} class={{if (is-active-route "vault.cluster.policies" "egp") "is-active"}}>
             Endpoint Governing Policies
-          {{/link-to}}
+          </LinkTo>
         </li>
       {{/if}}
-    {{/menu-sidebar}}
+    </MenuSidebar>
     <div class="column is-9">
       {{outlet}}
     </div>

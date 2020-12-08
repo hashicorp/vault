@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
@@ -22,10 +22,13 @@ module('Acceptance | secrets/cubbyhole/create', function(hooks) {
   test('it creates and can view a secret with the cubbyhole backend', async function(assert) {
     const kvPath = `cubbyhole-kv-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'cubbyhole' });
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
     await listPage.create();
+    await settled();
     await editPage.createSecret(kvPath, 'foo', 'bar');
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
