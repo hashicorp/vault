@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, reads } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 
@@ -23,9 +23,7 @@ export default Component.extend({
     return glyphs[this.type];
   }),
   activeCluster: computed('auth.activeCluster', function() {
-    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
+    return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
-  currentToken: computed('auth.currentToken', function() {
-    return this.get('auth.currentToken');
-  }),
+  currentToken: reads('auth.currentToken'),
 });

@@ -98,7 +98,7 @@ export default Route.extend({
           id: secret,
           backend,
           responsePath: 'data.keys',
-          page: params.page,
+          page: params.page || 1,
           pageFilter: params.pageFilter,
         })
         .then(model => {
@@ -146,7 +146,7 @@ export default Route.extend({
     let model = resolvedModel.secrets;
     let backend = this.enginePathParam();
     let backendModel = this.store.peekRecord('secret-engine', backend);
-    let has404 = this.get('has404');
+    let has404 = this.has404;
     // only clear store cache if this is a new model
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();

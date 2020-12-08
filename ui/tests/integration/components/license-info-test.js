@@ -108,7 +108,7 @@ module('Integration | Component | license info', function(hooks) {
     );
     await component.text('ABCDE12345');
     await component.saveButton();
-    assert.ok(this.get('saveModel').calledOnce);
+    assert.ok(this.saveModel.calledOnce);
   });
 
   test('it renders Performance Standby as inactive if count is 0', async function(assert) {

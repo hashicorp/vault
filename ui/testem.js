@@ -1,15 +1,19 @@
-const config = {
-  framework: 'qunit',
+'use strict';
+
+module.exports = {
   test_page: 'tests/index.html?hidepassed',
   tap_quiet_logs: true,
+  tap_failed_tests_only: true,
   disable_watching: true,
   launch_in_ci: ['Chrome'],
+  browser_start_timeout: 120,
   browser_args: {
     Chrome: {
       ci: [
         // --no-sandbox is needed when running Chrome inside a container
         process.env.CI ? '--no-sandbox' : null,
         '--headless',
+        '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
         '--mute-audio',
         '--remote-debugging-port=0',
@@ -25,9 +29,7 @@ const config = {
 };
 
 if (process.env.CI) {
-  config.reporter = 'xunit';
-  config.report_file = 'test-results/qunit/results.xml';
-  config.xunit_intermediate_output = true;
+  module.exports.reporter = 'xunit';
+  module.exports.report_file = 'test-results/qunit/results.xml';
+  module.exports.xunit_intermediate_output = true;
 }
-
-module.exports = config;

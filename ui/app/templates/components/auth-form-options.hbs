@@ -1,4 +1,4 @@
-{{#if (not this.selectedAuthIsPath)}}
+{{#unless this.selectedAuthIsPath}}
   <div class="box has-slim-padding is-shadowless">
     <ToggleButton
       @toggleTarget={{this}}
@@ -23,4 +23,4 @@
       </div>
     {{/if}}
   </div>
-{{/if}}
+{{/unless}}

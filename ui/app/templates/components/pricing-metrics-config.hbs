@@ -47,6 +47,7 @@
     </section>
     <footer class="modal-card-foot modal-card-foot-outlined">
       <button
+        type="button"
         class="button is-secondary"
         onclick={{action (mut modalOpen) false}}
         data-test-metrics-config-cancel
@@ -54,6 +55,7 @@
         Cancel
       </button>
       <button
+        type="button"
         class="button is-primary"
         onclick={{perform save}}
       >
@@ -64,11 +66,11 @@
 {{else}}
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics-config-table>
     {{#each infoRows as |item|}}
-      {{info-table-row
-        label=item.label
-        helperText=item.helperText
-        value=(get model item.valueKey)
-      }}
+      <InfoTableRow
+        @label={{item.label}}
+        @helperText={{item.helperText}}
+        @value={{get model item.valueKey}}
+      />
     {{/each}}
   </div>
 {{/if}}
