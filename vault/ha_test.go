@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -55,7 +56,7 @@ func TestGrabLockOrStop(t *testing.T) {
 				go func() {
 					defer closerWg.Done()
 					// Close the stop channel half the time.
-					if time.Now().UnixNano() % 2 == 0 {
+					if rand.Int() % 2 == 0 {
 						close(stop)
 					}
 				}()
