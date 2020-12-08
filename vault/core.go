@@ -534,6 +534,10 @@ type Core struct {
 	clusterHeartbeatInterval time.Duration
 
 	activityLogConfig ActivityLogCoreConfig
+
+	// KeyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	keyRotateGracePeriod *int64
 }
 
 // CoreConfig is used to parameterize a core
@@ -776,6 +780,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		raftJoinDoneCh:           make(chan struct{}),
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
 		activityLogConfig:        conf.ActivityLogConfig,
+		keyRotateGracePeriod:     new(int64),
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -796,6 +801,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -2663,4 +2669,12 @@ func (c *Core) RateLimitResponseHeadersEnabled() bool {
 	}
 
 	return false
+}
+
+func (c *Core) KeyRotateGracePeriod() time.Duration {
+	return time.Duration(atomic.LoadInt64(c.keyRotateGracePeriod))
+}
+
+func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
 }
