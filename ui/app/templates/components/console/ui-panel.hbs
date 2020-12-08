@@ -7,14 +7,6 @@
       The Vault Browser CLI provides an easy way to execute the most common CLI commands, such as write, read, delete, and list.
     </p>
   </div>
-  {{console/output-log log=log}}
-  {{console/command-input
-    isFullscreen=isFullscreen
-    isRunning=isRunning
-    value=inputValue
-    onValueUpdate=(action (mut inputValue))
-    onFullscreen=(action 'toggleFullscreen')
-    onExecuteCommand=(action 'executeCommand')
-    onShiftCommand=(action 'shiftCommandIndex')
-  }}
+  <Console::OutputLog @outputLog={{cliLog}} />
+  <Console::CommandInput @isFullscreen={{isFullscreen}} @isRunning={{isRunning}} @value={{inputValue}} @onValueUpdate={{action (mut inputValue)}} @onFullscreen={{action "toggleFullscreen"}} @onExecuteCommand={{action "executeCommand"}} @onShiftCommand={{action "shiftCommandIndex"}} />
 </div>

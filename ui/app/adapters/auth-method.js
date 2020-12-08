@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import { assign } from '@ember/polyfills';
 import { get, set } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
@@ -34,7 +34,7 @@ export default ApplicationAdapter.extend({
         });
     }
     return this.ajax(this.url(), 'GET').catch(e => {
-      if (e instanceof DS.AdapterError) {
+      if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/auth');
       }
       throw e;

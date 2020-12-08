@@ -31,14 +31,14 @@ export default Component.extend({
   classNameBindings: ['containerClass'],
 
   containerClass: computed('type', function() {
-    return 'message ' + messageTypes([this.get('type')]).class;
+    return 'message ' + messageTypes([this.type]).class;
   }),
 
   alertType: computed('type', function() {
-    return messageTypes([this.get('type')]);
+    return messageTypes([this.type]);
   }),
 
   secondAlertType: computed('secondIconType', function() {
-    return messageTypes([this.get('secondIconType')]);
+    return messageTypes([this.secondIconType]);
   }),
 });

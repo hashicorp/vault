@@ -1,7 +1,7 @@
 import { equal } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import { encodeString, decodeString } from 'vault/utils/b64';
 
 const B64 = 'base64';
@@ -83,40 +83,40 @@ export default Component.extend({
    * @type boolean
    */
   valuesMatch: computed('value', '_value', function() {
-    const { value, _value } = this.getProperties('value', '_value');
+    const { value, _value } = this;
     const anyBlank = isBlank(value) || isBlank(_value);
     return !anyBlank && value === _value;
   }),
 
   init() {
     this._super(...arguments);
-    const initial = get(this, 'initialEncoding');
+    const initial = this.initialEncoding;
     set(this, 'currentEncoding', initial);
     if (initial === B64) {
-      set(this, '_value', get(this, 'value'));
+      set(this, '_value', this.value);
       set(this, 'lastEncoding', B64);
     }
   },
 
   didReceiveAttrs() {
     // if there's no value, reset encoding
-    if (get(this, 'value') === '') {
+    if (this.value === '') {
       set(this, 'currentEncoding', UTF8);
       return;
     }
     // the value has changed after we transformed it so we reset currentEncoding
-    if (get(this, 'isBase64') && !get(this, 'valuesMatch')) {
+    if (this.isBase64 && !this.valuesMatch) {
       set(this, 'currentEncoding', UTF8);
     }
     // the value changed back to one we previously had transformed
-    if (get(this, 'lastEncoding') === B64 && get(this, 'valuesMatch')) {
+    if (this.lastEncoding === B64 && this.valuesMatch) {
       set(this, 'currentEncoding', B64);
     }
   },
 
   click() {
-    let val = get(this, 'value');
-    const isUTF8 = get(this, 'currentEncoding') === UTF8;
+    let val = this.value;
+    const isUTF8 = this.currentEncoding === UTF8;
     if (!val) {
       return;
     }

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, find } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -28,16 +28,10 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
       </ShamirModalFlow>
     `);
 
-    assert.equal(
-      find('[data-test-shamir-modal-body]').textContent.trim(),
-      'Inner content goes here',
-      'Template block gets rendered'
-    );
-    assert.equal(
-      find('[data-test-shamir-modal-cancel-button]').textContent.trim(),
-      'Cancel',
-      'Shows cancel button'
-    );
+    assert
+      .dom('[data-test-shamir-modal-body]')
+      .hasText('Inner content goes here', 'Template block gets rendered');
+    assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
   test('Shows correct content when started', async function(assert) {
@@ -57,11 +51,7 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
       </ShamirModalFlow>
     `);
     assert.dom('[data-test-shamir-input]').exists('Asks for Master Key Portion');
-    assert.equal(
-      find('[data-test-shamir-modal-cancel-button]').textContent.trim(),
-      'Cancel',
-      'Shows cancel button'
-    );
+    assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
   test('Shows OTP when provided and flow started', async function(assert) {
@@ -80,16 +70,8 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
         <p>Inner content goes here</p>
       </ShamirModalFlow>
     `);
-    assert.equal(
-      find('[data-test-shamir-encoded-token]').textContent,
-      'my-encoded-token',
-      'Shows encoded token'
-    );
-    assert.equal(
-      find('[data-test-shamir-modal-cancel-button]').textContent.trim(),
-      'Close',
-      'Shows close button'
-    );
+    assert.dom('[data-test-shamir-encoded-token]').hasText('my-encoded-token', 'Shows encoded token');
+    assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Close', 'Shows close button');
   });
   /*
   test('DR Secondary actions', async function (assert) {
