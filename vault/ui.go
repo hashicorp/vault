@@ -123,6 +123,11 @@ func (c *UIConfig) SetHeader(ctx context.Context, header string, values []string
 			Headers: http.Header{},
 		}
 	}
+
+	// Clear custom header values before setting new
+	config.Headers.Del(header)
+
+	// Set new values
 	for _, value := range values {
 		config.Headers.Add(header, value)
 	}

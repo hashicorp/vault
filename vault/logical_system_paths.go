@@ -1,10 +1,9 @@
 package vault
 
 import (
-	"strings"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"strings"
 )
 
 func (b *SystemBackend) configPaths() []*framework.Path {
@@ -60,7 +59,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
+			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header") + framework.OptionalParamRegex("multivalue"),
 
 			Fields: map[string]*framework.FieldSchema{
 				"header": &framework.FieldSchema{
@@ -70,6 +69,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				"values": &framework.FieldSchema{
 					Type:        framework.TypeStringSlice,
 					Description: "The values to set the header.",
+				},
+				"multivalue": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Returns multiple values if set",
 				},
 			},
 

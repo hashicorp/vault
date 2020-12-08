@@ -24,12 +24,30 @@ This endpoint returns the given UI header configuration.
 
 - `name` `(string: <required>)` – The name of the custom header.
 
+- `multivalue` `(string: <optional>)` - Returns multiple values if set.
+
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
+```
+
+### Sample Response
+
+```json
+{
+  "value": "custom-value"
+}
+```
+
+### Sample Request (Multi value)
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header/multivalue
 ```
 
 ### Sample Response

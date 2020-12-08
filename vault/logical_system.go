@@ -9,6 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"hash"
 	"net/http"
 	"path"
@@ -31,13 +38,6 @@ import (
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -2430,8 +2430,10 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	return nil, nil
 }
 
+const multiValueKey = "multivalue"
 func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	header := data.Get("header").(string)
+	multivalue := data.Get(multiValueKey).(string)
 
 	values, err := b.Core.uiConfig.GetHeader(ctx, header)
 	if err != nil {
@@ -2441,9 +2443,18 @@ func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logi
 		return nil, nil
 	}
 
+	// Return multiple values if specified
+	if multivalue == multiValueKey {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"values": values,
+			},
+		}, nil
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"values": values,
+			"value": values[0],
 		},
 	}, nil
 }
