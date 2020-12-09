@@ -1663,6 +1663,7 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if !reflect.DeepEqual(expectedStruct, actualStruct) {
 		t.Fatalf("bad:\nexpected:%#v\nactual:%#v\n", expectedStruct, actualStruct)
 	}
+	t.Logf("bad:\nexpected:%#v\nactual:%#v\n", expectedStruct, actualStruct)
 
 	roleData = map[string]interface{}{
 		"role_id":            "test_role_id",
