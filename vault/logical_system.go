@@ -2432,12 +2432,7 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 
 func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	header := data.Get("header").(string)
-	multivalueRaw := data.Get("multivalue").(string)
-
-	multivalue, err := strconv.ParseBool(multivalueRaw)
-	if err != nil {
-		return nil, fmt.Errorf("wrong argument '%s' for multivalue", multivalueRaw)
-	}
+	multivalue := data.Get("multivalue").(bool)
 
 	values, err := b.Core.uiConfig.GetHeader(ctx, header)
 	if err != nil {
