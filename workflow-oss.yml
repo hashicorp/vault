@@ -1,6 +1,3 @@
-# workflow.yml describes the workflow by which release bundles are tested
-# and promoted through a series of channels.
-
 job_defaults:
   executor: docker-env-go-test
   environment:
