@@ -25,7 +25,7 @@ export default Component.extend({
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   inputValue: null,
-  log: alias('console.log'),
+  cliLog: alias('console.log'),
 
   didRender() {
     this._super(...arguments);
@@ -33,7 +33,7 @@ export default Component.extend({
   },
 
   logAndOutput(command, logContent) {
-    this.get('console').logAndOutput(command, logContent);
+    this.console.logAndOutput(command, logContent);
     run.schedule('afterRender', () => this.scrollToBottom());
   },
 
@@ -41,7 +41,7 @@ export default Component.extend({
 
   executeCommand: task(function*(command, shouldThrow = false) {
     this.set('inputValue', '');
-    let service = this.get('console');
+    let service = this.console;
     let serviceArgs;
 
     if (
@@ -84,7 +84,7 @@ export default Component.extend({
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {
-        return this.logAndOutput(command, this.get('controlGroup').logFromError(error));
+        return this.logAndOutput(command, this.controlGroup.logFromError(error));
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }
@@ -92,11 +92,11 @@ export default Component.extend({
 
   refreshRoute: task(function*() {
     let owner = getOwner(this);
-    let routeName = this.get('router.currentRouteName');
+    let routeName = this.router.currentRouteName;
     let route = owner.lookup(`route:${routeName}`);
 
     try {
-      this.get('store').clearAllDatasets();
+      this.store.clearAllDatasets();
       yield route.refresh();
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {
@@ -128,7 +128,7 @@ export default Component.extend({
   }),
 
   shiftCommandIndex(keyCode) {
-    this.get('console').shiftCommandIndex(keyCode, val => {
+    this.console.shiftCommandIndex(keyCode, val => {
       this.set('inputValue', val);
     });
   },
@@ -145,7 +145,7 @@ export default Component.extend({
       this.toggleProperty('isFullscreen');
     },
     executeCommand(val) {
-      this.get('executeCommand').perform(val, true);
+      this.executeCommand.perform(val, true);
     },
     shiftCommandIndex(direction) {
       this.shiftCommandIndex(direction);

@@ -13,10 +13,10 @@
   </p>
 {{/if}}
 
-{{message-error model=config}}
+<MessageError @model={{config}} />
 <form {{action "save" section on="submit"}}  class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
   {{#each (get config (concat section "Attrs")) as |attr|}}
-    {{form-field attr=attr model=config data-test-field=attr.name}}
+    <FormField @attr={{attr}} @model={{config}} @data-test-field={{attr.name}} />
   {{/each}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">

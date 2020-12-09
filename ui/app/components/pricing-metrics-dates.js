@@ -69,7 +69,9 @@ export default Component.extend({
     }
   }),
 
-  showResultsWarning: computed('resultStart', 'resultEnd', function() {
+  // We don't want the warning to show when inputs are being updated before query is made
+  /* eslint-disable-next-line ember/require-computed-property-dependencies */
+  showResultsWarning: computed('resultEnd', 'resultStart', function() {
     if (!this.queryStart || !this.queryEnd || !this.resultStart || !this.resultEnd) {
       return false;
     }
@@ -96,7 +98,7 @@ export default Component.extend({
     return false;
   }),
 
-  error: computed('end', 'start', function() {
+  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function() {
     if (!this.startDate) {
       return 'Start date is invalid. Please use format MM/YYYY';
     }

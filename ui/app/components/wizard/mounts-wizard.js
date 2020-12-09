@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, equal } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { engines } from 'vault/helpers/mountable-secret-engines';
@@ -18,34 +18,32 @@ export default Component.extend({
   fullNextStep: alias('wizard.nextStep'),
   nextFeature: alias('wizard.nextFeature'),
   nextStep: computed('fullNextStep', function() {
-    return this.get('fullNextStep').split('.').lastObject;
+    return this.fullNextStep.split('.').lastObject;
   }),
-  needsEncryption: computed('mountSubtype', function() {
-    return this.get('mountSubtype') === 'transit';
-  }),
+  needsEncryption: equal('mountSubtype', 'transit'),
   stepComponent: alias('wizard.stepComponent'),
-  detailsComponent: computed('mountSubtype', function() {
-    let suffix = this.get('currentMachine') === 'secrets' ? 'engine' : 'method';
-    return this.get('mountSubtype') ? `wizard/${this.get('mountSubtype')}-${suffix}` : null;
+  detailsComponent: computed('currentMachine', 'mountSubtype', function() {
+    let suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
+    return this.mountSubtype ? `wizard/${this.mountSubtype}-${suffix}` : null;
   }),
-  isSupported: computed('mountSubtype', function() {
-    if (this.get('currentMachine') === 'secrets') {
-      return supportedSecrets.includes(this.get('mountSubtype'));
+  isSupported: computed('currentMachine', 'mountSubtype', function() {
+    if (this.currentMachine === 'secrets') {
+      return supportedSecrets.includes(this.mountSubtype);
     } else {
-      return supportedAuth.includes(this.get('mountSubtype'));
+      return supportedAuth.includes(this.mountSubtype);
     }
   }),
-  mountName: computed('mountSubtype', function() {
-    if (this.get('currentMachine') === 'secrets') {
+  mountName: computed('currentMachine', 'mountSubtype', function() {
+    if (this.currentMachine === 'secrets') {
       var secret = engines().find(engine => {
-        return engine.type === this.get('mountSubtype');
+        return engine.type === this.mountSubtype;
       });
       if (secret) {
         return secret.displayName;
       }
     } else {
       var auth = methods().find(method => {
-        return method.type === this.get('mountSubtype');
+        return method.type === this.mountSubtype;
       });
       if (auth) {
         return auth.displayName;
@@ -54,7 +52,7 @@ export default Component.extend({
     return null;
   }),
   actionText: computed('mountSubtype', function() {
-    switch (this.get('mountSubtype')) {
+    switch (this.mountSubtype) {
       case 'aws':
         return 'Generate credential';
       case 'ssh':

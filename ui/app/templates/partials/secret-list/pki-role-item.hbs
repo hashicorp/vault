@@ -2,7 +2,7 @@
   (concat
     "vault.cluster.secrets.backend."
     "credentials"
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.backend
   item.id
@@ -14,16 +14,7 @@
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      {{#link-to
-        (concat
-          "vault.cluster.secrets.backend."
-           "credentials"
-          (if (not item.id) "-root")
-        )
-        item.id
-        (query-params action="issue")
-        class="has-text-black has-text-weight-semibold"
-      }}
+      <LinkTo @route={{concat "vault.cluster.secrets.backend." "credentials" (unless item.id "-root") }} @model={{item.id}} @query={{hash action="issue"}} class="has-text-black has-text-weight-semibold">
       <Icon
         @glyph="user-square-outline"
         class="has-text-grey-light is-pulled-left"
@@ -31,7 +22,7 @@
       <div class="role-item-details">
         <span class="is-underline">{{if (eq item.id " ") "(self)" (or item.keyWithoutParent item.id)}}</span>
       </div>
-      {{/link-to}}
+      </LinkTo>
     </div>
     <div class="column has-text-right">
       {{partial "partials/role-pki/popup-menu"}}

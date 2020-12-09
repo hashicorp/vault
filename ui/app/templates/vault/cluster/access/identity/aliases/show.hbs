@@ -4,9 +4,9 @@
       <ul>
         <li>
           <span class="sep">&#x0002f;</span>
-          {{#link-to "vault.cluster.access.identity.aliases"}}
+          <LinkTo @route="vault.cluster.access.identity.aliases">
             {{pluralize (humanize model.identityType)}}
-          {{/link-to}}
+          </LinkTo>
         </li>
       </ul>
     </nav>
@@ -21,11 +21,11 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show model.identityType) as |tab|}}
-        {{#link-to "vault.cluster.access.identity.aliases.show" model.id tab tagName="li"}}
-          {{#link-to "vault.cluster.access.identity.aliases.show" model.id tab}}
+        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array model.id tab}} @tagName="li">
+          <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array model.id tab}}>
             {{capitalize tab}}
-          {{/link-to}}
-        {{/link-to}}
+          </LinkTo>
+        </LinkTo>
       {{/each}}
     </ul>
   </nav>

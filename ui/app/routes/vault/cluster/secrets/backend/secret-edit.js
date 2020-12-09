@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
-import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
@@ -128,7 +128,7 @@ export default Route.extend(UnloadModelRoute, {
     // if it didn't fail the server read, and the version is not attached to the metadata,
     // this should 404
     if (!version && secretModel.failedServerRead !== true) {
-      let error = new DS.AdapterError();
+      let error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

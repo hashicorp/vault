@@ -24,18 +24,18 @@ export default Component.extend({
   showCloseButton: false,
   type: null,
   glyph: computed('type', function() {
-    const modalType = this.get('type');
+    const modalType = this.type;
     if (!modalType) {
       return;
     }
-    return messageTypes([this.get('type')]);
+    return messageTypes([this.type]);
   }),
   modalClass: computed('type', function() {
-    const modalType = this.get('type');
+    const modalType = this.type;
     if (!modalType) {
       return 'modal';
     }
-    return 'modal ' + messageTypes([this.get('type')]).class;
+    return 'modal ' + messageTypes([this.type]).class;
   }),
   onClose: () => {},
 });

@@ -1,4 +1,4 @@
-{{#if (not (has-feature "DR Replication"))}}
+{{#unless (has-feature "DR Replication")}}
   {{upgrade-page title="Replication"}}
 {{else if (or cluster.allReplicationDisabled cluster.replicationAttrs.replicationDisabled)}}
   <PageHeader as |p|>
@@ -47,7 +47,7 @@
             <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
             Performance Replication
           </h3>
-          {{#if (not (has-feature "Performance Replication"))}}
+          {{#unless (has-feature "Performance Replication")}}
             <p class="help has-text-grey-dark">
               Performance Replication is a feature of Vault Enterprise Premium
             </p>
@@ -55,7 +55,7 @@
             <p class="help has-text-grey-dark">
               {{replication-mode-description 'performance'}}
             </p>
-          {{/if}}
+          {{/unless}}
         {{/if}}
       {{else}}
         <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
@@ -369,4 +369,4 @@
       </ReplicationPage>
     </div>
   {{/if}}
-{{/if}}
+{{/unless}}

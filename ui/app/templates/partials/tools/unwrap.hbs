@@ -11,28 +11,25 @@
     <nav class="tabs">
       <ul>
         <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "data") "is-active"}}">
-          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "data"}} data-test-button-data>Data</button>
+          <button type="button" class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "data"}} data-test-button-data>Data</button>
         </li>
         <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "details") "is-active"}}">
-          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}} data-test-button-details>Wrap Details</button>
+          <button type="button" class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}} data-test-button-details>Wrap Details</button>
         </li>
       </ul>
     </nav>
     {{#if (eq unwrapActiveTab "data")}}
       <div class="field">
         <div class="control">
-          {{json-editor
-            value=(stringify unwrap_data)
-            options=(hash
+          <JsonEditor @value={{stringify unwrap_data}} @options={{hash
               readOnly=true
-            )
-          }}
+            }} />
         </div>
       </div>
     {{else}}
       <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
         {{#each-in details as |key detail|}}
-          {{#info-table-row label=key value=key}}
+          <InfoTableRow @label={{key}} @value={{key}}>
             {{#if (or (eq detail "No") (eq detail "None"))}}
               <Icon class="has-text-grey" @glyph="cancel-square-outline" /> {{detail}}
             {{else}}
@@ -41,21 +38,16 @@
               {{/if}}
               {{detail}}
             {{/if}}
-          {{/info-table-row}}
+          </InfoTableRow>
         {{/each-in}}
       </div>
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      {{#copy-button
-        clipboardText=(stringify unwrap_data)
-        class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message 'Data copied!'))
-      }}
+      <CopyButton @clipboardText={{stringify unwrap_data}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Data copied!")}}>
         Copy
-      {{/copy-button}}
+      </CopyButton>
     </div>
     <div class="control">
       <button {{action 'onClear'}} type="button" class="button">
@@ -66,19 +58,11 @@
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
-    {{message-error errors=errors}}
+    <MessageError @errors={{errors}} />
     <div class="field">
       <label for="token" class="is-label">Wrapping token</label>
       <div class="control">
-        {{input
-          value=token
-          class="input"
-          id="token"
-          name="token"
-          autocomplete="off"
-          spellcheck="false"
-          data-test-tools-input="wrapping-token"
-        }}
+        <Input @value={{token}} class="input" @id="token" @name="token" @autocomplete="off" @spellcheck="false" data-test-tools-input="wrapping-token" />
       </div>
     </div>
   </div>
