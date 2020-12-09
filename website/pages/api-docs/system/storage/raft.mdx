@@ -173,7 +173,7 @@ it. Unavailable if Raft is used exclusively for `ha_storage`.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    -- data-binary @raft.snap
+    --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot
 ```
 
