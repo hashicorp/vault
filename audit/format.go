@@ -436,7 +436,7 @@ func parseVaultTokenFromJWT(token string) *string {
 }
 
 // Create a formatter not backed by a persistent salt.
-func NewTemporaryFormatter(format string, prefix string) *AuditFormatter {
+func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 	temporarySalt := func(ctx context.Context) (*salt.Salt, error) {
 		return salt.NewNonpersistentSalt(), nil
 	}
