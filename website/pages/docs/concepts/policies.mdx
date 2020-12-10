@@ -144,7 +144,7 @@ path "secret/bar/*" {
 }
 
 # Permit reading everything prefixed with "zip-". An attached token could read
-# "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
+# "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap".
 path "secret/zip-*" {
   capabilities = ["read"]
 }
@@ -154,7 +154,7 @@ In addition, a `+` can be used to denote any number of characters bounded
 within a single path segment (this appeared in Vault 1.1):
 
 ```ruby
-# Permit reading the "teamb" path under any top-level path under secret/
+# Permit reading the "teamb" path under any top-level path under secret/.
 path "secret/+/teamb" {
   capabilities = ["read"]
 }
