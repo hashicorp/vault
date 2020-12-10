@@ -1,0 +1,11 @@
+executor: go-machine
+steps:
+  - setup-go
+  - checkout
+  - attach_workspace:
+      at: .
+  - run:
+      name: Run go mod vendor
+      command: |
+        go mod vendor
+        git diff --exit-code
