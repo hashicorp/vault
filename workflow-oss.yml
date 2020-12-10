@@ -58,9 +58,9 @@ stages:
   - channel: current
     branches:
       - main
-      - release/*.*.x
+      - testing-promotion-pipeline
     job_defaults:
-      package_set: darwin_amd64
+      package_set: linux_amd64
     actions:
       checks:
         - phase: Some More Package Checks
@@ -89,7 +89,7 @@ stages:
   - channel: staging
     promote: manual
     job_defaults:
-      package_set: darwin_amd64
+      package_set: linux_amd64
     actions:
       checks:
         - phase: Yet More Binary Tests
