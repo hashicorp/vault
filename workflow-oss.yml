@@ -85,7 +85,7 @@ stages:
             - name: Unzip Package
               command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
           jobs:
-            - command: vault help
+            - command: vault version
               executor: default-machine
   - channel: staging
     promote: manual
@@ -98,5 +98,5 @@ stages:
             - name: Unzip Package
               command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
           jobs:
-            - command: vault write --help
+            - command: vault version
               executor: default-machine
