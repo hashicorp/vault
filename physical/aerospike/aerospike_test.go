@@ -42,11 +42,10 @@ type aerospikeConfig struct {
 
 func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:       "aerospike/aerospike-server",
-		ContainerName:   "aerospikedb",
-		ImageTag:        "latest",
-		Ports:           []string{"3000/tcp", "3001/tcp", "3002/tcp", "3003/tcp"},
-		DoNotAutoRemove: true,
+		ImageRepo:     "aerospike/aerospike-server",
+		ContainerName: "aerospikedb",
+		ImageTag:      "latest",
+		Ports:         []string{"3000/tcp", "3001/tcp", "3002/tcp", "3003/tcp"},
 	})
 	if err != nil {
 		t.Fatalf("Could not start local Aerospike: %s", err)

@@ -64,6 +64,7 @@ export default [
       {
         category: 'storage',
         content: [
+          'aerospike',
           'azure',
           'cassandra',
           'cockroachdb',

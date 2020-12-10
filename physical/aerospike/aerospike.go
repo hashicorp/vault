@@ -2,19 +2,28 @@ package aerospike
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
-	"hash/fnv"
 	"strconv"
 	"strings"
+	"time"
 
 	aero "github.com/aerospike/aerospike-client-go"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
 	keyBin   = "keyBin"
 	valueBin = "valueBin"
+
+	defaultNamespace = "test"
+
+	defaultHost = "127.0.0.1"
+	defaultPort = 3000
+
+	keyNotFoundError = "Key not found"
 )
 
 // AerospikeBackend is a physical backend that stores data in Aerospike.
@@ -30,19 +39,18 @@ var _ physical.Backend = (*AerospikeBackend)(nil)
 
 // NewAerospikeBackend constructs an AerospikeBackend backend.
 func NewAerospikeBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	namespace := conf["namespace"]
+	namespace, ok := conf["namespace"]
+	if !ok {
+		namespace = defaultNamespace
+	}
 	set := conf["set"]
 
-	policy := aero.NewClientPolicy()
-	policy.User = conf["username"]
-	policy.Password = conf["password"]
-
-	port, err := strconv.Atoi(conf["port"])
+	policy, err := buildClientPolicy(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := aero.NewClientWithPolicy(policy, conf["hostname"], port)
+	client, err := buildAerospikeClient(conf, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -55,17 +63,86 @@ func NewAerospikeBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	}, nil
 }
 
+func buildAerospikeClient(conf map[string]string, policy *aero.ClientPolicy) (*aero.Client, error) {
+	hostListString, ok := conf["hostlist"]
+	if !ok || hostListString == "" {
+		hostname, ok := conf["hostname"]
+		if !ok || hostname == "" {
+			hostname = defaultHost
+		}
+
+		portString, ok := conf["port"]
+		if !ok || portString == "" {
+			portString = strconv.Itoa(defaultPort)
+		}
+
+		port, err := strconv.Atoi(portString)
+		if err != nil {
+			return nil, err
+		}
+
+		return aero.NewClientWithPolicy(policy, hostname, port)
+	}
+
+	hostList, err := parseHostList(hostListString)
+	if err != nil {
+		return nil, err
+	}
+
+	return aero.NewClientWithPolicyAndHost(policy, hostList...)
+}
+
+func buildClientPolicy(conf map[string]string) (*aero.ClientPolicy, error) {
+	policy := aero.NewClientPolicy()
+
+	policy.User = conf["username"]
+	policy.Password = conf["password"]
+
+	authMode := aero.AuthModeInternal
+	if mode, ok := conf["auth_mode"]; ok {
+		switch strings.ToUpper(mode) {
+		case "EXTERNAL":
+			authMode = aero.AuthModeExternal
+		case "INTERNAL":
+			authMode = aero.AuthModeInternal
+		default:
+			return nil, fmt.Errorf("'auth_mode' must be one of {INTERNAL, EXTERNAL}")
+		}
+	}
+	policy.AuthMode = authMode
+	policy.ClusterName = conf["cluster_name"]
+
+	if timeoutString, ok := conf["timeout"]; ok {
+		timeout, err := strconv.Atoi(timeoutString)
+		if err != nil {
+			return nil, err
+		}
+		policy.Timeout = time.Duration(timeout) * time.Millisecond
+	}
+
+	if idleTimeoutString, ok := conf["idle_timeout"]; ok {
+		idleTimeout, err := strconv.Atoi(idleTimeoutString)
+		if err != nil {
+			return nil, err
+		}
+		policy.IdleTimeout = time.Duration(idleTimeout) * time.Millisecond
+	}
+
+	return policy, nil
+}
+
 func (a *AerospikeBackend) key(userKey string) (*aero.Key, error) {
 	return aero.NewKey(a.namespace, a.set, hash(userKey))
 }
 
 // Put is used to insert or update an entry.
-func (a *AerospikeBackend) Put(ctx context.Context, entry *physical.Entry) error {
+func (a *AerospikeBackend) Put(_ context.Context, entry *physical.Entry) error {
 	aeroKey, err := a.key(entry.Key)
 	if err != nil {
 		return err
 	}
 
+	// replace the Aerospike record if exists
 	writePolicy := aero.NewWritePolicy(0, 0)
 	writePolicy.RecordExistsAction = aero.REPLACE
 
@@ -77,7 +154,7 @@ func (a *AerospikeBackend) Put(ctx context.Context, entry *physical.Entry) error
 }
 
 // Get is used to fetch an entry.
-func (a *AerospikeBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
+func (a *AerospikeBackend) Get(_ context.Context, key string) (*physical.Entry, error) {
 	aeroKey, err := a.key(key)
 	if err != nil {
 		return nil, err
@@ -85,20 +162,25 @@ func (a *AerospikeBackend) Get(ctx context.Context, key string) (*physical.Entry
 
 	record, err := a.client.Get(nil, aeroKey)
 	if err != nil {
-		if err.Error() == "Key not found" {
+		if err.Error() == keyNotFoundError {
 			return nil, nil
 		}
 		return nil, err
 	}
 
+	value, ok := record.Bins[valueBin]
+	if !ok {
+		return nil, fmt.Errorf("Value bin was not found in the record")
+	}
+
 	return &physical.Entry{
 		Key:   key,
-		Value: record.Bins[valueBin].([]byte),
+		Value: value.([]byte),
 	}, nil
 }
 
 // Delete is used to permanently delete an entry.
-func (a *AerospikeBackend) Delete(ctx context.Context, key string) error {
+func (a *AerospikeBackend) Delete(_ context.Context, key string) error {
 	aeroKey, err := a.key(key)
 	if err != nil {
 		return err
@@ -110,7 +192,7 @@ func (a *AerospikeBackend) Delete(ctx context.Context, key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (a *AerospikeBackend) List(ctx context.Context, prefix string) ([]string, error) {
+func (a *AerospikeBackend) List(_ context.Context, prefix string) ([]string, error) {
 	recordSet, err := a.client.ScanAll(nil, a.namespace, a.set)
 	if err != nil {
 		return nil, err
@@ -123,13 +205,13 @@ func (a *AerospikeBackend) List(ctx context.Context, prefix string) ([]string, e
 		}
 		recordKey := res.Record.Bins[keyBin].(string)
 		if strings.HasPrefix(recordKey, prefix) {
-			trimPrefix := strings.Replace(recordKey, prefix, "", 1)
+			trimPrefix := strings.TrimPrefix(recordKey, prefix)
 			keys := strings.Split(trimPrefix, "/")
 			if len(keys) == 1 {
 				keyList = append(keyList, keys[0])
 			} else {
 				withSlash := keys[0] + "/"
-				if !listContains(keyList, withSlash) {
+				if !strutil.StrListContains(keyList, withSlash) {
 					keyList = append(keyList, withSlash)
 				}
 			}
@@ -139,17 +221,31 @@ func (a *AerospikeBackend) List(ctx context.Context, prefix string) ([]string, e
 	return keyList, nil
 }
 
-func hash(s string) string {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return fmt.Sprint(h.Sum32())
-}
-
-func listContains(list []string, s string) bool {
-	for _, i := range list {
-		if i == s {
-			return true
+func parseHostList(list string) ([]*aero.Host, error) {
+	hosts := strings.Split(list, ",")
+	var hostList []*aero.Host
+	for _, host := range hosts {
+		if host == "" {
+			continue
+		}
+		split := strings.Split(host, ":")
+		switch len(split) {
+		case 1:
+			hostList = append(hostList, aero.NewHost(split[0], defaultPort))
+		case 2:
+			port, err := strconv.Atoi(split[1])
+			if err != nil {
+				return nil, err
+			}
+			hostList = append(hostList, aero.NewHost(split[0], port))
+		default:
+			return nil, fmt.Errorf("Invalid 'hostlist' configuration")
 		}
 	}
-	return false
+	return hostList, nil
+}
+
+func hash(s string) string {
+	hash := sha256.Sum256([]byte(s))
+	return fmt.Sprintf("%x", hash[:])
 }
