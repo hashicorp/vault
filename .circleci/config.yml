@@ -2015,7 +2015,7 @@ jobs:
         at: .
     - run:
         command: |
-          go mod vendor
+          GO111MODULE=on go mod vendor
           git diff --exit-code
         name: Run go mod vendor
     environment:

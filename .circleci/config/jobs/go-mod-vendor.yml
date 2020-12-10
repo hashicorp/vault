@@ -7,5 +7,5 @@ steps:
   - run:
       name: Run go mod vendor
       command: |
-        go mod vendor
+        GO111MODULE=on go mod vendor
         git diff --exit-code
