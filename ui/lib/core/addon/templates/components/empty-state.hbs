@@ -6,14 +6,24 @@
         <h3 class="empty-state-title" data-test-empty-state-title>
           {{title}}
         </h3>
+        {{#if subTitle}}
+          <p class="empty-state-subTitle" data-test-empty-state-subText>
+            {{subTitle}}
+          </p>
+        {{/if}}
       </div>
     {{else}}
     <h3 class="empty-state-title" data-test-empty-state-title>
       {{title}}
     </h3>
+    {{#if subTitle}}
+      <p class="empty-state-subTitle" data-test-empty-state-subText>
+        {{subTitle}}
+      </p>
+    {{/if}}
     {{/if}}
     {{#if message}}
-    <p class="empty-state-message" data-test-empty-state-message>
+    <p class={{concat "empty-state-message" (if bottomBorder " has-border-bottom-light")}} data-test-empty-state-message>
       {{message}}
     </p>
     {{/if}}

@@ -12,8 +12,10 @@ import layout from '../templates/components/empty-state';
  * ```
  *
  * @param title=null{String} - A short label for the empty state
+ * @param subTitle=null{String} - A sub title that goes underneath the main title
  * @param message=null{String} - A description of why a user might be seeing the empty state and possibly instructions for actions they may take.
  * @param [icon='']{String} - A optional param to display icon to the right of the title
+ * @param bottomBorder=false{Boolean} - A bottom border underneath the message.  Generally used when you have links under the message
  */
 
 export default Component.extend({
@@ -22,4 +24,5 @@ export default Component.extend({
   title: null,
   message: null,
   icon: '',
+  bottomBorder: false,
 });
