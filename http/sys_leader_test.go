@@ -28,11 +28,11 @@ func TestSysLeader_get(t *testing.T) {
 		"leader_cluster_address":              "",
 		"performance_standby":                 false,
 		"performance_standby_last_remote_wal": json.Number("0"),
-		"active_time":                         time.Time{},
+		"active_time":                         time.Time{}.UTC().Format(time.RFC3339),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: %#v \n%#v", actual, expected)
 	}
 }
