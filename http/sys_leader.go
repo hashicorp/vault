@@ -54,7 +54,7 @@ func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 type LeaderResponse struct {
 	HAEnabled                bool      `json:"ha_enabled"`
 	IsSelf                   bool      `json:"is_self"`
-	ActiveTime               time.Time `json:"active_time"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
 	LeaderAddress            string    `json:"leader_address"`
 	LeaderClusterAddress     string    `json:"leader_cluster_address"`
 	PerfStandby              bool      `json:"performance_standby"`
