@@ -1,23 +1,25 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import sinon from 'sinon';
-import { render, click } from '@ember/test-helpers';
+import { render, click, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | box-radio', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    this.set('type', 'aws');
-    this.set('displayName', 'An Option');
-    this.set('mountType', '');
-    this.set('disabled', false);
+    this.type = 'aws';
+    this.displayName = 'An Option';
+    this.mountType = '';
+    this.disabled = false;
   });
 
+  const spy = sinon.spy();
+  this.set('onRadioChange', spy);
+
   test('it renders', async function(assert) {
-    const spy = sinon.spy();
-    this.set('onRadioChange', spy);
     await render(hbs`<BoxRadio
+      @value={{type}}
       @type={{type}}
       @glyph={{type}}
       @displayName={{displayName}}
@@ -28,6 +30,7 @@ module('Integration | Component | box-radio', function(hooks) {
     assert.dom(this.element).hasText('An Option', 'shows the display name of the option');
     assert.dom('.tooltip').doesNotExist('tooltip does not exist when disabled is false');
     await click('[data-test-mount-type="aws"]');
+    await settled();
     assert.ok(spy.calledOnce, 'calls the radio change function when option clicked');
   });
 
@@ -35,6 +38,7 @@ module('Integration | Component | box-radio', function(hooks) {
     const spy = sinon.spy();
     this.set('onRadioChange', spy);
     await render(hbs`<BoxRadio
+      @value={{type}}
       @type={{type}}
       @glyph={{type}}
       @displayName={{displayName}}
