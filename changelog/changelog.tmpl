@@ -1,0 +1,48 @@
+{{- if index .NotesByType "breaking-change" -}}
+BREAKING CHANGES:
+
+{{range index .NotesByType "breaking-change" -}}
+* {{ template "note" .}}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.security }}
+SECURITY:
+
+{{range .NotesByType.security -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.feature -}}
+FEATURES:
+
+{{range .NotesByType.feature -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.improvement }}
+IMPROVEMENTS:
+
+{{range .NotesByType.improvement -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.deprecation }}
+DEPRECATIONS:
+
+{{range .NotesByType.deprecation -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.bug }}
+BUG FIXES:
+
+{{range .NotesByType.bug -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
