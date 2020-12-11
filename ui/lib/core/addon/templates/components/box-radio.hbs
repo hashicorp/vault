@@ -44,6 +44,7 @@
     {{if (eq @groupValue @type) " is-selected"}}"
     data-test-mount-type-radio
     data-test-mount-type={{@type}}
+    {{on 'click' (fn this.handleClick @onRadioChange @type)}}
   >
     <Icon
       @glyph={{@glyph}}
