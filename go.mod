@@ -122,6 +122,7 @@ require (
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
+	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.6.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
