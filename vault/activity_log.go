@@ -1603,6 +1603,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 	}
 
 	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
+	activePeriodStart := endTime.AddDate(0, -a.defaultReportMonths, 0)
 
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
@@ -1635,6 +1636,16 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 				Entities:        uint64(len(counts.Entities)),
 				NonEntityTokens: counts.Tokens,
 			})
+
+			if startTime.After(activePeriodStart) {
+				a.metrics.SetGaugeWithLabels(
+					[]string{"identity", "entity", "active", "reporting_period"},
+					float32(len(counts.Entities)),
+					[]metricsutil.Label{
+						{Name: "namespace", Value: nsID},
+					},
+				)
+			}
 		}
 
 		err = a.queryStore.Put(ctx, pq)
