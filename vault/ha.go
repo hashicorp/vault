@@ -637,7 +637,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 // grabLockOrStop returns stopped=false if the lock is acquired. Returns
 // stopped=true if the lock is not acquired, because stopCh was closed. If the
-// lock was acquired (stopped=false) then it's up to the caller to unlock.
+// lock was acquired (stopped=false) then it's up to the caller to unlock. If
+// the lock was not acquired (stopped=true), the caller do not hold the lock and
+// should not call unlock.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
 	// lock protects these variables which are shared by parent and child.
 	var lock sync.Mutex
