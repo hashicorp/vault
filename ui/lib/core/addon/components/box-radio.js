@@ -23,11 +23,6 @@ import { setComponentTemplate } from '@ember/component';
 class BoxRadio extends Component {
   disabled = false;
   tooltipMessage = 'This option is not available to you at this time.';
-  onRadioChange = '';
-
-  handleClick(method, value) {
-    method(value);
-  }
 }
 
 export default setComponentTemplate(layout, BoxRadio);

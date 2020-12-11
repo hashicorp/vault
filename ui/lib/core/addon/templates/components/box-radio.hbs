@@ -10,7 +10,6 @@
         class="box-radio is-disabled is-marginless"
         data-test-mount-type-radio
         data-test-mount-type={{@type}}
-        {{on 'click' (fn this.handleClick @onRadioChange @type)}}
       >
         <Icon
           @glyph={{@glyph}}
@@ -27,7 +26,6 @@
           @radioId={{@type}}
           @disabled={{@disabled}}
         />
-        <label for={{@type}}></label>
       </label>
     </T.trigger>
     <T.content @class="tool-tip">
@@ -45,7 +43,6 @@
     {{if (eq @groupValue @type) " is-selected"}}"
     data-test-mount-type-radio
     data-test-mount-type={{@type}}
-    {{on 'click' (fn this.handleClick @onRadioChange @type)}}
   >
     <Icon
       @glyph={{@glyph}}
@@ -62,7 +59,6 @@
       @radioId={{@type}}
       @disabled={{@disabled}}
       />
-    <label for={{@type.type}}></label>
   </label>
   </div>
 {{/if}}

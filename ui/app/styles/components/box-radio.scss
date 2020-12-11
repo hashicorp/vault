@@ -33,22 +33,10 @@
 
   &.is-selected {
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
-
-    label {
-      background: $blue;
-      border: 1px solid $blue;
-      box-shadow: inset 0 0 0 0.15rem $white;
-    }
   }
 
   &.is-disabled {
     opacity: 0.5;
-  }
-
-  input[type='radio'].radio {
-    position: absolute;
-    z-index: 1;
-    opacity: 0;
   }
 
   input[type='radio'].radio + label {
@@ -61,6 +49,12 @@
     width: 1rem;
     flex-shrink: 0;
     flex-grow: 0;
+  }
+
+  input[type='radio'].radio:checked + label {
+    background: $blue;
+    border: 1px solid $blue;
+    box-shadow: inset 0 0 0 0.15rem $white;
   }
 
   input[type='radio'].radio:focus + label {
