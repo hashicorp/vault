@@ -1854,7 +1854,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Mark the active time. We do this first so it can be corrlated to the logs
+	// Mark the active time. We do this first so it can be correlated to the logs
 	// for the active startup.
 	c.activeTime = time.Now().UTC()
 
