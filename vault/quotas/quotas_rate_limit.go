@@ -170,6 +170,9 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 // in which we stop the ticker and return.
 func (rlq *RateLimitQuota) purgeBlockedClients() {
 	rlq.lock.RLock()
+	if rlq.purgeInterval <= 0 {
+		rlq.purgeInterval = 1 * time.Second
+	}
 	ticker := time.NewTicker(rlq.purgeInterval)
 	rlq.lock.RUnlock()
 
