@@ -716,7 +716,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft backend not in use")
 	}
 
-	init, err := c.Initialized(ctx)
+	init, err := c.InitializedLocally(ctx)
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 	}
@@ -794,7 +794,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return errors.New("raft leader address not provided")
 			}
 
-			init, err := c.Initialized(ctx)
+			init, err := c.InitializedLocally(ctx)
 			if err != nil {
 				return errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 			}
