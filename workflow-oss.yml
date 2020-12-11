@@ -87,16 +87,3 @@ stages:
           jobs:
             - command: vault version
               executor: default-machine
-  - channel: staging
-    promote: manual
-    job_defaults:
-      package_set: linux_amd64
-    actions:
-      checks:
-        - phase: Yet More Binary Tests
-          before_each_job:
-            - name: Unzip Package
-              command: unzip -d "$INSTALL_PATH" "$PACKAGE_ZIP_FILE" vault
-          jobs:
-            - command: vault version
-              executor: default-machine
