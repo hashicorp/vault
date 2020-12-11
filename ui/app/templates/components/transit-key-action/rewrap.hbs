@@ -4,23 +4,16 @@
       <div class="content">
         <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.</p>
       </div>
-    {{key-version-select
-      key=key
-      onVersionChange=(action (mut key_version))
-      key_version=key_version
-    }}
+    <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div class="control is-expanded">
-        {{ivy-codemirror
-            valueUpdated=(action (mut ciphertext))
-            options=(hash
+        <IvyCodemirror @valueUpdated={{action (mut ciphertext)}} @options={{hash
               lineNumbers=true
               tabSize=2
               mode='ruby'
               theme='hashi'
-            )
-          }}
+            }} />
       </div>
     </div>
     {{#if key.derived}}
@@ -30,10 +23,10 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
-            {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
           </div>
         </div>
       </div>
@@ -43,10 +36,10 @@
         <label for="nonce" class="is-label">Nonce</label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
+            <Input @type="text" @id="nonce" @value={{nonce}} class="input" data-test-transit-input="nonce" />
           </div>
           <div class="control">
-            {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
+            <B64Toggle @value={{nonce}} @data-test-transit-b64-toggle="nonce" />
           </div>
         </div>
       </div>

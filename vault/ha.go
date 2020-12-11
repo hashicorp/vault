@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -44,10 +45,6 @@ const (
 )
 
 var (
-	// KeyRotateGracePeriod is how long we allow an upgrade path
-	// for standby instances before we delete the upgrade keys
-	KeyRotateGracePeriod = 2 * time.Minute
-
 	addEnterpriseHaActors func(*Core, *run.Group) chan func()            = addEnterpriseHaActorsNoop
 	interruptPerfStandby  func(chan func(), chan struct{}) chan struct{} = interruptPerfStandbyNoop
 )
@@ -645,35 +642,48 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 	}
 }
 
-// grabLockOrStop returns true if we failed to get the lock before stopCh
-// was closed.  Returns false if the lock was obtained, in which case it's
-// the caller's responsibility to unlock it.
+// grabLockOrStop returns stopped=false if the lock is acquired. Returns
+// stopped=true if the lock is not acquired, because stopCh was closed. If the
+// lock was acquired (stopped=false) then it's up to the caller to unlock.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
-	// Grab the lock as we need it for cluster setup, which needs to happen
-	// before advertising;
-	lockGrabbedCh := make(chan struct{})
+	// lock protects these variables which are shared by parent and child.
+	var lock sync.Mutex
+	parentWaiting := true
+	locked := false
+
+	// doneCh is closed when the child goroutine is done.
+	doneCh := make(chan struct{})
 	go func() {
-		// Grab the lock
+		defer close(doneCh)
 		lockFunc()
-		// If stopCh has been closed, which only happens while the
-		// stateLock is held, we have actually terminated, so we just
-		// instantly give up the lock, otherwise we notify that it's ready
-		// for consumption
-		select {
-		case <-stopCh:
+
+		// The parent goroutine may or may not be waiting.
+		lock.Lock()
+		defer lock.Unlock()
+		if !parentWaiting {
 			unlockFunc()
-		default:
-			close(lockGrabbedCh)
+		} else {
+			locked = true
 		}
 	}()
 
+	stop := false
 	select {
 	case <-stopCh:
-		return true
-	case <-lockGrabbedCh:
-		// We now have the lock and can use it
+		stop = true
+	case <-doneCh:
 	}
 
+	// The child goroutine may not have acquired the lock yet.
+	lock.Lock()
+	defer lock.Unlock()
+	parentWaiting = false
+	if stop {
+		if locked {
+			unlockFunc()
+		}
+		return true
+	}
 	return false
 }
 
@@ -889,7 +899,7 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 	}
 
 	// Schedule cleanup for all of them
-	time.AfterFunc(KeyRotateGracePeriod, func() {
+	time.AfterFunc(c.KeyRotateGracePeriod(), func() {
 		sealed, err := c.barrier.Sealed()
 		if err != nil {
 			c.logger.Warn("failed to check barrier status at upgrade cleanup time")

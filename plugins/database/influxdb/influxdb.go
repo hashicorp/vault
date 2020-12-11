@@ -102,13 +102,17 @@ func (i *Influxdb) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (re
 				"username": username,
 				"password": req.Password,
 			}
-			q := influx.NewQuery(dbutil.QueryHelper(query, m), "", "")
-			response, err := cli.Query(q)
-			if err != nil {
+			qry := influx.NewQuery(dbutil.QueryHelper(query, m), "", "")
+			response, err := cli.Query(qry)
+			// err can be nil with response.Error() being not nil, so both need to be handled
+			merr := multierror.Append(err, response.Error())
+			if merr.ErrorOrNil() != nil {
+				// Attempt rollback only when the response has an error
 				if response != nil && response.Error() != nil {
 					attemptRollback(cli, username, rollbackIFQL)
 				}
-				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
+
+				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", merr)
 			}
 		}
 	}
@@ -133,10 +137,10 @@ func attemptRollback(cli influx.Client, username string, rollbackStatements []st
 			}), "", "")
 
 			response, err := cli.Query(q)
-			if err != nil {
-				if response != nil && response.Error() != nil {
-					return err
-				}
+			// err can be nil with response.Error() being not nil, so both need to be handled
+			merr := multierror.Append(err, response.Error())
+			if merr.ErrorOrNil() != nil {
+				return merr
 			}
 		}
 	}

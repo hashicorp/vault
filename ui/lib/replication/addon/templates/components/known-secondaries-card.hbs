@@ -6,7 +6,6 @@
     </ToolbarLink>
   </div>
   <div class="secondaries-table">
-    {{!-- TODO remove this or when backend api changes are merged --}}
     {{#unless replicationAttrs.secondaries}}
       <EmptyState
         @title="No known {{cluster.replicationMode}} secondary clusters associated with this cluster"

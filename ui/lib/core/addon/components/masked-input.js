@@ -41,19 +41,19 @@ export default Component.extend({
     autosize.destroy(this.element.querySelector('textarea'));
   },
   shouldObscure: computed('isMasked', 'isFocused', 'value', function() {
-    if (this.get('value') === '') {
+    if (this.value === '') {
       return false;
     }
-    if (this.get('isFocused') === true) {
+    if (this.isFocused === true) {
       return false;
     }
-    return this.get('isMasked');
+    return this.isMasked;
   }),
-  displayValue: computed('shouldObscure', function() {
-    if (this.get('shouldObscure')) {
+  displayValue: computed('shouldObscure', 'value', function() {
+    if (this.shouldObscure) {
       return '■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■';
     } else {
-      return this.get('value');
+      return this.value;
     }
   }),
   isMasked: true,

@@ -1,12 +1,11 @@
-import DS from 'ember-data';
+import Model from '@ember-data/model';
+import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const { attr } = DS;
-
-const Model = DS.Model.extend({
+const M = Model.extend({
   idPrefix: 'alphabet/',
   idForNav: computed('id', 'idPrefix', function() {
     let modelId = this.id || '';
@@ -32,6 +31,6 @@ const Model = DS.Model.extend({
   backend: attr('string', { readOnly: true }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(M, {
   updatePath: apiPath`${'backend'}/alphabet/${'id'}`,
 });

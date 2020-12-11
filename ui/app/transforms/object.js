@@ -1,9 +1,9 @@
-import DS from 'ember-data';
+import Transform from '@ember-data/serializer/transform';
 import { typeOf } from '@ember/utils';
 /*
   DS.attr('object')
 */
-export default DS.Transform.extend({
+export default Transform.extend({
   deserialize: function(value) {
     if (typeOf(value) !== 'object') {
       return {};

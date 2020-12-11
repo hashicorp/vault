@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -126,4 +127,15 @@ func ParseTimeFromPath(path string) (time.Time, error) {
 func MonthsPreviousTo(months int, now time.Time) time.Time {
 	firstOfMonth := StartOfMonth(now.UTC())
 	return firstOfMonth.AddDate(0, -months, 0)
+}
+
+// Skip this test if too close to the end of a month!
+func SkipAtEndOfMonth(t *testing.T) {
+	t.Helper()
+
+	thisMonth := StartOfMonth(time.Now().UTC())
+	endOfMonth := EndOfMonth(thisMonth)
+	if endOfMonth.Sub(time.Now()) < 10*time.Minute {
+		t.Skip("too close to end of month")
+	}
 }
