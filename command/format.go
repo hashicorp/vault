@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
@@ -191,6 +192,9 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 			}
 			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
 
+			if status.IsSelf && !status.ActiveTime.IsZero() {
+				out = append(out, fmt.Sprintf("Active Since | %s", status.ActiveTime.Format(time.RFC3339Nano)))
+			}
 			// This is down here just to keep ordering consistent
 			if showLeaderAddr {
 				out = append(out, fmt.Sprintf("Active Node Address | %s", status.LeaderAddress))
@@ -405,6 +409,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	// copy leaderStatus fields into sealStatusOutput for display later
 	sealStatusOutput.HAEnabled = leaderStatus.HAEnabled
 	sealStatusOutput.IsSelf = leaderStatus.IsSelf
+	sealStatusOutput.ActiveTime = leaderStatus.ActiveTime
 	sealStatusOutput.LeaderAddress = leaderStatus.LeaderAddress
 	sealStatusOutput.LeaderClusterAddress = leaderStatus.LeaderClusterAddress
 	sealStatusOutput.PerfStandby = leaderStatus.PerfStandby
@@ -431,13 +436,14 @@ func looksLikeDuration(k string) bool {
 // Currently we are adding the fields from api.LeaderResponse
 type SealStatusOutput struct {
 	api.SealStatusResponse
-	HAEnabled                bool   `json:"ha_enabled"`
-	IsSelf                   bool   `json:"is_self,omitempty""`
-	LeaderAddress            string `json:"leader_address,omitempty"`
-	LeaderClusterAddress     string `json:"leader_cluster_address,omitempty"`
-	PerfStandby              bool   `json:"performance_standby,omitempty"`
-	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal,omitempty"`
-	LastWAL                  uint64 `json:"last_wal,omitempty"`
-	RaftCommittedIndex       uint64 `json:"raft_committed_index,omitempty"`
-	RaftAppliedIndex         uint64 `json:"raft_applied_index,omitempty"`
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self,omitempty""`
+	ActiveTime               time.Time `json:"active_time,omitempty""`
+	LeaderAddress            string    `json:"leader_address,omitempty"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address,omitempty"`
+	PerfStandby              bool      `json:"performance_standby,omitempty"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal,omitempty"`
+	LastWAL                  uint64    `json:"last_wal,omitempty"`
+	RaftCommittedIndex       uint64    `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex         uint64    `json:"raft_applied_index,omitempty"`
 }

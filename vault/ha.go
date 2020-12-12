@@ -70,6 +70,13 @@ func (c *Core) PerfStandby() bool {
 	return perfStandby
 }
 
+func (c *Core) ActiveTime() time.Time {
+	c.stateLock.RLock()
+	activeTime := c.activeTime
+	c.stateLock.RUnlock()
+	return activeTime
+}
+
 // StandbyStates is meant as a way to avoid some extra locking on the very
 // common sys/health check.
 func (c *Core) StandbyStates() (standby, perfStandby bool) {
