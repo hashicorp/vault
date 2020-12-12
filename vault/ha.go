@@ -70,6 +70,13 @@ func (c *Core) PerfStandby() bool {
 	return perfStandby
 }
 
+func (c *Core) ActiveTime() time.Time {
+	c.stateLock.RLock()
+	activeTime := c.activeTime
+	c.stateLock.RUnlock()
+	return activeTime
+}
+
 // StandbyStates is meant as a way to avoid some extra locking on the very
 // common sys/health check.
 func (c *Core) StandbyStates() (standby, perfStandby bool) {
@@ -637,7 +644,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 // grabLockOrStop returns stopped=false if the lock is acquired. Returns
 // stopped=true if the lock is not acquired, because stopCh was closed. If the
-// lock was acquired (stopped=false) then it's up to the caller to unlock.
+// lock was acquired (stopped=false) then it's up to the caller to unlock. If
+// the lock was not acquired (stopped=true), the caller does not hold the lock and
+// should not call unlock.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
 	// lock protects these variables which are shared by parent and child.
 	var lock sync.Mutex
