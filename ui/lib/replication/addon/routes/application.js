@@ -7,17 +7,17 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 export default Route.extend(ClusterRoute, {
   version: service(),
   store: service(),
+  auth: service(),
 
   beforeModel() {
-    return this.get('version')
-      .fetchFeatures()
-      .then(() => {
-        return this._super(...arguments);
-      });
+    return this.version.fetchFeatures().then(() => {
+      return this._super(...arguments);
+    });
   },
 
   model() {
-    return this.store.findRecord('cluster', 'vault');
+    const activeClusterId = this.auth.activeCluster;
+    return this.store.peekRecord('cluster', activeClusterId);
   },
 
   afterModel(model) {

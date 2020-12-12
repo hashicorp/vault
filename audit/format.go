@@ -114,6 +114,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
+			MountType:           req.MountType,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -275,6 +276,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
+			MountType:           req.MountType,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -289,13 +291,14 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
-			Auth:     respAuth,
-			Secret:   respSecret,
-			Data:     resp.Data,
-			Warnings: resp.Warnings,
-			Redirect: resp.Redirect,
-			WrapInfo: respWrapInfo,
-			Headers:  resp.Headers,
+			MountType: req.MountType,
+			Auth:      respAuth,
+			Secret:    respSecret,
+			Data:      resp.Data,
+			Warnings:  resp.Warnings,
+			Redirect:  resp.Redirect,
+			WrapInfo:  respWrapInfo,
+			Headers:   resp.Headers,
 		},
 	}
 
@@ -336,6 +339,7 @@ type AuditRequest struct {
 	ID                            string                 `json:"id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
+	MountType                     string                 `json:"mount_type,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
@@ -349,13 +353,14 @@ type AuditRequest struct {
 }
 
 type AuditResponse struct {
-	Auth     *AuditAuth             `json:"auth,omitempty"`
-	Secret   *AuditSecret           `json:"secret,omitempty"`
-	Data     map[string]interface{} `json:"data,omitempty"`
-	Warnings []string               `json:"warnings,omitempty"`
-	Redirect string                 `json:"redirect,omitempty"`
-	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string    `json:"headers,omitempty"`
+	Auth      *AuditAuth             `json:"auth,omitempty"`
+	MountType string                 `json:"mount_type,omitempty"`
+	Secret    *AuditSecret           `json:"secret,omitempty"`
+	Data      map[string]interface{} `json:"data,omitempty"`
+	Warnings  []string               `json:"warnings,omitempty"`
+	Redirect  string                 `json:"redirect,omitempty"`
+	WrapInfo  *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers   map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {

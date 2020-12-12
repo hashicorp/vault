@@ -21,7 +21,7 @@ label {
 .b-checkbox .is-label {
   color: $grey-darker;
   display: inline-block;
-  font-size: $size-small;
+  font-size: $body-size;
   font-weight: $font-weight-bold;
 
   &:not(:last-child) {
@@ -70,6 +70,11 @@ label {
   }
 }
 
+.sub-text {
+  color: $grey;
+  margin-bottom: 0.25rem;
+  font-size: $size-8;
+}
 .input,
 .textarea,
 .select select {
@@ -208,6 +213,12 @@ label {
 }
 .field-body .field {
   margin-bottom: 0;
+}
+.field {
+  // cannot use :read-only selector because tag used for other purposes
+  &.is-readOnly {
+    background-color: $ui-gray-100;
+  }
 }
 .field.has-addons {
   flex-wrap: wrap;

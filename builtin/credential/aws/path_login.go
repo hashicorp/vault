@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -41,6 +42,11 @@ const (
 	// Retry configuration
 	retryWaitMin = 500 * time.Millisecond
 	retryWaitMax = 30 * time.Second
+)
+
+var (
+	errRequestBodyNotValid              = errors.New("iam request body is invalid")
+	errInvalidGetCallerIdentityResponse = errors.New("body of GetCallerIdentity is invalid")
 )
 
 func (b *backend) pathLogin() *framework.Path {
@@ -1041,18 +1047,23 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, canonicalArn): // check 2 passed
 		default:
 			// check 3 is a bit more complex, so we do it last
+			// only try to look up full ARNs if there's a wildcard ARN in BoundIamPrincipalIDs.
+			if !hasWildcardBind(roleEntry.BoundIamPrincipalARNs) {
+				return nil, fmt.Errorf("role %q no longer bound to ARN %q", roleName, canonicalArn)
+			}
+
 			fullArn := b.getCachedUserId(clientUserId)
 			if fullArn == "" {
 				entity, err := parseIamArn(canonicalArn)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error parsing ARN %q: {{err}}", canonicalArn), err)
+					return nil, errwrap.Wrapf(fmt.Sprintf("error parsing ARN %q when updating login for role %q: {{err}}", canonicalArn, roleName), err)
 				}
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error looking up full ARN of entity %v: {{err}}", entity), err)
+					return nil, errwrap.Wrapf(fmt.Sprintf("error looking up full ARN of entity %v when updating login for role %q: {{err}}", entity, roleName), err)
 				}
 				if fullArn == "" {
-					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v", entity)
+					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v when updating login for role %q", entity, roleName)
 				}
 				if clientUserId != "" {
 					b.setCachedUserId(clientUserId, fullArn)
@@ -1066,7 +1077,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 				}
 			}
 			if !matchedWildcardBind {
-				return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
+				return nil, fmt.Errorf("role %q no longer bound to ARN %q", roleName, canonicalArn)
 			}
 		}
 	}
@@ -1179,7 +1190,10 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return logical.ErrorResponse("error parsing iam_request_url"), nil
 	}
-
+	if parsedUrl.RawQuery != "" {
+		// Should be no query parameters
+		return logical.ErrorResponse(logical.ErrInvalidRequest.Error()), nil
+	}
 	// TODO: There are two potentially valid cases we're not yet supporting that would
 	// necessitate this check being changed. First, if we support GET requests.
 	// Second if we support presigned POST requests
@@ -1192,6 +1206,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("failed to base64 decode iam_request_body"), nil
 	}
 	body := string(bodyRaw)
+	if err = validateLoginIamRequestBody(body); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	headers := data.Get("iam_request_headers").(http.Header)
 	if len(headers) == 0 {
@@ -1212,6 +1229,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
+		}
+		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
@@ -1302,15 +1322,19 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		case strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, callerUniqueId): // check 1 passed
 		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, entity.canonicalArn()): // check 2 passed
 		default:
-			// evaluate check 3
+			// evaluate check 3 -- only try to look up full ARNs if there's a wildcard ARN in BoundIamPrincipalIDs.
+			if !hasWildcardBind(roleEntry.BoundIamPrincipalARNs) {
+				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
+			}
+
 			fullArn := b.getCachedUserId(callerUniqueId)
 			if fullArn == "" {
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("error looking up full ARN of entity %v: %v", entity, err)), nil
+					return logical.ErrorResponse("error looking up full ARN of entity %v when attempting login for role %q: %v", entity, roleName, err), nil
 				}
 				if fullArn == "" {
-					return logical.ErrorResponse(fmt.Sprintf("got empty string back when looking up full ARN of entity %v", entity)), nil
+					return logical.ErrorResponse("got empty string back when looking up full ARN of entity %v when attempting login for role %q", entity, roleName), nil
 				}
 				b.setCachedUserId(callerUniqueId, fullArn)
 			}
@@ -1322,7 +1346,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				}
 			}
 			if !matchedWildcardBind {
-				return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
 			}
 		}
 	}
@@ -1392,6 +1416,38 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	return &logical.Response{
 		Auth: auth,
 	}, nil
+}
+
+func hasWildcardBind(boundIamPrincipalARNs []string) bool {
+	for _, principalARN := range boundIamPrincipalARNs {
+		if strings.HasSuffix(principalARN, "*") {
+			return true
+		}
+	}
+	return false
+}
+
+// Validate that the iam_request_body passed is valid for the STS request
+func validateLoginIamRequestBody(body string) error {
+	qs, err := url.ParseQuery(body)
+	if err != nil {
+		return err
+	}
+	for k, v := range qs {
+		switch k {
+		case "Action":
+			if len(v) != 1 || v[0] != "GetCallerIdentity" {
+				return errRequestBodyNotValid
+			}
+		case "Version":
+		// Will assume for now that future versions don't change
+		// the semantics
+		default:
+			// Not expecting any other values
+			return errRequestBodyNotValid
+		}
+	}
+	return nil
 }
 
 // These two methods (hasValuesFor*) return two bools
@@ -1559,8 +1615,12 @@ func ensureHeaderIsSigned(signedHeaders, headerToSign string) error {
 }
 
 func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse, error) {
-	decoder := xml.NewDecoder(strings.NewReader(response))
 	result := GetCallerIdentityResponse{}
+	response = strings.TrimSpace(response)
+	if !strings.HasPrefix(response, "<GetCallerIdentityResponse") && !strings.HasPrefix(response, "<?xml") {
+		return result, errInvalidGetCallerIdentityResponse
+	}
+	decoder := xml.NewDecoder(strings.NewReader(response))
 	err := decoder.Decode(&result)
 	return result, err
 }
@@ -1596,6 +1656,11 @@ func submitCallerIdentityRequest(ctx context.Context, maxRetries int, method, en
 	if response != nil {
 		defer response.Body.Close()
 	}
+	// Validate that the response type is XML
+	if ct := response.Header.Get("Content-Type"); ct != "text/xml" {
+		return nil, errInvalidGetCallerIdentityResponse
+	}
+
 	// we check for status code afterwards to also print out response body
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {

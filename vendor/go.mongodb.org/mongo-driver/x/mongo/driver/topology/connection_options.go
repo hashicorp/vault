@@ -8,7 +8,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/ocsp"
 )
 
 // Dialer is used to make network connections.
@@ -36,28 +36,29 @@ var DefaultDialer Dialer = &net.Dialer{}
 type Handshaker = driver.Handshaker
 
 type connectionConfig struct {
-	appName        string
-	connectTimeout time.Duration
-	dialer         Dialer
-	handshaker     Handshaker
-	idleTimeout    time.Duration
-	lifeTimeout    time.Duration
-	cmdMonitor     *event.CommandMonitor
-	readTimeout    time.Duration
-	writeTimeout   time.Duration
-	tlsConfig      *tls.Config
-	compressors    []string
-	zlibLevel      *int
-	zstdLevel      *int
-	descCallback   func(description.Server)
+	appName                  string
+	connectTimeout           time.Duration
+	dialer                   Dialer
+	handshaker               Handshaker
+	idleTimeout              time.Duration
+	cmdMonitor               *event.CommandMonitor
+	readTimeout              time.Duration
+	writeTimeout             time.Duration
+	tlsConfig                *tls.Config
+	compressors              []string
+	zlibLevel                *int
+	zstdLevel                *int
+	ocspCache                ocsp.Cache
+	disableOCSPEndpointCheck bool
+	errorHandlingCallback    func(error, uint64)
+	tlsConnectionSource      tlsConnectionSource
 }
 
 func newConnectionConfig(opts ...ConnectionOption) (*connectionConfig, error) {
 	cfg := &connectionConfig{
-		connectTimeout: 30 * time.Second,
-		dialer:         nil,
-		idleTimeout:    10 * time.Minute,
-		lifeTimeout:    30 * time.Minute,
+		connectTimeout:      30 * time.Second,
+		dialer:              nil,
+		tlsConnectionSource: defaultTLSConnectionSource,
 	}
 
 	for _, opt := range opts {
@@ -74,21 +75,19 @@ func newConnectionConfig(opts ...ConnectionOption) (*connectionConfig, error) {
 	return cfg, nil
 }
 
-func withServerDescriptionCallback(callback func(description.Server), opts ...ConnectionOption) []ConnectionOption {
-	return append(opts, ConnectionOption(func(c *connectionConfig) error {
-		c.descCallback = callback
-		return nil
-	}))
-}
-
 // ConnectionOption is used to configure a connection.
 type ConnectionOption func(*connectionConfig) error
 
-// WithConnectionAppName sets the application name which gets sent to MongoDB when it
-// first connects.
-func WithConnectionAppName(fn func(string) string) ConnectionOption {
+func withTLSConnectionSource(fn func(tlsConnectionSource) tlsConnectionSource) ConnectionOption {
 	return func(c *connectionConfig) error {
-		c.appName = fn(c.appName)
+		c.tlsConnectionSource = fn(c.tlsConnectionSource)
+		return nil
+	}
+}
+
+func withErrorHandlingCallback(fn func(error, uint64)) ConnectionOption {
+	return func(c *connectionConfig) error {
+		c.errorHandlingCallback = fn
 		return nil
 	}
 }
@@ -131,14 +130,6 @@ func WithHandshaker(fn func(Handshaker) Handshaker) ConnectionOption {
 func WithIdleTimeout(fn func(time.Duration) time.Duration) ConnectionOption {
 	return func(c *connectionConfig) error {
 		c.idleTimeout = fn(c.idleTimeout)
-		return nil
-	}
-}
-
-// WithLifeTimeout configures the maximum life of a connection.
-func WithLifeTimeout(fn func(time.Duration) time.Duration) ConnectionOption {
-	return func(c *connectionConfig) error {
-		c.lifeTimeout = fn(c.lifeTimeout)
 		return nil
 	}
 }
@@ -187,6 +178,24 @@ func WithZlibLevel(fn func(*int) *int) ConnectionOption {
 func WithZstdLevel(fn func(*int) *int) ConnectionOption {
 	return func(c *connectionConfig) error {
 		c.zstdLevel = fn(c.zstdLevel)
+		return nil
+	}
+}
+
+// WithOCSPCache specifies a cache to use for OCSP verification.
+func WithOCSPCache(fn func(ocsp.Cache) ocsp.Cache) ConnectionOption {
+	return func(c *connectionConfig) error {
+		c.ocspCache = fn(c.ocspCache)
+		return nil
+	}
+}
+
+// WithDisableOCSPEndpointCheck specifies whether or the driver should perform non-stapled OCSP verification. If set
+// to true, the driver will only check stapled responses and will continue the connection without reaching out to
+// OCSP responders.
+func WithDisableOCSPEndpointCheck(fn func(bool) bool) ConnectionOption {
+	return func(c *connectionConfig) error {
+		c.disableOCSPEndpointCheck = fn(c.disableOCSPEndpointCheck)
 		return nil
 	}
 }

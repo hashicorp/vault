@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	// Ensure we use a high-entropy seed for the psuedo-random generator
+	// Ensure we use a high-entropy seed for the pseudo-random generator
 	rand.Seed(newSeed())
 }
 
@@ -93,6 +93,25 @@ func asyncNotifyBool(ch chan bool, v bool) {
 	select {
 	case ch <- v:
 	default:
+	}
+}
+
+// overrideNotifyBool is used to notify on a bool channel
+// but override existing value if value is present.
+// ch must be 1-item buffered channel.
+//
+// This method does not support multiple concurrent calls.
+func overrideNotifyBool(ch chan bool, v bool) {
+	select {
+	case ch <- v:
+		// value sent, all done
+	case <-ch:
+		// channel had an old value
+		select {
+		case ch <- v:
+		default:
+			panic("race: channel was sent concurrently")
+		}
 	}
 }
 

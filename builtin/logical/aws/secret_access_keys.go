@@ -67,7 +67,23 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 
 func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string, policyARNs []string,
-	lifeTimeInSeconds int64) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
+
+	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if groupPolicies != nil {
+		groupPolicies = append(groupPolicies, policy)
+		policy, err = combinePolicyDocuments(groupPolicies...)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+	if len(groupPolicyARNs) > 0 {
+		policyARNs = append(policyARNs, groupPolicyARNs...)
+	}
+
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -91,14 +107,13 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	// that by default; the behavior can be explicitly opted in to by associating the Vault role
 	// with a policy ARN or document that allows the appropriate permissions.
 	if policy == "" && len(policyARNs) == 0 {
-		return logical.ErrorResponse(fmt.Sprintf("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred)), nil
+		return logical.ErrorResponse("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred), nil
 	}
 
 	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
 
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error generating STS keys: %s", err)), awsutil.CheckAWSError(err)
+		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
@@ -126,7 +141,25 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	lifeTimeInSeconds int64) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
+
+	// grab any IAM group policies associated with the vault role, both inline
+	// and managed
+	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if len(groupPolicies) > 0 {
+		groupPolicies = append(groupPolicies, policy)
+		policy, err = combinePolicyDocuments(groupPolicies...)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+	if len(groupPolicyARNs) > 0 {
+		policyARNs = append(policyARNs, groupPolicyARNs...)
+	}
+
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -148,8 +181,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
 
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error assuming role: %s", err)), awsutil.CheckAWSError(err)
+		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
 
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
@@ -217,8 +249,7 @@ func (b *backend) secretAccessKeysCreate(
 			iamErr := errwrap.Wrapf("error creating IAM user: {{err}}", err)
 			return nil, errwrap.Wrap(errwrap.Wrapf("failed to delete WAL entry: {{err}}", walErr), iamErr)
 		}
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error creating IAM user: %s", err)), awsutil.CheckAWSError(err)
+		return logical.ErrorResponse("Error creating IAM user: %s", err), awsutil.CheckAWSError(err)
 	}
 
 	for _, arn := range role.PolicyArns {
@@ -228,8 +259,7 @@ func (b *backend) secretAccessKeysCreate(
 			PolicyArn: aws.String(arn),
 		})
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Error attaching user policy: %s", err)), awsutil.CheckAWSError(err)
+			return logical.ErrorResponse("Error attaching user policy: %s", err), awsutil.CheckAWSError(err)
 		}
 
 	}
@@ -241,8 +271,18 @@ func (b *backend) secretAccessKeysCreate(
 			PolicyDocument: aws.String(role.PolicyDocument),
 		})
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Error putting user policy: %s", err)), awsutil.CheckAWSError(err)
+			return logical.ErrorResponse("Error putting user policy: %s", err), awsutil.CheckAWSError(err)
+		}
+	}
+
+	for _, group := range role.IAMGroups {
+		// Add user to IAM groups
+		_, err = iamClient.AddUserToGroup(&iam.AddUserToGroupInput{
+			UserName:  aws.String(username),
+			GroupName: aws.String(group),
+		})
+		if err != nil {
+			return logical.ErrorResponse("Error adding user to group: %s", err), awsutil.CheckAWSError(err)
 		}
 	}
 
@@ -251,8 +291,7 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: aws.String(username),
 	})
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error creating access keys: %s", err)), awsutil.CheckAWSError(err)
+		return logical.ErrorResponse("Error creating access keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
 	// Remove the WAL entry, we succeeded! If we fail, we don't return

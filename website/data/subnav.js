@@ -7,22 +7,17 @@ export default [
       { text: 'Data Encryption', url: '/use-cases/data-encryption' },
       {
         text: 'Identity-based Access',
-        url: '/use-cases/identity-based-access'
-      }
-    ]
+        url: '/use-cases/identity-based-access',
+      },
+    ],
   },
   {
     text: 'Enterprise',
-    url: 'https://www.hashicorp.com/products/vault/enterprise'
-  },
-  {
-    text: 'Whitepaper',
-    url:
-      'https://www.hashicorp.com/resources/unlocking-the-cloud-operating-model-security?utm_source=vaultsubnav'
+    url: 'https://www.hashicorp.com/products/vault/enterprise',
   },
   'divider',
-  { text: 'Learn', url: 'https://learn.hashicorp.com/vault' },
+  { text: 'Tutorials', url: 'https://learn.hashicorp.com/vault' },
   { text: 'Docs', url: '/docs' },
   { text: 'API', url: '/api-docs' },
-  { text: 'Community', url: '/community' }
+  { text: 'Community', url: '/community' },
 ]

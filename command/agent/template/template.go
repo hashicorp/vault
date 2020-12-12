@@ -7,8 +7,12 @@ package template
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"strings"
+
+	"go.uber.org/atomic"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctlogging "github.com/hashicorp/consul-template/logging"
@@ -45,25 +49,35 @@ type Server struct {
 	config *ServerConfig
 
 	// runner is the consul-template runner
-	runner *manager.Runner
+	runner        *manager.Runner
+	runnerStarted *atomic.Bool
 
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
-	// lookupMap is alist of templates indexed by their consul-template ID. This
+	// lookupMap is a list of templates indexed by their consul-template ID. This
 	// is used to ensure all Vault templates have been rendered before returning
 	// from the runner in the event we're using exit after auth.
 	lookupMap map[string][]*ctconfig.TemplateConfig
 
-	DoneCh        chan struct{}
+	DoneCh  chan struct{}
+	stopped *atomic.Bool
+
 	logger        hclog.Logger
 	exitAfterAuth bool
+
+	// testingLimitRetry is used for tests to limit the number of retries
+	// performed by the template server
+	testingLimitRetry int
 }
 
 // NewServer returns a new configured server
 func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
 		DoneCh:        make(chan struct{}),
+		stopped:       atomic.NewBool(false),
+		runnerStarted: atomic.NewBool(false),
+
 		logger:        conf.Logger,
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
@@ -74,23 +88,23 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
-	latestToken := new(string)
-	ts.logger.Info("starting template server")
-	// defer the closing of the DoneCh
-	defer func() {
-		ts.logger.Info("template server stopped")
-		close(ts.DoneCh)
-	}()
-
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) error {
 	if incoming == nil {
-		panic("incoming channel is nil")
+		return errors.New("template server: incoming channel is nil")
 	}
 
-	// If there are no templates, return
+	latestToken := new(string)
+	ts.logger.Info("starting template server")
+
+	defer func() {
+		ts.logger.Info("template server stopped")
+	}()
+
+	// If there are no templates, we wait for context cancellation and then return
 	if len(templates) == 0 {
 		ts.logger.Info("no templates found")
-		return
+		<-ctx.Done()
+		return nil
 	}
 
 	// construct a consul template vault config based the agents vault
@@ -98,15 +112,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
-		ts.logger.Error("template server failed to generate runner config", "error", runnerConfigErr)
-		return
+		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
 	var err error
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
-		ts.logger.Error("template server failed to create", "error", err)
-		return
+		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
 	// Build the lookup map using the id mapping from the Template runner. This is
@@ -130,11 +142,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.Stop()
-			return
+			return nil
 
 		case token := <-incoming:
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
+
+				// If the runner was previously started and we intend to exit
+				// after auth, do not restart the runner if a new token is
+				// received.
+				if ts.exitAfterAuth && ts.runnerStarted.Load() {
+					ts.logger.Info("template server not restarting with new token with exit_after_auth set to true")
+					continue
+				}
+
 				ts.runner.Stop()
 				*latestToken = token
 				ctv := ctconfig.Config{
@@ -142,6 +163,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 						Token: latestToken,
 					},
 				}
+
+				// If we're testing, limit retries to 3 attempts to avoid
+				// long test runs from exponential back-offs
+				if ts.testingLimitRetry != 0 {
+					ctv.Vault.Retry = &ctconfig.RetryConfig{Attempts: &ts.testingLimitRetry}
+				}
+
 				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
@@ -149,11 +177,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
 				}
+				ts.runnerStarted.CAS(false, true)
 				go ts.runner.Start()
 			}
+
 		case err := <-ts.runner.ErrCh:
-			ts.logger.Error("template server error", "error", err.Error())
-			return
+			ts.runner.StopImmediately()
+			return fmt.Errorf("template server: %w", err)
+
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			events := ts.runner.RenderEvents()
@@ -179,9 +210,15 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
 				ts.runner.Stop()
-				return
+				return nil
 			}
 		}
+	}
+}
+
+func (ts *Server) Stop() {
+	if ts.stopped.CAS(false, true) {
+		close(ts.DoneCh)
 	}
 }
 

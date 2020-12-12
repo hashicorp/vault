@@ -103,7 +103,11 @@ When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally Vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
-settings (like Vault, plugins support [the use of mlock when available](/docs/configuration#disable_mlock)).
+settings. Like Vault, plugins support [the use of mlock when available](/docs/configuration#disable_mlock).
+
+~> Note: If Vault is configured with `mlock` enabled, then the Vault executable and each
+plugin executable in your [plugins directory](/docs/internals/plugins#plugin-directory) must be
+given the ability to use the `mlock` syscall.
 
 # Plugin Development
 

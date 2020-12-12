@@ -101,20 +101,6 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			return
 		}
 
-		isInSealMigration := core.IsInSealMigration()
-		if !req.Migrate && isInSealMigration {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'migrate' parameter must be set true in JSON body when in seal migration mode"))
-			return
-		}
-		if req.Migrate && !isInSealMigration {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'migrate' parameter set true in JSON body when not in seal migration mode"))
-			return
-		}
-
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
@@ -138,9 +124,10 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 		}
 
-		// Attempt the unseal
-		if core.SealAccess().RecoveryKeySupported() {
-			_, err = core.UnsealWithRecoveryKeys(key)
+		// Attempt the unseal.  If migrate was specified, the key should correspond
+		// to the old seal.
+		if req.Migrate {
+			_, err = core.UnsealMigrate(key)
 		} else {
 			_, err = core.Unseal(key)
 		}
@@ -180,8 +167,13 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 	sealed := core.Sealed()
 
+	initialized, err := core.Initialized(ctx)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	var sealConfig *vault.SealConfig
-	var err error
 	if core.SealAccess().RecoveryKeySupported() {
 		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 	} else {
@@ -195,10 +187,11 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	if sealConfig == nil {
 		respondOk(w, &SealStatusResponse{
 			Type:         core.SealAccess().BarrierType(),
-			Initialized:  false,
+			Initialized:  initialized,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
+			Version:      version.GetVersion().VersionNumber(),
 		})
 		return
 	}
@@ -223,14 +216,14 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 	respondOk(w, &SealStatusResponse{
 		Type:         sealConfig.Type,
-		Initialized:  true,
+		Initialized:  initialized,
 		Sealed:       sealed,
 		T:            sealConfig.SecretThreshold,
 		N:            sealConfig.SecretShares,
 		Progress:     progress,
 		Nonce:        nonce,
 		Version:      version.GetVersion().VersionNumber(),
-		Migration:    core.IsInSealMigration(),
+		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),

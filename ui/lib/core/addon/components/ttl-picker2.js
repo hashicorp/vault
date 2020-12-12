@@ -18,14 +18,13 @@
  * @param recalculationTimeout=5000 {Number} - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
  * @param initialValue=null {String} - This is the value set initially (particularly from a string like '30h')
  * @param initialEnabled=null {Boolean} - Set this value if you want the toggle on when component is mounted
+ * @param changeOnInit=false {Boolean} - set this value if you'd like the passed onChange function to be called on component initialization
  */
 
-import Ember from 'ember';
-import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { task, timeout } from 'ember-concurrency';
 import { typeOf } from '@ember/utils';
 import Duration from 'Duration.js';
+import TtlForm from './ttl-form';
 import layout from '../templates/components/ttl-picker2';
 
 const secondsMap = {
@@ -34,14 +33,12 @@ const secondsMap = {
   h: 3600,
   d: 86400,
 };
-const convertToSeconds = (time, unit) => {
-  return time * secondsMap[unit];
-};
+const validUnits = ['s', 'm', 'h', 'd'];
 const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
 };
 
-export default Component.extend({
+export default TtlForm.extend({
   layout,
   enableTTL: false,
   label: 'Time to live (TTL)',
@@ -50,39 +47,54 @@ export default Component.extend({
   description: '',
   time: 30,
   unit: 's',
-  recalculationTimeout: 5000,
   initialValue: null,
+  changeOnInit: false,
 
   init() {
     this._super(...arguments);
     const value = this.initialValue;
     const enable = this.initialEnabled;
+    const changeOnInit = this.changeOnInit;
     // if initial value is unset use params passed in as defaults
     if (!value && value !== 0) {
       return;
     }
 
-    let seconds = 30;
+    let time = 30;
+    let unit = 's';
     let setEnable = this.enableTTL;
     if (!!enable || typeOf(enable) === 'boolean') {
       // This allows non-boolean values passed in to be evaluated for truthiness
       setEnable = !!enable;
     }
+
     if (typeOf(value) === 'number') {
-      seconds = value;
+      // if the passed value is a number, assume unit is seconds
+      time = value;
     } else {
       try {
-        seconds = Duration.parse(value).seconds();
+        const seconds = Duration.parse(value).seconds();
+        const lastDigit = value.toString().substring(value.length - 1);
+        if (validUnits.indexOf(lastDigit) >= 0 && lastDigit !== 's') {
+          time = convertFromSeconds(seconds, lastDigit);
+          unit = lastDigit;
+        } else {
+          time = seconds;
+        }
       } catch (e) {
-        console.error(e);
-        // if parsing fails leave as default 30
+        // if parsing fails leave as default 30s
       }
     }
+
     this.setProperties({
-      time: seconds,
-      unit: 's',
+      time,
+      unit,
       enableTTL: setEnable,
     });
+
+    if (changeOnInit) {
+      this.handleChange();
+    }
   },
 
   unitOptions: computed(function() {
@@ -94,7 +106,7 @@ export default Component.extend({
     ];
   }),
   handleChange() {
-    let { time, unit, enableTTL, seconds } = this.getProperties('time', 'unit', 'enableTTL', 'seconds');
+    let { time, unit, enableTTL, seconds } = this;
     const ttl = {
       enabled: enableTTL,
       seconds,
@@ -102,52 +114,20 @@ export default Component.extend({
     };
     this.onChange(ttl);
   },
-  updateTime: task(function*(newTime) {
-    this.set('errorMessage', '');
-    let parsedTime;
-    parsedTime = parseInt(newTime, 10);
-    if (!newTime) {
-      this.set('errorMessage', 'This field is required');
-      return;
-    } else if (Number.isNaN(parsedTime)) {
-      this.set('errorMessage', 'Value must be a number');
-      return;
-    }
-    this.set('time', parsedTime);
-    this.handleChange();
-    if (Ember.testing) {
-      return;
-    }
-    this.set('recalculateSeconds', true);
-    yield timeout(this.recalculationTimeout);
-    this.set('recalculateSeconds', false);
-  }).restartable(),
 
-  recalculateTime(newUnit) {
-    const newTime = convertFromSeconds(this.seconds, newUnit);
-    this.setProperties({
-      time: newTime,
-      unit: newUnit,
-    });
-  },
+  helperText: computed(
+    'enableTTL',
+    'helperTextDisabled',
+    'helperTextEnabled',
+    'helperTextSet',
+    'helperTextUnset',
+    function() {
+      return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
+    }
+  ),
 
-  seconds: computed('time', 'unit', function() {
-    return convertToSeconds(this.time, this.unit);
-  }),
-  helperText: computed('enableTTL', 'helperTextUnset', 'helperTextSet', function() {
-    return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
-  }),
-  errorMessage: null,
   recalculateSeconds: false,
   actions: {
-    updateUnit(newUnit) {
-      if (this.recalculateSeconds) {
-        this.set('unit', newUnit);
-      } else {
-        this.recalculateTime(newUnit);
-      }
-      this.handleChange();
-    },
     toggleEnabled() {
       this.toggleProperty('enableTTL');
       this.handleChange();

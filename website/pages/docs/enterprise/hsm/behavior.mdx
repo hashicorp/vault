@@ -94,3 +94,14 @@ Via the API, the rekey operation is performed with the same parameters as the
 endpoint](/api/system/rekey); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.
+
+## Performance and Availability
+
+When an HSM is used for generating various CSPs or for entropy augmentation,
+interaction with the HSM becomes part of the request processing for
+functionality using it.  This means the HSM must be online and available for
+those requests to succeed.  Additionally, some operations are performed much
+more frequently than key generation where interaction with the HSM may
+impact performance.  A mount with seal wrapping enabled will interact with
+the HSM on every write for example.  Vault tokens (non-batch) generated with 
+entropy augmentation enabled will interact with the HSM when created.

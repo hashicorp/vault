@@ -25,6 +25,10 @@
     font-size: 16px;
     font-weight: $font-weight-bold;
     line-height: 1.25;
+
+    .progress {
+      margin-left: $spacing-xs;
+    }
   }
 
   .close-button + .message-title {

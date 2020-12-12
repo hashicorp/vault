@@ -466,7 +466,7 @@ func decode(b []byte) ([]byte, error) {
 }
 
 func (settings FileSettings) getResourceForToken(baseURI string) (string, error) {
-	// Compare dafault base URI from the SDK to the endpoints from the public cloud
+	// Compare default base URI from the SDK to the endpoints from the public cloud
 	// Base URI and token resource are the same string. This func finds the authentication
 	// file field that matches the SDK base URI. The SDK defines the public cloud
 	// endpoint as its default base URI
@@ -713,8 +713,8 @@ type MSIConfig struct {
 	ClientID string
 }
 
-// Authorizer gets the authorizer from MSI.
-func (mc MSIConfig) Authorizer() (autorest.Authorizer, error) {
+// ServicePrincipalToken creates a ServicePrincipalToken from MSI.
+func (mc MSIConfig) ServicePrincipalToken() (*adal.ServicePrincipalToken, error) {
 	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, err
@@ -731,6 +731,16 @@ func (mc MSIConfig) Authorizer() (autorest.Authorizer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to get oauth token from MSI for user assigned identity: %v", err)
 		}
+	}
+
+	return spToken, nil
+}
+
+// Authorizer gets the authorizer from MSI.
+func (mc MSIConfig) Authorizer() (autorest.Authorizer, error) {
+	spToken, err := mc.ServicePrincipalToken()
+	if err != nil {
+		return nil, err
 	}
 
 	return autorest.NewBearerAuthorizer(spToken), nil

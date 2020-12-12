@@ -1,6 +1,6 @@
+import Model, { hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
@@ -8,9 +8,7 @@ import { memberAction } from 'ember-api-actions';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const { attr, hasMany } = DS;
-
-let Model = DS.Model.extend({
+let ModelExport = Model.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -19,7 +17,7 @@ let Model = DS.Model.extend({
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   methodType: computed('type', function() {
-    return this.get('type').replace(/^ns_/, '');
+    return this.type.replace(/^ns_/, '');
   }),
   description: attr('string', {
     editType: 'textarea',
@@ -37,10 +35,10 @@ let Model = DS.Model.extend({
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
   apiPath: computed('path', function() {
-    return `auth/${this.get('path')}`;
+    return `auth/${this.path}`;
   }),
   localDisplay: computed('local', function() {
-    return this.get('local') ? 'local' : 'replicated';
+    return this.local ? 'local' : 'replicated';
   }),
 
   tuneAttrs: computed(function() {
@@ -85,17 +83,17 @@ let Model = DS.Model.extend({
   }),
 
   attrs: computed('formFields', function() {
-    return expandAttributeMeta(this, this.get('formFields'));
+    return expandAttributeMeta(this, this.formFields);
   }),
 
   fieldGroups: computed('formFieldGroups', function() {
-    return fieldToAttrs(this, this.get('formFieldGroups'));
+    return fieldToAttrs(this, this.formFieldGroups);
   }),
   canDisable: alias('deletePath.canDelete'),
   canEdit: alias('configPath.canUpdate'),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   deletePath: apiPath`sys/auth/${'id'}`,
   configPath: function(context) {
     if (context.type === 'aws') {

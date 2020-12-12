@@ -2,67 +2,57 @@
   <div class="box">
     {{#unless version.isOSS}}
       {{#if (and activeCluster.unsealed auth.currentToken)}}
-        {{#if (not cluster.dr.isSecondary)}}
+        {{#unless cluster.dr.isSecondary}}
           {{#if (has-permission 'status' routeParams='replication')}}
             <nav class="menu">
               <p class="menu-label">Replication</p>
               <ul>
                 {{#if cluster.anyReplicationEnabled}}
                   <li>
-                    {{#link-to
-                      "vault.cluster.replication.mode.index"
-                      "dr"
-                      disabled=(not currentToken)
-                      invokeAction=(action onLinkClick)
-                    }}
-                      {{replication-mode-summary
-                        mode="dr"
-                        display='menu'
-                        cluster=cluster
-                      }}
-                    {{/link-to}}
+                    <LinkTo @route="vault.cluster.replication.mode.index" @model="dr" @disabled={{not currentToken}} @invokeAction={{action onLinkClick}}>
+                      <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{cluster}} />
+                    </LinkTo>
                   </li>
                   <li>
                     {{#if (has-feature "Performance Replication")}}
-                      {{#link-to
-                        "vault.cluster.replication.mode.index"
-                        "performance"
-                        disabled=(not currentToken)
-                        invokeAction=(action onLinkClick)
-                      }}
-                        {{replication-mode-summary
-                          mode="performance"
-                          display="menu"
-                          cluster=cluster
-                          tagName="span"
-                        }}
-                      {{/link-to}}
+                      <LinkTo @route="vault.cluster.replication.mode.index" @model="performance" @disabled={{not currentToken}} @invokeAction={{action onLinkClick}}>
+                        <ReplicationModeSummary @mode="performance" @display="menu" @cluster={{cluster}} @tagName="span" />
+                      </LinkTo>
                     {{else}}
-                      {{replication-mode-summary
-                        mode="performance"
-                        display="menu"
-                        cluster=cluster
-                        class="menu-item"
-                      }}
+                      <ReplicationModeSummary @mode="performance" @display="menu" @cluster={{cluster}} @class="menu-item" />
                     {{/if}}
                   </li>
                 {{else}}
                   <li>
-                    {{#link-to "vault.cluster.replication"
-                      invokeAction=(action onLinkClick)
-                    }}
+                    <LinkTo @route="vault.cluster.replication" @invokeAction={{action onLinkClick}}>
                       <div class="level is-mobile">
                         <span class="level-left">Enable</span>
                         <Icon @glyph="plus-circle-outline" @class="has-text-grey-light level-right" />
                       </div>
-                    {{/link-to}}
+                    </LinkTo>
                   </li>
                 {{/if}}
               </ul>
             </nav>
             <hr/>
           {{/if}}
-        {{/if}}
+        {{else}}
+          {{#if (has-permission 'status' routeParams='replication')}}
+            <nav class="menu">
+              <p class="menu-label">Replication</p>
+              <ul>
+                {{#if cluster.anyReplicationEnabled}}
+                  <li>
+                    <LinkTo @route="vault.cluster.replication-dr-promote.details" @disabled={{not currentToken}} @invokeAction={{action onLinkClick}}>
+                      <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{cluster}} />
+                    </LinkTo>
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+            <hr/>
+          {{/if}}
+        {{/unless}}
       {{/if}}
     {{/unless}}
       <nav class="menu">
@@ -73,14 +63,12 @@
           <li class="action">
             {{#if activeCluster.unsealed}}
               {{#if (and (has-permission 'status' routeParams='seal') (not cluster.dr.isSecondary))}}
-                {{#link-to 'vault.cluster.settings.seal' cluster.name
-                  invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
-                }}
+                <LinkTo @route="vault.cluster.settings.seal" @model={{cluster.name}} @invokeAction={{action (queue (action onLinkClick) (action d.actions.close))}}>
                   <div class="level is-mobile">
                     <span class="level-left">Unsealed</span>
                     <Icon @glyph="check-circle-outline" class="has-text-success level-right" />
                   </div>
-                {{/link-to}}
+                </LinkTo>
               {{else}}
                 <span class="menu-item">
                   <div class="level is-mobile">
@@ -108,37 +96,35 @@
           <ul class="menu-list">
             {{#if (and version.features (has-permission 'status' routeParams='license') (not cluster.dr.isSecondary))}}
               <li class="action">
-                {{#link-to "vault.cluster.license" activeCluster.name invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))}}
+                <LinkTo @route="vault.cluster.license" @model={{activeCluster.name}} @invokeAction={{action (queue (action onLinkClick) (action d.actions.close))}}>
                   <div class="level is-mobile">
                     <span class="level-left">License</span>
                     <Chevron class="has-text-grey-light level-right" />
                   </div>
-                {{/link-to}}
+                </LinkTo>
               </li>
             {{/if}}
             {{#if (and cluster.usingRaft (has-permission 'status' routeParams='raft'))}}
               <li class="action">
-                {{#link-to "vault.cluster.storage" activeCluster.name invokeAction=onLinkClick}}
+                <LinkTo @route="vault.cluster.storage" @model={{activeCluster.name}} @invokeAction={{onLinkClick}}>
                   <div class="level is-mobile">
                     <span class="level-left">Raft Storage</span>
                     <Chevron class="has-text-grey-light level-right" />
                   </div>
-                {{/link-to}}
+                </LinkTo>
               </li>
             {{/if}}
           </ul>
         {{/if}}
-        {{#if ( and (has-permission 'metrics' routeParams='dashboard') (not cluster.dr.isSecondary) auth.currentToken)}}
+        {{#if ( and (has-permission 'metrics' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
-              {{#link-to 'vault.cluster.metrics' 
-                invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
-              }}
+              <LinkTo @route="vault.cluster.metrics" @invokeAction={{action (queue (action onLinkClick) (action d.actions.close))}}>
                 <div class="level is-mobile">
                   <span class="level-left">Metrics</span>
                   <Chevron class="has-text-grey-light level-right" />
                 </div>
-              {{/link-to}}
+              </LinkTo>
             </li>
           </ul>
         {{/if}}

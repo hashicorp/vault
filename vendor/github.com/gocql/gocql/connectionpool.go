@@ -94,6 +94,7 @@ func connConfig(cfg *ClusterConfig) (*ConnConfig, error) {
 		CQLVersion:      cfg.CQLVersion,
 		Timeout:         cfg.Timeout,
 		ConnectTimeout:  cfg.ConnectTimeout,
+		Dialer:          cfg.Dialer,
 		Compressor:      cfg.Compressor,
 		Authenticator:   cfg.Authenticator,
 		AuthProvider:    cfg.AuthProvider,
@@ -506,7 +507,7 @@ func (pool *hostConnPool) connect() (err error) {
 	var conn *Conn
 	reconnectionPolicy := pool.session.cfg.ReconnectionPolicy
 	for i := 0; i < reconnectionPolicy.GetMaxRetries(); i++ {
-		conn, err = pool.session.connect(pool.host, pool)
+		conn, err = pool.session.connect(pool.session.ctx, pool.host, pool)
 		if err == nil {
 			break
 		}

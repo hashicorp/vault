@@ -33,3 +33,6 @@ flags](/docs/commands) included on all commands.
 
 - `-mounts` `(array: [])` - Array or comma-separated string mount paths of the
   plugin backends to reload.
+
+- `-scope` `(string: "")` - The scope of the reload. For local reloads, omit this flag.
+  For reloads that span multiple Vault clusters, use `global`.

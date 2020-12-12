@@ -13,7 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/ory/dockertest"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -30,20 +32,20 @@ func TestInit_clientTLS(t *testing.T) {
 	defer os.RemoveAll(confDir)
 
 	// Create certificates for Mongo authentication
-	caCert := newCert(t,
-		commonName("test certificate authority"),
-		isCA(true),
-		selfSign(),
+	caCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("test certificate authority"),
+		certhelpers.IsCA(true),
+		certhelpers.SelfSign(),
 	)
-	serverCert := newCert(t,
-		commonName("server"),
-		dns("localhost"),
-		parent(caCert),
+	serverCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("server"),
+		certhelpers.DNS("localhost"),
+		certhelpers.Parent(caCert),
 	)
-	clientCert := newCert(t,
-		commonName("client"),
-		dns("client"),
-		parent(caCert),
+	clientCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("client"),
+		certhelpers.DNS("client"),
+		certhelpers.Parent(caCert),
 	)
 
 	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
@@ -77,17 +79,20 @@ net:
 	// Test
 	mongo := new()
 
-	conf := map[string]interface{}{
-		"connection_url":      retURL,
-		"allowed_roles":       "*",
-		"tls_certificate_key": clientCert.CombinedPEM(),
-		"tls_ca":              caCert.pem,
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url":      retURL,
+			"allowed_roles":       "*",
+			"tls_certificate_key": clientCert.CombinedPEM(),
+			"tls_ca":              caCert.Pem,
+		},
+		VerifyConnection: true,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := mongo.Init(ctx, conf, true)
+	_, err := mongo.Initialize(ctx, initReq)
 	if err != nil {
 		t.Fatalf("Unable to initialize mongo engine: %s", err)
 	}
@@ -111,7 +116,7 @@ net:
 		AuthInfo: authInfo{
 			AuthenticatedUsers: []user{
 				{
-					User: fmt.Sprintf("CN=%s", clientCert.template.Subject.CommonName),
+					User: fmt.Sprintf("CN=%s", clientCert.Template.Subject.CommonName),
 					DB:   "$external",
 				},
 			},
@@ -249,11 +254,11 @@ func connect(t *testing.T, uri string) (client *mongo.Client) {
 	return client
 }
 
-func setUpX509User(t *testing.T, client *mongo.Client, cert certificate) {
+func setUpX509User(t *testing.T, client *mongo.Client, cert certhelpers.Certificate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username := fmt.Sprintf("CN=%s", cert.template.Subject.CommonName)
+	username := fmt.Sprintf("CN=%s", cert.Template.Subject.CommonName)
 
 	cmd := &createUserCommand{
 		Username: username,
@@ -301,3 +306,15 @@ type roles []role
 func (r roles) Len() int           { return len(r) }
 func (r roles) Less(i, j int) bool { return r[i].Role < r[j].Role }
 func (r roles) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+
+// ////////////////////////////////////////////////////////////////////////////
+// Writing to file
+// ////////////////////////////////////////////////////////////////////////////
+func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
+	t.Helper()
+
+	err := ioutil.WriteFile(filename, data, perms)
+	if err != nil {
+		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
+	}
+}

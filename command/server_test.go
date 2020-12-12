@@ -1,4 +1,4 @@
-// +build !race !hsm
+// +build !race,!hsm
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -230,7 +230,7 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_header_timeout_config",
 			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
-			"unknown unit km in duration 12km",
+			"unknown unit \"km\" in duration \"12km\"",
 			1,
 			"-test-server-config",
 		},
@@ -244,14 +244,14 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_write_timeout_config",
 			testBaseHCL(t, badListenerWriteTimeout) + inmemHCL,
-			"unknown unit lbs in duration 56lbs",
+			"unknown unit \"lbs\" in duration \"56lbs\"",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_idle_timeout_config",
 			testBaseHCL(t, badListenerIdleTimeout) + inmemHCL,
-			"unknown unit gophers in duration 78gophers",
+			"unknown unit \"gophers\" in duration \"78gophers\"",
 			1,
 			"-test-server-config",
 		},

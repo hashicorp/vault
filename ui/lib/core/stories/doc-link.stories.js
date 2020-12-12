@@ -2,7 +2,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './doc-link.md';
 
-storiesOf('DocLink/', module)
+storiesOf('DocLink', module)
   .addParameters({ options: { showPanel: true } })
   .add(
     `DocLink`,

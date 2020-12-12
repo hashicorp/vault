@@ -572,6 +572,9 @@ func convertType(t FieldType) schemaType {
 	case TypeCommaIntSlice:
 		ret.baseType = "array"
 		ret.items = "integer"
+	case TypeTime:
+		ret.baseType = "string"
+		ret.format = "date-time"
 	default:
 		log.L().Warn("error parsing field type", "type", t)
 		ret.format = "unknown"

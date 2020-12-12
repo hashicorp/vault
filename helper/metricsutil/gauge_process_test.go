@@ -366,12 +366,10 @@ func TestGauge_InterruptedStreaming(t *testing.T) {
 		1000000*time.Hour,
 		2000000*time.Hour)
 
-	sink := &ClusterMetricSink{
-		ClusterName:         "test",
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       2 * time.Hour,
-		Sink:                inmemSink,
-	}
+	sink := NewClusterMetricSink("test", inmemSink)
+	sink.MaxGaugeCardinality = 500
+	sink.GaugeInterval = 2 * time.Hour
+
 	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
@@ -435,12 +433,9 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 		1000000*time.Hour,
 		2000000*time.Hour)
 
-	sink := &ClusterMetricSink{
-		ClusterName:         "test",
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       2 * time.Hour,
-		Sink:                inmemSink,
-	}
+	sink := NewClusterMetricSink("test", inmemSink)
+	sink.MaxGaugeCardinality = 500
+	sink.GaugeInterval = 2 * time.Hour
 
 	// Create a report larger than the default limit
 	excessGauges := 100
@@ -509,12 +504,10 @@ func TestGauge_MeasurementError(t *testing.T) {
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
-	sink := &ClusterMetricSink{
-		ClusterName:         "test",
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       2 * time.Hour,
-		Sink:                inmemSink,
-	}
+	sink := NewClusterMetricSink("test", inmemSink)
+	sink.MaxGaugeCardinality = 500
+	sink.GaugeInterval = 2 * time.Hour
+
 	// Create a small report so we don't have to deal with batching.
 	numGauges := 10
 	values := make([]GaugeLabelValues, numGauges)

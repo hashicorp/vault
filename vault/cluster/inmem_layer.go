@@ -30,6 +30,7 @@ type InmemLayer struct {
 	stopCh  chan struct{}
 
 	connectionCh chan *ConnectionInfo
+	readerDelay  time.Duration
 }
 
 // NewInmemLayer returns a new in-memory layer configured to listen on the
@@ -50,6 +51,26 @@ func (l *InmemLayer) SetConnectionCh(ch chan *ConnectionInfo) {
 	l.l.Lock()
 	l.connectionCh = ch
 	l.l.Unlock()
+}
+
+func (l *InmemLayer) SetReaderDelay(delay time.Duration) {
+	l.l.Lock()
+	defer l.l.Unlock()
+
+	l.readerDelay = delay
+
+	// Update the existing server and client connections
+	for _, servConns := range l.servConns {
+		for _, c := range servConns {
+			c.(*delayedConn).SetDelay(delay)
+		}
+	}
+
+	for _, clientConns := range l.clientConns {
+		for _, c := range clientConns {
+			c.(*delayedConn).SetDelay(delay)
+		}
+	}
 }
 
 // Addrs implements NetworkLayer.
@@ -127,7 +148,7 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 
 	tlsConn := tls.Client(conn, tlsConfig)
 
-	l.clientConns[addr] = append(l.clientConns[addr], tlsConn)
+	l.clientConns[addr] = append(l.clientConns[addr], conn)
 
 	return tlsConn, nil
 }
@@ -148,6 +169,9 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 	}
 
 	retConn, servConn := net.Pipe()
+
+	retConn = newDelayedConn(retConn, l.readerDelay)
+	servConn = newDelayedConn(servConn, l.readerDelay)
 
 	l.servConns[addr] = append(l.servConns[addr], servConn)
 
@@ -369,6 +393,12 @@ func (ic *InmemLayerCluster) Layers() []NetworkLayer {
 func (ic *InmemLayerCluster) SetConnectionCh(ch chan *ConnectionInfo) {
 	for _, node := range ic.layers {
 		node.SetConnectionCh(ch)
+	}
+}
+
+func (ic *InmemLayerCluster) SetReaderDelay(delay time.Duration) {
+	for _, node := range ic.layers {
+		node.SetReaderDelay(delay)
 	}
 }
 

@@ -103,6 +103,7 @@ func (p *Policy) ChangedBindings(toAdd *PolicyDelta, toRemove *PolicyDelta) (cha
 		return true, &Policy{
 			Bindings: newBindings,
 			Etag:     p.Etag,
+			Version:  p.Version,
 		}
 	}
 	return false, p

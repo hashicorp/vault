@@ -203,11 +203,14 @@ func (b *kubeAuthBackend) parseAndValidateJWT(jwtStr string, role *roleStorageEn
 		},
 	}
 
-	// set the expected issuer to the default kubernetes issuer if the config doesn't specify it
-	if config.Issuer != "" {
-		validator.SetIssuer(config.Issuer)
-	} else {
-		validator.SetIssuer(defaultJWTIssuer)
+	// perform ISS Claim validation if configured
+	if !config.DisableISSValidation {
+		// set the expected issuer to the default kubernetes issuer if the config doesn't specify it
+		if config.Issuer != "" {
+			validator.SetIssuer(config.Issuer)
+		} else {
+			validator.SetIssuer(defaultJWTIssuer)
+		}
 	}
 
 	// validate the audience if the role expects it

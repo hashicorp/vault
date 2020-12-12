@@ -28,10 +28,10 @@ var (
 
 func (n *Namespace) HasParent(possibleParent *Namespace) bool {
 	switch {
-	case n.Path == "":
-		return false
 	case possibleParent.Path == "":
 		return true
+	case n.Path == "":
+		return false
 	default:
 		return strings.HasPrefix(n.Path, possibleParent.Path)
 	}

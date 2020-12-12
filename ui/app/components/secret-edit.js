@@ -2,7 +2,7 @@ import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
-import { alias, or } from '@ember/object/computed';
+import { alias, or, not } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
@@ -35,7 +35,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   wrappedData: null,
   isWrapping: false,
-  showWrapButton: computed.not('wrappedData'),
+  showWrapButton: not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -154,9 +154,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretData.isAdvanced();
   }),
 
-  showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
-    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
-  }),
+  showAdvancedMode: or('secretDataIsAdvanced', 'preferAdvancedEdit'),
 
   isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
     if (!this.model) return;
@@ -262,7 +260,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             this.flashMessages.success('Secret Successfully Wrapped!');
           })
           .catch(() => {
-            this.flashMessages.error('Could Not Wrap Secret');
+            this.flashMessages.danger('Could Not Wrap Secret');
           })
           .finally(() => {
             this.set('isWrapping', false);
@@ -276,7 +274,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             this.flashMessages.success('Secret Successfully Wrapped!');
           })
           .catch(() => {
-            this.flashMessages.error('Could Not Wrap Secret');
+            this.flashMessages.danger('Could Not Wrap Secret');
           })
           .finally(() => {
             this.set('isWrapping', false);
@@ -294,16 +292,23 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     },
 
     handleCopyError() {
-      this.flashMessages.error('Could Not Copy Wrapped Data');
+      this.flashMessages.danger('Could Not Copy Wrapped Data');
       this.send('clearWrappedData');
     },
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
+      const MAXIMUM_VERSIONS = 9999999999999999;
       let model = this.modelForData;
+      let secret = this.model;
       // prevent from submitting if there's no key
-      // maybe do something fancier later
       if (type === 'create' && isBlank(model.path || model.id)) {
+        this.flashMessages.danger('Please provide a path for the secret');
+        return;
+      }
+      const maxVersions = secret.get('maxVersions');
+      if (MAXIMUM_VERSIONS < maxVersions) {
+        this.flashMessages.danger('Max versions is too large');
         return;
       }
 

@@ -30,7 +30,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/encoding/prototext"
-	"google.golang.org/protobuf/internal/fieldnum"
+	"google.golang.org/protobuf/internal/genid"
 	"google.golang.org/protobuf/internal/strs"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -625,9 +625,9 @@ type Enum struct {
 func newEnum(gen *Plugin, f *File, parent *Message, desc protoreflect.EnumDescriptor) *Enum {
 	var loc Location
 	if parent != nil {
-		loc = parent.Location.appendPath(fieldnum.DescriptorProto_EnumType, int32(desc.Index()))
+		loc = parent.Location.appendPath(int32(genid.DescriptorProto_EnumType_field_number), int32(desc.Index()))
 	} else {
-		loc = f.location(fieldnum.FileDescriptorProto_EnumType, int32(desc.Index()))
+		loc = f.location(int32(genid.FileDescriptorProto_EnumType_field_number), int32(desc.Index()))
 	}
 	enum := &Enum{
 		Desc:     desc,
@@ -664,7 +664,7 @@ func newEnumValue(gen *Plugin, f *File, message *Message, enum *Enum, desc proto
 		parentIdent = message.GoIdent
 	}
 	name := parentIdent.GoName + "_" + string(desc.Name())
-	loc := enum.Location.appendPath(fieldnum.EnumDescriptorProto_Value, int32(desc.Index()))
+	loc := enum.Location.appendPath(int32(genid.EnumDescriptorProto_Value_field_number), int32(desc.Index()))
 	return &EnumValue{
 		Desc:     desc,
 		GoIdent:  f.GoImportPath.Ident(name),
@@ -694,9 +694,9 @@ type Message struct {
 func newMessage(gen *Plugin, f *File, parent *Message, desc protoreflect.MessageDescriptor) *Message {
 	var loc Location
 	if parent != nil {
-		loc = parent.Location.appendPath(fieldnum.DescriptorProto_NestedType, int32(desc.Index()))
+		loc = parent.Location.appendPath(int32(genid.DescriptorProto_NestedType_field_number), int32(desc.Index()))
 	} else {
-		loc = f.location(fieldnum.FileDescriptorProto_MessageType, int32(desc.Index()))
+		loc = f.location(int32(genid.FileDescriptorProto_MessageType_field_number), int32(desc.Index()))
 	}
 	message := &Message{
 		Desc:     desc,
@@ -852,11 +852,11 @@ func newField(gen *Plugin, f *File, message *Message, desc protoreflect.FieldDes
 	var loc Location
 	switch {
 	case desc.IsExtension() && message == nil:
-		loc = f.location(fieldnum.FileDescriptorProto_Extension, int32(desc.Index()))
+		loc = f.location(int32(genid.FileDescriptorProto_Extension_field_number), int32(desc.Index()))
 	case desc.IsExtension() && message != nil:
-		loc = message.Location.appendPath(fieldnum.DescriptorProto_Extension, int32(desc.Index()))
+		loc = message.Location.appendPath(int32(genid.DescriptorProto_Extension_field_number), int32(desc.Index()))
 	default:
-		loc = message.Location.appendPath(fieldnum.DescriptorProto_Field, int32(desc.Index()))
+		loc = message.Location.appendPath(int32(genid.DescriptorProto_Field_field_number), int32(desc.Index()))
 	}
 	camelCased := strs.GoCamelCase(string(desc.Name()))
 	var parentPrefix string
@@ -927,7 +927,7 @@ type Oneof struct {
 }
 
 func newOneof(gen *Plugin, f *File, message *Message, desc protoreflect.OneofDescriptor) *Oneof {
-	loc := message.Location.appendPath(fieldnum.DescriptorProto_OneofDecl, int32(desc.Index()))
+	loc := message.Location.appendPath(int32(genid.DescriptorProto_OneofDecl_field_number), int32(desc.Index()))
 	camelCased := strs.GoCamelCase(string(desc.Name()))
 	parentPrefix := message.GoIdent.GoName + "_"
 	return &Oneof{
@@ -959,7 +959,7 @@ type Service struct {
 }
 
 func newService(gen *Plugin, f *File, desc protoreflect.ServiceDescriptor) *Service {
-	loc := f.location(fieldnum.FileDescriptorProto_Service, int32(desc.Index()))
+	loc := f.location(int32(genid.FileDescriptorProto_Service_field_number), int32(desc.Index()))
 	service := &Service{
 		Desc:     desc,
 		GoName:   strs.GoCamelCase(string(desc.Name())),
@@ -988,7 +988,7 @@ type Method struct {
 }
 
 func newMethod(gen *Plugin, f *File, service *Service, desc protoreflect.MethodDescriptor) *Method {
-	loc := service.Location.appendPath(fieldnum.ServiceDescriptorProto_Method, int32(desc.Index()))
+	loc := service.Location.appendPath(int32(genid.ServiceDescriptorProto_Method_field_number), int32(desc.Index()))
 	method := &Method{
 		Desc:     desc,
 		GoName:   strs.GoCamelCase(string(desc.Name())),

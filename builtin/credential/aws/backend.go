@@ -17,6 +17,17 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
+const amzHeaderPrefix = "X-Amz-"
+
+var defaultAllowedSTSRequestHeaders = []string{
+	"X-Amz-Algorithm",
+	"X-Amz-Content-Sha256",
+	"X-Amz-Credential",
+	"X-Amz-Date",
+	"X-Amz-Security-Token",
+	"X-Amz-Signature",
+	"X-Amz-SignedHeaders"}
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {
@@ -131,6 +142,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 			b.pathConfigClient(),
 			b.pathConfigCertificate(),
 			b.pathConfigIdentity(),
+			b.pathConfigRotateRoot(),
 			b.pathConfigSts(),
 			b.pathListSts(),
 			b.pathConfigTidyRoletagBlacklist(),
@@ -308,10 +320,19 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 
 	for _, p := range partitions {
 		// For most partitions, it's fine to choose a single region randomly.
-		// However, for the "aws" partition, it's best to choose "us-east-1"
-		// because it is always enabled (and enabled for STS) by default.
+		// However, there are a few exceptions:
+		//
+		//   For "aws", choose "us-east-1" because it is always enabled (and
+		//   enabled for STS) by default.
+		//
+		//   For "aws-us-gov", choose "us-gov-west-1" because it is the only
+		//   valid region for IAM operations.
+		//   ref: https://github.com/aws/aws-sdk-go/blob/v1.34.25/aws/endpoints/defaults.go#L8176-L8194
 		for _, r := range p.Regions() {
 			if p.ID() == "aws" && r.ID() != "us-east-1" {
+				continue
+			}
+			if p.ID() == "aws-us-gov" && r.ID() != "us-gov-west-1" {
 				continue
 			}
 			partitionToRegion[p.ID()] = &r

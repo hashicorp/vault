@@ -13,18 +13,28 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/okta/okta-sdk-golang/v2/okta"
+	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/stretchr/testify/require"
 )
 
 // To run this test, set the following env variables:
 // VAULT_ACC=1
 // OKTA_ORG=dev-219337
-// OKTA_API_TOKEN=<find in 1password>
-// OKTA_USERNAME=test2@example.com
+// OKTA_API_TOKEN=<generate via web UI, see Confluence for login details>
+// OKTA_USERNAME=test3@example.com
 // OKTA_PASSWORD=<find in 1password>
 //
 // You will need to install the Okta client app on your mobile device and
-// setup MFA.
+// setup MFA in order to use the Okta web UI.  This test does not exercise
+// MFA however (which is an enterprise feature), and therefore the test
+// user in OKTA_USERNAME should not be configured with it.  Currently
+// test3@example.com is not a member of testgroup, which is the group with
+// the profile that requires MFA.
 func TestBackend_Config(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.SkipNow()
+	}
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(context.Background(), &logical.BackendConfig{
@@ -41,6 +51,8 @@ func TestBackend_Config(t *testing.T) {
 	username := os.Getenv("OKTA_USERNAME")
 	password := os.Getenv("OKTA_PASSWORD")
 	token := os.Getenv("OKTA_API_TOKEN")
+	groupIDs := createOktaGroups(t, username, token, os.Getenv("OKTA_ORG"))
+	defer deleteOktaGroups(t, token, os.Getenv("OKTA_ORG"), groupIDs)
 
 	configData := map[string]interface{}{
 		"org_name": os.Getenv("OKTA_ORG"),
@@ -86,6 +98,62 @@ func TestBackend_Config(t *testing.T) {
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy", "user_policy"}),
 		},
 	})
+}
+
+func createOktaGroups(t *testing.T, username string, token string, org string) []string {
+	orgURL := "https://" + org + "." + previewBaseURL
+	ctx, client, err := okta.NewClient(context.Background(), okta.WithOrgUrl(orgURL), okta.WithToken(token))
+	require.Nil(t, err)
+
+	users, _, err := client.User.ListUsers(ctx, &query.Params{
+		Q: username,
+	})
+	require.Nil(t, err)
+	require.Len(t, users, 1)
+	userID := users[0].Id
+	var groupIDs []string
+
+	// Verify that login's call to list the groups of the user logging in will page
+	// through multiple result sets; note here
+	// https://developer.okta.com/docs/reference/api/groups/#list-groups-with-defaults
+	// that "If you don't specify a value for limit and don't specify a query,
+	// only 200 results are returned for most orgs."
+	for i := 0; i < 201; i++ {
+		name := fmt.Sprintf("TestGroup%d", i)
+		groups, _, err := client.Group.ListGroups(ctx, &query.Params{
+			Q: name,
+		})
+		require.Nil(t, err)
+
+		var groupID string
+		if len(groups) == 0 {
+			group, _, err := client.Group.CreateGroup(ctx, okta.Group{
+				Profile: &okta.GroupProfile{
+					Name: fmt.Sprintf("TestGroup%d", i),
+				},
+			})
+			require.Nil(t, err)
+			groupID = group.Id
+		} else {
+			groupID = groups[0].Id
+		}
+		groupIDs = append(groupIDs, groupID)
+
+		_, err = client.Group.AddUserToGroup(ctx, groupID, userID)
+		require.Nil(t, err)
+	}
+	return groupIDs
+}
+
+func deleteOktaGroups(t *testing.T, token string, org string, groupIDs []string) {
+	orgURL := "https://" + org + "." + previewBaseURL
+	ctx, client, err := okta.NewClient(context.Background(), okta.WithOrgUrl(orgURL), okta.WithToken(token))
+	require.Nil(t, err)
+
+	for _, groupID := range groupIDs {
+		_, err := client.Group.DeleteGroup(ctx, groupID)
+		require.Nil(t, err)
+	}
 }
 
 func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL time.Duration, policies []string) logicaltest.TestStep {

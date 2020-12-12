@@ -46,9 +46,9 @@ type Template struct {
 	// is indexed with a key that does not exist.
 	errMissingKey bool
 
-	// functionBlacklist are functions not permitted to be executed
+	// functionDenylist are functions not permitted to be executed
 	// when we render this template
-	functionBlacklist []string
+	functionDenylist []string
 
 	// sandboxPath adds a prefix to any path provided to the `file` function
 	// and causes an error if a relative path tries to traverse outside that
@@ -72,9 +72,9 @@ type NewTemplateInput struct {
 	LeftDelim  string
 	RightDelim string
 
-	// FunctionBlacklist are functions not permitted to be executed
+	// FunctionDenylist are functions not permitted to be executed
 	// when we render this template
-	FunctionBlacklist []string
+	FunctionDenylist []string
 
 	// SandboxPath adds a prefix to any path provided to the `file` function
 	// and causes an error if a relative path tries to traverse outside that
@@ -104,7 +104,7 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 	t.leftDelim = i.LeftDelim
 	t.rightDelim = i.RightDelim
 	t.errMissingKey = i.ErrMissingKey
-	t.functionBlacklist = i.FunctionBlacklist
+	t.functionDenylist = i.FunctionDenylist
 	t.sandboxPath = i.SandboxPath
 
 	if i.Source != "" {
@@ -175,13 +175,13 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 	tmpl.Delims(t.leftDelim, t.rightDelim)
 
 	tmpl.Funcs(funcMap(&funcMapInput{
-		t:                 tmpl,
-		brain:             i.Brain,
-		env:               i.Env,
-		used:              &used,
-		missing:           &missing,
-		functionBlacklist: t.functionBlacklist,
-		sandboxPath:       t.sandboxPath,
+		t:                tmpl,
+		brain:            i.Brain,
+		env:              i.Env,
+		used:             &used,
+		missing:          &missing,
+		functionDenylist: t.functionDenylist,
+		sandboxPath:      t.sandboxPath,
 	}))
 
 	if t.errMissingKey {
@@ -210,13 +210,13 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 
 // funcMapInput is input to the funcMap, which builds the template functions.
 type funcMapInput struct {
-	t                 *template.Template
-	brain             *Brain
-	env               []string
-	functionBlacklist []string
-	sandboxPath       string
-	used              *dep.Set
-	missing           *dep.Set
+	t                *template.Template
+	brain            *Brain
+	env              []string
+	functionDenylist []string
+	sandboxPath      string
+	used             *dep.Set
+	missing          *dep.Set
 }
 
 // funcMap is the map of template functions to their respective functions.
@@ -300,9 +300,9 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"maximum":  maximum,
 	}
 
-	for _, bf := range i.functionBlacklist {
+	for _, bf := range i.functionDenylist {
 		if _, ok := r[bf]; ok {
-			r[bf] = blacklisted
+			r[bf] = denied
 		}
 	}
 

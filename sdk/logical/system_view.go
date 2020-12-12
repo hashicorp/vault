@@ -86,6 +86,8 @@ type ExtendedSystemView interface {
 	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 }
 
+type PasswordGenerator func() (password string, err error)
+
 type StaticSystemView struct {
 	DefaultLeaseTTLVal  time.Duration
 	MaxLeaseTTLVal      time.Duration
@@ -101,7 +103,7 @@ type StaticSystemView struct {
 	Features            license.Features
 	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
-	PasswordPolicies    map[string]PasswordPolicy
+	PasswordPolicies    map[string]PasswordGenerator
 }
 
 type noopAuditor struct{}
@@ -192,5 +194,18 @@ func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policy
 	if !exists {
 		return "", fmt.Errorf("password policy not found")
 	}
-	return policy.Generate(ctx, nil)
+	return policy()
+}
+
+func (d *StaticSystemView) SetPasswordPolicy(name string, generator PasswordGenerator) {
+	if d.PasswordPolicies == nil {
+		d.PasswordPolicies = map[string]PasswordGenerator{}
+	}
+	d.PasswordPolicies[name] = generator
+}
+
+func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
+	_, existed = d.PasswordPolicies[name]
+	delete(d.PasswordPolicies, name)
+	return existed
 }

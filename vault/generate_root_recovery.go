@@ -21,7 +21,7 @@ type generateRecoveryToken struct {
 }
 
 func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	key, err := c.unsealKeyToRootKey(ctx, combinedKey)
+	key, err := c.unsealKeyToRootKeyPostUnseal(ctx, combinedKey)
 	if err != nil {
 		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
 	}

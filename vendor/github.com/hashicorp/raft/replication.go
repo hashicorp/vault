@@ -326,6 +326,9 @@ func (r *Raft) sendLatestSnapshot(s *followerReplication) (bool, error) {
 		s.failures++
 		return false, err
 	}
+	labels := []metrics.Label{{Name: "peer_id", Value: string(s.peer.ID)}}
+	metrics.MeasureSinceWithLabels([]string{"raft", "replication", "installSnapshot"}, start, labels)
+	// Duplicated information. Kept for backward compatibility.
 	metrics.MeasureSince([]string{"raft", "replication", "installSnapshot", string(s.peer.ID)}, start)
 
 	// Check for a newer term, stop running
@@ -386,6 +389,9 @@ func (r *Raft) heartbeat(s *followerReplication, stopCh chan struct{}) {
 		} else {
 			s.setLastContact()
 			failures = 0
+			labels := []metrics.Label{{Name: "peer_id", Value: string(s.peer.ID)}}
+			metrics.MeasureSinceWithLabels([]string{"raft", "replication", "heartbeat"}, start, labels)
+			// Duplicated information. Kept for backward compatibility.
 			metrics.MeasureSince([]string{"raft", "replication", "heartbeat", string(s.peer.ID)}, start)
 			s.notifyAll(resp.Success)
 		}
@@ -572,6 +578,10 @@ func (r *Raft) setNewLogs(req *AppendEntriesRequest, nextIndex, lastIndex uint64
 
 // appendStats is used to emit stats about an AppendEntries invocation.
 func appendStats(peer string, start time.Time, logs float32) {
+	labels := []metrics.Label{{Name: "peer_id", Value: peer}}
+	metrics.MeasureSinceWithLabels([]string{"raft", "replication", "appendEntries", "rpc"}, start, labels)
+	metrics.IncrCounterWithLabels([]string{"raft", "replication", "appendEntries", "logs"}, logs, labels)
+	// Duplicated information. Kept for backward compatibility.
 	metrics.MeasureSince([]string{"raft", "replication", "appendEntries", "rpc", peer}, start)
 	metrics.IncrCounter([]string{"raft", "replication", "appendEntries", "logs", peer}, logs)
 }

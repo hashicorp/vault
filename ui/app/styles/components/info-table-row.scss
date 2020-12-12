@@ -17,6 +17,8 @@
   }
 
   .column {
+    align-self: center;
+
     &.info-table-row-edit {
       padding-bottom: 0.3rem;
       padding-top: 0.3rem;
@@ -24,6 +26,10 @@
 
     textarea {
       min-height: 35px;
+    }
+
+    .helper-text {
+      font-weight: normal;
     }
   }
 
@@ -35,6 +41,10 @@
   }
   .icon-false {
     color: $ui-gray-300;
+  }
+
+  a {
+    text-decoration: none;
   }
 }
 

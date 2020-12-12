@@ -67,11 +67,6 @@ type Database interface {
 	// Close attempts to close the underlying database connection that was
 	// established by the backend.
 	Close() error
-
-	// DEPRECATED: Will be removed in a future plugin version bump.
-	// Initialize is a backwards-compatible implementation that simply calls
-	// Init, dropping the saveConfig, and returning the err.
-	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database

@@ -36,7 +36,7 @@ func CallSyscall(mib []int32) ([]byte, uint64, error) {
 	// get required buffer size
 	length := uint64(0)
 	_, _, err := unix.Syscall6(
-		unix.SYS___SYSCTL,
+		202, // unix.SYS___SYSCTL https://github.com/golang/sys/blob/76b94024e4b621e672466e8db3d7f084e7ddcad2/unix/zsysnum_darwin_amd64.go#L146
 		uintptr(unsafe.Pointer(&mib[0])),
 		uintptr(miblen),
 		0,
@@ -54,7 +54,7 @@ func CallSyscall(mib []int32) ([]byte, uint64, error) {
 	// get proc info itself
 	buf := make([]byte, length)
 	_, _, err = unix.Syscall6(
-		unix.SYS___SYSCTL,
+		202, // unix.SYS___SYSCTL https://github.com/golang/sys/blob/76b94024e4b621e672466e8db3d7f084e7ddcad2/unix/zsysnum_darwin_amd64.go#L146
 		uintptr(unsafe.Pointer(&mib[0])),
 		uintptr(miblen),
 		uintptr(unsafe.Pointer(&buf[0])),

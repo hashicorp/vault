@@ -7,11 +7,11 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 const (
@@ -138,6 +138,10 @@ type Raft struct {
 	// Tracks the latest configuration and latest committed configuration from
 	// the log/snapshot.
 	configurations configurations
+
+	// Holds a copy of the latest configuration which can be read
+	// independently from main loop.
+	latestConfiguration atomic.Value
 
 	// RPC chan comes from the transport layer
 	rpcCh <-chan RPC
@@ -288,37 +292,36 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	// expect data to be there and it's not. By refusing, we force them
 	// to show intent to start a cluster fresh by explicitly doing a
 	// bootstrap, rather than quietly fire up a fresh cluster here.
-	hasState, err := HasExistingState(logs, stable, snaps)
-	if err != nil {
+	if hasState, err := HasExistingState(logs, stable, snaps); err != nil {
 		return fmt.Errorf("failed to check for existing state: %v", err)
-	}
-	if !hasState {
+	} else if !hasState {
 		return fmt.Errorf("refused to recover cluster with no initial state, this is probably an operator error")
 	}
 
 	// Attempt to restore any snapshots we find, newest to oldest.
-	var snapshotIndex uint64
-	var snapshotTerm uint64
-	snapshots, err := snaps.List()
+	var (
+		snapshotIndex  uint64
+		snapshotTerm   uint64
+		snapshots, err = snaps.List()
+	)
 	if err != nil {
 		return fmt.Errorf("failed to list snapshots: %v", err)
 	}
 	for _, snapshot := range snapshots {
-		if !conf.NoSnapshotRestoreOnStart {
-			_, source, err := snaps.Open(snapshot.ID)
-			if err != nil {
-				// Skip this one and try the next. We will detect if we
-				// couldn't open any snapshots.
-				continue
-			}
+		var source io.ReadCloser
+		_, source, err = snaps.Open(snapshot.ID)
+		if err != nil {
+			// Skip this one and try the next. We will detect if we
+			// couldn't open any snapshots.
+			continue
+		}
 
-			err = fsm.Restore(source)
-			// Close the source after the restore has completed
-			source.Close()
-			if err != nil {
-				// Same here, skip and try the next one.
-				continue
-			}
+		err = fsm.Restore(source)
+		// Close the source after the restore has completed
+		source.Close()
+		if err != nil {
+			// Same here, skip and try the next one.
+			continue
 		}
 
 		snapshotIndex = snapshot.Index
@@ -341,7 +344,7 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	}
 	for index := snapshotIndex + 1; index <= lastLogIndex; index++ {
 		var entry Log
-		if err := logs.GetLog(index, &entry); err != nil {
+		if err = logs.GetLog(index, &entry); err != nil {
 			return fmt.Errorf("failed to get log at index %d: %v", index, err)
 		}
 		if entry.Type == LogCommand {
@@ -362,10 +365,10 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	if err != nil {
 		return fmt.Errorf("failed to create snapshot: %v", err)
 	}
-	if err := snapshot.Persist(sink); err != nil {
+	if err = snapshot.Persist(sink); err != nil {
 		return fmt.Errorf("failed to persist snapshot: %v", err)
 	}
-	if err := sink.Close(); err != nil {
+	if err = sink.Close(); err != nil {
 		return fmt.Errorf("failed to finalize snapshot: %v", err)
 	}
 
@@ -380,6 +383,23 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	}
 
 	return nil
+}
+
+// GetConfiguration returns the configuration of the Raft cluster without
+// starting a Raft instance or connecting to the cluster
+// This function has identical behavior to Raft.GetConfiguration
+func GetConfiguration(conf *Config, fsm FSM, logs LogStore, stable StableStore,
+	snaps SnapshotStore, trans Transport) (Configuration, error) {
+	conf.skipStartup = true
+	r, err := NewRaft(conf, fsm, logs, stable, snaps, trans)
+	if err != nil {
+		return Configuration{}, err
+	}
+	future := r.GetConfiguration()
+	if err = future.Error(); err != nil {
+		return Configuration{}, err
+	}
+	return future.Configuration(), nil
 }
 
 // HasExistingState returns true if the server has any existing state (logs,
@@ -483,7 +503,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		fsm:                   fsm,
 		fsmMutateCh:           make(chan interface{}, 128),
 		fsmSnapshotCh:         make(chan *reqSnapshotFuture),
-		leaderCh:              make(chan bool),
+		leaderCh:              make(chan bool, 1),
 		localID:               localID,
 		localAddr:             localAddr,
 		logger:                logger,
@@ -506,13 +526,6 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 
 	// Initialize as a follower.
 	r.setState(Follower)
-
-	// Start as leader if specified. This should only be used
-	// for testing purposes.
-	if conf.StartAsLeader {
-		r.setState(Leader)
-		r.setLeader(r.localAddr)
-	}
 
 	// Restore the current term and the last log.
 	r.setCurrentTerm(currentTerm)
@@ -542,6 +555,9 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 	// to be called concurrently with a blocking RPC.
 	trans.SetHeartbeatHandler(r.processHeartbeat)
 
+	if conf.skipStartup {
+		return r, nil
+	}
 	// Start the background work.
 	r.goFunc(r.run)
 	r.goFunc(r.runFSM)
@@ -585,18 +601,17 @@ func (r *Raft) restoreSnapshot() error {
 		r.setLastSnapshot(snapshot.Index, snapshot.Term)
 
 		// Update the configuration
+		var conf Configuration
+		var index uint64
 		if snapshot.Version > 0 {
-			r.configurations.committed = snapshot.Configuration
-			r.configurations.committedIndex = snapshot.ConfigurationIndex
-			r.configurations.latest = snapshot.Configuration
-			r.configurations.latestIndex = snapshot.ConfigurationIndex
+			conf = snapshot.Configuration
+			index = snapshot.ConfigurationIndex
 		} else {
-			configuration := decodePeers(snapshot.Peers, r.trans)
-			r.configurations.committed = configuration
-			r.configurations.committedIndex = snapshot.Index
-			r.configurations.latest = configuration
-			r.configurations.latestIndex = snapshot.Index
+			conf = decodePeers(snapshot.Peers, r.trans)
+			index = snapshot.Index
 		}
+		r.setCommittedConfiguration(conf, index)
+		r.setLatestConfiguration(conf, index)
 
 		// Success!
 		return nil
@@ -728,19 +743,14 @@ func (r *Raft) VerifyLeader() Future {
 	}
 }
 
-// GetConfiguration returns the latest configuration and its associated index
-// currently in use. This may not yet be committed. This must not be called on
-// the main thread (which can access the information directly).
+// GetConfiguration returns the latest configuration. This may not yet be
+// committed. The main loop can access this directly.
 func (r *Raft) GetConfiguration() ConfigurationFuture {
 	configReq := &configurationsFuture{}
 	configReq.init()
-	select {
-	case <-r.shutdownCh:
-		configReq.respond(ErrRaftShutdown)
-		return configReq
-	case r.configurationsCh <- configReq:
-		return configReq
-	}
+	configReq.configurations = configurations{latest: r.getLatestConfiguration()}
+	configReq.respond(nil)
+	return configReq
 }
 
 // AddPeer (deprecated) is used to add a new peer into the cluster. This must be
@@ -942,10 +952,17 @@ func (r *Raft) State() RaftState {
 	return r.getState()
 }
 
-// LeaderCh is used to get a channel which delivers signals on
-// acquiring or losing leadership. It sends true if we become
-// the leader, and false if we lose it. The channel is not buffered,
-// and does not block on writes.
+// LeaderCh is used to get a channel which delivers signals on acquiring or
+// losing leadership. It sends true if we become the leader, and false if we
+// lose it.
+//
+// Receivers can expect to receive a notification only if leadership
+// transition has occured.
+//
+// If receivers aren't ready for the signal, signals may drop and only the
+// latest leadership transition. For example, if a receiver receives subsequent
+// `true` values, they may deduce that leadership was lost and regained while
+// the the receiver was processing first leadership transition.
 func (r *Raft) LeaderCh() <-chan bool {
 	return r.leaderCh
 }

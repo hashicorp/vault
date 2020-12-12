@@ -17,14 +17,27 @@ using higher level constructs such as deployments, jobs or statefulsets.
 ## Before Using the Vault Agent Injector
 
 Before applying Vault Agent injection annotations to pods, the following requirements
-should be satisfied:
+should be satisfied.
 
-- the master Kubernetes nodes can receive traffic from worker nodes on port `8080`,
+### Connectivity
+
+- the Kubernetes API can connect to the Vault Agent injector service on port `443`, and
+  the injector can connect to the Kubernetes API,
+- Vault can connect to the Kubernetes API,
+- Pods in the Kubernetes cluster can connect to Vault.
+
+~> Note: The Kubernetes API typically runs on the master nodes, and the Vault Agent injector
+   on a worker node in a Kubernetes cluster. <br/><br/>
+   On Kubernetes clusters that have aggregator routing enabled (ex. [GKE private
+   clusters](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#add_firewall_rules)),
+   the Kubernetes API will connect directly to the injector service endpoint,
+   which is on port `8080`.
+
+### Kubernetes and Vault Configuration
 - Kubernetes auth method should be configured and enabled in Vault,
 - Pod should have a service account,
 - desired secrets exist within Vault,
 - the service account should be bound to a Vault role with a policy enabling access to desired secrets.
-
 
 For more information on configuring the Vault Kubernetes auth method,
 [see the official documentation](/docs/auth/kubernetes#configuration).

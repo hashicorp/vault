@@ -2,6 +2,7 @@ package raft
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -276,19 +277,14 @@ func (c *cluster) Close() {
 // or a timeout occurs. It is possible to set a filter to look for specific
 // observations. Setting timeout to 0 means that it will wait forever until a
 // non-filtered observation is made.
-func (c *cluster) WaitEventChan(filter FilterFn, timeout time.Duration) <-chan struct{} {
+func (c *cluster) WaitEventChan(ctx context.Context, filter FilterFn) <-chan struct{} {
 	ch := make(chan struct{})
 	go func() {
 		defer close(ch)
-		var timeoutCh <-chan time.Time
-		if timeout > 0 {
-			timeoutCh = time.After(timeout)
-		}
 		for {
 			select {
-			case <-timeoutCh:
+			case <-ctx.Done():
 				return
-
 			case o, ok := <-c.observationCh:
 				if !ok || filter == nil || filter(&o) {
 					return
@@ -304,11 +300,13 @@ func (c *cluster) WaitEventChan(filter FilterFn, timeout time.Duration) <-chan s
 // observations. Setting timeout to 0 means that it will wait forever until a
 // non-filtered observation is made or a test failure is signaled.
 func (c *cluster) WaitEvent(filter FilterFn, timeout time.Duration) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	eventCh := c.WaitEventChan(ctx, filter)
 	select {
 	case <-c.failedCh:
 		c.t.FailNow()
-
-	case <-c.WaitEventChan(filter, timeout):
+	case <-eventCh:
 	}
 }
 
@@ -319,7 +317,9 @@ func (c *cluster) WaitForReplication(fsmLength int) {
 
 CHECK:
 	for {
-		ch := c.WaitEventChan(nil, c.conf.CommitTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), c.conf.CommitTimeout)
+		defer cancel()
+		ch := c.WaitEventChan(ctx, nil)
 		select {
 		case <-c.failedCh:
 			c.t.FailNow()
@@ -415,6 +415,9 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
 			}
 		}
 
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		eventCh := c.WaitEventChan(ctx, filter)
 		select {
 		case <-c.failedCh:
 			c.t.FailNow()
@@ -422,7 +425,7 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
 		case <-limitCh:
 			c.FailNowf("timeout waiting for stable %s state", s)
 
-		case <-c.WaitEventChan(filter, 0):
+		case <-eventCh:
 			c.logger.Debug("resetting stability timeout")
 
 		case t, ok := <-timer.C:
@@ -805,5 +808,6 @@ func FileSnapTest(t *testing.T) (string, *FileSnapshotStore) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	snap.noSync = true
 	return dir, snap
 }

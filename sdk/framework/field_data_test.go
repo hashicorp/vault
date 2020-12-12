@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestFieldDataGet(t *testing.T) {
@@ -929,6 +930,40 @@ func TestFieldDataGet(t *testing.T) {
 			},
 			"foo",
 			0.0,
+			true,
+		},
+
+		"type time, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{},
+			"foo",
+			time.Time{},
+			false,
+		},
+		"type time, string value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{
+				"foo": "2021-12-11T09:08:07Z",
+			},
+			"foo",
+			// Comparison uses DeepEqual() so better match exactly,
+			// can't have a different location.
+			time.Date(2021, 12, 11, 9, 8, 7, 0, time.UTC),
+			false,
+		},
+		"type time, invalid value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{
+				"foo": "2021-13-11T09:08:07+02:00",
+			},
+			"foo",
+			time.Time{},
 			true,
 		},
 	}

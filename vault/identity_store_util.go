@@ -2131,3 +2131,62 @@ func (i *IdentityStore) countEntities() (int, error) {
 
 	return count, nil
 }
+
+// Sum up the number of entities belonging to each namespace (keyed by ID)
+func (i *IdentityStore) countEntitiesByNamespace(ctx context.Context) (map[string]int, error) {
+	txn := i.db.Txn(false)
+	iter, err := txn.Get(entitiesTable, "id")
+	if err != nil {
+		return nil, err
+	}
+
+	byNamespace := make(map[string]int)
+	val := iter.Next()
+	for val != nil {
+		// Check if runtime exceeded.
+		select {
+		case <-ctx.Done():
+			return byNamespace, errors.New("context cancelled")
+		default:
+			break
+		}
+
+		// Count in the namespace attached to the entity.
+		entity := val.(*identity.Entity)
+		byNamespace[entity.NamespaceID] = byNamespace[entity.NamespaceID] + 1
+		val = iter.Next()
+	}
+
+	return byNamespace, nil
+}
+
+// Sum up the number of entities belonging to each mount point (keyed by accessor)
+func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[string]int, error) {
+	txn := i.db.Txn(false)
+	iter, err := txn.Get(entitiesTable, "id")
+	if err != nil {
+		return nil, err
+	}
+
+	byMountAccessor := make(map[string]int)
+	val := iter.Next()
+	for val != nil {
+		// Check if runtime exceeded.
+		select {
+		case <-ctx.Done():
+			return byMountAccessor, errors.New("context cancelled")
+		default:
+			break
+		}
+
+		// Count each alias separately; will translate to mount point and type
+		// in the caller.
+		entity := val.(*identity.Entity)
+		for _, alias := range entity.Aliases {
+			byMountAccessor[alias.MountAccessor] = byMountAccessor[alias.MountAccessor] + 1
+		}
+		val = iter.Next()
+	}
+
+	return byMountAccessor, nil
+}

@@ -71,8 +71,8 @@ func (b *versionedKVBackend) pathConfigRead() framework.OperationFunc {
 			if err != nil {
 				return nil, err
 			}
-			rdata["delete_version_after"] = deleteVersionAfter.String()
 		}
+		rdata["delete_version_after"] = deleteVersionAfter.String()
 
 		return &logical.Response{
 			Data: rdata,

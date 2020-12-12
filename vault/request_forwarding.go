@@ -46,7 +46,7 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 
 	fwRPCServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * cluster.HeartbeatInterval,
+			Time: 2 * c.clusterHeartbeatInterval,
 		}),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.MaxSendMsgSize(math.MaxInt32),
@@ -279,7 +279,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		grpc.WithDialer(clusterListener.GetDialerFunc(ctx, consts.RequestForwardingALPN)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time: 2 * cluster.HeartbeatInterval,
+			Time: 2 * c.clusterHeartbeatInterval,
 		}),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
@@ -295,7 +295,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:                    c,
-		echoTicker:              time.NewTicker(cluster.HeartbeatInterval),
+		echoTicker:              time.NewTicker(c.clusterHeartbeatInterval),
 		echoContext:             dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
@@ -369,7 +369,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// If we are a perf standby and the request was forwarded to the active node
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
-	if c.perfStandby && resp.LastRemoteWal > 0 {
+	if c.PerfStandby() && resp.LastRemoteWal > 0 {
 		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
 	}
 

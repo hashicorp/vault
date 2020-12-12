@@ -85,14 +85,20 @@ func getCassandraBaseType(name string) Type {
 		return TypeBoolean
 	case "counter":
 		return TypeCounter
+	case "date":
+		return TypeDate
 	case "decimal":
 		return TypeDecimal
 	case "double":
 		return TypeDouble
+	case "duration":
+		return TypeDuration
 	case "float":
 		return TypeFloat
 	case "int":
 		return TypeInt
+	case "smallint":
+		return TypeSmallInt
 	case "tinyint":
 		return TypeTinyInt
 	case "time":

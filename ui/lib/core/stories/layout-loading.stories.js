@@ -2,7 +2,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './layout-loading.md';
 
-storiesOf('Loading/LayoutLoading/', module)
+storiesOf('LayoutLoading', module)
   .addParameters({ options: { showPanel: true } })
   .add(
     `LayoutLoading`,

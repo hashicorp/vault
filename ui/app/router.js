@@ -1,10 +1,10 @@
 import EmberRouter from '@ember/routing/router';
-import config from './config/environment';
+import config from 'vault/config/environment';
 
-const Router = EmberRouter.extend({
-  location: config.locationType,
-  rootURL: config.rootURL,
-});
+export default class Router extends EmberRouter {
+  location = config.locationType;
+  rootURL = config.rootURL;
+}
 
 Router.map(function() {
   this.route('vault', { path: '/' }, function() {
@@ -17,7 +17,8 @@ Router.map(function() {
       this.route('license');
       this.route('metrics', function() {
         this.route('index', { path: '/' });
-        this.route('http-requests');
+        this.route('config');
+        this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
@@ -121,13 +122,15 @@ Router.map(function() {
       });
       this.route('policies', { path: '/policies/:type' }, function() {
         this.route('index', { path: '/' });
-        this.route('create', { path: '/create' });
+        this.route('create');
       });
       this.route('policy', { path: '/policy/:type' }, function() {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
-      this.route('replication-dr-promote');
+      this.route('replication-dr-promote', function() {
+        this.route('details');
+      });
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
@@ -137,5 +140,3 @@ Router.map(function() {
     this.route('not-found', { path: '/*path' });
   });
 });
-
-export default Router;

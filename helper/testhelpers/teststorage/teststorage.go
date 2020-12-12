@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	realtesting "testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
-	physConsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
@@ -82,30 +79,17 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t.(*realtesting.T), "")
-	consulConf := map[string]string{
-		"address":      consulAddress,
-		"token":        consulToken,
-		"max_parallel": "32",
-	}
-	consulBackend, err := physConsul.NewConsulBackend(consulConf, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &vault.PhysicalBackendBundle{
-		Backend: consulBackend,
-		Cleanup: cleanup,
-	}
+func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	return MakeRaftBackendWithConf(t, coreIdx, logger, nil)
 }
 
-func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]string) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("raft dir: %s", raftDir)
+	//t.Logf("raft dir: %s", raftDir)
 	cleanupFunc := func() {
 		os.RemoveAll(raftDir)
 	}
@@ -117,8 +101,11 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 		"node_id":                nodeID,
 		"performance_multiplier": "8",
 	}
+	for k, v := range extraConf {
+		conf[k] = v
+	}
 
-	backend, err := raft.NewRaftBackend(conf, logger)
+	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
 	if err != nil {
 		cleanupFunc()
 		t.Fatal(err)
@@ -130,9 +117,56 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 	}
 }
 
-type ClusterSetupMutator func(conf *vault.CoreConfig, opts *vault.TestClusterOptions)
+// RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
+// and the physical.Backend provided in PhysicalBackendBundler as the storage
+// backend.
+func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+		// Call the factory func to create the storage backend
+		physFactory := SharedPhysicalFactory(f)
+		bundle := physFactory(t, coreIdx, logger)
 
-func SharedPhysicalFactory(f func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+		// This can happen if a shared physical backend is called on a non-0th core.
+		if bundle == nil {
+			bundle = new(vault.PhysicalBackendBundle)
+		}
+
+		raftDir := makeRaftDir(t)
+		cleanupFunc := func() {
+			os.RemoveAll(raftDir)
+		}
+
+		nodeID := fmt.Sprintf("core-%d", coreIdx)
+		conf := map[string]string{
+			"path":                   raftDir,
+			"node_id":                nodeID,
+			"performance_multiplier": "8",
+		}
+
+		// Create and set the HA Backend
+		raftBackend, err := raft.NewRaftBackend(conf, logger)
+		if err != nil {
+			bundle.Cleanup()
+			t.Fatal(err)
+		}
+		bundle.HABackend = raftBackend.(physical.HABackend)
+
+		// Re-wrap the cleanup func
+		bundleCleanup := bundle.Cleanup
+		bundle.Cleanup = func() {
+			if bundleCleanup != nil {
+				bundleCleanup()
+			}
+			cleanupFunc()
+		}
+
+		return bundle
+	}
+}
+
+type PhysicalBackendBundler func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle
+
+func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 		if coreIdx == 0 {
 			return f(t, logger)
@@ -140,6 +174,8 @@ func SharedPhysicalFactory(f func(t testing.T, logger hclog.Logger) *vault.Physi
 		return nil
 	}
 }
+
+type ClusterSetupMutator func(conf *vault.CoreConfig, opts *vault.TestClusterOptions)
 
 func InmemBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeInmemBackend)
@@ -149,9 +185,6 @@ func InmemNonTransactionalBackendSetup(conf *vault.CoreConfig, opts *vault.TestC
 }
 func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeFileBackend)
-}
-func ConsulBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-	opts.PhysicalFactory = SharedPhysicalFactory(MakeConsulBackend)
 }
 
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
@@ -164,6 +197,11 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			time.Sleep(15 * time.Second)
 		}
 	}
+}
+
+func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler PhysicalBackendBundler) {
+	opts.KeepStandbysSealed = true
+	opts.PhysicalFactory = RaftHAFactory(bundler)
 }
 
 func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup ClusterSetupMutator) (*vault.CoreConfig, *vault.TestClusterOptions) {

@@ -9,7 +9,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
@@ -242,30 +241,13 @@ func TestSystem_GRPC_pluginEnv(t *testing.T) {
 
 func TestSystem_GRPC_GeneratePasswordFromPolicy(t *testing.T) {
 	policyName := "testpolicy"
-	expectedPolicy := &random.StringGenerator{
-		Length: 8,
-		Rules: []random.Rule{
-			&random.CharsetRule{
-				Charset:  random.LowercaseRuneset,
-				MinChars: 1,
-			},
-			&random.CharsetRule{
-				Charset:  random.UppercaseRuneset,
-				MinChars: 1,
-			},
-			&random.CharsetRule{
-				Charset:  random.NumericRuneset,
-				MinChars: 1,
-			},
-			&random.CharsetRule{
-				Charset:  random.ShortSymbolRuneset,
-				MinChars: 1,
-			},
-		},
+	expectedPassword := "87354qtnjgrehiogd9u0t43"
+	passGen := func() (password string, err error) {
+		return expectedPassword, nil
 	}
 	sys := &logical.StaticSystemView{
-		PasswordPolicies: map[string]logical.PasswordPolicy{
-			policyName: logical.PasswordPolicy(expectedPolicy),
+		PasswordPolicies: map[string]logical.PasswordGenerator{
+			policyName: passGen,
 		},
 	}
 
@@ -287,15 +269,7 @@ func TestSystem_GRPC_GeneratePasswordFromPolicy(t *testing.T) {
 		t.Fatalf("no error expected, got: %s", err)
 	}
 
-	passRunes := []rune(password)
-
-	if len(passRunes) != expectedPolicy.Length {
-		t.Fatalf("Generated password should have length %d but was %d", expectedPolicy.Length, len(passRunes))
-	}
-
-	for _, rule := range expectedPolicy.Rules {
-		if !rule.Pass(passRunes) {
-			t.Fatalf("Password [%s] did not pass rule: %#v", password, rule)
-		}
+	if password != expectedPassword {
+		t.Fatalf("Actual password: %s\nExpected password: %s", password, expectedPassword)
 	}
 }

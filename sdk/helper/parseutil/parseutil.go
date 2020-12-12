@@ -67,6 +67,54 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 	return dur, nil
 }
 
+func ParseAbsoluteTime(in interface{}) (time.Time, error) {
+	var t time.Time
+	switch inp := in.(type) {
+	case nil:
+		// return default of zero
+		return t, nil
+	case string:
+		// Allow RFC3339 with nanoseconds, or without,
+		// or an epoch time as an integer.
+		var err error
+		t, err = time.Parse(time.RFC3339Nano, inp)
+		if err == nil {
+			break
+		}
+		t, err = time.Parse(time.RFC3339, inp)
+		if err == nil {
+			break
+		}
+		epochTime, err := strconv.ParseInt(inp, 10, 64)
+		if err == nil {
+			t = time.Unix(epochTime, 0)
+			break
+		}
+		return t, errors.New("could not parse string as date and time")
+	case json.Number:
+		epochTime, err := inp.Int64()
+		if err != nil {
+			return t, err
+		}
+		t = time.Unix(epochTime, 0)
+	case int:
+		t = time.Unix(int64(inp), 0)
+	case int32:
+		t = time.Unix(int64(inp), 0)
+	case int64:
+		t = time.Unix(inp, 0)
+	case uint:
+		t = time.Unix(int64(inp), 0)
+	case uint32:
+		t = time.Unix(int64(inp), 0)
+	case uint64:
+		t = time.Unix(int64(inp), 0)
+	default:
+		return t, errors.New("could not parse time from input type")
+	}
+	return t, nil
+}
+
 func ParseInt(in interface{}) (int64, error) {
 	var ret int64
 	jsonIn, ok := in.(json.Number)
@@ -108,6 +156,14 @@ func ParseBool(in interface{}) (bool, error) {
 	var result bool
 	if err := mapstructure.WeakDecode(in, &result); err != nil {
 		return false, err
+	}
+	return result, nil
+}
+
+func ParseString(in interface{}) (string, error) {
+	var result string
+	if err := mapstructure.WeakDecode(in, &result); err != nil {
+		return "", err
 	}
 	return result, nil
 }

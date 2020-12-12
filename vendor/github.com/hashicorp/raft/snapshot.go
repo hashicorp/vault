@@ -146,6 +146,7 @@ func (r *Raft) takeSnapshot() (string, error) {
 	// We have to use the future here to safely get this information since
 	// it is owned by the main thread.
 	configReq := &configurationsFuture{}
+	configReq.ShutdownCh = r.shutdownCh
 	configReq.init()
 	select {
 	case r.configurationsCh <- configReq:

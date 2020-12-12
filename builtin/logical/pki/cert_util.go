@@ -178,7 +178,7 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
-func validateNames(data *inputBundle, names []string) string {
+func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
 		sanitizedName := name
 		emailDomain := name
@@ -314,6 +314,18 @@ func validateNames(data *inputBundle, names []string) string {
 					continue
 				}
 
+				if data.role.AllowedDomainsTemplate {
+					isTemplate, _ := framework.ValidateIdentityTemplate(currDomain)
+					if isTemplate && data.req.EntityID != "" {
+						tmpCurrDomain, err := framework.PopulateIdentityTemplate(currDomain, data.req.EntityID, b.System())
+						if err != nil {
+							continue
+						}
+
+						currDomain = tmpCurrDomain
+					}
+				}
+
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if data.role.AllowBareDomains &&
@@ -338,6 +350,7 @@ func validateNames(data *inputBundle, names []string) string {
 					break
 				}
 			}
+
 			if valid {
 				continue
 			}
@@ -816,7 +829,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
 		if cn != "" {
-			badName := validateNames(data, []string{cn})
+			badName := validateNames(b, data, []string{cn})
 			if len(badName) != 0 {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"common name %s not allowed by this role", badName)}
@@ -832,13 +845,13 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 
 		// Check for bad email and/or DNS names
-		badName := validateNames(data, dnsNames)
+		badName := validateNames(b, data, dnsNames)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"subject alternate name %s not allowed by this role", badName)}
 		}
 
-		badName = validateNames(data, emailAddresses)
+		badName = validateNames(b, data, emailAddresses)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"email address %s not allowed by this role", badName)}

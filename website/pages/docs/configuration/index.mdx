@@ -48,7 +48,10 @@ to specify where the configuration is.
   an HA-supporting backend. If not set, HA will be attempted on the backend
   given in the `storage` parameter. This parameter is not required if the
   storage backend supports HA coordination and if HA specific options are
-  already specified with `storage` parameter.
+  already specified with `storage` parameter. (Refer to [Use Integrated Storage
+  for HA
+  Coordination](https://learn.hashicorp.com/vault/operations/raft-ha-storage)
+  for a usage example.)
 
 - `listener` `([Listener][listener]: <required>)` – Configures how
   Vault is listening for API requests.
@@ -61,7 +64,7 @@ to specify where the configuration is.
   Vault cluster. If omitted, Vault will generate a value. When connecting to
   Vault Enterprise, this value will be used in the interface.
 
-- `cache_size` `(string: "32000")` – Specifies the size of the read cache used
+- `cache_size` `(string: "131072")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the
   total cache size depends on the size of stored entries.
 
@@ -71,8 +74,9 @@ to specify where the configuration is.
 
 - `disable_mlock` `(bool: false)` – Disables the server from executing the
   `mlock` syscall. `mlock` prevents memory from being swapped to disk. Disabling
-  `mlock` is not recommended in production, but is fine for local development
-  and testing.
+  `mlock` is not recommended unless using [integrated storage](/docs/internals/integrated-storage).
+  Follow the additional security precautions outlined below when disabling `mlock`.
+  This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
 
   Disabling `mlock` is not recommended unless the systems running Vault only
   use encrypted swap or do not use swap at all. Vault only supports memory
@@ -99,7 +103,7 @@ to specify where the configuration is.
   sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
-  Note: Since each plugin runs as a separate process, you need to do the same
+  ~> Note: Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
   directory](/docs/internals/plugins#plugin-directory).
 
@@ -191,5 +195,6 @@ The following parameters are only used with Vault Enterprise
 [seal]: /docs/configuration/seal
 [sealwrap]: /docs/enterprise/sealwrap
 [telemetry]: /docs/configuration/telemetry
+[sentinel]: /docs/configuration/sentinel
 [high-availability]: /docs/concepts/ha
 [plugins]: /docs/plugin

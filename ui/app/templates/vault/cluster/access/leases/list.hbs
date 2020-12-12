@@ -1,35 +1,28 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=baseKey
-      path="vault.cluster.access.leases.list"
-      model=clusterController.model.name
-      root=backendCrumb
-      showCurrent=true
-    }}
+    <KeyValueHeader @baseKey={{baseKey}} @path="vault.cluster.access.leases.list" @model={{clusterController.model.name}} @root={{backendCrumb}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{#link-to "vault.cluster.access.leases.list-root"}}
+      <LinkTo @route="vault.cluster.access.leases.list-root">
         Leases
-      {{/link-to}}
+      </LinkTo>
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 <Toolbar>
   <ToolbarFilters>
-    {{navigate-input
-       filterFocusDidChange=(action "setFilterFocus")
-       filterDidChange=(action "setFilter")
-       filter=filter
-       filterMatchesKey=filterMatchesKey
-       firstPartialMatch=firstPartialMatch
-       baseKey=(get baseKey "id")
-       shouldNavigateTree=true
-       mode='leases'
-       placeholder='Filter leases'
-     }}
+    <NavigateInput
+      @filterFocusDidChange={{action "setFilterFocus"}}
+      @filterDidChange={{action "setFilter"}}
+      @filter={{this.filter}}
+      @filterMatchesKey={{filterMatchesKey}}
+      @firstPartialMatch={{firstPartialMatch}}
+      @baseKey={{get baseKey "id"}}
+      @shouldNavigateTree={{true}}
+      @mode="leases"
+      @placeholder="Filter leases" />
      {{#if filterFocused}}
        &nbsp;
        &nbsp;
@@ -82,15 +75,10 @@
 
 {{#if model.meta.total}}
   {{#each model as |item|}}
-    {{#link-to
-      (if item.isFolder "vault.cluster.access.leases.list" "vault.cluster.access.leases.show")
-      item.id
-      class="list-item-row"
-      data-test-lease-link=item.id
-    }}<Icon
+    <LinkTo @route={{if item.isFolder "vault.cluster.access.leases.list" "vault.cluster.access.leases.show" }} @model={{item.id}} class="list-item-row" data-test-lease-link={{item.id}}><Icon
       @glyph={{if item.isFolder 'folder-outline' 'file-outline'}}
       class="has-text-grey-light"
-    /><span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>{{/link-to}}
+    /><span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span></LinkTo>
   {{else}}
     <EmptyState
       @title="There are no leases matching &quot;{{this.filter}}&quot;"
@@ -102,10 +90,5 @@
   />
 {{/if}}
 {{#if (gt model.meta.lastPage 1) }}
-  {{list-pagination
-    page=model.meta.currentPage
-    lastPage=model.meta.lastPage
-    link=(concat "vault.cluster.access.leases.list" (if (not baseKey.id) "-root"))
-    model=(compact (array (if baseKey.id baseKey.id)))
-  }}
+  <ListPagination @page={{model.meta.currentPage}} @lastPage={{model.meta.lastPage}} @link={{concat "vault.cluster.access.leases.list" (unless baseKey.id "-root")}} @model={{compact (array (if baseKey.id baseKey.id))}} />
 {{/if}}

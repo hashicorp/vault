@@ -28,11 +28,30 @@ parameters on this page are grouped by the telemetry provider.
 
 The following options are available on all telemetry configurations.
 
+- `usage_gauge_period` `(string: "10m")` - Specifies the interval at which high-cardinality 
+   usage data is collected, such as token counts, entity counts, and secret counts.  
+   A value of "none" disables the collection.
+- `maximum_gauge_cardinality` `(int: 500)` - The maximum cardinality of gauge labels.
 - `disable_hostname` `(bool: false)` - Specifies if gauge values should be
   prefixed with the local hostname.
 - `enable_hostname_label` `(bool: false)` - Specifies if all metric values should
   contain the `host` label with the local hostname. It is recommended to enable
   `disable_hostname` if this option is used.
+- `lease_metrics_epsilon` `(string: "1hr")` - Specifies the the size of the bucket used to measure future 
+  lease expiration. For example, for the default value of 1 hour, the `vault.expire.leases.by_expiration`
+  metric will aggregate the total number of expiring leases for 1 hour buckets, starting from the current time.
+  Note that leases are put into buckets by rounding. For example, if `lease_metrics_epsilon` is set to 1hr and 
+  lease A expires 25 minutes from now, and lease B expires 35 minutes from now, then lease A will be in the first
+  bucket, which corresponds to 0-30 minutes, and lease B will be in the second bucket, which corresponds to 31-90
+  minutes.
+- `num_lease_metrics_buckets` `(int: 168)` - The number of expiry buckets for leases. For the default value, for
+  example, 168 value labels for the `vault.expire.leases.by_expiration` metric will be reported, where each value 
+  each bucket is separated in time by the `lease_metrics_epsilon` parameter. For the default 1 hour value of 
+  `lease_metrics_epsilon` and the default value of `num_lease_metrics_buckets`, `vault.expire.leases.by_expiration`
+  will report the total number of leases expiring within each hour from the current time to one week from the current time.
+- `add_lease_metrics_namespace_labels` `(bool: false)` - If this value is set to true, then `vault.expire.leases.by_expiration` 
+  will break down expiring leases by both time and namespace. This parameter is disabled by default because enabling it can lead
+  to a large-cardinality metric. 
 
 ### `statsite`
 
@@ -145,7 +164,7 @@ These `telemetry` parameters apply to
 [prometheus](https://prometheus.io).
 
 - `prometheus_retention_time` `(string: "24h")` - Specifies the amount of time that
-  Prometheus metrics are retained in memory.
+  Prometheus metrics are retained in memory. Setting this to 0 will disable Prometheus telemetry. 
 - `disable_hostname` `(bool: false)` - It is recommended to also enable the option
   `disable_hostname` to avoid having prefixed metrics with hostname.
 

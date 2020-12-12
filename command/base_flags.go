@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -748,6 +749,135 @@ func (f *FlagSet) Var(value flag.Value, name, usage string) {
 	f.mainSet.Var(value, name, usage)
 	f.flagSet.Var(value, name, usage)
 }
+
+// -- TimeVar and timeValue
+type TimeVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Default    time.Time
+	Hidden     bool
+	EnvVar     string
+	Target     *time.Time
+	Completion complete.Predictor
+	Formats    TimeFormat
+}
+
+// Identify the allowable formats, identified by the minimum
+// precision accepted.
+// TODO: move this somewhere where it can be re-used for the API.
+type TimeFormat int
+
+const (
+	TimeVar_EpochSecond TimeFormat = 1 << iota
+	TimeVar_RFC3339Nano
+	TimeVar_RFC3339Second
+	TimeVar_Day
+	TimeVar_Month
+)
+
+// Default value to use
+const TimeVar_TimeOrDay TimeFormat = TimeVar_EpochSecond | TimeVar_RFC3339Nano | TimeVar_RFC3339Second | TimeVar_Day
+
+// parseTimeAlternatives attempts several different allowable variants
+// of the time field.
+func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, error) {
+	// The RFC3339 formats require the inclusion of a time zone.
+	if allowedFormats&TimeVar_RFC3339Nano != 0 {
+		t, err := time.Parse(time.RFC3339Nano, input)
+		if err == nil {
+			return t, err
+		}
+	}
+
+	if allowedFormats&TimeVar_RFC3339Second != 0 {
+		t, err := time.Parse(time.RFC3339, input)
+		if err == nil {
+			return t, err
+		}
+	}
+
+	if allowedFormats&TimeVar_Day != 0 {
+		t, err := time.Parse("2006-01-02", input)
+		if err == nil {
+			return t, err
+		}
+	}
+
+	if allowedFormats&TimeVar_Month != 0 {
+		t, err := time.Parse("2006-01", input)
+		if err == nil {
+			return t, err
+		}
+	}
+
+	if allowedFormats&TimeVar_EpochSecond != 0 {
+		i, err := strconv.ParseInt(input, 10, 64)
+		if err == nil {
+			// If a customer enters 20200101 we don't want
+			// to parse that as an epoch time.
+			// This arbitrarily-chosen cutoff is around year 2000.
+			if i > 946000000 {
+				return time.Unix(i, 0), nil
+			}
+		}
+	}
+
+	return time.Time{}, errors.New("Could not parse as absolute time.")
+}
+
+func (f *FlagSet) TimeVar(i *TimeVar) {
+	initial := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if d, err := parseTimeAlternatives(v, i.Formats); err == nil {
+			initial = d
+		}
+	}
+
+	def := ""
+	if !i.Default.IsZero() {
+		def = i.Default.String()
+	}
+
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Default:    def,
+		EnvVar:     i.EnvVar,
+		Value:      newTimeValue(initial, i.Target, i.Hidden, i.Formats),
+		Completion: i.Completion,
+	})
+}
+
+type timeValue struct {
+	hidden  bool
+	target  *time.Time
+	formats TimeFormat
+}
+
+func newTimeValue(def time.Time, target *time.Time, hidden bool, f TimeFormat) *timeValue {
+	*target = def
+	return &timeValue{
+		hidden:  hidden,
+		target:  target,
+		formats: f,
+	}
+}
+
+func (d *timeValue) Set(s string) error {
+	v, err := parseTimeAlternatives(s, d.formats)
+	if err != nil {
+		return err
+	}
+	*d.target = v
+	return nil
+}
+
+func (d *timeValue) Get() interface{} { return *d.target }
+func (d *timeValue) String() string   { return (*d.target).String() }
+func (d *timeValue) Example() string  { return "time" }
+func (d *timeValue) Hidden() bool     { return d.hidden }
 
 // -- helpers
 func envDefault(key, def string) string {

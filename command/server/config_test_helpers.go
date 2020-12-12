@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -60,12 +62,17 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsdAddr:              "bar",
-				StatsiteAddr:            "foo",
-				DisableHostname:         false,
-				DogStatsDAddr:           "127.0.0.1:7254",
-				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
-				PrometheusRetentionTime: 30 * time.Second,
+				StatsdAddr:                  "bar",
+				StatsiteAddr:                "foo",
+				DisableHostname:             false,
+				DogStatsDAddr:               "127.0.0.1:7254",
+				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime:     30 * time.Second,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     125,
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  168,
+				LeaseMetricsNameSpaceLabels: false,
 			},
 
 			DisableMlock: true,
@@ -138,6 +145,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		APIAddr:     "top_level_api_addr",
 		ClusterAddr: "top_level_cluster_addr",
 	}
+	addExpectedEntConfig(expected, []string{})
+
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
@@ -170,6 +179,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				StatsiteAddr:                       "foo",
 				StatsdAddr:                         "bar",
 				DisableHostname:                    true,
+				UsageGaugePeriod:                   5 * time.Minute,
+				MaximumGaugeCardinality:            125,
 				CirconusAPIToken:                   "0",
 				CirconusAPIApp:                     "vault",
 				CirconusAPIURL:                     "http://api.circonus.com/v2",
@@ -184,6 +195,9 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				CirconusBrokerID:                   "0",
 				CirconusBrokerSelectTag:            "dc:sfo",
 				PrometheusRetentionTime:            30 * time.Second,
+				LeaseMetricsEpsilon:                time.Hour,
+				NumLeaseMetricsTimeBuckets:         168,
+				LeaseMetricsNameSpaceLabels:        false,
 			},
 		},
 
@@ -220,6 +234,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 	}
+	addExpectedEntConfig(expected, []string{"http"})
+
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
@@ -361,13 +377,18 @@ func testLoadConfigFile(t *testing.T) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsdAddr:              "bar",
-				StatsiteAddr:            "foo",
-				DisableHostname:         false,
-				DogStatsDAddr:           "127.0.0.1:7254",
-				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
-				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
-				MetricsPrefix:           "myprefix",
+				StatsdAddr:                  "bar",
+				StatsiteAddr:                "foo",
+				DisableHostname:             false,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     100,
+				DogStatsDAddr:               "127.0.0.1:7254",
+				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
+				MetricsPrefix:               "myprefix",
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  168,
+				LeaseMetricsNameSpaceLabels: false,
 			},
 
 			DisableMlock: true,
@@ -421,6 +442,9 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 	}
+
+	addExpectedEntConfig(expected, []string{})
+
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
@@ -446,6 +470,8 @@ func testLoadConfigFile_json(t *testing.T) {
 				StatsiteAddr:                       "baz",
 				StatsdAddr:                         "",
 				DisableHostname:                    false,
+				UsageGaugePeriod:                   5 * time.Minute,
+				MaximumGaugeCardinality:            100,
 				CirconusAPIToken:                   "",
 				CirconusAPIApp:                     "",
 				CirconusAPIURL:                     "",
@@ -460,6 +486,9 @@ func testLoadConfigFile_json(t *testing.T) {
 				CirconusBrokerID:                   "",
 				CirconusBrokerSelectTag:            "",
 				PrometheusRetentionTime:            configutil.PrometheusDefaultRetentionTime,
+				LeaseMetricsEpsilon:                time.Hour,
+				NumLeaseMetricsTimeBuckets:         168,
+				LeaseMetricsNameSpaceLabels:        false,
 			},
 
 			PidFile:     "./pidfile",
@@ -496,6 +525,9 @@ func testLoadConfigFile_json(t *testing.T) {
 		DisableSealWrap:      true,
 		DisableSealWrapRaw:   true,
 	}
+
+	addExpectedEntConfig(expected, []string{})
+
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
@@ -520,10 +552,15 @@ func testLoadConfigDir(t *testing.T) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsiteAddr:            "qux",
-				StatsdAddr:              "baz",
-				DisableHostname:         true,
-				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
+				StatsiteAddr:                "qux",
+				StatsdAddr:                  "baz",
+				DisableHostname:             true,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     100,
+				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  168,
+				LeaseMetricsNameSpaceLabels: false,
 			},
 			ClusterName: "testcluster",
 		},
@@ -552,6 +589,9 @@ func testLoadConfigDir(t *testing.T) {
 		MaxLeaseTTL:     10 * time.Hour,
 		DefaultLeaseTTL: 10 * time.Hour,
 	}
+
+	addExpectedEntConfig(expected, []string{"http"})
+
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
@@ -581,6 +621,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_printable_check":      false,
 		"disable_sealwrap":             true,
 		"raw_storage_endpoint":         true,
+		"disable_sentinel_trace":       true,
 		"enable_ui":                    true,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
@@ -616,6 +657,8 @@ func testConfig_Sanitized(t *testing.T) {
 			"type": "consul",
 		},
 		"telemetry": map[string]interface{}{
+			"usage_gauge_period":                     5 * time.Minute,
+			"maximum_gauge_cardinality":              100,
 			"circonus_api_app":                       "",
 			"circonus_api_token":                     "",
 			"circonus_api_url":                       "",
@@ -639,8 +682,14 @@ func testConfig_Sanitized(t *testing.T) {
 			"stackdriver_project_id":                 "",
 			"stackdriver_debug_logs":                 false,
 			"statsd_address":                         "bar",
-			"statsite_address":                       ""},
+			"statsite_address":                       "",
+			"lease_metrics_epsilon":                  time.Hour,
+			"num_lease_metrics_buckets":              168,
+			"add_lease_metrics_namespace_labels":     false,
+		},
 	}
+
+	addExpectedEntSanitizedConfig(expected, []string{"http"})
 
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
@@ -696,6 +745,153 @@ listener "tcp" {
 	}
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, *expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func testParseSeals(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_seals.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	config.Listeners[0].RawConfig = nil
+
+	expected := &Config{
+		Storage: &Storage{
+			Type:   "consul",
+			Config: map[string]string{},
+		},
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
+				},
+			},
+			Seals: []*configutil.KMS{
+				&configutil.KMS{
+					Type:    "pkcs11",
+					Purpose: []string{"many", "purposes"},
+					Config: map[string]string{
+						"lib":                    "/usr/lib/libcklog2.so",
+						"slot":                   "0.0",
+						"pin":                    "XXXXXXXX",
+						"key_label":              "HASHICORP",
+						"mechanism":              "0x1082",
+						"hmac_mechanism":         "0x0251",
+						"hmac_key_label":         "vault-hsm-hmac-key",
+						"default_hmac_key_label": "vault-hsm-hmac-key",
+						"generate_key":           "true",
+					},
+				},
+				&configutil.KMS{
+					Type:     "pkcs11",
+					Purpose:  []string{"single"},
+					Disabled: true,
+					Config: map[string]string{
+						"lib":                    "/usr/lib/libcklog2.so",
+						"slot":                   "0.0",
+						"pin":                    "XXXXXXXX",
+						"key_label":              "HASHICORP",
+						"mechanism":              "4226",
+						"hmac_mechanism":         "593",
+						"hmac_key_label":         "vault-hsm-hmac-key",
+						"default_hmac_key_label": "vault-hsm-hmac-key",
+						"generate_key":           "true",
+					},
+				},
+			},
+		},
+	}
+	require.Equal(t, config, expected)
+}
+
+func testLoadConfigFileLeaseMetrics(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config5.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
+				},
+			},
+
+			Telemetry: &configutil.Telemetry{
+				StatsdAddr:                  "bar",
+				StatsiteAddr:                "foo",
+				DisableHostname:             false,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     100,
+				DogStatsDAddr:               "127.0.0.1:7254",
+				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
+				MetricsPrefix:               "myprefix",
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  2,
+				LeaseMetricsNameSpaceLabels: true,
+			},
+
+			DisableMlock: true,
+
+			Entropy: nil,
+
+			PidFile: "./pidfile",
+
+			ClusterName: "testcluster",
+		},
+
+		Storage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "foo",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
+		HAStorage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "snafu",
+			Config: map[string]string{
+				"bar": "baz",
+			},
+			DisableClustering: true,
+		},
+
+		ServiceRegistration: &ServiceRegistration{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
+		DisableCache:             true,
+		DisableCacheRaw:          true,
+		DisablePrintableCheckRaw: true,
+		DisablePrintableCheck:    true,
+		EnableUI:                 true,
+		EnableUIRaw:              true,
+
+		EnableRawEndpoint:    true,
+		EnableRawEndpointRaw: true,
+
+		DisableSealWrap:    true,
+		DisableSealWrapRaw: true,
+
+		MaxLeaseTTL:        10 * time.Hour,
+		MaxLeaseTTLRaw:     "10h",
+		DefaultLeaseTTL:    10 * time.Hour,
+		DefaultLeaseTTLRaw: "10h",
+	}
+
+	addExpectedEntConfig(expected, []string{})
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
 }

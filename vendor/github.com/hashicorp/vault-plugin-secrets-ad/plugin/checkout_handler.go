@@ -3,7 +3,7 @@ package plugin
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
+
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -32,7 +32,8 @@ type CheckOut struct {
 // checkOutHandler manages checkouts. It's not thread-safe and expects the caller to handle locking because
 // locking may span multiple calls.
 type checkOutHandler struct {
-	client secretsClient
+	client            secretsClient
+	passwordGenerator passwordGenerator
 }
 
 // CheckOut attempts to check out a service account. If the account is unavailable, it returns
@@ -98,7 +99,7 @@ func (h *checkOutHandler) CheckIn(ctx context.Context, storage logical.Storage, 
 	if engineConf == nil {
 		return errors.New("the config is currently unset")
 	}
-	newPassword, err := util.GeneratePassword(engineConf.PasswordConf.Formatter, engineConf.PasswordConf.Length)
+	newPassword, err := GeneratePassword(ctx, engineConf.PasswordConf, h.passwordGenerator)
 	if err != nil {
 		return err
 	}

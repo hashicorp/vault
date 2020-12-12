@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, select } from '@storybook/addon-knobs';
 import notes from './toolbar.md';
 
-storiesOf('Toolbar/', module)
+storiesOf('Toolbar', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

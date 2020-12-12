@@ -18,11 +18,6 @@ import (
 	"golang.org/x/net/http2"
 )
 
-var (
-	// Making this a package var allows tests to modify
-	HeartbeatInterval = 5 * time.Second
-)
-
 const (
 	ListenerAcceptDeadline = 500 * time.Millisecond
 )
@@ -73,7 +68,7 @@ type Listener struct {
 	l            sync.RWMutex
 }
 
-func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger) *Listener {
+func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
@@ -81,7 +76,7 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 	h2Server := &http2.Server{
 		// Our forwarding connections heartbeat regularly so anything else we
 		// want to go away/get cleaned up pretty rapidly
-		IdleTimeout: 5 * HeartbeatInterval,
+		IdleTimeout: idleTimeout,
 	}
 
 	return &Listener{

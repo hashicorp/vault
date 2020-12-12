@@ -43,3 +43,7 @@ In order to bring the Vault server up reliably, using any node's raft data,
 recovery mode Vault automatically resizes the cluster to size 1. This means
 that after having used recovery mode, part of the procedure for returning to
 active service must include rejoining the raft cluster.
+
+If Raft is used exclusively for `ha_storage`, recovery mode will not allow for
+changes to the Raft data but instead allow for modification of the underlying
+physical data that is associated with Vault's storage backend.

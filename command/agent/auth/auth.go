@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"net/http"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
+// AuthMethod is the interface that auto-auth methods implement for the agent
+// to use.
 type AuthMethod interface {
 	// Authenticate returns a mount path, header, request body, and error.
 	// The header may be nil if no special header is needed.
@@ -18,6 +21,13 @@ type AuthMethod interface {
 	NewCreds() chan struct{}
 	CredSuccess()
 	Shutdown()
+}
+
+// AuthMethodWithClient is an extended interface that can return an API client
+// for use during the authentication call.
+type AuthMethodWithClient interface {
+	AuthMethod
+	AuthClient(client *api.Client) (*api.Client, error)
 }
 
 type AuthConfig struct {
@@ -30,7 +40,6 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	DoneCh                       chan struct{}
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	logger                       hclog.Logger
@@ -51,7 +60,6 @@ type AuthHandlerConfig struct {
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
-		DoneCh: make(chan struct{}),
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
@@ -74,16 +82,15 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if am == nil {
-		panic("nil auth method")
+		return errors.New("auth handler: nil auth method")
 	}
 
 	ah.logger.Info("starting auth handler")
 	defer func() {
 		am.Shutdown()
 		close(ah.OutputCh)
-		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
@@ -113,7 +120,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 
 		default:
 		}
@@ -122,6 +129,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
 
 		ah.logger.Info("authenticating")
+
 		path, header, data, err := am.Authenticate(ctx, ah.client)
 		if err != nil {
 			ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
@@ -129,9 +137,22 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			continue
 		}
 
-		clientToUse := ah.client
+		var clientToUse *api.Client
+
+		switch am.(type) {
+		case AuthMethodWithClient:
+			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
+			if err != nil {
+				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+		default:
+			clientToUse = ah.client
+		}
+
 		if ah.wrapTTL > 0 {
-			wrapClient, err := ah.client.Clone()
+			wrapClient, err := clientToUse.Clone()
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff.Seconds())
 				backoffOrQuit(ctx, backoff)
@@ -216,7 +237,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			watcher.Stop()
 		}
 
-		watcher, err = ah.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
+		watcher, err = clientToUse.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 			Secret: secret,
 		})
 		if err != nil {

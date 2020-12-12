@@ -23,6 +23,7 @@ export default [
         category: 'databases',
         content: [
           'cassandra',
+          'couchbase',
           'elasticdb',
           'influxdb',
           'hanadb',
@@ -37,6 +38,7 @@ export default [
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
+      { category: 'key-management' },
       { category: 'kmip' },
       {
         category: 'kv',
@@ -118,6 +120,7 @@ export default [
         category: 'mfa',
         content: ['duo', 'okta', 'pingid', 'totp'],
       },
+      'monitor',
       'mounts',
       'namespaces',
       'plugins-reload-backend',
@@ -126,6 +129,9 @@ export default [
       'policies',
       'policies-password',
       'pprof',
+      'quotas-config',
+      'rate-limit-quotas',
+      'lease-count-quotas',
       'raw',
       'rekey',
       'rekey-recovery-key',
@@ -141,7 +147,7 @@ export default [
       'step-down',
       {
         category: 'storage',
-        content: ['raft'],
+        content: ['raft', 'raftautosnapshots'],
       },
       'tools',
       'unseal',

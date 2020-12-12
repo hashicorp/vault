@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Validate we didn't get extraneous fields
 	if err := validateFields(req, data); err != nil {
-		return nil, logical.CodedError(422, err.Error())
+		return nil, logical.CodedError(http.StatusUnprocessableEntity, err.Error())
 	}
 
 	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
@@ -172,7 +173,7 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 
 	key, err := b.getSigningKey(ctx, jwtVal, signedJwt.(string), loginInfo.Role, req.Storage)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to get public key for signed JWT: %v", err)
+		return nil, errwrap.Wrapf("unable to get public key for signed JWT: {{err}}", err)
 	}
 
 	// Parse claims and verify signature.
@@ -193,14 +194,14 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	}
 	loginInfo.EmailOrId = baseClaims.Subject
 
-	if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
-		loginInfo.GceMetadata = customClaims.Google.Compute
+	if loginInfo.Role.RoleType == gceRoleType {
+		if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
+			loginInfo.GceMetadata = customClaims.Google.Compute
+		}
+		if loginInfo.GceMetadata == nil {
+			return nil, errors.New("expected JWT to have claims with GCE metadata")
+		}
 	}
-
-	if loginInfo.Role.RoleType == gceRoleType && loginInfo.GceMetadata == nil {
-		return nil, errors.New("expected JWT to have claims with GCE metadata")
-	}
-
 	return loginInfo, nil
 }
 
@@ -220,18 +221,21 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 		return k, nil
 	}
 
-	// If that failed, try to get account-specific key
-	b.Logger().Debug("Unable to get Google-wide OAuth2 Key, trying service-account public key")
 	saId, err := getJWTSubject(rawToken)
 	if err != nil {
 		return nil, err
 	}
-	k, saErr := gcputil.ServiceAccountPublicKey(saId, kid)
-	if saErr != nil {
+
+	if role.RoleType == iamRoleType {
+		// If that failed, and the authentication type is IAM, try to get account-specific key
+		b.Logger().Debug("Unable to get Google-wide OAuth2 Key, trying service-account public key")
+		k, saErr := gcputil.ServiceAccountPublicKey(saId, kid)
+		if saErr == nil {
+			return k, nil
+		}
 		return nil, errwrap.Wrapf(fmt.Sprintf("unable to get public key %q for JWT subject %q: {{err}}", kid, saId), saErr)
 	}
-
-	return k, nil
+	return nil, fmt.Errorf("unable to get public key %q for JWT subject %q: no Google OAuth2 provider key found for GCE role", kid, saId)
 }
 
 // getJWTSubject grabs 'sub' claim given an unverified signed JWT.
@@ -315,14 +319,25 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 		return nil, errors.New("service account is empty")
 	}
 
+	conf, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("unable to retrieve GCP configuration"), nil
+	}
+
+	alias, err := conf.getIAMAlias(role, serviceAccount)
+	if err != nil {
+		return logical.ErrorResponse("unable to create alias: %s", err), nil
+	}
+
 	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
+		resp := &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: serviceAccount.UniqueId,
+					Name: alias,
 				},
 			},
-		}, nil
+		}
+		return resp, nil
 	}
 
 	// Validate service account can login against role.
@@ -332,13 +347,14 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 
 	auth := &logical.Auth{
 		Alias: &logical.Alias{
-			Name: serviceAccount.UniqueId,
+			Name: alias,
 		},
-		Metadata:    authMetadata(loginInfo, serviceAccount),
 		DisplayName: serviceAccount.Email,
 	}
-
 	role.PopulateTokenAuth(auth)
+	if err := conf.IAMAuthMetadata.PopulateDesiredMetadata(auth, authMetadata(loginInfo, serviceAccount)); err != nil {
+		b.Logger().Warn("unable to populate iam metadata", "err", err.Error())
+	}
 
 	resp := &logical.Response{
 		Auth: auth,
@@ -449,11 +465,21 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	conf, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("unable to retrieve GCP configuration"), nil
+	}
+
+	alias, err := conf.getGCEAlias(role, instance)
+	if err != nil {
+		return logical.ErrorResponse("unable to create alias: %s", err), nil
+	}
+
 	if req.Operation == logical.AliasLookaheadOperation {
 		return &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
+					Name: alias,
 				},
 			},
 		}, nil
@@ -475,13 +501,14 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 	auth := &logical.Auth{
 		InternalData: map[string]interface{}{},
 		Alias: &logical.Alias{
-			Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
+			Name: alias,
 		},
-		Metadata:    authMetadata(loginInfo, serviceAccount),
 		DisplayName: instance.Name,
 	}
-
 	role.PopulateTokenAuth(auth)
+	if err := conf.GCEAuthMetadata.PopulateDesiredMetadata(auth, authMetadata(loginInfo, serviceAccount)); err != nil {
+		b.Logger().Warn("unable to populate gce metadata", "err", err.Error())
+	}
 
 	resp := &logical.Response{
 		Auth: auth,

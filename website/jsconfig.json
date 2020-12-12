@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "baseUrl": "."
+  },
+  "exclude": ["node_modules", ".next", ".mdx-data", "out"]
+}

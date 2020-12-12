@@ -16,6 +16,18 @@ func isLabelPresent(toFind Label, ls []Label) bool {
 	return false
 }
 
+// We can use a sink directly, or wrap the top-level
+// go-metrics implementation for testing purposes.
+func defaultMetrics(sink metrics.MetricSink) *metrics.Metrics {
+	// No service name
+	config := metrics.DefaultConfig("")
+
+	// No host name
+	config.EnableHostname = false
+	m, _ := metrics.New(config, sink)
+	return m
+}
+
 func TestClusterLabelPresent(t *testing.T) {
 	testClusterName := "test-cluster"
 
@@ -26,10 +38,7 @@ func TestClusterLabelPresent(t *testing.T) {
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
-	clusterSink := &ClusterMetricSink{
-		ClusterName: testClusterName,
-		Sink:        inmemSink,
-	}
+	clusterSink := NewClusterMetricSink(testClusterName, defaultMetrics(inmemSink))
 
 	key1 := []string{"aaa", "bbb"}
 	key2 := []string{"ccc", "ddd"}

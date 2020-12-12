@@ -64,17 +64,21 @@ it is up to the administrator to remove it from the method.
 
 ### Via the CLI
 
-The below requires Vault to present a certificate signed by `ca.pem` and
-presents `cert.pem` (using `key.pem`) to authenticate against the `web` cert
-role. Note that the name of `web` ties out with the configuration example
-below writing to a path of `auth/cert/certs/web`. If a certificate role name
-is not specified, the auth method will try to authenticate against all trusted
-certificates.
+The below authenticates against the `web` cert role by presenting a certificate
+(`cert.pem`) and key (`key.pem`) signed by the CA associated with the `web` cert
+role. Note that the name `web` ties to the configuration example below writing
+to a path of `auth/cert/certs/web`. If a certificate role name is not specified,
+the auth method will try to authenticate against all trusted certificates.
+
+~> **NOTE** The `-ca-cert` value used here is for the Vault TLS Listener CA
+certificate, not the CA that issued the client authentication certificate. This
+can be omitted if the CA used to issue the Vault server certificate is trusted
+by the local system executing this command.
 
 ```shell-session
 $ vault login \
     -method=cert \
-    -ca-cert=ca.pem \
+    -ca-cert=vault-ca.pem \
     -client-cert=cert.pem \
     -client-key=key.pem \
     name=web
@@ -87,10 +91,15 @@ TLS certificate and when the login endpoint is hit, the auth method will
 determine if there is a matching trusted certificate to authenticate the client.
 Optionally, you may specify a single certificate role to authenticate against.
 
+~> **NOTE** The `--cacert` value used here is for the Vault TLS Listener CA
+certificate, not the CA that issued the client authentication certificate. This
+can be omitted if the CA used to issue the Vault server certificate is trusted
+by the local system executing this command.
+
 ```shell-session
 $ curl \
     --request POST \
-    --cacert ca.pem \
+    --cacert vault-ca.pem \
     --cert cert.pem \
     --key key.pem \
     --data '{"name": "web"}' \

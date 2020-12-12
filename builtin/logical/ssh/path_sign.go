@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -249,7 +250,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	case len(allowedPrincipals) == 0:
 		// User has requested principals to be set, but role is not configured
 		// with any principals
-		return nil, fmt.Errorf("role is not configured to allow any principles")
+		return nil, fmt.Errorf("role is not configured to allow any principals")
 	default:
 		// Role was explicitly configured to allow any principal.
 		if principalsAllowedByRole == "*" {
@@ -497,6 +498,16 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	now := time.Now()
 
+	sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+	}
+
+	// prepare certificate for signing
+	nonce := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce")
+	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
 		Key:             b.PublicKey,
@@ -509,12 +520,22 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 			CriticalOptions: b.CriticalOptions,
 			Extensions:      b.Extensions,
 		},
+		Nonce:        nonce,
+		SignatureKey: sshAlgorithmSigner.PublicKey(),
 	}
 
-	err = certificate.SignCert(rand.Reader, b.Signer)
+	// get bytes to sign; this is based on Certificate.bytesForSigning() from the go ssh lib
+	out := certificate.Marshal()
+	// Drop trailing signature length.
+	certificateBytes := out[:len(out)-4]
+
+	algo := b.Role.AlgorithmSigner
+	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key")
+		return nil, fmt.Errorf("failed to generate signed SSH key: sign error")
 	}
+
+	certificate.Signature = sig
 
 	return certificate, nil
 }

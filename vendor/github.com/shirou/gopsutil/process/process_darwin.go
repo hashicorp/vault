@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -89,8 +90,24 @@ func (p *Process) NameWithContext(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	name := common.IntToString(k.Proc.P_comm[:])
 
-	return common.IntToString(k.Proc.P_comm[:]), nil
+	if len(name) >= 15 {
+		cmdlineSlice, err := p.CmdlineSliceWithContext(ctx)
+		if err != nil {
+			return "", err
+		}
+		if len(cmdlineSlice) > 0 {
+			extendedName := filepath.Base(cmdlineSlice[0])
+			if strings.HasPrefix(extendedName, p.name) {
+				name = extendedName
+			} else {
+				name = cmdlineSlice[0]
+			}
+		}
+	}
+
+	return name, nil
 }
 func (p *Process) Tgid() (int32, error) {
 	return 0, common.ErrNotImplementedError
@@ -199,7 +216,7 @@ func (p *Process) StatusWithContext(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	return r[0][0], err
+	return r[0][0][0:1], err
 }
 
 func (p *Process) Foreground() (bool, error) {
@@ -249,6 +266,20 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 	gids = append(gids, int32(k.Eproc.Pcred.P_rgid), int32(k.Eproc.Ucred.Ngroups), int32(k.Eproc.Pcred.P_svgid))
 
 	return gids, nil
+}
+
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	k, err := p.getKProc()
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make([]int32, k.Eproc.Ucred.Ngroups)
+	for i := int16(0); i < k.Eproc.Ucred.Ngroups; i++ {
+		groups[i] = int32(k.Eproc.Ucred.Groups[i])
+	}
+
+	return groups, nil
 }
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())
@@ -580,7 +611,7 @@ func (p *Process) getKProcWithContext(ctx context.Context) (*KinfoProc, error) {
 	length := uint64(unsafe.Sizeof(procK))
 	buf := make([]byte, length)
 	_, _, syserr := unix.Syscall6(
-		unix.SYS___SYSCTL,
+		202, // unix.SYS___SYSCTL https://github.com/golang/sys/blob/76b94024e4b621e672466e8db3d7f084e7ddcad2/unix/zsysnum_darwin_amd64.go#L146
 		uintptr(unsafe.Pointer(&mib[0])),
 		uintptr(len(mib)),
 		uintptr(unsafe.Pointer(&buf[0])),

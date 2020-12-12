@@ -60,6 +60,7 @@ type SSHVerifyResponse struct {
 type SSHHelperConfig struct {
 	VaultAddr       string `hcl:"vault_addr"`
 	SSHMountPoint   string `hcl:"ssh_mount_point"`
+	Namespace       string `hcl:"namespace"`
 	CACert          string `hcl:"ca_cert"`
 	CAPath          string `hcl:"ca_path"`
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
@@ -123,6 +124,11 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 		return nil, err
 	}
 
+	// Configure namespace
+	if c.Namespace != "" {
+		client.SetNamespace(c.Namespace)
+	}
+
 	return client, nil
 }
 
@@ -155,6 +161,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	valid := []string{
 		"vault_addr",
 		"ssh_mount_point",
+		"namespace",
 		"ca_cert",
 		"ca_path",
 		"allowed_cidr_list",

@@ -30,7 +30,7 @@ type Config struct {
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
-// Vault contains configuration for connnecting to Vault servers
+// Vault contains configuration for connecting to Vault servers
 type Vault struct {
 	Address          string      `hcl:"address"`
 	CACert           string      `hcl:"ca_cert"`
@@ -75,6 +75,7 @@ type Sink struct {
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
 	DHType     string        `hcl:"dh_type"`
+	DeriveKey  bool          `hcl:"derive_key"`
 	DHPath     string        `hcl:"dh_path"`
 	AAD        string        `hcl:"aad"`
 	AADEnvVar  string        `hcl:"aad_env_var"`
@@ -394,6 +395,9 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 		case s.DHPath == "" && s.DHType == "":
 			if s.AAD != "" {
 				return multierror.Prefix(errors.New("specifying AAD data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", s.Type))
+			}
+			if s.DeriveKey {
+				return multierror.Prefix(errors.New("specifying 'derive_key' data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", s.Type))
 			}
 		case s.DHPath != "" && s.DHType != "":
 		default:

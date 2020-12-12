@@ -59,13 +59,13 @@ module('Integration | Component | transit key actions', function(hooks) {
       {{transit-key-actions selectedAction="encrypt" key=key}}
       <div id="modal-wormhole"></div>
     `);
-    assert.equal(findAll('[data-test-transit-action="encrypt"]').length, 1, 'renders encrypt');
+    assert.dom('[data-test-transit-action="encrypt"]').exists({ count: 1 }, 'renders encrypt');
 
     this.set('key', { backend: 'transit', supportedActions: ['sign'] });
     await render(hbs`
       {{transit-key-actions selectedAction="sign" key=key}}
       <div id="modal-wormhole"></div>`);
-    assert.equal(findAll('[data-test-transit-action="sign"]').length, 1, 'renders sign');
+    assert.dom('[data-test-transit-action="sign"]').exists({ count: 1 }, 'renders sign');
   });
 
   test('it renders: signature_algorithm field', async function(assert) {
@@ -75,17 +75,13 @@ module('Integration | Component | transit key actions', function(hooks) {
       {{transit-key-actions selectedAction=selectedAction key=key}}
       <div id="modal-wormhole"></div>
     `);
-    assert.equal(
-      findAll('[data-test-signature-algorithm]').length,
-      0,
-      'does not render signature_algorithm field on sign'
-    );
+    assert
+      .dom('[data-test-signature-algorithm]')
+      .doesNotExist('does not render signature_algorithm field on sign');
     this.set('selectedAction', 'verify');
-    assert.equal(
-      findAll('[data-test-signature-algorithm]').length,
-      0,
-      'does not render signature_algorithm field on verify'
-    );
+    assert
+      .dom('[data-test-signature-algorithm]')
+      .doesNotExist('does not render signature_algorithm field on verify');
 
     this.set('selectedAction', 'sign');
     this.set('key', {
@@ -94,17 +90,13 @@ module('Integration | Component | transit key actions', function(hooks) {
       backend: 'transit',
       supportedActions: ['sign', 'verify'],
     });
-    assert.equal(
-      findAll('[data-test-signature-algorithm]').length,
-      1,
-      'renders signature_algorithm field on sign with rsa key'
-    );
+    assert
+      .dom('[data-test-signature-algorithm]')
+      .exists({ count: 1 }, 'renders signature_algorithm field on sign with rsa key');
     this.set('selectedAction', 'verify');
-    assert.equal(
-      findAll('[data-test-signature-algorithm]').length,
-      1,
-      'renders signature_algorithm field on verify with rsa key'
-    );
+    assert
+      .dom('[data-test-signature-algorithm]')
+      .exists({ count: 1 }, 'renders signature_algorithm field on verify with rsa key');
   });
 
   test('it renders: rotate', async function(assert) {
@@ -114,14 +106,12 @@ module('Integration | Component | transit key actions', function(hooks) {
       <div id="modal-wormhole"></div>
     `);
 
-    assert.equal(find('*').textContent.trim(), '', 'renders an empty div');
+    assert.dom('*').hasText('', 'renders an empty div');
 
     this.set('key.canRotate', true);
-    assert.equal(
-      find('button').textContent.trim(),
-      'Rotate encryption key',
-      'renders confirm-button when key.canRotate is true'
-    );
+    assert
+      .dom('button')
+      .hasText('Rotate encryption key', 'renders confirm-button when key.canRotate is true');
   });
 
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
@@ -139,7 +129,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     await click('button[type="submit"]');
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'encrypt',
         backend: 'transit',
@@ -162,7 +152,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await click('button[type="submit"]');
 
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'encrypt',
         backend: 'transit',
@@ -189,12 +179,12 @@ module('Integration | Component | transit key actions', function(hooks) {
     `);
 
     findAll('.CodeMirror')[0].CodeMirror.setValue('plaintext');
-    assert.equal(findAll('#key_version').length, 1, 'it renders the key version selector');
+    assert.dom('#key_version').exists({ count: 1 }, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
     await click('button[type="submit"]');
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'encrypt',
         backend: 'transit',
@@ -221,11 +211,7 @@ module('Integration | Component | transit key actions', function(hooks) {
 
     // await fillIn('#plaintext', 'plaintext');
     find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
-    assert.equal(
-      findAll('#key_version').length,
-      0,
-      'it does not render the selector when there is only one key'
-    );
+    assert.dom('#key_version').doesNotExist('it does not render the selector when there is only one key');
   });
 
   test('it does not carry ciphertext value over to decrypt', async function(assert) {
@@ -261,7 +247,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await click('button[type="submit"]');
 
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'export',
         backend: 'transit',
@@ -272,7 +258,7 @@ module('Integration | Component | transit key actions', function(hooks) {
       },
       'passes expected args to the adapter'
     );
-    assert.equal(this.get('storeService.callArgsOptions.wrapTTL'), '30m', 'passes value for wrapTTL');
+    assert.equal(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
     assert.equal(find('[data-test-encrypted-value="export"]').innerText, 'wrapped-token', 'wraps by default');
   });
 
@@ -280,8 +266,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     const response = { keys: { a: 'key' } };
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
-    await click('#wrap-response');
-    await triggerEvent('#wrap-response', 'change');
+    await click('[data-test-toggle-label="Wrap response"]');
     await click('button[type="submit"]');
     assert.dom('.modal.is-active').exists('Modal opens after export');
     assert.deepEqual(
@@ -295,8 +280,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     const response = { keys: { a: 'key' } };
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
-    await click('#wrap-response');
-    await triggerEvent('#wrap-response', 'change');
+    await click('[data-test-toggle-label="Wrap response"]');
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
     await click('button[type="submit"]');
@@ -307,7 +291,7 @@ module('Integration | Component | transit key actions', function(hooks) {
       'prints json response'
     );
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'export',
         backend: 'transit',
@@ -335,7 +319,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await blur('#algorithm');
     await click('button[type="submit"]');
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'hmac',
         backend: 'transit',

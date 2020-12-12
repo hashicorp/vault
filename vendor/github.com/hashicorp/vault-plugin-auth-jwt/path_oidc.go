@@ -28,6 +28,7 @@ const (
 	errLoginFailed       = "Vault login failed."
 	errNoResponse        = "No response from provider."
 	errTokenVerification = "Token verification failed."
+	errNotOIDCFlow       = "OIDC login is not configured for this mount"
 
 	noCode = "no_code"
 )
@@ -344,7 +345,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if config.authType() != OIDCFlow {
-		return logical.ErrorResponse("OIDC login is not configured for this mount"), nil
+		return logical.ErrorResponse(errNotOIDCFlow), nil
 	}
 
 	roleName := d.Get("role").(string)
@@ -368,6 +369,24 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	}
 	if role == nil {
 		return logical.ErrorResponse("role %q could not be found", roleName), nil
+	}
+
+	// If namespace will be passed around in state, and it has been provided as
+	// a redirectURI query parameter, remove it from redirectURI, and append it
+	// to the state (later in this function)
+	namespace := ""
+	if config.NamespaceInState {
+		inputURI, err := url.Parse(redirectURI)
+		if err != nil {
+			return resp, nil
+		}
+		qParam := inputURI.Query()
+		namespace = qParam.Get("namespace")
+		if len(namespace) > 0 {
+			qParam.Del("namespace")
+			inputURI.RawQuery = qParam.Encode()
+			redirectURI = inputURI.String()
+		}
 	}
 
 	if !validRedirect(redirectURI, role.AllowedRedirectURIs) {
@@ -406,6 +425,10 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		logger.Warn("error generating OAuth state", "error", err)
 		return resp, nil
+	}
+	if config.NamespaceInState && len(namespace) > 0 {
+		// embed namespace in state in the auth_url
+		stateID = fmt.Sprintf("%s,ns=%s", stateID, namespace)
 	}
 
 	authCodeOpts := []oauth2.AuthCodeOption{

@@ -192,6 +192,8 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"statsd_address":                         c.Telemetry.StatsdAddr,
 			"disable_hostname":                       c.Telemetry.DisableHostname,
 			"metrics_prefix":                         c.Telemetry.MetricsPrefix,
+			"usage_gauge_period":                     c.Telemetry.UsageGaugePeriod,
+			"maximum_gauge_cardinality":              c.Telemetry.MaximumGaugeCardinality,
 			"circonus_api_token":                     "",
 			"circonus_api_app":                       c.Telemetry.CirconusAPIApp,
 			"circonus_api_url":                       c.Telemetry.CirconusAPIURL,
@@ -212,6 +214,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
 			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
 			"stackdriver_debug_logs":                 c.Telemetry.StackdriverDebugLogs,
+			"lease_metrics_epsilon":                  c.Telemetry.LeaseMetricsEpsilon,
+			"num_lease_metrics_buckets":              c.Telemetry.NumLeaseMetricsTimeBuckets,
+			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

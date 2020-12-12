@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, text, boolean } from '@storybook/addon-knobs';
 import notes from './form-save-buttons.md';
 
-storiesOf('FormSaveButtons/', module)
+storiesOf('Forms/FormSaveButtons', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(
     withKnobs({

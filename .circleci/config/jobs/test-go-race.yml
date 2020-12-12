@@ -1,6 +1,7 @@
-executor: go-machine
+executor: docker-env-go-test-race
+parallelism: 8
 steps:
-  - setup-go
+  - check-branch-name
   - checkout
   - go_test:
       extra_flags: "-race"

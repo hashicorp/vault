@@ -10,7 +10,7 @@ let model = EmberObject.create({
   isError: true,
 });
 
-storiesOf('MessageError/', module)
+storiesOf('MessageError', module)
   .addParameters({ options: { showPanel: true } })
   .add(
     `MessageError`,

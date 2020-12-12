@@ -1,4 +1,5 @@
 'use strict';
+/* eslint-disable node/no-extraneous-require */
 
 const path = require('path');
 const stringUtil = require('ember-cli-string-utils');
@@ -58,7 +59,7 @@ module.exports = {
     let contents = '';
 
     // if we're in an addon, build import statement
-    if (options.project.isEmberCLIAddon() || (options.inRepoAddon && !options.inDummy)) {
+    if (options.project.isEmberCLIAddon() || (options.inRepoAddon && !options.inDummy) || !!options.in) {
       if (options.pod) {
         templatePath = './template';
       } else {

@@ -407,6 +407,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator usage": func() (cli.Command, error) {
+			return &OperatorUsageCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
 				BaseCommand: getBaseCommand(),
@@ -444,6 +449,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"plugin reload": func() (cli.Command, error) {
 			return &PluginReloadCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload-status": func() (cli.Command, error) {
+			return &PluginReloadStatusCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

@@ -102,6 +102,7 @@ type Runner struct {
 	// template and command runtime with. These environment variables will be
 	// available in both the command's environment as well as the template's
 	// environment.
+	// NOTE this is only used when CT is being used as a library.
 	Env map[string]string
 
 	// stopLock is the lock around checking if the runner can be stopped
@@ -883,13 +884,13 @@ func (r *Runner) init() error {
 		}
 
 		tmpl, err := template.NewTemplate(&template.NewTemplateInput{
-			Source:            config.StringVal(ctmpl.Source),
-			Contents:          config.StringVal(ctmpl.Contents),
-			ErrMissingKey:     config.BoolVal(ctmpl.ErrMissingKey),
-			LeftDelim:         leftDelim,
-			RightDelim:        rightDelim,
-			FunctionBlacklist: ctmpl.FunctionBlacklist,
-			SandboxPath:       config.StringVal(ctmpl.SandboxPath),
+			Source:           config.StringVal(ctmpl.Source),
+			Contents:         config.StringVal(ctmpl.Contents),
+			ErrMissingKey:    config.BoolVal(ctmpl.ErrMissingKey),
+			LeftDelim:        leftDelim,
+			RightDelim:       rightDelim,
+			FunctionDenylist: ctmpl.FunctionDenylist,
+			SandboxPath:      config.StringVal(ctmpl.SandboxPath),
 		})
 		if err != nil {
 			return err

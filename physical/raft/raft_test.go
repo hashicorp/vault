@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/base64"
@@ -35,8 +36,13 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 }
 
 func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
+		Name:  fmt.Sprintf("raft-%s", id),
 		Level: hclog.Trace,
 	})
 	logger.Info("raft dir", "dir", raftDir)
@@ -44,6 +50,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	conf := map[string]string{
 		"path":          raftDir,
 		"trailing_logs": "100",
+		"node_id":       id,
 	}
 
 	if noStoreState {
@@ -57,7 +64,12 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	backend := backendRaw.(*RaftBackend)
 
 	if bootstrap {
-		err = backend.Bootstrap(context.Background(), []Peer{Peer{ID: backend.NodeID(), Address: backend.NodeID()}})
+		err = backend.Bootstrap([]Peer{
+			{
+				ID:      backend.NodeID(),
+				Address: backend.NodeID(),
+			},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -68,7 +80,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 		}
 
 		for {
-			if backend.AppliedIndex() >= 2 {
+			if backend.raft.AppliedIndex() >= 2 {
 				break
 			}
 		}
@@ -144,18 +156,21 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 		return fmt.Errorf("configs did not match: %+v != %+v", config1, config2)
 	}
 
-	return compareDBs(t, fsm1.db, fsm2.db)
+	return compareDBs(t, fsm1.getDB(), fsm2.getDB(), false)
 }
 
-func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
+func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 	t.Helper()
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 
 	err := boltDB1.View(func(tx *bolt.Tx) error {
-
 		c := tx.Cursor()
 		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
+			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
+				continue
+			}
+
 			b := tx.Bucket(bucketName)
 
 			cBucket := b.Cursor()
@@ -175,6 +190,9 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
 	err = boltDB2.View(func(tx *bolt.Tx) error {
 		c := tx.Cursor()
 		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
+			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
+				continue
+			}
 			b := tx.Bucket(bucketName)
 
 			c := b.Cursor()

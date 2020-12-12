@@ -82,8 +82,9 @@ Sets a CA cert and associated parameters in a role name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
+    --cacert vault-ca.pem \
     --data @payload.json
-    http://127.0.0.1:8200/v1/auth/cert/certs/test-ca
+    https://127.0.0.1:8200/v1/auth/cert/certs/test-ca
 ```
 
 ## Read CA Certificate Role
@@ -103,7 +104,8 @@ Gets information associated with the named role.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/cert/certs/test-ca
+    --cacert vault-ca.pem \
+    https://127.0.0.1:8200/v1/auth/cert/certs/test-ca
 ```
 
 ### Sample Response
@@ -142,7 +144,8 @@ Lists configured certificate names.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/cert/certs
+    --cacert vault-ca.pem \
+    https://127.0.0.1:8200/v1/auth/cert/certs
 ```
 
 ### Sample Response
@@ -179,7 +182,8 @@ Deletes the named role and CA cert from the method mount.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/cert/certs/cert1
+    --cacert vault-ca.pem \
+    https://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
 ## Create CRL
@@ -209,8 +213,9 @@ Sets a named CRL.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
+    --cacert vault-ca.pem \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
+    https://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
 ## Read CRL
@@ -232,7 +237,8 @@ arbitrary size, these are returned as strings.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
+    --cacert vault-ca.pem \
+    https://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
 ### Sample Response
@@ -270,7 +276,8 @@ Deletes the named CRL from the auth method mount.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/cert/crls/cert1
+    --cacert vault-ca.pem \
+    https://127.0.0.1:8200/v1/auth/cert/crls/cert1
 ```
 
 ## Configure TLS Certificate Method
@@ -301,8 +308,9 @@ Configuration options for the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
+    --cacert vault-ca.pem \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/cert/certs/cert1
+    https://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
 ## Login with TLS Certificate Method
@@ -334,9 +342,15 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 
 ### Sample Request
 
+~> **NOTE** The `--cacert` value used here is for the Vault TLS Listener CA
+certificate, not the CA that issued the client authentication certificate. This
+can be omitted if the CA used to issue the Vault server certificate is trusted
+by the local system executing this command.
+
 ```shell-session
 $ curl \
     --request POST \
+    --cacert vault-ca.pem \
     --cert cert.pem \
     --key key.pem \
     --data @payload.json \

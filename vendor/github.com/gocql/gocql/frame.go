@@ -361,6 +361,9 @@ type ObservedFrameHeader struct {
 	Start time.Time
 	// EndHeader is the time we finished reading the frame header off the network connection.
 	End time.Time
+
+	// Host is Host of the connection the frame header was read from.
+	Host *HostInfo
 }
 
 func (f ObservedFrameHeader) String() string {

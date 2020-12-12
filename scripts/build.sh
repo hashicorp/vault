@@ -3,6 +3,8 @@
 # This script builds the application from source for multiple platforms.
 set -e
 
+GO_CMD=${GO_CMD:-go}
+
 # Get the parent directory of where this script is.
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
@@ -20,9 +22,9 @@ GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
 # If its dev mode, only build for ourself
 if [ "${VAULT_DEV_BUILD}x" != "x" ] && [ "${XC_OSARCH}x" == "x" ]; then
-    XC_OS=$(go env GOOS)
-    XC_ARCH=$(go env GOARCH)
-    XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
+    XC_OS=$(${GO_CMD} env GOOS)
+    XC_ARCH=$(${GO_CMD} env GOARCH)
+    XC_OSARCH=$(${GO_CMD} env GOOS)/$(${GO_CMD} env GOARCH)
 elif [ "${XC_OSARCH}x" != "x" ]; then
     IFS='/' read -ra SPLITXC <<< "${XC_OSARCH}"
 	DEV_PLATFORM="./pkg/${SPLITXC[0]}_${SPLITXC[1]}"
@@ -33,7 +35,7 @@ XC_ARCH=${XC_ARCH:-"386 amd64"}
 XC_OS=${XC_OS:-linux darwin windows freebsd openbsd netbsd solaris}
 XC_OSARCH=${XC_OSARCH:-"linux/386 linux/amd64 linux/arm linux/arm64 darwin/386 darwin/amd64 windows/386 windows/amd64 freebsd/386 freebsd/amd64 freebsd/arm openbsd/386 openbsd/amd64 openbsd/arm netbsd/386 netbsd/amd64 solaris/amd64"}
 
-GOPATH=${GOPATH:-$(go env GOPATH)}
+GOPATH=${GOPATH:-$(${GO_CMD} env GOPATH)}
 case $(uname) in
     CYGWIN*)
         GOPATH="$(cygpath $GOPATH)"
@@ -56,6 +58,7 @@ gox \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     ${GOX_PARALLEL_BUILDS+-parallel="${GOX_PARALLEL_BUILDS}"} \
     -tags="${BUILD_TAGS}" \
+    -gocmd="${GO_CMD}" \
     .
 
 # Move all the compiled things to the $GOPATH/bin
@@ -64,7 +67,7 @@ IFS=: MAIN_GOPATH=($GOPATH)
 IFS=$OLDIFS
 
 # Copy our OS/Arch to the bin/ directory
-DEV_PLATFORM=${DEV_PLATFORM:-"./pkg/$(go env GOOS)_$(go env GOARCH)"}
+DEV_PLATFORM=${DEV_PLATFORM:-"./pkg/$(${GO_CMD} env GOOS)_$(${GO_CMD} env GOARCH)"}
 for F in $(find ${DEV_PLATFORM} -mindepth 1 -maxdepth 1 -type f); do
     cp ${F} bin/
     cp ${F} ${MAIN_GOPATH}/bin/

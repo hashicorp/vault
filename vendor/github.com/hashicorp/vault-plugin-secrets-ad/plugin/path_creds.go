@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-errors/errors"
-	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -150,7 +149,7 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 }
 
 func (b *backend) generateAndReturnCreds(ctx context.Context, engineConf *configuration, storage logical.Storage, roleName string, role *backendRole, previousCred map[string]interface{}) (*logical.Response, error) {
-	newPassword, err := util.GeneratePassword(engineConf.PasswordConf.Formatter, engineConf.PasswordConf.Length)
+	newPassword, err := GeneratePassword(ctx, engineConf.PasswordConf, b.System())
 	if err != nil {
 		return nil, err
 	}

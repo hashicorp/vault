@@ -50,13 +50,19 @@ Configuration:
 }
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
+	mount, ok := m["mount"]
+	if !ok {
+		mount = "oci"
+	}
+	mount = strings.TrimSuffix(mount, "/")
+
 	role, ok := m["role"]
 	if !ok {
 		return nil, fmt.Errorf("Enter the role")
 	}
 	role = strings.ToLower(role)
 
-	path := fmt.Sprintf(PathBaseFormat, role)
+	path := fmt.Sprintf(PathBaseFormat, mount, role)
 	signingPath := PathVersionBase + path
 
 	loginData, err := CreateLoginData(c.Address(), m, signingPath)

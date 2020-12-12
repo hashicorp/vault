@@ -99,11 +99,11 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
-			if vs, ok := v.(string); ok {
-				strMap[k] = vs
-			} else {
-				return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: value could not be parsed as string", key), fmt.Sprintf("%s.%s:", blockName, key))
+			s, err := parseutil.ParseString(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
+			strMap[k] = s
 		}
 
 		seal := &KMS{

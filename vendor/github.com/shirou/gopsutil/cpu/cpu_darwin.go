@@ -4,6 +4,7 @@ package cpu
 
 import (
 	"context"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -22,6 +23,21 @@ const (
 
 // default value. from time.h
 var ClocksPerSec = float64(128)
+
+func init() {
+	getconf, err := exec.LookPath("getconf")
+	if err != nil {
+		return
+	}
+	out, err := invoke.Command(getconf, "CLK_TCK")
+	// ignore errors
+	if err == nil {
+		i, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
+		if err == nil {
+			ClocksPerSec = float64(i)
+		}
+	}
+}
 
 func Times(percpu bool) ([]TimesStat, error) {
 	return TimesWithContext(context.Background(), percpu)

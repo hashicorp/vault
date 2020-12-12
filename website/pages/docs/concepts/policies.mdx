@@ -86,7 +86,7 @@ user or machine is allowed to access.
 [hcl]: https://github.com/hashicorp/hcl
 
 Here is a very simple policy which grants read capabilities to the path
-"secret/foo":
+`"secret/foo"`:
 
 ```ruby
 path "secret/foo" {
@@ -167,7 +167,7 @@ path "secret/+/+/teamb" {
 
 Vault's architecture is similar to a filesystem. Every action in Vault has a
 corresponding path and capability - even Vault's internal core configuration
-endpoints live under the "sys/" path. Policies define access to these paths and
+endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
 ~> Policy paths are matched using the **most specific path match**. This may be
@@ -178,18 +178,7 @@ policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
-will sanitize request paths to be prefixes. In other words, policy paths
-targeting `list` capability should end with a trailing slash:
-
-```ruby
-path "secret/foo" {
-  capabilities = ["read"]
-}
-
-path "secret/foo/" {
-  capabilities = ["list"]
-}
-```
+will sanitize request paths to be prefixes.
 
 ### Capabilities
 
@@ -389,6 +378,27 @@ options are:
       allowed_parameters = {
         "bar" = ["zip", "zap"]
         "*"   = []
+      }
+    }
+    ```
+
+  - It's important to note that the use of globbing may result in surprising
+    or unexpected behavior.
+    ```ruby
+    # This allows the user to create or update "secret/foo" with a parameter
+    # named "bar". The values passed to parameter "bar" must start with "baz/"
+    # so values like "baz/quux" are fine. However, values like
+    # "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+    # underlies "secret/foo" might allow comma delimited values for the "bar"
+    # parameter, and if it did, specifying a value like
+    # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
+    # passed along. Seeing values like "wibble" or "wobble" getting passed to
+    # "secret/foo" might surprise someone that expected the allowed_parameters
+    # constraint to only allow values starting with "baz/".
+    path "secret/foo" {
+      capabilities = ["create", "update"]
+      allowed_parameters = {
+        "bar" = ["baz/*"]
       }
     }
     ```

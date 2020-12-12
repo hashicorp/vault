@@ -83,23 +83,8 @@ Contributions are very welcome for bug fixing, performance improvements...!
 
 ## Contributors
 
-Thanks to all contributors so far:
+Thanks to all [contributors](https://github.com/pierrec/lz4/graphs/contributors)  so far!
 
-- [@klauspost](https://github.com/klauspost)
-- [@heidawei](https://github.com/heidawei)
-- [@x4m](https://github.com/x4m)
-- [@Zariel](https://github.com/Zariel)
-- [@edwingeng](https://github.com/edwingeng)
-- [@danielmoy-google](https://github.com/danielmoy-google)
-- [@honda-tatsuya](https://github.com/honda-tatsuya)
-- [@h8liu](https://github.com/h8liu)
-- [@sbinet](https://github.com/sbinet)
-- [@fingon](https://github.com/fingon)
-- [@emfree](https://github.com/emfree)
-- [@lhemala](https://github.com/lhemala)
-- [@connor4312](https://github.com/connor4312)
-- [@oov](https://github.com/oov)
-- [@arya](https://github.com/arya)
-- [@ikkeps](https://github.com/ikkeps)
+Special thanks to [@Zariel](https://github.com/Zariel) for his asm implementation of the decoder.
 
-Special thanks to [@Zariel](https://github.com/Zariel) for his asm implementation of the decoder
+Special thanks to [@klauspost](https://github.com/klauspost) for his work on optimizing the code.

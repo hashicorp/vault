@@ -55,6 +55,19 @@ func (c GoCache) Set(key string, value *http.Response) {
 	c.rootLibrary.Set(key, value, c.ttl)
 }
 
+func (c GoCache) GetString(key string) string {
+	item, found := c.rootLibrary.Get(key)
+	if found {
+		return item.(string)
+	}
+
+	return ""
+}
+
+func (c GoCache) SetString(key string, value string) {
+	c.rootLibrary.Set(key, value, c.ttl)
+}
+
 func (c GoCache) Delete(key string) {
 	c.rootLibrary.Delete(key)
 }

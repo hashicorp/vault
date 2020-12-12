@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -568,6 +569,23 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		entity.Aliases = []*identity.Alias{
 			newAlias,
 		}
+
+		// Emit a metric for the new entity
+		ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+		var nsLabel metrics.Label
+		if err != nil {
+			nsLabel = metrics.Label{"namespace", "unknown"}
+		} else {
+			nsLabel = metricsutil.NamespaceLabel(ns)
+		}
+		i.core.MetricSink().IncrCounterWithLabels(
+			[]string{"identity", "entity", "creation"},
+			1,
+			[]metrics.Label{
+				nsLabel,
+				{"auth_method", newAlias.MountType},
+				{"mount_point", newAlias.MountPath},
+			})
 	}
 
 	// Update MemDB and persist entity object

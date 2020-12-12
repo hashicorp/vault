@@ -9,8 +9,17 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
+
+type DecryptBatchResponseItem struct {
+	// Plaintext for the ciphertext present in the corresponding batch
+	// request item
+	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
+
+	// Error, if set represents a failure encountered while encrypting a
+	// corresponding batch request item
+	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+}
 
 func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
@@ -57,7 +66,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	var batchInputItems []BatchRequestItem
 	var err error
 	if batchInputRaw != nil {
-		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
+		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
 		}
@@ -79,7 +88,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	for i, item := range batchInputItems {

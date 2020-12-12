@@ -6,24 +6,25 @@
 
 package options
 
-// ListCollectionsOptions represents all possible options for a listCollections command.
+// ListCollectionsOptions represents options that can be used to configure a ListCollections operation.
 type ListCollectionsOptions struct {
-	NameOnly *bool // If true, only the collection names will be returned.
+	// If true, each collection document will only contain a field for the collection name. The default value is false.
+	NameOnly *bool
 }
 
-// ListCollections creates a new *ListCollectionsOptions
+// ListCollections creates a new ListCollectionsOptions instance.
 func ListCollections() *ListCollectionsOptions {
 	return &ListCollectionsOptions{}
 }
 
-// SetNameOnly specifies whether to return only the collection names.
+// SetNameOnly sets the value for the NameOnly field.
 func (lc *ListCollectionsOptions) SetNameOnly(b bool) *ListCollectionsOptions {
 	lc.NameOnly = &b
 	return lc
 }
 
-// MergeListCollectionsOptions combines the given *ListCollectionsOptions into a single *ListCollectionsOptions in a
-// last one wins fashion.
+// MergeListCollectionsOptions combines the given ListCollectionsOptions instances into a single *ListCollectionsOptions
+// in a last-one-wins fashion.
 func MergeListCollectionsOptions(opts ...*ListCollectionsOptions) *ListCollectionsOptions {
 	lc := ListCollections()
 	for _, opt := range opts {

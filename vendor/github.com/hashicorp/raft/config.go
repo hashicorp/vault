@@ -178,10 +178,6 @@ type Config struct {
 	// step down as leader.
 	LeaderLeaseTimeout time.Duration
 
-	// StartAsLeader forces Raft to start in the leader state. This should
-	// never be used except for testing purposes, as it can cause a split-brain.
-	StartAsLeader bool
-
 	// The unique ID for this server across all time. When running with
 	// ProtocolVersion < 3, you must set this to be the same as the network
 	// address of your transport.
@@ -206,10 +202,13 @@ type Config struct {
 
 	// NoSnapshotRestoreOnStart controls if raft will restore a snapshot to the
 	// FSM on start. This is useful if your FSM recovers from other mechanisms
-	// than raft snapshotting. Snapshot metadata will still be used to initalize
+	// than raft snapshotting. Snapshot metadata will still be used to initialize
 	// raft's configuration and index values. This is used in NewRaft and
 	// RestoreCluster.
 	NoSnapshotRestoreOnStart bool
+
+	// skipStartup allows NewRaft() to bypass all background work goroutines
+	skipStartup bool
 }
 
 // DefaultConfig returns a Config with usable defaults.

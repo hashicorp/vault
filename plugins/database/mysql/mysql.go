@@ -4,13 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
-	"time"
 
 	stdmysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/errwrap"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -39,14 +38,17 @@ var (
 var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
-	*connutil.SQLConnectionProducer
-	credsutil.CredentialsProducer
+	*mySQLConnectionProducer
+
+	displayNameLen int
+	roleNameLen    int
+	maxUsernameLen int
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, error) {
+func New(displayNameLen int, roleNameLen int, maxUsernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		db := new(displayNameLen, roleNameLen, usernameLen)
+		db := newMySQL(displayNameLen, roleNameLen, maxUsernameLen)
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
@@ -54,48 +56,15 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 	}
 }
 
-func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
-	connProducer := &connutil.SQLConnectionProducer{}
-	connProducer.Type = mySQLTypeName
-
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: displayNameLen,
-		RoleNameLen:    roleNameLen,
-		UsernameLen:    usernameLen,
-		Separator:      "-",
-	}
+func newMySQL(displayNameLen int, roleNameLen int, maxUsernameLen int) *MySQL {
+	connProducer := &mySQLConnectionProducer{}
 
 	return &MySQL{
-		SQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
+		mySQLConnectionProducer: connProducer,
+		displayNameLen:          displayNameLen,
+		roleNameLen:             roleNameLen,
+		maxUsernameLen:          maxUsernameLen,
 	}
-}
-
-// Run instantiates a MySQL object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	return runCommon(false, apiTLSConfig)
-}
-
-// Run instantiates a MySQL object, and runs the RPC server for the plugin
-func RunLegacy(apiTLSConfig *api.TLSConfig) error {
-	return runCommon(true, apiTLSConfig)
-}
-
-func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
-	var f func() (interface{}, error)
-	if legacy {
-		f = New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
-	} else {
-		f = New(MetadataLen, MetadataLen, UsernameLen)
-	}
-	dbType, err := f()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 func (m *MySQL) Type() (string, error) {
@@ -111,27 +80,30 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
-	}
-
-	username, err = m.GenerateUsername(usernameConfig)
+func (m *MySQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	err := m.mySQLConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return "", "", err
+		return dbplugin.InitializeResponse{}, err
+	}
+	resp := dbplugin.InitializeResponse{
+		Config: req.Config,
+	}
+	return resp, nil
+}
+
+func (m *MySQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
+	if len(req.Statements.Commands) == 0 {
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	password, err = m.GeneratePassword()
+	username, err := m.generateUsername(req)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	expirationStr, err := m.GenerateExpiration(expiration)
-	if err != nil {
-		return "", "", err
-	}
+	password := req.Password
+
+	expirationStr := req.Expiration.Format("2006-01-02 15:04:05-0700")
 
 	queryMap := map[string]string{
 		"name":       username,
@@ -140,31 +112,41 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 		"expiration": expirationStr,
 	}
 
-	if err := m.executePreparedStatmentsWithMap(ctx, statements.Creation, queryMap); err != nil {
-		return "", "", err
+	if err := m.executePreparedStatementsWithMap(ctx, req.Statements.Commands, queryMap); err != nil {
+		return dbplugin.NewUserResponse{}, err
 	}
-	return username, password, nil
+
+	resp := dbplugin.NewUserResponse{
+		Username: username,
+	}
+	return resp, nil
 }
 
-// NOOP
-func (m *MySQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
-	return nil
+func (m *MySQL) generateUsername(req dbplugin.NewUserRequest) (string, error) {
+	username, err := credsutil.GenerateUsername(
+		credsutil.DisplayName(req.UsernameConfig.DisplayName, m.displayNameLen),
+		credsutil.RoleName(req.UsernameConfig.RoleName, m.roleNameLen),
+		credsutil.MaxLength(m.maxUsernameLen),
+	)
+	if err != nil {
+		return "", errwrap.Wrapf("error generating username: {{err}}", err)
+	}
+
+	return username, nil
 }
 
-func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+func (m *MySQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	// Grab the read lock
 	m.Lock()
 	defer m.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
-	revocationStmts := statements.Revocation
+	revocationStmts := req.Statements.Commands
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
 	if len(revocationStmts) == 0 {
 		revocationStmts = []string{defaultMysqlRevocationStmts}
@@ -173,7 +155,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 	defer tx.Rollback()
 
@@ -187,101 +169,44 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			// This is not a prepared statement because not all commands are supported
 			// 1295: This command is not supported in the prepared statement protocol yet
 			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
-			query = strings.Replace(query, "{{name}}", username, -1)
-			query = strings.Replace(query, "{{username}}", username, -1)
+			query = strings.Replace(query, "{{name}}", req.Username, -1)
+			query = strings.Replace(query, "{{username}}", req.Username, -1)
 			_, err = tx.ExecContext(ctx, query)
 			if err != nil {
-				return err
+				return dbplugin.DeleteUserResponse{}, err
 			}
 		}
 	}
 
 	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	err = tx.Commit()
+	return dbplugin.DeleteUserResponse{}, err
 }
 
-func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	if len(m.Username) == 0 || len(m.Password) == 0 {
-		return nil, errors.New("username and password are required to rotate")
+func (m *MySQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
+	if req.Password == nil && req.Expiration == nil {
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no change requested")
 	}
 
-	rotateStatements := statements
-	if len(rotateStatements) == 0 {
-		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
-	}
-
-	db, err := m.getConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		tx.Rollback()
-	}()
-
-	password, err := m.GeneratePassword()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, stmt := range rotateStatements {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
-
-			// This is not a prepared statement because not all commands are supported
-			// 1295: This command is not supported in the prepared statement protocol yet
-			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
-			query = strings.Replace(query, "{{username}}", m.Username, -1)
-			query = strings.Replace(query, "{{name}}", m.Username, -1)
-			query = strings.Replace(query, "{{password}}", password, -1)
-
-			if _, err := tx.ExecContext(ctx, query); err != nil {
-				return nil, err
-			}
+	if req.Password != nil {
+		err := m.changeUserPassword(ctx, req.Username, req.Password.NewPassword, req.Password.Statements.Commands)
+		if err != nil {
+			return dbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change password: %w", err)
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
+	// Expiration change/update is currently a no-op
 
-	if err := db.Close(); err != nil {
-		return nil, err
-	}
-
-	m.RawConfig["password"] = password
-	return m.RawConfig, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-// SetCredentials uses provided information to set the password to a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for setting
-// the password of static accounts, as well as rolling back passwords in the
-// database in the event an updated database fails to save in Vault's storage.
-func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	rotateStatements := statements.Rotation
-	if len(rotateStatements) == 0 {
-		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
+func (m *MySQL) changeUserPassword(ctx context.Context, username, password string, rotateStatements []string) error {
+	if username == "" || password == "" {
+		return errors.New("must provide both username and password")
 	}
 
-	username = staticUser.Username
-	password = staticUser.Password
-	if username == "" || password == "" {
-		return "", "", errors.New("must provide both username and password")
+	if len(rotateStatements) == 0 {
+		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
 	}
 
 	queryMap := map[string]string{
@@ -290,16 +215,16 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 		"password": password,
 	}
 
-	if err := m.executePreparedStatmentsWithMap(ctx, rotateStatements, queryMap); err != nil {
-		return "", "", err
+	if err := m.executePreparedStatementsWithMap(ctx, rotateStatements, queryMap); err != nil {
+		return err
 	}
-	return username, password, nil
+	return nil
 }
 
-// executePreparedStatmentsWithMap loops through the given templated SQL statements and
+// executePreparedStatementsWithMap loops through the given templated SQL statements and
 // applies the map to them, interpolating values into the templates, returning
 // the resulting username and password
-func (m *MySQL) executePreparedStatmentsWithMap(ctx context.Context, statements []string, queryMap map[string]string) error {
+func (m *MySQL) executePreparedStatementsWithMap(ctx context.Context, statements []string, queryMap map[string]string) error {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()

@@ -2,39 +2,21 @@
   <nav class="tabs">
     <ul>
       <li class="{{if (eq tab 'actions') 'is-active'}}">
-        {{#secret-link
-          secret=key.id
-          mode="show"
-          replace=true
-          queryParams=(query-params tab='actions')
-          data-test-transit-key-actions-link=true
-          }}
+        <SecretLink @secret={{key.id}} @mode="show" @replace={{true}} @queryParams={{query-params tab='actions'}} @data-test-transit-key-actions-link={{true}}>
           Key Actions
-        {{/secret-link}}
+        </SecretLink>
       </li>
 
       <li class="{{if (eq tab 'details') 'is-active'}}">
-        {{#secret-link
-          secret=key.id
-          mode="show"
-          replace=true
-          queryParams=(query-params tab='details')
-          data-test-transit-link="details"
-          }}
+        <SecretLink @secret={{key.id}} @mode="show" @replace={{true}} @queryParams={{query-params tab='details'}} @data-test-transit-link="details">
           Details
-        {{/secret-link}}
+        </SecretLink>
       </li>
 
       <li class="{{if (eq tab 'versions') 'is-active'}}">
-        {{#secret-link
-          secret=key.id
-          mode="show"
-          replace=true
-          queryParams=(query-params tab='versions')
-          data-test-transit-link="versions"
-          }}
+        <SecretLink @secret={{key.id}} @mode="show" @replace={{true}} @queryParams={{query-params tab='versions'}} @data-test-transit-link="versions">
           Versions
-        {{/secret-link}}
+        </SecretLink>
       </li>
     </ul>
   </nav>
@@ -103,6 +85,7 @@
   {{#if (or
       (eq key.type "aes256-gcm96")
       (eq key.type "chacha20-poly1305")
+      (eq key.type "aes128-gcm96")
     )
   }}
     {{#each-in key.keys as |version creationTimestamp|}}
@@ -166,14 +149,9 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li class="action">
-                    {{#copy-button
-                      clipboardText=meta.public_key
-                      class="link button is-transparent"
-                      buttonType="button"
-                      success=(action (set-flash-message 'Public key copied!'))
-                    }}
+                    <CopyButton @clipboardText={{meta.public_key}} @class="link button is-transparent" @buttonType="button" @success={{action (set-flash-message "Public key copied!")}}>
                       Copy Public Key
-                    {{/copy-button}}
+                    </CopyButton>
                   </li>
                 </ul>
               </nav>
@@ -184,11 +162,11 @@
     {{/each-in}}
   {{/if}}
 {{else}}
-  {{info-table-row label="Type" value=key.type}}
-  {{info-table-row label="Deletion allowed" value=(stringify key.deletionAllowed)}}
+  <InfoTableRow @label="Type" @value={{key.type}} />
+  <InfoTableRow @label="Deletion allowed" @value={{stringify key.deletionAllowed}} />
 
   {{#if key.derived}}
-    {{info-table-row label="Derived" value=key.derived}}
-    {{info-table-row label="Convergent encryption" value=key.convergentEncryption}}
+    <InfoTableRow @label="Derived" @value={{key.derived}} />
+    <InfoTableRow @label="Convergent encryption" @value={{key.convergentEncryption}} />
   {{/if}}
 {{/if}}

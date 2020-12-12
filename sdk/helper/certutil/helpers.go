@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -307,9 +308,12 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 		if ecPublicKey, ok := rawKey.(*ecdsa.PublicKey); ok {
 			return ecPublicKey, nil
 		}
+		if edPublicKey, ok := rawKey.(ed25519.PublicKey); ok {
+			return edPublicKey, nil
+		}
 	}
 
-	return nil, errors.New("data does not contain any valid RSA or ECDSA public keys")
+	return nil, errors.New("data does not contain any valid public keys")
 }
 
 // addPolicyIdentifiers adds certificate policies extension

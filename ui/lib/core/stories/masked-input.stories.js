@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, text, boolean } from '@storybook/addon-knobs';
 import notes from './masked-input.md';
 
-storiesOf('MaskedInput/', module)
+storiesOf('MaskedInput', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

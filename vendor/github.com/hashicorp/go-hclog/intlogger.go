@@ -113,7 +113,9 @@ func newLogger(opts *LoggerOptions) *intLogger {
 
 	l.setColorization(opts)
 
-	if opts.TimeFormat != "" {
+	if opts.DisableTime {
+		l.timeFormat = ""
+	} else if opts.TimeFormat != "" {
 		l.timeFormat = opts.TimeFormat
 	}
 
@@ -176,12 +178,14 @@ func trimCallerPath(path string) string {
 	return path[idx+1:]
 }
 
-var logImplFile = regexp.MustCompile(`github.com/hashicorp/go-hclog/.+logger.go$`)
+var logImplFile = regexp.MustCompile(`.+intlogger.go|.+interceptlogger.go$`)
 
 // Non-JSON logging format function
 func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, args ...interface{}) {
-	l.writer.WriteString(t.Format(l.timeFormat))
-	l.writer.WriteByte(' ')
+	if len(l.timeFormat) > 0 {
+		l.writer.WriteString(t.Format(l.timeFormat))
+		l.writer.WriteByte(' ')
+	}
 
 	s, ok := _levelToBracket[level]
 	if ok {
@@ -267,6 +271,12 @@ func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, 
 				val = strconv.FormatUint(uint64(st), 10)
 			case uint8:
 				val = strconv.FormatUint(uint64(st), 10)
+			case Hex:
+				val = "0x" + strconv.FormatUint(uint64(st), 16)
+			case Octal:
+				val = "0" + strconv.FormatUint(uint64(st), 8)
+			case Binary:
+				val = "0b" + strconv.FormatUint(uint64(st), 2)
 			case CapturedStacktrace:
 				stacktrace = st
 				continue FOR

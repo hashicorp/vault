@@ -13,8 +13,7 @@ rules to get in the way of that.
 That said, if you want to ensure that a pull request is likely to be merged,
 talk to us! You can find out our thoughts and ensure that your contribution
 won't clash or be obviated by Vault's normal direction. A great way to do this
-is via the [Vault Google Group][2]. Sometimes Vault devs are in `#vault-tool`
-on Freenode, too.
+is via the [Vault Discussion Forum][2].
 
 This document will cover what we're looking for in terms of reporting issues.
 By addressing all the points we're looking for, it raises the chances we can
@@ -69,7 +68,7 @@ following steps listed in the README, under the section [Developing Vault][1].
 
 
 [1]: https://github.com/hashicorp/vault#developing-vault
-[2]: https://groups.google.com/group/vault-tool
+[2]: https://discuss.hashicorp.com/c/vault
 
 ## Contributor License Agreement
 

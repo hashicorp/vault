@@ -10,11 +10,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -64,44 +64,68 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+	merr := &multierror.Error{}
+	err := isDatabasePlugin(ctx, plugin)
+	if err == nil {
+		return consts.PluginTypeDatabase, nil
+	}
+	merr = multierror.Append(merr, err)
 
-	{
-		// Attempt to run as database plugin
-		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			// Close the client and cleanup the plugin process
-			client.Close()
-			return consts.PluginTypeDatabase, nil
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
+	// Attempt to run as backend plugin
+	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		err := client.Setup(ctx, &logical.BackendConfig{})
+		if err != nil {
+			return consts.PluginTypeUnknown, err
 		}
+
+		backendType := client.Type()
+		client.Cleanup(ctx)
+
+		switch backendType {
+		case logical.TypeCredential:
+			return consts.PluginTypeCredential, nil
+		case logical.TypeLogical:
+			return consts.PluginTypeSecrets, nil
+		}
+	} else {
+		merr = multierror.Append(merr, err)
 	}
 
-	{
-		// Attempt to run as backend plugin
-		client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			err := client.Setup(ctx, &logical.BackendConfig{})
-			if err != nil {
-				return consts.PluginTypeUnknown, err
-			}
-
-			backendType := client.Type()
-			client.Cleanup(ctx)
-
-			switch backendType {
-			case logical.TypeCredential:
-				return consts.PluginTypeCredential, nil
-			case logical.TypeLogical:
-				return consts.PluginTypeSecrets, nil
-			}
-			logger.Warn(fmt.Sprintf("unknown backendType of %s", backendType))
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as an auth/secret plugin, continuing", err))
-		}
+	if client == nil || client.Type() == logical.TypeUnknown {
+		logger.Warn("unknown plugin type",
+			"plugin name", plugin.Name,
+			"error", merr.Error())
+	} else {
+		logger.Warn("unsupported plugin type",
+			"plugin name", plugin.Name,
+			"plugin type", client.Type().String(),
+			"error", merr.Error())
 	}
 
 	return consts.PluginTypeUnknown, nil
+}
+
+func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
+	merr := &multierror.Error{}
+	// Attempt to run as database V5 plugin
+	v5Client, err := v5.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		v5Client.Close()
+		return nil
+	}
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
+
+	v4Client, err := v4.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		v4Client.Close()
+		return nil
+	}
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
+
+	return merr.ErrorOrNil()
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to

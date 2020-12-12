@@ -4,6 +4,7 @@ package mem
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"os"
 	"strconv"
@@ -16,6 +17,14 @@ import (
 type VirtualMemoryExStat struct {
 	ActiveFile   uint64 `json:"activefile"`
 	InactiveFile uint64 `json:"inactivefile"`
+	ActiveAnon   uint64 `json:"activeanon"`
+	InactiveAnon uint64 `json:"inactiveanon"`
+	Unevictable  uint64 `json:"unevictable"`
+}
+
+func (v VirtualMemoryExStat) String() string {
+	s, _ := json.Marshal(v)
+	return string(s)
 }
 
 func VirtualMemory() (*VirtualMemoryStat, error) {
@@ -23,6 +32,26 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 }
 
 func VirtualMemoryWithContext(ctx context.Context) (*VirtualMemoryStat, error) {
+	vm, _, err := fillFromMeminfoWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return vm, nil
+}
+
+func VirtualMemoryEx() (*VirtualMemoryExStat, error) {
+	return VirtualMemoryExWithContext(context.Background())
+}
+
+func VirtualMemoryExWithContext(ctx context.Context) (*VirtualMemoryExStat, error) {
+	_, vmEx, err := fillFromMeminfoWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return vmEx, nil
+}
+
+func fillFromMeminfoWithContext(ctx context.Context) (*VirtualMemoryStat, *VirtualMemoryExStat, error) {
 	filename := common.HostProc("meminfo")
 	lines, _ := common.ReadLines(filename)
 
@@ -46,7 +75,7 @@ func VirtualMemoryWithContext(ctx context.Context) (*VirtualMemoryStat, error) {
 
 		t, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return ret, err
+			return ret, retEx,err
 		}
 		switch key {
 		case "MemTotal":
@@ -64,12 +93,18 @@ func VirtualMemoryWithContext(ctx context.Context) (*VirtualMemoryStat, error) {
 			ret.Active = t * 1024
 		case "Inactive":
 			ret.Inactive = t * 1024
+		case "Active(anon)":
+			retEx.ActiveAnon = t * 1024
+		case "Inactive(anon)":
+			retEx.InactiveAnon = t * 1024
 		case "Active(file)":
 			activeFile = true
 			retEx.ActiveFile = t * 1024
-		case "InActive(file)":
+		case "Inactive(file)":
 			inactiveFile = true
 			retEx.InactiveFile = t * 1024
+		case "Unevictable":
+			retEx.Unevictable = t * 1024
 		case "Writeback":
 			ret.Writeback = t * 1024
 		case "WritebackTmp":
@@ -135,7 +170,7 @@ func VirtualMemoryWithContext(ctx context.Context) (*VirtualMemoryStat, error) {
 	ret.Used = ret.Total - ret.Free - ret.Buffers - ret.Cached
 	ret.UsedPercent = float64(ret.Used) / float64(ret.Total) * 100.0
 
-	return ret, nil
+	return ret, retEx, nil
 }
 
 func SwapMemory() (*SwapMemoryStat, error) {
@@ -197,6 +232,12 @@ func SwapMemoryWithContext(ctx context.Context) (*SwapMemoryStat, error) {
 				continue
 			}
 			ret.PgFault = value * 4 * 1024
+		case "pgmajfault":
+			value, err := strconv.ParseUint(fields[1], 10, 64)
+			if err != nil {
+				continue
+			}
+			ret.PgMajFault = value * 4 * 1024
 		}
 	}
 	return ret, nil

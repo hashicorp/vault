@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, select } from '@storybook/addon-knobs';
 import notes from './chevron.md';
 
-storiesOf('Chevron/', module)
+storiesOf('Chevron', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

@@ -22,18 +22,24 @@ $ vault auth tune -default-lease-ttl=72h github/
 Success! Tuned the auth method at: github/
 ```
 
+Specify multiple audit non-hmac request keys:
+
+```shell-session
+$ vault auth tune -audit-non-hmac-request-keys=value1 -audit-non-hmac-request-keys=value2 github/
+```
+
 ## Usage
 
 The following flags are available in addition to the [standard set of
 flags](/docs/commands) included on all commands.
 
-- `-audit-non-hmac-request-keys` `(string: "")` - Comma-separated
-  string or list of keys that will not be HMAC'd by audit devices in the
-  request data object.
+- `-audit-non-hmac-request-keys` `(string: "")` - Key that will not be HMAC'd
+  by audit devices in the request data object. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
 
-- `-audit-non-hmac-response-keys` `(string: "")` - Comma-separated
-  string or list of keys that will not be HMAC'd by audit devices in the
-  response data object.
+- `-audit-non-hmac-response-keys` `(string: "")` - Key that will not be HMAC'd
+  by audit devices in the response data object. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
 
 - `-default-lease-ttl` `(duration: "")` - The default lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally

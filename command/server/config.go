@@ -65,6 +65,9 @@ type Config struct {
 
 	DisableIndexing    bool        `hcl:"-"`
 	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
+
+	DisableSentinelTrace    bool        `hcl:"-"`
+	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -89,7 +92,7 @@ enable_raw_endpoint = true
 storage "%s" {
 }
 
-enable_ui = true
+ui = true
 `
 
 	hclStr = fmt.Sprintf(hclStr, storageType)
@@ -166,6 +169,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableCache = c.DisableCache
 	if c2.DisableCache {
 		result.DisableCache = c2.DisableCache
+	}
+
+	result.DisableSentinelTrace = c.DisableSentinelTrace
+	if c2.DisableSentinelTrace {
+		result.DisableSentinelTrace = c2.DisableSentinelTrace
 	}
 
 	result.DisablePrintableCheck = c.DisablePrintableCheck
@@ -261,6 +269,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 			haStorage.DisableClustering = result.DisableClustering
 		}
 	}
+
+	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	return result
 }
@@ -368,6 +378,12 @@ func ParseConfig(d string) (*Config, error) {
 
 	if result.DisableClusteringRaw != nil {
 		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableSentinelTraceRaw != nil {
+		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -702,6 +718,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 	sharedResult := c.SharedConfig.Sanitized()
 	result := map[string]interface{}{
 		"cache_size":              c.CacheSize,
+		"disable_sentinel_trace":  c.DisableSentinelTrace,
 		"disable_cache":           c.DisableCache,
 		"disable_printable_check": c.DisablePrintableCheck,
 
@@ -758,6 +775,11 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"type": c.ServiceRegistration.Type,
 		}
 		result["service_registration"] = sanitizedServiceRegistration
+	}
+
+	entConfigResult := c.entConfig.Sanitized()
+	for k, v := range entConfigResult {
+		result[k] = v
 	}
 
 	return result

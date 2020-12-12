@@ -28,8 +28,13 @@ Subcommands:
 
 This command is used to join a new node as a peer to the Raft cluster. In order
 to join, there must be at least one existing member of the cluster. If Shamir
-seal is in use, then this API will request for the unseal keys to be supplied to
-join the cluster.
+seal is in use, then unseal keys are to be supplied before or after the
+join process, depending on whether it's being used exclusively for HA.
+
+If raft is used for `storage`, the node must be joined before unsealing and the
+`leader-api-addr` argument must be provided. If raft is used for `ha_storage`,
+the node must be first unsealed before joining and the `leader-api-addr` must
+_not_ be provided.
 
 ```text
 Usage: vault operator raft join [options] <leader-api-addr>
@@ -38,6 +43,27 @@ Usage: vault operator raft join [options] <leader-api-addr>
   of the Raft leader node.
 
 	  $ vault operator raft join "http://127.0.0.2:8200"
+```
+
+The `join` command also allows operators to specify cloud auto-join configuration
+instead of a static IP address or hostname. When provided, Vault will attempt to
+automatically discover and resolve potential leader addresses based on the provided
+auto-join configuration.
+
+Vault uses go-discover to support the auto-join functionality. Please see the
+go-discover
+[README](https://github.com/hashicorp/go-discover/blob/master/README.md) for
+details on the format.
+
+By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
+Operators may override these through the `--auto-join-scheme` and `--auto-join-port`
+CLI flags respectively.
+
+```text
+Usage: vault operator raft join [options] <auto-join-configuration>
+  Join the current node as a peer to the Raft cluster by providing cloud auto-join
+  metadata configuration.
+    $ vault operator raft join "provider=aws region=eu-west-1 ..."
 ```
 
 ### Parameters
@@ -72,7 +98,7 @@ Usage: vault operator raft list-peers
 
 ### Example Output
 
-```python
+```json
 {
  ...
   "data": {
@@ -144,6 +170,8 @@ Usage: vault operator raft snapshot save <snapshot_file>
 
 	  $ vault operator raft snapshot save raft.snap
 ```
+
+~> **Note:** Snapshot is not supported when Raft is used only for `ha_storage`.
 
 ### snapshot restore
 

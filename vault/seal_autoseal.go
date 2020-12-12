@@ -198,7 +198,7 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierType())
 	}
 
-	d.barrierConfig.Store(conf)
+	d.SetCachedBarrierConfig(conf)
 	return conf.Clone(), nil
 }
 
@@ -231,7 +231,7 @@ func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error
 		return errwrap.Wrapf("failed to write barrier seal configuration: {{err}}", err)
 	}
 
-	d.barrierConfig.Store(conf.Clone())
+	d.SetCachedBarrierConfig(conf.Clone())
 
 	return nil
 }

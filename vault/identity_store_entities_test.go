@@ -561,6 +561,42 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	}
 }
 
+func TestIdentityStore_ContextCancel(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	ctx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	entityReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+
+	expected := []string{}
+	for i := 0; i < 10; i++ {
+		resp, err = is.HandleRequest(ctx, entityReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		expected = append(expected, resp.Data["id"].(string))
+	}
+
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "entity/id",
+	}
+
+	cancelFunc()
+	resp, err = is.HandleRequest(ctx, listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp.Warnings == nil || len(resp.Warnings) == 0 {
+		t.Fatalf("expected warning for cancelled context. resp:%#v", resp)
+	}
+}
+
 func TestIdentityStore_ListEntities(t *testing.T) {
 	var err error
 	var resp *logical.Response

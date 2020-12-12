@@ -1,4 +1,5 @@
 'use strict';
+/* eslint-disable node/no-extraneous-require */
 const getPathOption = require('ember-cli-get-component-path-option');
 const stringUtil = require('ember-cli-string-utils');
 const path = require('path');
@@ -38,9 +39,7 @@ module.exports = {
   locals: function(options) {
     let contents = '';
 
-    let importMD = "import notes from './" + stringUtil.dasherize(options.entity.name) + ".md';\n";
     return {
-      importMD: importMD,
       contents: contents,
       path: getPathOption(options),
       header: stringUtil

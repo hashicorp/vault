@@ -2,6 +2,7 @@ package wrapping
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-kms-wrapping/internal/xor"
 )
@@ -11,6 +12,8 @@ type TestWrapper struct {
 	wrapperType string
 	secret      []byte
 	keyID       string
+
+	envelope bool
 }
 
 var _ Wrapper = (*TestWrapper)(nil)
@@ -21,6 +24,16 @@ func NewTestWrapper(secret []byte) *TestWrapper {
 		wrapperType: Test,
 		secret:      secret,
 		keyID:       "static-key",
+	}
+}
+
+// NewTestWrapper constructs a test wrapper
+func NewTestEnvelopeWrapper(secret []byte) *TestWrapper {
+	return &TestWrapper{
+		wrapperType: Test,
+		secret:      secret,
+		keyID:       "static-key",
+		envelope:    true,
 	}
 }
 
@@ -56,22 +69,63 @@ func (t *TestWrapper) SetKeyID(k string) {
 
 // Encrypt allows encrypting via the test wrapper
 func (t *TestWrapper) Encrypt(_ context.Context, plaintext, _ []byte) (*EncryptedBlobInfo, error) {
-	ct, err := t.obscureBytes(plaintext)
-	if err != nil {
-		return nil, err
-	}
+	switch t.envelope {
+	case true:
+		env, err := NewEnvelope(nil).Encrypt(plaintext, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error wrapping data: %w", err)
+		}
+		ct, err := t.obscureBytes(env.Key)
+		if err != nil {
+			return nil, err
+		}
 
-	return &EncryptedBlobInfo{
-		Ciphertext: ct,
-		KeyInfo: &KeyInfo{
-			KeyID: t.KeyID(),
-		},
-	}, nil
+		return &EncryptedBlobInfo{
+			Ciphertext: env.Ciphertext,
+			IV:         env.IV,
+			KeyInfo: &KeyInfo{
+				KeyID:      t.KeyID(),
+				WrappedKey: ct,
+			},
+		}, nil
+
+	default:
+		ct, err := t.obscureBytes(plaintext)
+		if err != nil {
+			return nil, err
+		}
+
+		return &EncryptedBlobInfo{
+			Ciphertext: ct,
+			KeyInfo: &KeyInfo{
+				KeyID: t.KeyID(),
+			},
+		}, nil
+	}
 }
 
 // Decrypt allows decrypting via the test wrapper
 func (t *TestWrapper) Decrypt(_ context.Context, dwi *EncryptedBlobInfo, _ []byte) ([]byte, error) {
-	return t.obscureBytes(dwi.Ciphertext)
+	switch t.envelope {
+	case true:
+		keyPlaintext, err := t.obscureBytes(dwi.KeyInfo.WrappedKey)
+		if err != nil {
+			return nil, err
+		}
+		envInfo := &EnvelopeInfo{
+			Key:        keyPlaintext,
+			IV:         dwi.IV,
+			Ciphertext: dwi.Ciphertext,
+		}
+		plaintext, err := NewEnvelope(nil).Decrypt(envInfo, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error decrypting data with envelope: %w", err)
+		}
+		return plaintext, nil
+	default:
+
+		return t.obscureBytes(dwi.Ciphertext)
+	}
 }
 
 // obscureBytes is a helper to simulate "encryption/decryption"

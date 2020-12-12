@@ -44,7 +44,7 @@ var (
 	// metricLockUnlock is the metric to register for a lock delete.
 	metricLockUnlock = []string{"gcs", "lock", "unlock"}
 
-	// metricLockGet is the metric to register for a lock get.
+	// metricLockLock is the metric to register for a lock get.
 	metricLockLock = []string{"gcs", "lock", "lock"}
 
 	// metricLockValue is the metric to register for a lock create/update.
@@ -194,7 +194,7 @@ func (l *Lock) Unlock() error {
 			MetagenerationMatch: r.attrs.Metageneration,
 		}
 
-		obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+		obj := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key)
 		if err := obj.If(conds).Delete(ctx); err != nil {
 			// If the pre-condition failed, it means that someone else has already
 			// acquired the lock and we don't want to delete it.
@@ -324,10 +324,6 @@ OUTER:
 //   - if key is empty or identity is the same or timestamp exceeds TTL
 //     - update the lock to self
 func (l *Lock) writeLock() (bool, error) {
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Create a transaction to read and the update (maybe)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -376,7 +372,7 @@ func (l *Lock) writeLock() (bool, error) {
 	}
 
 	// Write the object
-	obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+	obj := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key)
 	w := obj.If(conds).NewWriter(ctx)
 	w.ObjectAttrs.CacheControl = "no-cache; no-store; max-age=0"
 	w.ObjectAttrs.Metadata = map[string]string{
@@ -395,12 +391,8 @@ func (l *Lock) writeLock() (bool, error) {
 
 // get retrieves the value for the lock.
 func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Read
-	attrs, err := l.backend.client.Bucket(l.backend.bucket).Object(l.key).Attrs(ctx)
+	attrs, err := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key).Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, nil
 	}

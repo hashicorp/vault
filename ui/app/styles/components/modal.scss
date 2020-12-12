@@ -5,6 +5,8 @@
 .modal-card {
   box-shadow: $box-shadow-highest;
   border: 1px solid $grey-light;
+  max-height: calc(100vh - 70px);
+  margin-top: 60px;
 
   &-head {
     border-radius: 0;
@@ -39,6 +41,38 @@
   }
 }
 
+.modal-card-title.title {
+  display: flex;
+  align-items: center;
+}
+
 pre {
   background-color: inherit;
+}
+
+.is-highlight {
+  .modal-card-head {
+    background: $yellow-010;
+    border: 1px solid $yellow-100;
+  }
+  .modal-card-title {
+    color: $yellow-dark;
+  }
+}
+
+.modal-confirm-section .is-help {
+  color: $grey;
+  margin: $spacing-xxs 0;
+  strong {
+    color: inherit;
+  }
+}
+
+.modal-confirm-section {
+  margin: $spacing-xl 0 $spacing-m;
+}
+
+.modal-card-foot-outlined {
+  background: #f7f8fa;
+  border-top: 1px solid #bac1cc;
 }

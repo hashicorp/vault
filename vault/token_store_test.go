@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
@@ -602,10 +601,10 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 }
 
 func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
+	testMakeTokenViaCore(t, c, root, client, ttl, "", policy, false, nil)
 }
 
-func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
+func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	if batch {
@@ -615,6 +614,10 @@ func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, polic
 	}
 	req.Data["policies"] = policy
 	req.Data["ttl"] = ttl
+
+	if len(period) != 0 {
+		req.Data["period"] = period
+	}
 
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2122,16 +2125,8 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	c, _, root, sink := TestCoreUnsealedWithMetrics(t)
 	ts := c.tokenStore
-
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	c.metricSink = &metricsutil.ClusterMetricSink{
-		ClusterName: "test-cluster",
-		Sink:        inmemSink,
-	}
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
@@ -2144,54 +2139,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	intervals := inmemSink.Data()
-	// Test crossed an interval boundary, don't try to deal with it.
-	if len(intervals) > 1 {
-		t.Skip("Detected interval crossing.")
-	}
-
-	keyPrefix := "token.creation"
-	var counter *metrics.SampledValue = nil
-
-	for _, c := range intervals[0].Counters {
-		if strings.HasPrefix(c.Name, keyPrefix) {
-			counter = &c
-			break
-		}
-	}
-	if counter == nil {
-		t.Fatal("No token.creation counter found.")
-	}
-
-	if counter.Count != 1 {
-		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
-	}
-
-	if counter.Sum != 1.0 {
-		t.Errorf("Counter sum %v is not 1.", counter.Sum)
-	}
-
-	labels := make(map[string]string)
-	for _, l := range counter.Labels {
-		labels[l.Name] = l.Value
-	}
-	expected := map[string]string{
-		"cluster":      "test-cluster",
-		"namespace":    "root",
-		"auth_method":  "token",
-		"mount_point":  req.MountPoint,
-		"creation_ttl": "1d",
-		"token_type":   "service",
-	}
-	for expected_label, expected_val := range expected {
-		if v, ok := labels[expected_label]; ok {
-			if v != expected_val {
-				t.Errorf("Label %q incorrect, expected %q, got %q", expected_label, expected_val, v)
-			}
-		} else {
-			t.Errorf("Label %q missing", expected_label)
-		}
-	}
+	expectSingleCount(t, sink, "token.creation")
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
@@ -2403,11 +2351,20 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
-	testTokenStore_HandleRequest_Lookup(t, false)
-	testTokenStore_HandleRequest_Lookup(t, true)
+	t.Run("service_token", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, false, false)
+	})
+
+	t.Run("service_token_periodic", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, false, true)
+	})
+
+	t.Run("batch_token", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, true, false)
+	})
 }
 
-func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
+func testTokenStoreHandleRequestLookup(t *testing.T, batch, periodic bool) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	req := logical.TestRequest(t, logical.UpdateOperation, "lookup")
@@ -2448,8 +2405,13 @@ func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
+	period := ""
+	if periodic {
+		period = "3600s"
+	}
+
 	outAuth := new(logical.Auth)
-	testMakeTokenViaCore(t, c, root, "client", "3600s", []string{"foo"}, batch, outAuth)
+	testMakeTokenViaCore(t, c, root, "client", "3600s", period, []string{"foo"}, batch, outAuth)
 
 	tokenType := "service"
 	expID := "client"
@@ -2487,57 +2449,8 @@ func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 		"entity_id":        "",
 		"type":             tokenType,
 	}
-
-	if resp.Data["creation_time"].(int64) == 0 {
-		t.Fatalf("creation time was zero")
-	}
-	delete(resp.Data, "creation_time")
-	if resp.Data["issue_time"].(time.Time).IsZero() {
-		t.Fatal("issue time is default time")
-	}
-	delete(resp.Data, "issue_time")
-	if resp.Data["expire_time"].(time.Time).IsZero() {
-		t.Fatal("expire time is default time")
-	}
-	delete(resp.Data, "expire_time")
-
-	// Depending on timing of the test this may have ticked down, so accept 3599
-	if resp.Data["ttl"].(int64) == 3599 {
-		resp.Data["ttl"] = int64(3600)
-	}
-
-	if diff := deep.Equal(resp.Data, exp); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Test via POST
-	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
-	req.Data = map[string]interface{}{
-		"token": expID,
-	}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	exp = map[string]interface{}{
-		"id":               expID,
-		"accessor":         resp.Data["accessor"],
-		"policies":         []string{"default", "foo"},
-		"path":             "auth/token/create",
-		"meta":             map[string]string(nil),
-		"display_name":     "token",
-		"orphan":           false,
-		"num_uses":         0,
-		"creation_ttl":     int64(3600),
-		"ttl":              int64(3600),
-		"explicit_max_ttl": int64(0),
-		"renewable":        !batch,
-		"entity_id":        "",
-		"type":             tokenType,
+	if periodic {
+		exp["period"] = int64(3600)
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -5740,4 +5653,89 @@ func TestTokenStore_TokenID(t *testing.T) {
 			t.Fatalf("expected input error not present in error response")
 		}
 	})
+}
+
+func expectInGaugeCollection(t *testing.T, expectedLabels map[string]string, expectedValue float32, actual []metricsutil.GaugeLabelValues) {
+	t.Helper()
+
+	for _, glv := range actual {
+		actualLabels := make(map[string]string)
+		for _, l := range glv.Labels {
+			actualLabels[l.Name] = l.Value
+		}
+		if labelsMatch(actualLabels, expectedLabels) {
+			if expectedValue != glv.Value {
+				t.Errorf("expeced %v for %v, got %v", expectedValue, expectedLabels, glv.Value)
+			}
+			return
+		}
+	}
+	t.Errorf("didn't find labels %v", expectedLabels)
+}
+
+func TestTokenStore_Collectors(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	// This helper is defined in expiration.go
+	sampleToken(t, exp, "auth/userpass/login", true, "default")
+	sampleToken(t, exp, "auth/userpass/login", true, "policy23457")
+	sampleToken(t, exp, "auth/token/create", false, "root")
+	sampleToken(t, exp, "auth/github/login", true, "root")
+	sampleToken(t, exp, "auth/github/login", false, "root")
+
+	waitForRestore(t, exp)
+
+	// By namespace:
+	values, err := ts.gaugeCollector(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 1 {
+		t.Errorf("got %v values, expected 1", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root"},
+		5.0,
+		values)
+
+	values, err = ts.gaugeCollectorByPolicy(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 3 {
+		t.Errorf("got %v values, expected 3", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "root"},
+		3.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "default"},
+		1.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "policy23457"},
+		1.0,
+		values)
+
+	values, err = ts.gaugeCollectorByTtl(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 2 {
+		t.Errorf("got %v values, expected 2", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "creation_ttl": "1h"},
+		3.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "creation_ttl": "+Inf"},
+		2.0,
+		values)
+
+	// Need to set up router for this to work, TODO
+	// ts.gaugeCollectorByMethod( ctx )
 }

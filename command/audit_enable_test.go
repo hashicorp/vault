@@ -195,6 +195,11 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 					t.Log("skipping syslog test on WSL")
 					continue
 				}
+				if os.Getenv("CIRCLECI") == "true" {
+					// TODO install syslog in docker image we run our tests in
+					t.Log("skipping syslog test on CircleCI")
+					continue
+				}
 			}
 			code := cmd.Run(args)
 			if exp := 0; code != exp {

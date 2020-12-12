@@ -1,0 +1,41 @@
+<section class="section">
+  <div class="container is-widescreen">
+    <ReplicationPage @model={{model}} as |Page|>
+      <Page.header
+        @showTabs={{true}}
+      />
+      {{#if Page.isDisabled}}
+        <EmptyState
+          @title="Disaster Recovery secondary not set up"
+          @message={{Page.message}}
+          @icon="alert-circle-outline"
+          @bottomBorder={{true}}
+        >
+          <nav class="breadcrumb">
+            <ul class="is-grouped-split">
+              <li>
+                <LinkTo @route="vault.cluster.secrets.backends">
+                  <span class="sep"/>
+                  Go back
+                </LinkTo>
+              </li>
+              <li>
+                <LearnLink @path="/vault/operations/ops-disaster-recovery" @class="has-text-grey">
+                  Need help?
+                </LearnLink>
+              </li>
+            </ul>
+          </nav>
+        </EmptyState>
+      {{else}}
+        <section>
+          <ReplicationActions
+            @replicationMode="dr"
+            @model={{model}}
+            @onPromote={{action "onPromote"}}
+            />
+        </section>
+      {{/if}}
+    </ReplicationPage>
+  </div>
+</section>

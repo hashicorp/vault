@@ -26,6 +26,9 @@
       {{/info-tooltip}}
     {{/if}}
   </label>
+    {{#if attr.options.subText}}
+      <p class="sub-text">{{attr.options.subText}}</p>
+    {{/if}}
 {{/unless}}
 {{#if attr.options.possibleValues}}
   <div class="control is-expanded">
@@ -64,10 +67,21 @@
   </div>
 {{else if (eq attr.options.editType "searchSelect")}}
   <div class="form-section">
-    <SearchSelect @id={{attr.name}} @models={{attr.options.models}}
-      @onChange={{action (action "setAndBroadcast" valuePath)}} @inputValue={{get model valuePath}}
-      @helpText={{attr.options.helpText}} @label={{labelString}}
-      @fallbackComponent={{attr.options.fallbackComponent}} />
+    <SearchSelect
+      @id={{attr.name}}
+      @models={{attr.options.models}}
+      @onChange={{action (action "setAndBroadcast" valuePath)}}
+      @inputValue={{get model valuePath}}
+      @helpText={{attr.options.helpText}}
+      @subText={{attr.options.subText}}
+      @wildcardLabel={{attr.options.wildcardLabel}}
+      @label={{labelString}}
+      @subLabel={{attr.options.subLabel}}
+      @fallbackComponent={{attr.options.fallbackComponent}}
+      @selectLimit={{attr.options.selectLimit}}
+      @backend={{model.backend}}
+      @disallowNewItems={{attr.options.onlyAllowExisting}}
+    />
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}
   {{mount-accessor-select
@@ -115,8 +129,7 @@
   }}
 {{else if (eq attr.options.sensitive true)}}
   <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
-    @onChange={{action (action "setAndBroadcast" valuePath)}} />
-
+    @onChange={{action (action "setAndBroadcast" valuePath)}} @maskWhileTyping={{if (eq attr.name "bindpass") true}}/>
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}
@@ -144,10 +157,10 @@
       }}
     {{else}}
       <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
+        value={{or (get model valuePath) attr.options.defaultValue}} onChange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }} class="input" />
+        }} class="input" maxLength={{attr.options.characterLimit}} />
 
       {{#if attr.options.validationAttr}}
         {{#if

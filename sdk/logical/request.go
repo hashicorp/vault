@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/copystructure"
 )
 
 // RequestWrapInfo is a struct that stores information about desired response
@@ -177,6 +179,15 @@ type Request struct {
 	// ResponseWriter if set can be used to stream a response value to the http
 	// request that generated this logical.Request object.
 	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
+}
+
+// Clone returns a deep copy of the request by using copystructure
+func (r *Request) Clone() (*Request, error) {
+	cpy, err := copystructure.Copy(r)
+	if err != nil {
+		return nil, err
+	}
+	return cpy.(*Request), nil
 }
 
 // Get returns a data field and guards for nil Data

@@ -24,6 +24,10 @@ var (
 
 	// ErrBarrierInvalidKey is returned if the Unseal key is invalid
 	ErrBarrierInvalidKey = errors.New("Unseal failed, invalid key")
+
+	// ErrPlaintextTooLarge is returned if a plaintext is offered for encryption
+	// that is too large to encrypt in memory
+	ErrPlaintextTooLarge = errors.New("plaintext value too large")
 )
 
 const (

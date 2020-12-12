@@ -13,52 +13,53 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
 
-func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, nomadToken string) {
-	nomadToken = os.Getenv("NOMAD_TOKEN")
+type Config struct {
+	docker.ServiceURL
+	Token string
+}
 
-	retAddress = os.Getenv("NOMAD_ADDR")
+func (c *Config) APIConfig() *nomadapi.Config {
+	apiConfig := nomadapi.DefaultConfig()
+	apiConfig.Address = c.URL().String()
+	apiConfig.SecretID = c.Token
+	return apiConfig
+}
 
-	if retAddress != "" {
-		return func() {}, retAddress, nomadToken
+func prepareTestContainer(t *testing.T) (func(), *Config) {
+	if retAddress := os.Getenv("NOMAD_ADDR"); retAddress != "" {
+		s, err := docker.NewServiceURLParse(retAddress)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return func() {}, &Config{*s, os.Getenv("NOMAD_TOKEN")}
 	}
 
-	pool, err := dockertest.NewPool("")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "catsby/nomad",
+		ImageTag:      "0.8.4",
+		ContainerName: "nomad",
+		Ports:         []string{"4646/tcp"},
+		Cmd:           []string{"agent", "-dev"},
+		Env:           []string{`NOMAD_LOCAL_CONFIG=bind_addr = "0.0.0.0" acl { enabled = true }`},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("Could not start docker Nomad: %s", err)
 	}
 
-	dockerOptions := &dockertest.RunOptions{
-		Repository: "catsby/nomad",
-		Tag:        "0.8.4",
-		Cmd:        []string{"agent", "-dev"},
-		Env:        []string{`NOMAD_LOCAL_CONFIG=bind_addr = "0.0.0.0" acl { enabled = true }`},
-	}
-	resource, err := pool.RunWithOptions(dockerOptions)
-	if err != nil {
-		t.Fatalf("Could not start local Nomad docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retAddress = fmt.Sprintf("http://localhost:%s/", resource.GetPort("4646/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
+	var nomadToken string
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		var err error
 		nomadapiConfig := nomadapi.DefaultConfig()
-		nomadapiConfig.Address = retAddress
+		nomadapiConfig.Address = fmt.Sprintf("http://%s:%d/", host, port)
 		nomad, err := nomadapi.NewClient(nomadapiConfig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		nomadToken = aclbootstrap.SecretID
 		t.Logf("[WARN] Generated Master token: %s", nomadToken)
@@ -85,23 +86,29 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
         `,
 		}
 		nomadAuthConfig := nomadapi.DefaultConfig()
-		nomadAuthConfig.Address = retAddress
+		nomadAuthConfig.Address = nomad.Address()
 		nomadAuthConfig.SecretID = nomadToken
 		nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
 		_, err = nomadAuth.ACLPolicies().Upsert(policy, nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		_, err = nomadAuth.ACLPolicies().Upsert(anonPolicy, nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to docker: %s", err)
+		u, _ := docker.NewServiceURLParse(nomadapiConfig.Address)
+		return &Config{
+			ServiceURL: *u,
+			Token:      nomadToken,
+		}, nil
+	})
+
+	if err != nil {
+		t.Fatalf("Could not start docker Nomad: %s", err)
 	}
-	return cleanup, retAddress, nomadToken
+
+	return svc.Cleanup, svc.Config.(*Config)
 }
 
 func TestBackend_config_access(t *testing.T) {
@@ -112,12 +119,12 @@ func TestBackend_config_access(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t)
 	defer cleanup()
 
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": svccfg.URL().String(),
+		"token":   svccfg.Token,
 	}
 
 	confReq := &logical.Request{
@@ -158,11 +165,12 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t)
 	defer cleanup()
+
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": svccfg.URL().String(),
+		"token":   svccfg.Token,
 	}
 
 	req := &logical.Request{
@@ -267,7 +275,7 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t)
 	defer cleanup()
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "role/test")
@@ -280,9 +288,9 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("NOMAD_TOKEN", connToken)
+	os.Setenv("NOMAD_TOKEN", svccfg.Token)
 	defer os.Unsetenv("NOMAD_TOKEN")
-	os.Setenv("NOMAD_ADDR", connURL)
+	os.Setenv("NOMAD_ADDR", svccfg.URL().String())
 	defer os.Unsetenv("NOMAD_ADDR")
 
 	req.Operation = logical.ReadOperation
@@ -307,7 +315,7 @@ func TestBackend_max_token_name_length(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t)
 	defer cleanup()
 
 	testCases := []struct {
@@ -337,12 +345,12 @@ func TestBackend_max_token_name_length(t *testing.T) {
 		t.Run(tc.title, func(t *testing.T) {
 			// setup config/access
 			connData := map[string]interface{}{
-				"address":               connURL,
-				"token":                 connToken,
+				"address":               svccfg.URL().String(),
+				"token":                 svccfg.Token,
 				"max_token_name_length": tc.tokenLength,
 			}
 			expected := map[string]interface{}{
-				"address":               connURL,
+				"address":               svccfg.URL().String(),
 				"max_token_name_length": tc.tokenLength,
 			}
 

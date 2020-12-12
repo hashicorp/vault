@@ -82,7 +82,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	for i, item := range batchInputItems {

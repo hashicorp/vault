@@ -60,11 +60,12 @@ type RenderResult struct {
 // whether it would have rendered and actually did render.
 func Render(i *RenderInput) (*RenderResult, error) {
 	existing, err := ioutil.ReadFile(i.Path)
-	if err != nil && !os.IsNotExist(err) {
+	fileExists := !os.IsNotExist(err)
+	if err != nil && fileExists {
 		return nil, errors.Wrap(err, "failed reading file")
 	}
 
-	if bytes.Equal(existing, i.Contents) {
+	if bytes.Equal(existing, i.Contents) && fileExists {
 		return &RenderResult{
 			DidRender:   false,
 			WouldRender: true,

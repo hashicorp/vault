@@ -10,6 +10,7 @@ import (
 	kerberos "github.com/hashicorp/vault-plugin-auth-kerberos"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/jcmturner/gokrb5/v8/spnego"
 )
 
@@ -46,15 +47,26 @@ func NewKerberosAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	disableFast := false
+	disableFastRaw, ok := conf.Config["disable_fast_negotiation"]
+	if ok {
+		disableFast, err = parseutil.ParseBool(disableFastRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'disable_fast_negotiation': %s", err)
+		}
+	}
+
 	return &kerberosMethod{
 		logger:    conf.Logger,
 		mountPath: conf.MountPath,
 		loginCfg: &kerberos.LoginCfg{
-			Username:     username,
-			Service:      service,
-			Realm:        realm,
-			KeytabPath:   keytabPath,
-			Krb5ConfPath: krb5ConfPath,
+			Username:               username,
+			Service:                service,
+			Realm:                  realm,
+			KeytabPath:             keytabPath,
+			Krb5ConfPath:           krb5ConfPath,
+			DisableFASTNegotiation: disableFast,
 		},
 	}, nil
 }

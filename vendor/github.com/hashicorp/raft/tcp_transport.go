@@ -81,7 +81,7 @@ func newTCPTransport(bindAddr string,
 		list.Close()
 		return nil, errNotTCP
 	}
-	if addr.IP.IsUnspecified() {
+	if addr.IP == nil || addr.IP.IsUnspecified() {
 		list.Close()
 		return nil, errNotAdvertisable
 	}

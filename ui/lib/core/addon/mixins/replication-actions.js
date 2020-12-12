@@ -10,8 +10,9 @@ export default Mixin.create({
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
   onEnable() {},
   onDisable() {},
-  submitHandler(action, clusterMode, data, event) {
-    let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
+  onPromote() {},
+  submitHandler: task(function*(action, clusterMode, data, event) {
+    let replicationMode = (data && data.replicationMode) || this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }
@@ -22,32 +23,35 @@ export default Mixin.create({
       data = Object.keys(data).reduce((newData, key) => {
         var val = data[key];
         if (isPresent(val)) {
-          newData[key] = val;
+          if (key === 'dr_operation_token_primary' || key === 'dr_operation_token_promote') {
+            newData['dr_operation_token'] = val;
+          } else {
+            newData[key] = val;
+          }
         }
         return newData;
       }, {});
       delete data.replicationMode;
     }
-
-    return this.save.perform(action, replicationMode, clusterMode, data);
-  },
+    return yield this.save.perform(action, replicationMode, clusterMode, data);
+  }),
 
   save: task(function*(action, replicationMode, clusterMode, data) {
     let resp;
     try {
-      resp = yield this.get('store')
+      resp = yield this.store
         .adapterFor('cluster')
         .replicationAction(action, replicationMode, clusterMode, data);
     } catch (e) {
       return this.submitError(e);
     }
-    yield this.submitSuccess.perform(resp, action, clusterMode);
+    return yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
   submitSuccess: task(function*(resp, action, mode) {
-    const cluster = this.get('cluster');
-    const replicationMode = this.get('selectedReplicationMode') || this.get('replicationMode');
-    const store = this.get('store');
+    const cluster = this.cluster;
+    const replicationMode = this.selectedReplicationMode || this.replicationMode;
+    const store = this.store;
     if (!cluster) {
       return;
     }
@@ -89,12 +93,13 @@ export default Mixin.create({
     if (action === 'disable') {
       yield this.onDisable();
     }
-    if (action === 'enable') {
-      yield this.onEnable(replicationMode);
+    if (action === 'promote') {
+      yield this.onPromote();
     }
-
-    if (mode === 'secondary' && replicationMode === 'dr') {
-      yield this.router.transitionTo('vault.cluster');
+    if (action === 'enable') {
+      /// onEnable is a method available only to route vault.cluster.replication.index
+      // if action 'enable' is called from vault.cluster.replication.mode.index this method is not called
+      yield this.onEnable(replicationMode, mode);
     }
   }).drop(),
 

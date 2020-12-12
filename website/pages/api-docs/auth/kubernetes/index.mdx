@@ -29,10 +29,10 @@ access the Kubernetes API.
 ### Parameters
 
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
-- `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: \n
+- `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: `\n`
 - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
-  API to validate other JWTs during login. If not set
-  the JWT used for login will be used to access the API.
+  API to validate other JWTs during login. If not set,
+  the JWT submitted in the login payload will be used to access the Kubernetes TokenReview API.
 - `pem_keys` `(array: [])` - Optional list of PEM-formatted public keys or certificates
   used to verify the signatures of Kubernetes service account
   JWTs. If a certificate is given, its public key will be
@@ -40,6 +40,19 @@ access the Kubernetes API.
   keys.
 - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
   use `kubernetes.io/serviceaccount` as the default issuer.
+- `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
+- `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
+
+### Caveats
+
+If Vault is running in a Kubernetes Pod, the `kubernetes_ca_cert` and
+`token_reviewer_jwt` parameters will automatically default to the local CA cert
+(`/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) and local service
+account JWT (`/var/run/secrets/kubernetes.io/serviceaccount/token`). This
+behavior may be disabled by setting `disable_local_ca_jwt` to `true`.
+
+When Vault is running in a non-Kubernetes environment, either
+`kubernetes_ca_cert` or `pem_keys` must be set by the user.
 
 ### Sample Payload
 
@@ -84,7 +97,9 @@ $ curl \
   "data":{
     "kubernetes_host": "https://192.168.99.100:8443",
     "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
-    "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....]
+    "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....],
+    "disable_iss_validation": false,
+    "disable_local_ca_jwt": false
   }
 }
 ```

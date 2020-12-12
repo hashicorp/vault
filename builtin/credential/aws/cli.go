@@ -98,7 +98,18 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		headerValue = ""
 	}
 
-	creds, err := RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"])
+	logVal, ok := m["log_level"]
+	if !ok {
+		logVal = "info"
+	}
+	level := hclog.LevelFromString(logVal)
+	if level == hclog.NoLevel {
+		return nil, fmt.Errorf("failed to parse 'log_level' value: %q", logVal)
+	}
+	hlogger := hclog.Default()
+	hlogger.SetLevel(level)
+
+	creds, err := RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], hlogger)
 	if err != nil {
 		return nil, err
 	}
@@ -128,11 +139,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	return secret, nil
 }
 
-func RetrieveCreds(accessKey, secretKey, sessionToken string) (*credentials.Credentials, error) {
+func RetrieveCreds(accessKey, secretKey, sessionToken string, logger hclog.Logger) (*credentials.Credentials, error) {
 	credConfig := &awsutil.CredentialsConfig{
 		AccessKey:    accessKey,
 		SecretKey:    secretKey,
 		SessionToken: sessionToken,
+		Logger:       logger,
 	}
 	creds, err := credConfig.GenerateCredentialChain()
 	if err != nil {
@@ -195,6 +207,10 @@ Configuration:
 
   role=<string>
       Name of the role to request a token against
+
+  log_level=<string>
+      Set logging level during AWS credential acquisition. Valid levels are
+      trace, debug, info, warn, error. Defaults to info.
 `
 
 	return strings.TrimSpace(help)

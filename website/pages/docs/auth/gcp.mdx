@@ -190,6 +190,12 @@ must have the following role:
 roles/iam.serviceAccountTokenCreator
 ```
 
+!> **WARNING:** Make sure this role is only applied so your service account can
+impersonate itself. If this role is applied GCP project-wide, this will allow the service
+account to impersonate any service account in the GCP project where it resides.
+See [Managing service account impersonation](https://cloud.google.com/iam/docs/impersonating-service-accounts)
+for more information.
+
 ## Group Aliases
 
 As of Vault 1.0, roles can specify an `add_group_aliases` boolean parameter

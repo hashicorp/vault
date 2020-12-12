@@ -6,7 +6,7 @@ export default Helper.extend({
 
   compute([routeName, ...models], { replace = false }) {
     return () => {
-      const router = this.get('router');
+      const router = this.router;
       const method = replace ? router.replaceWith : router.transitionTo;
       return method.call(router, routeName, ...models);
     };

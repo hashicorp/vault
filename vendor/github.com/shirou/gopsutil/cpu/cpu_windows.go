@@ -50,7 +50,7 @@ type Win32_PerfFormattedData_PerfOS_System struct {
 }
 
 const (
-	win32_TicksPerSecond = 10000000.0
+	ClocksPerSec = 10000000.0
 
 	// systemProcessorPerformanceInformationClass information class to query with NTQuerySystemInformation
 	// https://processhacker.sourceforge.io/doc/ntexapi_8h.html#ad5d815b48e8f4da1ef2eb7a2f18a54e0
@@ -159,10 +159,10 @@ func perCPUTimes() ([]TimesStat, error) {
 	for core, v := range stats {
 		c := TimesStat{
 			CPU:    fmt.Sprintf("cpu%d", core),
-			User:   float64(v.UserTime) / win32_TicksPerSecond,
-			System: float64(v.KernelTime-v.IdleTime) / win32_TicksPerSecond,
-			Idle:   float64(v.IdleTime) / win32_TicksPerSecond,
-			Irq:    float64(v.InterruptTime) / win32_TicksPerSecond,
+			User:   float64(v.UserTime) / ClocksPerSec,
+			System: float64(v.KernelTime-v.IdleTime) / ClocksPerSec,
+			Idle:   float64(v.IdleTime) / ClocksPerSec,
+			Irq:    float64(v.InterruptTime) / ClocksPerSec,
 		}
 		ret = append(ret, c)
 	}

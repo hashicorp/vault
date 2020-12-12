@@ -1,8 +1,17 @@
 <div data-test-component="empty-state" class="empty-state" ...attributes>
   <div class="empty-state-content">
+    {{#if icon}}
+      <div class="empty-state-icon">
+        <Icon @glyph={{icon}} @size="xxl" />
+        <h3 class="empty-state-title" data-test-empty-state-title>
+          {{title}}
+        </h3>
+      </div>
+    {{else}}
     <h3 class="empty-state-title" data-test-empty-state-title>
       {{title}}
     </h3>
+    {{/if}}
     {{#if message}}
     <p class="empty-state-message" data-test-empty-state-message>
       {{message}}

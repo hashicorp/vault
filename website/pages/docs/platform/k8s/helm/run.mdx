@@ -54,7 +54,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
 ```
 
 -> **Important:** The Helm chart is new and under significant development.
@@ -73,11 +73,12 @@ Or install a specific version of the chart.
 # List the available releases
 $ helm search repo hashicorp/vault -l
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
-hashicorp/vault	0.4.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
+hashicorp/vault	0.7.0        	1.5.2      	Official HashiCorp Vault Chart
+hashicorp/vault	0.6.0        	1.4.2      	Official HashiCorp Vault Chart
 
-# Install version 0.4.0
-$ helm install vault hashicorp/vault --version 0.4.0
+# Install version 0.8.0
+$ helm install vault hashicorp/vault --version 0.8.0
 ```
 
 The `helm install` command accepts parameters to override default configuration
@@ -358,6 +359,27 @@ server:
       }
 ```
 
+### Probes
+
+Probes are essential for detecting failures, rescheduling and using pods in 
+Kubernetes. The helm chart offers configurable readiness and liveliness probes 
+which can be customized for a variety of use cases.
+
+Vault's [/sys/health`](/api-docs/system/health) endpoint can be customized to 
+change the behavior of the health check.  For example, we can change the Vault 
+readiness probe to show the Vault pods are ready even if they're still uninitialized 
+and sealed using the following probe:
+
+```yaml
+server:
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+```
+
+Using this customized probe, a `postStart` script could automatically run once the 
+pod is ready for additional setup.
+
 ### Upgrading Vault on Kubernetes
 
 To upgrade Vault on Kubernetes, we follow the same pattern as
@@ -399,14 +421,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.5.0 \
+$ helm upgrade vault hashicorp/vault --version=0.8.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run

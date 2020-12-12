@@ -110,6 +110,7 @@ type HostInfo struct {
 	// TODO(zariel): reduce locking maybe, not all values will change, but to ensure
 	// that we are thread safe use a mutex to access all fields.
 	mu               sync.RWMutex
+	hostname         string
 	peer             net.IP
 	broadcastAddress net.IP
 	listenAddress    net.IP
@@ -127,6 +128,7 @@ type HostInfo struct {
 	clusterName      string
 	version          cassVersion
 	state            nodeState
+	schemaVersion    string
 	tokens           []string
 }
 
@@ -226,8 +228,9 @@ func (h *HostInfo) PreferredIP() net.IP {
 
 func (h *HostInfo) DataCenter() string {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.dataCenter
+	dc := h.dataCenter
+	h.mu.RUnlock()
+	return dc
 }
 
 func (h *HostInfo) setDataCenter(dataCenter string) *HostInfo {
@@ -239,8 +242,9 @@ func (h *HostInfo) setDataCenter(dataCenter string) *HostInfo {
 
 func (h *HostInfo) Rack() string {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.rack
+	rack := h.rack
+	h.mu.RUnlock()
+	return rack
 }
 
 func (h *HostInfo) setRack(rack string) *HostInfo {
@@ -411,15 +415,22 @@ func (h *HostInfo) IsUp() bool {
 	return h != nil && h.State() == NodeUp
 }
 
+func (h *HostInfo) HostnameAndPort() string {
+	if h.hostname == "" {
+		h.hostname = h.ConnectAddress().String()
+	}
+	return net.JoinHostPort(h.hostname, strconv.Itoa(h.port))
+}
+
 func (h *HostInfo) String() string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	connectAddr, source := h.connectAddressLocked()
-	return fmt.Sprintf("[HostInfo connectAddress=%q peer=%q rpc_address=%q broadcast_address=%q "+
+	return fmt.Sprintf("[HostInfo hostname=%q connectAddress=%q peer=%q rpc_address=%q broadcast_address=%q "+
 		"preferred_ip=%q connect_addr=%q connect_addr_source=%q "+
 		"port=%d data_centre=%q rack=%q host_id=%q version=%q state=%s num_tokens=%d]",
-		h.connectAddress, h.peer, h.rpcAddress, h.broadcastAddress, h.preferredIP,
+		h.hostname, h.connectAddress, h.peer, h.rpcAddress, h.broadcastAddress, h.preferredIP,
 		connectAddr, source,
 		h.port, h.dataCenter, h.rack, h.hostId, h.version, h.state, len(h.tokens))
 }
@@ -450,15 +461,11 @@ func checkSystemSchema(control *controlConn) (bool, error) {
 
 // Given a map that represents a row from either system.local or system.peers
 // return as much information as we can in *HostInfo
-func (s *Session) hostInfoFromMap(row map[string]interface{}, port int) (*HostInfo, error) {
+func (s *Session) hostInfoFromMap(row map[string]interface{}, host *HostInfo) (*HostInfo, error) {
 	const assertErrorMsg = "Assertion failed for %s"
 	var ok bool
 
 	// Default to our connected port if the cluster doesn't have port information
-	host := HostInfo{
-		port: port,
-	}
-
 	for key, value := range row {
 		switch key {
 		case "data_center":
@@ -543,6 +550,12 @@ func (s *Session) hostInfoFromMap(row map[string]interface{}, port int) (*HostIn
 			if !ok {
 				return nil, fmt.Errorf(assertErrorMsg, "dse_version")
 			}
+		case "schema_version":
+			schemaVersion, ok := value.(UUID)
+			if !ok {
+				return nil, fmt.Errorf(assertErrorMsg, "schema_version")
+			}
+			host.schemaVersion = schemaVersion.String()
 		}
 		// TODO(thrawn01): Add 'port'? once CASSANDRA-7544 is complete
 		// Not sure what the port field will be called until the JIRA issue is complete
@@ -552,7 +565,7 @@ func (s *Session) hostInfoFromMap(row map[string]interface{}, port int) (*HostIn
 	host.connectAddress = ip
 	host.port = port
 
-	return &host, nil
+	return host, nil
 }
 
 // Ask the control node for host info on all it's known peers
@@ -575,7 +588,7 @@ func (r *ringDescriber) getClusterPeerInfo() ([]*HostInfo, error) {
 
 	for _, row := range rows {
 		// extract all available info about the peer
-		host, err := r.session.hostInfoFromMap(row, r.session.cfg.Port)
+		host, err := r.session.hostInfoFromMap(row, &HostInfo{port: r.session.cfg.Port})
 		if err != nil {
 			return nil, err
 		} else if !isValidPeer(host) {
@@ -637,7 +650,7 @@ func (r *ringDescriber) getHostInfo(ip net.IP, port int) (*HostInfo, error) {
 		}
 
 		for _, row := range rows {
-			h, err := r.session.hostInfoFromMap(row, port)
+			h, err := r.session.hostInfoFromMap(row, &HostInfo{port: port})
 			if err != nil {
 				return nil, err
 			}

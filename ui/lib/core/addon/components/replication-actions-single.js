@@ -3,7 +3,7 @@ import Component from '@ember/component';
 export default Component.extend({
   onSubmit() {},
   replicationMode: null,
-  replicationDisplayMode: null,
+  replicationModeForDisplay: null,
   model: null,
 
   actions: {

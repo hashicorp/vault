@@ -1,6 +1,6 @@
 # envconfig
 
-[![Build Status](https://travis-ci.org/kelseyhightower/envconfig.png)](https://travis-ci.org/kelseyhightower/envconfig)
+[![Build Status](https://travis-ci.org/kelseyhightower/envconfig.svg)](https://travis-ci.org/kelseyhightower/envconfig)
 
 ```Go
 import "github.com/kelseyhightower/envconfig"
@@ -54,7 +54,7 @@ func main() {
         log.Fatal(err.Error())
     }
     format := "Debug: %v\nPort: %d\nUser: %s\nRate: %f\nTimeout: %s\n"
-    _, err = fmt.Printf(format, s.Debug, s.Port, s.User, s.Rate)
+    _, err = fmt.Printf(format, s.Debug, s.Port, s.User, s.Rate, s.Timeout)
     if err != nil {
         log.Fatal(err.Error())
     }
@@ -103,6 +103,7 @@ type Specification struct {
     RequiredVar     string `required:"true"`
     IgnoredVar      string `ignored:"true"`
     AutoSplitVar    string `split_words:"true"`
+    RequiredAndAutoSplitVar    string `required:"true" split_words:"true"`
 }
 ```
 
@@ -128,7 +129,8 @@ If envconfig can't find an environment variable value for `MYAPP_DEFAULTVAR`,
 it will populate it with "foobar" as a default value.
 
 If envconfig can't find an environment variable value for `MYAPP_REQUIREDVAR`,
-it will return an error when asked to process the struct.
+it will return an error when asked to process the struct.  If
+`MYAPP_REQUIREDVAR` is present but empty, envconfig will not return an error.
 
 If envconfig can't find an environment variable in the form `PREFIX_MYVAR`, and there
 is a struct tag defined, it will try to populate your variable with an environment
@@ -150,7 +152,7 @@ environment variable is set.
 
 ## Supported Struct Field Types
 
-envconfig supports supports these struct field types:
+envconfig supports these struct field types:
 
   * string
   * int8, int16, int32, int64
@@ -159,6 +161,8 @@ envconfig supports supports these struct field types:
   * slices of any supported type
   * maps (keys and values of any supported type)
   * [encoding.TextUnmarshaler](https://golang.org/pkg/encoding/#TextUnmarshaler)
+  * [encoding.BinaryUnmarshaler](https://golang.org/pkg/encoding/#BinaryUnmarshaler)
+  * [time.Duration](https://golang.org/pkg/time/#Duration)
 
 Embedded structs using these fields are also supported.
 

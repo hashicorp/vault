@@ -19,7 +19,7 @@ let options = {
   filtered,
 };
 
-storiesOf('ListView/', module)
+storiesOf('ListView', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

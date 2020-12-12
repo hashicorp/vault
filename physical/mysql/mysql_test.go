@@ -43,11 +43,11 @@ func TestMySQLPlaintextCatch(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	NewMySQLBackend(map[string]string{
-		"address":  address,
-		"database": database,
-		"table":    table,
-		"username": username,
-		"password": password,
+		"address":                      address,
+		"database":                     database,
+		"table":                        table,
+		"username":                     username,
+		"password":                     password,
 		"plaintext_connection_allowed": "false",
 	}, logger)
 
@@ -82,11 +82,11 @@ func TestMySQLBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewMySQLBackend(map[string]string{
-		"address":  address,
-		"database": database,
-		"table":    table,
-		"username": username,
-		"password": password,
+		"address":                      address,
+		"database":                     database,
+		"table":                        table,
+		"username":                     username,
+		"password":                     password,
 		"plaintext_connection_allowed": "true",
 	}, logger)
 
@@ -128,12 +128,12 @@ func TestMySQLHABackend(t *testing.T) {
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
 	config := map[string]string{
-		"address":    address,
-		"database":   database,
-		"table":      table,
-		"username":   username,
-		"password":   password,
-		"ha_enabled": "true",
+		"address":                      address,
+		"database":                     database,
+		"table":                        table,
+		"username":                     username,
+		"password":                     password,
+		"ha_enabled":                   "true",
 		"plaintext_connection_allowed": "true",
 	}
 
@@ -162,7 +162,7 @@ func TestMySQLHABackend(t *testing.T) {
 // https://github.com/hashicorp/vault/issues/8203 and patched in
 // https://github.com/hashicorp/vault/pull/8229
 func TestMySQLHABackend_LockFailPanic(t *testing.T) {
-	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 
 	cfg, err := mysql.ParseDSN(connURL)
 	if err != nil {
@@ -176,12 +176,12 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	table := "test"
 	logger := logging.NewVaultLogger(log.Debug)
 	config := map[string]string{
-		"address":    cfg.Addr,
-		"database":   cfg.DBName,
-		"table":      table,
-		"username":   cfg.User,
-		"password":   cfg.Passwd,
-		"ha_enabled": "true",
+		"address":                      cfg.Addr,
+		"database":                     cfg.DBName,
+		"table":                        table,
+		"username":                     cfg.User,
+		"password":                     cfg.Passwd,
+		"ha_enabled":                   "true",
 		"plaintext_connection_allowed": "true",
 	}
 
@@ -264,4 +264,81 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got none")
 	}
+}
+
+func TestValidateDBTable(t *testing.T) {
+	type testCase struct {
+		database  string
+		table     string
+		expectErr bool
+	}
+
+	tests := map[string]testCase{
+		"empty database & table":        {"", "", true},
+		"empty database":                {"", "a", true},
+		"empty table":                   {"a", "", true},
+		"ascii database":                {"abcde", "a", false},
+		"ascii table":                   {"a", "abcde", false},
+		"ascii database & table":        {"abcde", "abcde", false},
+		"only whitespace db":            {"     ", "a", true},
+		"only whitespace table":         {"a", "     ", true},
+		"whitespace prefix db":          {" bcde", "a", true},
+		"whitespace middle db":          {"ab de", "a", true},
+		"whitespace suffix db":          {"abcd ", "a", true},
+		"whitespace prefix table":       {"a", " bcde", true},
+		"whitespace middle table":       {"a", "ab de", true},
+		"whitespace suffix table":       {"a", "abcd ", true},
+		"backtick prefix db":            {"`bcde", "a", true},
+		"backtick middle db":            {"ab`de", "a", true},
+		"backtick suffix db":            {"abcd`", "a", true},
+		"backtick prefix table":         {"a", "`bcde", true},
+		"backtick middle table":         {"a", "ab`de", true},
+		"backtick suffix table":         {"a", "abcd`", true},
+		"single quote prefix db":        {"'bcde", "a", true},
+		"single quote middle db":        {"ab'de", "a", true},
+		"single quote suffix db":        {"abcd'", "a", true},
+		"single quote prefix table":     {"a", "'bcde", true},
+		"single quote middle table":     {"a", "ab'de", true},
+		"single quote suffix table":     {"a", "abcd'", true},
+		"double quote prefix db":        {`"bcde`, "a", true},
+		"double quote middle db":        {`ab"de`, "a", true},
+		"double quote suffix db":        {`abcd"`, "a", true},
+		"double quote prefix table":     {"a", `"bcde`, true},
+		"double quote middle table":     {"a", `ab"de`, true},
+		"double quote suffix table":     {"a", `abcd"`, true},
+		"0x0000 prefix db":              {str(0x0000, 'b', 'c'), "a", true},
+		"0x0000 middle db":              {str('a', 0x0000, 'c'), "a", true},
+		"0x0000 suffix db":              {str('a', 'b', 0x0000), "a", true},
+		"0x0000 prefix table":           {"a", str(0x0000, 'b', 'c'), true},
+		"0x0000 middle table":           {"a", str('a', 0x0000, 'c'), true},
+		"0x0000 suffix table":           {"a", str('a', 'b', 0x0000), true},
+		"unicode > 0xFFFF prefix db":    {str(0x10000, 'b', 'c'), "a", true},
+		"unicode > 0xFFFF middle db":    {str('a', 0x10000, 'c'), "a", true},
+		"unicode > 0xFFFF suffix db":    {str('a', 'b', 0x10000), "a", true},
+		"unicode > 0xFFFF prefix table": {"a", str(0x10000, 'b', 'c'), true},
+		"unicode > 0xFFFF middle table": {"a", str('a', 0x10000, 'c'), true},
+		"unicode > 0xFFFF suffix table": {"a", str('a', 'b', 0x10000), true},
+		"non-printable prefix db":       {str(0x0001, 'b', 'c'), "a", true},
+		"non-printable middle db":       {str('a', 0x0001, 'c'), "a", true},
+		"non-printable suffix db":       {str('a', 'b', 0x0001), "a", true},
+		"non-printable prefix table":    {"a", str(0x0001, 'b', 'c'), true},
+		"non-printable middle table":    {"a", str('a', 0x0001, 'c'), true},
+		"non-printable suffix table":    {"a", str('a', 'b', 0x0001), true},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := validateDBTable(test.database, test.table)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+		})
+	}
+}
+
+func str(r ...rune) string {
+	return string(r)
 }

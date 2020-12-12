@@ -8,23 +8,23 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      {{#link-to "vault.cluster.access.identity.index" (pluralize identityType) tagName="li"}}
-        {{#link-to "vault.cluster.access.identity.index" (pluralize identityType)}}
+      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize identityType}} @tagName="li">
+        <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize identityType}}>
           {{capitalize (pluralize identityType)}}
-        {{/link-to}}
-      {{/link-to}}
-      {{#link-to "vault.cluster.access.identity.aliases.index" (pluralize identityType) tagName="li"}}
-        {{#link-to "vault.cluster.access.identity.aliases.index" (pluralize identityType)}}
+        </LinkTo>
+      </LinkTo>
+      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize identityType}} @tagName="li">
+        <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize identityType}}>
           Aliases
-        {{/link-to}}
-      {{/link-to}}
+        </LinkTo>
+      </LinkTo>
     </ul>
   </nav>
 </div>
 <Toolbar>
   {{#if model.meta.total}}
     <ToolbarFilters>
-      {{identity/lookup-input type=identityType}}
+      <Identity::LookupInput @type={{identityType}} />
     </ToolbarFilters>
   {{/if}}
   <ToolbarActions>

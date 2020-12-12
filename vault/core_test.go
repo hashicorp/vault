@@ -1250,7 +1250,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1267,6 +1267,7 @@ func TestCore_StepDown(t *testing.T) {
 		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirectOriginal,
 		DisableMlock: true,
+		Logger:       logger.Named("core1"),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1305,6 +1306,7 @@ func TestCore_StepDown(t *testing.T) {
 		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirectOriginal2,
 		DisableMlock: true,
+		Logger:       logger.Named("core2"),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
