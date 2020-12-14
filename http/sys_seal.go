@@ -167,8 +167,13 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 	sealed := core.Sealed()
 
+	initialized, err := core.Initialized(ctx)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	var sealConfig *vault.SealConfig
-	var err error
 	if core.SealAccess().RecoveryKeySupported() {
 		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 	} else {
@@ -182,7 +187,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	if sealConfig == nil {
 		respondOk(w, &SealStatusResponse{
 			Type:         core.SealAccess().BarrierType(),
-			Initialized:  false,
+			Initialized:  initialized,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
@@ -211,7 +216,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 	respondOk(w, &SealStatusResponse{
 		Type:         sealConfig.Type,
-		Initialized:  true,
+		Initialized:  initialized,
 		Sealed:       sealed,
 		T:            sealConfig.SecretThreshold,
 		N:            sealConfig.SecretShares,

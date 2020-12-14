@@ -656,7 +656,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	if sealConfigError != nil {
-		init, err := core.Initialized(context.Background())
+		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -1794,7 +1794,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if sealConfigError != nil {
-		init, err := core.Initialized(context.Background())
+		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
