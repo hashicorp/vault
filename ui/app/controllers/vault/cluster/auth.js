@@ -12,6 +12,26 @@ export default Controller.extend({
   wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
   redirectTo: alias('vaultController.redirectTo'),
+  managedNamespaceRoot: 'admin', // TODO: get this from API
+
+  get managedNamespaceChild() {
+    let fullParam = this.namespaceQueryParam;
+    let split = fullParam.split('/');
+    if (split.length > 1) {
+      split.shift();
+      console.log(split);
+      return `/${split.join('/')}`;
+    }
+    return '';
+  },
+
+  updateManagedNamespace: task(function*(value) {
+    yield timeout(500);
+    // TODO: Move this to shared fn
+    const newNamespace = `${this.managedNamespaceRoot}${value}`;
+    this.namespaceService.setNamespace(newNamespace, true);
+    this.set('namespaceQueryParam', newNamespace);
+  }).restartable(),
 
   updateNamespace: task(function*(value) {
     // debounce
