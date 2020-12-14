@@ -2005,6 +2005,42 @@ jobs:
         name: Install CircleCI CLI
     - run:
         command: make ci-verify
+  go-mod-vendor:
+    machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /go/src/github.com/hashicorp/vault
+    steps:
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - checkout
+    - attach_workspace:
+        at: .
+    - run:
+        command: |
+          GO111MODULE=on go mod vendor
+          git diff --exit-code
+        name: Run go mod vendor
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO_VERSION: 1.15.3
+    - GO111MODULE: 'off'
+    - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
@@ -2209,6 +2245,9 @@ workflows:
         requires:
         - pre-flight-checks
     - build-go-dev:
+        requires:
+        - pre-flight-checks
+    - go-mod-vendor:
         requires:
         - pre-flight-checks
     - test-ui:
