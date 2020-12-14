@@ -30,4 +30,16 @@ export default Component.extend({
   isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function() {
     return this.currentNamespace === this.targetNamespace;
   }),
+
+  namespaceLink: computed('targetNamespace', function() {
+    let origin =
+      window.location.protocol +
+      '//' +
+      window.location.hostname +
+      (window.location.port ? ':' + window.location.port : '');
+
+    if (!this.targetNamespace) return `${origin}/ui/vault/secrets`;
+
+    return `${origin}/ui/vault/secrets?namespace=${this.targetNamespace}`;
+  }),
 });
