@@ -1,6 +1,7 @@
 package jwtauth
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -21,7 +22,7 @@ type CustomProvider interface {
 	// Initialize should validate jwtConfig.ProviderConfig, set internal values
 	// and run any initialization necessary for subsequent calls to interface
 	// functions the provider implements
-	Initialize(*jwtConfig) error
+	Initialize(context.Context, *jwtConfig) error
 
 	// SensitiveKeys returns any fields in a provider's jwtConfig.ProviderConfig
 	// that should be masked or omitted when output
@@ -31,7 +32,7 @@ type CustomProvider interface {
 // NewProviderConfig - returns appropriate provider struct if provider_config is
 // specified in jwtConfig. The provider map is provider name -to- instance of a
 // CustomProvider.
-func NewProviderConfig(jc *jwtConfig, providerMap map[string]CustomProvider) (CustomProvider, error) {
+func NewProviderConfig(ctx context.Context, jc *jwtConfig, providerMap map[string]CustomProvider) (CustomProvider, error) {
 	if len(jc.ProviderConfig) == 0 {
 		return nil, nil
 	}
@@ -43,7 +44,7 @@ func NewProviderConfig(jc *jwtConfig, providerMap map[string]CustomProvider) (Cu
 	if !ok {
 		return nil, fmt.Errorf("provider %q not found in custom providers", provider)
 	}
-	if err := newCustomProvider.Initialize(jc); err != nil {
+	if err := newCustomProvider.Initialize(ctx, jc); err != nil {
 		return nil, fmt.Errorf("error initializing %q provider_config: %s", provider, err)
 	}
 	return newCustomProvider, nil
@@ -51,11 +52,11 @@ func NewProviderConfig(jc *jwtConfig, providerMap map[string]CustomProvider) (Cu
 
 // UserInfoFetcher - Optional support for custom user info handling
 type UserInfoFetcher interface {
-	FetchUserInfo(*jwtAuthBackend, map[string]interface{}, *jwtRole) error
+	FetchUserInfo(context.Context, *jwtAuthBackend, map[string]interface{}, *jwtRole) error
 }
 
 // GroupsFetcher - Optional support for custom groups handling
 type GroupsFetcher interface {
 	// FetchGroups queries for groups claims during login
-	FetchGroups(*jwtAuthBackend, map[string]interface{}, *jwtRole) (interface{}, error)
+	FetchGroups(context.Context, *jwtAuthBackend, map[string]interface{}, *jwtRole) (interface{}, error)
 }
