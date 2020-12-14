@@ -463,6 +463,28 @@ func NewClient(c *Config) (*Client, error) {
 	return client, nil
 }
 
+func (c *Client) CloneConfig() *Config {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	newConfig := DefaultConfig()
+	newConfig.Address = c.config.Address
+	newConfig.AgentAddress = c.config.AgentAddress
+	newConfig.MaxRetries = c.config.MaxRetries
+	newConfig.Timeout = c.config.Timeout
+	newConfig.Backoff = c.config.Backoff
+	newConfig.CheckRetry = c.config.CheckRetry
+	newConfig.Limiter = c.config.Limiter
+	newConfig.OutputCurlString = c.config.OutputCurlString
+	newConfig.SRVLookup = c.config.SRVLookup
+
+	// we specifically want a _copy_ of the client here, not a pointer to the original one
+	newClient := *c.config.HttpClient
+	newConfig.HttpClient = &newClient
+
+	return newConfig
+}
+
 // Sets the address of Vault in the client. The format of address should be
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.

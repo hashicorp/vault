@@ -78,7 +78,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.7.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.7.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.8.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201203001230-e35700fcc0d5
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.6.0
@@ -89,7 +89,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
@@ -122,6 +122,7 @@ require (
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
+	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.6.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
@@ -149,7 +150,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200828194041-157a740278f4
+	golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a
 	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
