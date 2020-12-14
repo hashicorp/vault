@@ -89,7 +89,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
