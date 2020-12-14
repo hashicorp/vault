@@ -190,7 +190,10 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		if enabledRaw, ok := d.GetOk("enabled"); ok {
 			enabledStr := enabledRaw.(string)
 
-			if config.Enabled == "enable" && (enabledStr == "disable" || enabledStr == "default") {
+			// If currently enabled with the intent to disable or intent to revert to
+			// default in a OSS context, then we return a warning to the client.
+			if config.Enabled == "enable" && enabledStr == "disable" ||
+				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" {
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
 			}
 		}
