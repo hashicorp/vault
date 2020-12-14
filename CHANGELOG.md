@@ -3,7 +3,6 @@
 BUG FIXES:
 
 * core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
-* core: Fix rate limit resource quota migration from 1.5.x to 1.6.x [[GH-10536](https://github.com/hashicorp/vault/pull/10536)]
 
 ## 1.6.0
 ### November 11th, 2020
