@@ -1380,10 +1380,20 @@ jobs:
 workflows:
   build-1973802ee6f7e7e5:
     jobs:
-      - build-common-layers: {}
+      - build-common-layers:
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - darwin_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - bundle-releases:
           requires:
             - darwin_amd64_package
@@ -1401,48 +1411,128 @@ workflows:
             - solaris_amd64_package
             - windows_386_package
             - windows_amd64_package
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - freebsd_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - freebsd_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - freebsd_arm_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_arm_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_arm64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - netbsd_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - netbsd_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - openbsd_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - openbsd_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - solaris_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - windows_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - windows_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
   test:
     jobs:
-      - Fast Tests: {}
+      - Fast Tests:
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
