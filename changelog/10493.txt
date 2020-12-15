@@ -1,3 +1,0 @@
-```release-note:bug
-ui: Fix footer URL linking to the correct version changelog.
-```
