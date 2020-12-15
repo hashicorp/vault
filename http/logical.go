@@ -112,13 +112,13 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			// and an incorrect content-type).
 			head, err := bufferedBody.Peek(512)
 			if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
-				return nil, nil, http.StatusBadRequest, err
+				return nil, nil, http.StatusBadRequest, fmt.Errorf("error reading data")
 			}
 
 			if isForm(head, r.Header.Get("Content-Type")) {
 				formData, err := parseFormRequest(r)
 				if err != nil {
-					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data: %w", err)
+					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data")
 				}
 
 				data = formData
@@ -129,7 +129,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 					err = nil
 				}
 				if err != nil {
-					return nil, nil, http.StatusBadRequest, err
+					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing JSON")
 				}
 			}
 		}
