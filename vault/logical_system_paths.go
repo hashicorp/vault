@@ -71,6 +71,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Type:        framework.TypeStringSlice,
 					Description: "The values to set the header.",
 				},
+				"multivalue": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Returns multiple values if true",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{

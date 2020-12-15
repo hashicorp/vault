@@ -213,13 +213,13 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return nil, errors.New("unhandled case during login")
 	}
 
-	if err := validateBoundClaims(b.Logger(), role.BoundClaimsType, role.BoundClaims, allClaims); err != nil {
-		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
-	}
-
-	alias, groupAliases, err := b.createIdentity(allClaims, role)
+	alias, groupAliases, err := b.createIdentity(ctx, allClaims, role)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if err := validateBoundClaims(b.Logger(), role.BoundClaimsType, role.BoundClaims, allClaims); err != nil {
+		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
 	}
 
 	tokenMetadata := map[string]string{"role": roleName}
@@ -308,7 +308,7 @@ func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig,
 
 // createIdentity creates an alias and set of groups aliases based on the role
 // definition and received claims.
-func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *jwtRole) (*logical.Alias, []*logical.Alias, error) {
+func (b *jwtAuthBackend) createIdentity(ctx context.Context, allClaims map[string]interface{}, role *jwtRole) (*logical.Alias, []*logical.Alias, error) {
 	userClaimRaw, ok := allClaims[role.UserClaim]
 	if !ok {
 		return nil, nil, fmt.Errorf("claim %q not found in token", role.UserClaim)
@@ -318,8 +318,12 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 		return nil, nil, fmt.Errorf("claim %q could not be converted to string", role.UserClaim)
 	}
 
-	err := b.fetchUserInfo(allClaims, role)
+	pConfig, err := NewProviderConfig(ctx, b.cachedConfig, ProviderMap())
 	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load custom provider config: %s", err)
+	}
+
+	if err := b.fetchUserInfo(ctx, pConfig, allClaims, role); err != nil {
 		return nil, nil, err
 	}
 
@@ -339,7 +343,7 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 		return alias, groupAliases, nil
 	}
 
-	groupsClaimRaw, err := b.fetchGroups(allClaims, role)
+	groupsClaimRaw, err := b.fetchGroups(ctx, pConfig, allClaims, role)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch groups: %s", err)
 	}
@@ -366,15 +370,11 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 }
 
 // Checks if there's a custom provider_config and calls FetchUserInfo() if implemented.
-func (b *jwtAuthBackend) fetchUserInfo(allClaims map[string]interface{}, role *jwtRole) error {
-	pConfig, err := NewProviderConfig(b.cachedConfig, ProviderMap())
-	if err != nil {
-		return fmt.Errorf("failed to load custom provider config: %s", err)
-	}
+func (b *jwtAuthBackend) fetchUserInfo(ctx context.Context, pConfig CustomProvider, allClaims map[string]interface{}, role *jwtRole) error {
 	// Fetch user info from custom provider if it's implemented
 	if pConfig != nil {
 		if uif, ok := pConfig.(UserInfoFetcher); ok {
-			return uif.FetchUserInfo(b, allClaims, role)
+			return uif.FetchUserInfo(ctx, b, allClaims, role)
 		}
 	}
 
@@ -382,16 +382,19 @@ func (b *jwtAuthBackend) fetchUserInfo(allClaims map[string]interface{}, role *j
 }
 
 // Checks if there's a custom provider_config and calls FetchGroups() if implemented
-func (b *jwtAuthBackend) fetchGroups(allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
-	pConfig, err := NewProviderConfig(b.cachedConfig, ProviderMap())
-	if err != nil {
-		return nil, fmt.Errorf("failed to load custom provider config: %s", err)
-	}
+func (b *jwtAuthBackend) fetchGroups(ctx context.Context, pConfig CustomProvider, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
 	// If the custom provider implements interface GroupsFetcher, call it,
 	// otherwise fall through to the default method
 	if pConfig != nil {
 		if gf, ok := pConfig.(GroupsFetcher); ok {
-			return gf.FetchGroups(b, allClaims, role)
+			groupsRaw, err := gf.FetchGroups(ctx, b, allClaims, role)
+			if err != nil {
+				return nil, err
+			}
+
+			// Add groups obtained by provider-specific fetching to the claims
+			// so that they can be used for bound_claims validation on the role.
+			allClaims["groups"] = groupsRaw
 		}
 	}
 	groupsClaimRaw := getClaim(b.Logger(), allClaims, role.GroupsClaim)
