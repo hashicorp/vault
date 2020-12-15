@@ -39,7 +39,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const currentTokenName = this.auth.get('currentTokenName');
     // if no namespace queryParam and user authenticated,
     // use user's root namespace to redirect to properly param'd url
-    if (!namespace && currentTokenName) {
+    if (!namespace && currentTokenName && !Ember.testing) {
       const storage = getStorage().getItem(currentTokenName);
       namespace = storage.userRootNamespace;
       // only redirect if something other than nothing
