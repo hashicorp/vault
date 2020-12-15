@@ -193,7 +193,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 			// If currently enabled with the intent to disable or intent to revert to
 			// default in a OSS context, then we return a warning to the client.
 			if config.Enabled == "enable" && enabledStr == "disable" ||
-				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" {
+				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
+				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
 			}
 		}
