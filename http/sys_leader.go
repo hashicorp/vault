@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/vault"
@@ -36,6 +37,9 @@ func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 		LeaderClusterAddress: clusterAddr,
 		PerfStandby:          core.PerfStandby(),
 	}
+	if isLeader {
+		resp.ActiveTime = core.ActiveTime()
+	}
 	if resp.PerfStandby {
 		resp.PerfStandbyLastRemoteWAL = vault.LastRemoteWAL(core)
 	} else if isLeader || !haEnabled {
@@ -48,13 +52,14 @@ func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 }
 
 type LeaderResponse struct {
-	HAEnabled                bool   `json:"ha_enabled"`
-	IsSelf                   bool   `json:"is_self"`
-	LeaderAddress            string `json:"leader_address"`
-	LeaderClusterAddress     string `json:"leader_cluster_address"`
-	PerfStandby              bool   `json:"performance_standby"`
-	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
-	LastWAL                  uint64 `json:"last_wal,omitempty"`
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
+	LeaderAddress            string    `json:"leader_address"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address"`
+	PerfStandby              bool      `json:"performance_standby"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64    `json:"last_wal,omitempty"`
 
 	// Raft Indexes for this node
 	RaftCommittedIndex uint64 `json:"raft_committed_index,omitempty"`

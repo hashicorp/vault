@@ -45,17 +45,17 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
-				"default_report_months": &framework.FieldSchema{
+				"default_report_months": {
 					Type:        framework.TypeInt,
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
 				},
-				"retention_months": &framework.FieldSchema{
+				"retention_months": {
 					Type:        framework.TypeInt,
 					Default:     24,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
 				},
-				"enabled": &framework.FieldSchema{
+				"enabled": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
@@ -156,6 +156,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
+	warnings := make([]string, 0)
+
 	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
@@ -186,8 +188,17 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	{
 		// Parse the enabled setting
 		if enabledRaw, ok := d.GetOk("enabled"); ok {
-			config.Enabled = enabledRaw.(string)
+			enabledStr := enabledRaw.(string)
+
+			// If currently enabled with the intent to disable or intent to revert to
+			// default in a OSS context, then we return a warning to the client.
+			if config.Enabled == "enable" && enabledStr == "disable" ||
+				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
+				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
+				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
+			}
 		}
+
 		switch config.Enabled {
 		case "default", "enable", "disable":
 		default:
@@ -215,6 +226,12 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
+
+	if len(warnings) > 0 {
+		return &logical.Response{
+			Warnings: warnings,
+		}, nil
+	}
 
 	return nil, nil
 }
