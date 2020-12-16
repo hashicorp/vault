@@ -198,7 +198,6 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
 			}
 
-			config.Enabled = enabledStr
 			switch enabledStr {
 			case "default", "enable", "disable":
 				config.Enabled = enabledStr
