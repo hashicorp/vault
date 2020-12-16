@@ -174,9 +174,9 @@ capabilities, which controls a token's access to credentials in Vault.
 an exact match or the longest-prefix match of a glob. This means if you define a
 policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 Specifically, when there are potentially multiple matching policy paths, `P1` and
-`P2`, the following criteria is applied:
+`P2`, the following matching criteria is applied:
 
-1. If the first wildcard (+) or glob (*) occurs earlier in `P1`, `P1` is lower priority
+1. If the first wildcard (`+`) or glob (`*`) occurs earlier in `P1`, `P1` is lower priority
 2. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
 3. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
 4. If `P1` is shorter, it is lower priority
