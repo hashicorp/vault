@@ -1,8 +1,84 @@
-## Next
+## 1.7.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* agent: Agent can now run as a Windows service. [[GH-10231](https://github.com/hashicorp/vault/pull/10231)]
+* auth/ldap: Improve consistency in error messages [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]
+* core (enterprise): Update Trial Enterprise license from 30 minutes to 6 hours
+* core/metrics: Added "vault operator usage" command. [[GH-10365](https://github.com/hashicorp/vault/pull/10365)]
+* core/metrics: New telemetry metrics reporting lease expirations by time interval and namespace [[GH-10375](https://github.com/hashicorp/vault/pull/10375)]
+* core: Added active since timestamp to the status output of active nodes. [[GH-10489](https://github.com/hashicorp/vault/pull/10489)]
+* secrets/gcp: Truncate ServiceAccount display names longer than 100 characters. [[GH-10558](https://github.com/hashicorp/vault/pull/10558)]
 
 BUG FIXES:
 
+* agent: Only set the namespace if the VAULT_NAMESPACE env var isn't present [[GH-10556](https://github.com/hashicorp/vault/pull/10556)]
+* api/sys/config/ui: Fixes issue where multiple UI custom header values are ignored and only the first given value is used [[GH-10490](https://github.com/hashicorp/vault/pull/10490)]
+* api: Fixes CORS API methods that were outdated and invalid [[GH-10444](https://github.com/hashicorp/vault/pull/10444)]
+* auth/jwt: Fixes `bound_claims` validation for provider-specific group and user info fetching. [[GH-10546](https://github.com/hashicorp/vault/pull/10546)]
+* core (enterprise): Limit entropy augmentation during token generation to root tokens. [[GH-10487](https://github.com/hashicorp/vault/pull/10487)]
+* core (enterprise): Vault EGP policies attached to path * were not correctly scoped to the namespace.
+* core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
 * core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
+* core: Fix rate limit resource quota migration from 1.5.x to 1.6.x by ensuring `purgeInterval` and
+`staleAge` are set appropriately. [[GH-10536](https://github.com/hashicorp/vault/pull/10536)]
+* core: Make all APIs that report init status consistent, and make them report
+initialized=true when a Raft join is in progress. [[GH-10498](https://github.com/hashicorp/vault/pull/10498)]
+* license: Fix license caching issue that prevents new licenses to get picked up by the license manager [[GH-10424](https://github.com/hashicorp/vault/pull/10424)]
+* secrets/database/influxdb: Fix issue where not all errors from InfluxDB were being handled [[GH-10384](https://github.com/hashicorp/vault/pull/10384)]
+* secrets/database/mysql: Fixes issue where the DisplayName within generated usernames was the incorrect length [[GH-10433](https://github.com/hashicorp/vault/pull/10433)]
+* secrets/database: Sanitize `private_key` field when reading database plugin config [[GH-10416](https://github.com/hashicorp/vault/pull/10416)]
+* secrets/transit: allow for null string to be used for optional parameters in encrypt and decrypt [[GH-10386](https://github.com/hashicorp/vault/pull/10386)]
+* transform (enterprise): Fix bug tokenization handling metadata on exportable stores
+* transform (enterprise): Fix transform configuration not handling `stores` parameter on the legacy path
+* transform (enterprise): Make expiration timestamps human readable
+* transform (enterprise): Return false for invalid tokens on the validate endpoint rather than returning an HTTP error
+* transform (enterprise): Fix bug where tokenization store changes are persisted but don't take effect
+* ui: Fix bug in Transform secret engine when a new role is added and then removed from a transformation [[GH-10417](https://github.com/hashicorp/vault/pull/10417)]
+* ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
+
+## 1.6.1
+### December 16, 2020
+
+SECURITY:
+
+* LDAP Auth Method: We addressed an issue where error messages returned by the
+  LDAP auth methold allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
+  Enterprise and is fixed in 1.5.6 and 1.6.1 (CVE-2020-35177).
+* Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
+  users within namespaces from applying Sentinel EGP policies to paths above
+  their namespace. This vulnerability affects Vault Enterprise and is fixed in
+  1.5.6 and 1.6.1.
+
+IMPROVEMENTS:
+
+* auth/ldap: Improve consistency in error messages [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]
+* core/metrics: Added "vault operator usage" command. [[GH-10365](https://github.com/hashicorp/vault/pull/10365)]
+* secrets/gcp: Truncate ServiceAccount display names longer than 100 characters. [[GH-10558](https://github.com/hashicorp/vault/pull/10558)]
+
+BUG FIXES:
+
+* agent: Only set the namespace if the VAULT_NAMESPACE env var isn't present [[GH-10556](https://github.com/hashicorp/vault/pull/10556)]
+* auth/jwt: Fixes `bound_claims` validation for provider-specific group and user info fetching. [[GH-10546](https://github.com/hashicorp/vault/pull/10546)]
+* core (enterprise): Vault EGP policies attached to path * were not correctly scoped to the namespace.
+* core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
+* core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
+* core: Fix rate limit resource quota migration from 1.5.x to 1.6.x by ensuring `purgeInterval` and
+`staleAge` are set appropriately. [[GH-10536](https://github.com/hashicorp/vault/pull/10536)]
+* core: Make all APIs that report init status consistent, and make them report
+initialized=true when a Raft join is in progress. [[GH-10498](https://github.com/hashicorp/vault/pull/10498)]
+* secrets/database/influxdb: Fix issue where not all errors from InfluxDB were being handled [[GH-10384](https://github.com/hashicorp/vault/pull/10384)]
+* secrets/database/mysql: Fixes issue where the DisplayName within generated usernames was the incorrect length [[GH-10433](https://github.com/hashicorp/vault/pull/10433)]
+* secrets/database: Sanitize `private_key` field when reading database plugin config [[GH-10416](https://github.com/hashicorp/vault/pull/10416)]
+* secrets/transit: allow for null string to be used for optional parameters in encrypt and decrypt [[GH-10386](https://github.com/hashicorp/vault/pull/10386)]
+* storage/raft (enterprise): The parameter aws_s3_server_kms_key was misnamed and didn't work.  Renamed to aws_s3_kms_key, and make it work so that when provided the given key will be used to encrypt the snapshot using AWS KMS.
+* transform (enterprise): Fix bug tokenization handling metadata on exportable stores
+* transform (enterprise): Fix transform configuration not handling `stores` parameter on the legacy path
+* transform (enterprise): Make expiration timestamps human readable
+* transform (enterprise): Return false for invalid tokens on the validate endpoint rather than returning an HTTP error
+* transform (enterprise): Fix bug where tokenization store changes are persisted but don't take effect
+* ui: Fix bug in Transform secret engine when a new role is added and then removed from a transformation [[GH-10417](https://github.com/hashicorp/vault/pull/10417)]
+* ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
 
 ## 1.6.0
 ### November 11th, 2020
@@ -75,6 +151,31 @@ BUG FIXES:
 * ui: Update language in promote dr modal flow [[GH-10155](https://github.com/hashicorp/vault/pull/10155)]
 * ui: Update language on replication primary dashboard for clarity [[GH-10205](https://github.com/hashicorp/vault/pull/10217)]
 * core: Fix bug where updating an existing path quota could introduce a conflict. [[GH-10285](https://github.com/hashicorp/vault/pull/10285)]
+
+## 1.5.6
+### December 16, 2020
+
+SECURITY:
+
+* LDAP Auth Method: We addressed an issue where error messages returned by the
+  LDAP auth methold allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
+  Enterprise and is fixed in 1.5.6 and 1.6.1 (CVE-2020-35177).
+* Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
+  users within namespaces from applying Sentinel EGP policies to paths above
+  their namespace. This vulnerability affects Vault Enterprise and is fixed in
+  1.5.6 and 1.6.1.
+
+IMPROVEMENTS:
+
+* auth/ldap: Improve consistency in error messages [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]
+
+BUG FIXES:
+
+* core (enterprise): Vault EGP policies attached to path * were not correctly scoped to the namespace.
+* core: Fix bug where updating an existing path quota could introduce a conflict [[GH-10285](https://github.com/hashicorp/vault/pull/10285)]
+* core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
+* quotas (enterprise): Reset cache before loading quotas in the db during startup
+* secrets/transit: allow for null string to be used for optional parameters in encrypt and decrypt [[GH-10386](https://github.com/hashicorp/vault/pull/10386)]
 
 ## 1.5.5
 ### October 21, 2020
@@ -204,6 +305,7 @@ CHANGES:
 * auth/gcp: Changes the default name of the entity alias that gets created to be the role ID for both IAM and GCE authentication. [[GH-99](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/99)]
 * core: Remove the addition of newlines to parsed configuration when using integer/boolean values [[GH-8928](https://github.com/hashicorp/vault/pull/8928)]
 * cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
+* secrets/azure: Default password generation changed from uuid to cryptographically secure randomized string [[GH-40](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/40)]
 * storage/gcs: The `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS` environment variable
   or default credentials may be used instead [[GH-9424](https://github.com/hashicorp/vault/pull/9424)]
 * storage/raft: The storage configuration now accepts a new `max_entry_size` config that will limit
