@@ -35,6 +35,7 @@ type OperatorRekeyCommand struct {
 	flagBackup         bool
 	flagBackupDelete   bool
 	flagBackupRetrieve bool
+	flagPGPShares      []string
 
 	testStdin io.Reader // for tests
 }
@@ -207,6 +208,14 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Default: false,
 		Usage: "Retrieve the backed-up unseal keys. This option is only available " +
 			"if the PGP keys were provided and the backup has not been deleted.",
+	})
+
+	f.VarFlag(&VarFlag{
+		Name:       "pgp-shares",
+		Value:      (*pgpkeys.SharePathsFlag)(&c.flagPGPShares),
+		Usage: "Comma-separated list of writable paths to save the encrypted shares." +
+			"It requires \"backup-retrieve\" to be supplied, and to match number of retrieved " +
+			"keys from the Vault.",
 	})
 
 	return set
@@ -572,6 +581,13 @@ func (c *OperatorRekeyCommand) backupRetrieve(client *api.Client) int {
 
 	secret := &api.Secret{
 		Data: structs.New(storedKeys).Map(),
+	}
+
+	if len(c.flagPGPShares) > 0 {
+		err := pgpkeys.WriteSharePaths(storedKeys.Keys, c.flagPGPShares); if err != nil {
+			c.UI.Error(fmt.Sprintf("Error saving retrieved keys: %s", err))
+			return 3
+		}
 	}
 
 	return OutputSecret(c.UI, secret)

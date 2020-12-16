@@ -153,3 +153,7 @@ flags](/docs/commands) included on all commands.
 - `-backup-retrieve` `(bool: false)` - Retrieve the backed-up unseal keys. This
   option is only available if the PGP keys were provided and the backup has not
   been deleted.
+
+- `-pgp-shares` `(string: "...")` - Comma-separated list of paths to files on disk
+  for saving retrieved backed-up unseal keys. All paths must be writable. This option
+  needs to be used with `-backup-retrieve` and must match the number of key shares stored in the backup.
