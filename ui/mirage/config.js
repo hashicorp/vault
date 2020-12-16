@@ -1,23 +1,4 @@
-import Response from 'ember-cli-mirage/response';
-
 export default function() {
-  this.get(
-    'http://localhost:4200/vault-config',
-    function() {
-      console.log('getting vault config');
-      return new Response(
-        201,
-        {
-          'Content-Type': 'application/json',
-        },
-        {
-          managedNamespaceRoot: 'admin',
-        }
-      );
-    },
-    { timing: 3000 }
-  );
-
   this.namespace = 'v1';
 
   this.get('sys/internal/counters/activity', function(db) {
@@ -36,6 +17,15 @@ export default function() {
     return {
       request_id: '00001',
       data: db['metrics/configs'].first(),
+    };
+  });
+
+  this.get('/vault-config', (schema, request) => {
+    if (request.params.false) {
+      return {};
+    }
+    return {
+      managedNamespaceRoot: 'admin',
     };
   });
 

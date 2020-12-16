@@ -8,6 +8,7 @@ export default Route.extend({
   routing: service('router'),
   wizard: service(),
   namespaceService: service('namespace'),
+  config: service(),
 
   actions: {
     willTransition() {
@@ -80,5 +81,15 @@ export default Route.extend({
       });
       return true;
     },
+  },
+
+  async beforeModel() {
+    const result = await fetch('/v1/vault-config', {
+      method: 'GET',
+    });
+    if (result.status === 200) {
+      const body = await result.json();
+      this.config.setManagedNamespaceRoot(body.managedNamespaceRoot);
+    }
   },
 });
