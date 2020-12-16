@@ -30,6 +30,10 @@ func TestLoadConfigFileIntegerAndBooleanValuesJson(t *testing.T) {
 	testLoadConfigFileIntegerAndBooleanValuesJson(t)
 }
 
+func TestLoadConfigFileWithLeaseMetricTelemetry(t *testing.T) {
+	testLoadConfigFileLeaseMetrics(t)
+}
+
 func TestLoadConfigDir(t *testing.T) {
 	testLoadConfigDir(t)
 }

@@ -1,4 +1,5 @@
 import { create } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -35,7 +36,7 @@ module('Acceptance | cluster', function(hooks) {
     await logout.visit();
     await authPage.login(userToken);
 
-    assert.dom('[data-test-navbar-item=policies]').doesNotExist();
+    assert.dom('[data-test-navbar-item="policies"]').doesNotExist();
     await logout.visit();
   });
 
@@ -49,8 +50,8 @@ module('Acceptance | cluster', function(hooks) {
     const userToken = await tokenWithPolicy('show-policies-nav', read_rgp_policy);
     await logout.visit();
     await authPage.login(userToken);
-
-    assert.dom('[data-test-navbar-item=policies]').hasAttribute('href', '/ui/vault/policies/rgp');
+    await settled();
+    assert.dom('[data-test-navbar-item="policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
     await logout.visit();
   });
 });

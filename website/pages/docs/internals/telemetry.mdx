@@ -85,11 +85,13 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.cache.miss`                   | Number of times a value was not in the LRU cache. The results in a read from the configured storage.                                                                                                | cache miss   | counter |
 | `vault.cache.write`                  | Number of times a value was written to the LRU cache.                                                                                                                                               | cache write  | counter |
 | `vault.cache.delete`                 | Number of times a value was deleted from the LRU cache. This does not count cache expirations.                                                                                                      | cache delete | counter |
+| `vault.core.active`                  | Has value 1 when the vault node is active, and 0 when node is in standby.                                                                                                                           | bool | gauge   |
+| `vault.core.activity.fragment_size`  | Number of entities or tokens (depending on the "type" label) observed by the local node.                                                                                                            | tokens | counter  |
+| `vault.core.activity.segment_write`  | Duration of time taken writing activity log segments to storage.                                                                                                                                    | ms   | summary  |
 | `vault.core.check_token`             | Duration of time taken by token checks handled by Vault core                                                                                                                                        | ms   | summary |
 | `vault.core.fetch_acl_and_token`     | Duration of time taken by ACL and corresponding token entry fetches handled by Vault core                                                                                                           | ms   | summary |
 | `vault.core.handle_request`          | Duration of time taken by requests handled by Vault core                                                                                                                                            | ms   | summary |
 | `vault.core.handle_login_request`    | Duration of time taken by login requests handled by Vault core                                                                                                                                      | ms   | summary |
-| `vault.core.active`                  | Has value 1 when the vault node is active, and 0 when node is in standby.                                                                                                                           | bool | gauge   |
 | `vault.core.leadership_setup_failed` | Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status. | ms   | summary |
 | `vault.core.leadership_lost`         | Duration of time taken by cluster leadership losses which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status.         | ms   | summary |
 | `vault.core.mount_table.num_entries` | Number of mounts in a particular mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)                                      | objects  | summary |
@@ -148,6 +150,9 @@ These metrics cover measurement of token, identity, and lease operations, and co
 | `vault.expire.fetch-lease-times`          | Time taken to fetch lease times                                             | ms     | summary |
 | `vault.expire.fetch-lease-times-by-token` | Time taken to fetch lease times by token                                    | ms     | summary |
 | `vault.expire.num_leases`                 | Number of all leases which are eligible for eventual expiry                 | leases | gauge   |
+| `vault.expire.leases.by_expiration` (cluster,gauge,expiring,namespace)  | Number of leases set to expire, grouped by a time interval. This time interval and total number of time intervals are configurable via `lease_metrics_epsilon` and `num_lease_metrics_buckets` in the telemetry stanza of a vault server configuration. The default values for these are `1hr` and `168` respectively, so the metric will report the number of leases that will expire each hour from the current time to a week from the current time. One can additionally group lease expiration by namespace by setting `add_lease_metrics_namespace_labels` to `true` in the config file (default is `false`).                                                                                                                                    | leases  | gauge   |
+| `vault.expire.lease_expiration`           | Count of lease expirations                                                  | leases | counter |
+| `vault.expire.lease_expiration.error`     | Count of lease expiration errors                                            | errors | counter |
 | `vault.expire.revoke`                     | Time taken to revoke a token                                                | ms     | summary |
 | `vault.expire.revoke-force`               | Time taken to forcibly revoke a token                                       | ms     | summary |
 | `vault.expire.revoke-prefix`              | Time taken to revoke tokens on a prefix                                     | ms     | summary |
@@ -190,16 +195,19 @@ These metrics relate to rate limit and lease count quotas. Each metric comes wit
 
 These metrics relate to internal operations on Merkle Trees and Write Ahead Logs (WAL)
 
-| Metric                        | Description                                                                 | Unit | Type    |
-| :---------------------------- | :-------------------------------------------------------------------------- | :--- | :------ |
-| `vault.merkle.flushDirty`     | Time taken to flush any dirty pages to cold storage                         | ms   | summary |
-| `vault.merkle.saveCheckpoint` | Time taken to save the checkpoint                                           | ms   | summary |
-| `vault.wal.deleteWALs`        | Time taken to delete a Write Ahead Log (WAL)                                | ms   | summary |
-| `vault.wal.gc.deleted`        | Number of Write Ahead Logs (WAL) deleted during each garbage collection run | WAL  | gauge |
-| `vault.wal.gc.total`          | Total Number of Write Ahead Logs (WAL) on disk                              | WAL  | gauge |
-| `vault.wal.loadWAL`           | Time taken to load a Write Ahead Log (WAL)                                  | ms   | summary |
-| `vault.wal.persistWALs`       | Time taken to persist a Write Ahead Log (WAL)                               | ms   | summary |
-| `vault.wal.flushReady`        | Time taken to flush a ready Write Ahead Log (WAL) to storage                | ms   | summary |
+| Metric                                  | Description                                                                 | Unit | Type    |
+| :-------------------------------------- | :-------------------------------------------------------------------------- | :--- | :------ |
+| `vault.merkle.flushDirty`               | Time taken to flush any dirty pages to cold storage                         | ms   | summary |
+| `vault.merkle.flushDirty.num_pages`     | Number of pages flushed                                                     | pages | gauge  |
+| `vault.merkle.saveCheckpoint`           | Time taken to save the checkpoint                                           | ms   | summary |
+| `vault.merkle.saveCheckpoint.num_dirty` | Number of dirty pages at checkpoint                                         | pages | gauge  |
+| `vault.wal.deleteWALs`                  | Time taken to delete a Write Ahead Log (WAL)                                | ms   | summary |
+| `vault.wal.gc.deleted`                  | Number of Write Ahead Logs (WAL) deleted during each garbage collection run | WAL  | gauge |
+| `vault.wal.gc.total`                    | Total Number of Write Ahead Logs (WAL) on disk                              | WAL  | gauge |
+| `vault.wal.loadWAL`                     | Time taken to load a Write Ahead Log (WAL)                                  | ms   | summary |
+| `vault.wal.persistWALs`                 | Time taken to persist a Write Ahead Log (WAL)                               | ms   | summary |
+| `vault.wal.flushReady`                  | Time taken to flush a ready Write Ahead Log (WAL) to storage                | ms   | summary |
+| `vault.wal.flushReady.queue_len`        | Size of the write queue in the WAL system                                   | WAL  | summary |
 
 ## Replication Metrics
 
@@ -297,6 +305,7 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.cockroachdb.delete`  | Duration of a DELETE operation against the [CockroachDB storage backend][cockroachdb-storage-backend]                  | ms   | summary |
 | `vault.cockroachdb.list`    | Duration of a LIST operation against the [CockroachDB storage backend][cockroachdb-storage-backend]                    | ms   | summary |
 | `vault.consul.put`          | Duration of a PUT operation against the [Consul storage backend][consul-storage-backend]                               | ms   | summary |
+| `vault.consul.transaction`  | Duration of a Txn operation against the [Consul storage backend][consul-storage-backend]                               | ms   | summary |
 | `vault.consul.get`          | Duration of a GET operation against the [Consul storage backend][consul-storage-backend]                               | ms   | summary |
 | `vault.consul.delete`       | Duration of a DELETE operation against the [Consul storage backend][consul-storage-backend]                            | ms   | summary |
 | `vault.consul.list`         | Duration of a LIST operation against the [Consul storage backend][consul-storage-backend]                              | ms   | summary |
@@ -422,6 +431,21 @@ themselves are unable to keep up with the load.
 lower than 200ms, leader > 0 and candidate == 0. Deviations from this might
 indicate flapping leadership.
 
+## Integrated Raft Storage Automated Snapshots
+
+These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-raft-snapshots).
+
+| Metric                                          | Description                                                                                                   | Unit  | Type    |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :---  | :------ |
+| `vault.autosnapshots.total.snapshot.size`		| For storage_type=local, space on disk used by saved snapshots                                                 | bytes      | gauge |
+| `vault.autosnapshots.percent.maxspace.used`	| For storage_type=local, percent used of maximum allocated space                                               | percentage | gauge |
+| `vault.autosnapshots.save.errors`				| Increments whenever an error occurs trying to save a snapshot                                                 | n/a        | counter |
+| `vault.autosnapshots.save.duration`			| Measures the time taken saving a snapshot                                                                     | ms         | summary |
+| `vault.autosnapshots.last.success.time`		| Epoch time (seconds since 1970/01/01) of last successful snapshot save                                        | n/a        | gauge |
+| `vault.autosnapshots.snapshot.size`			| Measures the size in bytes of snapshots                                                                       | bytes      | summary |
+| `vault.autosnapshots.rotate.duration`			| Measures the time taken to rotate (i.e. delete) old snapshots to satisfy configured retention                 | ms         | summary |
+| `vault.autosnapshots.snapshots.in.storage`	| Number of snapshots in storage                                                                                | n/a        | gauge |
+
 ## Metric Labels
 
 | Metric                                          | Description                                                                | Example                            |
@@ -435,6 +459,7 @@ indicate flapping leadership.
 | `secret_engine`                                 | The [secret engine][secrets-engine] type.                                  | `aws`                              |
 | `token_type`                                    | Identifies whether the token is a batch token or a service token.          | `service`                          |
 | `peer_id`                                       | Unique identifier of a peer.                                               | `node-1`                           |
+| `snapshot_config_name`                          | For automated snapshots, the name of the configuration                     | `config1`                          |
 
 [secrets-engines]: /docs/secrets
 [storage-backends]: /docs/configuration/storage

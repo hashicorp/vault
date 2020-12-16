@@ -8,7 +8,7 @@ export default Controller.extend({
   actions: {
     refreshNamespaceList() {
       // fetch new namespaces for the namespace picker
-      this.get('namespaceService.findNamespacesForUser').perform();
+      this.namespaceService.findNamespacesForUser.perform();
     },
   },
 });

@@ -1,7 +1,6 @@
-import DS from 'ember-data';
-const { attr, belongsTo } = DS;
+import Model, { belongsTo, attr } from '@ember-data/model';
 
-export default DS.Model.extend({
+export default Model.extend({
   config: belongsTo('kmip/config', { async: false }),
   caPem: attr('string', {
     label: 'CA PEM',

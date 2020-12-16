@@ -68,6 +68,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		rootUsername, ok := config.ConnectionDetails["username"].(string)
+		if !ok || rootUsername == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
+		}
+
 		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
@@ -92,7 +97,6 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		defer dbi.Unlock()
 
 		// Generate new credentials
-		username := config.ConnectionDetails["username"].(string)
 		oldPassword := config.ConnectionDetails["password"].(string)
 		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
 		if err != nil {
@@ -103,7 +107,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		// Write a WAL entry
 		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
 			ConnectionName: name,
-			UserName:       username,
+			UserName:       rootUsername,
 			OldPassword:    oldPassword,
 			NewPassword:    newPassword,
 		})
@@ -112,7 +116,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		}
 
 		updateReq := v5.UpdateUserRequest{
-			Username: username,
+			Username: rootUsername,
 			Password: &v5.ChangePassword{
 				NewPassword: newPassword,
 				Statements: v5.Statements{

@@ -534,6 +534,14 @@ type Core struct {
 	clusterHeartbeatInterval time.Duration
 
 	activityLogConfig ActivityLogCoreConfig
+
+	// activeTime is set on active nodes indicating the time at which this node
+	// became active.
+	activeTime time.Time
+
+	// KeyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	keyRotateGracePeriod *int64
 }
 
 // CoreConfig is used to parameterize a core
@@ -776,6 +784,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		raftJoinDoneCh:           make(chan struct{}),
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
 		activityLogConfig:        conf.ActivityLogConfig,
+		keyRotateGracePeriod:     new(int64),
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -796,6 +805,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -1850,6 +1860,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Mark the active time. We do this first so it can be correlated to the logs
+	// for the active startup.
+	c.activeTime = time.Now().UTC()
+
 	if err := postUnsealPhysical(c); err != nil {
 		return err
 	}
@@ -1926,7 +1940,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
-		if err := c.setupActivityLog(ctx); err != nil {
+		// not waiting on wg to avoid changing existing behavior
+		var wg sync.WaitGroup
+		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
 	} else {
@@ -2039,6 +2055,7 @@ func (c *Core) preSeal() error {
 
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
+	c.activeTime = time.Time{}
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
@@ -2661,4 +2678,12 @@ func (c *Core) RateLimitResponseHeadersEnabled() bool {
 	}
 
 	return false
+}
+
+func (c *Core) KeyRotateGracePeriod() time.Duration {
+	return time.Duration(atomic.LoadInt64(c.keyRotateGracePeriod))
+}
+
+func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
 }

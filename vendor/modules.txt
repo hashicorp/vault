@@ -474,7 +474,7 @@ github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
-# github.com/hashicorp/hcl v1.0.0
+# github.com/hashicorp/hcl v1.0.1-vault
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
 github.com/hashicorp/hcl/hcl/parser
@@ -498,59 +498,59 @@ github.com/hashicorp/raft
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.3
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.6
+# github.com/hashicorp/vault-plugin-auth-azure v0.6.0
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
+# github.com/hashicorp/vault-plugin-auth-centrify v0.7.0
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-cf v0.5.4
+# github.com/hashicorp/vault-plugin-auth-cf v0.7.0
 github.com/hashicorp/vault-plugin-auth-cf
 github.com/hashicorp/vault-plugin-auth-cf/models
 github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe
+# github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201029051557-9705f34b237d
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201203001230-e35700fcc0d5
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
+# github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
 github.com/hashicorp/vault-plugin-auth-kerberos
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20200921171209-a8c355e565cb
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-oci v0.5.5
+# github.com/hashicorp/vault-plugin-auth-oci v0.6.0
 github.com/hashicorp/vault-plugin-auth-oci
-# github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201022222321-52b89dc4ff04
+# github.com/hashicorp/vault-plugin-database-couchbase v0.2.1
 github.com/hashicorp/vault-plugin-database-couchbase
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.6-0.20201022222154-56454997629c
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.1
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.3-0.20201022222205-830fcbc5fdd2
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
 github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
-# github.com/hashicorp/vault-plugin-secrets-ad v0.7.1-0.20201009192637-c613b2a27345
+# github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
+# github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.6.2
+# github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.6
+# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
+# github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77 => ./api
@@ -760,6 +760,9 @@ github.com/mitchellh/mapstructure
 github.com/mitchellh/pointerstructure
 # github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
+# github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2
+github.com/moby/term
+github.com/moby/term/windows
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
@@ -825,6 +828,30 @@ github.com/ory/dockertest/docker/types/network
 github.com/ory/dockertest/docker/types/registry
 github.com/ory/dockertest/docker/types/strslice
 github.com/ory/dockertest/docker/types/versions
+# github.com/ory/dockertest/v3 v3.6.2
+github.com/ory/dockertest/v3
+github.com/ory/dockertest/v3/docker
+github.com/ory/dockertest/v3/docker/opts
+github.com/ory/dockertest/v3/docker/pkg/archive
+github.com/ory/dockertest/v3/docker/pkg/fileutils
+github.com/ory/dockertest/v3/docker/pkg/homedir
+github.com/ory/dockertest/v3/docker/pkg/idtools
+github.com/ory/dockertest/v3/docker/pkg/ioutils
+github.com/ory/dockertest/v3/docker/pkg/jsonmessage
+github.com/ory/dockertest/v3/docker/pkg/longpath
+github.com/ory/dockertest/v3/docker/pkg/mount
+github.com/ory/dockertest/v3/docker/pkg/pools
+github.com/ory/dockertest/v3/docker/pkg/stdcopy
+github.com/ory/dockertest/v3/docker/pkg/system
+github.com/ory/dockertest/v3/docker/types
+github.com/ory/dockertest/v3/docker/types/blkiodev
+github.com/ory/dockertest/v3/docker/types/container
+github.com/ory/dockertest/v3/docker/types/filters
+github.com/ory/dockertest/v3/docker/types/mount
+github.com/ory/dockertest/v3/docker/types/network
+github.com/ory/dockertest/v3/docker/types/registry
+github.com/ory/dockertest/v3/docker/types/strslice
+github.com/ory/dockertest/v3/docker/types/versions
 # github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c
 github.com/packethost/packngo
 # github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -1093,12 +1120,13 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200828194041-157a740278f4
+# golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
+golang.org/x/sys/windows/svc
 # golang.org/x/text v0.3.3
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap

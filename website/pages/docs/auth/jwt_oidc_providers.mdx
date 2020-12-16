@@ -159,10 +159,14 @@ the only OAuth scopes that should be granted are:
 ~> This is an **important security step** in order to give the service account the least set of privileges
 that enable the feature.
 
+The Google service account key file obtained from the steps in the guide must be made available on the
+host that Vault is running on.
+
 #### Configuration
 
 - `provider` `(string: <required>)` - Name of the provider. Must be set to "gsuite".
-- `gsuite_service_account` `(string: <required>)` - Path to the Google service account key file obtained from setup.
+- `gsuite_service_account` `(string: <required>)` - Path to the Google service account key file obtained
+from setup. The path must refer to a file that's readable on the host that Vault is running on.
 - `gsuite_admin_impersonate` `(string: <required>)` - Email address of a G Suite admin to impersonate.
 - `fetch_groups` `(bool: false)` - If set to true, groups will be fetched from G Suite.
 - `fetch_user_info` `(bool: false)` - If set to true, user info will be fetched from G Suite using the configured [user_custom_schemas](#user_custom_schemas).

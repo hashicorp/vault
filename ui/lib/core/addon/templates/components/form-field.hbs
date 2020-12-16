@@ -157,7 +157,7 @@
       }}
     {{else}}
       <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
+        value={{or (get model valuePath) attr.options.defaultValue}} onChange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }} class="input" maxLength={{attr.options.characterLimit}} />

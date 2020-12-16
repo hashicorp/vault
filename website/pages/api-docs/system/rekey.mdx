@@ -175,7 +175,7 @@ This endpoint deletes the backup copy of PGP-encrypted unseal keys.
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token" \
+    --header "X-Vault-Token: ..." \
     --request DELETE \
     http://127.0.0.1:8200/v1/sys/rekey/backup
 ```
@@ -219,7 +219,7 @@ for the verification operation.
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token" \
+    --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/update
@@ -293,7 +293,7 @@ nonce.
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token" \
+    --header "X-Vault-Token: ..." \
     --request DELETE \
     http://127.0.0.1:8200/v1/sys/rekey/verify
 ```
@@ -346,7 +346,7 @@ below; otherwise the response will be the same as the `GET` method against
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token" \
+    --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/verify

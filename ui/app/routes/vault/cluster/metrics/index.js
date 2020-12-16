@@ -1,7 +1,7 @@
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import { hash } from 'rsvp';
-import { endOfMonth } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { parseDateString } from 'vault/helpers/parse-date-string';
 
 const getActivityParams = ({ start, end }) => {
@@ -12,14 +12,14 @@ const getActivityParams = ({ start, end }) => {
     let startDate = parseDateString(start);
     if (startDate) {
       // TODO: Replace with formatRFC3339 when date-fns is updated
-      params.start_time = Math.round(startDate.getTime() / 1000);
+      params.start_time = format(addDays(startDate, 1), 'X');
     }
   }
   if (end) {
     let endDate = parseDateString(end);
     if (endDate) {
       // TODO: Replace with formatRFC3339 when date-fns is updated
-      params.end_time = Math.round(endOfMonth(endDate).getTime() / 1000);
+      params.end_time = format(addDays(endDate, 10), 'X');
     }
   }
   return params;

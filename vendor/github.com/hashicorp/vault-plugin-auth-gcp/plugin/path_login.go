@@ -173,7 +173,7 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 
 	key, err := b.getSigningKey(ctx, jwtVal, signedJwt.(string), loginInfo.Role, req.Storage)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to get public key for signed JWT: %v", err)
+		return nil, errwrap.Wrapf("unable to get public key for signed JWT: {{err}}", err)
 	}
 
 	// Parse claims and verify signature.

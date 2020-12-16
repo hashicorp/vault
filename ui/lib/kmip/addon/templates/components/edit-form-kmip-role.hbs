@@ -21,7 +21,7 @@
         Allow this role to perform KMIP operations
       </label>
     </div>
-    {{#if (not this.model.operationNone) }}
+    {{#unless this.model.operationNone}}
       <Toolbar>
         <h3 class="kmip-allowed-operations-header">
           Allowed Operations
@@ -68,7 +68,7 @@
           </div>
         </div>
       </div>
-    {{/if}}
+    {{/unless}}
     <div class="box is-fullwidth is-shadowless">
       <h3 class="title is-3">
         TLS

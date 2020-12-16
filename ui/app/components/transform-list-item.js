@@ -21,7 +21,7 @@ export default Component.extend({
   itemType: '',
 
   isBuiltin: computed('item', 'itemType', function() {
-    const item = this.get('item');
+    const item = this.item;
     if (this.itemType === 'alphabet' || this.itemType === 'template') {
       return item.get('id').startsWith('builtin/');
     }
