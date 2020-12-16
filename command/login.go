@@ -55,8 +55,8 @@ Usage: vault login [options] [AUTH K=V...]
       $ vault login -method=userpass username=my-username
 
   For more information about the list of configuration parameters available for
-  a given auth method, use the "vault auth help TYPE". You can also use "vault
-  auth list" to see the list of enabled auth methods.
+  a given auth method, use the "vault auth help TYPE" command. You can also use
+  "vault auth list" to see the list of enabled auth methods.
 
   If an auth method is enabled at a non-standard path, the -method flag still
   refers to the canonical type, but the -path flag refers to the enabled path.
