@@ -138,6 +138,17 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 		rlq.ID = id
 	}
 
+	// Set purgeInterval if coming from a previous version where purgeInterval was
+	// not defined.
+	if rlq.purgeInterval == 0 {
+		rlq.purgeInterval = DefaultRateLimitPurgeInterval
+	}
+
+	// Set staleAge if coming from a previous version where staleAge was not defined.
+	if rlq.staleAge == 0 {
+		rlq.staleAge = DefaultRateLimitStaleAge
+	}
+
 	rlStore, err := memorystore.New(&memorystore.Config{
 		Tokens:        uint64(math.Round(rlq.Rate)), // allow 'rlq.Rate' number of requests per 'Interval'
 		Interval:      rlq.Interval,                 // time interval in which to enforce rate limiting
