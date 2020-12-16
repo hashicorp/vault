@@ -179,21 +179,20 @@ name.
        ...
     ```
 
+    ```plaintext
     $ curl --header "X-Vault-Token: ..." \
      --request LIST
-    http://127.0.0.1:8200/v1/education/sys/namespaces | jq
-    {
+           http://127.0.0.1:8200/v1/education/sys/namespaces | jq
+     {
+       ...
+       "data": {
+         "keys": [
+           "certification/",
+           "training/"
+         ]
+       },
+       ...
     ...
-    "data": {
-    "keys": [
-    "certification/",
-    "training/"
-    ]
-    },
-    ...
-
-    ```
-
     ```
 
 #### Web UI
