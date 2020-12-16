@@ -39,11 +39,11 @@
     opacity: 0.5;
   }
 
-  input[type='radio'].radio {
-    position: absolute;
-    z-index: 1;
-    opacity: 0;
-  }
+  // input[type='radio'].radio {
+  //   position: absolute;
+  //   z-index: 1;
+  //   opacity: 0;
+  // }
 
   input[type='radio'].radio + label {
     border: 1px solid $grey-light;
