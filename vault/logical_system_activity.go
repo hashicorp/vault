@@ -191,7 +191,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 			enabledStr := enabledRaw.(string)
 
 			// If we switch from enabled to disabled, then we return a warning to the client.
-			// We have to keep in mind the default state for enabled
+			// We have to keep the default state of activity log enabled in mind
 			if config.Enabled == "enable" && enabledStr == "disable" ||
 				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
 				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
