@@ -1,6 +1,8 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
-import TextAndContent from '@hashicorp/react-text-and-content'
+import TextSplitWithLogoGrid from '@hashicorp/react-text-split-with-logo-grid'
+import TextSplitWithCode from '@hashicorp/react-text-split-with-code'
+import TextSplitWithImage from '@hashicorp/react-text-split-with-image'
 import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
 
@@ -42,146 +44,91 @@ export default function DataEncryptionUseCase() {
       </section>
 
       {/* Features / Text and content */}
-      <section className="g-container">
-        <SectionHeader headline="Identity-based Access Features" />
-
-        <div className="g-text-and-content">
-          <div className="text">
-            <div>
-              <h3 id="secure-plugins">Identity Plugins</h3>
-              <p>
-                Improve the extensibility of Vault with pluggable identity
-                backends
-              </p>
-            </div>
-          </div>
-          <div className="content logo-grid">
-            <ul className="g-logo-grid large">
-              {[
-                'aws',
-                'azure',
-                'gcp',
-                'kubernetes',
-                'nomad',
-                'okta',
-                'pivotalcf',
-                'ssh',
-              ].map((logo) => (
-                <li key={logo}>
-                  <img
-                    src={require(`./img/logos/${logo}.png`)}
-                    alt="company logo"
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
+      <section className="no-spacing">
+        <div className="g-grid-container">
+          <SectionHeader headline="Identity-based Access Features" />
         </div>
 
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Entities
-
-Integrated identities across platforms and using this information for policy and access control decisions.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: require('./img/screenshot-entities.png'),
-                format: 'png',
-              },
+        <TextSplitWithLogoGrid
+          textSplit={{
+            heading: 'Identity Plugins',
+            content:
+              'Improve the extensibility of Vault with pluggable identity backends',
+          }}
+          logoGrid={[
+            'aws',
+            'microsoft-azure',
+            'google',
+            'kubernetes',
+            { url: require('./img/logos/nomad.png?url') },
+            { url: require('./img/logos/okta.png?url') },
+            { url: require('./img/logos/pivotalcf.png?url') },
+            { url: require('./img/logos/ssh.png?url') },
+            {
+              url:
+                'https://www.datocms-assets.com/2885/1608143270-ellipsis.png',
             },
+          ]}
+        />
+
+        <TextSplitWithImage
+          textSplit={{
+            heading: 'Entities',
+            content:
+              'Integrated identities across platforms and using this information for policy and access control decisions.',
+            textSide: 'right',
+          }}
+          image={{
+            url: require('./img/screenshot-entities.png?url'),
           }}
         />
 
-        <TextAndContent
-          data={{
-            text: `### Control Groups
-
-Require multiple Identity Entities or members of Identity Groups to authorize an requested action.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: require('./img/screenshot-control-groups.png'),
-                format: 'png',
-              },
-            },
+        <TextSplitWithImage
+          textSplit={{
+            heading: 'Control Groups',
+            content:
+              'Require multiple Identity Entities or members of Identity Groups to authorize an requested action.',
+          }}
+          image={{
+            url: require('./img/screenshot-control-groups.png?url'),
           }}
         />
 
-        <TextAndContent
-          data={{
-            text: `### ACL Templates and Policy Control
-
-Create and manage policies that authorize access control throughout your infrastructure and organization`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `# User template (user-tmpl.hcl)
-# Grant permissions on user specific path
-
-path "user-kv/data/{{identity.entity.name}}/*" {
-  capabilities = [ "create", "update", "read", "delete", "list" ]
-}
-
-# For Web UI usage
-path "user-kv/metadata" {
-  capabilities = ["list"]
-}
-
-# Group template (group-tmpl.hcl)
-# Grant permissions on the group specific path
-# The region is specified in the group metadata
-path "group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*" {
-  capabilities = [ "create", "update", "read", "delete", "list" ]
-}
-
-# Group member can update the group information
-path "identity/group/id/{{identity.groups.names.education.id}}" {
-  capabilities = [ "update", "read" ]
-}
-
-# For Web UI usage
-path "group-kv/metadata" {
-  capabilities = ["list"]
-}
-
-path "identity/group/id" {
-  capabilities = [ "list" ]
-}`,
-            },
+        <TextSplitWithCode
+          textSplit={{
+            heading: 'ACL Templates and Policy Control',
+            content:
+              'Create and manage policies that authorize access control throughout your infrastructure and organization',
+          }}
+          codeBlock={{
+            options: { showWindowBar: true },
+            code:
+              '# User template (user-tmpl.hcl)\n# Grant permissions on user specific path\npath "user-kv/data/{{identity.entity.name}}/*" {\n  capabilities = [ "create", "update", "read", "delete", "list" ]\n}\n# For Web UI usage\npath "user-kv/metadata" {\n  capabilities = ["list"]\n}\n# Group template (group-tmpl.hcl)\n# Grant permissions on the group specific path\n# The region is specified in the group metadata\npath "group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*" {\n  capabilities = [ "create", "update", "read", "delete", "list" ]\n}\n# Group member can update the group information\npath "identity/group/id/{{identity.groups.names.education.id}}" {\n  capabilities = [ "update", "read" ]\n}\n# For Web UI usage\npath "group-kv/metadata" {\n  capabilities = ["list"]\n}\npath "identity/group/id" {\n  capabilities = [ "list" ]\n}\n',
           }}
         />
 
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Identity Groups
-
-Group trusted identities into logical groups for group-based access control.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: require('./img/screenshot-identity-groups.png'),
-                format: 'png',
-              },
-            },
+        <TextSplitWithImage
+          textSplit={{
+            heading: 'Identity Groups',
+            content:
+              'Group trusted identities into logical groups for group-based access control.',
+            textSide: 'right',
+          }}
+          image={{
+            url: require('./img/screenshot-identity-groups.png?url'),
           }}
         />
 
-        <TextAndContent
-          data={{
-            text: `### Multi-factor Authentication
-
-Enforce MFA workflows when accessing a secret or a secret path`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `$ curl \
---header "X-Vault-Token: ..." \\
---header "X-Vault-MFA:my_totp:695452" \\
-http://127.0.0.1:8200/v1/secret/foo`,
-            },
+        <TextSplitWithCode
+          textSplit={{
+            heading: 'Multi-factor Authentication',
+            content:
+              'Enforce MFA workflows when accessing a secret or a secret path',
+          }}
+          codeBlock={{
+            options: { showWindowBar: true },
+            code:
+              '$ curl --header "X-Vault-Token: ..." \\\n--header "X-Vault-MFA:my_totp:695452" \\\nhttp://127.0.0.1:8200/v1/secret/foo',
           }}
         />
       </section>

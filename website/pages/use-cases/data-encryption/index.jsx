@@ -1,6 +1,6 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
-import TextAndContent from '@hashicorp/react-text-and-content'
+import TextSplitWithImage from '@hashicorp/react-text-split-with-image'
 import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
 
@@ -44,38 +44,32 @@ export default function DataEncryptionUseCase() {
       </section>
 
       {/* Features / Text and content */}
-      <section className="g-container">
-        <SectionHeader headline=" Encryption Features" />
+      <section className="no-spacing">
+        <div className="g-grid-container">
+          <SectionHeader headline=" Encryption Features" />
+        </div>
 
-        <TextAndContent
-          data={{
-            text: `### API-driven Encryption
-
-Encrypt application data during transit and rest with AES 256-bit CBC data encryption and TLS in transit.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: 'https://www.datocms-assets.com/2885/1539314348-eaas.png',
-                format: 'png',
-              },
-            },
+        <TextSplitWithImage
+          textSplit={{
+            heading: 'API-driven Encryption',
+            content:
+              'Encrypt application data during transit and rest with AES 256-bit CBC data encryption and TLS in transit.',
+          }}
+          image={{
+            url: 'https://www.datocms-assets.com/2885/1539314348-eaas.png',
           }}
         />
 
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Encryption Key Rolling
-
-Update and roll new keys throughout distributed infrastructure while retaining the ability to decrypt encrypted data`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url:
-                  'https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png',
-                format: 'png',
-              },
-            },
+        <TextSplitWithImage
+          textSplit={{
+            heading: 'Encryption Key Rolling',
+            content:
+              'Update and roll new keys throughout distributed infrastructure while retaining the ability to decrypt encrypted data',
+            textSide: 'right',
+          }}
+          image={{
+            url:
+              'https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png',
           }}
         />
       </section>
