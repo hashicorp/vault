@@ -66,6 +66,7 @@ type serviceRegistration struct {
 	serviceName         string
 	serviceTags         []string
 	serviceAddress      *string
+	meta                map[string]string
 	disableRegistration bool
 	checkTimeout        time.Duration
 
@@ -122,6 +123,13 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	}
 	if logger.IsDebug() {
 		logger.Debug("config service_address set", "service_address", serviceAddr)
+	}
+
+	meta := make(map[string]string)
+	if metaStr, ok := conf["meta"]; ok {
+		if err := strutil.ParseKeyValues(metaStr, meta, ","); err != nil {
+			return nil, err
+		}
 	}
 
 	checkTimeout := defaultCheckTimeout
@@ -208,6 +216,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		serviceName:         service,
 		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
+		meta:                meta,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 
@@ -476,6 +485,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              tags,
+		Meta:              c.meta,
 		Port:              int(c.redirectPort),
 		Address:           serviceAddress,
 		EnableTagOverride: false,
