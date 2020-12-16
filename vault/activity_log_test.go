@@ -643,8 +643,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
+		if resp != nil && len(resp.Warnings) > 0 {
+			t.Logf("got warning(s): %#v", resp.Warnings)
 		}
 
 		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
@@ -654,8 +654,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
+		if resp != nil && len(resp.Warnings) > 0 {
+			t.Logf("got warning(s): %#v", resp.Warnings)
 		}
 
 		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
@@ -665,8 +665,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
+		if resp != nil && len(resp.Warnings) > 0 {
+			t.Logf("got warning(s): %#v", resp.Warnings)
 		}
 
 		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
@@ -698,8 +698,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
+		if resp != nil && len(resp.Warnings) > 0 {
+			t.Logf("got warning(s): %#v", resp.Warnings)
 		}
 
 		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
@@ -1657,8 +1657,8 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
+		if resp != nil && len(resp.Warnings) > 0 {
+			t.Logf("got warning(s): %#v", resp.Warnings)
 		}
 	}
 	disableRequest := func() {
@@ -1670,8 +1670,8 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
+		if resp != nil && len(resp.Warnings) > 0 {
+			t.Logf("got warning(s): %#v", resp.Warnings)
 		}
 	}
 
