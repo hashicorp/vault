@@ -36,3 +36,62 @@ cached.
   containing the output of the secret ID retrieval endpoint for the role (e.g.
   `auth/approle/role/webservers/secret-id`) and the creation path for the
   response-wrapping token must match the value set here.
+
+## Example Configuration
+
+An example configuration, using approle to enable [auto-auth](/docs/agent/autoauth) and creating both a plaintext token sink and [encrypted token sink file](/docs/agent/autoauth#wrap_ttl), follows:
+
+```python
+pid_file = "./pidfile"
+
+vault {
+        address = "https://127.0.0.1:8200"
+}
+
+auto_auth {
+  method {
+    type      = "approle"
+
+    config = {
+      role_id_file_path = "roleid"
+      secret_id_file_path = "secretid"
+      remove_secret_id_file_after_reading = false
+    }
+  }
+
+    sink {
+      type = "file"
+      wrap_ttl = "30m"
+      config = {
+        path = "sink_file_wrapped_1.txt"
+      }
+    }
+
+    sink {
+      type = "file"
+      config = {
+        path = "sink_file_unwrapped_2.txt"
+      }
+    }
+}
+
+
+cache {
+        use_auto_auth_token = true
+}
+
+listener "tcp" {
+         address = "127.0.0.1:8100"
+         tls_disable = true
+}
+
+template {
+  source      = "/etc/vault/server.key.ctmpl"
+  destination = "/etc/vault/server.key"
+}
+
+template {
+  source      = "/etc/vault/server.crt.ctmpl"
+  destination = "/etc/vault/server.crt"
+}
+```
