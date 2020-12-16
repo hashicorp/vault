@@ -220,7 +220,11 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		case groupByName == nil:
 			// Allowed
 		case group.ID == "":
-			group = groupByName
+			groupCloned, err := groupByName.Clone()
+			if err != nil {
+				return nil, err
+			}
+			group = groupCloned
 		case group.ID != "" && groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
