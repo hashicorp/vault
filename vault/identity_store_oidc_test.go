@@ -50,10 +50,11 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"key":       "test-key",
-		"ttl":       int64(86400),
-		"template":  "",
-		"client_id": resp.Data["client_id"],
+		"key":                 "test-key",
+		"ttl":                 int64(86400),
+		"template":            "",
+		"client_id":           resp.Data["client_id"],
+		"allow_impersonation": false,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -64,9 +65,10 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Path:      "oidc/role/test-role1",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template":  "{\"some-key\":\"some-value\"}",
-			"ttl":       "2h",
-			"client_id": "my_custom_id",
+			"template":           "{\"some-key\":\"some-value\"}",
+			"ttl":                "2h",
+			"client_id":          "my_custom_id",
+			"allow_impersonation": true,
 		},
 		Storage: storage,
 	})
@@ -80,10 +82,11 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"key":       "test-key",
-		"ttl":       int64(7200),
-		"template":  "{\"some-key\":\"some-value\"}",
-		"client_id": "my_custom_id",
+		"key":                "test-key",
+		"ttl":                int64(7200),
+		"template":           "{\"some-key\":\"some-value\"}",
+		"client_id":          "my_custom_id",
+		"allow_impersonation": true,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -204,10 +207,11 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"rotation_period":    int64(86400),
-		"verification_ttl":   int64(86400),
-		"algorithm":          "RS256",
-		"allowed_client_ids": []string{},
+		"rotation_period":     int64(86400),
+		"verification_ttl":    int64(86400),
+		"algorithm":           "RS256",
+		"allowed_client_ids":  []string{},
+		"allow_impersonation": false,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -218,9 +222,10 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"rotation_period":    "10m",
-			"verification_ttl":   "1h",
-			"allowed_client_ids": "allowed-test-role",
+			"rotation_period":     "10m",
+			"verification_ttl":    "1h",
+			"allowed_client_ids":  "allowed-test-role",
+			"allow_impersonation": true,
 		},
 		Storage: storage,
 	})
@@ -234,10 +239,11 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"rotation_period":    int64(600),
-		"verification_ttl":   int64(3600),
-		"algorithm":          "RS256",
-		"allowed_client_ids": []string{"allowed-test-role"},
+		"rotation_period":     int64(600),
+		"verification_ttl":    int64(3600),
+		"algorithm":           "RS256",
+		"allowed_client_ids":  []string{"allowed-test-role"},
+		"allow_impersonation": true,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -538,6 +544,97 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	claims := &jwt.Claims{}
 	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
 		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	}
+
+	// Test passing a subject to the token generation endpoint - should fail
+	// without impersonation enabled for role
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"subject": "foo",
+		},
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectError(t, resp, err)
+	expectedStrings = map[string]interface{}{
+		"the role \"test-role\" does not allow impersonation": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Enable impersonation for role
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"allow_impersonation": "true",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Test passing a subject to the token generation endpoint - should fail
+	// without impersonation enabled for key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"subject": "foo",
+		},
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectError(t, resp, err)
+	expectedStrings = map[string]interface{}{
+		"the key \"test-key\" does not allow impersonation": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Enable impersonation for key
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"allow_impersonation": "true",
+		},
+		Storage: storage,
+	})
+
+	// Test passing a subject to the token generation endpoint - should pass
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"subject": "foo",
+			"issuer": "bar",
+			"claims": "{\"foo\":\"bar\"}",
+		},
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectSuccess(t, resp, err)
+
+	// Validate claims
+	parsedToken, err = jwt.ParseSigned(resp.Data["token"].(string))
+	if err != nil {
+		t.Fatalf("error parsing token: %s", err.Error())
+	}
+	claims = &jwt.Claims{}
+	customClaims := struct {
+		Foo string `json:"foo"`
+	}{}
+	if err := parsedToken.Claims(responseJWKS.Keys[0], claims, &customClaims); err != nil {
+		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	}
+	if claims.Subject != "foo" {
+		t.Fatalf("Subject claim not overridden: %s", claims.Subject)
+	}
+	if claims.Issuer != "bar" {
+		t.Fatalf("Issuer claim not overridden: %s", claims.Issuer)
+	}
+	if customClaims.Foo != "bar" {
+		t.Fatalf("Custom claim not overridden: %s", customClaims.Foo)
 	}
 }
 
