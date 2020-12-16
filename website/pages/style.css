@@ -9,7 +9,7 @@
   --highlight-color: var(--brand);
 }
 
-@import '~@hashicorp/react-button/dist/style.css';
+@import '~@hashicorp/react-button/styles/index.css';
 @import '~@hashicorp/react-case-study-slider/dist/style.css';
 @import '~@hashicorp/react-code-block/dist/style.css';
 @import '~@hashicorp/react-consent-manager/dist/style.css';
@@ -19,10 +19,9 @@
 @import '~@hashicorp/react-enterprise-alert/dist/style.css';
 @import '~@hashicorp/react-hero/dist/style.css';
 @import '~@hashicorp/react-logo-grid/dist/style.css';
-@import '~@hashicorp/react-product-downloader/dist/style.css';
 @import '~@hashicorp/react-search/dist/style.css';
 @import '~@hashicorp/react-section-header/dist/style.css';
-@import '~@hashicorp/react-tabs/dist/style.css';
+@import '~@hashicorp/react-tabs/style.css';
 @import '~@hashicorp/react-text-and-content/dist/style.css';
 @import '~@hashicorp/react-toggle/dist/style.css';
 @import '~@hashicorp/react-use-cases/dist/style.css';
@@ -40,7 +39,6 @@
 
 /* Pages */
 @import './not-found/style.css';
-@import './downloads/style.css';
 @import './community/style.css';
 @import './use-cases/style.css';
 
