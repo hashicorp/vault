@@ -177,6 +177,30 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	return err
 }
 
+func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	var buf bytes.Buffer
+	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+		return err
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	err := b.write(ctx, buf.Bytes())
+	if err != nil {
+		rErr := b.reconnect(ctx)
+		if rErr != nil {
+			err = multierror.Append(err, rErr)
+		} else {
+			// Try once more after reconnecting
+			err = b.write(ctx, buf.Bytes())
+		}
+	}
+
+	return err
+}
+
 func (b *Backend) write(ctx context.Context, buf []byte) error {
 	if b.connection == nil {
 		if err := b.reconnect(ctx); err != nil {
@@ -203,8 +227,11 @@ func (b *Backend) reconnect(ctx context.Context) error {
 		b.connection = nil
 	}
 
+	timeoutContext, cancel := context.WithTimeout(ctx, b.writeDuration)
+	defer cancel()
+
 	dialer := net.Dialer{}
-	conn, err := dialer.DialContext(ctx, b.socketType, b.address)
+	conn, err := dialer.DialContext(timeoutContext, b.socketType, b.address)
 	if err != nil {
 		return err
 	}
