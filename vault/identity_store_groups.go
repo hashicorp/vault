@@ -219,10 +219,12 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		switch {
 		case groupByName == nil:
 			// Allowed
-		case newGroup && groupByName.ID != group.ID:
-			return logical.ErrorResponse("group name is already in use"), nil
+		case newGroup && groupByName != nil:
+			return logical.ErrorResponse("new group name is already in use"), nil
 		case group.ID == "":
 			group = groupByName
+		case group.ID != "" && groupByName.ID != group.ID:
+			return logical.ErrorResponse("group name is already in use"), nil
 		}
 		group.Name = groupName
 	}
