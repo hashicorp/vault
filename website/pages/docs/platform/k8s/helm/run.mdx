@@ -301,9 +301,9 @@ server:
       }
 ```
 
-#### Amazon EKS Auto Unseal
+#### Amazon KMS Auto Unseal
 
-The Helm chart may be run with [AWS EKS for Auto
+The Helm chart may be run with [AWS KMS for Auto
 Unseal](/docs/configuration/seal/awskms). This enables Vault server pods to auto
 unseal if they are rescheduled.
 
@@ -312,17 +312,17 @@ are defined in each Vault server pod.
 
 ##### Create the Secret
 
-First, create a secret with your EKS access key/secret:
+First, create a secret with your KMS access key/secret:
 
 ```shell-session
-$ kubectl create secret generic eks-creds \
+$ kubectl create secret generic kms-creds \
     --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
     --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
 ```
 
 ##### Config Example
 
-This is a Vault Helm configuration that uses AWS EKS:
+This is a Vault Helm configuration that uses AWS KMS:
 
 ```yaml
 global:
@@ -331,10 +331,10 @@ global:
 server:
   extraSecretEnvironmentVars:
     - envName: AWS_ACCESS_KEY_ID
-      secretName: eks-creds
+      secretName: kms-creds
       secretKey: AWS_ACCESS_KEY_ID
     - envName: AWS_SECRET_ACCESS_KEY
-      secretName: eks-creds
+      secretName: kms-creds
       secretKey: AWS_SECRET_ACCESS_KEY
 
   ha:
