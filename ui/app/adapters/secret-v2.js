@@ -8,9 +8,10 @@ export default ApplicationAdapter.extend({
   _url(backend, id) {
     let url = `${this.buildURL()}/${encodePath(backend)}/metadata/`;
     if (!isEmpty(id)) {
-      let test = id.replace(/%20/g, ' ');
-      console.log(id, 'id');
-      url = url + encodePath(test);
+      // if path has a whitespace already encoded, return to whitespace because method encodePath will encode it.
+      // if we don't return to a whitespace it will get encoded as %20, resulting in a %2520 (% => 25).
+      let path = id.replace(/%20/g, ' ');
+      url = url + encodePath(path);
     }
     return url;
   },
