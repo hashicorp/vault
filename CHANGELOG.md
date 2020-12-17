@@ -48,7 +48,7 @@ SECURITY:
 * Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
   users within namespaces from applying Sentinel EGP policies to paths above
   their namespace. This vulnerability affects Vault Enterprise and is fixed in
-  1.5.6 and 1.6.1.
+  1.5.6 and 1.6.1 (CVE-2020-35453).
 
 IMPROVEMENTS:
 
@@ -79,6 +79,7 @@ initialized=true when a Raft join is in progress. [[GH-10498](https://github.com
 * transform (enterprise): Fix bug where tokenization store changes are persisted but don't take effect
 * ui: Fix bug in Transform secret engine when a new role is added and then removed from a transformation [[GH-10417](https://github.com/hashicorp/vault/pull/10417)]
 * ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
+* ui: Fox radio click on secrets and auth list pages. [[GH-10586](https://github.com/hashicorp/vault/pull/10586)]
 
 ## 1.6.0
 ### November 11th, 2020
