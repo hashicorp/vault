@@ -23,6 +23,7 @@
 /docs/enterprise/auto-unseal/index.html /docs/concepts/seal.html 301!
 /docs/enterprise/hsm/configuration.html  /docs/configuration/seal/pkcs11 301!
 /docs/enterprise/ui/index.html  /docs/configuration/ui 301!
+/docs/enterprise/automated-raft-snapshots  /docs/enterprise/automated-integrated-storage-snapshots 301!
 /docs/guides/generate-root.html /guides/operations/generate-root 301!
 /docs/guides/index.html /guides 301!
 /docs/guides/production.html  /guides/operations/production 301!
