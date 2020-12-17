@@ -58,7 +58,7 @@ stages:
   - channel: current
     branches:
       - main
-      - testing-promotion-pipeline
+      - release/*
     job_defaults:
       package_set: linux_amd64
     actions:
