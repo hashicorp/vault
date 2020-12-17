@@ -1649,15 +1649,13 @@ func checkAPIWarnings(t *testing.T, originalEnabled, newEnabled bool, resp *logi
 
 	expectWarning := originalEnabled == true && newEnabled == false
 
-	if !expectWarning && resp != nil {
+	switch {
+	case !expectWarning && resp != nil:
 		t.Fatalf("got unexpected response: %#v", resp)
-	}
-	if expectWarning {
-		if resp == nil {
-			t.Fatal("expected response (containing warning) when switching from enabled to disabled")
-		} else if len(resp.Warnings) == 0 {
-			t.Fatal("expected warning when switching from enabled to disabled")
-		}
+	case expectWarning && resp == nil:
+		t.Fatal("expected response (containing warning) when switching from enabled to disabled")
+	case expectWarning && len(resp.Warnings) == 0:
+		t.Fatal("expected warning when switching from enabled to disabled")
 	}
 }
 
