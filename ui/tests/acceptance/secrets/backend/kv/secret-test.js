@@ -251,7 +251,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('paths are properly encoded', async function(assert) {
     let backend = 'kv';
     let paths = [
-      ' ',
       '(',
       ')',
       '"',
@@ -276,7 +275,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.expect(paths.length * 2);
     let secretName = '2';
     let commands = paths.map(path => `write '${backend}/${path}/${secretName}' 3=4`);
-    console.log(commands, 'commands');
     await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
     for (let path of paths) {
       await listPage.visit({ backend, id: path });
@@ -289,27 +287,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       );
     }
   });
-
-  // test('first level secrets redirect properly upon deletion', async function(assert) {
-  //   let enginePath = `kv-${new Date().getTime()}`;
-  //   let secretPath = 'test';
-  //   // mount version 1 engine
-  //   await mountSecrets.visit();
-  //   await mountSecrets.selectType('kv');
-  //   await mountSecrets
-  //     .next()
-  //     .path(enginePath)
-  //     .version(1)
-  //     .submit();
-  //   await listPage.create();
-  //   await editPage.createSecret(secretPath, 'foo', 'bar');
-  //   await showPage.deleteSecret();
-  //   assert.equal(
-  //     currentRouteName(),
-  //     'vault.cluster.secrets.backend.list-root',
-  //     'redirected to the list page on delete'
-  //   );
-  // });
 
   test('create secret with space shows version data', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
