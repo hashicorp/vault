@@ -197,21 +197,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 	return a, nil
 }
 
-// Return the in-memory activeEntities from an activity log
-func (c *Core) GetActiveEntities() map[string]struct{} {
-	out := make(map[string]struct{})
-
-	c.stateLock.RLock()
-	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.activeEntities {
-		out[k] = v
-	}
-	c.activityLog.fragmentLock.RUnlock()
-	c.stateLock.RUnlock()
-
-	return out
-}
-
 // saveCurrentSegmentToStorage updates the record of Entities or
 // Non Entity Tokens in persistent storage
 // :force: forces a save of tokens/entities even if the in-memory log is empty
