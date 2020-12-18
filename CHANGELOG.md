@@ -9,6 +9,7 @@ IMPROVEMENTS:
 * core/metrics: New telemetry metrics reporting lease expirations by time interval and namespace [[GH-10375](https://github.com/hashicorp/vault/pull/10375)]
 * core: Added active since timestamp to the status output of active nodes. [[GH-10489](https://github.com/hashicorp/vault/pull/10489)]
 * secrets/gcp: Truncate ServiceAccount display names longer than 100 characters. [[GH-10558](https://github.com/hashicorp/vault/pull/10558)]
+* ui: Upgrade Ember from 3.8 to 3.22 [[GH-9972](https://github.com/hashicorp/vault/pull/9972)]
 
 BUG FIXES:
 
