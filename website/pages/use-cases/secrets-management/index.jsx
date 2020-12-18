@@ -1,8 +1,8 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
 import TextAndContent from '@hashicorp/react-text-and-content'
-import BeforeAfterDiagram from '../../../components/before-after-diagram'
-import UseCaseCtaSection from '../../../components/use-case-cta-section'
+import BeforeAfterDiagram from 'components/before-after-diagram'
+import UseCaseCtaSection from 'components/use-case-cta-section'
 
 export default function SecretsManagmentUseCase() {
   return (
@@ -30,14 +30,14 @@ export default function SecretsManagmentUseCase() {
             beforeImage={{
               url:
                 'https://www.datocms-assets.com/2885/1539885048-secrets-managementchallenge.svg',
-              format: 'svg'
+              format: 'svg',
             }}
             beforeHeadline="The Challenge"
             beforeContent="Secrets for applications and systems need to be centralized and static IP-based solutions don't scale in dynamic environments with frequently changing applications and machines"
             afterImage={{
               url:
                 'https://www.datocms-assets.com/2885/1539885054-secrets-managementsolution.svg',
-              format: 'svg'
+              format: 'svg',
             }}
             afterHeadline="The Solution"
             afterContent="Vault centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity"
@@ -121,9 +121,9 @@ Dynamically create, revoke, and rotate secrets programmatically`,
                 format: 'jpg',
                 size: 71545,
                 width: 668,
-                height: 504
-              }
-            }
+                height: 504,
+              },
+            },
           }}
         />
 
@@ -147,8 +147,8 @@ listener "tcp" {
 telemetry {
     statsite_address = "127.0.0.1:8125"
     disable_hostname = true
-}`
-            }
+}`,
+            },
           }}
         />
 
@@ -172,8 +172,8 @@ telemetry {
                 'https://www.datocms-assets.com/2885/1510033601-aws_logo_rgb_fullcolor.svg',
                 'https://www.datocms-assets.com/2885/1506540175-color.svg',
                 'https://www.datocms-assets.com/2885/1539818112-postgresql.svg',
-                'https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg'
-              ].map(logo => (
+                'https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg',
+              ].map((logo) => (
                 <li key={logo}>
                   <img src={logo} alt="company logo" />
                 </li>
@@ -201,8 +201,8 @@ Detailed audit log of all client interaction (authentication, token creation, se
         "metadata": null,
         "entity_id": ""
     }
-}`
-            }
+}`,
+            },
           }}
         />
 
@@ -229,8 +229,8 @@ Key             Value
 lease_id        database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
 lease_duration  1h0m0s
 lease_renewable true
-$ vault lease revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809`
-            }
+$ vault lease revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809`,
+            },
           }}
         />
       </section>
