@@ -654,6 +654,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.1 h1:C3NF3pVF7/Emx
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.1/go.mod h1:813Nvr1IQqAKdlk3yIY97M5WyxMhWOrXtYioPf9PqJg=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1 h1:Yc8ZJJINvCH6JcJ8uvNkZ6W33KYzVdG4zI98dvbQ8lE=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1/go.mod h1:2So20ndRRsDAMDyG52az6nd7NwFOZTQER9EsrgPCgVg=
+github.com/hashicorp/vault-plugin-database-snowflake v0.1.0 h1:SfzEIHgPqaoDfSN8Key2yLXZfUI3AhI45OEn5jXN8Eo=
+github.com/hashicorp/vault-plugin-database-snowflake v0.1.0/go.mod h1:EUOuoWLg+RwiIjxydK+hH7Eeb4x66cESYNmTHLqqbuM=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.8.0 h1:SBOxEjYtxkipmp8AC7Yy3vjBVM5H24YM48WKCSCV+zA=
@@ -1061,6 +1063,7 @@ github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a/go.mod h1:X
 github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/smartystreets/goconvey v1.6.4 h1:fv0U8FUIMPNf1L9lnHLvLhgicrIVChEkdzIKYqbNC9s=
 github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
+github.com/snowflakedb/glog v0.0.0-20180824191149-f5055e6f21ce h1:CGR1hXCOeoZ1aJhCs8qdKJuEu3xoZnxsLcYoh5Bnr+4=
 github.com/snowflakedb/glog v0.0.0-20180824191149-f5055e6f21ce/go.mod h1:EB/w24pR5VKI60ecFnKqXzxX3dOorz1rnVicQTQrGM0=
 github.com/snowflakedb/gosnowflake v1.3.11 h1:4VATaWPZv2HEh9bkZG5LaMux4WRiZJDu/PvvMCzrpUg=
 github.com/snowflakedb/gosnowflake v1.3.11/go.mod h1:+BMe9ivHWpzcXbM1qSIxWZ8qpWGBBaA46o9Z1qSfrNg=
