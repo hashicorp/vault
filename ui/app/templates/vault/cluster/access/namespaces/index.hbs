@@ -38,9 +38,9 @@
           {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (contains targetNamespace accessibleNamespaces)}}
               <li class="action">
-                <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
+                <LinkTo @route="vault.cluster.secrets" @query={{hash namespace=targetNamespace}} class="is-block">
                   Switch to Namespace
-                </NamespaceLink>
+                </LinkTo>
               </li>
             {{/if}}
           {{/with}}
