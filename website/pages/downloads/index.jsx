@@ -61,15 +61,21 @@ export default function DownloadsPage({ releases }) {
         productName="Vault"
         productId="vault"
         latestVersion={VERSION}
-        getStartedDescription="Follow step-by-step tutorials on AWS, Azure, GCP, and localhost."
+        getStartedDescription="Follow step-by-step tutorials to get hands on with Vault."
         getStartedLinks={[
           {
-            label: 'Placeholder',
-            href: '#',
+            label: 'Get Started with CLI',
+            href:
+              'https://learn.hashicorp.com/collections/vault/getting-started',
           },
           {
-            label: 'Placeholder',
-            href: '#',
+            label: 'Get Started with UI',
+            href:
+              'https://learn.hashicorp.com/collections/vault/getting-started-ui',
+          },
+          {
+            label: 'Vault on Kubernetes',
+            href: 'https://learn.hashicorp.com/collections/vault/kubernetes',
           },
         ]}
         logo={<img className={styles.logo} alt="Vault" src={logo} />}
