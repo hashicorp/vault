@@ -41,7 +41,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		if consulVersion != "" {
 			version = consulVersion
 		} else {
-			version = "1.7.2" // Latest Consul version, update as new releases come out
+			version = "1.9.1" // Latest Consul version, update as new releases come out
 		}
 	}
 	if strings.HasPrefix(version, "1.3") {
@@ -114,6 +114,14 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 			Token: consulToken,
 		}
 		_, _, err = consul.ACL().PolicyCreate(policy, q)
+		if err != nil {
+			return nil, err
+		}
+		role := &consulapi.ACLRole{
+			Name:        "test_role",
+			Description: "test role",
+		}
+		_, _, err = consul.ACL().RoleCreate(role, q)
 		if err != nil {
 			return nil, err
 		}
