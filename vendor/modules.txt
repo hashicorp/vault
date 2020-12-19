@@ -106,7 +106,7 @@ github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
 github.com/apple/foundationdb/bindings/go/src/fdb/subspace
 github.com/apple/foundationdb/bindings/go/src/fdb/tuple
-# github.com/armon/go-metrics v0.3.4
+# github.com/armon/go-metrics v0.3.5
 github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
@@ -293,7 +293,7 @@ github.com/duosecurity/duo_api_golang
 github.com/duosecurity/duo_api_golang/authapi
 # github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 github.com/elazarl/go-bindata-assetfs
-# github.com/fatih/color v1.9.0
+# github.com/fatih/color v1.10.0
 github.com/fatih/color
 # github.com/fatih/structs v1.1.0
 github.com/fatih/structs
@@ -403,7 +403,7 @@ github.com/hashicorp/consul-template/signals
 github.com/hashicorp/consul-template/template
 github.com/hashicorp/consul-template/version
 github.com/hashicorp/consul-template/watch
-# github.com/hashicorp/consul/api v1.4.0
+# github.com/hashicorp/consul/api v1.8.1
 github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
@@ -430,9 +430,9 @@ github.com/hashicorp/go-discover/provider/triton
 github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.6.0
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.14.1
+# github.com/hashicorp/go-hclog v0.15.0
 github.com/hashicorp/go-hclog
-# github.com/hashicorp/go-immutable-radix v1.1.0
+# github.com/hashicorp/go-immutable-radix v1.3.0
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-kms-wrapping v0.5.16
 github.com/hashicorp/go-kms-wrapping
@@ -471,7 +471,7 @@ github.com/hashicorp/go-syslog
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.1
 github.com/hashicorp/go-version
-# github.com/hashicorp/golang-lru v0.5.3
+# github.com/hashicorp/golang-lru v0.5.4
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.1-vault
@@ -496,7 +496,7 @@ github.com/hashicorp/nomad/api/contexts
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.3
 github.com/hashicorp/raft-snapshot
-# github.com/hashicorp/serf v0.8.3
+# github.com/hashicorp/serf v0.9.5
 github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
 github.com/hashicorp/vault-plugin-auth-alicloud
@@ -724,7 +724,7 @@ github.com/lib/pq/oid
 github.com/lib/pq/scram
 # github.com/linode/linodego v0.7.1
 github.com/linode/linodego
-# github.com/mattn/go-colorable v0.1.6
+# github.com/mattn/go-colorable v0.1.8
 github.com/mattn/go-colorable
 # github.com/mattn/go-ieproxy v0.0.1
 github.com/mattn/go-ieproxy
@@ -738,7 +738,7 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mholt/archiver
 # github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 github.com/michaelklishin/rabbit-hole
-# github.com/miekg/dns v1.1.15
+# github.com/miekg/dns v1.1.26
 github.com/miekg/dns
 # github.com/mitchellh/cli v1.1.1
 github.com/mitchellh/cli
@@ -754,7 +754,7 @@ github.com/mitchellh/gox
 github.com/mitchellh/hashstructure
 # github.com/mitchellh/iochan v1.0.0
 github.com/mitchellh/iochan
-# github.com/mitchellh/mapstructure v1.3.3
+# github.com/mitchellh/mapstructure v1.4.0
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/pointerstructure v1.0.0
 github.com/mitchellh/pointerstructure
@@ -865,11 +865,10 @@ github.com/pierrec/lz4/internal/xxh32
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/posener/complete v1.2.1
+# github.com/posener/complete v1.2.3
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-github.com/posener/complete/match
 # github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
 github.com/pquerna/cachecontrol
 github.com/pquerna/cachecontrol/cacheobject
@@ -1120,7 +1119,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a
+# golang.org/x/sys v0.0.0-20201218084310-7d0127a74742
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

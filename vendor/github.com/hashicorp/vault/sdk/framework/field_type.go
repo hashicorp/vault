@@ -31,6 +31,11 @@ const (
 	// a string field
 	TypeCommaStringSlice
 
+	// TypeSemicolonStringSlice is a helper for TypeSlice that returns a
+	// sanitized slice of strings and also supports parsing a semicolon-separated
+	// list in a string field
+	TypeSemicolonStringSlice
+
 	// TypeLowerCaseString is a helper for TypeString that returns a lowercase
 	// version of the provided string
 	TypeLowerCaseString
@@ -82,7 +87,7 @@ func (t FieldType) String() string {
 		return "keypair"
 	case TypeDurationSecond, TypeSignedDurationSecond:
 		return "duration (sec)"
-	case TypeSlice, TypeStringSlice, TypeCommaStringSlice, TypeCommaIntSlice:
+	case TypeSlice, TypeStringSlice, TypeCommaStringSlice, TypeCommaIntSlice, TypeSemicolonStringSlice:
 		return "slice"
 	case TypeHeader:
 		return "header"
