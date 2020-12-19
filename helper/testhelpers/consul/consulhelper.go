@@ -120,6 +120,11 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		role := &consulapi.ACLRole{
 			Name:        "test_role",
 			Description: "test role",
+			Policies: []*consulapi.ACLRolePolicyLink{
+			    {
+				Name: "test",
+			    },
+			},
 		}
 		_, _, err = consul.ACL().RoleCreate(role, q)
 		if err != nil {
