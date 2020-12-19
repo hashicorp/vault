@@ -188,7 +188,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 			len(serviceIdentities) == 0 &&
 			len(nodeIdentities) == 0 {
 			return logical.ErrorResponse(
-				"Use either a policy document, a list of policies or roles, or a set of service identities and/or node identities, depending on your Consul version"), nil
+				"Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"), nil
 		}
 	case "management":
 	default:
