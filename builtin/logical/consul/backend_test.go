@@ -311,6 +311,239 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 	}
 }
 
+func TestBackendRenewRevokeRolesAndInstances(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "")
+	defer cleanup()
+
+	connData := map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := map[string]struct {
+		RoleName string
+		RoleData map[string]interface{}
+	}{
+		"just role": {
+			"r",
+			map[string]interface{}{
+				"roles": []string{"test_role"},
+				"lease": "6h",
+			},
+		},
+		"role and policy": {
+			"rp",
+			map[string]interface{}{
+				"policies": []string{"test"},
+				"roles":    []string{"test_role"},
+				"lease":    "6h",
+			},
+		},
+		"service identity": {
+			"si",
+			map[string]interface{}{
+				"service_identities": []string{"service1"},
+				"lease":              "6h",
+			},
+		},
+		"service identity and policy": {
+			"sip",
+			map[string]interface{}{
+				"policies":           []string{"test"},
+				"service_identities": []string{"service1"},
+				"lease":              "6h",
+			},
+		},
+		"service identity and role": {
+			"sir",
+			map[string]interface{}{
+				"roles":                []string{"test_role"},
+				"service_identitities": []string{"service1"},
+				"lease":                "6h",
+			},
+		},
+		"service identity and role and policy": {
+			"sirp",
+			map[string]interface{}{
+				"policies":           []string{"test"},
+				"roles":              []string{"test_role"},
+				"service_identities": []string{"service1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity": {
+			"ni",
+			map[string]interface{}{
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and policy": {
+			"nip",
+			map[string]interface{}{
+				"policies":        []string{"test"},
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and role": {
+			"nir",
+			map[string]interface{}{
+				"roles":           []string{"test_role"},
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and role and policy": {
+			"nirp",
+			map[string]interface{}{
+				"roles":              []string{"test_role"},
+				"service_identities": []string{"service1"},
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity": {
+			"nisi",
+			map[string]interface{}{
+				"service_identities": []string{"service1"},
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity and policy": {
+			"nisip",
+			map[string]interface{}{
+				"policies":           []string{"test"},
+				"service_identities": []string{"service1"},
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity and role": {
+			"nisir",
+			map[string]interface{}{
+				"roles":              []string{"test_role"},
+				"service_identities": []string{"service1"},
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity and role and policy": {
+			"nisirp",
+			map[string]interface{}{
+				"policies":           []string{"test"},
+				"roles":              []string{"test_role"},
+				"service_identities": []string{"service1"},
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+	}
+
+	for description, tc := range cases {
+		t.Logf("Testing: %s", description)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = fmt.Sprintf("roles/%s", tc.RoleName)
+		req.Data = tc.RoleData
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = fmt.Sprintf("creds/%s", tc.RoleName)
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("resp nil")
+		}
+		if resp.IsError() {
+			t.Fatalf("resp is error: %v", resp.Error())
+		}
+
+		generatedSecret := resp.Secret
+		generatedSecret.TTL = 6 * time.Hour
+
+		var d struct {
+			Token    string `mapstructure:"token"`
+			Accessor string `mapstructure:"accessor"`
+		}
+		if err := mapstructure.Decode(resp.Data, &d); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
+
+		// Build a client and verify that the credentials work
+		consulapiConfig := consulapi.DefaultNonPooledConfig()
+		consulapiConfig.Address = connData["address"].(string)
+		consulapiConfig.Token = d.Token
+		client, err := consulapi.NewClient(consulapiConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log("Verifying that the generated token works...")
+		_, err = client.Catalog(), nil
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Operation = logical.RenewOperation
+		req.Secret = generatedSecret
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("got nil response from renew")
+		}
+
+		req.Operation = logical.RevokeOperation
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Build a management client and verify that the token does not exist anymore
+		consulmgmtConfig := consulapi.DefaultNonPooledConfig()
+		consulmgmtConfig.Address = connData["address"].(string)
+		consulmgmtConfig.Token = connData["token"].(string)
+		mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
+
+		q := &consulapi.QueryOptions{
+			Datacenter: "DC1",
+		}
+
+		t.Log("Verifying that the generated token does not exist...")
+		_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
+		if err == nil {
+			t.Fatal("err: expected error")
+		}
+	}
+}
+
 func TestBackend_LocalToken(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
