@@ -40,7 +40,7 @@ func (d *FieldData) Validate() error {
 		switch schema.Type {
 		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 			TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
+			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime, TypeSemicolonStringSlice:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("error converting input %v for field %q: {{err}}", value, field), err)
@@ -133,7 +133,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	switch schema.Type {
 	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 		TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-		TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
+		TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime, TypeSemicolonStringSlice:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -280,6 +280,13 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeCommaStringSlice:
 		res, err := parseutil.ParseCommaStringSlice(raw)
+		if err != nil {
+			return nil, false, err
+		}
+		return res, true, nil
+
+	case TypeSemicolonStringSlice:
+		res, err := parseutil.ParseSemicolonStringSlice(raw)
 		if err != nil {
 			return nil, false, err
 		}
