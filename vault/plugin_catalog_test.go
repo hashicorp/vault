@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -129,6 +130,8 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 
 	if len(plugins) != len(builtinKeys) {
+		log.Printf("%s", builtinKeys)
+		log.Printf("%s", plugins)
 		t.Fatalf("unexpected length of plugin list, expected %d, got %d", len(builtinKeys), len(plugins))
 	}
 
