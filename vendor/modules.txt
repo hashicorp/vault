@@ -403,7 +403,7 @@ github.com/hashicorp/consul-template/signals
 github.com/hashicorp/consul-template/template
 github.com/hashicorp/consul-template/version
 github.com/hashicorp/consul-template/watch
-# github.com/hashicorp/consul/api v1.4.0
+# github.com/hashicorp/consul/api v1.8.1
 github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
@@ -496,7 +496,7 @@ github.com/hashicorp/nomad/api/contexts
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.3
 github.com/hashicorp/raft-snapshot
-# github.com/hashicorp/serf v0.8.3
+# github.com/hashicorp/serf v0.9.5
 github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
 github.com/hashicorp/vault-plugin-auth-alicloud
@@ -738,7 +738,7 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mholt/archiver
 # github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 github.com/michaelklishin/rabbit-hole
-# github.com/miekg/dns v1.1.15
+# github.com/miekg/dns v1.1.26
 github.com/miekg/dns
 # github.com/mitchellh/cli v1.1.1
 github.com/mitchellh/cli
@@ -865,11 +865,10 @@ github.com/pierrec/lz4/internal/xxh32
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/posener/complete v1.2.1
+# github.com/posener/complete v1.2.3
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-github.com/posener/complete/match
 # github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
 github.com/pquerna/cachecontrol
 github.com/pquerna/cachecontrol/cacheobject
