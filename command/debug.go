@@ -997,6 +997,8 @@ func (c *DebugCommand) writeLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer out.Close()
+
 	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
 	if err != nil {
 		return err
