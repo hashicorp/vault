@@ -1006,10 +1006,7 @@ func (c *DebugCommand) writeLogs(ctx context.Context) error {
 
 	for {
 		select {
-		case log, ok := <-logCh:
-			if !ok {
-				return nil
-			}
+		case log := <-logCh:
 			_, err = out.WriteString(log)
 			if err != nil {
 				return err
