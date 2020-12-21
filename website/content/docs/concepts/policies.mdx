@@ -233,7 +233,7 @@ credentials, the policy would grant `read` access on the appropriate path.
 ## Templated Policies
 
 The policy syntax allows for doing variable replacement in some policy strings
-with values available to the token. Currently `identity` information can be
+with values available to the token. Currently `identity` and `token` information can be
 injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
@@ -250,6 +250,7 @@ injected, and currently the `path` keys in policies allow injection.
 | `identity.groups.names.<group name>.id`                            | The group ID for the given group name                                   |
 | `identity.groups.ids.<group id>.metadata.<metadata key>`           | Metadata associated with the group for the given key                    |
 | `identity.groups.names.<group name>.metadata.<metadata key>`       | Metadata associated with the group for the given key                    |
+| `token.meta.<metadata key>`                                        | Metadata associated with the token for the given key                    |
 
 ### Examples
 

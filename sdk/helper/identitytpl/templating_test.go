@@ -33,6 +33,7 @@ func TestPopulate_Basic(t *testing.T) {
 		groupName         string
 		groupMetadata     map[string]string
 		groupMemberships  []string
+		tokenMeta         map[string]string
 		now               time.Time
 	}{
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
@@ -329,6 +330,24 @@ func TestPopulate_Basic(t *testing.T) {
 			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
 			output:        `{}`,
 		},
+		{
+			name:      "token_meta_basic",
+			input:     "path /{{token.meta.foo}}/ {",
+			tokenMeta: map[string]string{"foo": "bar"},
+			output:    "path /bar/ {",
+		},
+		{
+			name:      "token_meta_missing_key",
+			input:     "path /{{token.meta.foo2}}/ {",
+			tokenMeta: map[string]string{"foo": "bar"},
+			err:       ErrTemplateValueNotFound,
+		},
+		{
+			name:      "token_meta_multiple_keys",
+			input:     "path /secret/{{token.meta.cluster}}/{{token.meta.env}}/ {",
+			tokenMeta: map[string]string{"cluster": "amsterdam", "env": "prod"},
+			output:    "path /secret/amsterdam/prod/ {",
+		},
 	}
 
 	for _, test := range tests {
@@ -377,6 +396,7 @@ func TestPopulate_Basic(t *testing.T) {
 			Groups:            groups,
 			NamespaceID:       "root",
 			Now:               test.now,
+			TokenMeta:         test.tokenMeta,
 		})
 		if err != nil {
 			if test.err == nil {

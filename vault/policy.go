@@ -224,14 +224,14 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 // intermediary set of policies, before being compiled into
 // the ACL
 func ParseACLPolicy(ns *namespace.Namespace, rules string) (*Policy, error) {
-	return parseACLPolicyWithTemplating(ns, rules, false, nil, nil)
+	return parseACLPolicyWithTemplating(ns, rules, false, nil, nil, nil)
 }
 
 // parseACLPolicyWithTemplating performs the actual work and checks whether we
 // should perform substitutions. If performTemplating is true we know that it
 // is templated so we don't check again, otherwise we check to see if it's a
 // templated policy.
-func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group) (*Policy, error) {
+func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group, tokenMeta map[string]string) (*Policy, error) {
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
@@ -264,7 +264,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
-		if err := parsePaths(&p, o, performTemplating, entity, groups); err != nil {
+		if err := parsePaths(&p, o, performTemplating, entity, groups, tokenMeta); err != nil {
 			return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 		}
 	}
@@ -272,7 +272,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	return &p, nil
 }
 
-func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group) error {
+func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group, tokenMeta map[string]string) error {
 	paths := make([]*PathRules, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
@@ -287,6 +287,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				String:      key,
 				Entity:      identity.ToSDKEntity(entity),
 				Groups:      identity.ToSDKGroups(groups),
+				TokenMeta:   tokenMeta,
 				NamespaceID: result.namespace.ID,
 			})
 			if err != nil {
