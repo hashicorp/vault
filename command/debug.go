@@ -579,7 +579,8 @@ func (c *DebugCommand) capturePollingTargets() error {
 
 	if strutil.StrListContains(c.flagTargets, "log") {
 		g.Add(func() error {
-			return c.writeLogs(ctx)
+			_ = c.writeLogs(ctx)
+			return nil
 		}, func(error) {
 			cancelFunc()
 		})
