@@ -54,3 +54,16 @@ provides the `N+1` encryption key protected by the `N` key. This upgrade key is 
 for a few minutes enabling standby instances to do a periodic check for upgrades.
 This allows standby instances to update their keys and stay in-sync with the active Vault
 without requiring operators to perform another unseal.
+
+## NIST Rotation Guidance
+
+Period rotation of the encryption keys is recommended, even in the absence of 
+compromise.  Due to the nature of the AES-256-GCM encryption used, keys should be 
+rotated before approximately 2<sup>32</sup> encryptions have been performed, following
+the guidelines of NIST publication 800-38D.  It is recommended that operators
+monitor the sum of `vault.barrier.put` and `vault.token.creation` (with a label 
+of `token_type` equaling `batch`) to estimate the encryption rate.  Often the simplest
+strategy is to use those metrics to determine a frequency of rotation and make
+that part of the operational process.  For example, if one determines that the 
+estimated rate is 40 million operations per day, then rotating the key every
+three months is sufficient.  
