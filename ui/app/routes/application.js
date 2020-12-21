@@ -84,12 +84,12 @@ export default Route.extend({
   },
 
   async beforeModel() {
-    const result = await fetch('/v1/vault-config', {
+    const result = await fetch('/v1/sys/internal/vault-config', {
       method: 'GET',
     });
     if (result.status === 200) {
       const body = await result.json();
-      this.config.setManagedNamespaceRoot(body.managedNamespaceRoot);
+      this.config.setFeatureFlags(body.data.feature_flags);
     }
   },
 });

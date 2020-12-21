@@ -1,9 +1,15 @@
 import Service from '@ember/service';
 
 export default Service.extend({
-  managedNamespaceRoot: null,
+  featureFlags: null,
+  setFeatureFlags(flags) {
+    this.set('featureFlags', flags);
+  },
 
-  setManagedNamespaceRoot(path) {
-    this.set('managedNamespaceRoot', path);
+  get managedNamespaceRoot() {
+    if (this.featureFlags && this.featureFlags.includes('MANAGED_NAMESPACE')) {
+      return 'admin';
+    }
+    return null;
   },
 });

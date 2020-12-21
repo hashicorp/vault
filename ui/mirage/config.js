@@ -20,12 +20,11 @@ export default function() {
     };
   });
 
-  this.get('/vault-config', (schema, request) => {
-    if (request.params.false) {
-      return {};
-    }
+  this.get('/sys/internal/vault-config', (db, request) => {
     return {
-      managedNamespaceRoot: 'admin',
+      data: {
+        feature_flags: request.queryParams.empty ? null : ['MANAGED_NAMESPACE'],
+      },
     };
   });
 
