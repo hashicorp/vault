@@ -1,8 +1,8 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
 import TextAndContent from '@hashicorp/react-text-and-content'
-import BeforeAfterDiagram from '../../../components/before-after-diagram'
-import UseCaseCtaSection from '../../../components/use-case-cta-section'
+import BeforeAfterDiagram from 'components/before-after-diagram'
+import UseCaseCtaSection from 'components/use-case-cta-section'
 
 export default function DataEncryptionUseCase() {
   return (

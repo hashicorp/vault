@@ -115,6 +115,23 @@ func NewSalt(ctx context.Context, view logical.Storage, config *Config) (*Salt, 
 	return s, nil
 }
 
+// NewNonpersistentSalt creates a new salt with default configuration and no storage usage.
+func NewNonpersistentSalt() *Salt {
+	// Setup the configuration
+	config := &Config{}
+	config.Location = ""
+	config.HashFunc = SHA256Hash
+	config.HMAC = sha256.New
+	config.HMACType = "hmac-sha256"
+
+	s := &Salt{
+		config: config,
+	}
+	s.salt, _ = uuid.GenerateUUID()
+	s.generated = true
+	return s
+}
+
 // SaltID is used to apply a salt and hash function to an ID to make sure
 // it is not reversible
 func (s *Salt) SaltID(id string) string {
