@@ -5,7 +5,7 @@
   "author": "HashiCorp",
   "dependencies": {
     "@hashicorp/mktg-global-styles": "2.1.0",
-    "@hashicorp/nextjs-scripts": "13.0.0-canary.1",
+    "@hashicorp/nextjs-scripts": "14.0.1",
     "@hashicorp/react-button": "4.0.0",
     "@hashicorp/react-case-study-slider": "3.0.3",
     "@hashicorp/react-docs-page": "10.3.2",
