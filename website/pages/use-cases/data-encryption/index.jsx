@@ -51,7 +51,7 @@ export default function DataEncryptionUseCase({ content }) {
         </div>
       </section>
 
-      {/* Features / Text and content */}
+      {/* Features */}
       <section className="no-section-spacing">
         <div className="g-grid-container">
           <SectionHeader headline=" Encryption Features" />

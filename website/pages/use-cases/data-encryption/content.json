@@ -12,7 +12,8 @@
     {
       "textSplit": {
         "heading": "Encryption Key Rolling",
-        "content": "Update and roll new keys throughout distributed infrastructure while retaining the ability to decrypt encrypted data."
+        "content": "Update and roll new keys throughout distributed infrastructure while retaining the ability to decrypt encrypted data.",
+        "textSide": "right"
       },
       "image": {
         "url": "https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png"
