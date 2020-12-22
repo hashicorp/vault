@@ -1,0 +1,13 @@
+{
+  "features": [
+    {
+      "textSplit": {
+        "heading": "Dynamic Secrets",
+        "content": "Dynamically create, revoke, and rotate secrets programmatically."
+      },
+      "image": {
+        "url": "https://www.datocms-assets.com/2885/1538684923-dynamic-secrets-screenshot.jpg"
+      }
+    }
+  ]
+}

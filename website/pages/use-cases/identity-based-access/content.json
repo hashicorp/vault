@@ -1,0 +1,21 @@
+{
+  "features": [
+    {
+      "textSplit": {
+        "heading": "Identity Plugins",
+        "content": "Improve the extensibility of Vault with pluggable identity backends."
+      },
+      "logoGrid": [
+        "aws",
+        "microsoft-azure",
+        "google",
+        "kubernetes",
+        "aws",
+        "aws",
+        "aws",
+        "aws",
+        { "url": "https://www.datocms-assets.com/2885/1608143270-ellipsis.png" }
+      ]
+    }
+  ]
+}

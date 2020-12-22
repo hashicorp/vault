@@ -1,10 +1,18 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
-import TextAndContent from '@hashicorp/react-text-and-content'
+import TextSplits from '@hashicorp/react-text-splits'
 import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
+//  Imports below are used in getStaticProps
+import RAW_CONTENT from './content.json'
+import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
 
-export default function DataEncryptionUseCase() {
+export async function getStaticProps() {
+  const content = await highlightData(RAW_CONTENT)
+  return { props: { content } }
+}
+
+export default function DataEncryptionUseCase({ content }) {
   return (
     <div id="use-cases" className="g-section-block page-wrap">
       {/* Header / Buttons */}
@@ -44,40 +52,11 @@ export default function DataEncryptionUseCase() {
       </section>
 
       {/* Features / Text and content */}
-      <section className="g-container">
-        <SectionHeader headline=" Encryption Features" />
-
-        <TextAndContent
-          data={{
-            text: `### API-driven Encryption
-
-Encrypt application data during transit and rest with AES 256-bit CBC data encryption and TLS in transit.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: 'https://www.datocms-assets.com/2885/1539314348-eaas.png',
-                format: 'png',
-              },
-            },
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Encryption Key Rolling
-
-Update and roll new keys throughout distributed infrastructure while retaining the ability to decrypt encrypted data`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url:
-                  'https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png',
-                format: 'png',
-              },
-            },
-          }}
-        />
+      <section className="no-section-spacing">
+        <div className="g-grid-container">
+          <SectionHeader headline=" Encryption Features" />
+        </div>
+        <TextSplits textSplits={content.features} />
       </section>
 
       <UseCaseCtaSection />

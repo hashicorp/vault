@@ -1,10 +1,19 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
 import TextAndContent from '@hashicorp/react-text-and-content'
+import TextSplits from '@hashicorp/react-text-splits'
 import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
+//  Imports below are used in getStaticProps
+import RAW_CONTENT from './content.json'
+import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
 
-export default function SecretsManagmentUseCase() {
+export async function getStaticProps() {
+  const content = await highlightData(RAW_CONTENT)
+  return { props: { content } }
+}
+
+export default function SecretsManagmentUseCase({ content }) {
   return (
     <div id="use-cases" className="g-section-block page-wrap">
       <section className="g-container">
@@ -105,8 +114,12 @@ export default function SecretsManagmentUseCase() {
       </section>
 
       {/* Features / Text and content */}
-      <section className="g-container">
-        <SectionHeader headline="Secret Management Features" />
+      <section className="no-section-spacing">
+        <div className="g-grid-container">
+          <SectionHeader headline="Secret Management Features" />
+        </div>
+
+        <TextSplits textSplits={content.features} />
 
         <TextAndContent
           data={{
