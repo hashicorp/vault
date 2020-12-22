@@ -7,13 +7,13 @@ export default Controller.extend({
   vaultController: controller('vault'),
   clusterController: controller('vault.cluster'),
   namespaceService: service('namespace'),
-  configService: service('config'),
+  featureFlagService: service('featureFlag'),
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   queryParams: [{ authMethod: 'with' }],
   wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('configService.managedNamespaceRoot'),
+  managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
 
   get managedNamespaceChild() {
     let fullParam = this.namespaceQueryParam;

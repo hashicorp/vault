@@ -16,7 +16,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   permissions: service(),
   store: service(),
   auth: service(),
-  config: service(),
+  featureFlagService: service('featureFlag'),
   currentCluster: service(),
   modelTypes: computed(function() {
     return ['node', 'secret', 'secret-engine'];
@@ -47,8 +47,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });
       }
-    } else if (!namespace && !!this.config.managedNamespaceRoot) {
-      this.transitionTo({ queryParams: { namespace: this.config.managedNamespaceRoot } });
+    } else if (!namespace && !!this.featureFlagService.managedNamespaceRoot) {
+      this.transitionTo({ queryParams: { namespace: this.featureFlagService.managedNamespaceRoot } });
     }
     this.namespaceService.setNamespace(namespace);
     const id = this.getClusterId(params);
