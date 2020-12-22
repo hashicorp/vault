@@ -19,7 +19,6 @@
     "@hashicorp/react-product-downloader": "4.0.2",
     "@hashicorp/react-section-header": "3.0.1",
     "@hashicorp/react-subnav": "7.1.0",
-    "@hashicorp/react-text-and-content": "4.1.8",
     "@hashicorp/react-text-split": "1.2.0",
     "@hashicorp/react-text-split-with-code": "2.0.4",
     "@hashicorp/react-text-split-with-image": "3.0.0",
