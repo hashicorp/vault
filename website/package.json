@@ -15,6 +15,7 @@
     "@hashicorp/react-hero": "4.1.0",
     "@hashicorp/react-image": "3.0.3",
     "@hashicorp/react-inline-svg": "5.0.0",
+    "@hashicorp/react-logo-grid": "3.0.1",
     "@hashicorp/react-markdown-page": "0.1.0",
     "@hashicorp/react-product-downloader": "4.0.2",
     "@hashicorp/react-section-header": "3.0.1",
