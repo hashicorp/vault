@@ -435,6 +435,12 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			}
 			continue
 		}
+		if entry == nil {
+			// This could happen when the certName was provided and the cert doesn't exist,
+			// or just if between the LIST and the GET the cert was deleted.
+			continue
+		}
+
 		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
 			b.Logger().Error("failed to parse certificate", "name", name)
