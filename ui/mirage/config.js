@@ -20,10 +20,11 @@ export default function() {
     };
   });
 
-  this.get('/sys/internal/vault-config', (db, request) => {
+  this.get('/sys/internal/vault-config', db => {
+    const featuresResponse = db.features.first();
     return {
       data: {
-        feature_flags: request.queryParams.empty ? null : ['MANAGED_NAMESPACE'],
+        feature_flags: featuresResponse ? featuresResponse.feature_flags : null,
       },
     };
   });

@@ -1,5 +1,9 @@
 import Service from '@ember/service';
 
+const FLAGS = {
+  vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
+};
+
 export default Service.extend({
   featureFlags: null,
   setFeatureFlags(flags) {
@@ -7,7 +11,7 @@ export default Service.extend({
   },
 
   get managedNamespaceRoot() {
-    if (this.featureFlags && this.featureFlags.includes('MANAGED_NAMESPACE')) {
+    if (this.featureFlags && this.featureFlags.includes(FLAGS.vaultCloudNamespace)) {
       return 'admin';
     }
     return null;

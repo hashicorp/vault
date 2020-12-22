@@ -20,13 +20,13 @@ export default Controller.extend({
     let split = fullParam.split('/');
     if (split.length > 1) {
       split.shift();
-      console.log(split);
       return `/${split.join('/')}`;
     }
     return '';
   },
 
   updateManagedNamespace: task(function*(value) {
+    // debounce
     yield timeout(500);
     // TODO: Move this to shared fn
     const newNamespace = `${this.managedNamespaceRoot}${value}`;
