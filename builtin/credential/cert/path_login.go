@@ -414,19 +414,25 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
-	names, err := storage.List(ctx, "cert/")
-	if err != nil {
-		b.Logger().Error("failed to list trusted certs", "error", err)
-		return
-	}
-	for _, name := range names {
-		// If we are trying to select a single CertEntry and this isn't it
-		if certName != "" && name != certName {
-			continue
+
+	var names []string
+	if certName != "" {
+		names = append(names, certName)
+	} else {
+		var err error
+		names, err = storage.List(ctx, "cert/")
+		if err != nil {
+			b.Logger().Error("failed to list trusted certs", "error", err)
+			return
 		}
+	}
+
+	for _, name := range names {
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
-			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
+			if certName == "" {
+				b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
+			}
 			continue
 		}
 		parsed := parsePEM([]byte(entry.Certificate))
