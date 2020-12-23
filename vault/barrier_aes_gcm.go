@@ -9,17 +9,18 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"go.uber.org/atomic"
 )
 
@@ -46,6 +47,8 @@ type barrierInit struct {
 
 // Validate AESGCMBarrier satisfies SecurityBarrier interface
 var _ SecurityBarrier = &AESGCMBarrier{}
+
+var barrierEncryptsMetric = []string{"barrier", "estimated_encryptions"}
 
 // AESGCMBarrier is a SecurityBarrier implementation that uses the AES
 // cipher core and the Galois Counter Mode block mode. It defaults to
@@ -932,6 +935,12 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 		return nil, errors.New("unable to read enough random bytes to fill gcm nonce")
 	}
 
+	// Amortize metrics overhead.  Every 32 encryptions probabilistically (taking advantage of the nonce as a free RNG),
+	// increment the estimated encryptions.
+	if nonce[0]&31 == 0 {
+		metrics.IncrCounterWithLabels(barrierEncryptsMetric, 32, termLabel(term))
+	}
+
 	// Seal the output
 	switch b.currentAESGCMVersionByte {
 	case AESGCMVersion1:
@@ -947,6 +956,15 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 	}
 
 	return out, nil
+}
+
+func termLabel(term uint32) []metrics.Label {
+	return []metrics.Label{
+		{
+			Name:  "term",
+			Value: strconv.FormatUint(uint64(term), 10),
+		},
+	}
 }
 
 // decrypt is used to decrypt a value using the keyring
@@ -972,7 +990,7 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 }
 
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
-func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
+func (b *AESGCMBarrier) Encrypt(_ context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
 	if b.sealed {
 		b.l.RUnlock()
@@ -990,11 +1008,12 @@ func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byt
 	if err != nil {
 		return nil, err
 	}
+
 	return ciphertext, nil
 }
 
 // Decrypt is used to decrypt in-memory for the BarrierEncryptor interface
-func (b *AESGCMBarrier) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
+func (b *AESGCMBarrier) Decrypt(_ context.Context, key string, ciphertext []byte) ([]byte, error) {
 	b.l.RLock()
 	if b.sealed {
 		b.l.RUnlock()
