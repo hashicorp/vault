@@ -303,7 +303,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 // getAuthTokenFromIMDS uses the Azure Instance Metadata Service to retrieve a short-lived credential using OAuth
 // more info on this https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
 func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, err
 	}
