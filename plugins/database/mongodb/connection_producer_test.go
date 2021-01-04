@@ -15,7 +15,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/ory/dockertest"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -79,7 +79,7 @@ net:
 	// Test
 	mongo := new()
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"connection_url":      retURL,
 			"allowed_roles":       "*",

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
+	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
@@ -715,7 +716,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft backend not in use")
 	}
 
-	init, err := c.Initialized(ctx)
+	init, err := c.InitializedLocally(ctx)
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 	}
@@ -793,7 +794,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return errors.New("raft leader address not provided")
 			}
 
-			init, err := c.Initialized(ctx)
+			init, err := c.InitializedLocally(ctx)
 			if err != nil {
 				return errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 			}
@@ -923,11 +924,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		for _, leaderInfo := range leaderInfos {
 			switch {
 			case leaderInfo.LeaderAPIAddr != "" && leaderInfo.AutoJoin != "":
-				c.logger.Info("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
+				c.logger.Error("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
 
 			case leaderInfo.LeaderAPIAddr != "":
 				if err := joinLeader(leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
-					c.logger.Info("join attempt failed", "error", err)
+					c.logger.Warn("join attempt failed", "error", err)
 				} else {
 					// successfully joined leader
 					return nil
@@ -936,12 +937,38 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			case leaderInfo.AutoJoin != "":
 				addrs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
 				if err != nil {
-					c.logger.Info("failed to parse addresses from auto-join metadata", "error", err)
+					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
 
 				for _, addr := range addrs {
+					u, err := url.Parse(addr)
+					if err != nil {
+						c.logger.Error("failed to parse discovered address", "error", err)
+						continue
+					}
+
+					if u.Scheme == "" {
+						scheme := leaderInfo.AutoJoinScheme
+						if scheme == "" {
+							// default to HTTPS when no scheme is provided
+							scheme = "https"
+						}
+
+						addr = fmt.Sprintf("%s://%s", scheme, addr)
+					}
+
+					if u.Port() == "" {
+						port := leaderInfo.AutoJoinPort
+						if port == 0 {
+							// default to 8200 when no port is provided
+							port = 8200
+						}
+
+						addr = fmt.Sprintf("%s:%d", addr, port)
+					}
+
 					if err := joinLeader(leaderInfo, addr); err != nil {
-						c.logger.Info("join attempt failed", "error", err)
+						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
 						return nil
@@ -949,7 +976,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 			default:
-				c.logger.Info("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
+				c.logger.Error("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
 			}
 		}
 
@@ -1157,6 +1184,8 @@ func newDiscover() (*discover.Discover, error) {
 	for k, v := range discover.Providers {
 		providers[k] = v
 	}
+
+	providers["k8s"] = &discoverk8s.Provider{}
 
 	return discover.New(
 		discover.WithProviders(providers),

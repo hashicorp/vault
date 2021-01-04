@@ -6,10 +6,20 @@
 
 package tag // import "go.mongodb.org/mongo-driver/tag"
 
+import (
+	"bytes"
+	"fmt"
+)
+
 // Tag is a name/vlaue pair.
 type Tag struct {
 	Name  string
 	Value string
+}
+
+// String returns a human-readable human-readable description of the tag.
+func (tag Tag) String() string {
+	return fmt.Sprintf("%s=%s", tag.Name, tag.Value)
 }
 
 // NewTagSetFromMap creates a new tag set from a map.
@@ -54,4 +64,16 @@ func (ts Set) ContainsAll(other []Tag) bool {
 	}
 
 	return true
+}
+
+// String returns a human-readable human-readable description of the tagset.
+func (ts Set) String() string {
+	var b bytes.Buffer
+	for i, tag := range ts {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(tag.String())
+	}
+	return b.String()
 }

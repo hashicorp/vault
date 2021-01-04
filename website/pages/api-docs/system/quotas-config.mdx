@@ -17,6 +17,8 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 
 ### Parameters
 
+- `rate_limit_exempt_paths` `([]string: [])` - Specifies the list of exempt paths
+  from all rate limit quotas. If empty no paths will be exempt.
 - `enable_rate_limit_audit_logging` `(bool: false)` - If set, starts audit logging
   of requests that get rejected due to rate limit quota rule violations.
 - `enable_rate_limit_response_headers` `(bool: false)` - If set, additional rate
@@ -26,6 +28,16 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 
 ```json
 {
+  "rate_limit_exempt_paths": [
+		"sys/internal/ui/mounts",
+		"sys/generate-recovery-token/attempt",
+		"sys/generate-recovery-token/update",
+		"sys/generate-root/attempt",
+		"sys/generate-root/update",
+		"sys/health",
+		"sys/seal-status",
+		"sys/unseal"
+  ],
   "enable_rate_limit_audit_logging": true,
   "enable_rate_limit_response_headers": true,
 }
@@ -66,7 +78,17 @@ $ curl \
   "renewable": false,
   "data": {
     "enable_rate_limit_audit_logging": false,
-    "enable_rate_limit_response_headers": false
+    "enable_rate_limit_response_headers": false,
+    "rate_limit_exempt_paths": [
+      "sys/internal/ui/mounts",
+      "sys/generate-recovery-token/attempt",
+      "sys/generate-recovery-token/update",
+      "sys/generate-root/attempt",
+      "sys/generate-root/update",
+      "sys/health",
+      "sys/seal-status",
+      "sys/unseal"
+    ],
   },
   "warnings": null
 }

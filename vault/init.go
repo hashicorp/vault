@@ -69,8 +69,35 @@ func (c *Core) InitializeRecovery(ctx context.Context) error {
 	return nil
 }
 
-// Initialized checks if the Vault is already initialized
+// Initialized checks if the Vault is already initialized.  This means one of
+// two things: either the barrier has been created (with keyring and master key)
+// and the seal config written to storage, or Raft is forming a cluster and a
+// join/bootstrap is in progress.
 func (c *Core) Initialized(ctx context.Context) (bool, error) {
+	// Check the barrier first
+	init, err := c.InitializedLocally(ctx)
+	if err != nil || init {
+		return init, err
+	}
+
+	if c.isRaftUnseal() {
+		return true, nil
+	}
+
+	rb := c.getRaftBackend()
+	if rb != nil && rb.Initialized() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// InitializedLocally checks if the Vault is already initialized from the
+// local node's perspective.  This is the same thing as Initialized, unless
+// using Raft, in which case Initialized may return true (because a peer
+// we're joining to has been initialized) while InitializedLocally returns
+// false (because we're not done bootstrapping raft on the local node).
+func (c *Core) InitializedLocally(ctx context.Context) (bool, error) {
 	// Check the barrier first
 	init, err := c.barrier.Initialized(ctx)
 	if err != nil {
@@ -413,9 +440,12 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigration() {
+	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
 
 	sealed := c.Sealed()
 	if !sealed {
@@ -434,27 +464,22 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	if len(keys) == 0 {
 		return NewNonFatalError(errors.New("stored unseal keys are supported, but none were found"))
 	}
-
-	unsealed := false
-	keysUsed := 0
-	for _, key := range keys {
-		unsealed, err = c.Unseal(key)
-		if err != nil {
-			return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
-		}
-		keysUsed++
-		if unsealed {
-			break
-		}
+	if len(keys) != 1 {
+		return NewNonFatalError(errors.New("expected exactly one stored key"))
 	}
 
-	if !unsealed {
+	err = c.unsealInternal(ctx, keys[0])
+	if err != nil {
+		return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
+	}
+
+	if c.Sealed() {
 		// This most likely means that the user configured Vault to only store a
 		// subset of the required threshold of keys. We still consider this a
 		// "success", since trying again would yield the same result.
-		c.Logger().Warn("vault still sealed after using stored unseal keys", "stored_keys_used", keysUsed)
+		c.Logger().Warn("vault still sealed after using stored unseal key")
 	} else {
-		c.Logger().Info("unsealed with stored keys", "stored_keys_used", keysUsed)
+		c.Logger().Info("unsealed with stored key")
 	}
 
 	return nil

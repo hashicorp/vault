@@ -13,6 +13,11 @@ import (
 	"github.com/hashicorp/vault/vault/replication"
 )
 
+const (
+	activityLogEnabledDefault      = false
+	activityLogEnabledDefaultValue = "default-disabled"
+)
+
 type entCore struct{}
 type entCoreConfig struct{}
 

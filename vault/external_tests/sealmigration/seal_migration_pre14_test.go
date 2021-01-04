@@ -1,5 +1,3 @@
-// +build !enterprise
-
 package sealmigration
 
 import (
@@ -32,23 +30,24 @@ func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
 func testSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) {
 
 	// Create the transit server.
-	tss := sealhelper.NewTransitSealServer(t)
+	tss := sealhelper.NewTransitSealServer(t, 0)
 	defer func() {
 		if tss != nil {
 			tss.Cleanup()
 		}
 	}()
-	tss.MakeKey(t, "transit-seal-key")
+	sealKeyName := "transit-seal-key"
+	tss.MakeKey(t, sealKeyName)
 
 	// Initialize the backend with transit.
-	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	cluster, opts := initializeTransit(t, logger, storage, basePort, tss, sealKeyName)
 	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
 	cluster.EnsureCoresSealed(t)
 	cluster.Cleanup()
 	storage.Cleanup(t, cluster)
 
 	// Migrate the backend from transit to shamir
-	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, transitSeal, rootToken, recoveryKeys)
+	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, opts.SealFunc, rootToken, recoveryKeys)
 
 	// Now that migration is done, we can nuke the transit server, since we
 	// can unseal without it.
@@ -60,25 +59,20 @@ func testSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, s
 	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
 }
 
-func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int, tss *sealhelper.TransitSealServer, transitSeal vault.Seal, rootToken string, recoveryKeys [][]byte) {
+func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int,
+	tss *sealhelper.TransitSealServer, sealFunc func() vault.Seal, rootToken string, recoveryKeys [][]byte) {
+
 	var baseClusterPort = basePort + 10
 
-	var conf = vault.CoreConfig{
-		Logger: logger.Named("migrateFromTransitToShamir"),
-		// N.B. Providing an UnwrapSeal puts us in migration mode. This is the
-		// equivalent of doing the following in HCL:
-		//     seal "transit" {
-		//       // ...
-		//       disabled = "true"
-		//     }
-		UnwrapSeal: transitSeal,
-	}
+	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{
+		Logger:                logger.Named("migrateFromTransitToShamir"),
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
+		UnwrapSealFunc:        sealFunc,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)

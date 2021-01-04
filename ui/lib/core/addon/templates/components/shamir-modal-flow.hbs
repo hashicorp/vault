@@ -43,9 +43,9 @@
           </h4>
           <p class="help has-text-grey has-bottom-margin-xs">
             {{#if otp}}
-            This command contains both the encoded token and the OTP. It should be executed on the primary cluster in order to generate the operation token.
+            This command contains both the encoded token and the OTP. It should be executed on the secondary cluster in order to generate the operation token.
             {{else}}
-            This command requires the OTP saved earlier. It should be executed on the primary cluster in order to generate the operation token.
+            This command requires the OTP saved earlier. It should be executed on the secondary cluster in order to generate the operation token.
             {{/if}}
           </p>
           <div class="message is-list has-copy-button" tabindex="-1">

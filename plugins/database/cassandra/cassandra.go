@@ -7,10 +7,9 @@ import (
 
 	"github.com/gocql/gocql"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/api"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
@@ -21,7 +20,7 @@ const (
 	cassandraTypeName        = "cassandra"
 )
 
-var _ newdbplugin.Database = &Cassandra{}
+var _ dbplugin.Database = &Cassandra{}
 
 // Cassandra is an implementation of Database interface
 type Cassandra struct {
@@ -31,7 +30,7 @@ type Cassandra struct {
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
 	db := new()
-	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
@@ -43,18 +42,6 @@ func new() *Cassandra {
 	return &Cassandra{
 		cassandraConnectionProducer: connProducer,
 	}
-}
-
-// Run instantiates a Cassandra object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 // Type returns the TypeName for this backend
@@ -73,13 +60,13 @@ func (c *Cassandra) getConnection(ctx context.Context) (*gocql.Session, error) {
 
 // NewUser generates the username/password on the underlying Cassandra secret backend as instructed by
 // the statements provided.
-func (c *Cassandra) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (c *Cassandra) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	session, err := c.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	creationCQL := req.Statements.Commands
@@ -100,7 +87,7 @@ func (c *Cassandra) NewUser(ctx context.Context, req newdbplugin.NewUserRequest)
 		credsutil.ToLower(),
 	)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 	username = strings.ReplaceAll(username, "-", "_")
 
@@ -124,12 +111,12 @@ func (c *Cassandra) NewUser(ctx context.Context, req newdbplugin.NewUserRequest)
 				if rollbackErr != nil {
 					err = multierror.Append(err, rollbackErr)
 				}
-				return newdbplugin.NewUserResponse{}, err
+				return dbplugin.NewUserResponse{}, err
 			}
 		}
 	}
 
-	resp := newdbplugin.NewUserResponse{
+	resp := dbplugin.NewUserResponse{
 		Username: username,
 	}
 	return resp, nil
@@ -158,20 +145,20 @@ func rollbackUser(ctx context.Context, session *gocql.Session, username string, 
 	return nil
 }
 
-func (c *Cassandra) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (c *Cassandra) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
 	}
 
 	if req.Password != nil {
 		err := c.changeUserPassword(ctx, req.Username, req.Password)
-		return newdbplugin.UpdateUserResponse{}, err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 	// Expiration is no-op
-	return newdbplugin.UpdateUserResponse{}, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-func (c *Cassandra) changeUserPassword(ctx context.Context, username string, changePass *newdbplugin.ChangePassword) error {
+func (c *Cassandra) changeUserPassword(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	session, err := c.getConnection(ctx)
 	if err != nil {
 		return err
@@ -206,13 +193,13 @@ func (c *Cassandra) changeUserPassword(ctx context.Context, username string, cha
 }
 
 // DeleteUser attempts to drop the specified user.
-func (c *Cassandra) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (c *Cassandra) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	session, err := c.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	revocationCQL := req.Statements.Commands
@@ -240,5 +227,5 @@ func (c *Cassandra) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRe
 		}
 	}
 
-	return newdbplugin.DeleteUserResponse{}, result.ErrorOrNil()
+	return dbplugin.DeleteUserResponse{}, result.ErrorOrNil()
 }

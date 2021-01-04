@@ -18,6 +18,14 @@ documentation = "An array containing index specification documents for the index
 type = "int64"
 documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."
 
+[request.commitQuorum]
+type = "value"
+minWireVersionRequired = 9
+documentation = """
+The number of data-bearing members of a replica set, including the primary, that must complete the index builds
+successfully before the primary marks the indexes as ready. This should either be a string or int32 value.
+"""
+
 [response]
 name = "CreateIndexesResult"
 

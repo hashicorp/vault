@@ -17,6 +17,7 @@ The OCI Object Storage backend is used to persist Vault's data in OCI Object Sto
 
 ```hcl
 storage "oci" {
+   region = "<oci_region>"
    namespace_name = "<object_storage_namespace_name>"
    bucket_name = "<vault_data_bucket_name>"
    ha_enabled = "<boolean true/false>"
@@ -41,9 +42,11 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 ## `oci` Parameters
 
+- `region` `(string: <optional>)` - Specifies the OCI region where Vault should look for object storage buckets.  If not specified the OCI Storage Backend will use the region specified in your OCI credentials configuration.
+
 - `namespace_name` `(string: <required>)` – Specifies the name of the OCI Object Storage namespaces containing the data bucket and the lock bucket.
 
-- `bucket_name` `(string: <required>)` - Specifies the name of the bucket that will be used to store the vault data.
+- `bucket_name` `(string: <required>)` - Specifies the name of the bucket that will be used to store the Vault data.
 
 ### High Availability Parameters
 

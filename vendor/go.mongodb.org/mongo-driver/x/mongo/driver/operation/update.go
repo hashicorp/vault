@@ -33,6 +33,8 @@ type Update struct {
 	monitor                  *event.CommandMonitor
 	database                 string
 	deployment               driver.Deployment
+	hint                     *bool
+	arrayFilters             *bool
 	selector                 description.ServerSelector
 	writeConcern             *writeconcern.WriteConcern
 	retry                    *driver.RetryMode
@@ -119,10 +121,17 @@ func NewUpdate(updates ...bsoncore.Document) *Update {
 // Result returns the result of executing this operation.
 func (u *Update) Result() UpdateResult { return u.result }
 
-func (u *Update) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server) error {
-	var err error
+func (u *Update) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, currIndex int) error {
+	ur, err := buildUpdateResult(response, srvr)
 
-	u.result, err = buildUpdateResult(response, srvr)
+	u.result.N += ur.N
+	u.result.NModified += ur.NModified
+	if currIndex > 0 {
+		for ind := range ur.Upserted {
+			ur.Upserted[ind].Index += int64(currIndex)
+		}
+	}
+	u.result.Upserted = append(u.result.Upserted, ur.Upserted...)
 	return err
 
 }
@@ -167,6 +176,20 @@ func (u *Update) command(dst []byte, desc description.SelectedServer) ([]byte, e
 
 		dst = bsoncore.AppendBooleanElement(dst, "ordered", *u.ordered)
 	}
+	if u.hint != nil && *u.hint {
+
+		if desc.WireVersion == nil || !desc.WireVersion.Includes(5) {
+			return nil, errors.New("the 'hint' command parameter requires a minimum server wire version of 5")
+		}
+		if !u.writeConcern.Acknowledged() {
+			return nil, errUnacknowledgedHint
+		}
+	}
+	if u.arrayFilters != nil && *u.arrayFilters {
+		if desc.WireVersion == nil || !desc.WireVersion.Includes(6) {
+			return nil, errors.New("the 'arrayFilters' command parameter requires a minimum server wire version of 6")
+		}
+	}
 
 	return dst, nil
 }
@@ -182,6 +205,29 @@ func (u *Update) BypassDocumentValidation(bypassDocumentValidation bool) *Update
 	return u
 }
 
+// Hint is a flag to indicate that the update document contains a hint. Hint is only supported by
+// servers >= 4.2. Older servers >= 3.4 will report an error for using the hint option. For servers <
+// 3.4, the driver will return an error if the hint option is used.
+func (u *Update) Hint(hint bool) *Update {
+	if u == nil {
+		u = new(Update)
+	}
+
+	u.hint = &hint
+	return u
+}
+
+// ArrayFilters is a flag to indicate that the update document contains an arrayFilters field. This option is only
+// supported on server versions 3.6 and higher. For servers < 3.6, the driver will return an error.
+func (u *Update) ArrayFilters(arrayFilters bool) *Update {
+	if u == nil {
+		u = new(Update)
+	}
+
+	u.arrayFilters = &arrayFilters
+	return u
+}
+
 // Ordered sets ordered. If true, when a write fails, the operation will return the error, when
 // false write failures do not stop execution of the operation.
 func (u *Update) Ordered(ordered bool) *Update {
@@ -194,7 +240,8 @@ func (u *Update) Ordered(ordered bool) *Update {
 }
 
 // Updates specifies an array of update statements to perform when this operation is executed.
-// Each update document must have the following structure: {q: <query>, u: <update>, multi: <boolean>, collation: Optional<Document>, arrayFitlers: Optional<Array>}.
+// Each update document must have the following structure:
+// {q: <query>, u: <update>, multi: <boolean>, collation: Optional<Document>, arrayFitlers: Optional<Array>, hint: Optional<string/Document>}.
 func (u *Update) Updates(updates ...bsoncore.Document) *Update {
 	if u == nil {
 		u = new(Update)

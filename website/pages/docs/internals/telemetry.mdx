@@ -89,9 +89,11 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.core.fetch_acl_and_token`     | Duration of time taken by ACL and corresponding token entry fetches handled by Vault core                                                                                                           | ms   | summary |
 | `vault.core.handle_request`          | Duration of time taken by requests handled by Vault core                                                                                                                                            | ms   | summary |
 | `vault.core.handle_login_request`    | Duration of time taken by login requests handled by Vault core                                                                                                                                      | ms   | summary |
-| `vault.core.leader`                  | Has value 1 when the vault node is leader, and 0 when node is in standby.                                                                                                                           | bool | gauge   |
+| `vault.core.active`                  | Has value 1 when the vault node is active, and 0 when node is in standby.                                                                                                                           | bool | gauge   |
 | `vault.core.leadership_setup_failed` | Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status. | ms   | summary |
 | `vault.core.leadership_lost`         | Duration of time taken by cluster leadership losses which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status.         | ms   | summary |
+| `vault.core.mount_table.num_entries` | Number of mounts in a particular mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)                                      | objects  | summary |
+| `vault.core.mount_table.size`        | Size of a particular mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)                                                  | objects  | summary |
 | `vault.core.post_unseal`             | Duration of time taken by post-unseal operations handled by Vault core                                                                                                                              | ms   | summary |
 | `vault.core.pre_seal`                | Duration of time taken by pre-seal operations                                                                                                                                                       | ms   | summary |
 | `vault.core.seal-with-request`       | Duration of time taken by requested seal operations                                                                                                                                                 | ms   | summary |
@@ -146,6 +148,8 @@ These metrics cover measurement of token, identity, and lease operations, and co
 | `vault.expire.fetch-lease-times`          | Time taken to fetch lease times                                             | ms     | summary |
 | `vault.expire.fetch-lease-times-by-token` | Time taken to fetch lease times by token                                    | ms     | summary |
 | `vault.expire.num_leases`                 | Number of all leases which are eligible for eventual expiry                 | leases | gauge   |
+| `vault.expire.lease_expiration            | Count of lease expirations                                                  | leases | counter |
+| `vault.expire.lease_expiration.error`     | Count of lease expiration errors                                            | errors | counter |
 | `vault.expire.revoke`                     | Time taken to revoke a token                                                | ms     | summary |
 | `vault.expire.revoke-force`               | Time taken to forcibly revoke a token                                       | ms     | summary |
 | `vault.expire.revoke-prefix`              | Time taken to revoke tokens on a prefix                                     | ms     | summary |
@@ -295,6 +299,7 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.cockroachdb.delete`  | Duration of a DELETE operation against the [CockroachDB storage backend][cockroachdb-storage-backend]                  | ms   | summary |
 | `vault.cockroachdb.list`    | Duration of a LIST operation against the [CockroachDB storage backend][cockroachdb-storage-backend]                    | ms   | summary |
 | `vault.consul.put`          | Duration of a PUT operation against the [Consul storage backend][consul-storage-backend]                               | ms   | summary |
+| `vault.consul.transaction`  | Duration of a Txn operation against the [Consul storage backend][consul-storage-backend]                               | ms   | summary |
 | `vault.consul.get`          | Duration of a GET operation against the [Consul storage backend][consul-storage-backend]                               | ms   | summary |
 | `vault.consul.delete`       | Duration of a DELETE operation against the [Consul storage backend][consul-storage-backend]                            | ms   | summary |
 | `vault.consul.list`         | Duration of a LIST operation against the [Consul storage backend][consul-storage-backend]                              | ms   | summary |

@@ -73,22 +73,30 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
 
+- `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at 
+  `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with 
+  auto-auth methods such as approle that require paths to secrets be present.
+
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault 
   token with other containers in the pod. This is helpful when other containers 
   communicate directly with Vault but require auto-authentication provided by Vault 
   Agent. This should be set to a `true` or `false` value. Defaults to `false`.
 
 - `vault.hashicorp.com/agent-limits-cpu` - configures the CPU limits on the Vault
-  Agent containers. Defaults to `500m`.
+  Agent containers. Defaults to `500m`. Setting this to an empty string disables
+  CPU limits.
 
 - `vault.hashicorp.com/agent-limits-mem` - configures the memory limits on the Vault
-  Agent containers. Defaults to `128Mi`.
+  Agent containers. Defaults to `128Mi`. Setting this to an empty string disables
+  memory limits.
 
 - `vault.hashicorp.com/agent-requests-cpu` - configures the CPU requests on the
-  Vault Agent containers. Defaults to `250m`.
+  Vault Agent containers. Defaults to `250m`. Setting this to an empty string disables
+  CPU requests.
 
 - `vault.hashicorp.com/agent-requests-mem` - configures the memory requests on the
-  Vault Agent containers. Defaults to `64Mi`.
+  Vault Agent containers. Defaults to `64Mi`. Setting this to an empty string disables
+  memory requests.
 
 - `vault.hashicorp.com/agent-revoke-on-shutdown` - configures whether the sidecar 
   will revoke it's own token before shutting down. This setting will only be applied 
@@ -136,7 +144,7 @@ them, optional commands to run, etc.
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
 
 - `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable 
-  [caching](/docs/caching). Defaults to `false`.
+  [caching](/docs/agent/caching). Defaults to `false`.
 
 - `vault.hashicorp.com/agent-cache-use-auto-auth-token` - configures Vault Agent cache 
   to authenticate on behalf of the requester. Set to `force` to enable. Disabled 

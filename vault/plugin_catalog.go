@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -109,7 +109,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	v5Client, err := newdbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	v5Client, err := v5.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()
@@ -117,7 +117,7 @@ func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) erro
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
-	v4Client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	v4Client, err := v4.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v4Client.Close()

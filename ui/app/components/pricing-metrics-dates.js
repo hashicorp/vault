@@ -16,6 +16,7 @@
  * @param {number} [retentionMonths=24] - setting for the retention months, which informs valid dates to query by
  */
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import {
   differenceInSeconds,
@@ -32,6 +33,8 @@ import { parseDateString } from 'vault/helpers/parse-date-string';
 
 export default Component.extend({
   layout,
+  router: service(),
+
   queryStart: null,
   queryEnd: null,
   resultStart: null,
@@ -137,5 +140,18 @@ export default Component.extend({
 
     this.start = format(initialStart, 'MM/YYYY');
     this.end = format(initialEnd, 'MM/YYYY');
+  },
+
+  actions: {
+    handleQuery() {
+      const start = format(this.startDate, 'MM-YYYY');
+      const end = format(this.endDate, 'MM-YYYY');
+      this.router.transitionTo('vault.cluster.metrics', {
+        queryParams: {
+          start,
+          end,
+        },
+      });
+    },
   },
 });

@@ -10,18 +10,17 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/api"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const msSQLTypeName = "mssql"
 
-var _ newdbplugin.Database = &MSSQL{}
+var _ dbplugin.Database = &MSSQL{}
 
 // MSSQL is an implementation of Database interface
 type MSSQL struct {
@@ -31,7 +30,7 @@ type MSSQL struct {
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
-	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
@@ -43,18 +42,6 @@ func new() *MSSQL {
 	return &MSSQL{
 		SQLConnectionProducer: connProducer,
 	}
-}
-
-// Run instantiates a MSSQL object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 // Type returns the TypeName for this backend
@@ -77,12 +64,12 @@ func (m *MSSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MSSQL) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	newConf, err := m.SQLConnectionProducer.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
 	return resp, nil
@@ -90,17 +77,17 @@ func (m *MSSQL) Initialize(ctx context.Context, req newdbplugin.InitializeReques
 
 // NewUser generates the username/password on the underlying MSSQL secret backend as instructed by
 // the statements provided.
-func (m *MSSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (m *MSSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	m.Lock()
 	defer m.Unlock()
 
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
 	if len(req.Statements.Commands) == 0 {
-		return newdbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
 	username, err := credsutil.GenerateUsername(
@@ -110,14 +97,14 @@ func (m *MSSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (ne
 		credsutil.Separator("-"),
 	)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	expirationStr := req.Expiration.Format("2006-01-02 15:04:05-0700")
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 	defer tx.Rollback()
 
@@ -135,16 +122,16 @@ func (m *MSSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (ne
 			}
 
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return newdbplugin.NewUserResponse{}, err
+				return dbplugin.NewUserResponse{}, err
 			}
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	resp := newdbplugin.NewUserResponse{
+	resp := dbplugin.NewUserResponse{
 		Username: username,
 	}
 
@@ -154,15 +141,15 @@ func (m *MSSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (ne
 // DeleteUser attempts to drop the specified user. It will first attempt to disable login,
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
-func (m *MSSQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (m *MSSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	if len(req.Statements.Commands) == 0 {
 		err := m.revokeUserDefault(ctx, req.Username)
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
 	merr := &multierror.Error{}
@@ -184,7 +171,7 @@ func (m *MSSQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReques
 		}
 	}
 
-	return newdbplugin.DeleteUserResponse{}, merr.ErrorOrNil()
+	return dbplugin.DeleteUserResponse{}, merr.ErrorOrNil()
 }
 
 func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
@@ -290,19 +277,19 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	return nil
 }
 
-func (m *MSSQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
 	}
 	if req.Password != nil {
 		err := m.updateUserPass(ctx, req.Username, req.Password)
-		return newdbplugin.UpdateUserResponse{}, err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 	// Expiration is a no-op
-	return newdbplugin.UpdateUserResponse{}, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *newdbplugin.ChangePassword) error {
+func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	stmts := changePass.Statements.Commands
 	if len(stmts) == 0 {
 		stmts = []string{alterLoginSQL}

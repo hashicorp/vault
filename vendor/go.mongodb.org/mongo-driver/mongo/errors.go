@@ -26,6 +26,9 @@ var ErrClientDisconnected = errors.New("client is disconnected")
 // ErrNilDocument is returned when a nil document is passed to a CRUD method.
 var ErrNilDocument = errors.New("document is nil")
 
+// ErrNilValue is returned when a nil value is passed to a CRUD method.
+var ErrNilValue = errors.New("value is nil")
+
 // ErrEmptySlice is returned when an empty slice is passed to a CRUD method that requires a non-empty slice.
 var ErrEmptySlice = errors.New("must provide at least one element in input slice")
 
@@ -34,11 +37,20 @@ func replaceErrors(err error) error {
 		return ErrClientDisconnected
 	}
 	if de, ok := err.(driver.Error); ok {
-		return CommandError{Code: de.Code, Message: de.Message, Labels: de.Labels, Name: de.Name}
+		return CommandError{
+			Code:    de.Code,
+			Message: de.Message,
+			Labels:  de.Labels,
+			Name:    de.Name,
+			Wrapped: de.Wrapped,
+		}
 	}
 	if qe, ok := err.(driver.QueryFailureError); ok {
 		// qe.Message is "command failure"
-		ce := CommandError{Name: qe.Message}
+		ce := CommandError{
+			Name:    qe.Message,
+			Wrapped: qe.Wrapped,
+		}
 
 		dollarErr, err := qe.Response.LookupErr("$err")
 		if err == nil {
@@ -80,6 +92,11 @@ func (ekve EncryptionKeyVaultError) Error() string {
 	return fmt.Sprintf("key vault communication error: %v", ekve.Wrapped)
 }
 
+// Unwrap returns the underlying error.
+func (ekve EncryptionKeyVaultError) Unwrap() error {
+	return ekve.Wrapped
+}
+
 // MongocryptdError represents an error while communicating with mongocryptd during client-side encryption.
 type MongocryptdError struct {
 	Wrapped error
@@ -90,12 +107,18 @@ func (e MongocryptdError) Error() string {
 	return fmt.Sprintf("mongocryptd communication error: %v", e.Wrapped)
 }
 
+// Unwrap returns the underlying error.
+func (e MongocryptdError) Unwrap() error {
+	return e.Wrapped
+}
+
 // CommandError represents a server error during execution of a command. This can be returned by any operation.
 type CommandError struct {
 	Code    int32
 	Message string
 	Labels  []string // Categories to which the error belongs
 	Name    string   // A human-readable name corresponding to the error code
+	Wrapped error    // The underlying error, if one exists.
 }
 
 // Error implements the error interface.
@@ -104,6 +127,11 @@ func (e CommandError) Error() string {
 		return fmt.Sprintf("(%v) %v", e.Name, e.Message)
 	}
 	return e.Message
+}
+
+// Unwrap returns the underlying error.
+func (e CommandError) Unwrap() error {
+	return e.Wrapped
 }
 
 // HasErrorLabel returns true if the error contains the specified label.
@@ -185,6 +213,9 @@ type WriteException struct {
 
 	// The write errors that occurred during operation execution.
 	WriteErrors WriteErrors
+
+	// The categories to which the exception belongs.
+	Labels []string
 }
 
 // Error implements the error interface.
@@ -196,12 +227,29 @@ func (mwe WriteException) Error() string {
 	return buf.String()
 }
 
+// HasErrorLabel returns true if the error contains the specified label.
+func (mwe WriteException) HasErrorLabel(label string) bool {
+	if mwe.Labels != nil {
+		for _, l := range mwe.Labels {
+			if l == label {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func convertDriverWriteConcernError(wce *driver.WriteConcernError) *WriteConcernError {
 	if wce == nil {
 		return nil
 	}
 
-	return &WriteConcernError{Code: int(wce.Code), Message: wce.Message, Details: bson.Raw(wce.Details)}
+	return &WriteConcernError{
+		Name:    wce.Name,
+		Code:    int(wce.Code),
+		Message: wce.Message,
+		Details: bson.Raw(wce.Details),
+	}
 }
 
 // BulkWriteError is an error that occurred during execution of one operation in a BulkWrite. This error type is only
@@ -225,6 +273,9 @@ type BulkWriteException struct {
 
 	// The write errors that occurred during operation execution.
 	WriteErrors []BulkWriteError
+
+	// The categories to which the exception belongs.
+	Labels []string
 }
 
 // Error implements the error interface.
@@ -234,6 +285,18 @@ func (bwe BulkWriteException) Error() string {
 	fmt.Fprintf(&buf, "{%s}, ", bwe.WriteErrors)
 	fmt.Fprintf(&buf, "{%s}]", bwe.WriteConcernError)
 	return buf.String()
+}
+
+// HasErrorLabel returns true if the error contains the specified label.
+func (bwe BulkWriteException) HasErrorLabel(label string) bool {
+	if bwe.Labels != nil {
+		for _, l := range bwe.Labels {
+			if l == label {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // returnResult is used to determine if a function calling processWriteError should return
@@ -265,6 +328,7 @@ func processWriteError(err error) (returnResult, error) {
 			return rrMany, WriteException{
 				WriteConcernError: convertDriverWriteConcernError(tt.WriteConcernError),
 				WriteErrors:       writeErrorsFromDriverWriteErrors(tt.WriteErrors),
+				Labels:            tt.Labels,
 			}
 		default:
 			return rrNone, replaceErrors(err)

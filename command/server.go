@@ -656,7 +656,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	if sealConfigError != nil {
-		init, err := core.Initialized(context.Background())
+		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -1100,7 +1100,9 @@ func (c *ServerCommand) Run(args []string) int {
 					Logger: c.logger.Named("shamir"),
 				}),
 			})
-			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
+			var sealInfoKeys []string
+			var sealInfoMap = map[string]string{}
+			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -1116,11 +1118,17 @@ func (c *ServerCommand) Run(args []string) int {
 				})
 			}
 
+			var infoPrefix = ""
 			if configSeal.Disabled {
 				unwrapSeal = seal
+				infoPrefix = "Old "
 			} else {
 				barrierSeal = seal
 				barrierWrapper = wrapper
+			}
+			for _, k := range sealInfoKeys {
+				infoKeys = append(infoKeys, infoPrefix+k)
+				info[infoPrefix+k] = sealInfoMap[k]
 			}
 
 			// Ensure that the seal finalizer is called, even if using verify-only
@@ -1570,7 +1578,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	if !core.IsInSealMigration() {
+	if !core.IsInSealMigrationMode() {
 		go func() {
 			for {
 				err := core.UnsealWithStoredKeys(context.Background())
@@ -1659,75 +1667,77 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		var qw *quiescenceSink
+		var qwo sync.Once
 		qw = &quiescenceSink{
 			t: time.AfterFunc(100*time.Millisecond, func() {
-				// Print the big dev mode warning!
-				c.UI.Warn(wrapAtLength(
-					"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
-						"in-memory and starts unsealed with a single unseal key. The root " +
-						"token is already authenticated to the CLI, so you can immediately " +
-						"begin using Vault."))
-				c.UI.Warn("")
-				c.UI.Warn("You may need to set the following environment variable:")
-				c.UI.Warn("")
+				qwo.Do(func() {
+					c.logger.DeregisterSink(qw)
 
-				endpointURL := "http://" + config.Listeners[0].Address
-				if runtime.GOOS == "windows" {
-					c.UI.Warn("PowerShell:")
-					c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
-					c.UI.Warn("cmd.exe:")
-					c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
-				} else {
-					c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
-				}
-
-				// Unseal key is not returned if stored shares is supported
-				if len(init.SecretShares) > 0 {
-					c.UI.Warn("")
+					// Print the big dev mode warning!
 					c.UI.Warn(wrapAtLength(
-						"The unseal key and root token are displayed below in case you want " +
-							"to seal/unseal the Vault or re-authenticate."))
+						"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
+							"in-memory and starts unsealed with a single unseal key. The root " +
+							"token is already authenticated to the CLI, so you can immediately " +
+							"begin using Vault."))
 					c.UI.Warn("")
-					c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
-				}
+					c.UI.Warn("You may need to set the following environment variable:")
+					c.UI.Warn("")
 
-				if len(init.RecoveryShares) > 0 {
-					c.UI.Warn("")
-					c.UI.Warn(wrapAtLength(
-						"The recovery key and root token are displayed below in case you want " +
-							"to seal/unseal the Vault or re-authenticate."))
-					c.UI.Warn("")
-					c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
-				}
-
-				c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
-
-				if len(plugins) > 0 {
-					c.UI.Warn("")
-					c.UI.Warn(wrapAtLength(
-						"The following dev plugins are registered in the catalog:"))
-					for _, p := range plugins {
-						c.UI.Warn(fmt.Sprintf("    - %s", p))
+					endpointURL := "http://" + config.Listeners[0].Address
+					if runtime.GOOS == "windows" {
+						c.UI.Warn("PowerShell:")
+						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+						c.UI.Warn("cmd.exe:")
+						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
+					} else {
+						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
 					}
-				}
 
-				if len(pluginsNotLoaded) > 0 {
+					// Unseal key is not returned if stored shares is supported
+					if len(init.SecretShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The unseal key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
+					}
+
+					if len(init.RecoveryShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The recovery key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+					}
+
+					c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+					if len(plugins) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins are registered in the catalog:"))
+						for _, p := range plugins {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
+					if len(pluginsNotLoaded) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
+						for _, p := range pluginsNotLoaded {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
 					c.UI.Warn("")
 					c.UI.Warn(wrapAtLength(
-						"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
-					for _, p := range pluginsNotLoaded {
-						c.UI.Warn(fmt.Sprintf("    - %s", p))
-					}
-				}
-
-				c.UI.Warn("")
-				c.UI.Warn(wrapAtLength(
-					"Development mode should NOT be used in production installations!"))
-				c.UI.Warn("")
-				c.logger.DeregisterSink(qw)
-
-			}),
-		}
+						"Development mode should NOT be used in production installations!"))
+					c.UI.Warn("")
+				})
+			})}
 		c.logger.RegisterSink(qw)
 	}
 
@@ -1784,7 +1794,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if sealConfigError != nil {
-		init, err := core.Initialized(context.Background())
+		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1

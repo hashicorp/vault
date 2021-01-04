@@ -17,7 +17,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.14.7
+GO_VERSION_MIN=1.15.3
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -200,7 +200,7 @@ proto:
 	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/database/newdbplugin/proto/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/database/dbplugin/v5/proto/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go

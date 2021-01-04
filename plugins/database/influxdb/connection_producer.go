@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
@@ -43,7 +43,7 @@ type influxdbConnectionProducer struct {
 	sync.Mutex
 }
 
-func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	i.Lock()
 	defer i.Unlock()
 
@@ -51,7 +51,7 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req newdbpl
 
 	err := mapstructure.WeakDecode(req.Config, i)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	if i.ConnectTimeoutRaw == nil {
@@ -62,16 +62,16 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req newdbpl
 	}
 	i.connectTimeout, err = parseutil.ParseDurationSecond(i.ConnectTimeoutRaw)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
 	}
 
 	switch {
 	case len(i.Host) == 0:
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("host cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("host cannot be empty")
 	case len(i.Username) == 0:
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
 	case len(i.Password) == 0:
-		return newdbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -80,11 +80,11 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req newdbpl
 	case len(i.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(i.PemJSON))
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		i.certificate = certBundle.Certificate
 		i.privateKey = certBundle.PrivateKey
@@ -94,11 +94,11 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req newdbpl
 	case len(i.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(i.PemBundle)
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		i.certificate = certBundle.Certificate
 		i.privateKey = certBundle.PrivateKey
@@ -112,11 +112,11 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req newdbpl
 
 	if req.VerifyConnection {
 		if _, err := i.Connection(ctx); err != nil {
-			return newdbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
 

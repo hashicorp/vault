@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
+	jose "gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -86,11 +87,14 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Description: "Provider-specific configuration. Optional.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Provider Config",
-					Value: map[string]interface{}{
-						"provider":               "gsuite",
-						"fetch_groups":           true,
-						"gsuite_service_account": "ey4921...",
-					},
+				},
+			},
+			"namespace_in_state": {
+				Type:        framework.TypeBool,
+				Description: "Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Namespace in OIDC state",
+					Value: true,
 				},
 			},
 		},
@@ -170,6 +174,7 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"jwks_ca_pem":            config.JWKSCAPEM,
 			"bound_issuer":           config.BoundIssuer,
 			"provider_config":        config.ProviderConfig,
+			"namespace_in_state":     config.NamespaceInState,
 		},
 	}
 
@@ -191,6 +196,23 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
 		ProviderConfig:       d.Get("provider_config").(map[string]interface{}),
+	}
+
+	// Check if the config already exists, to determine if this is a create or
+	// an update, since req.Operation is always 'update' in this handler, and
+	// there's no existence check defined.
+	existingConfig, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if nsInState, ok := d.GetOk("namespace_in_state"); ok {
+		config.NamespaceInState = nsInState.(bool)
+	} else if existingConfig == nil {
+		// new configs default to true
+		config.NamespaceInState = true
+	} else {
+		// maintain the existing value
+		config.NamespaceInState = existingConfig.NamespaceInState
 	}
 
 	// Run checks on values
@@ -258,7 +280,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	// default to e.g. "none".
 	for _, a := range config.JWTSupportedAlgs {
 		switch a {
-		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
+		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512, string(jose.EdDSA):
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
 		}
@@ -281,7 +303,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	}
 
 	// Validate provider_config
-	if _, err := NewProviderConfig(config, ProviderMap()); err != nil {
+	if _, err := NewProviderConfig(ctx, config, ProviderMap()); err != nil {
 		return logical.ErrorResponse("invalid provider_config: %s", err), nil
 	}
 
@@ -353,6 +375,7 @@ type jwtConfig struct {
 	BoundIssuer          string                 `json:"bound_issuer"`
 	DefaultRole          string                 `json:"default_role"`
 	ProviderConfig       map[string]interface{} `json:"provider_config"`
+	NamespaceInState     bool                   `json:"namespace_in_state"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`
 }

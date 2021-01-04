@@ -8,24 +8,26 @@ package options
 
 import "time"
 
-// EstimatedDocumentCountOptions represents all possible options to the EstimatedDocumentCount() function.
+// EstimatedDocumentCountOptions represents options that can be used to configure an EstimatedDocumentCount operation.
 type EstimatedDocumentCountOptions struct {
-	MaxTime *time.Duration // The maximum amount of time to allow the operation to run
+	// The maximum amount of time that the query can run on the server. The default value is nil, meaning that there
+	// is no time limit for query execution.
+	MaxTime *time.Duration
 }
 
-// EstimatedDocumentCount returns a pointer to a new EstimatedDocumentCountOptions
+// EstimatedDocumentCount creates a new EstimatedDocumentCountOptions instance.
 func EstimatedDocumentCount() *EstimatedDocumentCountOptions {
 	return &EstimatedDocumentCountOptions{}
 }
 
-// SetMaxTime specifies the maximum amount of time to allow the operation to run
+// SetMaxTime sets the value for the MaxTime field.
 func (eco *EstimatedDocumentCountOptions) SetMaxTime(d time.Duration) *EstimatedDocumentCountOptions {
 	eco.MaxTime = &d
 	return eco
 }
 
-// MergeEstimatedDocumentCountOptions combines the given *EstimatedDocumentCountOptions into a single
-// *EstimatedDocumentCountOptions in a last one wins fashion.
+// MergeEstimatedDocumentCountOptions combines the given EstimatedDocumentCountOptions instances into a single
+// EstimatedDocumentCountOptions in a last-one-wins fashion.
 func MergeEstimatedDocumentCountOptions(opts ...*EstimatedDocumentCountOptions) *EstimatedDocumentCountOptions {
 	e := EstimatedDocumentCount()
 	for _, opt := range opts {

@@ -128,12 +128,37 @@ vault write -force database/rotate-root/my-elasticsearch-database
 
 The Vault plugin system is documented on the [Vault documentation site](https://www.vaultproject.io/docs/internals/plugins.html).
 
-You will need to define a plugin directory using the `plugin_directory` configuration directive, then place the `vault-plugin-database-elasticsearch` executable generated above in the directory.
+The local_dev.sh script will build the plugin, start vault, mount the plugin,
+and run any custom commands in `./scripts/custom.sh`:
 
-Register the plugin using
+```console
+./scripts/local_dev.sh
+```
 
+## Testing
+
+### Unit and integration tests
+
+```console
+make test
 ```
-vault write sys/plugins/catalog/vault-plugin-database-elasticsearch \
-    sha256=$(sha256sum bin/vault-plugin-database-elasticsearch) \
-    command="vault-plugin-database-elasticsearch"
+
+Requires docker.
+
+### Acceptance tests
+
+To also run acceptance tests against an elasticsearch cluster, follow the
+instructions at the top of [acceptance_test.go](./acceptance_test.go), then
+
+```console
+make testacc
 ```
+
+Or to run only the acceptance tests:
+
+```console
+./scripts/run_acceptance.sh
+```
+
+See the comments in [run_acceptance.sh](./scripts/run_acceptance.sh) for
+configuration information.

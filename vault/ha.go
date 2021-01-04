@@ -7,8 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -16,11 +23,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/oklog/run"
 )
@@ -70,6 +72,16 @@ func (c *Core) PerfStandby() bool {
 	perfStandby := c.perfStandby
 	c.stateLock.RUnlock()
 	return perfStandby
+}
+
+// StandbyStates is meant as a way to avoid some extra locking on the very
+// common sys/health check.
+func (c *Core) StandbyStates() (standby, perfStandby bool) {
+	c.stateLock.RLock()
+	standby = c.standby
+	perfStandby = c.perfStandby
+	c.stateLock.RUnlock()
+	return
 }
 
 // Leader is used to get the current active leader
@@ -551,6 +563,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		if err == nil {
 			c.standby = false
 			c.leaderUUID = uuid
+			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
 
 		close(continueCh)
@@ -598,6 +611,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Mark as standby
 			c.standby = true
 			c.leaderUUID = ""
+			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
 			// Seal
 			if err := c.preSeal(); err != nil {
@@ -625,35 +639,48 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 	}
 }
 
-// grabLockOrStop returns true if we failed to get the lock before stopCh
-// was closed.  Returns false if the lock was obtained, in which case it's
-// the caller's responsibility to unlock it.
+// grabLockOrStop returns stopped=false if the lock is acquired. Returns
+// stopped=true if the lock is not acquired, because stopCh was closed. If the
+// lock was acquired (stopped=false) then it's up to the caller to unlock.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
-	// Grab the lock as we need it for cluster setup, which needs to happen
-	// before advertising;
-	lockGrabbedCh := make(chan struct{})
+	// lock protects these variables which are shared by parent and child.
+	var lock sync.Mutex
+	parentWaiting := true
+	locked := false
+
+	// doneCh is closed when the child goroutine is done.
+	doneCh := make(chan struct{})
 	go func() {
-		// Grab the lock
+		defer close(doneCh)
 		lockFunc()
-		// If stopCh has been closed, which only happens while the
-		// stateLock is held, we have actually terminated, so we just
-		// instantly give up the lock, otherwise we notify that it's ready
-		// for consumption
-		select {
-		case <-stopCh:
+
+		// The parent goroutine may or may not be waiting.
+		lock.Lock()
+		defer lock.Unlock()
+		if !parentWaiting {
 			unlockFunc()
-		default:
-			close(lockGrabbedCh)
+		} else {
+			locked = true
 		}
 	}()
 
+	stop := false
 	select {
 	case <-stopCh:
-		return true
-	case <-lockGrabbedCh:
-		// We now have the lock and can use it
+		stop = true
+	case <-doneCh:
 	}
 
+	// The child goroutine may not have acquired the lock yet.
+	lock.Lock()
+	defer lock.Unlock()
+	parentWaiting = false
+	if stop {
+		if locked {
+			unlockFunc()
+		}
+		return true
+	}
 	return false
 }
 

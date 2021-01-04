@@ -10,11 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
-	dbtesting "github.com/hashicorp/vault/sdk/database/newdbplugin/testing"
-	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 )
 
 func TestInitialize(t *testing.T) {
@@ -22,12 +21,12 @@ func TestInitialize(t *testing.T) {
 	defer cleanup()
 
 	type testCase struct {
-		req newdbplugin.InitializeRequest
+		req dbplugin.InitializeRequest
 	}
 
 	tests := map[string]testCase{
 		"happy path": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
 				},
@@ -35,7 +34,7 @@ func TestInitialize(t *testing.T) {
 			},
 		},
 		"max_open_connections set": {
-			newdbplugin.InitializeRequest{
+			dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url":       connURL,
 					"max_open_connections": "5",
@@ -63,7 +62,7 @@ func TestNewUser(t *testing.T) {
 	defer cleanup()
 
 	type testCase struct {
-		req           newdbplugin.NewUserRequest
+		req           dbplugin.NewUserRequest
 		usernameRegex string
 		expectErr     bool
 		assertUser    func(t testing.TB, connURL, username, password string)
@@ -71,12 +70,12 @@ func TestNewUser(t *testing.T) {
 
 	tests := map[string]testCase{
 		"no creation statements": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{},
+				Statements: dbplugin.Statements{},
 				Password:   "AG4qagho-dsvZ",
 				Expiration: time.Now().Add(1 * time.Second),
 			},
@@ -85,12 +84,12 @@ func TestNewUser(t *testing.T) {
 			assertUser:    assertCredsDoNotExist,
 		},
 		"with creation statements": {
-			req: newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{testMSSQLRole},
 				},
 				Password:   "AG4qagho-dsvZ",
@@ -109,7 +108,7 @@ func TestNewUser(t *testing.T) {
 				t.Fatalf("failed to compile username regex %q: %s", test.usernameRegex, err)
 			}
 
-			initReq := newdbplugin.InitializeRequest{
+			initReq := dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
 				},
@@ -133,7 +132,7 @@ func TestNewUser(t *testing.T) {
 			}
 
 			// Protect against future fields that aren't specified
-			expectedResp := newdbplugin.NewUserResponse{
+			expectedResp := dbplugin.NewUserResponse{
 				Username: createResp.Username,
 			}
 			if !reflect.DeepEqual(createResp, expectedResp) {
@@ -147,7 +146,7 @@ func TestNewUser(t *testing.T) {
 
 func TestUpdateUser_password(t *testing.T) {
 	type testCase struct {
-		req              newdbplugin.UpdateUserRequest
+		req              dbplugin.UpdateUserRequest
 		expectErr        bool
 		expectedPassword string
 	}
@@ -157,33 +156,33 @@ func TestUpdateUser_password(t *testing.T) {
 
 	tests := map[string]testCase{
 		"missing password": {
-			req: newdbplugin.UpdateUserRequest{
+			req: dbplugin.UpdateUserRequest{
 				Username: dbUser,
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: "",
-					Statements:  newdbplugin.Statements{},
+					Statements:  dbplugin.Statements{},
 				},
 			},
 			expectErr:        true,
 			expectedPassword: initPassword,
 		},
 		"empty rotation statements": {
-			req: newdbplugin.UpdateUserRequest{
+			req: dbplugin.UpdateUserRequest{
 				Username: dbUser,
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
-					Statements:  newdbplugin.Statements{},
+					Statements:  dbplugin.Statements{},
 				},
 			},
 			expectErr:        false,
 			expectedPassword: "N90gkKLy8$angf",
 		},
 		"username rotation": {
-			req: newdbplugin.UpdateUserRequest{
+			req: dbplugin.UpdateUserRequest{
 				Username: dbUser,
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
-					Statements: newdbplugin.Statements{
+					Statements: dbplugin.Statements{
 						Commands: []string{
 							"ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}'",
 						},
@@ -194,11 +193,11 @@ func TestUpdateUser_password(t *testing.T) {
 			expectedPassword: "N90gkKLy8$angf",
 		},
 		"bad statements": {
-			req: newdbplugin.UpdateUserRequest{
+			req: dbplugin.UpdateUserRequest{
 				Username: dbUser,
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
-					Statements: newdbplugin.Statements{
+					Statements: dbplugin.Statements{
 						Commands: []string{
 							"ahosh98asjdffs",
 						},
@@ -215,7 +214,7 @@ func TestUpdateUser_password(t *testing.T) {
 			cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 			defer cleanup()
 
-			initReq := newdbplugin.InitializeRequest{
+			initReq := dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
 				},
@@ -241,7 +240,7 @@ func TestUpdateUser_password(t *testing.T) {
 			}
 
 			// Protect against future fields that aren't specified
-			expectedResp := newdbplugin.UpdateUserResponse{}
+			expectedResp := dbplugin.UpdateUserResponse{}
 			if !reflect.DeepEqual(updateResp, expectedResp) {
 				t.Fatalf("Fields missing from expected response: Actual: %#v", updateResp)
 			}
@@ -258,7 +257,7 @@ func TestDeleteUser(t *testing.T) {
 	dbUser := "vaultuser"
 	initPassword := "p4$sw0rd"
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
 			"connection_url": connURL,
 		},
@@ -273,7 +272,7 @@ func TestDeleteUser(t *testing.T) {
 
 	assertCredsExist(t, connURL, dbUser, initPassword)
 
-	deleteReq := newdbplugin.DeleteUserRequest{
+	deleteReq := dbplugin.DeleteUserRequest{
 		Username: dbUser,
 	}
 
@@ -285,7 +284,7 @@ func TestDeleteUser(t *testing.T) {
 	}
 
 	// Protect against future fields that aren't specified
-	expectedResp := newdbplugin.DeleteUserResponse{}
+	expectedResp := dbplugin.DeleteUserResponse{}
 	if !reflect.DeepEqual(deleteResp, expectedResp) {
 		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
 	}

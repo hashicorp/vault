@@ -42,13 +42,23 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 			}
 
+			// Refresh the standby gauge, on all nodes
+			if standby, _ := c.Standby(); standby {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
+			}
+
+			// Refresh gauge metrics that are looped
+			c.cachedGaugeMetricsEmitter()
+
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
 				// Go through the loop again, this time the stop channel case
 				// should trigger
 				continue
 			}
-			if c.perfStandby { // already have lock here, don't re-acquire
+			if c.perfStandby { // already have lock here, do not re-acquire
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
@@ -58,8 +68,8 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
-			// Only emit on active node
-			if c.PerfStandby() {
+			// Only emit on active node of cluster that is not a DR cecondary.
+			if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
 				break
 			}
 
@@ -186,10 +196,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 		},
 	}
 
-	// Disable collection if configured, or if we're a performance standby.
+	// Disable collection if configured, or if we're a performance standby
+	// node or DR secondary cluster.
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
 		c.logger.Info("usage gauge collection is disabled")
-	} else if !c.PerfStandby() {
+	} else if standby, _ := c.Standby(); !standby && !c.IsDRSecondary() {
 		for _, init := range metricsInit {
 			if init.DisableEnvVar != "" {
 				if os.Getenv(init.DisableEnvVar) != "" {
@@ -417,4 +428,20 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 	}
 
 	return values, nil
+}
+
+func (c *Core) cachedGaugeMetricsEmitter() {
+	if c.metricsHelper == nil {
+		return
+	}
+
+	loopMetrics := &c.metricsHelper.LoopMetrics.Metrics
+
+	emit := func(key interface{}, value interface{}) bool {
+		metricValue := value.(metricsutil.GaugeMetric)
+		c.metricSink.SetGaugeWithLabels(metricValue.Key, metricValue.Value, metricValue.Labels)
+		return true
+	}
+
+	loopMetrics.Range(emit)
 }

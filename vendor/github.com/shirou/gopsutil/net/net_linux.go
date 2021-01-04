@@ -696,7 +696,7 @@ func decodeAddress(family uint32, src string) (Addr, error) {
 		return Addr{}, fmt.Errorf("does not contain port, %s", src)
 	}
 	addr := t[0]
-	port, err := strconv.ParseInt("0x"+t[1], 0, 64)
+	port, err := strconv.ParseUint(t[1], 16, 16)
 	if err != nil {
 		return Addr{}, fmt.Errorf("invalid port, %s", src)
 	}

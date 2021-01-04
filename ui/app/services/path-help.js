@@ -23,6 +23,7 @@ export function sanitizePath(path) {
 
 export default Service.extend({
   attrs: null,
+  dynamicApiPath: '',
   ajax(url, options = {}) {
     let appAdapter = getOwner(this).lookup(`adapter:application`);
     let { data } = options;
@@ -226,11 +227,16 @@ export default Service.extend({
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(id, isList) {
+      urlForItem(id, isList, dynamicApiPath) {
         const itemType = getPath.path.slice(1);
         let url;
         id = encodePath(id);
-
+        // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
+        // overwrite apiPath if dynamicApiPath exist.
+        // dynamicApiPath comes from the model->adapter
+        if (dynamicApiPath) {
+          apiPath = dynamicApiPath;
+        }
         // isList indicates whether we are viewing the list page
         // of a top-level item such as userpass
         if (isList) {

@@ -11,12 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
-
-	dbtesting "github.com/hashicorp/vault/sdk/database/newdbplugin/testing"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	influx "github.com/influxdata/influxdb/client/v2"
 )
 
@@ -101,78 +99,78 @@ func TestInfluxdb_Initialize(t *testing.T) {
 	defer cleanup()
 
 	type testCase struct {
-		req               newdbplugin.InitializeRequest
-		expectedResponse  newdbplugin.InitializeResponse
+		req               dbplugin.InitializeRequest
+		expectedResponse  dbplugin.InitializeResponse
 		expectErr         bool
 		expectInitialized bool
 	}
 
 	tests := map[string]testCase{
 		"port is an int": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config:           makeConfig(config.connectionParams()),
 				VerifyConnection: true,
 			},
-			expectedResponse: newdbplugin.InitializeResponse{
+			expectedResponse: dbplugin.InitializeResponse{
 				Config: config.connectionParams(),
 			},
 			expectErr:         false,
 			expectInitialized: true,
 		},
 		"port is a string": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config:           makeConfig(config.connectionParams(), "port", strconv.Itoa(config.connectionParams()["port"].(int))),
 				VerifyConnection: true,
 			},
-			expectedResponse: newdbplugin.InitializeResponse{
+			expectedResponse: dbplugin.InitializeResponse{
 				Config: makeConfig(config.connectionParams(), "port", strconv.Itoa(config.connectionParams()["port"].(int))),
 			},
 			expectErr:         false,
 			expectInitialized: true,
 		},
 		"missing config": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config:           nil,
 				VerifyConnection: true,
 			},
-			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectedResponse:  dbplugin.InitializeResponse{},
 			expectErr:         true,
 			expectInitialized: false,
 		},
 		"missing host": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config:           makeConfig(config.connectionParams(), "host", ""),
 				VerifyConnection: true,
 			},
-			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectedResponse:  dbplugin.InitializeResponse{},
 			expectErr:         true,
 			expectInitialized: false,
 		},
 		"missing username": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config:           makeConfig(config.connectionParams(), "username", ""),
 				VerifyConnection: true,
 			},
-			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectedResponse:  dbplugin.InitializeResponse{},
 			expectErr:         true,
 			expectInitialized: false,
 		},
 		"missing password": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				Config:           makeConfig(config.connectionParams(), "password", ""),
 				VerifyConnection: true,
 			},
-			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectedResponse:  dbplugin.InitializeResponse{},
 			expectErr:         true,
 			expectInitialized: false,
 		},
 		"failed to validate connection": {
-			req: newdbplugin.InitializeRequest{
+			req: dbplugin.InitializeRequest{
 				// Host exists, but isn't a running instance
 				Config:           makeConfig(config.connectionParams(), "host", "foobar://bad_connection"),
 				VerifyConnection: true,
 			},
-			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectedResponse:  dbplugin.InitializeResponse{},
 			expectErr:         true,
 			expectInitialized: true,
 		},
@@ -227,19 +225,19 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 	defer cleanup()
 
 	db := new()
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           config.connectionParams(),
 		VerifyConnection: true,
 	}
 	dbtesting.AssertInitialize(t, db, req)
 
 	password := "nuozxby98523u89bdfnkjl"
-	newUserReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   password,
@@ -261,19 +259,19 @@ func TestUpdateUser_expiration(t *testing.T) {
 	defer cleanup()
 
 	db := new()
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           config.connectionParams(),
 		VerifyConnection: true,
 	}
 	dbtesting.AssertInitialize(t, db, req)
 
 	password := "nuozxby98523u89bdfnkjl"
-	newUserReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   password,
@@ -283,9 +281,9 @@ func TestUpdateUser_expiration(t *testing.T) {
 
 	assertCredsExist(t, config.URL().String(), newUserResp.Username, password)
 
-	renewReq := newdbplugin.UpdateUserRequest{
+	renewReq := dbplugin.UpdateUserRequest{
 		Username: newUserResp.Username,
-		Expiration: &newdbplugin.ChangeExpiration{
+		Expiration: &dbplugin.ChangeExpiration{
 			NewExpiration: time.Now().Add(5 * time.Minute),
 		},
 	}
@@ -300,19 +298,19 @@ func TestUpdateUser_password(t *testing.T) {
 	defer cleanup()
 
 	db := new()
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           config.connectionParams(),
 		VerifyConnection: true,
 	}
 	dbtesting.AssertInitialize(t, db, req)
 
 	initialPassword := "nuozxby98523u89bdfnkjl"
-	newUserReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   initialPassword,
@@ -323,9 +321,9 @@ func TestUpdateUser_password(t *testing.T) {
 	assertCredsExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 
 	newPassword := "y89qgmbzadiygry8uazodijnb"
-	newPasswordReq := newdbplugin.UpdateUserRequest{
+	newPasswordReq := dbplugin.UpdateUserRequest{
 		Username: newUserResp.Username,
-		Password: &newdbplugin.ChangePassword{
+		Password: &dbplugin.ChangePassword{
 			NewPassword: newPassword,
 		},
 	}
@@ -346,14 +344,14 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 	defer cleanup()
 
 	db := new()
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           config.connectionParams(),
 		VerifyConnection: true,
 	}
 	dbtesting.AssertInitialize(t, db, req)
 
 	// attempt to revoke a user that does not exist
-	delReq := newdbplugin.DeleteUserRequest{
+	delReq := dbplugin.DeleteUserRequest{
 		Username: "someuser",
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -369,19 +367,19 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 	defer cleanup()
 
 	db := new()
-	req := newdbplugin.InitializeRequest{
+	req := dbplugin.InitializeRequest{
 		Config:           config.connectionParams(),
 		VerifyConnection: true,
 	}
 	dbtesting.AssertInitialize(t, db, req)
 
 	initialPassword := "nuozxby98523u89bdfnkjl"
-	newUserReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
 			DisplayName: "test",
 			RoleName:    "test",
 		},
-		Statements: newdbplugin.Statements{
+		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
 		},
 		Password:   initialPassword,
@@ -391,7 +389,7 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 
 	assertCredsExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 
-	delReq := newdbplugin.DeleteUserRequest{
+	delReq := dbplugin.DeleteUserRequest{
 		Username: newUserResp.Username,
 	}
 	dbtesting.AssertDeleteUser(t, db, delReq)

@@ -88,7 +88,7 @@
 // the reliance on encoding.json. `json` struct tags are still supported. In
 // addition support for a new struct tag `dynamodbav` was added. Support for
 // the json.Marshaler and json.Unmarshaler interfaces have been removed and
-// replaced with have been replaced with dynamodbattribute.Marshaler and
+// replaced with dynamodbattribute.Marshaler and
 // dynamodbattribute.Unmarshaler interfaces.
 //
 // The Unmarshal functions are backwards compatible with data marshalled by

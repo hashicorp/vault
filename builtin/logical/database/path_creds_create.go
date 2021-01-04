@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -95,15 +95,15 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, fmt.Errorf("unable to generate password: %w", err)
 		}
 
-		newUserReq := newdbplugin.NewUserRequest{
-			UsernameConfig: newdbplugin.UsernameMetadata{
+		newUserReq := v5.NewUserRequest{
+			UsernameConfig: v5.UsernameMetadata{
 				DisplayName: req.DisplayName,
 				RoleName:    name,
 			},
-			Statements: newdbplugin.Statements{
+			Statements: v5.Statements{
 				Commands: role.Statements.Creation,
 			},
-			RollbackStatements: newdbplugin.Statements{
+			RollbackStatements: v5.Statements{
 				Commands: role.Statements.Rollback,
 			},
 			Password:   password,

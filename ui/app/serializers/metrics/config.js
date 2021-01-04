@@ -10,7 +10,7 @@ export default ApplicationSerializer.extend({
       id: payload.id,
       data: {
         ...payload.data,
-        enabled: payload.data.enabled.includes('enabled') ? 'On' : 'Off',
+        enabled: payload.data.enabled.includes('enable') ? 'On' : 'Off',
       },
     };
     return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
@@ -20,7 +20,7 @@ export default ApplicationSerializer.extend({
     let json = this._super(...arguments);
     if (json.enabled === 'On' || json.enabled === 'Off') {
       const oldEnabled = json.enabled;
-      json.enabled = oldEnabled === 'On' ? 'enabled' : 'disabled';
+      json.enabled = oldEnabled === 'On' ? 'enable' : 'disable';
     }
     json.default_report_months = parseInt(json.default_report_months, 10);
     json.retention_months = parseInt(json.retention_months, 10);
