@@ -35,7 +35,7 @@ type AzureProvider struct {
 }
 
 // Initialize anything in the AzureProvider struct - satisfying the CustomProvider interface
-func (a *AzureProvider) Initialize(jc *jwtConfig) error {
+func (a *AzureProvider) Initialize(_ context.Context, _ *jwtConfig) error {
 	return nil
 }
 
@@ -45,7 +45,7 @@ func (a *AzureProvider) SensitiveKeys() []string {
 }
 
 // FetchGroups - custom groups fetching for azure - satisfying GroupsFetcher interface
-func (a *AzureProvider) FetchGroups(b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
+func (a *AzureProvider) FetchGroups(_ context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
 	groupsClaimRaw := getClaim(b.Logger(), allClaims, role.GroupsClaim)
 
 	if groupsClaimRaw == nil {
