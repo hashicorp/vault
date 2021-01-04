@@ -1,8 +1,8 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
 import TextAndContent from '@hashicorp/react-text-and-content'
-import BeforeAfterDiagram from '../../../components/before-after-diagram'
-import UseCaseCtaSection from '../../../components/use-case-cta-section'
+import BeforeAfterDiagram from 'components/before-after-diagram'
+import UseCaseCtaSection from 'components/use-case-cta-section'
 
 export default function DataEncryptionUseCase() {
   return (
@@ -28,14 +28,14 @@ export default function DataEncryptionUseCase() {
             beforeImage={{
               url:
                 'https://www.datocms-assets.com/2885/1539885046-data-protectionchallenge.svg',
-              format: 'svg'
+              format: 'svg',
             }}
             beforeHeadline="The Challenge"
             beforeContent="All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly"
             afterImage={{
               url:
                 'https://www.datocms-assets.com/2885/1539885039-data-protectionsolution.svg',
-              format: 'svg'
+              format: 'svg',
             }}
             afterHeadline="The Solution"
             afterContent="Vault provides encryption as a service with centralized key management to simplify encrypting data in transit and at rest across clouds and data centers"
@@ -56,9 +56,9 @@ Encrypt application data during transit and rest with AES 256-bit CBC data encry
               __typename: 'SbcImageRecord',
               image: {
                 url: 'https://www.datocms-assets.com/2885/1539314348-eaas.png',
-                format: 'png'
-              }
-            }
+                format: 'png',
+              },
+            },
           }}
         />
 
@@ -73,9 +73,9 @@ Update and roll new keys throughout distributed infrastructure while retaining t
               image: {
                 url:
                   'https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png',
-                format: 'png'
-              }
-            }
+                format: 'png',
+              },
+            },
           }}
         />
       </section>
