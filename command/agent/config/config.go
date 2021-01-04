@@ -40,6 +40,7 @@ type Vault struct {
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
 	TLSServerName    string      `hcl:"tls_server_name"`
+	Retry            *Retry      `hcl:"retry"`
 }
 
 // Cache contains any configuration needed for Cache mode
@@ -80,6 +81,15 @@ type Sink struct {
 	AAD        string        `hcl:"aad"`
 	AADEnvVar  string        `hcl:"aad_env_var"`
 	Config     map[string]interface{}
+}
+
+type Retry struct {
+	Enabled       bool          `hcl:"enabled"`
+	Attempts      int           `hcl:"attempts"`
+	BackoffRaw    interface{}   `hcl:"backoff"`
+	Backoff       time.Duration `hcl:"-"`
+	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
+	MaxBackoff    time.Duration `hcl:"-"`
 }
 
 func NewConfig() *Config {
@@ -200,6 +210,64 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Vault = &v
+
+	subs, ok := item.Val.(*ast.ObjectType)
+	if !ok {
+		return fmt.Errorf("could not parse %q as an object", name)
+	}
+	subList := subs.List
+
+	if err := parseRetry(result, subList); err != nil {
+		return errwrap.Wrapf("error parsing 'retry': {{err}}", err)
+	}
+
+	return nil
+}
+
+func parseRetry(result *Config, list *ast.ObjectList) error {
+	name := "retry"
+
+	retryList := list.Filter(name)
+	if len(retryList.Items) == 0 {
+		return nil
+	}
+
+	if len(retryList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := retryList.Items[0]
+
+	var r Retry
+	err := hcl.DecodeObject(&r, item.Val)
+	if err != nil {
+		return err
+	}
+
+	// Set defaults
+	if r.Attempts < 1 {
+		r.Attempts = ctconfig.DefaultRetryAttempts
+	}
+	r.Backoff = ctconfig.DefaultRetryBackoff
+	r.MaxBackoff = ctconfig.DefaultRetryMaxBackoff
+
+	if r.BackoffRaw != nil {
+		var err error
+		if r.Backoff, err = parseutil.ParseDurationSecond(r.BackoffRaw); err != nil {
+			return err
+		}
+		r.BackoffRaw = nil
+	}
+
+	if r.MaxBackoffRaw != nil {
+		var err error
+		if r.MaxBackoff, err = parseutil.ParseDurationSecond(r.MaxBackoffRaw); err != nil {
+			return err
+		}
+		r.MaxBackoffRaw = nil
+	}
+
+	result.Vault.Retry = &r
 
 	return nil
 }
