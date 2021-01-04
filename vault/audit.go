@@ -40,6 +40,24 @@ var (
 	errLoadAuditFailed = errors.New("failed to setup audit table")
 )
 
+func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
+	requestId, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	return &logical.LogInput{
+		Type: "request",
+		Auth: nil,
+		Request: &logical.Request{
+			ID:        requestId,
+			Operation: "update",
+			Path:      "sys/audit/test",
+		},
+		Response: nil,
+		OuterErr: nil,
+	}, nil
+}
+
 // enableAudit is used to enable a new audit backend
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	// Ensure we end the path in a slash
@@ -101,6 +119,20 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	}
 	if backend == nil {
 		return fmt.Errorf("nil audit backend of type %q returned from factory", entry.Type)
+	}
+
+	if entry.Options["skip_test"] != "true" {
+		// Test the new audit device and report failure if it doesn't work.
+		testProbe, err := c.generateAuditTestProbe()
+		if err != nil {
+			return err
+		}
+		err = backend.LogTestMessage(ctx, testProbe, entry.Options)
+		if err != nil {
+			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
+			return fmt.Errorf("audit backend failed test message: %w", err)
+
+		}
 	}
 
 	newTable := c.audit.shallowClone()

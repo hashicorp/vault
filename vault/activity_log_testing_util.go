@@ -164,3 +164,10 @@ func (a *ActivityLog) SetEnable(enabled bool) {
 	defer a.fragmentLock.Unlock()
 	a.enabled = enabled
 }
+
+// GetEnabled returns the enabled flag on an activity log
+func (a *ActivityLog) GetEnabled() bool {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+	return a.enabled
+}

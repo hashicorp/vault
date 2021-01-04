@@ -561,6 +561,19 @@ func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	return nil
 }
 
+func (n *noopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	n.l.Lock()
+	defer n.l.Unlock()
+	var w bytes.Buffer
+	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	err := tempFormatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
+	return nil
+}
+
 func (n *noopAudit) Reload(_ context.Context) error {
 	return nil
 }
@@ -2125,6 +2138,10 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	}
 
 	return n.RespErr
+}
+
+func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, options map[string]string) error {
+	return nil
 }
 
 func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {

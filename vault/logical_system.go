@@ -2432,18 +2432,28 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 
 func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	header := data.Get("header").(string)
+	multivalue := data.Get("multivalue").(bool)
 
-	value, err := b.Core.uiConfig.GetHeader(ctx, header)
+	values, err := b.Core.uiConfig.GetHeader(ctx, header)
 	if err != nil {
 		return nil, err
 	}
-	if value == "" {
+	if len(values) == 0 {
 		return nil, nil
+	}
+
+	// Return multiple values if specified
+	if multivalue {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"values": values,
+			},
+		}, nil
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"value": value,
+			"value": values[0],
 		},
 	}, nil
 }
@@ -2477,7 +2487,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	for _, v := range values {
 		value.Add(header, v)
 	}
-	err := b.Core.uiConfig.SetHeader(ctx, header, value.Get(header))
+	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
 	if err != nil {
 		return nil, err
 	}
@@ -2540,8 +2550,8 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(KeyRotateGracePeriod, func() {
-			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", KeyRotateGracePeriod)
+		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
 			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
