@@ -1928,16 +1928,11 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
-		"ttl": "5m",
+		"ttl":      "5m",
+		"policies": "root",
 	}
+	resp := testMakeTokenViaRequest(t, ts, req)
 
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v; resp: %#v", err, resp)
-	}
-	if resp == nil || resp.Auth == nil {
-		t.Fatalf("failed to create a root token using another root token")
-	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"root"}) {
 		t.Fatalf("bad: policies: expected: root; actual: %s", resp.Auth.Policies)
 	}
@@ -1949,9 +1944,13 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 	req.Data = map[string]interface{}{
 		"ttl": "0",
 	}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatalf("expected error")
+	}
+	expectedErr := "expiring root tokens cannot create non-expiring root tokens"
+	if resp.Data["error"].(string) != expectedErr {
+		t.Fatalf("got err=%v, expected=%v", resp.Data["error"], expectedErr)
 	}
 }
 

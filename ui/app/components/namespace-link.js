@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
@@ -30,4 +31,23 @@ export default Component.extend({
   isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function() {
     return this.currentNamespace === this.targetNamespace;
   }),
+
+  get namespaceLink() {
+    if (Ember.testing) {
+      if (this.normalizedNamespace) {
+        return `/ui/vault/secrets?namespace=${this.normalizedNamespace}`;
+      }
+      return `/ui/vault/secrets`;
+    }
+
+    let origin =
+      window.location.protocol +
+      '//' +
+      window.location.hostname +
+      (window.location.port ? ':' + window.location.port : '');
+
+    if (!this.normalizedNamespace) return `${origin}/ui/vault/secrets`;
+    // The full URL/origin is required so that the page is reloaded.
+    return `${origin}/ui/vault/secrets?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+  },
 });
