@@ -1953,6 +1953,10 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 	if err == nil {
 		t.Fatalf("expected error")
 	}
+	expectedErr := "expiring root tokens cannot create non-expiring root tokens"
+	if resp.Data["error"].(string) != expectedErr {
+		t.Fatalf("got err=%v, expected=%v", resp.Data["error"], expectedErr)
+	}
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
