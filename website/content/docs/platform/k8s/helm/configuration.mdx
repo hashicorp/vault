@@ -56,7 +56,7 @@ and consider if they're appropriate for your deployment.
   - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
     A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server to use.
 
-  - `replicas` (`int: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault Helm 0.7.0 to have more than 1 replica.
+  - `replicas` (`int: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault K8s 0.7.0 to have more than 1 replica.
 
   - `leaderElector` - Values that configure the Vault Agent Injector leader election for HA deployments.
 
