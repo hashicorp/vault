@@ -192,16 +192,28 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 }
 
 // GeneratePrivateKey generates a private key with the specified type and key bits
-func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer) error {
+// GeneratePrivateKey takes in an optional list of io.Readers to use when generating
+// keys. This list will be ignored unless it has one specific io.Reader in it.
+// The entropyReader argument is variadic only because we require it to be optional so
+// as not to change existing behavior upstream.
+func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader ...io.Reader) error {
 	var err error
 	var privateKeyType PrivateKeyType
 	var privateKeyBytes []byte
 	var privateKey crypto.Signer
 
+	var randReader io.Reader
+	// check if randReader is initialized -- if not, then just use rand.Reader
+	if len(entropyReader) == 1 {
+		randReader = entropyReader[0]
+	} else {
+		randReader = rand.Reader
+	}
+
 	switch keyType {
 	case "rsa":
 		privateKeyType = RSAPrivateKey
-		privateKey, err = rsa.GenerateKey(rand.Reader, keyBits)
+		privateKey, err = rsa.GenerateKey(randReader, keyBits)
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error generating RSA private key: %v", err)}
 		}
@@ -221,7 +233,7 @@ func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 		default:
 			return errutil.UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", keyBits)}
 		}
-		privateKey, err = ecdsa.GenerateKey(curve, rand.Reader)
+		privateKey, err = ecdsa.GenerateKey(curve, randReader)
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error generating EC private key: %v", err)}
 		}
@@ -491,9 +503,11 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	return nil
 }
 
-// Performs the heavy lifting of creating a certificate. Returns
-// a fully-filled-in ParsedCertBundle.
-func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
+// CreateCertificate takes in an optional list of io.Readers to use when generating
+// keys. This list will be ignored unless it has one specific io.Reader in it.
+// The entropyReader argument is variadic only because we require it to be optional so
+// as not to change existing behavior upstream.
+func CreateCertificate(data *CreationBundle, randReader ...io.Reader) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
 
@@ -504,7 +518,7 @@ func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 
 	if err := GeneratePrivateKey(data.Params.KeyType,
 		data.Params.KeyBits,
-		result); err != nil {
+		result, randReader...); err != nil {
 		return nil, err
 	}
 
@@ -620,15 +634,17 @@ func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 
-// Creates a CSR. This is currently only meant for use when
-// generating an intermediate certificate.
-func CreateCSR(data *CreationBundle, addBasicConstraints bool) (*ParsedCSRBundle, error) {
+// CreateCSR takes in an optional list of io.Readers to use when generating
+// keys. This list will be ignored unless it has one specific io.Reader in it.
+// The entropyReader argument is variadic only because we require it to be optional so
+// as not to change existing behavior upstream.
+func CreateCSR(data *CreationBundle, addBasicConstraints bool, randReader ...io.Reader) (*ParsedCSRBundle, error) {
 	var err error
 	result := &ParsedCSRBundle{}
 
 	if err := GeneratePrivateKey(data.Params.KeyType,
 		data.Params.KeyBits,
-		result); err != nil {
+		result, randReader...); err != nil {
 		return nil, err
 	}
 
