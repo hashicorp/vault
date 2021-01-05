@@ -22,6 +22,24 @@ export default Route.extend({
     },
   },
 
+  modelTypeForDatabase(tab) {
+    let modelType;
+    switch (tab) {
+      case 'overview':
+        modelType = 'database/overview';
+        break;
+      case 'connections':
+        modelType = 'database/connection';
+        break;
+      case 'role':
+        modelType = 'database/role';
+        break;
+      default:
+        modelType = 'database';
+    }
+    return modelType;
+  },
+
   modelTypeForTransform(tab) {
     let modelType;
     switch (tab) {
@@ -73,6 +91,7 @@ export default Route.extend({
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine.get('engineType');
     let types = {
+      database: this.modelTypeForDatabase(tab),
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),

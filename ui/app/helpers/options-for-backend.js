@@ -55,6 +55,44 @@ const SECRET_BACKENDS = {
     editComponent: 'role-ssh-edit',
     listItemPartial: 'partials/secret-list/ssh-role-item',
   },
+  database: {
+    displayName: 'Database',
+    navigateTree: false,
+    listItemPartial: 'partials/secret-list/database-list-item',
+    tabs: [
+      // TODO add one for overview and connections
+      {
+        name: 'overview',
+        modelPrefix: 'overview/',
+        label: 'Overview',
+        searchPlaceholder: 'TODO ARG',
+        item: 'overview',
+        create: 'Create Overview', // TODO ARG
+        tab: 'overview',
+        editComponent: 'database-overview-edit',
+      },
+      {
+        name: 'connection',
+        modelPrefix: 'connection/',
+        label: 'Connection',
+        searchPlaceholder: 'TODO ARG',
+        item: 'connection',
+        create: 'Create connection', // TODO ARG
+        tab: 'connection',
+        editComponent: 'database-connection-edit',
+      },
+      {
+        name: 'role',
+        modelPrefix: 'role/',
+        label: 'Roles',
+        searchPlaceholder: 'Filter roles',
+        item: 'role',
+        create: 'Create role',
+        tab: 'role',
+        editComponent: 'database-role-edit',
+      },
+    ],
+  },
   transform: {
     displayName: 'Transformation',
     navigateTree: false,
@@ -126,6 +164,7 @@ export function optionsForBackend([backend, tab]) {
       displayName: backend === 'kv' ? 'KV' : capitalize(backend),
     });
   }
+  console.log('backendOptons: ', backendOptions);
   return backendOptions;
 }
 
