@@ -65,11 +65,8 @@ const SECRET_BACKENDS = {
         name: 'overview',
         modelPrefix: 'overview/',
         label: 'Overview',
-        searchPlaceholder: 'TODO ARG',
         item: 'overview',
-        create: 'Create Overview', // TODO ARG
         tab: 'overview',
-        editComponent: 'database-overview-edit',
       },
       {
         name: 'connection',
@@ -164,7 +161,6 @@ export function optionsForBackend([backend, tab]) {
       displayName: backend === 'kv' ? 'KV' : capitalize(backend),
     });
   }
-  console.log('backendOptons: ', backendOptions);
   return backendOptions;
 }
 
