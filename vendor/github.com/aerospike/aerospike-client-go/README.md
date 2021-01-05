@@ -98,7 +98,7 @@ Details about the API are available in the [`docs`](docs) directory.
 <a name="Prerequisites"></a>
 ## Prerequisites
 
-[Go](http://golang.org) version v1.9+ is required.
+[Go](http://golang.org) version v1.12+ is required.
 
 To install the latest stable version of Go, visit
 [http://golang.org/dl/](http://golang.org/dl/)

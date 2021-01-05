@@ -83,7 +83,7 @@ github.com/SAP/go-hdb/internal/unicode/cesu8
 github.com/Sectorbob/mlab-ns2/gae/ns/digest
 # github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
 github.com/StackExchange/wmi
-# github.com/aerospike/aerospike-client-go v3.1.0+incompatible
+# github.com/aerospike/aerospike-client-go v3.1.1+incompatible
 github.com/aerospike/aerospike-client-go
 github.com/aerospike/aerospike-client-go/internal/atomic
 github.com/aerospike/aerospike-client-go/internal/lua

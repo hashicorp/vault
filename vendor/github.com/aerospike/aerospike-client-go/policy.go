@@ -123,7 +123,7 @@ type BasePolicy struct {
 	// UseCompression tells the server to compress its response using zlib.
 	// Use zlib compression on write or batch read commands when the command buffer size is greater
 	// than 128 bytes. In addition, it directs the server to compress its response on read commands.
-	// The server response compression threshold is also 128 bytes.
+	// The server response compression threshold is also 128 bytes. Works with server EE v4.8.0.1+.
 	//
 	// This option will increase CPU and memory usage (for extra compressed buffers), but
 	// decrease the size of data sent over the network.
