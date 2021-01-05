@@ -1,5 +1,5 @@
 <a
-  href="{{href-to 'vault.cluster.secrets' (query-params namespace=this.normalizedNamespace)}}"
+  href={{this.namespaceLink}}
   class={{concat "is-block " class}}
   data-test-namespace-link={{this.normalizedNamespace}}
   >
