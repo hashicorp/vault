@@ -89,7 +89,8 @@ export default Route.extend({
     });
     if (result.status === 200) {
       const body = await result.json();
-      this.featureFlagService.setFeatureFlags(body.data.feature_flags);
+      const flags = body.data?.feature_flags || [];
+      this.featureFlagService.setFeatureFlags(flags);
     }
   },
 });
