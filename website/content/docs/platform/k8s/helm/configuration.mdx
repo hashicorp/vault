@@ -453,10 +453,10 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) - When set to `true`, enables a Network Policy for the Vault cluster.
 
-      - `egress` (`string: null`) - This value configures the [egress](https://kubernetes.io/docs/concepts/services-networking/network-policies/) network policy rules.
+      - `egress` (`array: []`) - This value configures the [egress](https://kubernetes.io/docs/concepts/services-networking/network-policies/) network policy rules.
 
       ```yaml
-      egress: |
+      egress:
       - to:
         - ipBlock:
             cidr: 10.0.0.0/24
