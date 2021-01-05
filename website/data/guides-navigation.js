@@ -1,7 +1,5 @@
 export default [
-  {
-    category: 'getting-started'
-  },
+  'getting-started',
   {
     category: 'operations',
     content: [
@@ -18,8 +16,8 @@ export default [
       'multi-tenant',
       'autounseal-aws-kms',
       'seal-wrap',
-      'monitoring'
-    ]
+      'monitoring',
+    ],
   },
   {
     category: 'identity',
@@ -32,8 +30,8 @@ export default [
       'identity',
       '--------------',
       'sentinel',
-      'control-groups'
-    ]
+      'control-groups',
+    ],
   },
   {
     category: 'secret-mgmt',
@@ -45,11 +43,11 @@ export default [
       'cubbyhole',
       'ssh-otp',
       'pki-engine',
-      'app-integration'
-    ]
+      'app-integration',
+    ],
   },
   {
     category: 'encryption',
-    content: ['transit', 'spring-demo', 'transit-rewrap']
-  }
+    content: ['transit', 'spring-demo', 'transit-rewrap'],
+  },
 ]
