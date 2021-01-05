@@ -7,12 +7,13 @@
 package storagepacker
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	any "github.com/golang/protobuf/ptypes/any"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -204,13 +205,16 @@ func file_helper_storagepacker_types_proto_rawDescGZIP() []byte {
 	return file_helper_storagepacker_types_proto_rawDescData
 }
 
-var file_helper_storagepacker_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_helper_storagepacker_types_proto_goTypes = []interface{}{
-	(*Item)(nil),    // 0: storagepacker.Item
-	(*Bucket)(nil),  // 1: storagepacker.Bucket
-	nil,             // 2: storagepacker.Bucket.ItemMapEntry
-	(*any.Any)(nil), // 3: google.protobuf.Any
-}
+var (
+	file_helper_storagepacker_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+	file_helper_storagepacker_types_proto_goTypes  = []interface{}{
+		(*Item)(nil),    // 0: storagepacker.Item
+		(*Bucket)(nil),  // 1: storagepacker.Bucket
+		nil,             // 2: storagepacker.Bucket.ItemMapEntry
+		(*any.Any)(nil), // 3: google.protobuf.Any
+	}
+)
+
 var file_helper_storagepacker_types_proto_depIDxs = []int32{
 	3, // 0: storagepacker.Item.message:type_name -> google.protobuf.Any
 	0, // 1: storagepacker.Bucket.items:type_name -> storagepacker.Item

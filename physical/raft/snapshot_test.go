@@ -136,7 +136,6 @@ func TestRaft_Snapshot_Loading(t *testing.T) {
 	if !bytes.Equal(computed1, computed3) {
 		t.Fatal("hashes did not match")
 	}
-
 }
 
 func TestRaft_Snapshot_Index(t *testing.T) {
@@ -892,7 +891,7 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if err = os.Chmod(dir2, 000); err != nil {
+	if err = os.Chmod(dir2, 0o00); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	defer os.Chmod(dir2, 777) // Set perms back for delete

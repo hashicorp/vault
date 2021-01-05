@@ -365,7 +365,7 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	}
 
 	var statusResp *api.RekeyUpdateResponse
-	var keys = cluster.BarrierKeys
+	keys := cluster.BarrierKeys
 	if cluster.Cores[0].Core.SealAccess().RecoveryKeySupported() {
 		keys = cluster.RecoveryKeys
 	}
@@ -431,7 +431,6 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
 	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
@@ -447,7 +446,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leader.Client.Address(),
 			TLSConfig:     leader.TLSConfig,
 		},
@@ -489,7 +488,6 @@ func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftli
 // NewHardcodedServerAddressProvider is a convenience function that makes a
 // ServerAddressProvider from a given cluster address base port.
 func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.ServerAddressProvider {
-
 	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
 
 	for i := 0; i < numCores; i++ {
@@ -507,7 +505,6 @@ func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.Se
 // the correct number of servers, having the correct NodeIDs, and exactly one
 // leader.
 func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
-
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
 	ctx := namespace.RootContext(context.Background())
 	config, err := backend.GetConfiguration(ctx)
@@ -558,7 +555,6 @@ func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
 
 // AwaitLeader waits for one of the cluster's nodes to become leader.
 func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
-
 	timeout := time.Now().Add(30 * time.Second)
 	for {
 		if time.Now().After(timeout) {

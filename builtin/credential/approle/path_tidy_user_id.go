@@ -45,7 +45,6 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
-
 }
 
 type tidyHelperSecretIDAccessor struct {
@@ -197,7 +196,7 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			// roles without having a lock while doing so.  Because
 			// accHashesByLockID was populated previously, at worst this may
 			// mean that we fail to clean up something we ought to.
-			var allSecretIDHMACs = make(map[string]struct{})
+			allSecretIDHMACs := make(map[string]struct{})
 			for _, roleNameHMAC := range roleNameHMACs {
 				secretIDHMACs, err := s.List(ctx, secretIDPrefixToUse+roleNameHMAC)
 				if err != nil {
@@ -265,7 +264,9 @@ func (b *backend) pathTidySecretIDUpdate(ctx context.Context, req *logical.Reque
 	return b.tidySecretID(ctx, req)
 }
 
-const pathTidySecretIDSyn = "Trigger the clean-up of expired SecretID entries."
-const pathTidySecretIDDesc = `SecretIDs will have expiration time attached to them. The periodic function
+const (
+	pathTidySecretIDSyn  = "Trigger the clean-up of expired SecretID entries."
+	pathTidySecretIDDesc = `SecretIDs will have expiration time attached to them. The periodic function
 of the backend will look for expired entries and delete them. This happens once in a minute. Invoking
 this endpoint will trigger the clean-up action, without waiting for the backend's periodic function.`
+)

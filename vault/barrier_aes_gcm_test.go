@@ -14,9 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
-var (
-	logger = logging.NewVaultLogger(log.Trace)
-)
+var logger = logging.NewVaultLogger(log.Trace)
 
 // mockBarrier returns a physical backend, security barrier, and master key
 func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {
@@ -594,5 +592,4 @@ func TestAESGCMBarrier_ReloadKeyring(t *testing.T) {
 	if len(b.cache) != 0 {
 		t.Fatal("failed to clear cache")
 	}
-
 }

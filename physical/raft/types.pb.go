@@ -7,11 +7,12 @@
 package raft
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -367,14 +368,17 @@ func file_physical_raft_types_proto_rawDescGZIP() []byte {
 	return file_physical_raft_types_proto_rawDescData
 }
 
-var file_physical_raft_types_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_physical_raft_types_proto_goTypes = []interface{}{
-	(*LogOperation)(nil),       // 0: raft.LogOperation
-	(*LogData)(nil),            // 1: raft.LogData
-	(*IndexValue)(nil),         // 2: raft.IndexValue
-	(*Server)(nil),             // 3: raft.Server
-	(*ConfigurationValue)(nil), // 4: raft.ConfigurationValue
-}
+var (
+	file_physical_raft_types_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+	file_physical_raft_types_proto_goTypes  = []interface{}{
+		(*LogOperation)(nil),       // 0: raft.LogOperation
+		(*LogData)(nil),            // 1: raft.LogData
+		(*IndexValue)(nil),         // 2: raft.IndexValue
+		(*Server)(nil),             // 3: raft.Server
+		(*ConfigurationValue)(nil), // 4: raft.ConfigurationValue
+	}
+)
+
 var file_physical_raft_types_proto_depIdxs = []int32{
 	0, // 0: raft.LogData.operations:type_name -> raft.LogOperation
 	3, // 1: raft.ConfigurationValue.servers:type_name -> raft.Server

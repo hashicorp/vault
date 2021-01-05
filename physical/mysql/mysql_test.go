@@ -59,6 +59,7 @@ func TestMySQLPlaintextCatch(t *testing.T) {
 		t.Fatalf("No warning of plaintext credentials occurred")
 	}
 }
+
 func TestMySQLBackend(t *testing.T) {
 	address := os.Getenv("MYSQL_ADDR")
 	if address == "" {
@@ -89,7 +90,6 @@ func TestMySQLBackend(t *testing.T) {
 		"password":                     password,
 		"plaintext_connection_allowed": "true",
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}

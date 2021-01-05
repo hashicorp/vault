@@ -41,8 +41,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const maxBytes = 128 * 1024
-const globalScope = "global"
+const (
+	maxBytes    = 128 * 1024
+	globalScope = "global"
+)
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -3562,7 +3564,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
 	if err != nil {

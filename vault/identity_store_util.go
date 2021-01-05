@@ -22,9 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	errDuplicateIdentityName = errors.New("duplicate identity name")
-)
+var errDuplicateIdentityName = errors.New("duplicate identity name")
 
 func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
 	c.loadCaseSensitiveIdentityStore = caseSensitive
@@ -1894,7 +1892,6 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 	}
 
 	refreshFunc := func(dryRun bool) (bool, []*logical.Alias, error) {
-
 		if !dryRun {
 			i.groupLock.Lock()
 			defer i.groupLock.Unlock()

@@ -193,7 +193,6 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 	}
 	if len(status.Reservations) == 0 {
 		return nil, fmt.Errorf("no reservations found in instance description")
-
 	}
 	if len(status.Reservations[0].Instances) == 0 {
 		return nil, fmt.Errorf("no instance details found in reservations")
@@ -393,7 +392,6 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 // trying to validate those requirements
 func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error) {
-
 	switch {
 	case instance == nil:
 		return nil, fmt.Errorf("nil instance")
@@ -511,7 +509,6 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		// Extract out the instance profile name from the instance
 		// profile ARN
 		iamInstanceProfileEntity, err := parseIamArn(iamInstanceProfileARN)
-
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to parse IAM instance profile ARN %q: {{err}}", iamInstanceProfileARN), err)
 		}

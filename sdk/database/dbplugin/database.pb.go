@@ -8,6 +8,9 @@ package dbplugin
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	grpc "google.golang.org/grpc"
@@ -15,8 +18,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -1185,27 +1186,30 @@ func file_sdk_database_dbplugin_database_proto_rawDescGZIP() []byte {
 	return file_sdk_database_dbplugin_database_proto_rawDescData
 }
 
-var file_sdk_database_dbplugin_database_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
-var file_sdk_database_dbplugin_database_proto_goTypes = []interface{}{
-	(*InitializeRequest)(nil),             // 0: dbplugin.InitializeRequest
-	(*InitRequest)(nil),                   // 1: dbplugin.InitRequest
-	(*CreateUserRequest)(nil),             // 2: dbplugin.CreateUserRequest
-	(*RenewUserRequest)(nil),              // 3: dbplugin.RenewUserRequest
-	(*RevokeUserRequest)(nil),             // 4: dbplugin.RevokeUserRequest
-	(*RotateRootCredentialsRequest)(nil),  // 5: dbplugin.RotateRootCredentialsRequest
-	(*Statements)(nil),                    // 6: dbplugin.Statements
-	(*UsernameConfig)(nil),                // 7: dbplugin.UsernameConfig
-	(*InitResponse)(nil),                  // 8: dbplugin.InitResponse
-	(*CreateUserResponse)(nil),            // 9: dbplugin.CreateUserResponse
-	(*TypeResponse)(nil),                  // 10: dbplugin.TypeResponse
-	(*RotateRootCredentialsResponse)(nil), // 11: dbplugin.RotateRootCredentialsResponse
-	(*Empty)(nil),                         // 12: dbplugin.Empty
-	(*GenerateCredentialsResponse)(nil),   // 13: dbplugin.GenerateCredentialsResponse
-	(*StaticUserConfig)(nil),              // 14: dbplugin.StaticUserConfig
-	(*SetCredentialsRequest)(nil),         // 15: dbplugin.SetCredentialsRequest
-	(*SetCredentialsResponse)(nil),        // 16: dbplugin.SetCredentialsResponse
-	(*timestamp.Timestamp)(nil),           // 17: google.protobuf.Timestamp
-}
+var (
+	file_sdk_database_dbplugin_database_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+	file_sdk_database_dbplugin_database_proto_goTypes  = []interface{}{
+		(*InitializeRequest)(nil),             // 0: dbplugin.InitializeRequest
+		(*InitRequest)(nil),                   // 1: dbplugin.InitRequest
+		(*CreateUserRequest)(nil),             // 2: dbplugin.CreateUserRequest
+		(*RenewUserRequest)(nil),              // 3: dbplugin.RenewUserRequest
+		(*RevokeUserRequest)(nil),             // 4: dbplugin.RevokeUserRequest
+		(*RotateRootCredentialsRequest)(nil),  // 5: dbplugin.RotateRootCredentialsRequest
+		(*Statements)(nil),                    // 6: dbplugin.Statements
+		(*UsernameConfig)(nil),                // 7: dbplugin.UsernameConfig
+		(*InitResponse)(nil),                  // 8: dbplugin.InitResponse
+		(*CreateUserResponse)(nil),            // 9: dbplugin.CreateUserResponse
+		(*TypeResponse)(nil),                  // 10: dbplugin.TypeResponse
+		(*RotateRootCredentialsResponse)(nil), // 11: dbplugin.RotateRootCredentialsResponse
+		(*Empty)(nil),                         // 12: dbplugin.Empty
+		(*GenerateCredentialsResponse)(nil),   // 13: dbplugin.GenerateCredentialsResponse
+		(*StaticUserConfig)(nil),              // 14: dbplugin.StaticUserConfig
+		(*SetCredentialsRequest)(nil),         // 15: dbplugin.SetCredentialsRequest
+		(*SetCredentialsResponse)(nil),        // 16: dbplugin.SetCredentialsResponse
+		(*timestamp.Timestamp)(nil),           // 17: google.protobuf.Timestamp
+	}
+)
+
 var file_sdk_database_dbplugin_database_proto_depIdxs = []int32{
 	6,  // 0: dbplugin.CreateUserRequest.statements:type_name -> dbplugin.Statements
 	7,  // 1: dbplugin.CreateUserRequest.username_config:type_name -> dbplugin.UsernameConfig
@@ -1474,8 +1478,10 @@ func file_sdk_database_dbplugin_database_proto_init() {
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
+var (
+	_ context.Context
+	_ grpc.ClientConnInterface
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
@@ -1613,36 +1619,44 @@ type DatabaseServer interface {
 }
 
 // UnimplementedDatabaseServer can be embedded to have forward compatible implementations.
-type UnimplementedDatabaseServer struct {
-}
+type UnimplementedDatabaseServer struct{}
 
 func (*UnimplementedDatabaseServer) Type(context.Context, *Empty) (*TypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
 }
+
 func (*UnimplementedDatabaseServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
+
 func (*UnimplementedDatabaseServer) RenewUser(context.Context, *RenewUserRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RenewUser not implemented")
 }
+
 func (*UnimplementedDatabaseServer) RevokeUser(context.Context, *RevokeUserRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RevokeUser not implemented")
 }
+
 func (*UnimplementedDatabaseServer) RotateRootCredentials(context.Context, *RotateRootCredentialsRequest) (*RotateRootCredentialsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RotateRootCredentials not implemented")
 }
+
 func (*UnimplementedDatabaseServer) Init(context.Context, *InitRequest) (*InitResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Init not implemented")
 }
+
 func (*UnimplementedDatabaseServer) Close(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
 }
+
 func (*UnimplementedDatabaseServer) SetCredentials(context.Context, *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetCredentials not implemented")
 }
+
 func (*UnimplementedDatabaseServer) GenerateCredentials(context.Context, *Empty) (*GenerateCredentialsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateCredentials not implemented")
 }
+
 func (*UnimplementedDatabaseServer) Initialize(context.Context, *InitializeRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
 }

@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftListPeersCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftListPeersCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftListPeersCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftListPeersCommand)(nil)
+)
 
 type OperatorRaftListPeersCommand struct {
 	*BaseCommand

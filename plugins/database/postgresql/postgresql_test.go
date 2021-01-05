@@ -87,7 +87,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -108,7 +109,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -129,7 +131,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -151,7 +154,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'

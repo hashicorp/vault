@@ -28,9 +28,11 @@ type CouchDBBackend struct {
 }
 
 // Verify CouchDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*CouchDBBackend)(nil)
-var _ physical.PseudoTransactional = (*CouchDBBackend)(nil)
-var _ physical.PseudoTransactional = (*TransactionalCouchDBBackend)(nil)
+var (
+	_ physical.Backend             = (*CouchDBBackend)(nil)
+	_ physical.PseudoTransactional = (*CouchDBBackend)(nil)
+	_ physical.PseudoTransactional = (*TransactionalCouchDBBackend)(nil)
+)
 
 type couchDBClient struct {
 	endpoint string

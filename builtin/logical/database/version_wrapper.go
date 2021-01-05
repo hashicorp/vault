@@ -237,9 +237,7 @@ type passwordGenerator interface {
 	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
 }
 
-var (
-	defaultPasswordGenerator = random.DefaultStringGenerator
-)
+var defaultPasswordGenerator = random.DefaultStringGenerator
 
 // GeneratePassword either from the v4 database or by using the provided password policy. If using a v5 database
 // and no password policy is specified, this will have a reasonable default password generator.

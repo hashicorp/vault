@@ -89,7 +89,7 @@ func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extr
 	if err != nil {
 		t.Fatal(err)
 	}
-	//t.Logf("raft dir: %s", raftDir)
+	// t.Logf("raft dir: %s", raftDir)
 	cleanupFunc := func() {
 		os.RemoveAll(raftDir)
 	}
@@ -180,9 +180,11 @@ type ClusterSetupMutator func(conf *vault.CoreConfig, opts *vault.TestClusterOpt
 func InmemBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeInmemBackend)
 }
+
 func InmemNonTransactionalBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeInmemNonTransactionalBackend)
 }
+
 func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeFileBackend)
 }

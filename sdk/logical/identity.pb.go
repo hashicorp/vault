@@ -7,11 +7,12 @@
 package logical
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -364,15 +365,18 @@ func file_sdk_logical_identity_proto_rawDescGZIP() []byte {
 	return file_sdk_logical_identity_proto_rawDescData
 }
 
-var file_sdk_logical_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_sdk_logical_identity_proto_goTypes = []interface{}{
-	(*Entity)(nil), // 0: logical.Entity
-	(*Alias)(nil),  // 1: logical.Alias
-	(*Group)(nil),  // 2: logical.Group
-	nil,            // 3: logical.Entity.MetadataEntry
-	nil,            // 4: logical.Alias.MetadataEntry
-	nil,            // 5: logical.Group.MetadataEntry
-}
+var (
+	file_sdk_logical_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+	file_sdk_logical_identity_proto_goTypes  = []interface{}{
+		(*Entity)(nil), // 0: logical.Entity
+		(*Alias)(nil),  // 1: logical.Alias
+		(*Group)(nil),  // 2: logical.Group
+		nil,            // 3: logical.Entity.MetadataEntry
+		nil,            // 4: logical.Alias.MetadataEntry
+		nil,            // 5: logical.Group.MetadataEntry
+	}
+)
+
 var file_sdk_logical_identity_proto_depIDxs = []int32{
 	1, // 0: logical.Entity.aliases:type_name -> logical.Alias
 	3, // 1: logical.Entity.metadata:type_name -> logical.Entity.MetadataEntry

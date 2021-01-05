@@ -39,7 +39,6 @@ type StorageCleanup func()
 // MakeReusableStorage makes a physical backend that can be re-used across
 // multiple test clusters in sequence.
 func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, StorageCleanup) {
-
 	storage := ReusableStorage{
 		IsRaft: false,
 
@@ -74,7 +73,6 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 // MakeReusableRaftStorage makes a physical raft backend that can be re-used
 // across multiple test clusters in sequence.
 func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int, addressProvider raftlib.ServerAddressProvider) (ReusableStorage, StorageCleanup) {
-
 	raftDirs := make([]string, numCores)
 	for i := 0; i < numCores; i++ {
 		raftDirs[i] = makeRaftDir(t)
@@ -164,12 +162,11 @@ func makeRaftDir(t testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//t.Logf("raft dir: %s", raftDir)
+	// t.Logf("raft dir: %s", raftDir)
 	return raftDir
 }
 
 func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string, addressProvider raftlib.ServerAddressProvider, ha bool) *vault.PhysicalBackendBundle {
-
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
 		"path":                   raftDir,

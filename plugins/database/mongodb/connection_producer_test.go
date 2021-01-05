@@ -48,9 +48,9 @@ func TestInit_clientTLS(t *testing.T) {
 		certhelpers.Parent(caCert),
 	)
 
-	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
-	writeFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0644)
-	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0o644)
+	writeFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0o644)
+	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0o644)
 
 	// //////////////////////////////////////////////////////
 	// Set up Mongo config file
@@ -62,7 +62,7 @@ net:
       CAFile: /etc/mongo/ca.pem
       allowInvalidHostnames: true`
 
-	writeFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0644)
+	writeFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0o644)
 
 	// //////////////////////////////////////////////////////
 	// Start Mongo container

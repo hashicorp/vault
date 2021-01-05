@@ -7,13 +7,14 @@
 package identity
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	mfa "github.com/hashicorp/vault/helper/identity/mfa"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -971,23 +972,26 @@ func file_helper_identity_types_proto_rawDescGZIP() []byte {
 	return file_helper_identity_types_proto_rawDescData
 }
 
-var file_helper_identity_types_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
-var file_helper_identity_types_proto_goTypes = []interface{}{
-	(*Group)(nil),               // 0: identity.Group
-	(*Entity)(nil),              // 1: identity.Entity
-	(*Alias)(nil),               // 2: identity.Alias
-	(*EntityStorageEntry)(nil),  // 3: identity.EntityStorageEntry
-	(*PersonaIndexEntry)(nil),   // 4: identity.PersonaIndexEntry
-	nil,                         // 5: identity.Group.MetadataEntry
-	nil,                         // 6: identity.Entity.MetadataEntry
-	nil,                         // 7: identity.Entity.MFASecretsEntry
-	nil,                         // 8: identity.Alias.MetadataEntry
-	nil,                         // 9: identity.EntityStorageEntry.MetadataEntry
-	nil,                         // 10: identity.EntityStorageEntry.MFASecretsEntry
-	nil,                         // 11: identity.PersonaIndexEntry.MetadataEntry
-	(*timestamp.Timestamp)(nil), // 12: google.protobuf.Timestamp
-	(*mfa.Secret)(nil),          // 13: mfa.Secret
-}
+var (
+	file_helper_identity_types_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+	file_helper_identity_types_proto_goTypes  = []interface{}{
+		(*Group)(nil),               // 0: identity.Group
+		(*Entity)(nil),              // 1: identity.Entity
+		(*Alias)(nil),               // 2: identity.Alias
+		(*EntityStorageEntry)(nil),  // 3: identity.EntityStorageEntry
+		(*PersonaIndexEntry)(nil),   // 4: identity.PersonaIndexEntry
+		nil,                         // 5: identity.Group.MetadataEntry
+		nil,                         // 6: identity.Entity.MetadataEntry
+		nil,                         // 7: identity.Entity.MFASecretsEntry
+		nil,                         // 8: identity.Alias.MetadataEntry
+		nil,                         // 9: identity.EntityStorageEntry.MetadataEntry
+		nil,                         // 10: identity.EntityStorageEntry.MFASecretsEntry
+		nil,                         // 11: identity.PersonaIndexEntry.MetadataEntry
+		(*timestamp.Timestamp)(nil), // 12: google.protobuf.Timestamp
+		(*mfa.Secret)(nil),          // 13: mfa.Secret
+	}
+)
+
 var file_helper_identity_types_proto_depIDxs = []int32{
 	5,  // 0: identity.Group.metadata:type_name -> identity.Group.MetadataEntry
 	12, // 1: identity.Group.creation_time:type_name -> google.protobuf.Timestamp

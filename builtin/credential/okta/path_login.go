@@ -15,12 +15,12 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login/(?P<username>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 			},
@@ -145,11 +145,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	return resp, nil
-
 }
 
 func (b *backend) getConfig(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
-
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err

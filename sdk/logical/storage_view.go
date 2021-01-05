@@ -11,9 +11,7 @@ type StorageView struct {
 	prefix  string
 }
 
-var (
-	ErrRelativePath = errors.New("relative paths not supported")
-)
+var ErrRelativePath = errors.New("relative paths not supported")
 
 func NewStorageView(storage Storage, prefix string) *StorageView {
 	return &StorageView{

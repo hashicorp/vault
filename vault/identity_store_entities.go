@@ -551,7 +551,7 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 		for _, bucket := range byBucket {
 			ids := make([]string, len(bucket))
 			i := 0
-			for id, _ := range bucket {
+			for id := range bucket {
 				ids[i] = id
 				i++
 			}

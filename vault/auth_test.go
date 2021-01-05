@@ -210,7 +210,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	c.auth = &MountTable{
 		Type: credentialTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:            credentialTableType,
 				Path:             "noop/",
 				Type:             "noop",
@@ -220,7 +220,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 				NamespaceID:      namespace.RootNamespaceID,
 				namespace:        namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:            credentialTableType,
 				Path:             "noop2/",
 				Type:             "noop",
@@ -512,7 +512,8 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeCredential,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -537,7 +538,8 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeCredential,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -547,7 +549,7 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		c.auth = &MountTable{
 			Type: credentialTableType,
 			Entries: []*MountEntry{
-				&MountEntry{
+				{
 					Table:            credentialTableType,
 					Path:             "foo/",
 					Type:             "initable",

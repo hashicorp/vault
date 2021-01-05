@@ -8,6 +8,9 @@ package proto
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
@@ -16,8 +19,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -902,25 +903,28 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP() []byte {
 	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescData
 }
 
-var file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
-var file_sdk_database_dbplugin_v5_proto_database_proto_goTypes = []interface{}{
-	(*InitializeRequest)(nil),   // 0: dbplugin.v5.InitializeRequest
-	(*InitializeResponse)(nil),  // 1: dbplugin.v5.InitializeResponse
-	(*NewUserRequest)(nil),      // 2: dbplugin.v5.NewUserRequest
-	(*UsernameConfig)(nil),      // 3: dbplugin.v5.UsernameConfig
-	(*NewUserResponse)(nil),     // 4: dbplugin.v5.NewUserResponse
-	(*UpdateUserRequest)(nil),   // 5: dbplugin.v5.UpdateUserRequest
-	(*ChangePassword)(nil),      // 6: dbplugin.v5.ChangePassword
-	(*ChangeExpiration)(nil),    // 7: dbplugin.v5.ChangeExpiration
-	(*UpdateUserResponse)(nil),  // 8: dbplugin.v5.UpdateUserResponse
-	(*DeleteUserRequest)(nil),   // 9: dbplugin.v5.DeleteUserRequest
-	(*DeleteUserResponse)(nil),  // 10: dbplugin.v5.DeleteUserResponse
-	(*TypeResponse)(nil),        // 11: dbplugin.v5.TypeResponse
-	(*Statements)(nil),          // 12: dbplugin.v5.Statements
-	(*Empty)(nil),               // 13: dbplugin.v5.Empty
-	(*_struct.Struct)(nil),      // 14: google.protobuf.Struct
-	(*timestamp.Timestamp)(nil), // 15: google.protobuf.Timestamp
-}
+var (
+	file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+	file_sdk_database_dbplugin_v5_proto_database_proto_goTypes  = []interface{}{
+		(*InitializeRequest)(nil),   // 0: dbplugin.v5.InitializeRequest
+		(*InitializeResponse)(nil),  // 1: dbplugin.v5.InitializeResponse
+		(*NewUserRequest)(nil),      // 2: dbplugin.v5.NewUserRequest
+		(*UsernameConfig)(nil),      // 3: dbplugin.v5.UsernameConfig
+		(*NewUserResponse)(nil),     // 4: dbplugin.v5.NewUserResponse
+		(*UpdateUserRequest)(nil),   // 5: dbplugin.v5.UpdateUserRequest
+		(*ChangePassword)(nil),      // 6: dbplugin.v5.ChangePassword
+		(*ChangeExpiration)(nil),    // 7: dbplugin.v5.ChangeExpiration
+		(*UpdateUserResponse)(nil),  // 8: dbplugin.v5.UpdateUserResponse
+		(*DeleteUserRequest)(nil),   // 9: dbplugin.v5.DeleteUserRequest
+		(*DeleteUserResponse)(nil),  // 10: dbplugin.v5.DeleteUserResponse
+		(*TypeResponse)(nil),        // 11: dbplugin.v5.TypeResponse
+		(*Statements)(nil),          // 12: dbplugin.v5.Statements
+		(*Empty)(nil),               // 13: dbplugin.v5.Empty
+		(*_struct.Struct)(nil),      // 14: google.protobuf.Struct
+		(*timestamp.Timestamp)(nil), // 15: google.protobuf.Timestamp
+	}
+)
+
 var file_sdk_database_dbplugin_v5_proto_database_proto_depIdxs = []int32{
 	14, // 0: dbplugin.v5.InitializeRequest.config_data:type_name -> google.protobuf.Struct
 	14, // 1: dbplugin.v5.InitializeResponse.config_data:type_name -> google.protobuf.Struct
@@ -1149,8 +1153,10 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
+var (
+	_ context.Context
+	_ grpc.ClientConnInterface
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
@@ -1241,24 +1247,28 @@ type DatabaseServer interface {
 }
 
 // UnimplementedDatabaseServer can be embedded to have forward compatible implementations.
-type UnimplementedDatabaseServer struct {
-}
+type UnimplementedDatabaseServer struct{}
 
 func (*UnimplementedDatabaseServer) Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
 }
+
 func (*UnimplementedDatabaseServer) NewUser(context.Context, *NewUserRequest) (*NewUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewUser not implemented")
 }
+
 func (*UnimplementedDatabaseServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
 }
+
 func (*UnimplementedDatabaseServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
 }
+
 func (*UnimplementedDatabaseServer) Type(context.Context, *Empty) (*TypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
 }
+
 func (*UnimplementedDatabaseServer) Close(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
 }

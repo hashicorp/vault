@@ -25,26 +25,30 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const EnvVaultAddress = "VAULT_ADDR"
-const EnvVaultAgentAddr = "VAULT_AGENT_ADDR"
-const EnvVaultCACert = "VAULT_CACERT"
-const EnvVaultCAPath = "VAULT_CAPATH"
-const EnvVaultClientCert = "VAULT_CLIENT_CERT"
-const EnvVaultClientKey = "VAULT_CLIENT_KEY"
-const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-const EnvVaultSRVLookup = "VAULT_SRV_LOOKUP"
-const EnvVaultSkipVerify = "VAULT_SKIP_VERIFY"
-const EnvVaultNamespace = "VAULT_NAMESPACE"
-const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
-const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
-const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
-const EnvVaultToken = "VAULT_TOKEN"
-const EnvVaultMFA = "VAULT_MFA"
-const EnvRateLimit = "VAULT_RATE_LIMIT"
+const (
+	EnvVaultAddress       = "VAULT_ADDR"
+	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
+	EnvVaultCACert        = "VAULT_CACERT"
+	EnvVaultCAPath        = "VAULT_CAPATH"
+	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
+	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
+	EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultSRVLookup     = "VAULT_SRV_LOOKUP"
+	EnvVaultSkipVerify    = "VAULT_SKIP_VERIFY"
+	EnvVaultNamespace     = "VAULT_NAMESPACE"
+	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
+	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
+	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
+	EnvVaultToken         = "VAULT_TOKEN"
+	EnvVaultMFA           = "VAULT_MFA"
+	EnvRateLimit          = "VAULT_RATE_LIMIT"
+)
 
 // Deprecated values
-const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
-const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+const (
+	EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
+	EnvVaultInsecure     = "VAULT_SKIP_VERIFY"
+)
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -360,7 +364,6 @@ func (c *Config) ReadEnvironment() error {
 }
 
 func parseRateLimit(val string) (rate float64, burst int, err error) {
-
 	_, err = fmt.Sscanf(val, "%f:%d", &rate, &burst)
 	if err != nil {
 		rate, err = strconv.ParseFloat(val, 64)
@@ -371,7 +374,6 @@ func parseRateLimit(val string) (rate float64, burst int, err error) {
 	}
 
 	return rate, burst, err
-
 }
 
 // Client is the client to the Vault API. Create a client with NewClient.
@@ -792,7 +794,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	policyOverride := c.policyOverride
 	c.modifyLock.RUnlock()
 
-	var host = addr.Host
+	host := addr.Host
 	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
 	// record and take the highest match; this is not designed for high-availability, just discovery
 	// Internet Draft specifies that the SRV record is ignored if a port is given

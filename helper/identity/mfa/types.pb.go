@@ -7,11 +7,12 @@
 package mfa
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -823,16 +824,19 @@ func file_helper_identity_mfa_types_proto_rawDescGZIP() []byte {
 	return file_helper_identity_mfa_types_proto_rawDescData
 }
 
-var file_helper_identity_mfa_types_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_helper_identity_mfa_types_proto_goTypes = []interface{}{
-	(*Config)(nil),       // 0: mfa.Config
-	(*TOTPConfig)(nil),   // 1: mfa.TOTPConfig
-	(*DuoConfig)(nil),    // 2: mfa.DuoConfig
-	(*OktaConfig)(nil),   // 3: mfa.OktaConfig
-	(*PingIDConfig)(nil), // 4: mfa.PingIDConfig
-	(*Secret)(nil),       // 5: mfa.Secret
-	(*TOTPSecret)(nil),   // 6: mfa.TOTPSecret
-}
+var (
+	file_helper_identity_mfa_types_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+	file_helper_identity_mfa_types_proto_goTypes  = []interface{}{
+		(*Config)(nil),       // 0: mfa.Config
+		(*TOTPConfig)(nil),   // 1: mfa.TOTPConfig
+		(*DuoConfig)(nil),    // 2: mfa.DuoConfig
+		(*OktaConfig)(nil),   // 3: mfa.OktaConfig
+		(*PingIDConfig)(nil), // 4: mfa.PingIDConfig
+		(*Secret)(nil),       // 5: mfa.Secret
+		(*TOTPSecret)(nil),   // 6: mfa.TOTPSecret
+	}
+)
+
 var file_helper_identity_mfa_types_proto_depIDxs = []int32{
 	1, // 0: mfa.Config.totp_config:type_name -> mfa.TOTPConfig
 	3, // 1: mfa.Config.okta_config:type_name -> mfa.OktaConfig

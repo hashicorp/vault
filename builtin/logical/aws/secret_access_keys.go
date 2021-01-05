@@ -22,16 +22,16 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: secretAccessKeyType,
 		Fields: map[string]*framework.FieldSchema{
-			"access_key": &framework.FieldSchema{
+			"access_key": {
 				Type:        framework.TypeString,
 				Description: "Access Key",
 			},
 
-			"secret_key": &framework.FieldSchema{
+			"secret_key": {
 				Type:        framework.TypeString,
 				Description: "Secret Key",
 			},
-			"security_token": &framework.FieldSchema{
+			"security_token": {
 				Type:        framework.TypeString,
 				Description: "Security Token",
 			},
@@ -68,7 +68,6 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string, policyARNs []string,
 	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
-
 	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -111,7 +110,6 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	}
 
 	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
-
 	if err != nil {
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -142,7 +140,6 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
 	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
-
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
 	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
@@ -179,7 +176,6 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
 	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
-
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -354,7 +350,6 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	// STS cleans up after itself so we can skip this if is_sts internal data
 	// element set to true. If is_sts is not set, assumes old version
 	// and defaults to the IAM approach.

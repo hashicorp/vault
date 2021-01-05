@@ -7,11 +7,12 @@
 package logical
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -99,10 +100,13 @@ func file_sdk_logical_plugin_proto_rawDescGZIP() []byte {
 	return file_sdk_logical_plugin_proto_rawDescData
 }
 
-var file_sdk_logical_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_sdk_logical_plugin_proto_goTypes = []interface{}{
-	(*PluginEnvironment)(nil), // 0: logical.PluginEnvironment
-}
+var (
+	file_sdk_logical_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+	file_sdk_logical_plugin_proto_goTypes  = []interface{}{
+		(*PluginEnvironment)(nil), // 0: logical.PluginEnvironment
+	}
+)
+
 var file_sdk_logical_plugin_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type

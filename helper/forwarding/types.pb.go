@@ -7,11 +7,12 @@
 package forwarding
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -32,7 +33,7 @@ type Request struct {
 
 	// Not used right now but reserving in case it turns out that streaming
 	// makes things more economical on the gRPC side
-	//uint64 id = 1;
+	// uint64 id = 1;
 	Method           string                  `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
 	Url              *URL                    `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
 	HeaderEntries    map[string]*HeaderEntry `protobuf:"bytes,4,rep,name=header_entries,json=headerEntries,proto3" json:"header_entries,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
@@ -132,12 +133,12 @@ type URL struct {
 	Opaque string `protobuf:"bytes,2,opt,name=opaque,proto3" json:"opaque,omitempty"`
 	// This isn't needed now but might be in the future, so we'll skip the
 	// number to keep the ordering in net/url
-	//UserInfo user = 3;
+	// UserInfo user = 3;
 	Host    string `protobuf:"bytes,4,opt,name=host,proto3" json:"host,omitempty"`
 	Path    string `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`
 	RawPath string `protobuf:"bytes,6,opt,name=raw_path,json=rawPath,proto3" json:"raw_path,omitempty"`
 	// This also isn't needed right now, but we'll reserve the number
-	//bool force_query = 7;
+	// bool force_query = 7;
 	RawQuery string `protobuf:"bytes,8,opt,name=raw_query,json=rawQuery,proto3" json:"raw_query,omitempty"`
 	Fragment string `protobuf:"bytes,9,opt,name=fragment,proto3" json:"fragment,omitempty"`
 }
@@ -277,7 +278,7 @@ type Response struct {
 
 	// Not used right now but reserving in case it turns out that streaming
 	// makes things more economical on the gRPC side
-	//uint64 id = 1;
+	// uint64 id = 1;
 	StatusCode uint32 `protobuf:"varint,2,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
 	Body       []byte `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
 	// Added in 0.6.2 to ensure that the content-type is set appropriately, as
@@ -423,15 +424,18 @@ func file_helper_forwarding_types_proto_rawDescGZIP() []byte {
 	return file_helper_forwarding_types_proto_rawDescData
 }
 
-var file_helper_forwarding_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_helper_forwarding_types_proto_goTypes = []interface{}{
-	(*Request)(nil),     // 0: forwarding.Request
-	(*URL)(nil),         // 1: forwarding.URL
-	(*HeaderEntry)(nil), // 2: forwarding.HeaderEntry
-	(*Response)(nil),    // 3: forwarding.Response
-	nil,                 // 4: forwarding.Request.HeaderEntriesEntry
-	nil,                 // 5: forwarding.Response.HeaderEntriesEntry
-}
+var (
+	file_helper_forwarding_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+	file_helper_forwarding_types_proto_goTypes  = []interface{}{
+		(*Request)(nil),     // 0: forwarding.Request
+		(*URL)(nil),         // 1: forwarding.URL
+		(*HeaderEntry)(nil), // 2: forwarding.HeaderEntry
+		(*Response)(nil),    // 3: forwarding.Response
+		nil,                 // 4: forwarding.Request.HeaderEntriesEntry
+		nil,                 // 5: forwarding.Response.HeaderEntriesEntry
+	}
+)
+
 var file_helper_forwarding_types_proto_depIdxs = []int32{
 	1, // 0: forwarding.Request.url:type_name -> forwarding.URL
 	4, // 1: forwarding.Request.header_entries:type_name -> forwarding.Request.HeaderEntriesEntry

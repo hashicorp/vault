@@ -18,8 +18,10 @@ const (
 	activityLogEnabledDefaultValue = "default-disabled"
 )
 
-type entCore struct{}
-type entCoreConfig struct{}
+type (
+	entCore       struct{}
+	entCoreConfig struct{}
+)
 
 func (e entCoreConfig) Clone() entCoreConfig {
 	return entCoreConfig{}
@@ -51,6 +53,7 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	}
 	return nil
 }
+
 func (c *Core) setupReplicationResolverHandler() error {
 	return nil
 }

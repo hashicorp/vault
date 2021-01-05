@@ -106,7 +106,6 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	if !reflect.DeepEqual(p, expectedBuiltin) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", p, expectedBuiltin)
 	}
-
 }
 
 func TestPluginCatalog_List(t *testing.T) {
@@ -179,5 +178,4 @@ func TestPluginCatalog_List(t *testing.T) {
 			t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[i+1], p)
 		}
 	}
-
 }

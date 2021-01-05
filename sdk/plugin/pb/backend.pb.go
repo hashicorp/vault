@@ -8,6 +8,9 @@ package pb
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	logical "github.com/hashicorp/vault/sdk/logical"
@@ -16,8 +19,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -3629,66 +3630,69 @@ func file_sdk_plugin_pb_backend_proto_rawDescGZIP() []byte {
 	return file_sdk_plugin_pb_backend_proto_rawDescData
 }
 
-var file_sdk_plugin_pb_backend_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
-var file_sdk_plugin_pb_backend_proto_goTypes = []interface{}{
-	(*Empty)(nil),                             // 0: pb.Empty
-	(*Header)(nil),                            // 1: pb.Header
-	(*ProtoError)(nil),                        // 2: pb.ProtoError
-	(*Paths)(nil),                             // 3: pb.Paths
-	(*Request)(nil),                           // 4: pb.Request
-	(*Auth)(nil),                              // 5: pb.Auth
-	(*TokenEntry)(nil),                        // 6: pb.TokenEntry
-	(*LeaseOptions)(nil),                      // 7: pb.LeaseOptions
-	(*Secret)(nil),                            // 8: pb.Secret
-	(*Response)(nil),                          // 9: pb.Response
-	(*ResponseWrapInfo)(nil),                  // 10: pb.ResponseWrapInfo
-	(*RequestWrapInfo)(nil),                   // 11: pb.RequestWrapInfo
-	(*HandleRequestArgs)(nil),                 // 12: pb.HandleRequestArgs
-	(*HandleRequestReply)(nil),                // 13: pb.HandleRequestReply
-	(*InitializeArgs)(nil),                    // 14: pb.InitializeArgs
-	(*InitializeReply)(nil),                   // 15: pb.InitializeReply
-	(*SpecialPathsReply)(nil),                 // 16: pb.SpecialPathsReply
-	(*HandleExistenceCheckArgs)(nil),          // 17: pb.HandleExistenceCheckArgs
-	(*HandleExistenceCheckReply)(nil),         // 18: pb.HandleExistenceCheckReply
-	(*SetupArgs)(nil),                         // 19: pb.SetupArgs
-	(*SetupReply)(nil),                        // 20: pb.SetupReply
-	(*TypeReply)(nil),                         // 21: pb.TypeReply
-	(*InvalidateKeyArgs)(nil),                 // 22: pb.InvalidateKeyArgs
-	(*StorageEntry)(nil),                      // 23: pb.StorageEntry
-	(*StorageListArgs)(nil),                   // 24: pb.StorageListArgs
-	(*StorageListReply)(nil),                  // 25: pb.StorageListReply
-	(*StorageGetArgs)(nil),                    // 26: pb.StorageGetArgs
-	(*StorageGetReply)(nil),                   // 27: pb.StorageGetReply
-	(*StoragePutArgs)(nil),                    // 28: pb.StoragePutArgs
-	(*StoragePutReply)(nil),                   // 29: pb.StoragePutReply
-	(*StorageDeleteArgs)(nil),                 // 30: pb.StorageDeleteArgs
-	(*StorageDeleteReply)(nil),                // 31: pb.StorageDeleteReply
-	(*TTLReply)(nil),                          // 32: pb.TTLReply
-	(*TaintedReply)(nil),                      // 33: pb.TaintedReply
-	(*CachingDisabledReply)(nil),              // 34: pb.CachingDisabledReply
-	(*ReplicationStateReply)(nil),             // 35: pb.ReplicationStateReply
-	(*ResponseWrapDataArgs)(nil),              // 36: pb.ResponseWrapDataArgs
-	(*ResponseWrapDataReply)(nil),             // 37: pb.ResponseWrapDataReply
-	(*MlockEnabledReply)(nil),                 // 38: pb.MlockEnabledReply
-	(*LocalMountReply)(nil),                   // 39: pb.LocalMountReply
-	(*EntityInfoArgs)(nil),                    // 40: pb.EntityInfoArgs
-	(*EntityInfoReply)(nil),                   // 41: pb.EntityInfoReply
-	(*GroupsForEntityReply)(nil),              // 42: pb.GroupsForEntityReply
-	(*PluginEnvReply)(nil),                    // 43: pb.PluginEnvReply
-	(*GeneratePasswordFromPolicyRequest)(nil), // 44: pb.GeneratePasswordFromPolicyRequest
-	(*GeneratePasswordFromPolicyReply)(nil),   // 45: pb.GeneratePasswordFromPolicyReply
-	(*Connection)(nil),                        // 46: pb.Connection
-	nil,                                       // 47: pb.Request.HeadersEntry
-	nil,                                       // 48: pb.Auth.MetadataEntry
-	nil,                                       // 49: pb.TokenEntry.MetaEntry
-	nil,                                       // 50: pb.Response.HeadersEntry
-	nil,                                       // 51: pb.SetupArgs.ConfigEntry
-	(*logical.Alias)(nil),                     // 52: logical.Alias
-	(*timestamp.Timestamp)(nil),               // 53: google.protobuf.Timestamp
-	(*logical.Entity)(nil),                    // 54: logical.Entity
-	(*logical.Group)(nil),                     // 55: logical.Group
-	(*logical.PluginEnvironment)(nil),         // 56: logical.PluginEnvironment
-}
+var (
+	file_sdk_plugin_pb_backend_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+	file_sdk_plugin_pb_backend_proto_goTypes  = []interface{}{
+		(*Empty)(nil),                             // 0: pb.Empty
+		(*Header)(nil),                            // 1: pb.Header
+		(*ProtoError)(nil),                        // 2: pb.ProtoError
+		(*Paths)(nil),                             // 3: pb.Paths
+		(*Request)(nil),                           // 4: pb.Request
+		(*Auth)(nil),                              // 5: pb.Auth
+		(*TokenEntry)(nil),                        // 6: pb.TokenEntry
+		(*LeaseOptions)(nil),                      // 7: pb.LeaseOptions
+		(*Secret)(nil),                            // 8: pb.Secret
+		(*Response)(nil),                          // 9: pb.Response
+		(*ResponseWrapInfo)(nil),                  // 10: pb.ResponseWrapInfo
+		(*RequestWrapInfo)(nil),                   // 11: pb.RequestWrapInfo
+		(*HandleRequestArgs)(nil),                 // 12: pb.HandleRequestArgs
+		(*HandleRequestReply)(nil),                // 13: pb.HandleRequestReply
+		(*InitializeArgs)(nil),                    // 14: pb.InitializeArgs
+		(*InitializeReply)(nil),                   // 15: pb.InitializeReply
+		(*SpecialPathsReply)(nil),                 // 16: pb.SpecialPathsReply
+		(*HandleExistenceCheckArgs)(nil),          // 17: pb.HandleExistenceCheckArgs
+		(*HandleExistenceCheckReply)(nil),         // 18: pb.HandleExistenceCheckReply
+		(*SetupArgs)(nil),                         // 19: pb.SetupArgs
+		(*SetupReply)(nil),                        // 20: pb.SetupReply
+		(*TypeReply)(nil),                         // 21: pb.TypeReply
+		(*InvalidateKeyArgs)(nil),                 // 22: pb.InvalidateKeyArgs
+		(*StorageEntry)(nil),                      // 23: pb.StorageEntry
+		(*StorageListArgs)(nil),                   // 24: pb.StorageListArgs
+		(*StorageListReply)(nil),                  // 25: pb.StorageListReply
+		(*StorageGetArgs)(nil),                    // 26: pb.StorageGetArgs
+		(*StorageGetReply)(nil),                   // 27: pb.StorageGetReply
+		(*StoragePutArgs)(nil),                    // 28: pb.StoragePutArgs
+		(*StoragePutReply)(nil),                   // 29: pb.StoragePutReply
+		(*StorageDeleteArgs)(nil),                 // 30: pb.StorageDeleteArgs
+		(*StorageDeleteReply)(nil),                // 31: pb.StorageDeleteReply
+		(*TTLReply)(nil),                          // 32: pb.TTLReply
+		(*TaintedReply)(nil),                      // 33: pb.TaintedReply
+		(*CachingDisabledReply)(nil),              // 34: pb.CachingDisabledReply
+		(*ReplicationStateReply)(nil),             // 35: pb.ReplicationStateReply
+		(*ResponseWrapDataArgs)(nil),              // 36: pb.ResponseWrapDataArgs
+		(*ResponseWrapDataReply)(nil),             // 37: pb.ResponseWrapDataReply
+		(*MlockEnabledReply)(nil),                 // 38: pb.MlockEnabledReply
+		(*LocalMountReply)(nil),                   // 39: pb.LocalMountReply
+		(*EntityInfoArgs)(nil),                    // 40: pb.EntityInfoArgs
+		(*EntityInfoReply)(nil),                   // 41: pb.EntityInfoReply
+		(*GroupsForEntityReply)(nil),              // 42: pb.GroupsForEntityReply
+		(*PluginEnvReply)(nil),                    // 43: pb.PluginEnvReply
+		(*GeneratePasswordFromPolicyRequest)(nil), // 44: pb.GeneratePasswordFromPolicyRequest
+		(*GeneratePasswordFromPolicyReply)(nil),   // 45: pb.GeneratePasswordFromPolicyReply
+		(*Connection)(nil),                        // 46: pb.Connection
+		nil,                                       // 47: pb.Request.HeadersEntry
+		nil,                                       // 48: pb.Auth.MetadataEntry
+		nil,                                       // 49: pb.TokenEntry.MetaEntry
+		nil,                                       // 50: pb.Response.HeadersEntry
+		nil,                                       // 51: pb.SetupArgs.ConfigEntry
+		(*logical.Alias)(nil),                     // 52: logical.Alias
+		(*timestamp.Timestamp)(nil),               // 53: google.protobuf.Timestamp
+		(*logical.Entity)(nil),                    // 54: logical.Entity
+		(*logical.Group)(nil),                     // 55: logical.Group
+		(*logical.PluginEnvironment)(nil),         // 56: logical.PluginEnvironment
+	}
+)
+
 var file_sdk_plugin_pb_backend_proto_depIDxs = []int32{
 	8,  // 0: pb.Request.secret:type_name -> pb.Secret
 	5,  // 1: pb.Request.auth:type_name -> pb.Auth
@@ -4370,8 +4374,10 @@ func file_sdk_plugin_pb_backend_proto_init() {
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
+var (
+	_ context.Context
+	_ grpc.ClientConnInterface
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
@@ -4538,30 +4544,36 @@ type BackendServer interface {
 }
 
 // UnimplementedBackendServer can be embedded to have forward compatible implementations.
-type UnimplementedBackendServer struct {
-}
+type UnimplementedBackendServer struct{}
 
 func (*UnimplementedBackendServer) HandleRequest(context.Context, *HandleRequestArgs) (*HandleRequestReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HandleRequest not implemented")
 }
+
 func (*UnimplementedBackendServer) SpecialPaths(context.Context, *Empty) (*SpecialPathsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SpecialPaths not implemented")
 }
+
 func (*UnimplementedBackendServer) HandleExistenceCheck(context.Context, *HandleExistenceCheckArgs) (*HandleExistenceCheckReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HandleExistenceCheck not implemented")
 }
+
 func (*UnimplementedBackendServer) Cleanup(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Cleanup not implemented")
 }
+
 func (*UnimplementedBackendServer) InvalidateKey(context.Context, *InvalidateKeyArgs) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvalidateKey not implemented")
 }
+
 func (*UnimplementedBackendServer) Setup(context.Context, *SetupArgs) (*SetupReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Setup not implemented")
 }
+
 func (*UnimplementedBackendServer) Initialize(context.Context, *InitializeArgs) (*InitializeReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
 }
+
 func (*UnimplementedBackendServer) Type(context.Context, *Empty) (*TypeReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
 }
@@ -4818,18 +4830,20 @@ type StorageServer interface {
 }
 
 // UnimplementedStorageServer can be embedded to have forward compatible implementations.
-type UnimplementedStorageServer struct {
-}
+type UnimplementedStorageServer struct{}
 
 func (*UnimplementedStorageServer) List(context.Context, *StorageListArgs) (*StorageListReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
+
 func (*UnimplementedStorageServer) Get(context.Context, *StorageGetArgs) (*StorageGetReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
+
 func (*UnimplementedStorageServer) Put(context.Context, *StoragePutArgs) (*StoragePutReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Put not implemented")
 }
+
 func (*UnimplementedStorageServer) Delete(context.Context, *StorageDeleteArgs) (*StorageDeleteReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
@@ -5138,42 +5152,52 @@ type SystemViewServer interface {
 }
 
 // UnimplementedSystemViewServer can be embedded to have forward compatible implementations.
-type UnimplementedSystemViewServer struct {
-}
+type UnimplementedSystemViewServer struct{}
 
 func (*UnimplementedSystemViewServer) DefaultLeaseTTL(context.Context, *Empty) (*TTLReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DefaultLeaseTTL not implemented")
 }
+
 func (*UnimplementedSystemViewServer) MaxLeaseTTL(context.Context, *Empty) (*TTLReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MaxLeaseTTL not implemented")
 }
+
 func (*UnimplementedSystemViewServer) Tainted(context.Context, *Empty) (*TaintedReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Tainted not implemented")
 }
+
 func (*UnimplementedSystemViewServer) CachingDisabled(context.Context, *Empty) (*CachingDisabledReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CachingDisabled not implemented")
 }
+
 func (*UnimplementedSystemViewServer) ReplicationState(context.Context, *Empty) (*ReplicationStateReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReplicationState not implemented")
 }
+
 func (*UnimplementedSystemViewServer) ResponseWrapData(context.Context, *ResponseWrapDataArgs) (*ResponseWrapDataReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResponseWrapData not implemented")
 }
+
 func (*UnimplementedSystemViewServer) MlockEnabled(context.Context, *Empty) (*MlockEnabledReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MlockEnabled not implemented")
 }
+
 func (*UnimplementedSystemViewServer) LocalMount(context.Context, *Empty) (*LocalMountReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LocalMount not implemented")
 }
+
 func (*UnimplementedSystemViewServer) EntityInfo(context.Context, *EntityInfoArgs) (*EntityInfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EntityInfo not implemented")
 }
+
 func (*UnimplementedSystemViewServer) PluginEnv(context.Context, *Empty) (*PluginEnvReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PluginEnv not implemented")
 }
+
 func (*UnimplementedSystemViewServer) GroupsForEntity(context.Context, *EntityInfoArgs) (*GroupsForEntityReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GroupsForEntity not implemented")
 }
+
 func (*UnimplementedSystemViewServer) GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GeneratePasswordFromPolicy not implemented")
 }

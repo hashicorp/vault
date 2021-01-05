@@ -8,6 +8,9 @@ package vault
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	forwarding "github.com/hashicorp/vault/helper/forwarding"
 	grpc "google.golang.org/grpc"
@@ -15,8 +18,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -587,17 +588,20 @@ func file_vault_request_forwarding_service_proto_rawDescGZIP() []byte {
 	return file_vault_request_forwarding_service_proto_rawDescData
 }
 
-var file_vault_request_forwarding_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_vault_request_forwarding_service_proto_goTypes = []interface{}{
-	(*EchoRequest)(nil),                 // 0: vault.EchoRequest
-	(*EchoReply)(nil),                   // 1: vault.EchoReply
-	(*NodeInformation)(nil),             // 2: vault.NodeInformation
-	(*ClientKey)(nil),                   // 3: vault.ClientKey
-	(*PerfStandbyElectionInput)(nil),    // 4: vault.PerfStandbyElectionInput
-	(*PerfStandbyElectionResponse)(nil), // 5: vault.PerfStandbyElectionResponse
-	(*forwarding.Request)(nil),          // 6: forwarding.Request
-	(*forwarding.Response)(nil),         // 7: forwarding.Response
-}
+var (
+	file_vault_request_forwarding_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+	file_vault_request_forwarding_service_proto_goTypes  = []interface{}{
+		(*EchoRequest)(nil),                 // 0: vault.EchoRequest
+		(*EchoReply)(nil),                   // 1: vault.EchoReply
+		(*NodeInformation)(nil),             // 2: vault.NodeInformation
+		(*ClientKey)(nil),                   // 3: vault.ClientKey
+		(*PerfStandbyElectionInput)(nil),    // 4: vault.PerfStandbyElectionInput
+		(*PerfStandbyElectionResponse)(nil), // 5: vault.PerfStandbyElectionResponse
+		(*forwarding.Request)(nil),          // 6: forwarding.Request
+		(*forwarding.Response)(nil),         // 7: forwarding.Response
+	}
+)
+
 var file_vault_request_forwarding_service_proto_depIDxs = []int32{
 	2, // 0: vault.EchoRequest.node_info:type_name -> vault.NodeInformation
 	2, // 1: vault.EchoReply.node_info:type_name -> vault.NodeInformation
@@ -715,8 +719,10 @@ func file_vault_request_forwarding_service_proto_init() {
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
+var (
+	_ context.Context
+	_ grpc.ClientConnInterface
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
@@ -797,15 +803,16 @@ type RequestForwardingServer interface {
 }
 
 // UnimplementedRequestForwardingServer can be embedded to have forward compatible implementations.
-type UnimplementedRequestForwardingServer struct {
-}
+type UnimplementedRequestForwardingServer struct{}
 
 func (*UnimplementedRequestForwardingServer) ForwardRequest(context.Context, *forwarding.Request) (*forwarding.Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardRequest not implemented")
 }
+
 func (*UnimplementedRequestForwardingServer) Echo(context.Context, *EchoRequest) (*EchoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Echo not implemented")
 }
+
 func (*UnimplementedRequestForwardingServer) PerformanceStandbyElectionRequest(*PerfStandbyElectionInput, RequestForwarding_PerformanceStandbyElectionRequestServer) error {
 	return status.Errorf(codes.Unimplemented, "method PerformanceStandbyElectionRequest not implemented")
 }

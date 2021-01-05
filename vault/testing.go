@@ -370,7 +370,6 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 	if resp.IsError() {
 		t.Fatal(err)
 	}
-
 }
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
@@ -491,8 +490,10 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 	}
 }
 
-var testLogicalBackends = map[string]logical.Factory{}
-var testCredentialBackends = map[string]logical.Factory{}
+var (
+	testLogicalBackends    = map[string]logical.Factory{}
+	testCredentialBackends = map[string]logical.Factory{}
+)
 
 // This adds a credential backend for the test core. This needs to be
 // invoked before the test core is created.
@@ -876,7 +877,6 @@ func (c *TestClusterCore) Seal(t testing.T) {
 }
 
 func (c *TestClusterCore) stop() error {
-
 	c.Logger().Info("stopping vault test core")
 
 	if c.Listeners != nil {
@@ -1087,12 +1087,12 @@ func NewTestLogger(t testing.T) *TestLogger {
 	var logPath string
 	output := os.Stderr
 
-	var logDir = os.Getenv("VAULT_TEST_LOG_DIR")
+	logDir := os.Getenv("VAULT_TEST_LOG_DIR")
 	if logDir != "" {
 		logPath = filepath.Join(logDir, t.Name()+".log")
 		// t.Name may include slashes.
 		dir, _ := filepath.Split(logPath)
-		err := os.MkdirAll(dir, 0755)
+		err := os.MkdirAll(dir, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1178,7 +1178,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	if opts != nil && opts.TempDir != "" {
 		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
+			if err := os.MkdirAll(opts.TempDir, 0o700); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -1237,7 +1237,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 	testCluster.CACertPEM = pem.EncodeToMemory(caCertPEMBlock)
 	testCluster.CACertPEMFile = filepath.Join(testCluster.TempDir, "ca_cert.pem")
-	err = ioutil.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0755)
+	err = ioutil.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1250,7 +1250,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		Bytes: marshaledCAKey,
 	}
 	testCluster.CAKeyPEM = pem.EncodeToMemory(caKeyPEMBlock)
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "ca_key.pem"), testCluster.CAKeyPEM, 0755)
+	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "ca_key.pem"), testCluster.CAKeyPEM, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1341,11 +1341,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
 		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
-		err = ioutil.WriteFile(certFile, certInfoSlice[i].certPEM, 0755)
+		err = ioutil.WriteFile(certFile, certInfoSlice[i].certPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0755)
+		err = ioutil.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1370,10 +1370,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		tlsConfig.BuildNameToCertificate()
 		tlsConfigs = append(tlsConfigs, tlsConfig)
-		lns := []*TestListener{&TestListener{
-			Listener: tls.NewListener(ln, tlsConfig),
-			Address:  ln.Addr().(*net.TCPAddr),
-		},
+		lns := []*TestListener{
+			{
+				Listener: tls.NewListener(ln, tlsConfig),
+				Address:  ln.Addr().(*net.TCPAddr),
+			},
 		}
 		listeners = append(listeners, lns)
 		var handler http.Handler = http.NewServeMux()
@@ -1664,10 +1665,11 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	if err != nil {
 		t.Fatal(err)
 	}
-	tcc.Listeners = []*TestListener{&TestListener{
-		Listener: tls.NewListener(ln, tcc.TLSConfig),
-		Address:  ln.Addr().(*net.TCPAddr),
-	},
+	tcc.Listeners = []*TestListener{
+		{
+			Listener: tls.NewListener(ln, tcc.TLSConfig),
+			Address:  ln.Addr().(*net.TCPAddr),
+		},
 	}
 
 	tcc.Handler = http.NewServeMux()
@@ -1818,7 +1820,6 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 func (testCluster *TestCluster) setupClusterListener(
 	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
 	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
-
 	if coreConfig.ClusterAddr == "" {
 		return
 	}
@@ -1852,7 +1853,6 @@ func (testCluster *TestCluster) setupClusterListener(
 }
 
 func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
-
 	leader := tc.Cores[0]
 
 	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Handler)
@@ -1863,7 +1863,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 	tc.RootToken = root
 
 	// Write root token and barrier keys
-	err := ioutil.WriteFile(filepath.Join(tc.TempDir, "root_token"), []byte(root), 0755)
+	err := ioutil.WriteFile(filepath.Join(tc.TempDir, "root_token"), []byte(root), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1874,7 +1874,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			buf.WriteRune('\n')
 		}
 	}
-	err = ioutil.WriteFile(filepath.Join(tc.TempDir, "barrier_keys"), buf.Bytes(), 0755)
+	err = ioutil.WriteFile(filepath.Join(tc.TempDir, "barrier_keys"), buf.Bytes(), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1884,7 +1884,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			buf.WriteRune('\n')
 		}
 	}
-	err = ioutil.WriteFile(filepath.Join(tc.TempDir, "recovery_keys"), buf.Bytes(), 0755)
+	err = ioutil.WriteFile(filepath.Join(tc.TempDir, "recovery_keys"), buf.Bytes(), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2001,13 +2001,11 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			t.Fatal(err)
 		}
 	}
-
 }
 
 func (testCluster *TestCluster) getAPIClient(
 	t testing.T, opts *TestClusterOptions,
 	port int, tlsConfig *tls.Config) *api.Client {
-
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {

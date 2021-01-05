@@ -45,10 +45,12 @@ var (
 )
 
 // Verify FSM satisfies the correct interfaces
-var _ physical.Backend = (*FSM)(nil)
-var _ physical.Transactional = (*FSM)(nil)
-var _ raft.FSM = (*FSM)(nil)
-var _ raft.BatchingFSM = (*FSM)(nil)
+var (
+	_ physical.Backend       = (*FSM)(nil)
+	_ physical.Transactional = (*FSM)(nil)
+	_ raft.FSM               = (*FSM)(nil)
+	_ raft.BatchingFSM       = (*FSM)(nil)
+)
 
 type restoreCallback func(context.Context) error
 
@@ -90,7 +92,6 @@ type FSM struct {
 
 // NewFSM constructs a FSM using the given directory
 func NewFSM(path string, logger log.Logger) (*FSM, error) {
-
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
 	latestIndex := new(uint64)
@@ -141,7 +142,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
-	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -313,7 +314,6 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	var found bool
 
 	err := f.db.View(func(tx *bolt.Tx) error {
-
 		value := tx.Bucket(dataBucketName).Get([]byte(path))
 		if value != nil {
 			found = true

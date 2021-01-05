@@ -138,7 +138,6 @@ func TestSystemConfigCORS(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("DELETE FAILED -- bad: %#v", actual)
 	}
-
 }
 
 func TestSystemBackend_mounts(t *testing.T) {
@@ -337,7 +336,6 @@ func TestSystemBackend_mount(t *testing.T) {
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
 		t.Fatalf("bad: diff: %#v", diff)
 	}
-
 }
 
 func TestSystemBackend_mount_force_no_cache(t *testing.T) {
@@ -2348,7 +2346,6 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["format"] = "hex"
 	req.Data["bytes"] = maxBytes + 1
 	doRequest(req, true, "", 0)
-
 }
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
@@ -3315,11 +3312,11 @@ func passwordPoliciesFieldData(raw map[string]interface{}) *framework.FieldData 
 	return &framework.FieldData{
 		Raw: raw,
 		Schema: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the password policy.",
 			},
-			"policy": &framework.FieldSchema{
+			"policy": {
 				Type:        framework.TypeString,
 				Description: "The password policy",
 			},

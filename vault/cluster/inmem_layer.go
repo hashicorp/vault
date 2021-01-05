@@ -321,6 +321,7 @@ type inmemAddr struct {
 func (a inmemAddr) Network() string {
 	return "inmem"
 }
+
 func (a inmemAddr) String() string {
 	return a.addr
 }

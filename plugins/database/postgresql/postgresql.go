@@ -244,7 +244,6 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to start transaction: %w", err)
-
 	}
 	defer tx.Rollback()
 

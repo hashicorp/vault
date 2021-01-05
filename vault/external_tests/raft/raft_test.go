@@ -33,7 +33,7 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 			"userpass": credUserpass.Factory,
 		},
 	}
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(conf, &opts)
 	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
@@ -94,7 +94,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 func TestRaft_Retry_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -115,7 +115,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leaderAPI,
 			TLSConfig:     leaderCore.TLSConfig,
 			Retry:         true,
@@ -158,7 +158,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 func TestRaft_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -881,7 +881,7 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 func TestRaft_Join_InitStatus(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)

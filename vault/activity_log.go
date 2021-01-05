@@ -452,7 +452,6 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.EntityActivityLog)) error {
-
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -482,7 +481,6 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.TokenCount)) error {
-
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -1168,7 +1166,6 @@ func (a *ActivityLog) activeFragmentWorker() {
 			endOfMonth.Reset(delta)
 		}
 	}
-
 }
 
 type ActivityIntentLog struct {
@@ -1349,7 +1346,6 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
 
 	// TODO: check if current segment is full and should be written
-
 }
 
 type ClientCountResponse struct {

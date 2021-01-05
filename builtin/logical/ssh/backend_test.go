@@ -3,21 +3,21 @@ package ssh
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
-	"net"
-	"reflect"
-	"strconv"
-	"testing"
-	"time"
-
-	"golang.org/x/crypto/ssh"
-
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net"
+	"reflect"
+	"strconv"
 	"strings"
+	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
+
+	"golang.org/x/crypto/ssh"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -818,7 +818,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 		Steps: []logicaltest.TestStep{
 			configCaStep(caPublicKey, caPrivateKey),
 			testRoleWrite(t, "testcarole", roleOptions),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
 				ErrorOk:   expectError,
@@ -946,7 +946,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 			testRoleWrite(t, "testcarole", roleOptionsOldEntry),
 			testRoleWrite(t, "testcarole", roleOptionsUpgradedEntry),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
 				ErrorOk:   false,
@@ -956,7 +956,6 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 				},
 
 				Check: func(resp *logical.Response) error {
-
 					signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
 					if signedKey == "" {
 						return errors.New("no signed key in response")
@@ -991,7 +990,6 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 }
 
 func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
-
 	config := logical.TestBackendConfig()
 
 	b, err := Factory(context.Background(), config)
@@ -1004,13 +1002,12 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			logicaltest.TestStep{
+			{
 				Operation:       logical.ReadOperation,
 				Path:            "public_key",
 				Unauthenticated: true,
 
 				Check: func(resp *logical.Response) error {
-
 					key := string(resp.Data["http_raw_body"].([]byte))
 
 					if key != testCAPublicKey {
@@ -1027,7 +1024,6 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 }
 
 func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
-
 	config := logical.TestBackendConfig()
 
 	b, err := Factory(context.Background(), config)
@@ -1039,7 +1035,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Check: func(resp *logical.Response) error {
@@ -1051,13 +1047,12 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 				},
 			},
 
-			logicaltest.TestStep{
+			{
 				Operation:       logical.ReadOperation,
 				Path:            "public_key",
 				Unauthenticated: true,
 
 				Check: func(resp *logical.Response) error {
-
 					key := string(resp.Data["http_raw_body"].([]byte))
 
 					if key == "" {
@@ -1185,7 +1180,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 					"rsa": json.Number(strconv.FormatInt(4096, 10)),
 				},
 			}),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/weakkey",
 				Data: map[string]interface{}{
@@ -1207,7 +1202,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				},
 			}),
 			// Pass with 2048 key
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
@@ -1215,7 +1210,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				},
 			},
 			// Fail with 4096 key
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
@@ -1302,7 +1297,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 				"allow_user_key_ids":      false,
 				"allow_user_certificates": true,
 			}),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testing",
 				Data: map[string]interface{}{
@@ -1353,7 +1348,6 @@ func signCertificateStep(
 		Data:      requestParameters,
 
 		Check: func(resp *logical.Response) error {
-
 			serialNumber := resp.Data["serial_number"].(string)
 			if serialNumber == "" {
 				return errors.New("no serial number in response")
@@ -1378,7 +1372,6 @@ func signCertificateStep(
 
 func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration) error {
-
 	if cert.KeyId != keyID {
 		return fmt.Errorf("incorrect KeyId: %v, wanted %v", cert.KeyId, keyID)
 	}

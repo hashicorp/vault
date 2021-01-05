@@ -18,7 +18,7 @@ func (b *backend) pathConfigTidyRoletagBlacklist() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
-				Default: 15552000, //180d
+				Default: 15552000, // 180d
 				Description: `The amount of extra time that must have passed beyond the roletag
 expiration, before it is removed from the backend storage.
 Defaults to 4320h (180 days).`,
@@ -153,6 +153,7 @@ type tidyBlacklistRoleTagConfig struct {
 const pathConfigTidyRoletagBlacklistHelpSyn = `
 Configures the periodic tidying operation of the blacklisted role tag entries.
 `
+
 const pathConfigTidyRoletagBlacklistHelpDesc = `
 By default, the expired entries in the blacklist will be attempted to be removed
 periodically. This operation will look for expired items in the list and purges them.

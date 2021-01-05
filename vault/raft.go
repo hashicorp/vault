@@ -49,17 +49,20 @@ func (s *raftFollowerStates) update(nodeID string, appliedIndex uint64) {
 	s.followers[nodeID] = appliedIndex
 	s.l.Unlock()
 }
+
 func (s *raftFollowerStates) delete(nodeID string) {
 	s.l.RLock()
 	delete(s.followers, nodeID)
 	s.l.RUnlock()
 }
+
 func (s *raftFollowerStates) get(nodeID string) uint64 {
 	s.l.RLock()
 	index := s.followers[nodeID]
 	s.l.RUnlock()
 	return index
 }
+
 func (s *raftFollowerStates) minIndex() uint64 {
 	var min uint64 = math.MaxUint64
 	minFunc := func(a, b uint64) uint64 {

@@ -47,8 +47,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AgentCommand)(nil)
-var _ cli.CommandAutocomplete = (*AgentCommand)(nil)
+var (
+	_ cli.Command             = (*AgentCommand)(nil)
+	_ cli.CommandAutocomplete = (*AgentCommand)(nil)
+)
 
 type AgentCommand struct {
 	*BaseCommand
@@ -485,7 +487,7 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		var proxyVaultToken = !config.Cache.ForceAutoAuthToken
+		proxyVaultToken := !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
@@ -675,7 +677,6 @@ func (c *AgentCommand) Run(args []string) int {
 // the request header that is used for SSRF protection.
 func verifyRequestHeader(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
@@ -743,7 +744,7 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}

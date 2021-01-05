@@ -38,7 +38,6 @@ func WriteToStorage(t *testing.T, c *Core, path string, data []byte) {
 		Key:   path,
 		Value: data,
 	})
-
 	if err != nil {
 		t.Fatalf("Failed to write %s\nto %s\nerror: %v", data, path, err)
 	}

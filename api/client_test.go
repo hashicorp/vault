@@ -308,8 +308,8 @@ func TestParsingRateOnly(t *testing.T) {
 }
 
 func TestParsingErrorCase(t *testing.T) {
-	var incorrectFormat = "foobar"
-	var _, _, err = parseRateLimit(incorrectFormat)
+	incorrectFormat := "foobar"
+	_, _, err := parseRateLimit(incorrectFormat)
 	if err == nil {
 		t.Error("Expected error, found no error")
 	}

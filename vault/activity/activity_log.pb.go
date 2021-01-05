@@ -7,11 +7,12 @@
 package activity
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -357,16 +358,19 @@ func file_vault_activity_activity_log_proto_rawDescGZIP() []byte {
 	return file_vault_activity_activity_log_proto_rawDescData
 }
 
-var file_vault_activity_activity_log_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_vault_activity_activity_log_proto_goTypes = []interface{}{
-	(*EntityRecord)(nil),        // 0: activity.EntityRecord
-	(*LogFragment)(nil),         // 1: activity.LogFragment
-	(*EntityActivityLog)(nil),   // 2: activity.EntityActivityLog
-	(*TokenCount)(nil),          // 3: activity.TokenCount
-	(*LogFragmentResponse)(nil), // 4: activity.LogFragmentResponse
-	nil,                         // 5: activity.LogFragment.NonEntityTokensEntry
-	nil,                         // 6: activity.TokenCount.CountByNamespaceIDEntry
-}
+var (
+	file_vault_activity_activity_log_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+	file_vault_activity_activity_log_proto_goTypes  = []interface{}{
+		(*EntityRecord)(nil),        // 0: activity.EntityRecord
+		(*LogFragment)(nil),         // 1: activity.LogFragment
+		(*EntityActivityLog)(nil),   // 2: activity.EntityActivityLog
+		(*TokenCount)(nil),          // 3: activity.TokenCount
+		(*LogFragmentResponse)(nil), // 4: activity.LogFragmentResponse
+		nil,                         // 5: activity.LogFragment.NonEntityTokensEntry
+		nil,                         // 6: activity.TokenCount.CountByNamespaceIDEntry
+	}
+)
+
 var file_vault_activity_activity_log_proto_depIDxs = []int32{
 	0, // 0: activity.LogFragment.entities:type_name -> activity.EntityRecord
 	5, // 1: activity.LogFragment.non_entity_tokens:type_name -> activity.LogFragment.NonEntityTokensEntry

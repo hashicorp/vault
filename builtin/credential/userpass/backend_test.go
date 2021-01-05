@@ -2,12 +2,11 @@ package userpass
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
-
-	"crypto/tls"
 
 	"github.com/go-test/deep"
 	sockaddr "github.com/hashicorp/go-sockaddr"
@@ -78,7 +77,7 @@ func TestBackend_CRUD(t *testing.T) {
 	if diff := deep.Equal(resp.Data["token_policies"], []string{"foo"}); diff != nil {
 		t.Fatal(diff)
 	}
-	if diff := deep.Equal(resp.Data["token_bound_cidrs"], []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{localhostSockAddr}}); diff != nil {
+	if diff := deep.Equal(resp.Data["token_bound_cidrs"], []*sockaddr.SockAddrMarshaler{{localhostSockAddr}}); diff != nil {
 		t.Fatal(diff)
 	}
 
@@ -124,10 +123,10 @@ func TestBackend_CRUD(t *testing.T) {
 	if diff := deep.Equal(resp.Data["token_policies"], []string{"bar"}); diff != nil {
 		t.Fatal(diff)
 	}
-	if diff := deep.Equal(resp.Data["bound_cidrs"], []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{localhostSockAddr}}); diff != nil {
+	if diff := deep.Equal(resp.Data["bound_cidrs"], []*sockaddr.SockAddrMarshaler{{localhostSockAddr}}); diff != nil {
 		t.Fatal(diff)
 	}
-	if diff := deep.Equal(resp.Data["token_bound_cidrs"], []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{localhostSockAddr}}); diff != nil {
+	if diff := deep.Equal(resp.Data["token_bound_cidrs"], []*sockaddr.SockAddrMarshaler{{localhostSockAddr}}); diff != nil {
 		t.Fatal(diff)
 	}
 }
@@ -221,7 +220,6 @@ func TestBackend_passwordUpdate(t *testing.T) {
 			testAccStepLogin(t, "web", "newpassword", []string{"default", "foo"}),
 		},
 	})
-
 }
 
 func TestBackend_policiesUpdate(t *testing.T) {
@@ -247,7 +245,6 @@ func TestBackend_policiesUpdate(t *testing.T) {
 			testAccStepLogin(t, "web", "password", []string{"bar", "default", "foo"}),
 		},
 	})
-
 }
 
 func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestStep {
@@ -382,7 +379,7 @@ func TestBackend_UserUpgrade(t *testing.T) {
 		Policies:   []string{"foo"},
 		TTL:        time.Second,
 		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 	}
 
 	entry, err := logical.StorageEntryJSON("user/foo", foo)
@@ -403,12 +400,12 @@ func TestBackend_UserUpgrade(t *testing.T) {
 		Policies:   []string{"foo"},
 		TTL:        time.Second,
 		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 		TokenParams: tokenutil.TokenParams{
 			TokenPolicies:   []string{"foo"},
 			TokenTTL:        time.Second,
 			TokenMaxTTL:     time.Second,
-			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 		},
 	}
 	if diff := deep.Equal(userEntry, exp); diff != nil {

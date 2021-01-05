@@ -115,7 +115,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(dhpath, mPubKey, 0600); err != nil {
+	if err := ioutil.WriteFile(dhpath, mPubKey, 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote dh param file", "path", dhpath)
@@ -224,7 +224,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 
 	// Get a token
 	jwtToken, _ := GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
@@ -335,7 +335,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	// Get another token to test the backend pushing the need to authenticate
 	// to the handler
 	jwtToken, _ = GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

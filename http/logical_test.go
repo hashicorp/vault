@@ -470,5 +470,4 @@ func TestLogical_ShouldParseForm(t *testing.T) {
 			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
 		}
 	}
-
 }

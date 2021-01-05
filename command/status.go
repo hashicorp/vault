@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*StatusCommand)(nil)
-var _ cli.CommandAutocomplete = (*StatusCommand)(nil)
+var (
+	_ cli.Command             = (*StatusCommand)(nil)
+	_ cli.CommandAutocomplete = (*StatusCommand)(nil)
+)
 
 type StatusCommand struct {
 	*BaseCommand

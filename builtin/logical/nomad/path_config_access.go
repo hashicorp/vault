@@ -14,31 +14,31 @@ func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
-			"address": &framework.FieldSchema{
+			"address": {
 				Type:        framework.TypeString,
 				Description: "Nomad server address",
 			},
 
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
 
-			"max_token_name_length": &framework.FieldSchema{
+			"max_token_name_length": {
 				Type:        framework.TypeInt,
 				Description: "Max length for name of generated Nomad tokens",
 			},
-			"ca_cert": &framework.FieldSchema{
+			"ca_cert": {
 				Type: framework.TypeString,
 				Description: `CA certificate to use when verifying Nomad server certificate,
 must be x509 PEM encoded.`,
 			},
-			"client_cert": &framework.FieldSchema{
+			"client_cert": {
 				Type: framework.TypeString,
 				Description: `Client certificate used for Nomad's TLS communication,
 must be x509 PEM encoded and if this is set you need to also set client_key.`,
 			},
-			"client_key": &framework.FieldSchema{
+			"client_key": {
 				Type: framework.TypeString,
 				Description: `Client key used for Nomad's TLS communication,
 must be x509 PEM encoded and if this is set you need to also set client_cert.`,

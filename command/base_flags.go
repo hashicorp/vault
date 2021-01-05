@@ -668,7 +668,7 @@ func (s *stringMapValue) Hidden() bool     { return s.hidden }
 
 func mapToKV(m map[string]string) string {
 	list := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		list = append(list, k)
 	}
 	sort.Strings(list)

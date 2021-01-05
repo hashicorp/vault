@@ -34,7 +34,7 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 1: %s", err)
 	}
-	err = ioutil.WriteFile(pubFiles[0], pub1Bytes, 0755)
+	err = ioutil.WriteFile(pubFiles[0], pub1Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 1 to temp file: %s", err)
 	}
@@ -42,7 +42,7 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 2: %s", err)
 	}
-	err = ioutil.WriteFile(pubFiles[1], pub2Bytes, 0755)
+	err = ioutil.WriteFile(pubFiles[1], pub2Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
@@ -50,11 +50,11 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 3: %s", err)
 	}
-	err = ioutil.WriteFile(pubFiles[2], pub3Bytes, 0755)
+	err = ioutil.WriteFile(pubFiles[2], pub3Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
 	}
-	err = ioutil.WriteFile(pubFiles[3], []byte(pgpkeys.TestAAPubKey1), 0755)
+	err = ioutil.WriteFile(pubFiles[3], []byte(pgpkeys.TestAAPubKey1), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing aa pub key 1 to temp file: %s", err)
 	}
@@ -97,7 +97,6 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	backupKeys map[string][]string,
 	backupKeysB64 map[string][]string,
 	core *vault.Core) {
-
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(pgpkeys.TestPrivKey1)
 	if err != nil {

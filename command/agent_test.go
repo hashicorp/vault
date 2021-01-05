@@ -318,7 +318,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	t.Logf("config: %s", conf)
 
 	jwtToken, _ := agent.GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
@@ -357,7 +357,7 @@ auto_auth {
 `
 
 	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
-	if err := ioutil.WriteFile(conf, []byte(config), 0600); err != nil {
+	if err := ioutil.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test config", "path", conf)
@@ -781,7 +781,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0600); err != nil {
+				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				templatePaths = append(templatePaths, fileName)
@@ -912,7 +912,7 @@ auto_auth {
 
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0600); err != nil {
+				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -1168,6 +1168,7 @@ var templates = []string{
 {{- if .Data.data.password }}"password":"{{ .Data.data.password }}"{{- end }}}
 {{- end }}`,
 }
+
 var rendered = []string{
 	`{"secret": "other","username":"barstuff","password":"zap"}`,
 	`{"secret": "myapp","username":"bar","password":"zap"}`,
@@ -1182,6 +1183,7 @@ func templateContents(seed int) string {
 	index := seed % len(templates)
 	return templates[index]
 }
+
 func templateRendered(seed int) string {
 	index := seed % len(templates)
 	return rendered[index]

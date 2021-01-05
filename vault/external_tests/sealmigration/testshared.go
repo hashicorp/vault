@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping"
@@ -15,8 +18,6 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
-	"testing"
-	"time"
 )
 
 const (
@@ -32,7 +33,6 @@ const (
 )
 
 func ParamTestSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) {
-
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t, 0)
 	defer func() {
@@ -64,7 +64,6 @@ func ParamTestSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logg
 }
 
 func ParamTestSealMigrationShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) {
-
 	// Initialize the backend using shamir
 	cluster, _ := initializeShamir(t, logger, storage, basePort)
 	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
@@ -149,7 +148,6 @@ func ParamTestSealMigrationShamirToTransit_Post14(t *testing.T, logger hclog.Log
 
 func ParamTestSealMigration_TransitToTransit(t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int) {
-
 	// Create the transit server.
 	tss1 := sealhelper.NewTransitSealServer(t, 0)
 	defer func() {
@@ -192,11 +190,10 @@ func ParamTestSealMigration_TransitToTransit(t *testing.T, logger hclog.Logger,
 
 func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int,
 	tss *sealhelper.TransitSealServer, sealFunc func() vault.Seal, rootToken string, recoveryKeys [][]byte) {
-
-	var baseClusterPort = basePort + 10
+	baseClusterPort := basePort + 10
 
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{
+	opts := vault.TestClusterOptions{
 		Logger:                logger.Named("migrateFromTransitToShamir"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
@@ -265,10 +262,10 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 }
 
 func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int, tss *sealhelper.TransitSealServer, rootToken string, recoveryKeys [][]byte) func() vault.Seal {
-	var baseClusterPort = basePort + 10
+	baseClusterPort := basePort + 10
 
-	var conf = vault.CoreConfig{}
-	var opts = vault.TestClusterOptions{
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
 		Logger:                logger.Named("migrateFromShamirToTransit"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
@@ -349,7 +346,6 @@ func validateMigration(t *testing.T, storage teststorage.ReusableStorage,
 
 func migratePost14(t *testing.T, storage teststorage.ReusableStorage, cluster *vault.TestCluster,
 	opts *vault.TestClusterOptions, unsealKeys [][]byte) int {
-
 	cluster.Logger = cluster.Logger.Named("migration")
 	// Restart each follower with the new config, and migrate.
 	for i := 1; i < len(cluster.Cores); i++ {
@@ -558,11 +554,11 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int) (*vault.TestCluster, *vault.TestClusterOptions) {
 	t.Helper()
 
-	var baseClusterPort = basePort + 10
+	baseClusterPort := basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
-	var opts = vault.TestClusterOptions{
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
 		Logger:                logger.Named("initializeShamir"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
@@ -609,11 +605,11 @@ func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.Reu
 // runShamir uses a pre-populated backend storage with Shamir.
 func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int, rootToken string, barrierKeys [][]byte) {
 	t.Helper()
-	var baseClusterPort = basePort + 10
+	baseClusterPort := basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
-	var opts = vault.TestClusterOptions{
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
 		Logger:                logger.Named("runShamir"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
@@ -678,11 +674,11 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	tss *sealhelper.TransitSealServer, sealKeyName string) (*vault.TestCluster, *vault.TestClusterOptions) {
 	t.Helper()
 
-	var baseClusterPort = basePort + 10
+	baseClusterPort := basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
-	var opts = vault.TestClusterOptions{
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
 		Logger:                logger.Named("initializeTransit"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
@@ -730,12 +726,11 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 
 func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage,
 	basePort int, rootToken string, sealFunc func() vault.Seal) {
-
-	var baseClusterPort = basePort + 10
+	baseClusterPort := basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
-	var opts = vault.TestClusterOptions{
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
 		Logger:                logger.Named("runTransit"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
@@ -811,7 +806,7 @@ func joinRaftFollowers(t *testing.T, cluster *vault.TestCluster, useStoredKeys b
 	vault.TestWaitActive(t, leader.Core)
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leader.Client.Address(),
 			TLSConfig:     leader.TLSConfig,
 		},
