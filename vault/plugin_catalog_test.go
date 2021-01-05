@@ -3,8 +3,9 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,8 +13,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 func TestPluginCatalog_CRUD(t *testing.T) {
@@ -130,8 +129,6 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 
 	if len(plugins) != len(builtinKeys) {
-		log.Printf("%s", builtinKeys)
-		log.Printf("%s", plugins)
 		t.Fatalf("unexpected length of plugin list, expected %d, got %d", len(builtinKeys), len(plugins))
 	}
 

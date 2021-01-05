@@ -2078,6 +2078,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mysql-aurora-database-plugin",
 		"mysql-rds-database-plugin",
 		"mysql-legacy-database-plugin",
+
 		"cassandra-database-plugin",
 		"couchbase-database-plugin",
 		"elasticsearch-database-plugin",
