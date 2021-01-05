@@ -935,11 +935,7 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 		return nil, errors.New("unable to read enough random bytes to fill gcm nonce")
 	}
 
-	// Amortize metrics overhead.  Every 32 encryptions probabilistically (taking advantage of the nonce as a free RNG),
-	// increment the estimated encryptions.
-	if nonce[0]&31 == 0 {
-		metrics.IncrCounterWithLabels(barrierEncryptsMetric, 32, termLabel(term))
-	}
+	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	// Seal the output
 	switch b.currentAESGCMVersionByte {
