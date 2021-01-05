@@ -34,6 +34,7 @@ export default [
           'oracle',
           'postgresql',
           'redshift',
+          'snowflake',
         ],
       },
       'gcp',
