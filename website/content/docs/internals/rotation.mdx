@@ -68,7 +68,7 @@ of encryptions by summing the following:
 * The `merkle.flushDirty.num_pages` metric.
 * The WAL index.
 
-The simplest strategy may be  to use those metrics to determine a frequency of 
+The simplest strategy may be to use those metrics to determine a frequency of 
 rotation and make that part of the operational process.  For example, if one 
 determines that the estimated rate is 40 million operations per day, then 
 rotating the key every three months is sufficient.  
