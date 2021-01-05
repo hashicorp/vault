@@ -136,7 +136,20 @@ and consider if they're appropriate for your deployment.
 
   - `extraEnvironmentVars` (`dictionary: {}`) - Extra environment variables to set in the injector deployment.
 
-  - `affinity` (`string: null`) - Affinity Settings for injector pods. This should be a multi-line string matching the affinity section of a PodSpec.
+  - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
+
+    ```yaml
+    # Recommended default server affinity:
+    affinity: |
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+          matchLabels:
+            app: {{ template "vault.name" . }}
+            release: "{{ .Release.Name }}"
+            component: injector
+          topologyKey: kubernetes.io/hostname
+    ```
 
   - `tolerations` (`string: null`) - Toleration Settings for injector pods. This should be a multi-line string matching the Toleration array in a PodSpec.
 
