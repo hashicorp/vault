@@ -156,7 +156,7 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string : ""`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
+  - `failurePolicy` (`string: "Ignore"`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected. When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
     When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
 
   - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
