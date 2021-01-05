@@ -3364,7 +3364,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	me := b.Core.router.MatchingMountEntry(ctx, path)
 	if me == nil {
 		// To be consistent with the case no client token was supplied, go through the motions of verifying authorization
-		err = b.verifyAuthorizedMountAccess(ctx, req, "")
+		_, err = b.verifyAuthorizedMountAccess(ctx, req)
 		if err != nil {
 			return errResp, err
 		}
@@ -3392,33 +3392,34 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		fullMountPath = ns.Path + me.Namespace().Path + me.Path
 	}
 
-	err = b.verifyAuthorizedMountAccess(ctx, req, fullMountPath)
+	acl, err := b.verifyAuthorizedMountAccess(ctx, req)
 	if err != nil {
 		return errResp, err
+	}
+
+	if !hasMountAccess(ctx, acl, fullMountPath) {
+		return errResp, logical.ErrPermissionDenied
 	}
 
 	return resp, nil
 }
 
-func (b *SystemBackend) verifyAuthorizedMountAccess(ctx context.Context, req *logical.Request, fullMountPath string) error {
+func (b *SystemBackend) verifyAuthorizedMountAccess(ctx context.Context, req *logical.Request) (*ACL, error) {
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if entity != nil && entity.Disabled {
 		b.logger.Warn("permission denied as the entity on the token is disabled")
-		return logical.ErrPermissionDenied
+		return nil, logical.ErrPermissionDenied
 	}
 	if te != nil && te.EntityID != "" && entity == nil {
 		b.logger.Warn("permission denied as the entity on the token is invalid")
-		return logical.ErrPermissionDenied
+		return nil, logical.ErrPermissionDenied
 	}
 
-	if !hasMountAccess(ctx, acl, fullMountPath) {
-		return logical.ErrPermissionDenied
-	}
-	return nil
+	return acl, nil
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
