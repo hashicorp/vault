@@ -68,7 +68,7 @@ and consider if they're appropriate for your deployment.
 
       - `tag` (`string: "0.4"`) - The tag of the Docker image for the Leader Election. **This should be pinned to a specific version when running in production.**
     
-    - `ttl` - The frequency in which leader elections are performed in the Vault Agent Injector cluster.
+    - `ttl` (`string: "60s"`) - The frequency in which leader elections are performed in the Vault Agent Injector cluster.
 
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
