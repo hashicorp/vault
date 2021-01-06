@@ -109,6 +109,7 @@ export default [
       'init',
       'internal-counters',
       'internal-specs-openapi',
+      'internal-ui-feature',
       'internal-ui-mounts',
       'key-status',
       'leader',
