@@ -1,4 +1,3 @@
-import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
