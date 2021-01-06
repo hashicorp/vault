@@ -9,7 +9,7 @@
     {{yield}}
   </div>
 {{else}}
-  <div class="selectable-card no-flex is-rounded">
+  <div class="selectable-card is-rounded {{if actionCard "no-flex"}}">
     {{#unless actionCard}}
       <div>
         <h2 class="title-number">{{format-number total}}</h2>
@@ -29,6 +29,7 @@
         </LinkTo>
       </div>
       <p class="has-text-grey is-size-8">{{subText}}</p>
+      <h2 class="title-number">{{format-number total}}</h2>
     {{/unless}}
     {{yield}}
   </div>

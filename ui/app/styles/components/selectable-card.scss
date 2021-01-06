@@ -9,6 +9,10 @@
     padding: $spacing-l;
     display: initial;
     line-height: initial;
+
+    .title-number {
+      padding-top: $spacing-s;
+    }
   }
 
   &:hover {
