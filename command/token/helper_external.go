@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/cli/safeexec"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -127,6 +128,12 @@ func ExecScript(script string) (*exec.Cmd, error) {
 	if other := os.Getenv("SHELL"); other != "" {
 		shell = other
 	}
-	cmd := exec.Command(shell, flag, script)
+
+	safeSSHExecutable, err := safeexec.LookPath(shell)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command(safeSSHExecutable, flag, script)
 	return cmd, nil
 }

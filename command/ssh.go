@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/cli/safeexec"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
@@ -482,7 +483,13 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 	// Add extra user defined ssh arguments
 	args = append(args, sshArgs...)
 
-	cmd := exec.Command(c.flagSSHExecutable, args...)
+	safeSSHExecutable, err := safeexec.LookPath(c.flagSSHExecutable)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("failed to find ssh executable: %s", err))
+		return 2
+	}
+
+	cmd := exec.Command(safeSSHExecutable, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -570,7 +577,13 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 	// Add the rest of the ssh args appended by the user
 	args = append(args, sshArgs...)
 
-	cmd = exec.Command(sshCmd, args...)
+	safeSSHExecutable, err := safeexec.LookPath(sshCmd)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("failed to find ssh executable: %s", err))
+		return 2
+	}
+
+	cmd = exec.Command(safeSSHExecutable, args...)
 	cmd.Env = env
 
 	cmd.Stdin = os.Stdin
@@ -643,7 +656,13 @@ func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []stri
 	// Add extra user defined ssh arguments
 	args = append(args, sshArgs...)
 
-	cmd := exec.Command(c.flagSSHExecutable, args...)
+	safeSSHExecutable, err := safeexec.LookPath(c.flagSSHExecutable)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("failed to find ssh executable: %s", err))
+		return 2
+	}
+
+	cmd := exec.Command(safeSSHExecutable, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
