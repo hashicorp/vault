@@ -20,8 +20,8 @@ const (
 
 	defaultNamespace = "test"
 
-	defaultHost = "127.0.0.1"
-	defaultPort = 3000
+	defaultHostname = "127.0.0.1"
+	defaultPort     = 3000
 
 	keyNotFoundError = "Key not found"
 )
@@ -68,7 +68,7 @@ func buildAerospikeClient(conf map[string]string, policy *aero.ClientPolicy) (*a
 	if !ok || hostListString == "" {
 		hostname, ok := conf["hostname"]
 		if !ok || hostname == "" {
-			hostname = defaultHost
+			hostname = defaultHostname
 		}
 
 		portString, ok := conf["port"]
