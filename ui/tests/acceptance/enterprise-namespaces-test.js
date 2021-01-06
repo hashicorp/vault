@@ -1,4 +1,4 @@
-import { click, settled, visit, pauseTest } from '@ember/test-helpers';
+import { click, settled, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -16,6 +16,7 @@ const createNS = async name => {
 const switchToNS = async name => {
   await click('[data-test-namespace-toggle]');
   await settled();
+  // visit the URL instead of using the toggle because it refreshes the page and Qunit doesn't like that
   let url = `/vault/secrets?namespace=${name}`;
   await visit(url);
 };
