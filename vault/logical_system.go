@@ -3376,6 +3376,12 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 
 	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
 	if err != nil {
+		// Go through the motions of verifying authorization, as above
+		_, err = b.verifyAuthorizedMountAccess(ctx, req)
+		if err != nil {
+			return errResp, err
+		}
+
 		return nil, err
 	}
 	if filtered {
