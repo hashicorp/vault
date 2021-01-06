@@ -191,23 +191,28 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	return parsedBundle, nil
 }
 
-// GeneratePrivateKey generates a private key with the specified type and key bits
-// GeneratePrivateKey takes in an optional list of io.Readers to use when generating
-// keys. This list will be ignored unless it has one specific io.Reader in it.
-// The entropyReader argument is variadic only because we require it to be optional so
-// as not to change existing behavior upstream.
-func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader ...io.Reader) error {
+// GeneratePrivateKey generates a private key with the specified type and key bits.
+func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer) error {
+	return generatePrivateKey(keyType, keyBits, container, nil)
+}
+
+// GeneratePrivateKeyWithEntropy generates a private key with the specified type and key bits.
+// GeneratePrivateKeyWithEntropy uses randomness from the entropyReader to generate the private key.
+func GeneratePrivateKeyWithEntropy(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error {
+	return generatePrivateKey(keyType, keyBits, container, entropyReader)
+}
+
+// generatePrivateKey generates a private key with the specified type and key bits.
+// generatePrivateKey uses randomness from the entropyReader to generate the private key.
+func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error {
 	var err error
 	var privateKeyType PrivateKeyType
 	var privateKeyBytes []byte
 	var privateKey crypto.Signer
 
-	var randReader io.Reader
-	// check if randReader is initialized -- if not, then just use rand.Reader
-	if len(entropyReader) == 1 {
-		randReader = entropyReader[0]
-	} else {
-		randReader = rand.Reader
+	var randReader io.Reader = rand.Reader
+	if entropyReader != nil {
+		randReader = entropyReader
 	}
 
 	switch keyType {
@@ -251,7 +256,17 @@ func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 
 // GenerateSerialNumber generates a serial number suitable for a certificate
 func GenerateSerialNumber() (*big.Int, error) {
-	serial, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	return generateSerialNumber(rand.Reader)
+}
+
+// GenerateSerialNumberWithEntropy generates a serial number suitable
+// for a certificate with custom entropy.
+func GenerateSerialNumberWithEntropy(randReader io.Reader) (*big.Int, error) {
+	return generateSerialNumber(randReader)
+}
+
+func generateSerialNumber(randReader io.Reader) (*big.Int, error) {
+	serial, err := rand.Int(randReader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error generating serial number: %v", err)}
 	}
@@ -503,11 +518,19 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	return nil
 }
 
-// CreateCertificate takes in an optional list of io.Readers to use when generating
-// keys. This list will be ignored unless it has one specific io.Reader in it.
-// The entropyReader argument is variadic only because we require it to be optional so
-// as not to change existing behavior upstream.
-func CreateCertificate(data *CreationBundle, randReader ...io.Reader) (*ParsedCertBundle, error) {
+// CreateCertificate uses CreationBundle and the default rand.Reader to
+// generate a cert/keypair.
+func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
+	return createCertificate(data, rand.Reader)
+}
+
+// CreateCertificateWithEntropy uses CreationBundle and a custom
+// io.Reader for randomness to generate a cert/keypair.
+func CreateCertificateWithEntropy(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+	return createCertificate(data, randReader)
+}
+
+func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
 
@@ -516,9 +539,9 @@ func CreateCertificate(data *CreationBundle, randReader ...io.Reader) (*ParsedCe
 		return nil, err
 	}
 
-	if err := GeneratePrivateKey(data.Params.KeyType,
+	if err := generatePrivateKey(data.Params.KeyType,
 		data.Params.KeyBits,
-		result, randReader...); err != nil {
+		result, randReader); err != nil {
 		return nil, err
 	}
 
@@ -583,7 +606,7 @@ func CreateCertificate(data *CreationBundle, randReader ...io.Reader) (*ParsedCe
 		caCert := data.SigningBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
-		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+		certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
 	} else {
 		// Creating a self-signed root
 		if data.Params.MaxPathLength == 0 {
@@ -602,7 +625,7 @@ func CreateCertificate(data *CreationBundle, randReader ...io.Reader) (*ParsedCe
 
 		certTemplate.AuthorityKeyId = subjKeyID
 		certTemplate.BasicConstraintsValid = true
-		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
+		certBytes, err = x509.CreateCertificate(randReader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
 	}
 
 	if err != nil {
@@ -634,17 +657,25 @@ func CreateCertificate(data *CreationBundle, randReader ...io.Reader) (*ParsedCe
 
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 
-// CreateCSR takes in an optional list of io.Readers to use when generating
-// keys. This list will be ignored unless it has one specific io.Reader in it.
-// The entropyReader argument is variadic only because we require it to be optional so
-// as not to change existing behavior upstream.
-func CreateCSR(data *CreationBundle, addBasicConstraints bool, randReader ...io.Reader) (*ParsedCSRBundle, error) {
+// CreateCSR creates a CSR with the default rand.Reader to
+// generate a cert/keypair.
+func CreateCSR(data *CreationBundle, addBasicConstraints bool) (*ParsedCSRBundle, error) {
+	return createCSR(data, addBasicConstraints, rand.Reader)
+}
+
+// CreateCSRWithEntropy creates a CSR with a custom io.Reader
+// for randomness to generate a cert/keypair.
+func CreateCSRWithEntropy(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
+	return createCSR(data, addBasicConstraints, randReader)
+}
+
+func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
 	var err error
 	result := &ParsedCSRBundle{}
 
-	if err := GeneratePrivateKey(data.Params.KeyType,
+	if err := generatePrivateKey(data.Params.KeyType,
 		data.Params.KeyBits,
-		result, randReader...); err != nil {
+		result, randReader); err != nil {
 		return nil, err
 	}
 
@@ -685,7 +716,7 @@ func CreateCSR(data *CreationBundle, addBasicConstraints bool, randReader ...io.
 		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 	}
 
-	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, result.PrivateKey)
+	csr, err := x509.CreateCertificateRequest(randReader, csrTemplate, result.PrivateKey)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
 	}
@@ -699,9 +730,21 @@ func CreateCSR(data *CreationBundle, addBasicConstraints bool, randReader ...io.
 	return result, nil
 }
 
-// Performs the heavy lifting of generating a certificate from a CSR.
+// SignCertificate performs the heavy lifting
+// of generating a certificate from a CSR.
 // Returns a ParsedCertBundle sans private keys.
 func SignCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
+	return signCertificate(data, rand.Reader)
+}
+
+// SignCertificateWithEntropy generates a certificate
+// from a CSR, using custom randomness from the randReader.
+// Returns a ParsedCertBundle sans private keys.
+func SignCertificateWithEntropy(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+	return signCertificate(data, randReader)
+}
+
+func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
 	switch {
 	case data == nil:
 		return nil, errutil.UserError{Err: "nil data bundle given to signCertificate"}
@@ -813,7 +856,7 @@ func SignCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
 
-	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
+	certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
 
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
