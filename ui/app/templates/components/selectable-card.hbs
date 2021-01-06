@@ -10,11 +10,24 @@
   </div>
 {{else}}
   <div class="selectable-card is-rounded">
-    <div>
-      <h2 class="title-number">{{format-number total}}</h2>
-      <h3 class="title is-5" data-test-selectable-card-title={{formattedCardTitle}}>{{formattedCardTitle}}</h3>
-      <p class="has-text-grey is-size-8">{{subText}}</p>
-    </div>
+    {{#unless actionCard}}
+      <div>
+        <h2 class="title-number">{{format-number total}}</h2>
+        <h3 class="title is-5" data-test-selectable-card-title={{formattedCardTitle}}>{{formattedCardTitle}}</h3>
+        <p class="has-text-grey is-size-8">{{subText}}</p>
+      </div>
+    {{else}}
+      <div class="is-flex-between is-fullwidth card-details" >
+        <h3 class="title is-5">{{formattedCardTitle}}</h3>
+        <LinkTo 
+          @route="vault.cluster.auth"
+          @class="has-icon-right is-ghost is-no-underline has-text-semibold"
+        >
+          {{actionText}}
+          <Icon @glyph="chevron-right" />
+        </LinkTo>
+      </div>
+    {{/unless}}
     {{yield}}
   </div>
 {{/if}}
