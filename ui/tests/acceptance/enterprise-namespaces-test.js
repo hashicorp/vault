@@ -1,4 +1,4 @@
-import { click, settled, fillIn, currentURL } from '@ember/test-helpers';
+import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -11,12 +11,6 @@ const shell = create(consoleClass);
 
 const createNS = async name => {
   await shell.runCommands(`write sys/namespaces/${name} -force`);
-};
-
-const switchToNS = async name => {
-  await click('[data-test-namespace-toggle]');
-  await click(`[data-test-namespace-link="${name}"]`);
-  await click('[data-test-namespace-toggle]');
 };
 
 module('Acceptance | Enterprise | namespaces', function(hooks) {
@@ -50,7 +44,18 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
       }
       // the namespace path will include all of the namespaces up to this point
       let targetNamespace = nses.slice(0, i + 1).join('/');
-      await switchToNS(targetNamespace);
+      let url = `/vault/secrets?namespace=${targetNamespace}`;
+      // check if namespace is in the toggle
+      await click('[data-test-namespace-toggle]');
+      await settled();
+      // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display
+      assert
+        .dom(`[data-test-namespace-link="${targetNamespace}"]`)
+        .hasText(ns, 'shows the namespace in the toggle component');
+      // close toggle
+      await click('[data-test-namespace-toggle]');
+      // because quint does not like page reloads, visiting url directing instead of clicking on namespace in toggle
+      await visit(url);
       await settled();
     }
     await logout.visit();
