@@ -43,7 +43,7 @@ The response will contain a token at `auth.client_token`:
 ```json
 {
   "auth": {
-    "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
+    "client_token": "abcd1234-7890...",
     "policies": ["admins"],
     "metadata": {
       "username": "mitchellh"
@@ -72,7 +72,7 @@ $ vault auth enable okta
 $ vault write auth/okta/config \
    base_url="okta.com" \
    org_name="dev-123456" \
-   api_token="00KzlTNCqDf0enpQKYSAYUt88KHqXax6dT11xEZz_g"
+   api_token="00abcxyz..."
 ```
 
 \*\*If no token is supplied, Vault will function, but only locally configured
