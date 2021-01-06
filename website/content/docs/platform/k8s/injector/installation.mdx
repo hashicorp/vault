@@ -85,7 +85,7 @@ The leader-elector sidecar in use is described in detail [here][k8s-blog]. For
 more information on configuring leader election, see the [Vault Helm
 leaderElector values](/docs/platform/k8s/helm/configuration#leaderelector).
 
-With Manual TLS,
+With Manual TLS and multiple replicas,
 [injector.leaderElector.enabled](/docs/platform/k8s/helm/configuration#enabled-2)
 should be set to `false` since leader-election is not necessary in this case.
 
