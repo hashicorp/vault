@@ -5,6 +5,12 @@
   padding: $spacing-l 0 $spacing-l $spacing-l;
   line-height: 0;
 
+  &.no-flex {
+    padding: $spacing-l;
+    display: initial;
+    line-height: initial;
+  }
+
   &:hover {
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
   }

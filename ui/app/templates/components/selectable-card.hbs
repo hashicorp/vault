@@ -9,7 +9,7 @@
     {{yield}}
   </div>
 {{else}}
-  <div class="selectable-card is-rounded">
+  <div class="selectable-card no-flex is-rounded">
     {{#unless actionCard}}
       <div>
         <h2 class="title-number">{{format-number total}}</h2>
@@ -20,13 +20,15 @@
       <div class="is-flex-between is-fullwidth card-details" >
         <h3 class="title is-5">{{formattedCardTitle}}</h3>
         <LinkTo 
-          @route="vault.cluster.auth"
+          @route={{actionTo}}
           @class="has-icon-right is-ghost is-no-underline has-text-semibold"
+          @query={{hash tab=queryParam}}
         >
           {{actionText}}
-          <Icon @glyph="chevron-right" />
+          {{#if actionText}}<Icon @glyph="chevron-right" />{{/if}}
         </LinkTo>
       </div>
+      <p class="has-text-grey is-size-8">{{subText}}</p>
     {{/unless}}
     {{yield}}
   </div>
