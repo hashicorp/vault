@@ -234,6 +234,7 @@ export default [
           'oracle',
           'postgresql',
           'redshift',
+          'snowflake',
           'custom',
         ],
       },
