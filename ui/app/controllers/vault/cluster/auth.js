@@ -1,4 +1,5 @@
 import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
@@ -15,7 +16,7 @@ export default Controller.extend({
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
 
-  get managedNamespaceChild() {
+  managedNamespaceChild: computed('namespaceQueryParam', function() {
     let fullParam = this.namespaceQueryParam;
     let split = fullParam.split('/');
     if (split.length > 1) {
@@ -23,7 +24,7 @@ export default Controller.extend({
       return `/${split.join('/')}`;
     }
     return '';
-  },
+  }),
 
   updateManagedNamespace: task(function*(value) {
     // debounce
@@ -37,7 +38,6 @@ export default Controller.extend({
   updateNamespace: task(function*(value) {
     // debounce
     yield timeout(500);
-    this.namespaceService.setNamespace(value, true);
     this.set('namespaceQueryParam', value);
   }).restartable(),
 });
