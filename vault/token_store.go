@@ -1306,7 +1306,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 
 	switch {
 	// It's any kind of expiring token with no lease, immediately delete it
-	case lt.IssueTime.IsZero():
+	case lt == nil:
 		tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, ts.core)
 		if err != nil {
 			return nil, err
