@@ -81,6 +81,41 @@ They do not forward service read or write requests until they are elected and be
 
 For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api/system/replication).
 
+## Primary and Secondary Cluster Compatibility
+
+### Storage engines
+
+There is no requirement that both clusters use the same storage engine.
+
+### Seals
+
+There is no requirement that both clusters use the same seal type, but see
+[sealwrap](/docs/enterprise/sealwrap#seal-wrap-and-replication) for the full
+details.
+
+Also note that enabling replication will modify the secondary seal.
+If the secondary uses an auto seal, its recovery configuration and keys
+will be replaced; if it uses shamir, its seal configuration and unseal
+keys will be replaced.  Here seal/recovery configuration means the number of
+seal/recovery key fragments and the required threshold of those
+fragments.
+
+| Primary seal | Secondary seal | Impact on secondary of enabling replication |
+| ------------ | -------------- | ------------------------------------------- |
+| Shamir       | Shamir         | Seal config and unseal keys replaced with primary's |
+| Shamir       | Auto           | Seal recovery config and recovery keys replaced with primary's seal config and unseal keys |
+| Auto         | Auto           | Seal recovery config and recovery keys replaced with primary's |
+| Auto         | Shamir         | Seal config and unseal keys replaced with primary's recovery seal config and recovery keys |
+
+### Vault versions
+
+Vault changes are designed and tested to ensure that the
+[upgrade instructions](/docs/upgrading#replication-installations) are viable, i.e.
+that a secondary can run a newer Vault version than its primary.
+
+That said, we do not recommend running replicated Vault clusters with different
+versions any longer than necessary to perform the upgrade.
+
 ## Internals
 
 Details on the internal design of the replication feature can be found in the
