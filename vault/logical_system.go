@@ -1602,15 +1602,14 @@ func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Requ
 			"ttl":          int64(0),
 		},
 	}
-	renewable, _ := leaseTimes.renewable()
-	resp.Data["renewable"] = renewable
+	resp.Data["renewable"] = leaseTimes.Renewable
 
 	if !leaseTimes.LastRenewalTime.IsZero() {
 		resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 	}
 	if !leaseTimes.ExpireTime.IsZero() {
 		resp.Data["expire_time"] = leaseTimes.ExpireTime
-		resp.Data["ttl"] = leaseTimes.ttl()
+		resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
 	}
 	return resp, nil
 }

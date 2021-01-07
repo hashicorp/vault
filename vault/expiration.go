@@ -59,7 +59,7 @@ const (
 
 type pendingInfo struct {
 	// A subset of the lease entry, cached in memory
-	cachedLeaseInfo *leaseEntry
+	cachedLeaseInfo minimalLeaseEntry
 	timer           *time.Timer
 }
 
@@ -116,10 +116,10 @@ type ExpirationManager struct {
 	testRegisterAuthFailure uberAtomic.Bool
 }
 
-type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
+type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *namespace.Namespace)
 
 // revokeIDFunc is invoked when a given ID is expired
-func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *leaseEntry) {
+func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		releasePermit := func() {}
 		if m.revokePermitPool != nil {
@@ -129,10 +129,10 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			m.logger.Trace("expiring lease; got permit pool")
 		}
 
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", le.namespace.ID}})
+		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", ns.ID}})
 
 		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
-		revokeCtx = namespace.ContextWithNamespace(revokeCtx, le.namespace)
+		revokeCtx = namespace.ContextWithNamespace(revokeCtx, ns)
 
 		go func() {
 			select {
@@ -145,12 +145,12 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 
 		select {
 		case <-m.quitCh:
-			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
 			releasePermit()
 			cancel()
 			return
 		case <-m.quitContext.Done():
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
 			releasePermit()
 			cancel()
 			return
@@ -158,7 +158,7 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 		}
 
 		m.coreStateLock.RLock()
-		err := m.Revoke(revokeCtx, le.LeaseID)
+		err := m.Revoke(revokeCtx, leaseID)
 		m.coreStateLock.RUnlock()
 		releasePermit()
 		cancel()
@@ -166,12 +166,12 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			return
 		}
 
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", le.namespace.ID}})
+		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", ns.ID}})
 
-		m.logger.Error("failed to revoke lease", "lease_id", le.LeaseID, "error", err)
+		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-	m.logger.Error("maximum revoke attempts reached", "lease_id", le.LeaseID)
+	m.logger.Error("maximum revoke attempts reached", "lease_id", leaseID)
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -1353,7 +1353,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 // the leaseID, rather than pushing that logic back into the token store.
 // As a special case, for a batch token it simply returns the information
 // encoded on it.
-func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logical.TokenEntry) (*leaseEntry, error) {
+func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logical.TokenEntry) (*leaseTimes, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times-by-token"}, time.Now())
 
 	if te == nil {
@@ -1362,10 +1362,9 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logi
 
 	if te.Type == logical.TokenTypeBatch {
 		issueTime := time.Unix(te.CreationTime, 0)
-		return &leaseEntry{
-			IssueTime:       issueTime,
-			ExpireTime:      issueTime.Add(te.TTL),
-			ClientTokenType: logical.TokenTypeBatch,
+		return &leaseTimes{
+			IssueTime:  issueTime,
+			ExpireTime: issueTime.Add(te.TTL),
 		}, nil
 	}
 
@@ -1392,15 +1391,22 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logi
 	return m.FetchLeaseTimes(ctx, leaseID)
 }
 
+type leaseTimes struct {
+	IssueTime       time.Time
+	ExpireTime      time.Time
+	LastRenewalTime time.Time
+	Renewable       bool
+}
+
 // FetchLeaseTimes is used to fetch the issue time, expiration time, and last
 // renewed time of a lease entry. It returns a leaseEntry itself, but with only
 // those values copied over.
-func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string) (*leaseEntry, error) {
+func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string) (*leaseTimes, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
 
-	info, ok := m.pending.Load(leaseID)
-	if ok && info.(pendingInfo).cachedLeaseInfo != nil {
-		return m.leaseTimesForExport(info.(pendingInfo).cachedLeaseInfo), nil
+	if info, ok := m.pending.Load(leaseID); ok {
+		mle := info.(pendingInfo).cachedLeaseInfo
+		return mle.leaseTimes(), nil
 	}
 
 	// Load the entry
@@ -1412,39 +1418,88 @@ func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string)
 		return nil, nil
 	}
 
-	return m.leaseTimesForExport(le), nil
+	return &leaseTimes{
+		IssueTime:       le.IssueTime,
+		ExpireTime:      le.ExpireTime,
+		LastRenewalTime: le.LastRenewalTime,
+	}, nil
 }
 
-// Returns lease times for outside callers based on the full leaseEntry passed in
-func (m *ExpirationManager) leaseTimesForExport(le *leaseEntry) *leaseEntry {
-	ret := &leaseEntry{
+type minimalLeaseEntry struct {
+	SecretTTL time.Duration
+	AuthTTL   time.Duration
+
+	IssueTime       time.Time
+	ExpireTime      time.Time
+	LastRenewalTime time.Time
+
+	Policies []string
+
+	ClientTokenType logical.TokenType
+	IsTokenLease    bool
+	SecretRenewable bool
+	AuthRenewable   bool
+}
+
+func (mle *minimalLeaseEntry) renewable() (bool, error) {
+	switch {
+	// If there is no entry, cannot review to renew
+	case mle == nil:
+		return false, fmt.Errorf("lease not found")
+
+	case mle.ExpireTime.IsZero():
+		return false, fmt.Errorf("lease is not renewable")
+
+	case mle.ClientTokenType == logical.TokenTypeBatch:
+		return false, nil
+
+	// Determine if the lease is expired
+	case mle.ExpireTime.Before(time.Now()):
+		return false, fmt.Errorf("lease expired")
+
+	// Determine if the lease is renewable
+	case mle.SecretTTL != 0 && !mle.SecretRenewable:
+		return false, fmt.Errorf("lease is not renewable")
+
+	case mle.AuthTTL != 0 && !mle.AuthRenewable:
+		return false, fmt.Errorf("lease is not renewable")
+	}
+
+	return true, nil
+}
+
+func (mle *minimalLeaseEntry) leaseTimes() *leaseTimes {
+	renewable, _ := mle.renewable()
+	return &leaseTimes{
+		IssueTime:       mle.IssueTime,
+		ExpireTime:      mle.ExpireTime,
+		LastRenewalTime: mle.LastRenewalTime,
+		Renewable:       renewable,
+	}
+}
+
+// Restricts lease entry stored in pendingInfo to a low-cost subset of the
+// information.
+func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) minimalLeaseEntry {
+	ret := minimalLeaseEntry{
 		IssueTime:       le.IssueTime,
 		ExpireTime:      le.ExpireTime,
 		LastRenewalTime: le.LastRenewalTime,
 	}
 	if le.Secret != nil {
-		ret.Secret = &logical.Secret{}
-		ret.Secret.Renewable = le.Secret.Renewable
-		ret.Secret.TTL = le.Secret.TTL
+		ret.SecretRenewable = le.Secret.Renewable
+		ret.SecretTTL = le.Secret.TTL
 	}
 	if le.Auth != nil {
-		ret.Auth = &logical.Auth{}
-		ret.Auth.Renewable = le.Auth.Renewable
-		ret.Auth.TTL = le.Auth.TTL
-	}
+		ret.AuthRenewable = le.Auth.Renewable
+		ret.AuthTTL = le.Auth.TTL
+		ret.IsTokenLease = true
 
-	return ret
-}
+		// Need to index:
+		//   namespace -- derived from lease ID
+		//   policies -- stored in Auth object
+		//   auth method -- derived from lease.Path
 
-// Restricts lease entry stored in pendingInfo to a low-cost subset of the
-// information.
-func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
-	ret := m.leaseTimesForExport(le)
-	// Need to index:
-	//   namespace -- derived from lease ID
-	//   policies -- stored in Auth object
-	//   auth method -- derived from lease.Path
-	if le.Auth != nil {
 		// Ensure that list of policies is not copied more than
 		// once. This method is called with pendingLock held.
 
@@ -1453,12 +1508,11 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 		key := strings.Join(le.Auth.Policies, "\n")
 		uniq, ok := m.uniquePolicies[key]
 		if ok {
-			ret.Auth.Policies = uniq
+			ret.Policies = uniq
 		} else {
 			m.uniquePolicies[key] = le.Auth.Policies
-			ret.Auth.Policies = le.Auth.Policies
+			ret.Policies = le.Auth.Policies
 		}
-		ret.Path = le.Path
 	}
 	return ret
 }
@@ -1524,9 +1578,10 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		pending.timer.Reset(leaseTotal)
 		// No change to lease count in this case
 	} else {
+		leaseID, namespace := le.LeaseID, le.namespace
 		// Extend the timer by the lease total
 		timer := time.AfterFunc(leaseTotal, func() {
-			m.expireFunc(m.quitContext, m, le)
+			m.expireFunc(m.quitContext, m, leaseID, namespace)
 		})
 		pending = pendingInfo{
 			timer: timer,
@@ -2025,7 +2080,6 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -2061,11 +2115,9 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 // Callback function type to walk tokens referenced in the expiration
 // manager. Don't want to use leaseEntry here because it's an unexported
 // type (though most likely we would only call this from within the "vault" core package.)
-type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path string) bool
+type ExpirationWalkFunction = func(leaseID string, mle minimalLeaseEntry) bool
 
-var (
-	ErrInRestoreMode = errors.New("expiration manager in restore mode")
-)
+var ErrInRestoreMode = errors.New("expiration manager in restore mode")
 
 // WalkTokens extracts the Auth structure from leases corresponding to tokens.
 // Returning false from the walk function terminates the iteration.
@@ -2076,12 +2128,9 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 
 	callback := func(key, value interface{}) bool {
 		p := value.(pendingInfo)
-		if p.cachedLeaseInfo == nil {
-			return true
-		}
-		lease := p.cachedLeaseInfo
-		if lease.Auth != nil {
-			return walkFn(key.(string), lease.Auth, lease.Path)
+		mle := p.cachedLeaseInfo
+		if mle.IsTokenLease {
+			return walkFn(key.(string), mle)
 		}
 		return true
 	}
@@ -2102,9 +2151,6 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 
 	callback := func(key, value interface{}) bool {
 		p := value.(pendingInfo)
-		if p.cachedLeaseInfo == nil {
-			return true
-		}
 		lease := p.cachedLeaseInfo
 		expireTime := lease.ExpireTime
 		return walkFn(key.(string), expireTime)

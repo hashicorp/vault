@@ -1297,7 +1297,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	if ts.expiration == nil {
 		return nil, errors.New("expiration manager is nil on tokenstore")
 	}
-	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
+	lt, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to fetch lease times: {{err}}", err)
 	}
@@ -1306,7 +1306,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 
 	switch {
 	// It's any kind of expiring token with no lease, immediately delete it
-	case le == nil:
+	case lt.IssueTime.IsZero():
 		tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, ts.core)
 		if err != nil {
 			return nil, err
@@ -1329,7 +1329,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// Only return if we're not past lease expiration (or if tainted is true),
 	// otherwise assume expmgr is working on revocation
 	default:
-		if !le.ExpireTime.Before(time.Now()) || tainted {
+		if !lt.ExpireTime.Before(time.Now()) || tainted {
 			ret = entry
 		}
 	}
@@ -2974,17 +2974,17 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if leaseTimes != nil {
+	if !leaseTimes.IssueTime.IsZero() {
+
 		if !leaseTimes.LastRenewalTime.IsZero() {
 			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
 			resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
 			resp.Data["expire_time"] = leaseTimes.ExpireTime
-			resp.Data["ttl"] = leaseTimes.ttl()
+			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
 		}
-		renewable, _ := leaseTimes.renewable()
-		resp.Data["renewable"] = renewable
+		resp.Data["renewable"] = leaseTimes.Renewable
 		resp.Data["issue_time"] = leaseTimes.IssueTime
 	}
 
@@ -3456,7 +3456,7 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		namespacePosition[ns.ID] = i
 	}
 
-	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+	err := ts.expiration.WalkTokens(func(leaseID string, mle minimalLeaseEntry) bool {
 		select {
 		// Abort and return empty collection if it's taking too much time, nonblocking check.
 		case <-ctx.Done():
@@ -3503,7 +3503,7 @@ func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil
 	allNamespaces := ts.core.collectNamespaces()
 	byNsAndPolicy := make(map[string]map[string]int)
 
-	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+	err := ts.expiration.WalkTokens(func(leaseID string, mle minimalLeaseEntry) bool {
 		select {
 		// Abort and return empty collection if it's taking too much time, nonblocking check.
 		case <-ctx.Done():
@@ -3518,7 +3518,7 @@ func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil
 				policyMap = make(map[string]int)
 				byNsAndPolicy[nsID] = policyMap
 			}
-			for _, policy := range auth.Policies {
+			for _, policy := range mle.Policies {
 				policyMap[policy] = policyMap[policy] + 1
 			}
 			return true
@@ -3562,13 +3562,13 @@ func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.Ga
 	allNamespaces := ts.core.collectNamespaces()
 	byNsAndBucket := make(map[string]map[string]int)
 
-	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+	err := ts.expiration.WalkTokens(func(leaseID string, mle minimalLeaseEntry) bool {
 		select {
 		// Abort and return empty collection if it's taking too much time, nonblocking check.
 		case <-ctx.Done():
 			return false
 		default:
-			if auth == nil {
+			if !mle.IsTokenLease {
 				return true
 			}
 
@@ -3581,9 +3581,9 @@ func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.Ga
 				bucketMap = make(map[string]int)
 				byNsAndBucket[nsID] = bucketMap
 			}
-			bucket := metricsutil.TTLBucket(auth.TTL)
+			bucket := metricsutil.TTLBucket(mle.AuthTTL)
 			// Zero is a special value in this context
-			if auth.TTL == time.Duration(0) {
+			if mle.AuthTTL == time.Duration(0) {
 				bucket = metricsutil.OverflowBucket
 			}
 
@@ -3672,13 +3672,13 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 		return mountEntry.Type
 	}
 
-	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+	err := ts.expiration.WalkTokens(func(leaseID string, mle minimalLeaseEntry) bool {
 		select {
 		// Abort and return empty collection if it's taking too much time, nonblocking check.
 		case <-ctx.Done():
 			return false
 		default:
-			_, nsID := namespace.SplitIDFromString(leaseID)
+			bareLeaseID, nsID := namespace.SplitIDFromString(leaseID)
 			if nsID == "" {
 				nsID = namespace.RootNamespaceID
 			}
@@ -3686,6 +3686,11 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 			if !ok {
 				methodMap = make(map[string]int)
 				byNsAndMethod[nsID] = methodMap
+			}
+			path := bareLeaseID
+			idx := strings.LastIndexByte(bareLeaseID, '/')
+			if idx != -1 {
+				path = bareLeaseID[:idx]
 			}
 			method := pathToPrefix(nsID, path)
 			methodMap[method] = methodMap[method] + 1

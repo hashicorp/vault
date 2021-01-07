@@ -518,8 +518,9 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 		req := &logical.Request{
 			Operation:   logical.ReadOperation,
 			Path:        "prod/aws/" + pathUUID,
-			ClientToken: "root",
+			ClientToken: "foobar",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -531,7 +532,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 				"secret_key": "abcd",
 			},
 		}
-		_, err = exp.Register(context.Background(), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -1945,11 +1946,11 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 	// Now let the revocation actually process
 	time.Sleep(1 * time.Second)
 
-	le, err = exp.FetchLeaseTimes(namespace.RootContext(nil), le.LeaseID)
+	leaseTimes, err := exp.FetchLeaseTimes(namespace.RootContext(nil), le.LeaseID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if le != nil {
+	if leaseTimes != nil {
 		t.Fatal("lease entry not nil")
 	}
 }
@@ -2367,14 +2368,11 @@ func TestExpiration_WalkTokens(t *testing.T) {
 		// Count before and after each revocation
 		t.Logf("Counting %d tokens.", len(tokenEntries))
 		count := 0
-		exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
+		exp.WalkTokens(func(leaseId string, mle minimalLeaseEntry) bool {
 			count += 1
 			t.Logf("Lease ID %d: %q\n", count, leaseId)
-			if !findMatchingPath(path, tokenEntries) {
-				t.Errorf("Mismatched Path: %v", path)
-			}
-			if len(auth.Policies) < 1 || !findMatchingPolicy(auth.Policies[0], tokenEntries) {
-				t.Errorf("Mismatched Policies: %v", auth.Policies)
+			if len(mle.Policies) < 1 || !findMatchingPolicy(mle.Policies[0], tokenEntries) {
+				t.Errorf("Mismatched Policies: %v", mle.Policies)
 			}
 			return true
 		})
@@ -2432,8 +2430,8 @@ func TestExpiration_CachedPolicyIsShared(t *testing.T) {
 	var policies [][]string
 
 	waitForRestore(t, exp)
-	exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
-		policies = append(policies, auth.Policies)
+	exp.WalkTokens(func(leaseId string, mle minimalLeaseEntry) bool {
+		policies = append(policies, mle.Policies)
 		return true
 	})
 	if len(policies) != len(tokenEntries) {
