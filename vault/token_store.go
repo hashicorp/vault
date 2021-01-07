@@ -2974,8 +2974,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if !leaseTimes.IssueTime.IsZero() {
-
+	if leaseTimes != nil {
 		if !leaseTimes.LastRenewalTime.IsZero() {
 			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
 			resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
