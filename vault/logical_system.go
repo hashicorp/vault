@@ -3344,6 +3344,20 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	path = sanitizePath(path)
 
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
+		return nil, logical.ErrPermissionDenied
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
+		return nil, logical.ErrPermissionDenied
+	}
+
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
 	ns, err := namespace.FromContext(ctx)
@@ -3374,20 +3388,6 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if ns.ID != me.Namespace().ID {
 		resp.Data["path"] = me.Namespace().Path + me.Path
 		fullMountPath = ns.Path + me.Namespace().Path + me.Path
-	}
-
-	// Load the ACL policies so we can walk the prefix for this mount
-	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if entity != nil && entity.Disabled {
-		b.logger.Warn("permission denied as the entity on the token is disabled")
-		return errResp, logical.ErrPermissionDenied
-	}
-	if te != nil && te.EntityID != "" && entity == nil {
-		b.logger.Warn("permission denied as the entity on the token is invalid")
-		return nil, logical.ErrPermissionDenied
 	}
 
 	if !hasMountAccess(ctx, acl, fullMountPath) {
