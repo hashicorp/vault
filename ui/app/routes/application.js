@@ -8,13 +8,14 @@ export default Route.extend({
   routing: service('router'),
   wizard: service(),
   namespaceService: service('namespace'),
+  featureFlagService: service('featureFlag'),
 
   actions: {
     willTransition() {
       window.scrollTo(0, 0);
     },
     error(error, transition) {
-      let controlGroup = this.get('controlGroup');
+      let controlGroup = this.controlGroup;
       if (error instanceof ControlGroupError) {
         return controlGroup.handleError(error, transition);
       }
@@ -22,7 +23,7 @@ export default Route.extend({
         controlGroup.unmarkTokenForUnwrap();
       }
 
-      let router = this.get('routing');
+      let router = this.routing;
       //FIXME transition.intent likely needs to be replaced
       let errorURL = transition.intent.url;
       let { name, contexts, queryParams } = transition.intent;
@@ -59,7 +60,7 @@ export default Route.extend({
       return true;
     },
     didTransition() {
-      let wizard = this.get('wizard');
+      let wizard = this.wizard;
 
       if (wizard.get('currentState') !== 'active.feature') {
         return true;
@@ -74,11 +75,22 @@ export default Route.extend({
           this.set('wizard.expectedRouteName', activeRoute);
         }
         let expectedRouteName = this.get('wizard.expectedRouteName');
-        if (this.get('routing').isActive(expectedRouteName) === false) {
+        if (this.routing.isActive(expectedRouteName) === false) {
           wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
         }
       });
       return true;
     },
+  },
+
+  async beforeModel() {
+    const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+      method: 'GET',
+    });
+    if (result.status === 200) {
+      const body = await result.json();
+      const flags = body.data?.feature_flags || [];
+      this.featureFlagService.setFeatureFlags(flags);
+    }
   },
 });

@@ -1,4 +1,4 @@
-import { click } from '@ember/test-helpers';
+import { click, fillIn, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -59,5 +59,23 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
     assert
       .dom('[data-test-namespace-link="beep/boop/bop"]')
       .exists('renders the link to the nested namespace');
+  });
+
+  test('it shows the regular namespace toolbar when not managed', async function(assert) {
+    // This test is the opposite of the test in managed-namespace-test
+    await logout.visit();
+    assert.equal(currentURL(), '/vault/auth?with=token', 'Does not redirect');
+    assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
+    assert
+      .dom('[data-test-managed-namespace-toolbar]')
+      .doesNotExist('Managed namespace toolbar does not exist');
+    assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
+    await fillIn('input#namespace', '/foo');
+    let encodedNamespace = encodeURIComponent('/foo');
+    assert.equal(
+      currentURL(),
+      `/vault/auth?namespace=${encodedNamespace}&with=token`,
+      'Does not prepend root to namespace'
+    );
   });
 });
