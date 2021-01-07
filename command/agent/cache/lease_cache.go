@@ -178,32 +178,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	defer func() { unlockFunc() }()
 
 	// Check if the response for this request is already in the cache
-	sendResp, err := c.checkCacheForRequest(id)
+	cachedResp, err := c.checkCacheForRequest(id)
 	if err != nil {
 		return nil, err
 	}
-	if sendResp != nil {
+	if cachedResp != nil {
 		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
-		return sendResp, nil
-	}
-
-	// Perform a lock upgrade
-	idLock.RUnlock()
-	idLock.Lock()
-	unlockFunc = idLock.Unlock
-
-	// Check cache once more after upgrade
-	sendResp, err = c.checkCacheForRequest(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// If found, it means that some other parallel request already cached this response
-	// in between this upgrade so we can simply return that. Otherwise, this request
-	// will be the one performing the cache write.
-	if sendResp != nil {
-		c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
-		return sendResp, nil
+		return cachedResp, nil
 	}
 
 	c.logger.Debug("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -352,6 +333,28 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		DoneCh:     renewCtxInfo.DoneCh,
 	}
 
+	// If we're at this point, it means that the response will be cached.
+	// Perform a lock upgrade, and re-check before writing to the cache.
+	idLock.RUnlock()
+	idLock.Lock()
+	unlockFunc = idLock.Unlock
+
+	// Check cache once more after upgrade
+	cachedResp, err = c.checkCacheForRequest(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// If found, it means that some other parallel request already cached the
+	// response for this request in between this upgrade.
+	// TODO: Which response should we return and what happens to the
+	//       secret from this current request?
+	if cachedResp != nil {
+		c.logger.Debug("cached response found after proxied request", "method", req.Request.Method, "path", req.Request.URL.Path)
+		// c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
+		return cachedResp, nil
+	}
+
 	// Store the index in the cache
 	c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
 	err = c.db.Set(index)
@@ -452,6 +455,8 @@ func computeIndexID(req *SendRequest) (string, error) {
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed
 	// requests sets the token directly into SendRequest.Token
 	b.Write([]byte(req.Token))
+
+	// b.Write([]byte(time.Now().String()))
 
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
