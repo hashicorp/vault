@@ -101,6 +101,18 @@ github.com/aliyun/alibaba-cloud-sdk-go/services/ram
 github.com/aliyun/alibaba-cloud-sdk-go/services/sts
 # github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 github.com/aliyun/aliyun-oss-go-sdk/oss
+# github.com/apache/arrow/go/arrow v0.0.0-20200601151325-b2287a20f230
+github.com/apache/arrow/go/arrow
+github.com/apache/arrow/go/arrow/array
+github.com/apache/arrow/go/arrow/arrio
+github.com/apache/arrow/go/arrow/bitutil
+github.com/apache/arrow/go/arrow/decimal128
+github.com/apache/arrow/go/arrow/float16
+github.com/apache/arrow/go/arrow/internal/cpu
+github.com/apache/arrow/go/arrow/internal/debug
+github.com/apache/arrow/go/arrow/internal/flatbuf
+github.com/apache/arrow/go/arrow/ipc
+github.com/apache/arrow/go/arrow/memory
 # github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
@@ -240,6 +252,8 @@ github.com/denisenkom/go-mssqldb/internal/querytext
 github.com/denverdino/aliyungo/common
 github.com/denverdino/aliyungo/ecs
 github.com/denverdino/aliyungo/util
+# github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
+github.com/dgrijalva/jwt-go/v4
 # github.com/digitalocean/godo v1.7.5
 github.com/digitalocean/godo
 # github.com/dimchansky/utfbom v1.1.0
@@ -352,6 +366,8 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
+# github.com/google/flatbuffers v1.11.0
+github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.5.2
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
@@ -529,6 +545,8 @@ github.com/hashicorp/vault-plugin-database-couchbase
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
 github.com/hashicorp/vault-plugin-database-mongodbatlas
+# github.com/hashicorp/vault-plugin-database-snowflake v0.1.0
+github.com/hashicorp/vault-plugin-database-snowflake
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
 # github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
@@ -861,6 +879,8 @@ github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.5.2+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
+# github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
+github.com/pkg/browser
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -918,6 +938,10 @@ github.com/shirou/gopsutil/net
 github.com/shirou/gopsutil/process
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
+# github.com/snowflakedb/glog v0.0.0-20180824191149-f5055e6f21ce
+github.com/snowflakedb/glog
+# github.com/snowflakedb/gosnowflake v1.3.11
+github.com/snowflakedb/gosnowflake
 # github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d
 github.com/softlayer/softlayer-go/config
 github.com/softlayer/softlayer-go/datatypes
