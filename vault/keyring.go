@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -32,10 +33,12 @@ type EncodedKeyring struct {
 
 // Key represents a single term, along with the key used.
 type Key struct {
-	Term        uint32
-	Version     int
-	Value       []byte
-	InstallTime time.Time
+	Term                uint32
+	Version             int
+	Value               []byte
+	InstallTime         time.Time
+	Encryptions         uint64
+	ReportedEncryptions uint64 `json:",omitempty"`
 }
 
 // Serialize is used to create a byte encoded key
@@ -199,5 +202,12 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	}
 	for _, key := range k.keys {
 		memzero(key.Value)
+	}
+}
+
+func (k *Keyring) AddEncryptionEstimate(term uint32, delta uint64) {
+	key := k.TermKey(term)
+	if key != nil {
+		atomic.AddUint64(&key.Encryptions, delta)
 	}
 }
