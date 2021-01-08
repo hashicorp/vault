@@ -196,9 +196,9 @@ func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 	return generatePrivateKey(keyType, keyBits, container, nil)
 }
 
-// GeneratePrivateKeyWithEntropy generates a private key with the specified type and key bits.
-// GeneratePrivateKeyWithEntropy uses randomness from the entropyReader to generate the private key.
-func GeneratePrivateKeyWithEntropy(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error {
+// GeneratePrivateKeyWithRandomSource generates a private key with the specified type and key bits.
+// GeneratePrivateKeyWithRandomSource uses randomness from the entropyReader to generate the private key.
+func GeneratePrivateKeyWithRandomSource(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error {
 	return generatePrivateKey(keyType, keyBits, container, entropyReader)
 }
 
@@ -259,9 +259,9 @@ func GenerateSerialNumber() (*big.Int, error) {
 	return generateSerialNumber(rand.Reader)
 }
 
-// GenerateSerialNumberWithEntropy generates a serial number suitable
+// GenerateSerialNumberWithRandomSource generates a serial number suitable
 // for a certificate with custom entropy.
-func GenerateSerialNumberWithEntropy(randReader io.Reader) (*big.Int, error) {
+func GenerateSerialNumberWithRandomSource(randReader io.Reader) (*big.Int, error) {
 	return generateSerialNumber(randReader)
 }
 
@@ -524,9 +524,9 @@ func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 	return createCertificate(data, rand.Reader)
 }
 
-// CreateCertificateWithEntropy uses CreationBundle and a custom
+// CreateCertificateWithRandomSource uses CreationBundle and a custom
 // io.Reader for randomness to generate a cert/keypair.
-func CreateCertificateWithEntropy(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+func CreateCertificateWithRandomSource(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
 	return createCertificate(data, randReader)
 }
 
@@ -658,14 +658,15 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 
 // CreateCSR creates a CSR with the default rand.Reader to
-// generate a cert/keypair.
+// generate a cert/keypair. This is currently only meant
+// for use when generating an intermediate certificate.
 func CreateCSR(data *CreationBundle, addBasicConstraints bool) (*ParsedCSRBundle, error) {
 	return createCSR(data, addBasicConstraints, rand.Reader)
 }
 
-// CreateCSRWithEntropy creates a CSR with a custom io.Reader
+// CreateCSRWithRandomSource creates a CSR with a custom io.Reader
 // for randomness to generate a cert/keypair.
-func CreateCSRWithEntropy(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
+func CreateCSRWithRandomSource(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
 	return createCSR(data, addBasicConstraints, randReader)
 }
 
@@ -737,10 +738,10 @@ func SignCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 	return signCertificate(data, rand.Reader)
 }
 
-// SignCertificateWithEntropy generates a certificate
+// SignCertificateWithRandomSource generates a certificate
 // from a CSR, using custom randomness from the randReader.
 // Returns a ParsedCertBundle sans private keys.
-func SignCertificateWithEntropy(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+func SignCertificateWithRandomSource(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
 	return signCertificate(data, randReader)
 }
 
