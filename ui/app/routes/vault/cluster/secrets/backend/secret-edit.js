@@ -40,6 +40,20 @@ export default Route.extend(UnloadModelRoute, {
     let noun = modelType.split('/')[1];
     return `${backend}/${noun}/${secret}`;
   },
+  // ARG TODO not the best pattern consider adding a helper for both here and transform
+  modelTypeForDatabase(secretName) {
+    if (!secretName) return 'database';
+    // if (secretName.startsWith('role/')) {
+    //   return 'database/role';
+    // }
+    // if (secretName.startsWith('overview/')) {
+    //   return 'database/overview';
+    // }
+    // if (secretName.startsWith('connection/')) {
+    //   return 'database/connection';
+    // }
+    return 'database';
+  },
 
   modelTypeForTransform(secretName) {
     if (!secretName) return 'transform';
@@ -95,6 +109,7 @@ export default Route.extend(UnloadModelRoute, {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
+      database: this.modelTypeForDatabase(secret),
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),

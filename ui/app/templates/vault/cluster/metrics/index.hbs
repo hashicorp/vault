@@ -39,7 +39,8 @@
   </nav>
 </div>
 
-{{#if (eq model.config.queriesAvailable false)}}
+{{!-- {{#if (eq model.config.queriesAvailable false)}} --}}
+{{#if false}}
   {{#if (eq model.config.enabled "On")}}
     <EmptyState @title="No data is being received" @message='We haven’t yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.' />
   {{else}}
@@ -67,9 +68,9 @@
       @defaultSpan={{model.config.defaultReportMonths}}
       @retentionMonths={{model.config.retentionMonths}}
     />
-    {{#unless model.activity.total}}
+    {{!-- {{#unless model.activity.total}}
       <EmptyState @title="No data found" @message="No data exists for that query period. Try searching again." />
-    {{else}}
+    {{else}} --}}
       <div class="selectable-card-container">
         <SelectableCard
           @cardTitle="Active clients"
@@ -87,6 +88,6 @@
           @subText="Current namespace"
         />
       </div>
-    {{/unless}}
+    {{!-- {{/unless}} --}}
   </div>
 {{/if}}

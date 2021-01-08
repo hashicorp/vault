@@ -22,24 +22,6 @@ export default Route.extend({
     },
   },
 
-  modelTypeForDatabase(tab) {
-    let modelType;
-    switch (tab) {
-      case 'overview':
-        modelType = 'database/overview';
-        break;
-      case 'connections':
-        modelType = 'database/connection';
-        break;
-      case 'role':
-        modelType = 'database/role';
-        break;
-      default:
-        modelType = 'database';
-    }
-    return modelType;
-  },
-
   modelTypeForTransform(tab) {
     let modelType;
     switch (tab) {
@@ -66,6 +48,7 @@ export default Route.extend({
 
   enginePathParam() {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    console.log(backend, 'BACKEND');
     return backend;
   },
 
@@ -91,7 +74,7 @@ export default Route.extend({
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine.get('engineType');
     let types = {
-      database: this.modelTypeForDatabase(tab),
+      database: 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
@@ -109,7 +92,6 @@ export default Route.extend({
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-
     return hash({
       secret,
       secrets: this.store
@@ -125,6 +107,7 @@ export default Route.extend({
           return model;
         })
         .catch(err => {
+          console.log(err, 'error');
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
