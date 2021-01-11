@@ -206,7 +206,6 @@ export default [
       },
       'caching',
       'template',
-      'winsvc',
     ],
   },
   '----------------',
