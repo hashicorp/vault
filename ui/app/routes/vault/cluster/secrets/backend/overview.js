@@ -8,10 +8,11 @@ export default Route.extend(ClusterRoute, {
   model() {
     // let { backend } = this.paramsFor('vault.cluster.secrets.backend');
 
+    let connection = this.store.query('database/connection', {});
+    console.log(connection.get('length'), 'LENGHT');
     // FUTURE find records for the models
-
     return hash({
-      connections: [],
+      connections: connection,
       roles: [],
     });
   },

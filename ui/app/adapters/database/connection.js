@@ -2,20 +2,17 @@ import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
+  // ARG unsure if anything pathForType is doing
   pathForType() {
     return 'connection';
   },
-
   urlFor(backend, id) {
-    // example : id mydb
     let url = `${this.buildURL()}/${backend}/config`;
     if (id) {
       url = `${this.buildURL()}/${backend}/config/${id}`;
     }
-    console.log('URLLLLL', url);
     return url;
   },
-
   optionsForQuery(id) {
     let data = {};
     if (!id) {
@@ -23,25 +20,15 @@ export default ApplicationAdapter.extend({
     }
     return { data };
   },
-
-  fetchByQuery(store, query) {
-    const { backend, id } = query;
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
-      // MONDAY: why is AJax returning something different?
-      const data = {
-        backend,
-      };
-      console.log('🇲🇻 RESPONSONDFLJl', resp);
+  fetchByQuery() {
+    // ARG todo pass in id later.
+    return this.ajax(this.urlFor('database'), 'GET', this.optionsForQuery()).then(resp => {
+      // resp.id = id;
+      resp.backend = 'database';
       return resp;
-      // return assign({}, resp, data);
     });
   },
-
-  query(store, type, query) {
-    return this.fetchByQuery(store, query);
-  },
-
-  queryRecord(store, type, query) {
-    return this.fetchByQuery(store, query);
+  query() {
+    return this.fetchByQuery();
   },
 });

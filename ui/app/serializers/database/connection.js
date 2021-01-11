@@ -1,0 +1,62 @@
+import RESTSerializer from '@ember-data/serializer/rest';
+// import { assign } from '@ember/polyfills';
+import { decamelize } from '@ember/string';
+
+export default RESTSerializer.extend({
+  primaryKey: 'name',
+
+  keyForAttribute: function(attr) {
+    return decamelize(attr);
+  },
+
+  normalizeSecrets(payload) {
+    if (payload.data.keys && Array.isArray(payload.data.keys)) {
+      const secrets = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
+      return secrets;
+    }
+    // ARG this was copied from transit-keys, unsure what I need
+    // assign(payload, payload.data);
+    // delete payload.data;
+    // // timestamps for these two are in seconds...
+    // if (
+    //   payload.type === 'aes256-gcm96' ||
+    //   payload.type === 'chacha20-poly1305' ||
+    //   payload.type === 'aes128-gcm96'
+    // ) {
+    //   for (let version in payload.keys) {
+    //     payload.keys[version] = payload.keys[version] * 1000;
+    //   }
+    // }
+    // payload.id = payload.name;
+    // return [payload];
+  },
+
+  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
+    const secrets = nullResponses.includes(requestType)
+      ? { name: id, backend: payload.backend }
+      : this.normalizeSecrets(payload);
+    const { modelName } = primaryModelClass;
+    let transformedPayload = { [modelName]: secrets };
+    if (requestType === 'queryRecord') {
+      transformedPayload = { [modelName]: secrets };
+    }
+    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
+  },
+
+  serialize(snapshot, requestType) {
+    if (requestType === 'update') {
+      // const min_decryption_version = snapshot.attr('minDecryptionVersion');
+      // const min_encryption_version = snapshot.attr('minEncryptionVersion');
+      // const deletion_allowed = snapshot.attr('deletionAllowed');
+      // return {
+      //   min_decryption_version,
+      //   min_encryption_version,
+      //   deletion_allowed,
+      // };
+    } else {
+      // snapshot.id = snapshot.attr('name');
+      // return this._super(snapshot, requestType);
+    }
+  },
+});

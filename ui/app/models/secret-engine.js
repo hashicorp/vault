@@ -98,7 +98,6 @@ export default Model.extend({
   }),
 
   fieldGroups: computed('formFieldGroups', function() {
-    console.log('🥦 field Groups', this.formFieldGroups);
     return fieldToAttrs(this, this.formFieldGroups);
   }),
 
