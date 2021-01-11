@@ -5,20 +5,21 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const connections = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
-      return connections;
+      const roles = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
+      console.log('playload', roles);
+      return roles;
     }
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
-    const connections = nullResponses.includes(requestType)
+    const roles = nullResponses.includes(requestType)
       ? { name: id, backend: payload.backend }
       : this.normalizeSecrets(payload);
     const { modelName } = primaryModelClass;
-    let transformedPayload = { [modelName]: connections };
+    let transformedPayload = { [modelName]: roles };
     if (requestType === 'queryRecord') {
-      transformedPayload = { [modelName]: connections };
+      transformedPayload = { [modelName]: roles };
     }
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },

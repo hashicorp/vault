@@ -13,6 +13,5 @@ const M = Model.extend({
 });
 
 export default attachCapabilities(M, {
-  // ARG right now this isn't doing anything, don't think the endpoint is correct
   updatePath: apiPath`${'backend'}/config/${'id'}`,
 });

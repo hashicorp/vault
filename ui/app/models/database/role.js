@@ -6,30 +6,8 @@ import attachCapabilities from 'vault/lib/attach-capabilities';
 
 const ModelExport = Model.extend({
   // used for getting appropriate options for backend
-  name: attr('string', {
-    label: 'Name',
-    fieldValue: 'id',
-    readOnly: true,
-    subText: 'TODO add subtext',
-  }),
   // TODO ARG SEE API DOCS
   // https://www.vaultproject.io/api-docs/secret/databases#create-role
-
-  // transformations: attr('array', {
-  //   editType: 'searchSelect',
-  //   fallbackComponent: 'string-list',
-  //   label: 'Transformations',
-  //   models: ['transform'],
-  //   onlyAllowExisting: true,
-  //   subLabel: 'Transformations',
-  //   subText: 'Select which transformations this role will have access to. It must already exist.',
-  // }),
-
-  // attrs: computed('transformations', function() {
-  //   let keys = ['name', 'transformations'];
-  //   return expandAttributeMeta(this, keys);
-  // }),
-
   backend: attr('string', { readOnly: true }),
 });
 
