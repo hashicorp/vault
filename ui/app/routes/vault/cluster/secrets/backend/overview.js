@@ -9,9 +9,11 @@ export default Route.extend(ClusterRoute, {
     let connection = this.store.query('database/connection', {});
     let role = this.store.query('database/role', {});
     // FUTURE find records for the models
+    // ARG engineType are we okay setting here?
     return hash({
       connections: connection,
       roles: role,
+      engineType: 'database',
     });
   },
 });

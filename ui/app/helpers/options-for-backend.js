@@ -60,18 +60,11 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     listItemPartial: 'partials/secret-list/database-list-item',
     tabs: [
-      // TODO add one for overview and connections
-      {
-        name: 'overview',
-        modelPrefix: 'overview/',
-        label: 'Overview',
-        item: 'overview',
-        tab: 'overview',
-      },
+      // we have the landing route Overview, and tabs connection and roles
       {
         name: 'connection',
         modelPrefix: 'connection/',
-        label: 'Connection',
+        label: 'Connections',
         searchPlaceholder: 'TODO ARG',
         item: 'connection',
         create: 'Create connection', // TODO ARG
