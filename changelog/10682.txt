@@ -1,0 +1,3 @@
+```release-note:improvement
+core: support token metadata in template
+```

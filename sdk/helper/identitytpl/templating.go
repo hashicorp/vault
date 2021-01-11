@@ -14,6 +14,7 @@ import (
 
 var (
 	ErrUnbalancedTemplatingCharacter = errors.New("unbalanced templating characters")
+	ErrNoAttachedToken               = errors.New("string contains entity template directives but no token was provided")
 	ErrNoEntityAttachedToToken       = errors.New("string contains entity template directives but no entity was provided")
 	ErrNoGroupsAttachedToToken       = errors.New("string contains groups template directives but no groups were provided")
 	ErrTemplateValueNotFound         = errors.New("no value could be found for one of the template directives")
@@ -27,6 +28,7 @@ const (
 type PopulateStringInput struct {
 	String            string
 	ValidityCheckOnly bool
+	Token             *logical.TokenEntry
 	Entity            *logical.Entity
 	Groups            []*logical.Group
 	NamespaceID       string
@@ -192,6 +194,18 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		return "", ErrTemplateValueNotFound
 	}
 
+	performTokenTemplating := func(trimmed string) (string, error) {
+		switch {
+		case trimmed == "metadata":
+			return p.templateHandler(p.Token.Meta)
+		case strings.HasPrefix(trimmed, "metadata."):
+			split := strings.SplitN(trimmed, ".", 2)
+			return p.templateHandler(p.Token.Meta, split[1])
+		}
+
+		return "", ErrTemplateValueNotFound
+	}
+
 	performEntityTemplating := func(trimmed string) (string, error) {
 		switch {
 		case trimmed == "id":
@@ -351,6 +365,13 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			return "", ErrNoEntityAttachedToToken
 		}
 		return performEntityTemplating(strings.TrimPrefix(input, "identity.entity."))
+
+	case strings.HasPrefix(input, "token."):
+		if p.Token == nil {
+			return "", ErrNoAttachedToken
+		}
+
+		return performTokenTemplating(strings.TrimPrefix(input, "token."))
 
 	case strings.HasPrefix(input, "identity.groups."):
 		if len(p.Groups) == 0 {

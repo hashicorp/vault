@@ -553,3 +553,41 @@ func TestPopulate_FullObject(t *testing.T) {
 		t.Fatalf("expected:\n%s\n\ngot:\n%s", expected, out)
 	}
 }
+
+func TestPopulate_TokenMetaData(t *testing.T) {
+	testToken := &logical.TokenEntry{
+		Meta: map[string]string{
+			"color":         "green",
+			"size":          "small",
+			"non-printable": "\"\n\t",
+		},
+	}
+
+	template := `
+			{
+			    "all metadata": {{token.metadata}},
+			    "one metadata key": {{token.metadata.color}},
+			    "one metadata key not found": {{token.metadata.asldfk}}
+			}`
+
+	expected := `
+			{
+			    "all metadata": {"color":"green","non-printable":"\"\n\t","size":"small"},
+			    "one metadata key": "green",
+			    "one metadata key not found": ""
+			}`
+
+	input := PopulateStringInput{
+		Mode:   JSONTemplating,
+		String: template,
+		Token:  testToken,
+	}
+	_, out, err := PopulateString(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if out != expected {
+		t.Fatalf("expected:\n%s\n\ngot:\n%s", expected, out)
+	}
+}
