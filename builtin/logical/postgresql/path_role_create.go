@@ -113,7 +113,13 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			"expiration": expiration,
 		}
 
-		if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
+		// inject metadata as parameters
+		metadata := req.TokenEntry().Meta
+		for k, v := range metadata {
+			m[fmt.Sprintf("token.metadata.%s", k)] = v
+		}
+
+		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}
