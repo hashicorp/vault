@@ -2,10 +2,7 @@ import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
-  // ARG unsure if anything pathForType is doing
-  pathForType() {
-    return 'connection';
-  },
+
   urlFor(backend, id) {
     let url = `${this.buildURL()}/${backend}/config`;
     if (id) {
@@ -22,9 +19,10 @@ export default ApplicationAdapter.extend({
   },
   fetchByQuery() {
     // ARG todo pass in id later.
-    return this.ajax(this.urlFor('database'), 'GET', this.optionsForQuery()).then(resp => {
+    const backendName = 'database'; // TODO: grab this dynamically
+    return this.ajax(this.urlFor(backendName), 'GET', this.optionsForQuery()).then(resp => {
       // resp.id = id;
-      resp.backend = 'database';
+      resp.backend = backendName;
       return resp;
     });
   },
