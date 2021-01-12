@@ -48,7 +48,7 @@ SECURITY:
 * Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
   users within namespaces from applying Sentinel EGP policies to paths above
   their namespace. This vulnerability affects Vault Enterprise and is fixed in
-  1.5.6 and 1.6.1.
+  1.5.6 and 1.6.1 (CVE-2020-35453).
 
 IMPROVEMENTS:
 
