@@ -28,21 +28,8 @@
           {{#if actionText}}<Icon @glyph="chevron-right" />{{/if}}
         </LinkTo>
       </div>
-      {{#unless isSearchSelect}}
         <p class="has-text-grey is-size-8">{{subText}}</p>
         <h2 class="title-number">{{format-number total}}</h2>
-      {{else}}
-        <p class="is-label search-label">Role to use</p>
-        <SearchSelect />
-        <button
-          type="button"
-          class="button is-secondary"
-          onclick={{action (mut isModalActive) true}}
-          data-test-replication-action-trigger
-        >
-          {{searchText}}
-        </button>
-      {{/unless}}
     {{/unless}}
     {{yield}}
   </div>
