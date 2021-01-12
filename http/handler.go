@@ -271,6 +271,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	if maxRequestDuration == 0 {
 		maxRequestDuration = vault.DefaultMaxRequestDuration
 	}
+	if maxRequestSize == 0 {
+		maxRequestSize = DefaultMaxRequestSize
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
