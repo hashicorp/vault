@@ -198,7 +198,6 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 	if len(txns) == 0 {
 		return nil
 	}
-	defer metrics.MeasureSince([]string{"consul", "transaction"}, time.Now())
 
 	ops := make([]*api.KVTxnOp, 0, len(txns))
 
