@@ -48,7 +48,6 @@ export default Route.extend({
 
   enginePathParam() {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    console.log(backend, 'BACKEND');
     return backend;
   },
 
