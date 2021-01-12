@@ -2432,28 +2432,18 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 
 func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	header := data.Get("header").(string)
-	multivalue := data.Get("multivalue").(bool)
 
-	values, err := b.Core.uiConfig.GetHeader(ctx, header)
+	value, err := b.Core.uiConfig.GetHeader(ctx, header)
 	if err != nil {
 		return nil, err
 	}
-	if len(values) == 0 {
+	if value == "" {
 		return nil, nil
-	}
-
-	// Return multiple values if specified
-	if multivalue {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"values": values,
-			},
-		}, nil
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"value": values[0],
+			"value": value,
 		},
 	}, nil
 }
@@ -2487,7 +2477,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	for _, v := range values {
 		value.Add(header, v)
 	}
-	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
+	err := b.Core.uiConfig.SetHeader(ctx, header, value.Get(header))
 	if err != nil {
 		return nil, err
 	}

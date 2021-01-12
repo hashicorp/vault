@@ -92,25 +92,25 @@ func (c *UIConfig) HeaderKeys(ctx context.Context) ([]string, error) {
 	return keys, nil
 }
 
-// GetHeader retrieves the configured values for the given header
-func (c *UIConfig) GetHeader(ctx context.Context, header string) ([]string, error) {
+// GetHeader retrieves the configured value for the given header
+func (c *UIConfig) GetHeader(ctx context.Context, header string) (string, error) {
 	c.l.RLock()
 	defer c.l.RUnlock()
 
 	config, err := c.get(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if config == nil {
-		return nil, nil
+		return "", nil
 	}
 
-	value := config.Headers.Values(header)
+	value := config.Headers.Get(header)
 	return value, nil
 }
 
-// SetHeader sets the values for the given header
-func (c *UIConfig) SetHeader(ctx context.Context, header string, values []string) error {
+// SetHeader sets the value for the given header
+func (c *UIConfig) SetHeader(ctx context.Context, header, value string) error {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -123,14 +123,7 @@ func (c *UIConfig) SetHeader(ctx context.Context, header string, values []string
 			Headers: http.Header{},
 		}
 	}
-
-	// Clear custom header values before setting new
-	config.Headers.Del(header)
-
-	// Set new values
-	for _, value := range values {
-		config.Headers.Add(header, value)
-	}
+	config.Headers.Set(header, value)
 	return c.save(ctx, config)
 }
 

@@ -51,10 +51,10 @@ func TestConfig_Headers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(head) != 0 {
+	if head != "" {
 		t.Fatal("header returned found, should not be found")
 	}
-	err = config.SetHeader(context.Background(), "Test-Header", []string{"123", "456"})
+	err = config.SetHeader(context.Background(), "Test-Header", "123")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -62,28 +62,22 @@ func TestConfig_Headers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(head) != 2 {
-		t.Fatalf("header not found or incorrect number of values: %#v", head)
+	if head == "" {
+		t.Fatal("header not found when it should be")
 	}
-	if head[0] != "123" {
-		t.Fatalf("expected: %s, got: %s", "123", head[0])
-	}
-	if head[1] != "456" {
-		t.Fatalf("expected: %s, got: %s", "456", head[1])
+	if head != "123" {
+		t.Fatalf("expected: %s, got: %s", "123", head)
 	}
 
 	head, err = config.GetHeader(context.Background(), "tEST-hEADER")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(head) != 2 {
-		t.Fatalf("header not found or incorrect number of values: %#v", head)
+	if head == "" {
+		t.Fatal("header not found when it should be")
 	}
-	if head[0] != "123" {
-		t.Fatalf("expected: %s, got: %s", "123", head[0])
-	}
-	if head[1] != "456" {
-		t.Fatalf("expected: %s, got: %s", "456", head[1])
+	if head != "123" {
+		t.Fatalf("expected: %s, got: %s", "123", head)
 	}
 
 	keys, err := config.HeaderKeys(context.Background())
@@ -94,7 +88,7 @@ func TestConfig_Headers(t *testing.T) {
 		t.Fatalf("expected 1 key, got %d", len(keys))
 	}
 
-	err = config.SetHeader(context.Background(), "Test-Header-2", []string{"321"})
+	err = config.SetHeader(context.Background(), "Test-Header-2", "321")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -118,7 +112,7 @@ func TestConfig_Headers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(head) != 0 {
+	if head != "" {
 		t.Fatal("header returned found, should not be found")
 	}
 	keys, err = config.HeaderKeys(context.Background())
@@ -157,7 +151,7 @@ func TestConfig_DefaultHeaders(t *testing.T) {
 		t.Fatalf("header does not match: expected %s, got %s", defaultCSP, head)
 	}
 
-	err = config.SetHeader(context.Background(), "Content-security-Policy", []string{"test"})
+	err = config.SetHeader(context.Background(), "Content-security-Policy", "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
