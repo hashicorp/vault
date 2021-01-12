@@ -147,6 +147,7 @@ export default [
           'seal',
           'step-down',
           'unseal',
+          'usage',
         ],
       },
       'path-help',
