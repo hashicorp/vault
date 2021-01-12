@@ -63,13 +63,11 @@ const SECRET_BACKENDS = {
     tabs: [
       {
         name: 'connection',
-        modelPrefix: 'connection/',
         label: 'Connections',
         searchPlaceholder: 'Filter connections',
         item: 'connection',
         create: 'Create connection',
-        tab: 'connection',
-        editComponent: 'database-connection-edit',
+        editComponent: 'database-connection',
       },
       {
         name: 'role',
@@ -142,7 +140,7 @@ const SECRET_BACKENDS = {
 export function optionsForBackend([backend, tab]) {
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
-  console.log({ selected });
+
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];
