@@ -3,6 +3,7 @@ package consul
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -97,10 +98,40 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 			Name: policyName,
 		})
 	}
+	var roleLink = []*api.ACLTokenRoleLink{}
+	for _, roleName := range result.Roles {
+		roleLink = append(roleLink, &api.ACLRolePolicyLink{
+			Name: roleName,
+		})
+	}
+	var serviceIdentities = []*api.ACLServiceIdentity{}
+	for _, serviceIdentity := range result.ServiceIdentities {
+		entry := &api.ACLServiceIdentity{}
+		components := strings.SplitN(serviceIdentity, ":", 2)
+		entry.ServiceName = components[0]
+		if len(components) == 2 {
+			entry.Datacenters = strings.Split(components[1], ",")
+		}
+		serviceIdentities = append(serviceIdentities, entry)
+	}
+	var nodeIdentities = []*api.ACLNodeIdentity{}
+	for _, nodeIdentity := range result.NodeIdentities {
+		entry := &api.ACLNodeIdentity{}
+		components := strings.Split(nodeIdentity, ":")
+		entry.NodeName = components[0]
+		if len(components) > 1 {
+			entry.Datacenter = components[1]
+		}
+		nodeIdentities = append(nodeIdentities, entry)
+	}
+
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
-		Description: tokenName,
-		Policies:    policyLink,
-		Local:       result.Local,
+		Description:       tokenName,
+		Policies:          policyLink,
+		Roles:             roleLink,
+		ServiceIdentities: serviceIdentities,
+		NodeIdentities:    nodeIdentities,
+		Local:             result.Local,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
