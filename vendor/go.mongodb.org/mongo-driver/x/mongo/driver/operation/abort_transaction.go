@@ -40,7 +40,7 @@ func NewAbortTransaction() *AbortTransaction {
 	return &AbortTransaction{}
 }
 
-func (at *AbortTransaction) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server) error {
+func (at *AbortTransaction) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, currIndex int) error {
 	var err error
 	return err
 }

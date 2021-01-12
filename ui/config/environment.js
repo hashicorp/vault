@@ -56,6 +56,9 @@ module.exports = function(environment) {
     ENV.APP.rootElement = '#ember-testing';
     ENV.APP.autoboot = false;
     ENV.flashMessageDefaults.timeout = 50;
+    ENV['ember-cli-mirage'] = {
+      enabled: false,
+    };
   }
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;

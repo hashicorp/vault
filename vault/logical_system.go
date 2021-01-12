@@ -11,12 +11,14 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -100,6 +102,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-prefix/*",
 				"leases/revoke-force/*",
 				"leases/lookup/*",
+				"storage/raft/snapshot-auto/config/*",
 			},
 
 			Unauthenticated: []string{
@@ -138,6 +141,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 			LocalStorage: []string{
 				expirationSubPath,
+				countersSubPath,
 			},
 		},
 	}
@@ -164,6 +168,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -1014,6 +1019,29 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	return nil, nil
 }
 
+func validateMountPath(p string) error {
+	hasSuffix := strings.HasSuffix(p, "/")
+	s := path.Clean(p)
+	// Retain the trailing slash if it was provided
+	if hasSuffix {
+		s = s + "/"
+	}
+	if p != s {
+		return fmt.Errorf("path '%v' does not match cleaned path '%v'", p, s)
+	}
+
+	// Check URL path for non-printable characters
+	idx := strings.IndexFunc(p, func(c rune) bool {
+		return !unicode.IsPrint(c)
+	})
+
+	if idx != -1 {
+		return errors.New("path cannot contain non-printable characters")
+	}
+
+	return nil
+}
+
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1030,6 +1058,10 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(
 				"both 'from' and 'to' path must be specified as a string"),
 			logical.ErrInvalidRequest
+	}
+
+	if err = validateMountPath(toPath); err != nil {
+		return handleError(fmt.Errorf("'to' %v", err))
 	}
 
 	entry := b.Core.router.MatchingMountEntry(ctx, fromPath)
@@ -2400,18 +2432,28 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 
 func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	header := data.Get("header").(string)
+	multivalue := data.Get("multivalue").(bool)
 
-	value, err := b.Core.uiConfig.GetHeader(ctx, header)
+	values, err := b.Core.uiConfig.GetHeader(ctx, header)
 	if err != nil {
 		return nil, err
 	}
-	if value == "" {
+	if len(values) == 0 {
 		return nil, nil
+	}
+
+	// Return multiple values if specified
+	if multivalue {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"values": values,
+			},
+		}, nil
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"value": value,
+			"value": values[0],
 		},
 	}, nil
 }
@@ -2445,7 +2487,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	for _, v := range values {
 		value.Add(header, v)
 	}
-	err := b.Core.uiConfig.SetHeader(ctx, header, value.Get(header))
+	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
 	if err != nil {
 		return nil, err
 	}
@@ -2508,8 +2550,8 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(KeyRotateGracePeriod, func() {
-			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", KeyRotateGracePeriod)
+		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
 			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
@@ -3312,6 +3354,20 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	path = sanitizePath(path)
 
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
+		return nil, logical.ErrPermissionDenied
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
+		return nil, logical.ErrPermissionDenied
+	}
+
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
 	ns, err := namespace.FromContext(ctx)
@@ -3342,20 +3398,6 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if ns.ID != me.Namespace().ID {
 		resp.Data["path"] = me.Namespace().Path + me.Path
 		fullMountPath = ns.Path + me.Namespace().Path + me.Path
-	}
-
-	// Load the ACL policies so we can walk the prefix for this mount
-	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if entity != nil && entity.Disabled {
-		b.logger.Warn("permission denied as the entity on the token is disabled")
-		return errResp, logical.ErrPermissionDenied
-	}
-	if te != nil && te.EntityID != "" && entity == nil {
-		b.logger.Warn("permission denied as the entity on the token is invalid")
-		return nil, logical.ErrPermissionDenied
 	}
 
 	if !hasMountAccess(ctx, acl, fullMountPath) {
@@ -4325,6 +4367,10 @@ This path responds to the following HTTP methods.
 		"Write, Read, and Delete data directly in the Storage backend.",
 		"",
 	},
+	"internal-ui-feature-flags": {
+		"Enabled feature flags. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
 	"internal-ui-mounts": {
 		"Information about mounts returned according to their tuned visibility. Internal API; its location, inputs, and outputs may change.",
 		"",
@@ -4360,5 +4406,13 @@ This path responds to the following HTTP methods.
 		`Information about the host instance that this Vault server is running on.
 		The information that gets collected includes host hardware information, and CPU,
 		disk, and memory utilization`,
+	},
+	"activity-query": {
+		"Query the historical count of clients.",
+		"Query the historical count of clients.",
+	},
+	"activity-config": {
+		"Control the collection and reporting of client counts.",
+		"Control the collection and reporting of client counts.",
 	},
 }

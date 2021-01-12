@@ -9,14 +9,13 @@ import (
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
-
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
-var _ newdbplugin.Database = (*MySQL)(nil)
+var _ dbplugin.Database = (*MySQL)(nil)
 
 func TestMySQL_Initialize(t *testing.T) {
 	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
@@ -26,12 +25,12 @@ func TestMySQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config:           connectionDetails,
 		VerifyConnection: true,
 	}
 
-	db := new(false)
+	db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -52,12 +51,12 @@ func TestMySQL_Initialize(t *testing.T) {
 		"max_open_connections": "5",
 	}
 
-	initReq = newdbplugin.InitializeRequest{
+	initReq = dbplugin.InitializeRequest{
 		Config:           connectionDetails,
 		VerifyConnection: true,
 	}
 
-	db = new(false)
+	db = newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err = db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -66,19 +65,19 @@ func TestMySQL_Initialize(t *testing.T) {
 
 func TestMySQL_CreateUser(t *testing.T) {
 	t.Run("missing creation statements", func(t *testing.T) {
-		db := new(false)
+		db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 
 		password, err := credsutil.RandomAlphaNumeric(32, false)
 		if err != nil {
 			t.Fatalf("unable to generate password: %s", err)
 		}
 
-		createReq := newdbplugin.NewUserRequest{
-			UsernameConfig: newdbplugin.UsernameMetadata{
+		createReq := dbplugin.NewUserRequest{
+			UsernameConfig: dbplugin.UsernameMetadata{
 				DisplayName: "test",
 				RoleName:    "test",
 			},
-			Statements: newdbplugin.Statements{
+			Statements: dbplugin.Statements{
 				Commands: []string{},
 			},
 			Password:   password,
@@ -103,12 +102,12 @@ func TestMySQL_CreateUser(t *testing.T) {
 			"connection_url": connURL,
 		}
 
-		initReq := newdbplugin.InitializeRequest{
+		initReq := dbplugin.InitializeRequest{
 			Config:           connectionDetails,
 			VerifyConnection: true,
 		}
 
-		db := new(false)
+		db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 		_, err := db.Initialize(context.Background(), initReq)
 		if err != nil {
 			t.Fatalf("err: %s", err)
@@ -126,12 +125,12 @@ func TestMySQL_CreateUser(t *testing.T) {
 			"connection_url": connURL,
 		}
 
-		initReq := newdbplugin.InitializeRequest{
+		initReq := dbplugin.InitializeRequest{
 			Config:           connectionDetails,
 			VerifyConnection: true,
 		}
 
-		db := new(true)
+		db := newMySQL(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
 		_, err := db.Initialize(context.Background(), initReq)
 		if err != nil {
 			t.Fatalf("err: %s", err)
@@ -188,12 +187,12 @@ func testCreateUser(t *testing.T, db *MySQL, connURL string) {
 				t.Fatalf("unable to generate password: %s", err)
 			}
 
-			createReq := newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: test.createStmts,
 				},
 				Password:   password,
@@ -256,12 +255,12 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			initReq := newdbplugin.InitializeRequest{
+			initReq := dbplugin.InitializeRequest{
 				Config:           connectionDetails,
 				VerifyConnection: true,
 			}
 
-			db := new(false)
+			db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 			_, err := db.Initialize(context.Background(), initReq)
 			if err != nil {
 				t.Fatalf("err: %s", err)
@@ -271,11 +270,11 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 				t.Fatal("Database should be initialized")
 			}
 
-			updateReq := newdbplugin.UpdateUserRequest{
+			updateReq := dbplugin.UpdateUserRequest{
 				Username: "root",
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: "different_sercret",
-					Statements: newdbplugin.Statements{
+					Statements: dbplugin.Statements{
 						Commands: test.statements,
 					},
 				},
@@ -331,12 +330,12 @@ func TestMySQL_DeleteUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	initReq := newdbplugin.InitializeRequest{
+	initReq := dbplugin.InitializeRequest{
 		Config:           connectionDetails,
 		VerifyConnection: true,
 	}
 
-	db := new(false)
+	db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -349,12 +348,12 @@ func TestMySQL_DeleteUser(t *testing.T) {
 				t.Fatalf("unable to generate password: %s", err)
 			}
 
-			createReq := newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
+			createReq := dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
 					DisplayName: "test",
 					RoleName:    "test",
 				},
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: []string{`
 						CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 						GRANT SELECT ON *.* TO '{{name}}'@'%';`,
@@ -377,9 +376,9 @@ func TestMySQL_DeleteUser(t *testing.T) {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 
-			deleteReq := newdbplugin.DeleteUserRequest{
+			deleteReq := dbplugin.DeleteUserRequest{
 				Username: userResp.Username,
-				Statements: newdbplugin.Statements{
+				Statements: dbplugin.Statements{
 					Commands: test.revokeStmts,
 				},
 			}
@@ -436,7 +435,7 @@ func TestMySQL_UpdateUser(t *testing.T) {
 				"connection_url": connURL,
 			}
 
-			initReq := newdbplugin.InitializeRequest{
+			initReq := dbplugin.InitializeRequest{
 				Config:           connectionDetails,
 				VerifyConnection: true,
 			}
@@ -445,7 +444,7 @@ func TestMySQL_UpdateUser(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			db := new(false)
+			db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 			_, err := db.Initialize(context.Background(), initReq)
 			if err != nil {
 				t.Fatalf("err: %s", err)
@@ -456,11 +455,11 @@ func TestMySQL_UpdateUser(t *testing.T) {
 				t.Fatalf("unable to generate password: %s", err)
 			}
 
-			updateReq := newdbplugin.UpdateUserRequest{
+			updateReq := dbplugin.UpdateUserRequest{
 				Username: dbUser,
-				Password: &newdbplugin.ChangePassword{
+				Password: &dbplugin.ChangePassword{
 					NewPassword: newPassword,
-					Statements: newdbplugin.Statements{
+					Statements: dbplugin.Statements{
 						Commands: test.rotateStmts,
 					},
 				},
@@ -497,7 +496,7 @@ func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 		"password":       pw,
 	}
 
-	db := new(false)
+	db := newMySQL(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

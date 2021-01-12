@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"strings"
 	"time"
 
 	"github.com/couchbase/gocb/v2"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 )
 
 const (
@@ -23,7 +22,7 @@ const (
 )
 
 var (
-	_ newdbplugin.Database = &CouchbaseDB{}
+	_ dbplugin.Database = &CouchbaseDB{}
 )
 
 // Type that combines the custom plugins Couchbase database connection configuration options and the Vault CredentialsProducer
@@ -44,7 +43,7 @@ type RolesAndGroups struct {
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
-	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
 }
 
@@ -59,30 +58,18 @@ func new() *CouchbaseDB {
 	return db
 }
 
-// Run instantiates a CouchbaseDB object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	db, err := New()
-	if err != nil {
-		return err
-	}
-
-	newdbplugin.Serve(db.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
-}
-
-func (c *CouchbaseDB) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (c *CouchbaseDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	err := c.couchbaseDBConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
 	return resp, nil
 }
 
-func (c *CouchbaseDB) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (c *CouchbaseDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()
@@ -91,42 +78,42 @@ func (c *CouchbaseDB) NewUser(ctx context.Context, req newdbplugin.NewUserReques
 		credsutil.DisplayName(req.UsernameConfig.DisplayName, maxKeyLength),
 		credsutil.RoleName(req.UsernameConfig.RoleName, maxKeyLength))
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
 	}
 	username = strings.ToUpper(username)
 
 	db, err := c.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to get connection: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to get connection: %w", err)
 	}
 
 	err = newUser(ctx, db, username, req)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	resp := newdbplugin.NewUserResponse{
+	resp := dbplugin.NewUserResponse{
 		Username: username,
 	}
 
 	return resp, nil
 }
 
-func (c *CouchbaseDB) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (c *CouchbaseDB) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password != nil {
 		err := c.changeUserPassword(ctx, req.Username, req.Password.NewPassword)
-		return newdbplugin.UpdateUserResponse{}, err
+		return dbplugin.UpdateUserResponse{}, err
 	}
-	return newdbplugin.UpdateUserResponse{}, nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-func (c *CouchbaseDB) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (c *CouchbaseDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	db, err := c.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("failed to make connection: %w", err)
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to make connection: %w", err)
 	}
 
 	// Close the database connection to ensure no new connections come in
@@ -143,13 +130,13 @@ func (c *CouchbaseDB) DeleteUser(ctx context.Context, req newdbplugin.DeleteUser
 	err = mgr.DropUser(req.Username, nil)
 
 	if err != nil {
-		return newdbplugin.DeleteUserResponse{}, err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
-	return newdbplugin.DeleteUserResponse{}, nil
+	return dbplugin.DeleteUserResponse{}, nil
 }
 
-func newUser(ctx context.Context, db *gocb.Cluster, username string, req newdbplugin.NewUserRequest) error {
+func newUser(ctx context.Context, db *gocb.Cluster, username string, req dbplugin.NewUserRequest) error {
 	statements := removeEmpty(req.Statements.Commands)
 	if len(statements) == 0 {
 		statements = append(statements, defaultCouchbaseUserRole)

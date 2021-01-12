@@ -196,8 +196,9 @@ func (c *Client) AdvanceOperationTime(opTime *primitive.Timestamp) error {
 	return nil
 }
 
-// UpdateUseTime updates the session's last used time.
-// Must be called whenver this session is used to send a command to the server.
+// UpdateUseTime sets the session's last used time to the current time. This must be called whenever the session is
+// used to send a command to the server to ensure that the session is not prematurely marked expired in the driver's
+// session pool. If the session has already been ended, this method will return ErrSessionEnded.
 func (c *Client) UpdateUseTime() error {
 	if c.Terminated {
 		return ErrSessionEnded

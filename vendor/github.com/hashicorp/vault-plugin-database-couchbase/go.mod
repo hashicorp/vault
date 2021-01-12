@@ -11,8 +11,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201007132131-6a41edbf89f5
+	github.com/hashicorp/vault/sdk v0.1.14-0.20201022214319-d87657199d4b
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.3

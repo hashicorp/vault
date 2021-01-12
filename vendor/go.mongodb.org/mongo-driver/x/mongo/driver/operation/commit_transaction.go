@@ -40,7 +40,7 @@ func NewCommitTransaction() *CommitTransaction {
 	return &CommitTransaction{}
 }
 
-func (ct *CommitTransaction) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server) error {
+func (ct *CommitTransaction) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
 	var err error
 	return err
 }

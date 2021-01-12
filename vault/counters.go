@@ -12,8 +12,11 @@ import (
 
 const (
 	requestCounterDatePathFormat = "2006/01"
-	countersPath                 = systemBarrierPrefix + "counters"
-	requestCountersPath          = "sys/counters/requests/"
+
+	// This storage path stores both the request counters in this file, and the activity log.
+	countersSubPath = "counters/"
+
+	requestCountersPath = "sys/counters/requests/"
 )
 
 type counters struct {

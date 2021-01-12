@@ -35,14 +35,15 @@ func NewResourceSkusClient(subscriptionID string) ResourceSkusClient {
 	return NewResourceSkusClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewResourceSkusClientWithBaseURI creates an instance of the ResourceSkusClient client.
+// NewResourceSkusClientWithBaseURI creates an instance of the ResourceSkusClient client using a custom endpoint.  Use
+// this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewResourceSkusClientWithBaseURI(baseURI string, subscriptionID string) ResourceSkusClient {
 	return ResourceSkusClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
 // List gets the list of Microsoft.Compute SKUs available for your Subscription.
 // Parameters:
-// filter - the filter to apply on the operation.
+// filter - the filter to apply on the operation. Only **location** filter is supported currently.
 func (client ResourceSkusClient) List(ctx context.Context, filter string) (result ResourceSkusResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ResourceSkusClient.List")
@@ -101,8 +102,7 @@ func (client ResourceSkusClient) ListPreparer(ctx context.Context, filter string
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client ResourceSkusClient) ListSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -110,7 +110,6 @@ func (client ResourceSkusClient) ListSender(req *http.Request) (*http.Response, 
 func (client ResourceSkusClient) ListResponder(resp *http.Response) (result ResourceSkusResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

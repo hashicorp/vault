@@ -6,8 +6,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 const mockV5Type = "mockv5"
@@ -17,7 +16,7 @@ type MockDatabaseV5 struct {
 	config map[string]interface{}
 }
 
-var _ newdbplugin.Database = &MockDatabaseV5{}
+var _ v5.Database = &MockDatabaseV5{}
 
 // New returns a new in-memory instance
 func New() (interface{}, error) {
@@ -26,52 +25,52 @@ func New() (interface{}, error) {
 }
 
 // Run instantiates a MongoDB object, and runs the RPC server for the plugin
-func RunV5(apiTLSConfig *api.TLSConfig) error {
+func RunV5() error {
 	dbType, err := New()
 	if err != nil {
 		return err
 	}
 
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	v5.Serve(dbType.(v5.Database))
 
 	return nil
 }
 
-func (m MockDatabaseV5) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (m MockDatabaseV5) Initialize(ctx context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
 	log.Default().Info("Initialize called",
 		"req", req)
 
 	config := req.Config
 	config["from-plugin"] = "this value is from the plugin itself"
 
-	resp := newdbplugin.InitializeResponse{
+	resp := v5.InitializeResponse{
 		Config: req.Config,
 	}
 	return resp, nil
 }
 
-func (m MockDatabaseV5) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (m MockDatabaseV5) NewUser(ctx context.Context, req v5.NewUserRequest) (v5.NewUserResponse, error) {
 	log.Default().Info("NewUser called",
 		"req", req)
 
 	now := time.Now()
 	user := fmt.Sprintf("mockv5_user_%s", now.Format(time.RFC3339))
-	resp := newdbplugin.NewUserResponse{
+	resp := v5.NewUserResponse{
 		Username: user,
 	}
 	return resp, nil
 }
 
-func (m MockDatabaseV5) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (m MockDatabaseV5) UpdateUser(ctx context.Context, req v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
 	log.Default().Info("UpdateUser called",
 		"req", req)
-	return newdbplugin.UpdateUserResponse{}, nil
+	return v5.UpdateUserResponse{}, nil
 }
 
-func (m MockDatabaseV5) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (m MockDatabaseV5) DeleteUser(ctx context.Context, req v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
 	log.Default().Info("DeleteUser called",
 		"req", req)
-	return newdbplugin.DeleteUserResponse{}, nil
+	return v5.DeleteUserResponse{}, nil
 }
 
 func (m MockDatabaseV5) Type() (string, error) {

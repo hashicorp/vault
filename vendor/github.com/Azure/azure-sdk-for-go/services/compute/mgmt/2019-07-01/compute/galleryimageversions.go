@@ -36,7 +36,9 @@ func NewGalleryImageVersionsClient(subscriptionID string) GalleryImageVersionsCl
 	return NewGalleryImageVersionsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewGalleryImageVersionsClientWithBaseURI creates an instance of the GalleryImageVersionsClient client.
+// NewGalleryImageVersionsClientWithBaseURI creates an instance of the GalleryImageVersionsClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
 func NewGalleryImageVersionsClientWithBaseURI(baseURI string, subscriptionID string) GalleryImageVersionsClient {
 	return GalleryImageVersionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -64,11 +66,7 @@ func (client GalleryImageVersionsClient) CreateOrUpdate(ctx context.Context, res
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: galleryImageVersion,
 			Constraints: []validation.Constraint{{Target: "galleryImageVersion.GalleryImageVersionProperties", Name: validation.Null, Rule: false,
-				Chain: []validation.Constraint{{Target: "galleryImageVersion.GalleryImageVersionProperties.StorageProfile", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "galleryImageVersion.GalleryImageVersionProperties.StorageProfile.Source", Name: validation.Null, Rule: false,
-						Chain: []validation.Constraint{{Target: "galleryImageVersion.GalleryImageVersionProperties.StorageProfile.Source.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					}},
-				}}}}}); err != nil {
+				Chain: []validation.Constraint{{Target: "galleryImageVersion.GalleryImageVersionProperties.StorageProfile", Name: validation.Null, Rule: true, Chain: nil}}}}}}); err != nil {
 		return result, validation.NewError("compute.GalleryImageVersionsClient", "CreateOrUpdate", err.Error())
 	}
 
@@ -115,9 +113,8 @@ func (client GalleryImageVersionsClient) CreateOrUpdatePreparer(ctx context.Cont
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
 func (client GalleryImageVersionsClient) CreateOrUpdateSender(req *http.Request) (future GalleryImageVersionsCreateOrUpdateFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
@@ -130,7 +127,6 @@ func (client GalleryImageVersionsClient) CreateOrUpdateSender(req *http.Request)
 func (client GalleryImageVersionsClient) CreateOrUpdateResponder(resp *http.Response) (result GalleryImageVersion, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated, http.StatusAccepted),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -196,9 +192,8 @@ func (client GalleryImageVersionsClient) DeletePreparer(ctx context.Context, res
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client GalleryImageVersionsClient) DeleteSender(req *http.Request) (future GalleryImageVersionsDeleteFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
@@ -211,7 +206,6 @@ func (client GalleryImageVersionsClient) DeleteSender(req *http.Request) (future
 func (client GalleryImageVersionsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -286,8 +280,7 @@ func (client GalleryImageVersionsClient) GetPreparer(ctx context.Context, resour
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client GalleryImageVersionsClient) GetSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -295,7 +288,6 @@ func (client GalleryImageVersionsClient) GetSender(req *http.Request) (*http.Res
 func (client GalleryImageVersionsClient) GetResponder(resp *http.Response) (result GalleryImageVersion, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -367,8 +359,7 @@ func (client GalleryImageVersionsClient) ListByGalleryImagePreparer(ctx context.
 // ListByGalleryImageSender sends the ListByGalleryImage request. The method will close the
 // http.Response Body if it receives an error.
 func (client GalleryImageVersionsClient) ListByGalleryImageSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListByGalleryImageResponder handles the response to the ListByGalleryImage request. The method always
@@ -376,7 +367,6 @@ func (client GalleryImageVersionsClient) ListByGalleryImageSender(req *http.Requ
 func (client GalleryImageVersionsClient) ListByGalleryImageResponder(resp *http.Response) (result GalleryImageVersionList, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -418,5 +408,89 @@ func (client GalleryImageVersionsClient) ListByGalleryImageComplete(ctx context.
 		}()
 	}
 	result.page, err = client.ListByGalleryImage(ctx, resourceGroupName, galleryName, galleryImageName)
+	return
+}
+
+// Update update a gallery Image Version.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// galleryName - the name of the Shared Image Gallery in which the Image Definition resides.
+// galleryImageName - the name of the gallery Image Definition in which the Image Version is to be updated.
+// galleryImageVersionName - the name of the gallery Image Version to be updated. Needs to follow semantic
+// version name pattern: The allowed characters are digit and period. Digits must be within the range of a
+// 32-bit integer. Format: <MajorVersion>.<MinorVersion>.<Patch>
+// galleryImageVersion - parameters supplied to the update gallery Image Version operation.
+func (client GalleryImageVersionsClient) Update(ctx context.Context, resourceGroupName string, galleryName string, galleryImageName string, galleryImageVersionName string, galleryImageVersion GalleryImageVersionUpdate) (result GalleryImageVersionsUpdateFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/GalleryImageVersionsClient.Update")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, galleryName, galleryImageName, galleryImageVersionName, galleryImageVersion)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsClient", "Update", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.UpdateSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsClient", "Update", result.Response(), "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// UpdatePreparer prepares the Update request.
+func (client GalleryImageVersionsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, galleryName string, galleryImageName string, galleryImageVersionName string, galleryImageVersion GalleryImageVersionUpdate) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"galleryImageName":        autorest.Encode("path", galleryImageName),
+		"galleryImageVersionName": autorest.Encode("path", galleryImageVersionName),
+		"galleryName":             autorest.Encode("path", galleryName),
+		"resourceGroupName":       autorest.Encode("path", resourceGroupName),
+		"subscriptionId":          autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2019-07-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
+		autorest.AsPatch(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/galleries/{galleryName}/images/{galleryImageName}/versions/{galleryImageVersionName}", pathParameters),
+		autorest.WithJSON(galleryImageVersion),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// UpdateSender sends the Update request. The method will close the
+// http.Response Body if it receives an error.
+func (client GalleryImageVersionsClient) UpdateSender(req *http.Request) (future GalleryImageVersionsUpdateFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
+	return
+}
+
+// UpdateResponder handles the response to the Update request. The method always
+// closes the http.Response Body.
+func (client GalleryImageVersionsClient) UpdateResponder(resp *http.Response) (result GalleryImageVersion, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
 	return
 }

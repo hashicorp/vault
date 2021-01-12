@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
+	"github.com/hashicorp/vault/command/agent/winsvc"
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -369,9 +370,11 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Check if a default namespace has been set
 		mountPath := config.AutoAuth.Method.MountPath
-		if config.AutoAuth.Method.Namespace != "" {
-			namespace = config.AutoAuth.Method.Namespace
-			mountPath = path.Join(namespace, mountPath)
+		if cns := config.AutoAuth.Method.Namespace; cns != "" {
+			// Only set this value if the env var is empty, otherwise we end up with a nested namespace
+			if ens := os.Getenv(api.EnvVaultNamespace); ens == "" {
+				mountPath = path.Join(cns, mountPath)
+			}
 		}
 
 		authConfig := &auth.AuthConfig{
@@ -557,6 +560,8 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Output("==> Vault agent shutdown triggered")
 				return nil
 			case <-ctx.Done():
+				return nil
+			case <-winsvc.ShutdownChannel():
 				return nil
 			}
 		}

@@ -350,9 +350,9 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 // CreateAlias API operation for AWS Key Management Service.
 //
 // Creates a display name for a customer managed customer master key (CMK).
-// You can use an alias to identify a CMK in cryptographic operations, such
-// as Encrypt and GenerateDataKey. You can change the CMK associated with the
-// alias at any time.
+// You can use an alias to identify a CMK in cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations),
+// such as Encrypt and GenerateDataKey. You can change the CMK associated with
+// the alias at any time.
 //
 // Aliases are easier to remember than key IDs. They can also help to simplify
 // your applications. For example, if you use an alias in your code, you can
@@ -399,11 +399,12 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 //    a new alias with the desired name.
 //
 //    * You can use an alias name or alias ARN to identify a CMK in AWS KMS
-//    cryptographic operations and in the DescribeKey operation. However, you
-//    cannot use alias names or alias ARNs in API operations that manage CMKs,
-//    such as DisableKey or GetKeyPolicy. For information about the valid CMK
-//    identifiers for each AWS KMS API operation, see the descriptions of the
-//    KeyId parameter in the API operation documentation.
+//    cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+//    and in the DescribeKey operation. However, you cannot use alias names
+//    or alias ARNs in API operations that manage CMKs, such as DisableKey or
+//    GetKeyPolicy. For information about the valid CMK identifiers for each
+//    AWS KMS API operation, see the descriptions of the KeyId parameter in
+//    the API operation documentation.
 //
 // Because an alias is not a property of a CMK, you can delete and change the
 // aliases of a CMK without affecting the CMK. Also, aliases do not appear in
@@ -693,8 +694,8 @@ func (c *KMS) CreateGrantRequest(input *CreateGrantInput) (req *request.Request,
 // principal to use the CMK when the conditions specified in the grant are met.
 // When setting permissions, grants are an alternative to key policies.
 //
-// To create a grant that allows a cryptographic operation only when the request
-// includes a particular encryption context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context),
+// To create a grant that allows a cryptographic operation (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+// only when the request includes a particular encryption context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context),
 // use the Constraints parameter. For details, see GrantConstraints.
 //
 // You can create grants on symmetric and asymmetric CMKs. However, if the grant
@@ -1357,12 +1358,12 @@ func (c *KMS) DeleteCustomKeyStoreRequest(input *DeleteCustomKeyStoreInput) (req
 // The custom key store that you delete cannot contain any AWS KMS customer
 // master keys (CMKs) (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys).
 // Before deleting the key store, verify that you will never need to use any
-// of the CMKs in the key store for any cryptographic operations. Then, use
-// ScheduleKeyDeletion to delete the AWS KMS customer master keys (CMKs) from
-// the key store. When the scheduled waiting period expires, the ScheduleKeyDeletion
-// operation deletes the CMKs. Then it makes a best effort to delete the key
-// material from the associated cluster. However, you might need to manually
-// delete the orphaned key material (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-orphaned-key)
+// of the CMKs in the key store for any cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations).
+// Then, use ScheduleKeyDeletion to delete the AWS KMS customer master keys
+// (CMKs) from the key store. When the scheduled waiting period expires, the
+// ScheduleKeyDeletion operation deletes the CMKs. Then it makes a best effort
+// to delete the key material from the associated cluster. However, you might
+// need to manually delete the orphaned key material (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-orphaned-key)
 // from the cluster and its backups.
 //
 // After all CMKs are deleted from AWS KMS, use DisconnectCustomKeyStore to
@@ -1844,8 +1845,8 @@ func (c *KMS) DisableKeyRequest(input *DisableKeyInput) (req *request.Request, o
 // DisableKey API operation for AWS Key Management Service.
 //
 // Sets the state of a customer master key (CMK) to disabled, thereby preventing
-// its use for cryptographic operations. You cannot perform this operation on
-// a CMK in a different AWS account.
+// its use for cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations).
+// You cannot perform this operation on a CMK in a different AWS account.
 //
 // For more information about how key state affects the use of a CMK, see How
 // Key State Affects the Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
@@ -2079,8 +2080,9 @@ func (c *KMS) DisconnectCustomKeyStoreRequest(input *DisconnectCustomKeyStoreInp
 //
 // While a custom key store is disconnected, all attempts to create customer
 // master keys (CMKs) in the custom key store or to use existing CMKs in cryptographic
-// operations will fail. This action can prevent users from storing and accessing
-// sensitive data.
+// operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+// will fail. This action can prevent users from storing and accessing sensitive
+// data.
 //
 // To find the connection state of a custom key store, use the DescribeCustomKeyStores
 // operation. To reconnect a custom key store, use the ConnectCustomKeyStore
@@ -2195,8 +2197,8 @@ func (c *KMS) EnableKeyRequest(input *EnableKeyInput) (req *request.Request, out
 // EnableKey API operation for AWS Key Management Service.
 //
 // Sets the key state of a customer master key (CMK) to enabled. This allows
-// you to use the CMK for cryptographic operations. You cannot perform this
-// operation on a CMK in a different AWS account.
+// you to use the CMK for cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations).
+// You cannot perform this operation on a CMK in a different AWS account.
 //
 // The CMK that you use for this operation must be in a compatible key state.
 // For details, see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
@@ -2429,11 +2431,12 @@ func (c *KMS) EncryptRequest(input *EncryptInput) (req *request.Request, output 
 //    identifier or database password, or other sensitive information.
 //
 //    * You can use the Encrypt operation to move encrypted data from one AWS
-//    region to another. In the first region, generate a data key and use the
-//    plaintext key to encrypt the data. Then, in the new region, call the Encrypt
-//    method on same plaintext data key. Now, you can safely move the encrypted
-//    data and encrypted data key to the new region, and decrypt in the new
-//    region when necessary.
+//    Region to another. For example, in Region A, generate a data key and use
+//    the plaintext key to encrypt your data. Then, in Region A, use the Encrypt
+//    operation to encrypt the plaintext data key under a CMK in Region B. Now,
+//    you can move the encrypted data and the encrypted data key to Region B.
+//    When necessary, you can decrypt the encrypted data key and the encrypted
+//    data entirely within in Region B.
 //
 // You don't need to use the Encrypt operation to encrypt a data key. The GenerateDataKey
 // and GenerateDataKeyPair operations return a plaintext data key and an encrypted
@@ -2603,27 +2606,20 @@ func (c *KMS) GenerateDataKeyRequest(input *GenerateDataKeyInput) (req *request.
 
 // GenerateDataKey API operation for AWS Key Management Service.
 //
-// Generates a unique symmetric data key. This operation returns a plaintext
-// copy of the data key and a copy that is encrypted under a customer master
-// key (CMK) that you specify. You can use the plaintext key to encrypt your
-// data outside of AWS KMS and store the encrypted data key with the encrypted
-// data.
+// Generates a unique symmetric data key for client-side encryption. This operation
+// returns a plaintext copy of the data key and a copy that is encrypted under
+// a customer master key (CMK) that you specify. You can use the plaintext key
+// to encrypt your data outside of AWS KMS and store the encrypted data key
+// with the encrypted data.
 //
 // GenerateDataKey returns a unique data key for each request. The bytes in
-// the key are not related to the caller or CMK that is used to encrypt the
-// data key.
+// the plaintext key are not related to the caller or the CMK.
 //
 // To generate a data key, specify the symmetric CMK that will be used to encrypt
 // the data key. You cannot use an asymmetric CMK to generate data keys. To
-// get the type of your CMK, use the DescribeKey operation.
-//
-// You must also specify the length of the data key. Use either the KeySpec
-// or NumberOfBytes parameters (but not both). For 128-bit and 256-bit data
-// keys, use the KeySpec parameter.
-//
-// If the operation succeeds, the plaintext copy of the data key is in the Plaintext
-// field of the response, and the encrypted copy of the data key in the CiphertextBlob
-// field.
+// get the type of your CMK, use the DescribeKey operation. You must also specify
+// the length of the data key. Use either the KeySpec or NumberOfBytes parameters
+// (but not both). For 128-bit and 256-bit data keys, use the KeySpec parameter.
 //
 // To get only an encrypted copy of the data key, use GenerateDataKeyWithoutPlaintext.
 // To generate an asymmetric data key pair, use the GenerateDataKeyPair or GenerateDataKeyPairWithoutPlaintext
@@ -2640,24 +2636,32 @@ func (c *KMS) GenerateDataKeyRequest(input *GenerateDataKeyInput) (req *request.
 // For details, see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
+// How to use your data key
+//
 // We recommend that you use the following pattern to encrypt data locally in
-// your application:
+// your application. You can write your own code or use a client-side encryption
+// library, such as the AWS Encryption SDK (https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/),
+// the Amazon DynamoDB Encryption Client (https://docs.aws.amazon.com/dynamodb-encryption-client/latest/devguide/),
+// or Amazon S3 client-side encryption (https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingClientSideEncryption.html)
+// to do these tasks for you.
 //
-// Use the GenerateDataKey operation to get a data encryption key.
+// To encrypt data outside of AWS KMS:
 //
-// Use the plaintext data key (returned in the Plaintext field of the response)
-// to encrypt data locally, then erase the plaintext data key from memory.
+// Use the GenerateDataKey operation to get a data key.
 //
-// Store the encrypted data key (returned in the CiphertextBlob field of the
-// response) alongside the locally encrypted data.
+// Use the plaintext data key (in the Plaintext field of the response) to encrypt
+// your data outside of AWS KMS. Then erase the plaintext data key from memory.
 //
-// To decrypt data locally:
+// Store the encrypted data key (in the CiphertextBlob field of the response)
+// with the encrypted data.
+//
+// To decrypt data outside of AWS KMS:
 //
 // Use the Decrypt operation to decrypt the encrypted data key. The operation
 // returns a plaintext copy of the data key.
 //
-// Use the plaintext data key to decrypt data locally, then erase the plaintext
-// data key from memory.
+// Use the plaintext data key to decrypt data outside of AWS KMS, then erase
+// the plaintext data key from memory.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2794,7 +2798,8 @@ func (c *KMS) GenerateDataKeyPairRequest(input *GenerateDataKeyPairInput) (req *
 //
 // To generate a data key pair, you must specify a symmetric customer master
 // key (CMK) to encrypt the private key in a data key pair. You cannot use an
-// asymmetric CMK. To get the type of your CMK, use the DescribeKey operation.
+// asymmetric CMK or a CMK in a custom key store. To get the type and origin
+// of your CMK, use the DescribeKey operation.
 //
 // If you are using the data key pair to encrypt data, or for any operation
 // where you don't immediately need a private key, consider using the GenerateDataKeyPairWithoutPlaintext
@@ -2867,6 +2872,10 @@ func (c *KMS) GenerateDataKeyPairRequest(input *GenerateDataKeyPairInput) (req *
 //   For more information about how key state affects the use of a CMK, see How
 //   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide .
+//
+//   * UnsupportedOperationException
+//   The request was rejected because a specified parameter is not supported or
+//   a specified resource is not valid for this operation.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GenerateDataKeyPair
 func (c *KMS) GenerateDataKeyPair(input *GenerateDataKeyPairInput) (*GenerateDataKeyPairOutput, error) {
@@ -2941,8 +2950,8 @@ func (c *KMS) GenerateDataKeyPairWithoutPlaintextRequest(input *GenerateDataKeyP
 //
 // To generate a data key pair, you must specify a symmetric customer master
 // key (CMK) to encrypt the private key in the data key pair. You cannot use
-// an asymmetric CMK. To get the type of your CMK, use the KeySpec field in
-// the DescribeKey response.
+// an asymmetric CMK or a CMK in a custom key store. To get the type and origin
+// of your CMK, use the KeySpec field in the DescribeKey response.
 //
 // You can use the public key that GenerateDataKeyPairWithoutPlaintext returns
 // to encrypt data or verify a signature outside of AWS KMS. Then, store the
@@ -3017,6 +3026,10 @@ func (c *KMS) GenerateDataKeyPairWithoutPlaintextRequest(input *GenerateDataKeyP
 //   For more information about how key state affects the use of a CMK, see How
 //   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide .
+//
+//   * UnsupportedOperationException
+//   The request was rejected because a specified parameter is not supported or
+//   a specified resource is not valid for this operation.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GenerateDataKeyPairWithoutPlaintext
 func (c *KMS) GenerateDataKeyPairWithoutPlaintext(input *GenerateDataKeyPairWithoutPlaintextInput) (*GenerateDataKeyPairWithoutPlaintextOutput, error) {
@@ -4237,6 +4250,12 @@ func (c *KMS) ListGrantsRequest(input *ListGrantsInput) (req *request.Request, o
 // To perform this operation on a CMK in a different AWS account, specify the
 // key ARN in the value of the KeyId parameter.
 //
+// The GranteePrincipal field in the ListGrants response usually contains the
+// user or role designated as the grantee principal in the grant. However, when
+// the grantee principal in the grant is an AWS service, the GranteePrincipal
+// field contains the service principal (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#principal-services),
+// which might represent several different grantee principals.
+//
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
@@ -5016,13 +5035,15 @@ func (c *KMS) ReEncryptRequest(input *ReEncryptInput) (req *request.Request, out
 // is encrypted, such as when you manually rotate (https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html#rotate-keys-manually)
 // a CMK or change the CMK that protects a ciphertext. You can also use it to
 // reencrypt ciphertext under the same CMK, such as to change the encryption
-// context of a ciphertext.
+// context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
+// of a ciphertext.
 //
 // The ReEncrypt operation can decrypt ciphertext that was encrypted by using
 // an AWS KMS CMK in an AWS KMS operation, such as Encrypt or GenerateDataKey.
 // It can also decrypt ciphertext that was encrypted by using the public key
-// of an asymmetric CMK outside of AWS KMS. However, it cannot decrypt ciphertext
-// produced by other libraries, such as the AWS Encryption SDK (https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/)
+// of an asymmetric CMK (https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-concepts.html#asymmetric-cmks)
+// outside of AWS KMS. However, it cannot decrypt ciphertext produced by other
+// libraries, such as the AWS Encryption SDK (https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/)
 // or Amazon S3 client-side encryption (https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingClientSideEncryption.html).
 // These libraries return a ciphertext format that is incompatible with AWS
 // KMS.
@@ -5057,17 +5078,16 @@ func (c *KMS) ReEncryptRequest(input *ReEncryptInput) (req *request.Request, out
 //
 // Unlike other AWS KMS API operations, ReEncrypt callers must have two permissions:
 //
-//    * kms:EncryptFrom permission on the source CMK
+//    * kms:ReEncryptFrom permission on the source CMK
 //
-//    * kms:EncryptTo permission on the destination CMK
+//    * kms:ReEncryptTo permission on the destination CMK
 //
-// To permit reencryption from
-//
-// or to a CMK, include the "kms:ReEncrypt*" permission in your key policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html).
+// To permit reencryption from or to a CMK, include the "kms:ReEncrypt*" permission
+// in your key policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html).
 // This permission is automatically included in the key policy when you use
 // the console to create a CMK. But you must include it manually when you create
-// a CMK programmatically or when you use the PutKeyPolicy operation set a key
-// policy.
+// a CMK programmatically or when you use the PutKeyPolicy operation to set
+// a key policy.
 //
 // The CMK that you use for this operation must be in a compatible key state.
 // For details, see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
@@ -5995,6 +6015,11 @@ func (c *KMS) UpdateAliasRequest(input *UpdateAliasInput) (req *request.Request,
 //   The request was rejected because an internal exception occurred. The request
 //   can be retried.
 //
+//   * LimitExceededException
+//   The request was rejected because a quota was exceeded. For more information,
+//   see Quotas (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   in the AWS Key Management Service Developer Guide.
+//
 //   * InvalidStateException
 //   The request was rejected because the state of the specified resource is not
 //   valid for this request.
@@ -6642,7 +6667,8 @@ func (s *CancelKeyDeletionInput) SetKeyId(v string) *CancelKeyDeletionInput {
 type CancelKeyDeletionOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The unique identifier of the master key for which deletion is canceled.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK whose deletion is canceled.
 	KeyId *string `min:"1" type:"string"`
 }
 
@@ -7259,9 +7285,10 @@ func (s *CreateCustomKeyStoreOutput) SetCustomKeyStoreId(v string) *CreateCustom
 type CreateGrantInput struct {
 	_ struct{} `type:"structure"`
 
-	// Allows a cryptographic operation only when the encryption context matches
-	// or includes the encryption context specified in this structure. For more
-	// information about encryption context, see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
+	// Allows a cryptographic operation (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// only when the encryption context matches or includes the encryption context
+	// specified in this structure. For more information about encryption context,
+	// see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
 	// in the AWS Key Management Service Developer Guide .
 	Constraints *GrantConstraints `type:"structure"`
 
@@ -7530,9 +7557,10 @@ type CreateKeyInput struct {
 	// a task.
 	Description *string `type:"string"`
 
-	// Determines the cryptographic operations for which you can use the CMK. The
-	// default value is ENCRYPT_DECRYPT. This parameter is required only for asymmetric
-	// CMKs. You can't change the KeyUsage value after the CMK is created.
+	// Determines the cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// for which you can use the CMK. The default value is ENCRYPT_DECRYPT. This
+	// parameter is required only for asymmetric CMKs. You can't change the KeyUsage
+	// value after the CMK is created.
 	//
 	// Select only one valid value.
 	//
@@ -7992,11 +8020,12 @@ type CustomKeyStoresListEntry struct {
 	//    to the custom key store.
 	//
 	//    * SUBNET_NOT_FOUND - A subnet in the AWS CloudHSM cluster configuration
-	//    was deleted. If AWS KMS cannot find all of the subnets that were configured
-	//    for the cluster when the custom key store was created, attempts to connect
-	//    fail. To fix this error, create a cluster from a backup and associate
-	//    it with your custom key store. This process includes selecting a VPC and
-	//    subnets. For details, see How to Fix a Connection Failure (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-failed)
+	//    was deleted. If AWS KMS cannot find all of the subnets in the cluster
+	//    configuration, attempts to connect the custom key store to the AWS CloudHSM
+	//    cluster fail. To fix this error, create a cluster from a recent backup
+	//    and associate it with your custom key store. (This process creates a new
+	//    cluster configuration with a VPC and private subnets.) For details, see
+	//    How to Fix a Connection Failure (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-failed)
 	//    in the AWS Key Management Service Developer Guide.
 	//
 	//    * USER_LOCKED_OUT - The kmsuser CU account is locked out of the associated
@@ -8126,9 +8155,9 @@ type DecryptInput struct {
 	EncryptionAlgorithm *string `type:"string" enum:"EncryptionAlgorithmSpec"`
 
 	// Specifies the encryption context to use when decrypting the data. An encryption
-	// context is valid only for cryptographic operations with a symmetric CMK.
-	// The standard asymmetric encryption algorithms that AWS KMS uses do not support
-	// an encryption context.
+	// context is valid only for cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// with a symmetric CMK. The standard asymmetric encryption algorithms that
+	// AWS KMS uses do not support an encryption context.
 	//
 	// An encryption context is a collection of non-secret key-value pairs that
 	// represents additional authenticated data. When you use an encryption context
@@ -8241,7 +8270,8 @@ type DecryptOutput struct {
 	// The encryption algorithm that was used to decrypt the ciphertext.
 	EncryptionAlgorithm *string `type:"string" enum:"EncryptionAlgorithmSpec"`
 
-	// The ARN of the customer master key that was used to perform the decryption.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that was used to decrypt the ciphertext.
 	KeyId *string `min:"1" type:"string"`
 
 	// Decrypted plaintext data. When you use the HTTP API or the AWS CLI, the value
@@ -9133,9 +9163,9 @@ type EncryptInput struct {
 	EncryptionAlgorithm *string `type:"string" enum:"EncryptionAlgorithmSpec"`
 
 	// Specifies the encryption context that will be used to encrypt the data. An
-	// encryption context is valid only for cryptographic operations with a symmetric
-	// CMK. The standard asymmetric encryption algorithms that AWS KMS uses do not
-	// support an encryption context.
+	// encryption context is valid only for cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// with a symmetric CMK. The standard asymmetric encryption algorithms that
+	// AWS KMS uses do not support an encryption context.
 	//
 	// An encryption context is a collection of non-secret key-value pairs that
 	// represents additional authenticated data. When you use an encryption context
@@ -9257,7 +9287,8 @@ type EncryptOutput struct {
 	// The encryption algorithm that was used to encrypt the plaintext.
 	EncryptionAlgorithm *string `type:"string" enum:"EncryptionAlgorithmSpec"`
 
-	// The ID of the key used during encryption.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that was used to encrypt the plaintext.
 	KeyId *string `min:"1" type:"string"`
 }
 
@@ -9475,7 +9506,8 @@ type GenerateDataKeyOutput struct {
 	// CiphertextBlob is automatically base64 encoded/decoded by the SDK.
 	CiphertextBlob []byte `min:"1" type:"blob"`
 
-	// The identifier of the CMK that encrypted the data key.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that encrypted the data key.
 	KeyId *string `min:"1" type:"string"`
 
 	// The plaintext data key. When you use the HTTP API or the AWS CLI, the value
@@ -9538,7 +9570,8 @@ type GenerateDataKeyPairInput struct {
 	GrantTokens []*string `type:"list"`
 
 	// Specifies the symmetric CMK that encrypts the private key in the data key
-	// pair. You cannot specify an asymmetric CMKs.
+	// pair. You cannot specify an asymmetric CMK or a CMK in a custom key store.
+	// To get the type and origin of your CMK, use the DescribeKey operation.
 	//
 	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
 	// or alias ARN. When using an alias name, prefix it with "alias/". To specify
@@ -9627,7 +9660,8 @@ func (s *GenerateDataKeyPairInput) SetKeyPairSpec(v string) *GenerateDataKeyPair
 type GenerateDataKeyPairOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The identifier of the CMK that encrypted the private key.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that encrypted the private key.
 	KeyId *string `min:"1" type:"string"`
 
 	// The type of data key pair that was generated.
@@ -9714,8 +9748,9 @@ type GenerateDataKeyPairWithoutPlaintextInput struct {
 	GrantTokens []*string `type:"list"`
 
 	// Specifies the CMK that encrypts the private key in the data key pair. You
-	// must specify a symmetric CMK. You cannot use an asymmetric CMK. To get the
-	// type of your CMK, use the DescribeKey operation.
+	// must specify a symmetric CMK. You cannot use an asymmetric CMK or a CMK in
+	// a custom key store. To get the type and origin of your CMK, use the DescribeKey
+	// operation.
 	//
 	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
 	// or alias ARN. When using an alias name, prefix it with "alias/".
@@ -9803,25 +9838,8 @@ func (s *GenerateDataKeyPairWithoutPlaintextInput) SetKeyPairSpec(v string) *Gen
 type GenerateDataKeyPairWithoutPlaintextOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Specifies the CMK that encrypted the private key in the data key pair. You
-	// must specify a symmetric CMK. You cannot use an asymmetric CMK. To get the
-	// type of your CMK, use the DescribeKey operation.
-	//
-	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
-	// or alias ARN. When using an alias name, prefix it with "alias/".
-	//
-	// For example:
-	//
-	//    * Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
-	//
-	//    * Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
-	//
-	//    * Alias name: alias/ExampleAlias
-	//
-	//    * Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
-	//
-	// To get the key ID and key ARN for a CMK, use ListKeys or DescribeKey. To
-	// get the alias name and alias ARN, use ListAliases.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that encrypted the private key.
 	KeyId *string `min:"1" type:"string"`
 
 	// The type of data key pair that was generated.
@@ -9997,7 +10015,8 @@ type GenerateDataKeyWithoutPlaintextOutput struct {
 	// CiphertextBlob is automatically base64 encoded/decoded by the SDK.
 	CiphertextBlob []byte `min:"1" type:"blob"`
 
-	// The identifier of the CMK that encrypted the data key.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that encrypted the data key.
 	KeyId *string `min:"1" type:"string"`
 }
 
@@ -10358,8 +10377,9 @@ type GetParametersForImportOutput struct {
 	// ImportToken is automatically base64 encoded/decoded by the SDK.
 	ImportToken []byte `min:"1" type:"blob"`
 
-	// The identifier of the CMK to use in a subsequent ImportKeyMaterial request.
-	// This is the same CMK specified in the GetParametersForImport request.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK to use in a subsequent ImportKeyMaterial request. This is the
+	// same CMK specified in the GetParametersForImport request.
 	KeyId *string `min:"1" type:"string"`
 
 	// The time at which the import token and public key are no longer valid. After
@@ -10494,7 +10514,8 @@ type GetPublicKeyOutput struct {
 	// is ENCRYPT_DECRYPT.
 	EncryptionAlgorithms []*string `type:"list"`
 
-	// The identifier of the asymmetric CMK from which the public key was downloaded.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the asymmetric CMK from which the public key was downloaded.
 	KeyId *string `min:"1" type:"string"`
 
 	// The permitted use of the public key. Valid values are ENCRYPT_DECRYPT or
@@ -10567,24 +10588,16 @@ func (s *GetPublicKeyOutput) SetSigningAlgorithms(v []*string) *GetPublicKeyOutp
 	return s
 }
 
-// Use this structure to allow cryptographic operations in the grant only when
-// the operation request includes the specified encryption context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context).
+// Use this structure to allow cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+// in the grant only when the operation request includes the specified encryption
+// context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context).
 //
-// AWS KMS applies the grant constraints only when the grant allows a cryptographic
-// operation that accepts an encryption context as input, such as the following.
-//
-//    * Encrypt
-//
-//    * Decrypt
-//
-//    * GenerateDataKey
-//
-//    * GenerateDataKeyWithoutPlaintext
-//
-//    * ReEncrypt
-//
-// AWS KMS does not apply the grant constraints to other operations, such as
-// DescribeKey or ScheduleKeyDeletion.
+// AWS KMS applies the grant constraints only to cryptographic operations that
+// support an encryption context, that is, all cryptographic operations with
+// a symmetric CMK (https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-concepts.html#symmetric-cmks).
+// Grant constraints are not applied to operations that do not support an encryption
+// context, such as cryptographic operations with asymmetric CMKs and management
+// operations, such as DescribeKey or ScheduleKeyDeletion.
 //
 // In a cryptographic operation, the encryption context in the decryption operation
 // must be an exact, case-sensitive match for the keys and values in the encryption
@@ -10602,16 +10615,16 @@ type GrantConstraints struct {
 	_ struct{} `type:"structure"`
 
 	// A list of key-value pairs that must match the encryption context in the cryptographic
-	// operation request. The grant allows the operation only when the encryption
-	// context in the request is the same as the encryption context specified in
-	// this constraint.
+	// operation (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// request. The grant allows the operation only when the encryption context
+	// in the request is the same as the encryption context specified in this constraint.
 	EncryptionContextEquals map[string]*string `type:"map"`
 
 	// A list of key-value pairs that must be included in the encryption context
-	// of the cryptographic operation request. The grant allows the cryptographic
-	// operation only when the encryption context in the request includes the key-value
-	// pairs specified in this constraint, although it can include additional key-value
-	// pairs.
+	// of the cryptographic operation (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// request. The grant allows the cryptographic operation only when the encryption
+	// context in the request includes the key-value pairs specified in this constraint,
+	// although it can include additional key-value pairs.
 	EncryptionContextSubset map[string]*string `type:"map"`
 }
 
@@ -10637,7 +10650,7 @@ func (s *GrantConstraints) SetEncryptionContextSubset(v map[string]*string) *Gra
 	return s
 }
 
-// Contains information about an entry in a list of grants.
+// Contains information about a grant.
 type GrantListEntry struct {
 	_ struct{} `type:"structure"`
 
@@ -10651,7 +10664,13 @@ type GrantListEntry struct {
 	// The unique identifier for the grant.
 	GrantId *string `min:"1" type:"string"`
 
-	// The principal that receives the grant's permissions.
+	// The identity that gets the permissions in the grant.
+	//
+	// The GranteePrincipal field in the ListGrants response usually contains the
+	// user or role designated as the grantee principal in the grant. However, when
+	// the grantee principal in the grant is an AWS service, the GranteePrincipal
+	// field contains the service principal (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#principal-services),
+	// which might represent several different grantee principals.
 	GranteePrincipal *string `min:"1" type:"string"`
 
 	// The AWS account under which the grant was issued.
@@ -11768,8 +11787,8 @@ type KeyMetadata struct {
 	// is true, otherwise it is false.
 	Enabled *bool `type:"boolean"`
 
-	// A list of encryption algorithms that the CMK supports. You cannot use the
-	// CMK with other encryption algorithms within AWS KMS.
+	// The encryption algorithms that the CMK supports. You cannot use the CMK with
+	// other encryption algorithms within AWS KMS.
 	//
 	// This field appears only when the KeyUsage of the CMK is ENCRYPT_DECRYPT.
 	EncryptionAlgorithms []*string `type:"list"`
@@ -11789,14 +11808,15 @@ type KeyMetadata struct {
 	// in the AWS Key Management Service Developer Guide.
 	KeyManager *string `type:"string" enum:"KeyManagerType"`
 
-	// The state of the CMK.
+	// The current status of the CMK.
 	//
-	// For more information about how key state affects the use of a CMK, see How
-	// Key State Affects the Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+	// For more information about how key state affects the use of a CMK, see Key
+	// state: Effect on your CMK (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 	// in the AWS Key Management Service Developer Guide.
 	KeyState *string `type:"string" enum:"KeyState"`
 
-	// The cryptographic operations for which you can use the CMK.
+	// The cryptographic operations (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#cryptographic-operations)
+	// for which you can use the CMK.
 	KeyUsage *string `type:"string" enum:"KeyUsageType"`
 
 	// The source of the CMK's key material. When this value is AWS_KMS, AWS KMS
@@ -11806,8 +11826,8 @@ type KeyMetadata struct {
 	// in the AWS CloudHSM cluster associated with a custom key store.
 	Origin *string `type:"string" enum:"OriginType"`
 
-	// A list of signing algorithms that the CMK supports. You cannot use the CMK
-	// with other signing algorithms within AWS KMS.
+	// The signing algorithms that the CMK supports. You cannot use the CMK with
+	// other signing algorithms within AWS KMS.
 	//
 	// This field appears only when the KeyUsage of the CMK is SIGN_VERIFY.
 	SigningAlgorithms []*string `type:"list"`
@@ -13205,7 +13225,8 @@ type ReEncryptOutput struct {
 	// The encryption algorithm that was used to reencrypt the data.
 	DestinationEncryptionAlgorithm *string `type:"string" enum:"EncryptionAlgorithmSpec"`
 
-	// Unique identifier of the CMK used to reencrypt the data.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK that was used to reencrypt the data.
 	KeyId *string `min:"1" type:"string"`
 
 	// The encryption algorithm that was used to decrypt the ciphertext before it
@@ -13491,8 +13512,8 @@ type ScheduleKeyDeletionOutput struct {
 	// The date and time after which AWS KMS deletes the customer master key (CMK).
 	DeletionDate *time.Time `type:"timestamp"`
 
-	// The unique identifier of the customer master key (CMK) for which deletion
-	// is scheduled.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the CMK whose deletion is scheduled.
 	KeyId *string `min:"1" type:"string"`
 }
 
@@ -13644,8 +13665,8 @@ func (s *SignInput) SetSigningAlgorithm(v string) *SignInput {
 type SignOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the asymmetric CMK that was used to sign
-	// the message.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the asymmetric CMK that was used to sign the message.
 	KeyId *string `min:"1" type:"string"`
 
 	// The cryptographic signature that was generated for the message.
@@ -14466,8 +14487,8 @@ func (s *VerifyInput) SetSigningAlgorithm(v string) *VerifyInput {
 type VerifyOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The unique identifier for the asymmetric CMK that was used to verify the
-	// signature.
+	// The Amazon Resource Name (key ARN (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-ARN))
+	// of the asymmetric CMK that was used to verify the signature.
 	KeyId *string `min:"1" type:"string"`
 
 	// A Boolean value that indicates whether the signature was verified. A value
@@ -14519,6 +14540,15 @@ const (
 	AlgorithmSpecRsaesOaepSha256 = "RSAES_OAEP_SHA_256"
 )
 
+// AlgorithmSpec_Values returns all elements of the AlgorithmSpec enum
+func AlgorithmSpec_Values() []string {
+	return []string{
+		AlgorithmSpecRsaesPkcs1V15,
+		AlgorithmSpecRsaesOaepSha1,
+		AlgorithmSpecRsaesOaepSha256,
+	}
+}
+
 const (
 	// ConnectionErrorCodeTypeInvalidCredentials is a ConnectionErrorCodeType enum value
 	ConnectionErrorCodeTypeInvalidCredentials = "INVALID_CREDENTIALS"
@@ -14548,6 +14578,21 @@ const (
 	ConnectionErrorCodeTypeSubnetNotFound = "SUBNET_NOT_FOUND"
 )
 
+// ConnectionErrorCodeType_Values returns all elements of the ConnectionErrorCodeType enum
+func ConnectionErrorCodeType_Values() []string {
+	return []string{
+		ConnectionErrorCodeTypeInvalidCredentials,
+		ConnectionErrorCodeTypeClusterNotFound,
+		ConnectionErrorCodeTypeNetworkErrors,
+		ConnectionErrorCodeTypeInternalError,
+		ConnectionErrorCodeTypeInsufficientCloudhsmHsms,
+		ConnectionErrorCodeTypeUserLockedOut,
+		ConnectionErrorCodeTypeUserNotFound,
+		ConnectionErrorCodeTypeUserLoggedIn,
+		ConnectionErrorCodeTypeSubnetNotFound,
+	}
+}
+
 const (
 	// ConnectionStateTypeConnected is a ConnectionStateType enum value
 	ConnectionStateTypeConnected = "CONNECTED"
@@ -14564,6 +14609,17 @@ const (
 	// ConnectionStateTypeDisconnecting is a ConnectionStateType enum value
 	ConnectionStateTypeDisconnecting = "DISCONNECTING"
 )
+
+// ConnectionStateType_Values returns all elements of the ConnectionStateType enum
+func ConnectionStateType_Values() []string {
+	return []string{
+		ConnectionStateTypeConnected,
+		ConnectionStateTypeConnecting,
+		ConnectionStateTypeFailed,
+		ConnectionStateTypeDisconnected,
+		ConnectionStateTypeDisconnecting,
+	}
+}
 
 const (
 	// CustomerMasterKeySpecRsa2048 is a CustomerMasterKeySpec enum value
@@ -14591,6 +14647,20 @@ const (
 	CustomerMasterKeySpecSymmetricDefault = "SYMMETRIC_DEFAULT"
 )
 
+// CustomerMasterKeySpec_Values returns all elements of the CustomerMasterKeySpec enum
+func CustomerMasterKeySpec_Values() []string {
+	return []string{
+		CustomerMasterKeySpecRsa2048,
+		CustomerMasterKeySpecRsa3072,
+		CustomerMasterKeySpecRsa4096,
+		CustomerMasterKeySpecEccNistP256,
+		CustomerMasterKeySpecEccNistP384,
+		CustomerMasterKeySpecEccNistP521,
+		CustomerMasterKeySpecEccSecgP256k1,
+		CustomerMasterKeySpecSymmetricDefault,
+	}
+}
+
 const (
 	// DataKeyPairSpecRsa2048 is a DataKeyPairSpec enum value
 	DataKeyPairSpecRsa2048 = "RSA_2048"
@@ -14614,6 +14684,19 @@ const (
 	DataKeyPairSpecEccSecgP256k1 = "ECC_SECG_P256K1"
 )
 
+// DataKeyPairSpec_Values returns all elements of the DataKeyPairSpec enum
+func DataKeyPairSpec_Values() []string {
+	return []string{
+		DataKeyPairSpecRsa2048,
+		DataKeyPairSpecRsa3072,
+		DataKeyPairSpecRsa4096,
+		DataKeyPairSpecEccNistP256,
+		DataKeyPairSpecEccNistP384,
+		DataKeyPairSpecEccNistP521,
+		DataKeyPairSpecEccSecgP256k1,
+	}
+}
+
 const (
 	// DataKeySpecAes256 is a DataKeySpec enum value
 	DataKeySpecAes256 = "AES_256"
@@ -14621,6 +14704,14 @@ const (
 	// DataKeySpecAes128 is a DataKeySpec enum value
 	DataKeySpecAes128 = "AES_128"
 )
+
+// DataKeySpec_Values returns all elements of the DataKeySpec enum
+func DataKeySpec_Values() []string {
+	return []string{
+		DataKeySpecAes256,
+		DataKeySpecAes128,
+	}
+}
 
 const (
 	// EncryptionAlgorithmSpecSymmetricDefault is a EncryptionAlgorithmSpec enum value
@@ -14633,6 +14724,15 @@ const (
 	EncryptionAlgorithmSpecRsaesOaepSha256 = "RSAES_OAEP_SHA_256"
 )
 
+// EncryptionAlgorithmSpec_Values returns all elements of the EncryptionAlgorithmSpec enum
+func EncryptionAlgorithmSpec_Values() []string {
+	return []string{
+		EncryptionAlgorithmSpecSymmetricDefault,
+		EncryptionAlgorithmSpecRsaesOaepSha1,
+		EncryptionAlgorithmSpecRsaesOaepSha256,
+	}
+}
+
 const (
 	// ExpirationModelTypeKeyMaterialExpires is a ExpirationModelType enum value
 	ExpirationModelTypeKeyMaterialExpires = "KEY_MATERIAL_EXPIRES"
@@ -14640,6 +14740,14 @@ const (
 	// ExpirationModelTypeKeyMaterialDoesNotExpire is a ExpirationModelType enum value
 	ExpirationModelTypeKeyMaterialDoesNotExpire = "KEY_MATERIAL_DOES_NOT_EXPIRE"
 )
+
+// ExpirationModelType_Values returns all elements of the ExpirationModelType enum
+func ExpirationModelType_Values() []string {
+	return []string{
+		ExpirationModelTypeKeyMaterialExpires,
+		ExpirationModelTypeKeyMaterialDoesNotExpire,
+	}
+}
 
 const (
 	// GrantOperationDecrypt is a GrantOperation enum value
@@ -14685,6 +14793,26 @@ const (
 	GrantOperationGenerateDataKeyPairWithoutPlaintext = "GenerateDataKeyPairWithoutPlaintext"
 )
 
+// GrantOperation_Values returns all elements of the GrantOperation enum
+func GrantOperation_Values() []string {
+	return []string{
+		GrantOperationDecrypt,
+		GrantOperationEncrypt,
+		GrantOperationGenerateDataKey,
+		GrantOperationGenerateDataKeyWithoutPlaintext,
+		GrantOperationReEncryptFrom,
+		GrantOperationReEncryptTo,
+		GrantOperationSign,
+		GrantOperationVerify,
+		GrantOperationGetPublicKey,
+		GrantOperationCreateGrant,
+		GrantOperationRetireGrant,
+		GrantOperationDescribeKey,
+		GrantOperationGenerateDataKeyPair,
+		GrantOperationGenerateDataKeyPairWithoutPlaintext,
+	}
+}
+
 const (
 	// KeyManagerTypeAws is a KeyManagerType enum value
 	KeyManagerTypeAws = "AWS"
@@ -14692,6 +14820,14 @@ const (
 	// KeyManagerTypeCustomer is a KeyManagerType enum value
 	KeyManagerTypeCustomer = "CUSTOMER"
 )
+
+// KeyManagerType_Values returns all elements of the KeyManagerType enum
+func KeyManagerType_Values() []string {
+	return []string{
+		KeyManagerTypeAws,
+		KeyManagerTypeCustomer,
+	}
+}
 
 const (
 	// KeyStateEnabled is a KeyState enum value
@@ -14710,6 +14846,17 @@ const (
 	KeyStateUnavailable = "Unavailable"
 )
 
+// KeyState_Values returns all elements of the KeyState enum
+func KeyState_Values() []string {
+	return []string{
+		KeyStateEnabled,
+		KeyStateDisabled,
+		KeyStatePendingDeletion,
+		KeyStatePendingImport,
+		KeyStateUnavailable,
+	}
+}
+
 const (
 	// KeyUsageTypeSignVerify is a KeyUsageType enum value
 	KeyUsageTypeSignVerify = "SIGN_VERIFY"
@@ -14718,6 +14865,14 @@ const (
 	KeyUsageTypeEncryptDecrypt = "ENCRYPT_DECRYPT"
 )
 
+// KeyUsageType_Values returns all elements of the KeyUsageType enum
+func KeyUsageType_Values() []string {
+	return []string{
+		KeyUsageTypeSignVerify,
+		KeyUsageTypeEncryptDecrypt,
+	}
+}
+
 const (
 	// MessageTypeRaw is a MessageType enum value
 	MessageTypeRaw = "RAW"
@@ -14725,6 +14880,14 @@ const (
 	// MessageTypeDigest is a MessageType enum value
 	MessageTypeDigest = "DIGEST"
 )
+
+// MessageType_Values returns all elements of the MessageType enum
+func MessageType_Values() []string {
+	return []string{
+		MessageTypeRaw,
+		MessageTypeDigest,
+	}
+}
 
 const (
 	// OriginTypeAwsKms is a OriginType enum value
@@ -14736,6 +14899,15 @@ const (
 	// OriginTypeAwsCloudhsm is a OriginType enum value
 	OriginTypeAwsCloudhsm = "AWS_CLOUDHSM"
 )
+
+// OriginType_Values returns all elements of the OriginType enum
+func OriginType_Values() []string {
+	return []string{
+		OriginTypeAwsKms,
+		OriginTypeExternal,
+		OriginTypeAwsCloudhsm,
+	}
+}
 
 const (
 	// SigningAlgorithmSpecRsassaPssSha256 is a SigningAlgorithmSpec enum value
@@ -14766,7 +14938,29 @@ const (
 	SigningAlgorithmSpecEcdsaSha512 = "ECDSA_SHA_512"
 )
 
+// SigningAlgorithmSpec_Values returns all elements of the SigningAlgorithmSpec enum
+func SigningAlgorithmSpec_Values() []string {
+	return []string{
+		SigningAlgorithmSpecRsassaPssSha256,
+		SigningAlgorithmSpecRsassaPssSha384,
+		SigningAlgorithmSpecRsassaPssSha512,
+		SigningAlgorithmSpecRsassaPkcs1V15Sha256,
+		SigningAlgorithmSpecRsassaPkcs1V15Sha384,
+		SigningAlgorithmSpecRsassaPkcs1V15Sha512,
+		SigningAlgorithmSpecEcdsaSha256,
+		SigningAlgorithmSpecEcdsaSha384,
+		SigningAlgorithmSpecEcdsaSha512,
+	}
+}
+
 const (
 	// WrappingKeySpecRsa2048 is a WrappingKeySpec enum value
 	WrappingKeySpecRsa2048 = "RSA_2048"
 )
+
+// WrappingKeySpec_Values returns all elements of the WrappingKeySpec enum
+func WrappingKeySpec_Values() []string {
+	return []string{
+		WrappingKeySpecRsa2048,
+	}
+}

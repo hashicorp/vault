@@ -1,4 +1,4 @@
-// +build linux darwin freebsd openbsd netbsd dragonfly solaris
+// +build linux darwin freebsd openbsd netbsd dragonfly solaris illumos
 
 package azblob
 

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
@@ -38,6 +39,56 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_RetryAutoJoin(t *testing.T) {
+	t.Parallel()
+
+	var (
+		conf vault.CoreConfig
+
+		opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	)
+
+	teststorage.RaftBackendSetup(&conf, &opts)
+
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	leaderCore := cluster.Cores[0]
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			AutoJoin:  "provider=aws region=eu-west-1 tag_key=consul tag_value=tag access_key_id=a secret_access_key=a",
+			TLSConfig: leaderCore.TLSConfig,
+			Retry:     true,
+		},
+	}
+
+	{
+		// expected to pass but not join as we're not actually discovering leader addresses
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		require.NoError(t, err)
+	}
+
+	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+		"core-0": true,
+	})
 }
 
 func TestRaft_Retry_Join(t *testing.T) {
@@ -587,7 +638,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				// Set the key clean up to 0 so it's cleaned immediately. This
 				// will simulate that there are no ways to upgrade to the latest
 				// term.
-				vault.KeyRotateGracePeriod = 0
+				for _, c := range cluster.Cores {
+					c.Core.SetKeyRotateGracePeriod(0)
+				}
 
 				// Rotate
 				err = leaderClient.Sys().Rotate()
@@ -823,4 +876,101 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 	}
 
 	b.Run("256b", func(b *testing.B) { bench(b, 25) })
+}
+
+func TestRaft_Join_InitStatus(t *testing.T) {
+	t.Parallel()
+	var conf vault.CoreConfig
+	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	teststorage.RaftBackendSetup(&conf, &opts)
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+	// Seal the leader so we can install an address provider
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	joinFunc := func(client *api.Client) {
+		req := &api.RaftJoinRequest{
+			LeaderAPIAddr: leaderAPI,
+			LeaderCACert:  string(cluster.CACertPEM),
+		}
+		resp, err := client.Sys().RaftJoin(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !resp.Joined {
+			t.Fatalf("failed to join raft cluster")
+		}
+	}
+
+	verifyInitStatus := func(coreIdx int, expected bool) {
+		t.Helper()
+		client := cluster.Cores[coreIdx].Client
+
+		initialized, err := client.Sys().InitStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if initialized != expected {
+			t.Errorf("core %d: expected init=%v, sys/init returned %v", coreIdx, expected, initialized)
+		}
+
+		status, err := client.Sys().SealStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if status.Initialized != expected {
+			t.Errorf("core %d: expected init=%v, sys/seal-status returned %v", coreIdx, expected, status.Initialized)
+		}
+
+		health, err := client.Sys().Health()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if health.Initialized != expected {
+			t.Errorf("core %d: expected init=%v, sys/health returned %v", coreIdx, expected, health.Initialized)
+		}
+	}
+
+	for i := range cluster.Cores {
+		verifyInitStatus(i, i < 1)
+	}
+
+	joinFunc(cluster.Cores[1].Client)
+	for i, core := range cluster.Cores {
+		verifyInitStatus(i, i < 2)
+		if i == 1 {
+			cluster.UnsealCore(t, core)
+			verifyInitStatus(i, true)
+		}
+	}
+
+	joinFunc(cluster.Cores[2].Client)
+	for i, core := range cluster.Cores {
+		verifyInitStatus(i, true)
+		if i == 2 {
+			cluster.UnsealCore(t, core)
+			verifyInitStatus(i, true)
+		}
+	}
+
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
+	for i := range cluster.Cores {
+		verifyInitStatus(i, true)
+	}
 }

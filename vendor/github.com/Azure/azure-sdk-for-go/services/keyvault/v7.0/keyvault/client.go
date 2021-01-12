@@ -109,8 +109,7 @@ func (client BaseClient) BackupCertificatePreparer(ctx context.Context, vaultBas
 // BackupCertificateSender sends the BackupCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) BackupCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // BackupCertificateResponder handles the response to the BackupCertificate request. The method always
@@ -196,8 +195,7 @@ func (client BaseClient) BackupKeyPreparer(ctx context.Context, vaultBaseURL str
 // BackupKeySender sends the BackupKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) BackupKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // BackupKeyResponder handles the response to the BackupKey request. The method always
@@ -276,8 +274,7 @@ func (client BaseClient) BackupSecretPreparer(ctx context.Context, vaultBaseURL 
 // BackupSecretSender sends the BackupSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) BackupSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // BackupSecretResponder handles the response to the BackupSecret request. The method always
@@ -356,8 +353,7 @@ func (client BaseClient) BackupStorageAccountPreparer(ctx context.Context, vault
 // BackupStorageAccountSender sends the BackupStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) BackupStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // BackupStorageAccountResponder handles the response to the BackupStorageAccount request. The method always
@@ -397,7 +393,7 @@ func (client BaseClient) CreateCertificate(ctx context.Context, vaultBaseURL str
 			Constraints: []validation.Constraint{{Target: "parameters.CertificatePolicy", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties", Name: validation.Null, Rule: false,
 					Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties.ValidityInMonths", Name: validation.Null, Rule: false,
-						Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties.ValidityInMonths", Name: validation.InclusiveMinimum, Rule: 0, Chain: nil}}},
+						Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties.ValidityInMonths", Name: validation.InclusiveMinimum, Rule: int64(0), Chain: nil}}},
 					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "CreateCertificate", err.Error())
@@ -452,8 +448,7 @@ func (client BaseClient) CreateCertificatePreparer(ctx context.Context, vaultBas
 // CreateCertificateSender sends the CreateCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) CreateCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateCertificateResponder handles the response to the CreateCertificate request. The method always
@@ -541,8 +536,7 @@ func (client BaseClient) CreateKeyPreparer(ctx context.Context, vaultBaseURL str
 // CreateKeySender sends the CreateKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) CreateKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateKeyResponder handles the response to the CreateKey request. The method always
@@ -635,8 +629,7 @@ func (client BaseClient) DecryptPreparer(ctx context.Context, vaultBaseURL strin
 // DecryptSender sends the Decrypt request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DecryptSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DecryptResponder handles the response to the Decrypt request. The method always
@@ -716,8 +709,7 @@ func (client BaseClient) DeleteCertificatePreparer(ctx context.Context, vaultBas
 // DeleteCertificateSender sends the DeleteCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteCertificateResponder handles the response to the DeleteCertificate request. The method always
@@ -791,8 +783,7 @@ func (client BaseClient) DeleteCertificateContactsPreparer(ctx context.Context, 
 // DeleteCertificateContactsSender sends the DeleteCertificateContacts request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteCertificateContactsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteCertificateContactsResponder handles the response to the DeleteCertificateContacts request. The method always
@@ -871,8 +862,7 @@ func (client BaseClient) DeleteCertificateIssuerPreparer(ctx context.Context, va
 // DeleteCertificateIssuerSender sends the DeleteCertificateIssuer request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteCertificateIssuerSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteCertificateIssuerResponder handles the response to the DeleteCertificateIssuer request. The method always
@@ -951,8 +941,7 @@ func (client BaseClient) DeleteCertificateOperationPreparer(ctx context.Context,
 // DeleteCertificateOperationSender sends the DeleteCertificateOperation request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteCertificateOperationSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteCertificateOperationResponder handles the response to the DeleteCertificateOperation request. The method always
@@ -1032,8 +1021,7 @@ func (client BaseClient) DeleteKeyPreparer(ctx context.Context, vaultBaseURL str
 // DeleteKeySender sends the DeleteKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteKeyResponder handles the response to the DeleteKey request. The method always
@@ -1122,8 +1110,7 @@ func (client BaseClient) DeleteSasDefinitionPreparer(ctx context.Context, vaultB
 // DeleteSasDefinitionSender sends the DeleteSasDefinition request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteSasDefinitionSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteSasDefinitionResponder handles the response to the DeleteSasDefinition request. The method always
@@ -1202,8 +1189,7 @@ func (client BaseClient) DeleteSecretPreparer(ctx context.Context, vaultBaseURL 
 // DeleteSecretSender sends the DeleteSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteSecretResponder handles the response to the DeleteSecret request. The method always
@@ -1287,8 +1273,7 @@ func (client BaseClient) DeleteStorageAccountPreparer(ctx context.Context, vault
 // DeleteStorageAccountSender sends the DeleteStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) DeleteStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteStorageAccountResponder handles the response to the DeleteStorageAccount request. The method always
@@ -1383,8 +1368,7 @@ func (client BaseClient) EncryptPreparer(ctx context.Context, vaultBaseURL strin
 // EncryptSender sends the Encrypt request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) EncryptSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // EncryptResponder handles the response to the Encrypt request. The method always
@@ -1465,8 +1449,7 @@ func (client BaseClient) GetCertificatePreparer(ctx context.Context, vaultBaseUR
 // GetCertificateSender sends the GetCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificateResponder handles the response to the GetCertificate request. The method always
@@ -1540,8 +1523,7 @@ func (client BaseClient) GetCertificateContactsPreparer(ctx context.Context, vau
 // GetCertificateContactsSender sends the GetCertificateContacts request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificateContactsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificateContactsResponder handles the response to the GetCertificateContacts request. The method always
@@ -1620,8 +1602,7 @@ func (client BaseClient) GetCertificateIssuerPreparer(ctx context.Context, vault
 // GetCertificateIssuerSender sends the GetCertificateIssuer request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificateIssuerSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificateIssuerResponder handles the response to the GetCertificateIssuer request. The method always
@@ -1658,7 +1639,7 @@ func (client BaseClient) GetCertificateIssuers(ctx context.Context, vaultBaseURL
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetCertificateIssuers", err.Error())
 	}
@@ -1710,8 +1691,7 @@ func (client BaseClient) GetCertificateIssuersPreparer(ctx context.Context, vaul
 // GetCertificateIssuersSender sends the GetCertificateIssuers request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificateIssuersSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificateIssuersResponder handles the response to the GetCertificateIssuers request. The method always
@@ -1827,8 +1807,7 @@ func (client BaseClient) GetCertificateOperationPreparer(ctx context.Context, va
 // GetCertificateOperationSender sends the GetCertificateOperation request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificateOperationSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificateOperationResponder handles the response to the GetCertificateOperation request. The method always
@@ -1907,8 +1886,7 @@ func (client BaseClient) GetCertificatePolicyPreparer(ctx context.Context, vault
 // GetCertificatePolicySender sends the GetCertificatePolicy request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificatePolicySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificatePolicyResponder handles the response to the GetCertificatePolicy request. The method always
@@ -1946,7 +1924,7 @@ func (client BaseClient) GetCertificates(ctx context.Context, vaultBaseURL strin
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetCertificates", err.Error())
 	}
@@ -2001,8 +1979,7 @@ func (client BaseClient) GetCertificatesPreparer(ctx context.Context, vaultBaseU
 // GetCertificatesSender sends the GetCertificates request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificatesSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificatesResponder handles the response to the GetCertificates request. The method always
@@ -2077,7 +2054,7 @@ func (client BaseClient) GetCertificateVersions(ctx context.Context, vaultBaseUR
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetCertificateVersions", err.Error())
 	}
@@ -2133,8 +2110,7 @@ func (client BaseClient) GetCertificateVersionsPreparer(ctx context.Context, vau
 // GetCertificateVersionsSender sends the GetCertificateVersions request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetCertificateVersionsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetCertificateVersionsResponder handles the response to the GetCertificateVersions request. The method always
@@ -2251,8 +2227,7 @@ func (client BaseClient) GetDeletedCertificatePreparer(ctx context.Context, vaul
 // GetDeletedCertificateSender sends the GetDeletedCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedCertificateResponder handles the response to the GetDeletedCertificate request. The method always
@@ -2292,7 +2267,7 @@ func (client BaseClient) GetDeletedCertificates(ctx context.Context, vaultBaseUR
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetDeletedCertificates", err.Error())
 	}
@@ -2347,8 +2322,7 @@ func (client BaseClient) GetDeletedCertificatesPreparer(ctx context.Context, vau
 // GetDeletedCertificatesSender sends the GetDeletedCertificates request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedCertificatesSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedCertificatesResponder handles the response to the GetDeletedCertificates request. The method always
@@ -2465,8 +2439,7 @@ func (client BaseClient) GetDeletedKeyPreparer(ctx context.Context, vaultBaseURL
 // GetDeletedKeySender sends the GetDeletedKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedKeyResponder handles the response to the GetDeletedKey request. The method always
@@ -2505,7 +2478,7 @@ func (client BaseClient) GetDeletedKeys(ctx context.Context, vaultBaseURL string
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetDeletedKeys", err.Error())
 	}
@@ -2557,8 +2530,7 @@ func (client BaseClient) GetDeletedKeysPreparer(ctx context.Context, vaultBaseUR
 // GetDeletedKeysSender sends the GetDeletedKeys request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedKeysSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedKeysResponder handles the response to the GetDeletedKeys request. The method always
@@ -2684,8 +2656,7 @@ func (client BaseClient) GetDeletedSasDefinitionPreparer(ctx context.Context, va
 // GetDeletedSasDefinitionSender sends the GetDeletedSasDefinition request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedSasDefinitionSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedSasDefinitionResponder handles the response to the GetDeletedSasDefinition request. The method always
@@ -2725,7 +2696,7 @@ func (client BaseClient) GetDeletedSasDefinitions(ctx context.Context, vaultBase
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetDeletedSasDefinitions", err.Error())
 	}
@@ -2781,8 +2752,7 @@ func (client BaseClient) GetDeletedSasDefinitionsPreparer(ctx context.Context, v
 // GetDeletedSasDefinitionsSender sends the GetDeletedSasDefinitions request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedSasDefinitionsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedSasDefinitionsResponder handles the response to the GetDeletedSasDefinitions request. The method always
@@ -2898,8 +2868,7 @@ func (client BaseClient) GetDeletedSecretPreparer(ctx context.Context, vaultBase
 // GetDeletedSecretSender sends the GetDeletedSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedSecretResponder handles the response to the GetDeletedSecret request. The method always
@@ -2936,7 +2905,7 @@ func (client BaseClient) GetDeletedSecrets(ctx context.Context, vaultBaseURL str
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetDeletedSecrets", err.Error())
 	}
@@ -2988,8 +2957,7 @@ func (client BaseClient) GetDeletedSecretsPreparer(ctx context.Context, vaultBas
 // GetDeletedSecretsSender sends the GetDeletedSecrets request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedSecretsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedSecretsResponder handles the response to the GetDeletedSecrets request. The method always
@@ -3111,8 +3079,7 @@ func (client BaseClient) GetDeletedStorageAccountPreparer(ctx context.Context, v
 // GetDeletedStorageAccountSender sends the GetDeletedStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedStorageAccountResponder handles the response to the GetDeletedStorageAccount request. The method always
@@ -3149,7 +3116,7 @@ func (client BaseClient) GetDeletedStorageAccounts(ctx context.Context, vaultBas
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetDeletedStorageAccounts", err.Error())
 	}
@@ -3201,8 +3168,7 @@ func (client BaseClient) GetDeletedStorageAccountsPreparer(ctx context.Context, 
 // GetDeletedStorageAccountsSender sends the GetDeletedStorageAccounts request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetDeletedStorageAccountsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetDeletedStorageAccountsResponder handles the response to the GetDeletedStorageAccounts request. The method always
@@ -3320,8 +3286,7 @@ func (client BaseClient) GetKeyPreparer(ctx context.Context, vaultBaseURL string
 // GetKeySender sends the GetKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetKeyResponder handles the response to the GetKey request. The method always
@@ -3360,7 +3325,7 @@ func (client BaseClient) GetKeys(ctx context.Context, vaultBaseURL string, maxre
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetKeys", err.Error())
 	}
@@ -3412,8 +3377,7 @@ func (client BaseClient) GetKeysPreparer(ctx context.Context, vaultBaseURL strin
 // GetKeysSender sends the GetKeys request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetKeysSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetKeysResponder handles the response to the GetKeys request. The method always
@@ -3488,7 +3452,7 @@ func (client BaseClient) GetKeyVersions(ctx context.Context, vaultBaseURL string
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetKeyVersions", err.Error())
 	}
@@ -3544,8 +3508,7 @@ func (client BaseClient) GetKeyVersionsPreparer(ctx context.Context, vaultBaseUR
 // GetKeyVersionsSender sends the GetKeyVersions request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetKeyVersionsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetKeyVersionsResponder handles the response to the GetKeyVersions request. The method always
@@ -3671,8 +3634,7 @@ func (client BaseClient) GetSasDefinitionPreparer(ctx context.Context, vaultBase
 // GetSasDefinitionSender sends the GetSasDefinition request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetSasDefinitionSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetSasDefinitionResponder handles the response to the GetSasDefinition request. The method always
@@ -3712,7 +3674,7 @@ func (client BaseClient) GetSasDefinitions(ctx context.Context, vaultBaseURL str
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetSasDefinitions", err.Error())
 	}
@@ -3768,8 +3730,7 @@ func (client BaseClient) GetSasDefinitionsPreparer(ctx context.Context, vaultBas
 // GetSasDefinitionsSender sends the GetSasDefinitions request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetSasDefinitionsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetSasDefinitionsResponder handles the response to the GetSasDefinitions request. The method always
@@ -3887,8 +3848,7 @@ func (client BaseClient) GetSecretPreparer(ctx context.Context, vaultBaseURL str
 // GetSecretSender sends the GetSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetSecretResponder handles the response to the GetSecret request. The method always
@@ -3926,7 +3886,7 @@ func (client BaseClient) GetSecrets(ctx context.Context, vaultBaseURL string, ma
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetSecrets", err.Error())
 	}
@@ -3978,8 +3938,7 @@ func (client BaseClient) GetSecretsPreparer(ctx context.Context, vaultBaseURL st
 // GetSecretsSender sends the GetSecrets request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetSecretsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetSecretsResponder handles the response to the GetSecrets request. The method always
@@ -4054,7 +4013,7 @@ func (client BaseClient) GetSecretVersions(ctx context.Context, vaultBaseURL str
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetSecretVersions", err.Error())
 	}
@@ -4110,8 +4069,7 @@ func (client BaseClient) GetSecretVersionsPreparer(ctx context.Context, vaultBas
 // GetSecretVersionsSender sends the GetSecretVersions request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetSecretVersionsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetSecretVersionsResponder handles the response to the GetSecretVersions request. The method always
@@ -4233,8 +4191,7 @@ func (client BaseClient) GetStorageAccountPreparer(ctx context.Context, vaultBas
 // GetStorageAccountSender sends the GetStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetStorageAccountResponder handles the response to the GetStorageAccount request. The method always
@@ -4271,7 +4228,7 @@ func (client BaseClient) GetStorageAccounts(ctx context.Context, vaultBaseURL st
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
 				Chain: []validation.Constraint{{Target: "maxresults", Name: validation.InclusiveMaximum, Rule: int64(25), Chain: nil},
-					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: 1, Chain: nil},
+					{Target: "maxresults", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "GetStorageAccounts", err.Error())
 	}
@@ -4323,8 +4280,7 @@ func (client BaseClient) GetStorageAccountsPreparer(ctx context.Context, vaultBa
 // GetStorageAccountsSender sends the GetStorageAccounts request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) GetStorageAccountsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetStorageAccountsResponder handles the response to the GetStorageAccounts request. The method always
@@ -4403,7 +4359,7 @@ func (client BaseClient) ImportCertificate(ctx context.Context, vaultBaseURL str
 				{Target: "parameters.CertificatePolicy", Name: validation.Null, Rule: false,
 					Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties", Name: validation.Null, Rule: false,
 						Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties.ValidityInMonths", Name: validation.Null, Rule: false,
-							Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties.ValidityInMonths", Name: validation.InclusiveMinimum, Rule: 0, Chain: nil}}},
+							Chain: []validation.Constraint{{Target: "parameters.CertificatePolicy.X509CertificateProperties.ValidityInMonths", Name: validation.InclusiveMinimum, Rule: int64(0), Chain: nil}}},
 						}},
 					}}}}}); err != nil {
 		return result, validation.NewError("keyvault.BaseClient", "ImportCertificate", err.Error())
@@ -4458,8 +4414,7 @@ func (client BaseClient) ImportCertificatePreparer(ctx context.Context, vaultBas
 // ImportCertificateSender sends the ImportCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) ImportCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ImportCertificateResponder handles the response to the ImportCertificate request. The method always
@@ -4550,8 +4505,7 @@ func (client BaseClient) ImportKeyPreparer(ctx context.Context, vaultBaseURL str
 // ImportKeySender sends the ImportKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) ImportKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ImportKeyResponder handles the response to the ImportKey request. The method always
@@ -4639,8 +4593,7 @@ func (client BaseClient) MergeCertificatePreparer(ctx context.Context, vaultBase
 // MergeCertificateSender sends the MergeCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) MergeCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // MergeCertificateResponder handles the response to the MergeCertificate request. The method always
@@ -4720,8 +4673,7 @@ func (client BaseClient) PurgeDeletedCertificatePreparer(ctx context.Context, va
 // PurgeDeletedCertificateSender sends the PurgeDeletedCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) PurgeDeletedCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // PurgeDeletedCertificateResponder handles the response to the PurgeDeletedCertificate request. The method always
@@ -4800,8 +4752,7 @@ func (client BaseClient) PurgeDeletedKeyPreparer(ctx context.Context, vaultBaseU
 // PurgeDeletedKeySender sends the PurgeDeletedKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) PurgeDeletedKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // PurgeDeletedKeyResponder handles the response to the PurgeDeletedKey request. The method always
@@ -4880,8 +4831,7 @@ func (client BaseClient) PurgeDeletedSecretPreparer(ctx context.Context, vaultBa
 // PurgeDeletedSecretSender sends the PurgeDeletedSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) PurgeDeletedSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // PurgeDeletedSecretResponder handles the response to the PurgeDeletedSecret request. The method always
@@ -4966,8 +4916,7 @@ func (client BaseClient) PurgeDeletedStorageAccountPreparer(ctx context.Context,
 // PurgeDeletedStorageAccountSender sends the PurgeDeletedStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) PurgeDeletedStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // PurgeDeletedStorageAccountResponder handles the response to the PurgeDeletedStorageAccount request. The method always
@@ -5046,8 +4995,7 @@ func (client BaseClient) RecoverDeletedCertificatePreparer(ctx context.Context, 
 // RecoverDeletedCertificateSender sends the RecoverDeletedCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RecoverDeletedCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RecoverDeletedCertificateResponder handles the response to the RecoverDeletedCertificate request. The method always
@@ -5128,8 +5076,7 @@ func (client BaseClient) RecoverDeletedKeyPreparer(ctx context.Context, vaultBas
 // RecoverDeletedKeySender sends the RecoverDeletedKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RecoverDeletedKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RecoverDeletedKeyResponder handles the response to the RecoverDeletedKey request. The method always
@@ -5218,8 +5165,7 @@ func (client BaseClient) RecoverDeletedSasDefinitionPreparer(ctx context.Context
 // RecoverDeletedSasDefinitionSender sends the RecoverDeletedSasDefinition request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RecoverDeletedSasDefinitionSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RecoverDeletedSasDefinitionResponder handles the response to the RecoverDeletedSasDefinition request. The method always
@@ -5298,8 +5244,7 @@ func (client BaseClient) RecoverDeletedSecretPreparer(ctx context.Context, vault
 // RecoverDeletedSecretSender sends the RecoverDeletedSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RecoverDeletedSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RecoverDeletedSecretResponder handles the response to the RecoverDeletedSecret request. The method always
@@ -5384,8 +5329,7 @@ func (client BaseClient) RecoverDeletedStorageAccountPreparer(ctx context.Contex
 // RecoverDeletedStorageAccountSender sends the RecoverDeletedStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RecoverDeletedStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RecoverDeletedStorageAccountResponder handles the response to the RecoverDeletedStorageAccount request. The method always
@@ -5475,8 +5419,7 @@ func (client BaseClient) RegenerateStorageAccountKeyPreparer(ctx context.Context
 // RegenerateStorageAccountKeySender sends the RegenerateStorageAccountKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RegenerateStorageAccountKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RegenerateStorageAccountKeyResponder handles the response to the RegenerateStorageAccountKey request. The method always
@@ -5559,8 +5502,7 @@ func (client BaseClient) RestoreCertificatePreparer(ctx context.Context, vaultBa
 // RestoreCertificateSender sends the RestoreCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RestoreCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RestoreCertificateResponder handles the response to the RestoreCertificate request. The method always
@@ -5650,8 +5592,7 @@ func (client BaseClient) RestoreKeyPreparer(ctx context.Context, vaultBaseURL st
 // RestoreKeySender sends the RestoreKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RestoreKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RestoreKeyResponder handles the response to the RestoreKey request. The method always
@@ -5734,8 +5675,7 @@ func (client BaseClient) RestoreSecretPreparer(ctx context.Context, vaultBaseURL
 // RestoreSecretSender sends the RestoreSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RestoreSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RestoreSecretResponder handles the response to the RestoreSecret request. The method always
@@ -5818,8 +5758,7 @@ func (client BaseClient) RestoreStorageAccountPreparer(ctx context.Context, vaul
 // RestoreStorageAccountSender sends the RestoreStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) RestoreStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RestoreStorageAccountResponder handles the response to the RestoreStorageAccount request. The method always
@@ -5897,8 +5836,7 @@ func (client BaseClient) SetCertificateContactsPreparer(ctx context.Context, vau
 // SetCertificateContactsSender sends the SetCertificateContacts request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) SetCertificateContactsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // SetCertificateContactsResponder handles the response to the SetCertificateContacts request. The method always
@@ -5986,8 +5924,7 @@ func (client BaseClient) SetCertificateIssuerPreparer(ctx context.Context, vault
 // SetCertificateIssuerSender sends the SetCertificateIssuer request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) SetCertificateIssuerSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // SetCertificateIssuerResponder handles the response to the SetCertificateIssuer request. The method always
@@ -6082,8 +6019,7 @@ func (client BaseClient) SetSasDefinitionPreparer(ctx context.Context, vaultBase
 // SetSasDefinitionSender sends the SetSasDefinition request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) SetSasDefinitionSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // SetSasDefinitionResponder handles the response to the SetSasDefinition request. The method always
@@ -6173,8 +6109,7 @@ func (client BaseClient) SetSecretPreparer(ctx context.Context, vaultBaseURL str
 // SetSecretSender sends the SetSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) SetSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // SetSecretResponder handles the response to the SetSecret request. The method always
@@ -6265,8 +6200,7 @@ func (client BaseClient) SetStorageAccountPreparer(ctx context.Context, vaultBas
 // SetStorageAccountSender sends the SetStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) SetStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // SetStorageAccountResponder handles the response to the SetStorageAccount request. The method always
@@ -6356,8 +6290,7 @@ func (client BaseClient) SignPreparer(ctx context.Context, vaultBaseURL string, 
 // SignSender sends the Sign request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) SignSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // SignResponder handles the response to the Sign request. The method always
@@ -6449,8 +6382,7 @@ func (client BaseClient) UnwrapKeyPreparer(ctx context.Context, vaultBaseURL str
 // UnwrapKeySender sends the UnwrapKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UnwrapKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UnwrapKeyResponder handles the response to the UnwrapKey request. The method always
@@ -6534,8 +6466,7 @@ func (client BaseClient) UpdateCertificatePreparer(ctx context.Context, vaultBas
 // UpdateCertificateSender sends the UpdateCertificate request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateCertificateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateCertificateResponder handles the response to the UpdateCertificate request. The method always
@@ -6617,8 +6548,7 @@ func (client BaseClient) UpdateCertificateIssuerPreparer(ctx context.Context, va
 // UpdateCertificateIssuerSender sends the UpdateCertificateIssuer request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateCertificateIssuerSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateCertificateIssuerResponder handles the response to the UpdateCertificateIssuer request. The method always
@@ -6700,8 +6630,7 @@ func (client BaseClient) UpdateCertificateOperationPreparer(ctx context.Context,
 // UpdateCertificateOperationSender sends the UpdateCertificateOperation request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateCertificateOperationSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateCertificateOperationResponder handles the response to the UpdateCertificateOperation request. The method always
@@ -6784,8 +6713,7 @@ func (client BaseClient) UpdateCertificatePolicyPreparer(ctx context.Context, va
 // UpdateCertificatePolicySender sends the UpdateCertificatePolicy request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateCertificatePolicySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateCertificatePolicyResponder handles the response to the UpdateCertificatePolicy request. The method always
@@ -6869,8 +6797,7 @@ func (client BaseClient) UpdateKeyPreparer(ctx context.Context, vaultBaseURL str
 // UpdateKeySender sends the UpdateKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateKeyResponder handles the response to the UpdateKey request. The method always
@@ -6962,8 +6889,7 @@ func (client BaseClient) UpdateSasDefinitionPreparer(ctx context.Context, vaultB
 // UpdateSasDefinitionSender sends the UpdateSasDefinition request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateSasDefinitionSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateSasDefinitionResponder handles the response to the UpdateSasDefinition request. The method always
@@ -7048,8 +6974,7 @@ func (client BaseClient) UpdateSecretPreparer(ctx context.Context, vaultBaseURL 
 // UpdateSecretSender sends the UpdateSecret request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateSecretSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateSecretResponder handles the response to the UpdateSecret request. The method always
@@ -7137,8 +7062,7 @@ func (client BaseClient) UpdateStorageAccountPreparer(ctx context.Context, vault
 // UpdateStorageAccountSender sends the UpdateStorageAccount request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) UpdateStorageAccountSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateStorageAccountResponder handles the response to the UpdateStorageAccount request. The method always
@@ -7231,8 +7155,7 @@ func (client BaseClient) VerifyPreparer(ctx context.Context, vaultBaseURL string
 // VerifySender sends the Verify request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) VerifySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // VerifyResponder handles the response to the Verify request. The method always
@@ -7325,8 +7248,7 @@ func (client BaseClient) WrapKeyPreparer(ctx context.Context, vaultBaseURL strin
 // WrapKeySender sends the WrapKey request. The method will close the
 // http.Response Body if it receives an error.
 func (client BaseClient) WrapKeySender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // WrapKeyResponder handles the response to the WrapKey request. The method always

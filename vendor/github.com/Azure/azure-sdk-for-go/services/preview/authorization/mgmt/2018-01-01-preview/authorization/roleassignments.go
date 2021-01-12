@@ -36,7 +36,8 @@ func NewRoleAssignmentsClient(subscriptionID string) RoleAssignmentsClient {
 	return NewRoleAssignmentsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewRoleAssignmentsClientWithBaseURI creates an instance of the RoleAssignmentsClient client.
+// NewRoleAssignmentsClientWithBaseURI creates an instance of the RoleAssignmentsClient client using a custom endpoint.
+// Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewRoleAssignmentsClientWithBaseURI(baseURI string, subscriptionID string) RoleAssignmentsClient {
 	return RoleAssignmentsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -116,8 +117,7 @@ func (client RoleAssignmentsClient) CreatePreparer(ctx context.Context, scope st
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) CreateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateResponder handles the response to the Create request. The method always
@@ -125,7 +125,6 @@ func (client RoleAssignmentsClient) CreateSender(req *http.Request) (*http.Respo
 func (client RoleAssignmentsClient) CreateResponder(resp *http.Response) (result RoleAssignment, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -202,8 +201,7 @@ func (client RoleAssignmentsClient) CreateByIDPreparer(ctx context.Context, role
 // CreateByIDSender sends the CreateByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) CreateByIDSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateByIDResponder handles the response to the CreateByID request. The method always
@@ -211,7 +209,6 @@ func (client RoleAssignmentsClient) CreateByIDSender(req *http.Request) (*http.R
 func (client RoleAssignmentsClient) CreateByIDResponder(resp *http.Response) (result RoleAssignment, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -278,8 +275,7 @@ func (client RoleAssignmentsClient) DeletePreparer(ctx context.Context, scope st
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -287,7 +283,6 @@ func (client RoleAssignmentsClient) DeleteSender(req *http.Request) (*http.Respo
 func (client RoleAssignmentsClient) DeleteResponder(resp *http.Response) (result RoleAssignment, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -352,8 +347,7 @@ func (client RoleAssignmentsClient) DeleteByIDPreparer(ctx context.Context, role
 // DeleteByIDSender sends the DeleteByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) DeleteByIDSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteByIDResponder handles the response to the DeleteByID request. The method always
@@ -361,7 +355,6 @@ func (client RoleAssignmentsClient) DeleteByIDSender(req *http.Request) (*http.R
 func (client RoleAssignmentsClient) DeleteByIDResponder(resp *http.Response) (result RoleAssignment, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -428,8 +421,7 @@ func (client RoleAssignmentsClient) GetPreparer(ctx context.Context, scope strin
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) GetSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -437,7 +429,6 @@ func (client RoleAssignmentsClient) GetSender(req *http.Request) (*http.Response
 func (client RoleAssignmentsClient) GetResponder(resp *http.Response) (result RoleAssignment, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -502,8 +493,7 @@ func (client RoleAssignmentsClient) GetByIDPreparer(ctx context.Context, roleID 
 // GetByIDSender sends the GetByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) GetByIDSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetByIDResponder handles the response to the GetByID request. The method always
@@ -511,7 +501,6 @@ func (client RoleAssignmentsClient) GetByIDSender(req *http.Request) (*http.Resp
 func (client RoleAssignmentsClient) GetByIDResponder(resp *http.Response) (result RoleAssignment, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -582,8 +571,7 @@ func (client RoleAssignmentsClient) ListPreparer(ctx context.Context, filter str
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -591,7 +579,6 @@ func (client RoleAssignmentsClient) ListSender(req *http.Request) (*http.Respons
 func (client RoleAssignmentsClient) ListResponder(resp *http.Response) (result RoleAssignmentListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -709,8 +696,7 @@ func (client RoleAssignmentsClient) ListForResourcePreparer(ctx context.Context,
 // ListForResourceSender sends the ListForResource request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListForResourceSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListForResourceResponder handles the response to the ListForResource request. The method always
@@ -718,7 +704,6 @@ func (client RoleAssignmentsClient) ListForResourceSender(req *http.Request) (*h
 func (client RoleAssignmentsClient) ListForResourceResponder(resp *http.Response) (result RoleAssignmentListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -828,8 +813,7 @@ func (client RoleAssignmentsClient) ListForResourceGroupPreparer(ctx context.Con
 // ListForResourceGroupSender sends the ListForResourceGroup request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListForResourceGroupSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListForResourceGroupResponder handles the response to the ListForResourceGroup request. The method always
@@ -837,7 +821,6 @@ func (client RoleAssignmentsClient) ListForResourceGroupSender(req *http.Request
 func (client RoleAssignmentsClient) ListForResourceGroupResponder(resp *http.Response) (result RoleAssignmentListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -946,8 +929,7 @@ func (client RoleAssignmentsClient) ListForScopePreparer(ctx context.Context, sc
 // ListForScopeSender sends the ListForScope request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListForScopeSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListForScopeResponder handles the response to the ListForScope request. The method always
@@ -955,7 +937,6 @@ func (client RoleAssignmentsClient) ListForScopeSender(req *http.Request) (*http
 func (client RoleAssignmentsClient) ListForScopeResponder(resp *http.Response) (result RoleAssignmentListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

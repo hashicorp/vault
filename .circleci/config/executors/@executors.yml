@@ -4,38 +4,47 @@ go-machine:
   environment:
     GO111MODULE: "off"
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-    GO_VERSION: 1.14.7  # Pin Go to patch version (ex: 1.2.3)
+    GO_VERSION: 1.15.3  # Pin Go to patch version (ex: 1.2.3)
     GOTESTSUM_VERSION: 0.5.2  # Pin gotestsum to patch version (ex: 1.2.3)
     GO_TAGS: ""
   working_directory: /go/src/github.com/hashicorp/vault
 node:
   docker:
-    - image: node:10-buster
+    - image: docker.mirror.hashicorp.services/node:10-buster
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /go/src/github.com/hashicorp/vault
 python:
   docker:
-    - image: python:3-alpine
+    - image: docker.mirror.hashicorp.services/python:3-alpine
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /go/src/github.com/hashicorp/vault
 alpine:
   docker:
-    - image: alpine:3.10.2
+    - image: docker.mirror.hashicorp.services/alpine:3.10.2
   shell: /bin/sh
   working_directory: /go/src/github.com/hashicorp/vault
-docker-env-large:
-  resource_class: large
+docker-env-go-test-remote-docker:
+  resource_class: medium
   docker:
-    - image: "circleci/golang:1.14.7-stretch"
+    - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
   environment:
     GO111MODULE: "off"
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
     GO_TAGS: ""
   working_directory: /go/src/github.com/hashicorp/vault
-docker-env-xlarge:
+docker-env-go-test:
+  resource_class: large
+  docker:
+    - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
+  environment:
+    GO111MODULE: "off"
+    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+    GO_TAGS: ""
+  working_directory: /go/src/github.com/hashicorp/vault
+docker-env-go-test-race:
   resource_class: xlarge
   docker:
-    - image: "circleci/golang:1.14.7-stretch"
+    - image: "docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster"
   environment:
     GO111MODULE: "off"
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)

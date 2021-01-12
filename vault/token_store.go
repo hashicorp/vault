@@ -485,7 +485,8 @@ type TokenStore struct {
 	parentBarrierView   *BarrierView
 	rolesBarrierView    *BarrierView
 
-	expiration *ExpirationManager
+	expiration  *ExpirationManager
+	activityLog *ActivityLog
 
 	cubbyholeBackend *CubbyholeBackend
 
@@ -657,6 +658,12 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
 
+// SetActivityLog injects the activity log to which all new
+// token creation events are reported.
+func (ts *TokenStore) SetActivityLog(a *ActivityLog) {
+	ts.activityLog = a
+}
+
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -799,7 +806,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
+	var createRootTokenFlag bool
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		createRootTokenFlag = true
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
@@ -813,7 +822,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
+			if createRootTokenFlag {
+				entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
+			} else {
+				entry.ID, err = base62.Random(TokenLength)
+			}
 			if err != nil {
 				return err
 			}
@@ -862,6 +875,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 
+		// Update the activity log
+		if ts.activityLog != nil {
+			ts.activityLog.HandleTokenCreation(entry)
+		}
+
 		return ts.storeCommon(ctx, entry, true)
 
 	case logical.TokenTypeBatch:
@@ -903,6 +921,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
+		}
+
+		// Update the activity log
+		if ts.activityLog != nil {
+			ts.activityLog.HandleTokenCreation(entry)
 		}
 
 		return nil

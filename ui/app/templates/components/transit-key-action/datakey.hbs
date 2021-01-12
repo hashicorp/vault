@@ -29,10 +29,10 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
-            {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
           </div>
         </div>
       </div>
@@ -42,10 +42,10 @@
         <label for="nonce" class="is-label">Nonce</label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
+            <Input @type="text" @id="nonce" @value={{nonce}} class="input" data-test-transit-input="nonce" />
           </div>
           <div class="control">
-            {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
+            <B64Toggle @value={{nonce}} @data-test-transit-b64-toggle="nonce" />
           </div>
         </div>
       </div>

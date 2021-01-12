@@ -1,10 +1,10 @@
+import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
 import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
 import { set, get, computed } from '@ember/object';
-import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
 
@@ -27,7 +27,7 @@ export function keyForCache(query) {
   return JSON.stringify(cacheKeyObject);
 }
 
-export default DS.Store.extend({
+export default Store.extend({
   // this is a map of map that stores the caches
   lazyCaches: computed(function() {
     return new Map();
@@ -37,7 +37,7 @@ export default DS.Store.extend({
     const cacheKey = keyForCache(key);
     const cache = this.lazyCacheForModel(modelName) || new Map();
     cache.set(cacheKey, value);
-    const lazyCaches = this.get('lazyCaches');
+    const lazyCaches = this.lazyCaches;
     const modelKey = normalizeModelName(modelName);
     lazyCaches.set(modelKey, cache);
   },
@@ -51,7 +51,7 @@ export default DS.Store.extend({
   },
 
   lazyCacheForModel(modelName) {
-    return this.get('lazyCaches').get(normalizeModelName(modelName));
+    return this.lazyCaches.get(normalizeModelName(modelName));
   },
 
   // This is the public interface for the store extension - to be used just
@@ -178,7 +178,7 @@ export default DS.Store.extend({
   },
 
   clearDataset(modelName) {
-    let cacheList = this.get('lazyCaches');
+    let cacheList = this.lazyCaches;
     if (!cacheList.size) return;
     if (modelName && cacheList.has(modelName)) {
       cacheList.delete(modelName);

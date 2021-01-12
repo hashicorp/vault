@@ -60,6 +60,11 @@ type = "array"
 minWireVersionRequired = 6
 documentation = "ArrayFilters specifies an array of filter documents that determines which array elements to modify for an update operation on an array field."
 
+[request.hint]
+type = "value"
+minWireVersionRequired = 8
+documentation = "Hint specifies the index to use. This option is only valid for server versions >= 4.4. Server version 4.2 will error if this option is set. For server versions < 4.2, the driver will error if this option is set."
+
 [response]
 name = "FindAndModifyResult"
 

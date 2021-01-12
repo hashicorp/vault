@@ -16,6 +16,7 @@
  * @param {number} [retentionMonths=24] - setting for the retention months, which informs valid dates to query by
  */
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import {
   differenceInSeconds,
@@ -32,6 +33,8 @@ import { parseDateString } from 'vault/helpers/parse-date-string';
 
 export default Component.extend({
   layout,
+  router: service(),
+
   queryStart: null,
   queryEnd: null,
   resultStart: null,
@@ -66,7 +69,9 @@ export default Component.extend({
     }
   }),
 
-  showResultsWarning: computed('resultStart', 'resultEnd', function() {
+  // We don't want the warning to show when inputs are being updated before query is made
+  /* eslint-disable-next-line ember/require-computed-property-dependencies */
+  showResultsWarning: computed('resultEnd', 'resultStart', function() {
     if (!this.queryStart || !this.queryEnd || !this.resultStart || !this.resultEnd) {
       return false;
     }
@@ -93,7 +98,7 @@ export default Component.extend({
     return false;
   }),
 
-  error: computed('end', 'start', function() {
+  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function() {
     if (!this.startDate) {
       return 'Start date is invalid. Please use format MM/YYYY';
     }
@@ -137,5 +142,18 @@ export default Component.extend({
 
     this.start = format(initialStart, 'MM/YYYY');
     this.end = format(initialEnd, 'MM/YYYY');
+  },
+
+  actions: {
+    handleQuery() {
+      const start = format(this.startDate, 'MM-YYYY');
+      const end = format(this.endDate, 'MM-YYYY');
+      this.router.transitionTo('vault.cluster.metrics', {
+        queryParams: {
+          start,
+          end,
+        },
+      });
+    },
   },
 });

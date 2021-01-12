@@ -267,6 +267,20 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 
 	return gids, nil
 }
+
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	k, err := p.getKProc()
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make([]int32, k.Eproc.Ucred.Ngroups)
+	for i := int16(0); i < k.Eproc.Ucred.Ngroups; i++ {
+		groups[i] = int32(k.Eproc.Ucred.Groups[i])
+	}
+
+	return groups, nil
+}
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())
 }
@@ -597,7 +611,7 @@ func (p *Process) getKProcWithContext(ctx context.Context) (*KinfoProc, error) {
 	length := uint64(unsafe.Sizeof(procK))
 	buf := make([]byte, length)
 	_, _, syserr := unix.Syscall6(
-		unix.SYS___SYSCTL,
+		202, // unix.SYS___SYSCTL https://github.com/golang/sys/blob/76b94024e4b621e672466e8db3d7f084e7ddcad2/unix/zsysnum_darwin_amd64.go#L146
 		uintptr(unsafe.Pointer(&mib[0])),
 		uintptr(len(mib)),
 		uintptr(unsafe.Pointer(&buf[0])),

@@ -13,8 +13,9 @@ import (
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -41,9 +42,11 @@ var _ physical.Backend = (*AzureBackend)(nil)
 
 // NewAzureBackend constructs an Azure backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
-// from the environment, AWS credential files or by IAM role.
+// from the environment, via HCL or by using managed identities.
 func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	name := os.Getenv("AZURE_BLOB_CONTAINER")
+	useMSI := false
+
 	if name == "" {
 		name = conf["container"]
 		if name == "" {
@@ -63,7 +66,8 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if accountKey == "" {
 		accountKey = conf["accountKey"]
 		if accountKey == "" {
-			return nil, fmt.Errorf("'accountKey' must be set")
+			logger.Info("accountKey not set, using managed identity auth")
+			useMSI = true
 		}
 	}
 
@@ -99,9 +103,39 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
+	var credential azblob.Credential
+	if useMSI {
+		authToken, err := getAuthTokenFromIMDS(environment.ResourceIdentifiers.Storage)
+		if err != nil {
+			errorMsg := fmt.Sprintf("failed to obtain auth token from IMDS %q: {{err}}",
+				environmentName)
+			return nil, errwrap.Wrapf(errorMsg, err)
+		}
+
+		credential = azblob.NewTokenCredential(authToken.OAuthToken(), func(c azblob.TokenCredential) time.Duration {
+			err = authToken.Refresh()
+			if err != nil {
+				logger.Error("couldn't refresh token credential", "error", err)
+				return 0
+			}
+
+			expIn, err := authToken.Token().ExpiresIn.Int64()
+			if err != nil {
+				logger.Error("couldn't retrieve jwt claim for 'expiresIn' from refreshed token", "error", err)
+				return 0
+			}
+
+			logger.Debug("token refreshed, new token expires in", "access_token_expiry", expIn)
+			c.SetToken(authToken.OAuthToken())
+
+			// tokens are valid for 23h59m (86399s) by default, refresh after ~21h
+			return time.Duration(int(float64(expIn)*0.9)) * time.Second
+		})
+	} else {
+		credential, err = azblob.NewSharedKeyCredential(accountName, accountKey)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
+		}
 	}
 
 	URL, err := url.Parse(
@@ -179,7 +213,7 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
-	res, err := blobURL.Download(ctx, 0, 0, azblob.BlobAccessConditions{}, false)
+	res, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
 	if err != nil {
 		var e azblob.StorageError
 		if errors.As(err, &e) {
@@ -194,8 +228,8 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	}
 
 	reader := res.Body(azblob.RetryReaderOptions{})
-
 	defer reader.Close()
+
 	data, err := ioutil.ReadAll(reader)
 
 	ent := &physical.Entry{
@@ -238,7 +272,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
 
-	keys := []string{}
+	var keys []string
 	for marker := (azblob.Marker{}); marker.NotDone(); {
 		listBlob, err := a.container.ListBlobsFlatSegment(ctx, marker, azblob.ListBlobsSegmentOptions{
 			Prefix:     prefix,
@@ -264,4 +298,29 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 
 	sort.Strings(keys)
 	return keys, nil
+}
+
+// getAuthTokenFromIMDS uses the Azure Instance Metadata Service to retrieve a short-lived credential using OAuth
+// more info on this https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
+func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) {
+	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	if err != nil {
+		return nil, err
+	}
+
+	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := spt.Refresh(); err != nil {
+		return nil, err
+	}
+
+	token := spt.Token()
+	if token.IsZero() {
+		return nil, err
+	}
+
+	return spt, nil
 }

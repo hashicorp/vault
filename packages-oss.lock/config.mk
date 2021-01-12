@@ -19,11 +19,23 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel)
 # automatically.
 AUTO_INSTALL_TOOLS ?= NO
 
+define ENSURE_GITIGNORE_ALL
+_ := $(shell cd "$(REPO_ROOT)" && [ -f "$(1)/.gitignore" ] || { mkdir -p "$(1)"; echo '*' > "$(1)/.gitignore"; })
+endef
+
 # CACHE_ROOT is the build cache directory.
 CACHE_ROOT ?= .buildcache
-
-CACHE_GITIGNORE := $(CACHE_ROOT)/.gitignore
-$(shell [ -f $(CACHE_GITIGNORE) ] || { mkdir -p $(CACHE_ROOT); echo '*' > $(CACHE_GITIGNORE); })
+_ := $(call ENSURE_GITIGNORE_ALL,$(CACHE_ROOT))
+# PACKAGES_ROOT holds the package store, as well as other package aliases.
+PACKAGES_ROOT := $(CACHE_ROOT)/packages
+_ := $(call ENSURE_GITIGNORE_ALL,$(PACKAGES_ROOT))
+# PACKAGE_STORE is where we store all the package files themselves
+# addressed by their input hashes.
+PACKAGE_STORE := $(PACKAGES_ROOT)/store
+_ := $(call ENSURE_GITIGNORE_ALL,$(PACKAGE_STORE))
+# BY_ALIAS is where we store alias symlinks to the store.
+BY_ALIAS      := $(PACKAGES_ROOT)/by-alias
+_ := $(call ENSURE_GITIGNORE_ALL,$(BY_ALIAS))
 
 # SPEC is the human-managed description of which packages we are able to build.
 SPEC_FILE_PATTERN := packages*.yml
@@ -122,7 +134,7 @@ PRODUCT_REVISION_NICE_NAME := <current-workdir>
 DIRTY_FILES := $(shell cd $(REPO_ROOT) && git ls-files -o -m --exclude-standard -- $(ALWAYS_EXCLUDE_SOURCE_GIT) | xargs)
 ifneq ($(DIRTY_FILES),)
 DIRTY := dirty_$(shell cd $(REPO_ROOT) && cat $(DIRTY_FILES) | $(SUM) || echo FAIL)_
-ifeq ($(DIRTY),FAIL_)
+ifeq ($(findstring FAIL_,$(DIRTY)),FAIL_)
 $(error Failed to determine dirty files sha1sum)
 endif
 endif
@@ -234,6 +246,8 @@ PRODUCT_CIRCLECI_SLUG := $(shell $(call QUERY_SPEC,.config["circleci-project-slu
 
 # PRODUCT_CIRCLECI_HOST is the host configured to build this repo.
 PRODUCT_CIRCLECI_HOST := $(shell $(call QUERY_SPEC,.config["circleci-host"]))
+
+export ON_PUBLISH := $(shell $(call QUERY_SPEC,.config["on-publish"]))
 
 # End including config once only.
 endif

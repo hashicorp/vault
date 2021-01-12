@@ -71,6 +71,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Type:        framework.TypeStringSlice,
 					Description: "The values to set the header.",
 				},
+				"multivalue": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Returns multiple values if true",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -824,6 +828,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
 				},
 			},
+		},
+		{
+			Pattern: "internal/ui/feature-flags",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					// callback is absent because this is an unauthenticated method
+					Summary: "Lists enabled feature flags.",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-feature-flags"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-feature-flags"][1]),
 		},
 		{
 			Pattern: "internal/ui/mounts",

@@ -1,0 +1,9 @@
+## AWS Instance Metadata Timeout
+
+In 1.4.0 Vault started using an updated AWS Go SDK which had support for v2 of
+the [EC2 instance metadata service][aws-ec2-imdsv2]. However, due to the way the
+SDK was configured in Vault, there can be a delay of around 2 minutes when Vault
+relies on the instance metadata service for credentials. A fix that reduces the
+delay went into 1.5.5: [#10133](https://github.com/hashicorp/vault/pull/10133).
+
+[aws-ec2-imdsv2]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html

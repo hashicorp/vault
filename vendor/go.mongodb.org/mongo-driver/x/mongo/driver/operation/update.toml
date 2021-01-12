@@ -19,7 +19,7 @@ variadic = true
 required = true
 documentation = """
 Updates specifies an array of update statements to perform when this operation is executed.
-Each update document must have the following structure: {q: <query>, u: <update>, multi: <boolean>, collation: Optional<Document>, arrayFitlers: Optional<Array>}.\
+Each update document must have the following structure: {q: <query>, u: <update>, multi: <boolean>, collation: Optional<Document>, arrayFitlers: Optional<Array>, hint: Optional<string/Document>}.\
 """
 
 [request.ordered]
@@ -35,6 +35,15 @@ minWireVersion = 4
 documentation = """
 BypassDocumentValidation allows the operation to opt-out of document level validation. Valid
 for server versions >= 3.2. For servers < 3.2, this setting is ignored.\
+"""
+
+[request.hint]
+type = "boolean"
+minWireVersionRequired = 5
+documentation = """
+Hint is a flag to indicate that the update document contains a hint. Hint is only supported by
+servers >= 4.2. Older servers >= 3.4 will report an error for using the hint option. For servers <
+3.4, the driver will return an error if the hint option is used.\
 """
 
 [response]

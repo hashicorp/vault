@@ -10,7 +10,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -207,6 +207,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		delete(config.ConnectionDetails, "password")
+		delete(config.ConnectionDetails, "private_key")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),
@@ -318,7 +319,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 
-		initReq := newdbplugin.InitializeRequest{
+		initReq := v5.InitializeRequest{
 			Config:           config.ConnectionDetails,
 			VerifyConnection: verifyConnection,
 		}

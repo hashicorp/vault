@@ -9,11 +9,10 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/api"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/lib/pq"
@@ -32,7 +31,7 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 )
 
 var (
-	_ newdbplugin.Database = &PostgreSQL{}
+	_ dbplugin.Database = &PostgreSQL{}
 
 	// postgresEndStatement is basically the word "END" but
 	// surrounded by a word boundary to differentiate it from
@@ -52,7 +51,7 @@ var (
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
-	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
 }
 
@@ -67,28 +66,16 @@ func new() *PostgreSQL {
 	return db
 }
 
-// Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
-}
-
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 }
 
-func (p *PostgreSQL) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	newConf, err := p.SQLConnectionProducer.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, err
 	}
-	resp := newdbplugin.InitializeResponse{
+	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
 	return resp, nil
@@ -107,12 +94,12 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (p *PostgreSQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (p *PostgreSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Username == "" {
-		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("missing username")
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("missing username")
 	}
 	if req.Password == nil && req.Expiration == nil {
-		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
 	}
 
 	merr := &multierror.Error{}
@@ -124,10 +111,10 @@ func (p *PostgreSQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserR
 		err := p.changeUserExpiration(ctx, req.Username, req.Expiration)
 		merr = multierror.Append(merr, err)
 	}
-	return newdbplugin.UpdateUserResponse{}, merr.ErrorOrNil()
+	return dbplugin.UpdateUserResponse{}, merr.ErrorOrNil()
 }
 
-func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, changePass *newdbplugin.ChangePassword) error {
+func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	stmts := changePass.Statements.Commands
 	if len(stmts) == 0 {
 		stmts = []string{defaultChangePasswordStatement}
@@ -184,7 +171,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	return nil
 }
 
-func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, changeExp *newdbplugin.ChangeExpiration) error {
+func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, changeExp *dbplugin.ChangeExpiration) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -229,9 +216,9 @@ func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, 
 	return tx.Commit()
 }
 
-func (p *PostgreSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	if len(req.Statements.Commands) == 0 {
-		return newdbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
 	p.Lock()
@@ -244,19 +231,19 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest
 		credsutil.MaxLength(63),
 	)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	expirationStr := req.Expiration.Format(expirationFormat)
 
 	db, err := p.getConnection(ctx)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return newdbplugin.NewUserResponse{}, fmt.Errorf("unable to start transaction: %w", err)
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to start transaction: %w", err)
 
 	}
 	defer tx.Rollback()
@@ -271,7 +258,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest
 				"expiration": expirationStr,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
-				return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
+				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 			continue
 		}
@@ -289,30 +276,30 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest
 				"expiration": expirationStr,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
+				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return newdbplugin.NewUserResponse{}, err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	resp := newdbplugin.NewUserResponse{
+	resp := dbplugin.NewUserResponse{
 		Username: username,
 	}
 	return resp, nil
 }
 
-func (p *PostgreSQL) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (p *PostgreSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	p.Lock()
 	defer p.Unlock()
 
 	if len(req.Statements.Commands) == 0 {
-		return newdbplugin.DeleteUserResponse{}, p.defaultDeleteUser(ctx, req.Username)
+		return dbplugin.DeleteUserResponse{}, p.defaultDeleteUser(ctx, req.Username)
 	}
 
-	return newdbplugin.DeleteUserResponse{}, p.customDeleteUser(ctx, req.Username, req.Statements.Commands)
+	return dbplugin.DeleteUserResponse{}, p.customDeleteUser(ctx, req.Username, req.Statements.Commands)
 }
 
 func (p *PostgreSQL) customDeleteUser(ctx context.Context, username string, revocationStmts []string) error {

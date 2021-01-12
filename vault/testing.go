@@ -295,10 +295,6 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
 
-func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
-	return core.UnsealWithRecoveryKeys(key)
-}
-
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
@@ -313,6 +309,7 @@ func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
 	return core, keys, root, inmemSink
@@ -557,6 +554,19 @@ func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	defer n.l.Unlock()
 	var w bytes.Buffer
 	err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
+	return nil
+}
+
+func (n *noopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	n.l.Lock()
+	defer n.l.Unlock()
+	var w bytes.Buffer
+	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	err := tempFormatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
 	if err != nil {
 		return err
 	}
@@ -830,6 +840,7 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
+	t.Helper()
 	var keys [][]byte
 	if core.seal.RecoveryKeySupported() {
 		keys = c.RecoveryKeys
@@ -844,6 +855,7 @@ func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
 }
 
 func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.T, core *TestClusterCore) {
+	t.Helper()
 	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -1018,12 +1030,13 @@ type TestClusterOptions struct {
 	// do not clash with any other explicitly assigned ports in other tests.
 	BaseClusterListenPort int
 
-	NumCores int
-	SealFunc func() Seal
-	Logger   log.Logger
-	TempDir  string
-	CACert   []byte
-	CAKey    *ecdsa.PrivateKey
+	NumCores       int
+	SealFunc       func() Seal
+	UnwrapSealFunc func() Seal
+	Logger         log.Logger
+	TempDir        string
+	CACert         []byte
+	CAKey          *ecdsa.PrivateKey
 	// PhysicalFactory is used to create backends.
 	// The int argument is the index of the core within the cluster, i.e. first
 	// core in cluster will have 0, second 1, etc.
@@ -1048,6 +1061,8 @@ type TestClusterOptions struct {
 	// RaftAddressProvider should only be specified if the underlying physical
 	// storage is Raft.
 	RaftAddressProvider raftlib.ServerAddressProvider
+
+	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 }
 
 var DefaultNumCores = 3
@@ -1409,8 +1424,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.LicensingConfig = base.LicensingConfig
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
+		coreConfig.MetricSink = base.MetricSink
 		coreConfig.SecureRandomReader = base.SecureRandomReader
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
+		coreConfig.ClusterName = base.ClusterName
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1464,7 +1481,16 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
 
+		coreConfig.ActivityLogConfig = base.ActivityLogConfig
+
 		testApplyEntBaseConfig(coreConfig, base)
+	}
+	if coreConfig.ClusterName == "" {
+		coreConfig.ClusterName = t.Name()
+	}
+
+	if coreConfig.ClusterName == "" {
+		coreConfig.ClusterName = t.Name()
 	}
 
 	if coreConfig.ClusterHeartbeatInterval == 0 {
@@ -1701,6 +1727,9 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if opts != nil && opts.SealFunc != nil {
 		localConfig.Seal = opts.SealFunc()
 	}
+	if opts != nil && opts.UnwrapSealFunc != nil {
+		localConfig.UnwrapSeal = opts.UnwrapSealFunc()
+	}
 
 	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
@@ -1753,6 +1782,13 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 		metrics.DefaultInmemSignal(inm)
 		localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
+	}
+	if opts != nil && opts.CoreMetricSinkProvider != nil {
+		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
+	}
+
+	if opts != nil && opts.CoreMetricSinkProvider != nil {
+		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
 	}
 
 	c, err := NewCore(&localConfig)
@@ -2025,7 +2061,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
-	return dbMysql.New(false), true
+	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins.
@@ -2053,6 +2089,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"postgresql-database-plugin",
 		"redshift-database-plugin",
+		"snowflake-database-plugin",
 	}
 }
 
@@ -2102,6 +2139,10 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	}
 
 	return n.RespErr
+}
+
+func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, options map[string]string) error {
+	return nil
 }
 
 func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {

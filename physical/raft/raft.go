@@ -125,6 +125,19 @@ type RaftBackend struct {
 // LeaderJoinInfo contains information required by a node to join itself as a
 // follower to an existing raft cluster
 type LeaderJoinInfo struct {
+	// AutoJoin defines any cloud auto-join metadata. If supplied, Vault will
+	// attempt to automatically discover peers in addition to what can be provided
+	// via 'leader_api_addr'.
+	AutoJoin string `json:"auto_join"`
+
+	// AutoJoinScheme defines the optional URI protocol scheme for addresses
+	// discovered via auto-join.
+	AutoJoinScheme string `json:"auto_join_scheme"`
+
+	// AutoJoinPort defines the optional port used for addressed discovered via
+	// auto-join.
+	AutoJoinPort uint `json:"auto_join_port"`
+
 	// LeaderAPIAddr is the address of the leader node to connect to
 	LeaderAPIAddr string `json:"leader_api_addr"`
 
@@ -178,11 +191,19 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 		return nil, errors.New("invalid retry_join config")
 	}
 
-	for _, info := range leaderInfos {
+	for i, info := range leaderInfos {
+		if len(info.AutoJoin) != 0 && len(info.LeaderAPIAddr) != 0 {
+			return nil, errors.New("cannot provide both a leader_api_addr and auto_join")
+		}
+
+		if info.AutoJoinScheme != "" && (info.AutoJoinScheme != "http" && info.AutoJoinScheme != "https") {
+			return nil, fmt.Errorf("invalid scheme '%s'; must either be http or https", info.AutoJoinScheme)
+		}
+
 		info.Retry = true
 		info.TLSConfig, err = parseTLSInfo(info)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node (retry_join index: %d): {{err}}", i), err)
 		}
 	}
 
@@ -276,6 +297,14 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snap = snapshots
 	}
 
+	if delayRaw, ok := conf["snapshot_delay"]; ok {
+		delay, err := time.ParseDuration(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
+		}
+		snap = newSnapshotStoreDelay(snap, delay)
+	}
+
 	var localID string
 	{
 		// Determine the local node ID from the environment.
@@ -341,6 +370,33 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
 		maxEntrySize: maxEntrySize,
 	}, nil
+}
+
+type snapshotStoreDelay struct {
+	wrapped raft.SnapshotStore
+	delay   time.Duration
+}
+
+func (s snapshotStoreDelay) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+	time.Sleep(s.delay)
+	return s.wrapped.Create(version, index, term, configuration, configurationIndex, trans)
+}
+
+func (s snapshotStoreDelay) List() ([]*raft.SnapshotMeta, error) {
+	return s.wrapped.List()
+}
+
+func (s snapshotStoreDelay) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+	return s.wrapped.Open(id)
+}
+
+var _ raft.SnapshotStore = &snapshotStoreDelay{}
+
+func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration) *snapshotStoreDelay {
+	return &snapshotStoreDelay{
+		wrapped: snap,
+		delay:   delay,
+	}
 }
 
 // Close is used to gracefully close all file resources.  N.B. This method
@@ -867,10 +923,19 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	return ret, nil
 }
 
+// SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
+// response.
+func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal.Access) error {
+	out.Header().Add("Content-Disposition", "attachment")
+	out.Header().Add("Content-Type", "application/gzip")
+
+	return b.Snapshot(out, access)
+}
+
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Access) error {
+func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -886,26 +951,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Acc
 		}
 	}
 
-	snap, err := snapshot.NewWithSealer(b.logger.Named("snapshot"), b.raft, s)
-	if err != nil {
-		return err
-	}
-	defer snap.Close()
-
-	size, err := snap.Size()
-	if err != nil {
-		return err
-	}
-
-	out.Header().Add("Content-Disposition", "attachment")
-	out.Header().Add("Content-Length", fmt.Sprintf("%d", size))
-	out.Header().Add("Content-Type", "application/gzip")
-	_, err = io.Copy(out, snap)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return snapshot.Write(b.logger.Named("snapshot"), b.raft, s, out)
 }
 
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,

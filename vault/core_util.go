@@ -13,6 +13,11 @@ import (
 	"github.com/hashicorp/vault/vault/replication"
 )
 
+const (
+	activityLogEnabledDefault      = false
+	activityLogEnabledDefaultValue = "default-disabled"
+)
+
 type entCore struct{}
 type entCoreConfig struct{}
 
@@ -34,9 +39,9 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	cacheLogger := c.baseLogger.Named("storage.cache")
 	c.allLoggers = append(c.allLoggers, cacheLogger)
 	if txnOK {
-		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
+		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger, c.MetricSink().Sink)
 	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, cacheLogger, c.MetricSink().Sink)
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 

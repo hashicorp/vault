@@ -27,6 +27,7 @@
     </CopyButton>
   {{/if}}
   <button {{action "toggleMask"}}
+    type="button"
     class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}"
     data-test-button>
     <Icon @glyph={{if shouldObscure "visibility-hide" "visibility-show"}} aria-hidden="true" />
