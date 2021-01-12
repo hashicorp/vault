@@ -4357,10 +4357,6 @@ This path responds to the following HTTP methods.
 		"Write, Read, and Delete data directly in the Storage backend.",
 		"",
 	},
-	"internal-ui-feature-flags": {
-		"Enabled feature flags. Internal API; its location, inputs, and outputs may change.",
-		"",
-	},
 	"internal-ui-mounts": {
 		"Information about mounts returned according to their tuned visibility. Internal API; its location, inputs, and outputs may change.",
 		"",

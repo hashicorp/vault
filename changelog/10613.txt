@@ -1,3 +1,0 @@
-```release-node:improvement
-core: Added an internal endpoint that lists feature flags.
-```
