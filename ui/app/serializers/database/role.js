@@ -6,7 +6,6 @@ export default RESTSerializer.extend({
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
       const roles = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
-      console.log('playload', roles);
       return roles;
     }
   },

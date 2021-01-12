@@ -62,6 +62,15 @@ const SECRET_BACKENDS = {
     tabs: [
       // we have the landing route Overview, and tabs connection and roles
       {
+        name: 'overview',
+        modelPrefix: 'overview/',
+        label: 'Overview',
+        searchPlaceholder: 'TODO ARG',
+        item: 'overview',
+        tab: 'overview',
+        editComponent: 'database-overview-edit',
+      },
+      {
         name: 'connection',
         modelPrefix: 'connection/',
         label: 'Connections',
