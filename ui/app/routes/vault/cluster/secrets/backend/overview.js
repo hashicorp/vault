@@ -17,8 +17,6 @@ export default Route.extend({
     let connection = this.store.query('database/connection', {});
     let role = this.store.query('database/role', {});
     // FUTURE find records for the models
-    // ARG engineType are we okay setting here?
-    console.log(this.type, 'type');
     return hash({
       connections: connection,
       roles: role,
