@@ -59,25 +59,15 @@ const SECRET_BACKENDS = {
     displayName: 'Database',
     navigateTree: false,
     listItemPartial: 'partials/secret-list/database-list-item',
+    hasOverview: true,
     tabs: [
-      // we have the landing route Overview, and tabs connection and roles
-      {
-        name: 'overview',
-        modelPrefix: 'overview/',
-        label: 'Overview',
-        item: 'overview',
-        tab: 'overview',
-        editComponent: 'database-overview-edit',
-      },
       {
         name: 'connection',
-        modelPrefix: 'connection/',
         label: 'Connections',
         searchPlaceholder: 'Filter connections',
         item: 'connection',
         create: 'Create connection',
-        tab: 'connection',
-        editComponent: 'database-connection-edit',
+        editComponent: 'database-connection',
       },
       {
         name: 'role',
