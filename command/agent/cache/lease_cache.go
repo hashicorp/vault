@@ -83,7 +83,8 @@ type LeaseCache struct {
 	idLocks []*locksutil.LockEntry
 
 	// inflightCache keeps track of inflight requests
-	inflightCache *gocache.Cache
+	inflightCache     *gocache.Cache
+	inflightCacheLock sync.Mutex
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -207,8 +208,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			}
 		}()
 
+		c.inflightCacheLock.Lock()
 		entry, found := c.inflightCache.Get(id)
 		if found {
+			c.inflightCacheLock.Unlock()
 			inflight = entry.(*inflightRequest)
 			inflight.remaining.Inc()
 			defer inflight.remaining.Dec()
@@ -223,6 +226,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			defer inflight.remaining.Dec()
 
 			c.inflightCache.Set(id, inflight, gocache.NoExpiration)
+			c.inflightCacheLock.Unlock()
 
 			// Signal that the processing request is done
 			defer close(inflight.ch)
