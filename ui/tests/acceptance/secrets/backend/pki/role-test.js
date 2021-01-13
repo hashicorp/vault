@@ -14,19 +14,14 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     return authPage.login();
   });
 
-  const mountAndNav = async () => {
+  test('it creates a role and redirects', async function(assert) {
+    // UPGRADE TODO: Getting error:
+    // Promise rejected before "it creates a role and redirects meep": Assertion Failed: You cannot use the same root element (#ember-testing) multiple times in an Ember.Application
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();
     await editPage.visitRoot({ backend: path });
     await settled();
-    return path;
-  };
-
-  test('it creates a role and redirects', async function(assert) {
-    // UPGRADE TODO: Getting error:
-    // Promise rejected before "it creates a role and redirects meep": Assertion Failed: You cannot use the same root element (#ember-testing) multiple times in an Ember.Application
-    const path = await mountAndNav(assert);
     await editPage.createRole('role', 'example.com');
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -64,7 +59,11 @@ module('Acceptance | secrets/pki/create', function(hooks) {
   });
 
   test('it deletes a role', async function(assert) {
-    const path = await mountAndNav(assert);
+    const path = `pki-${new Date().getTime()}`;
+    await enablePage.enable('pki', path);
+    await settled();
+    await editPage.visitRoot({ backend: path });
+    await settled();
     await editPage.createRole('role', 'example.com');
     await settled();
     await showPage.visit({ backend: path, id: 'role' });
