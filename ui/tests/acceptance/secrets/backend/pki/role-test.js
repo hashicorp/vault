@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
@@ -25,9 +25,9 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await editPage.createRole('role', 'example.com');
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    assert.ok(showPage.editIsPresent, 'shows the edit button');
-    assert.ok(showPage.generateCertIsPresent, 'shows the generate button');
-    assert.ok(showPage.signCertIsPresent, 'shows the sign button');
+    assert.dom('[data-test-edit-link]').exists('shows the edit button');
+    assert.dom('[data-test-credentials-link]').exists('shows the generate button');
+    assert.dom('[data-test-sign-link]').exists('shows the sign button');
 
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
@@ -41,7 +41,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
 
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
-    await showPage.signCert();
+    await click('[data-test-sign-link]');
     await settled();
     assert.equal(
       currentRouteName(),
