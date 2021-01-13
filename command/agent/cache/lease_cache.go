@@ -28,6 +28,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	gocache "github.com/patrickmn/go-cache"
+	"go.uber.org/atomic"
 )
 
 const (
@@ -81,7 +83,7 @@ type LeaseCache struct {
 	idLocks []*locksutil.LockEntry
 
 	// inflightCache keeps track of inflight requests
-	inflightCache sync.Map
+	inflightCache *gocache.Cache
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -92,20 +94,20 @@ type LeaseCacheConfig struct {
 	Proxier     Proxier
 	Logger      hclog.Logger
 }
-type inflightCache struct {
-	l sync.RWMutex
-	m map[string]*inflightRequest
-}
 
 type inflightRequest struct {
+	// ch is closed by the request that ends up processing the set of
+	// parallel request
 	ch chan struct{}
-	wg *sync.WaitGroup
+
+	// remaining is the number of remaining inflight request that needs to
+	// be processed before this object can be cleaned up
+	remaining atomic.Uint64
 }
 
 func newInflightRequest() *inflightRequest {
 	return &inflightRequest{
 		ch: make(chan struct{}),
-		wg: new(sync.WaitGroup),
 	}
 }
 
@@ -132,13 +134,14 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
-		client:      conf.Client,
-		proxier:     conf.Proxier,
-		logger:      conf.Logger,
-		db:          db,
-		baseCtxInfo: baseCtxInfo,
-		l:           &sync.RWMutex{},
-		idLocks:     locksutil.CreateLocks(),
+		client:        conf.Client,
+		proxier:       conf.Proxier,
+		logger:        conf.Logger,
+		db:            db,
+		baseCtxInfo:   baseCtxInfo,
+		l:             &sync.RWMutex{},
+		idLocks:       locksutil.CreateLocks(),
+		inflightCache: gocache.New(gocache.NoExpiration, gocache.NoExpiration),
 	}, nil
 }
 
@@ -190,39 +193,39 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
-	// Grab a read lock for this particular request
-	idLock := locksutil.LockForKey(c.idLocks, id)
-
-	idLock.RLock()
-	unlockFunc := idLock.RUnlock
-	defer func() { unlockFunc() }()
-
 	if os.Getenv("VAULT_AGENT_INFLIGHT_CACHE") != "" {
 		// Check the inflight cache to see if there are other inflight requests
-		// of the same kind, based on the computer ID. If so, we hold until the
-		entryRaw, loaded := c.inflightCache.LoadOrStore(id, newInflightRequest())
-		entry := entryRaw.(*inflightRequest)
-		if loaded {
-			// Add this to the inflight cache's WaitGroup so that the winner
-			// can clear the cache once all concurrent requests has been processed
-			entry.wg.Add(1)
-			defer entry.wg.Done()
+		// of the same kind, based on the computer ID. If so, we increment a counter
 
-			// Block until the entry's channel is closed
+		var inflight *inflightRequest
+
+		defer func() {
+			// Cleanup on the cache if there are no remaining inflight requests.
+			// This is the last step, so we defer the call first
+			if inflight != nil && inflight.remaining.Load() == 0 {
+				c.inflightCache.Delete(id)
+			}
+		}()
+
+		entry, found := c.inflightCache.Get(id)
+		if found {
+			inflight = entry.(*inflightRequest)
+			inflight.remaining.Inc()
+			defer inflight.remaining.Dec()
+
 			select {
-			case <-entry.ch:
 			case <-ctx.Done():
+			case <-inflight.ch:
 			}
 		} else {
-			// Otherwise we process the request
-			defer func() {
-				// wait until all inflight requests for this ID has been processed
-				// before deleting this entry
-				entry.wg.Wait()
-				c.inflightCache.Delete(id)
-			}()
-			// Close channel to trigger other inflight request to process
-			defer close(entry.ch)
+			inflight = newInflightRequest()
+			inflight.remaining.Inc()
+			defer inflight.remaining.Dec()
+
+			c.inflightCache.Set(id, inflight, gocache.NoExpiration)
+
+			// Signal that the processing request is done
+			defer close(inflight.ch)
 		}
 	}
 
@@ -380,28 +383,6 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		Ctx:        renewCtx,
 		CancelFunc: renewCtxInfo.CancelFunc,
 		DoneCh:     renewCtxInfo.DoneCh,
-	}
-
-	// If we're at this point, it means that the response will be cached.
-	// Perform a lock upgrade, and re-check before writing to the cache.
-	idLock.RUnlock()
-	idLock.Lock()
-	unlockFunc = idLock.Unlock
-
-	// Check cache once more after upgrade
-	cachedResp, err = c.checkCacheForRequest(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// If found, it means that some other parallel request already cached the
-	// response for this request in between this upgrade.
-	// TODO: Which response should we return and what happens to the
-	//       secret from this current request?
-	if cachedResp != nil {
-		c.logger.Debug("========= cached response found after proxied request, dropping leased secret", "method", req.Request.Method, "path", req.Request.URL.Path)
-		// c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
-		return cachedResp, nil
 	}
 
 	// Store the index in the cache
