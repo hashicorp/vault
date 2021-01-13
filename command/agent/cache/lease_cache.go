@@ -208,14 +208,18 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			}
 		}()
 
-		c.inflightCacheLock.Lock()
-		entry, found := c.inflightCache.Get(id)
+		idLock := locksutil.LockForKey(c.idLocks, id)
+
+		idLock.Lock()
+		inflightRaw, found := c.inflightCache.Get(id)
 		if found {
-			c.inflightCacheLock.Unlock()
-			inflight = entry.(*inflightRequest)
+			idLock.Unlock()
+			inflight = inflightRaw.(*inflightRequest)
 			inflight.remaining.Inc()
 			defer inflight.remaining.Dec()
 
+			// If found it means that there's an inflight request being processed.
+			// We wait until that's finished before proceeding further.
 			select {
 			case <-ctx.Done():
 			case <-inflight.ch:
@@ -226,7 +230,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			defer inflight.remaining.Dec()
 
 			c.inflightCache.Set(id, inflight, gocache.NoExpiration)
-			c.inflightCacheLock.Unlock()
+			idLock.Unlock()
 
 			// Signal that the processing request is done
 			defer close(inflight.ch)
