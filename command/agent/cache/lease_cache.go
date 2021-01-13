@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -76,11 +75,8 @@ type LeaseCache struct {
 	baseCtxInfo *cachememdb.ContextInfo
 	l           *sync.RWMutex
 
-	// idLocks is used during cache lookup to ensure that identical requests made
-	// in parallel won't trigger multiple renewal goroutines.
-	idLocks []*locksutil.LockEntry
-
-	// inflightCache keeps track of inflight requests
+	// inflightCache keeps track of inflight requests to ensure that identical
+	// requests made in parallel won't trigger multiple renewal goroutines.
 	inflightCache sync.Map
 }
 
@@ -138,7 +134,6 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		db:          db,
 		baseCtxInfo: baseCtxInfo,
 		l:           &sync.RWMutex{},
-		idLocks:     locksutil.CreateLocks(),
 	}, nil
 }
 
@@ -190,16 +185,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
-	// Grab a read lock for this particular request
-	idLock := locksutil.LockForKey(c.idLocks, id)
-
-	idLock.RLock()
-	unlockFunc := idLock.RUnlock
-	defer func() { unlockFunc() }()
-
 	if os.Getenv("VAULT_AGENT_INFLIGHT_CACHE") != "" {
 		// Check the inflight cache to see if there are other inflight requests
-		// of the same kind, based on the computer ID. If so, we hold until the
+		// of the same kind, based on the computed ID. If so, we hold until the
+		// until one of these requests wins and writes to the inflight cache.
 		entryRaw, loaded := c.inflightCache.LoadOrStore(id, newInflightRequest())
 		entry := entryRaw.(*inflightRequest)
 		if loaded {
@@ -231,8 +220,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	if err != nil {
 		return nil, err
 	}
+
+	// If found, it means that some other parallel request already cached the
+	// response for this request in between this upgrade.
 	if cachedResp != nil {
-		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
+		c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return cachedResp, nil
 	}
 
@@ -380,28 +372,6 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		Ctx:        renewCtx,
 		CancelFunc: renewCtxInfo.CancelFunc,
 		DoneCh:     renewCtxInfo.DoneCh,
-	}
-
-	// If we're at this point, it means that the response will be cached.
-	// Perform a lock upgrade, and re-check before writing to the cache.
-	idLock.RUnlock()
-	idLock.Lock()
-	unlockFunc = idLock.Unlock
-
-	// Check cache once more after upgrade
-	cachedResp, err = c.checkCacheForRequest(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// If found, it means that some other parallel request already cached the
-	// response for this request in between this upgrade.
-	// TODO: Which response should we return and what happens to the
-	//       secret from this current request?
-	if cachedResp != nil {
-		c.logger.Debug("========= cached response found after proxied request, dropping leased secret", "method", req.Request.Method, "path", req.Request.URL.Path)
-		// c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
-		return cachedResp, nil
 	}
 
 	// Store the index in the cache
