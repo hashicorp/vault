@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -78,6 +79,9 @@ type LeaseCache struct {
 	// idLocks is used during cache lookup to ensure that identical requests made
 	// in parallel won't trigger multiple renewal goroutines.
 	idLocks []*locksutil.LockEntry
+
+	// inflightCache keeps track of inflight requests
+	inflightCache sync.Map
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -87,6 +91,22 @@ type LeaseCacheConfig struct {
 	BaseContext context.Context
 	Proxier     Proxier
 	Logger      hclog.Logger
+}
+type inflightCache struct {
+	l sync.RWMutex
+	m map[string]*inflightRequest
+}
+
+type inflightRequest struct {
+	ch chan struct{}
+	wg *sync.WaitGroup
+}
+
+func newInflightRequest() *inflightRequest {
+	return &inflightRequest{
+		ch: make(chan struct{}),
+		wg: new(sync.WaitGroup),
+	}
 }
 
 // NewLeaseCache creates a new instance of a LeaseCache.
@@ -176,6 +196,35 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	idLock.RLock()
 	unlockFunc := idLock.RUnlock
 	defer func() { unlockFunc() }()
+
+	if os.Getenv("VAULT_AGENT_INFLIGHT_CACHE") != "" {
+		// Check the inflight cache to see if there are other inflight requests
+		// of the same kind, based on the computer ID. If so, we hold until the
+		entryRaw, loaded := c.inflightCache.LoadOrStore(id, newInflightRequest())
+		entry := entryRaw.(*inflightRequest)
+		if loaded {
+			// Add this to the inflight cache's WaitGroup so that the winner
+			// can clear the cache once all concurrent requests has been processed
+			entry.wg.Add(1)
+			defer entry.wg.Done()
+
+			// Block until the entry's channel is closed
+			select {
+			case <-entry.ch:
+			case <-ctx.Done():
+			}
+		} else {
+			// Otherwise we process the request
+			defer func() {
+				// wait until all inflight requests for this ID has been processed
+				// before deleting this entry
+				entry.wg.Wait()
+				c.inflightCache.Delete(id)
+			}()
+			// Close channel to trigger other inflight request to process
+			defer close(entry.ch)
+		}
+	}
 
 	// Check if the response for this request is already in the cache
 	cachedResp, err := c.checkCacheForRequest(id)
@@ -350,7 +399,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// TODO: Which response should we return and what happens to the
 	//       secret from this current request?
 	if cachedResp != nil {
-		c.logger.Debug("cached response found after proxied request", "method", req.Request.Method, "path", req.Request.URL.Path)
+		c.logger.Debug("========= cached response found after proxied request, dropping leased secret", "method", req.Request.Method, "path", req.Request.URL.Path)
 		// c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return cachedResp, nil
 	}
