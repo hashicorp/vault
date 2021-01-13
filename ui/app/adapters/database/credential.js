@@ -10,7 +10,6 @@ export default ApplicationAdapter.extend({
     });
   },
   queryRecord(store, type, query) {
-    console.log('blach');
     return this.fetchByQuery(store, query);
   },
 });
