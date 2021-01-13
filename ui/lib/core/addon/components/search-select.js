@@ -148,6 +148,8 @@ export default Component.extend({
     },
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
+      // fire off getSelectedValue action higher up in get-credentials-card component
+      this.getSelectedValue('');
       if (!selected.new) {
         this.options.pushObject(selected);
       }

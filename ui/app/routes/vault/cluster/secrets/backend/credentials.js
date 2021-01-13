@@ -2,7 +2,7 @@ import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
-const SUPPORTED_DYNAMIC_BACKENDS = ['ssh', 'aws', 'pki'];
+const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'pki'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',

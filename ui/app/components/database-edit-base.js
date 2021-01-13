@@ -90,7 +90,6 @@ export default Component.extend(FocusOnInsertMixin, {
   applyChanges(type, callback = () => {}) {
     const modelId = this.model.id || this.model.name; // database comes in as model.name
     const modelPrefix = this.modelPrefixFromType(this.model.constructor.modelName);
-    console.log(modelId, 'modelId 🇫🇲 ');
     // prevent from submitting if there's no key
     // maybe do something fancier later
     if (type === 'create' && isBlank(modelId)) {
