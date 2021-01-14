@@ -56,7 +56,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `kms_key_id` `(string: <required>)`: The AWS KMS key ID to use for encryption
   and decryption. May also be specified by the `VAULT_AWSKMS_SEAL_KEY_ID`
-  environment variable.
+  environment variable.  An alias in the format `alias/key-alias-name` may also be used here.
 
 - `endpoint` `(string: "")`: The KMS API endpoint to be used to make AWS KMS
   requests. May also be specified by the `AWS_KMS_ENDPOINT` environment
