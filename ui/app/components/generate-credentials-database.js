@@ -1,32 +1,32 @@
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
-export default Component.extend({
-  store: service(),
+export default class GenerateCredentialsDatabase extends Component {
+  @service store;
   // set on the component
-  backendType: null,
-  backendPath: null,
-  roleName: null,
+  backendType = null;
+  backendPath = null;
+  roleName = null;
+  @tracked model = null;
 
-  model: null,
-  init() {
-    this._super(...arguments);
+  constructor() {
+    super(...arguments);
     this.fetchCredentials.perform();
-  },
-
-  fetchCredentials: task(function*() {
-    let { roleName, backendType } = this;
+  }
+  @task(function*() {
+    let { roleName, backendType } = this.args;
     let newModel = yield this.store.queryRecord('database/credential', {
       backend: backendType,
       secret: roleName,
     });
-    this.set('model', newModel);
-  }).restartable(),
+    this.model = newModel;
+  })
+  fetchCredentials;
 
-  actions: {
-    redirectPreviousPage() {
-      window.history.back();
-    },
-  },
-});
+  @action redirectPreviousPage() {
+    window.history.back();
+  }
+}
