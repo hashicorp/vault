@@ -10,6 +10,10 @@ export default Component.extend({
   roleName: null,
 
   model: null,
+  init() {
+    this._super(...arguments);
+    this.fetchCredentials.perform();
+  },
 
   fetchCredentials: task(function*() {
     let { roleName, backendType } = this;
@@ -18,5 +22,11 @@ export default Component.extend({
       secret: roleName,
     });
     this.set('model', newModel);
-  }).on('didInsertElement'),
+  }).restartable(),
+
+  actions: {
+    redirectPreviousPage() {
+      window.history.back();
+    },
+  },
 });
