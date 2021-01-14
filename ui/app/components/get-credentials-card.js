@@ -1,34 +1,34 @@
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 /**
  * @module GetCredentialsCard
-//  * ARG TODO update text here
- * SelectableCard components are card-like components that display a title, total, subtotal, and anything after the yield.
+ * GetCredentialsCard components are card-like components that display a title, and SearchSelect component that sends you to a credentials route for the selected item.
  * They are designed to be used in containers that act as flexbox or css grid containers.
  *
  * @example
  * ```js
- * <GetCredentialsCard @title="Get Credentials" @models={{array 'database/roles'}} />
+ * <GetCredentialsCard @title="Get Credentials" @searchLabel="Role to use" @models={{array 'database/roles'}} />
  * ```
- * @param title=null {String} - cardTitle displays the card title
+ * @param title=null {String} - The title displays the card title
+ * @param searchLabel=null {String} - The text above the searchSelect component
  * @param models=null {Array} - An array of model types to fetch from the API.  Passed through to SearchSelect component
  */
+export default class GetCredentialsCard extends Component {
+  @service router;
+  role = '';
+  @tracked buttonDisabled = true;
 
-// ARG TODO turn into octane component
-// ARG TODO add in remaining params and storybook this.
-export default Component.extend({
-  tagName: '', // do not wrap component with div
-  router: service(),
-  role: '',
-  buttonDisabled: true,
-  actions: {
-    getSelectedValue(selectValue) {
-      this.role = selectValue[0];
-      this.toggleProperty('buttonDisabled');
-    },
-    transitionToCredential() {
-      let role = this.role;
-      this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
-    },
-  },
-});
+  @action
+  getSelectedValue(selectValue) {
+    this.role = selectValue[0];
+    // Ember Octane way of getting away from toggleProperty
+    this.buttonDisabled = !this.buttonDisabled;
+  }
+  @action
+  transitionToCredential() {
+    let role = this.role;
+    this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
+  }
+}
