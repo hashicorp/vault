@@ -1,0 +1,3 @@
+```release-note:bug
+core: Allow max_request_size to be unlimited for listeners when the value is less than 0, and update documentation to reflect this.
+```
