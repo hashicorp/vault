@@ -27,6 +27,12 @@
     text-decoration: none;
   }
 
+  .button {
+    &:disabled {
+      border-color: $vault-gray-300;
+    }
+  }
+
   .card-details {
     grid-column-start: 2;
     grid-row-start: 3;
