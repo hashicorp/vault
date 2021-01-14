@@ -1485,9 +1485,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			props["cluster address"] = addr
 		}
 
-		// if MaxRequestSize == 0, set it to the default.
-		// MaxRequestSize can be < 0, in which case it will be treated as
-		// unlimited.
+		// if MaxRequestSize is 0, set it to the default.
+		// MaxRequestSize can be configured as less than 0, in which
+		// case it will be treated as unlimited.
 		if lnConfig.MaxRequestSize == 0 {
 			lnConfig.MaxRequestSize = vaulthttp.DefaultMaxRequestSize
 		}

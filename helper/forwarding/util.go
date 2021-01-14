@@ -67,7 +67,7 @@ func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 		if !ok {
 			return nil, errors.New("could not parse max_request_size from request context")
 		}
-		// max < 0 will allow unlimited max_request_size for the listener.
+		// max <= 0 will allow unlimited max_request_size for the listener.
 		if max > 0 {
 			reader = io.LimitReader(req.Body, max)
 		}
