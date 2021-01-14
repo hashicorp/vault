@@ -22,13 +22,15 @@
 {{#if (eq @mode 'create')}}
 <form
   {{on 'submit' this.handleSubmit}}>
-  {{#each @model.allFields as |attr|}}
-    <p>{{attr}}: {{get this attr}}</p>
-  {{/each}}
-  <input
-      {{on 'input' (fn this.updateValue 'name')}}
-      id="message-input" class="channel-footer__message-input w-full px-4" placeholder="Message #general" value={{this.body}}
+  {{#each @model.fieldAttrs as |attr|}}
+    <p>{{attr.name}}: {{get @model attr.name}}</p>
+    <input
+      {{on 'input' (fn this.updateValue attr.name)}}
+      id="form-{{attr.name}}"
+      placeholder={{attr.name}}
+      value={{get this attr.name}}
       type="text">
+  {{/each}}
 
     <input type="submit" value="SEND" />
 </form>
@@ -36,12 +38,11 @@
 [Edit form]
 {{else}}
 [Show]
-  {{#each model.fieldAttrs as |attr|}}
-    {{log "ATTR>>>>>" attr}}
+  {{#each @model.fieldAttrs as |attr|}}
     {{#if (eq attr.type "object")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
+      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
     {{else}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
+      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get @model attr.name}} />
     {{/if}}
   {{/each}}
 
