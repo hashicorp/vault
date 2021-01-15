@@ -430,9 +430,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	for _, name := range names {
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
-			if certName == "" {
-				b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
-			}
+			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
 		if entry == nil {
