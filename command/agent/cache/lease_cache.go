@@ -494,8 +494,6 @@ func computeIndexID(req *SendRequest) (string, error) {
 	// requests sets the token directly into SendRequest.Token
 	b.Write([]byte(req.Token))
 
-	// b.Write([]byte(time.Now().String()))
-
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
