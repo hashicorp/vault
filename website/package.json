@@ -47,6 +47,7 @@
     "export": "next export",
     "format": "next-hashicorp format",
     "generate:component": "next-hashicorp generate component",
+    "generate:readme": "next-hashicorp markdown-blocks README.md",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
     "start": "next-remote-watch ./content/**/*.mdx",
