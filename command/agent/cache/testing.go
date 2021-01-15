@@ -80,3 +80,25 @@ func (p *mockTokenVerifierProxier) Send(ctx context.Context, req *SendRequest) (
 func (p *mockTokenVerifierProxier) GetCurrentRequestToken() string {
 	return p.currentToken
 }
+
+type mockDelayProxier struct {
+	cacheableResp bool
+	delay         int
+}
+
+func (p *mockDelayProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
+	if p.delay > 0 {
+		select {
+		case <-ctx.Done():
+		case <-time.After(time.Duration(p.delay) * time.Millisecond):
+		}
+	}
+
+	// If this is a cacheable response, we return a unique response every time
+	if p.cacheableResp {
+		s := fmt.Sprintf(`{"lease_id": "foo", "renewable": true, "data": {"date": %q}}`, time.Now())
+		return newTestSendResponse(http.StatusOK, s), nil
+	}
+
+	return newTestSendResponse(http.StatusOK, `{"value": "output"}`), nil
+}

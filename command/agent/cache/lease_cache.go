@@ -194,7 +194,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
-	if os.Getenv("VAULT_AGENT_INFLIGHT_CACHE") != "" {
+	if os.Getenv("VAULT_AGENT_INFLIGHT_CACHE") == "" {
 		// Check the inflight cache to see if there are other inflight requests
 		// of the same kind, based on the computer ID. If so, we increment a counter
 
