@@ -484,7 +484,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 func computeIndexID(req *SendRequest) (string, error) {
 	var b bytes.Buffer
 
-	// Serialze the request
+	// Serialize the request
 	if err := req.Request.Write(&b); err != nil {
 		return "", fmt.Errorf("failed to serialize request: %v", err)
 	}

@@ -536,12 +536,6 @@ func TestCache_DeriveNamespaceAndRevocationPath(t *testing.T) {
 func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 	lc := testNewLeaseCacheWithDelay(t, false, 50)
 
-	// Send a request through the lease cache which is not cacheable (there is
-	// no lease information or auth information in the response)
-	sendReq := &SendRequest{
-		Request: httptest.NewRequest("GET", "http://example.com", nil),
-	}
-
 	// We are going to send 100 requests, each taking 50ms to process. If these
 	// requests are processed serially, it will take ~5seconds to finish. we
 	// use a ContextWithTimeout to tell us if this is the case by giving ample
@@ -560,6 +554,13 @@ func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 
 			go func() {
 				defer wg.Done()
+
+				// Send a request through the lease cache which is not cacheable (there is
+				// no lease information or auth information in the response)
+				sendReq := &SendRequest{
+					Request: httptest.NewRequest("GET", "http://example.com", nil),
+				}
+
 				_, err := lc.Send(ctx, sendReq)
 				if err != nil {
 					t.Fatal(err)
@@ -586,13 +587,6 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Send a request through the lease cache which is not cacheable (there is
-	// no lease information or auth information in the response)
-	sendReq := &SendRequest{
-		Token:   "autoauthtoken",
-		Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", nil),
-	}
-
 	// We are going to send 100 requests, each taking 50ms to process. If these
 	// requests are processed serially, it will take ~5seconds to finish, so we
 	// use a ContextWithTimeout to tell us if this is the case.
@@ -610,6 +604,14 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 
 			go func() {
 				defer wg.Done()
+
+				// Send a request through the lease cache which is not cacheable (there is
+				// no lease information or auth information in the response)
+				sendReq := &SendRequest{
+					Token:   "autoauthtoken",
+					Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", nil),
+				}
+
 				resp, err := lc.Send(ctx, sendReq)
 				if err != nil {
 					t.Fatal(err)
