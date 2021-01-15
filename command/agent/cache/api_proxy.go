@@ -3,8 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"os"
-	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -47,12 +45,6 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
 	fwReq.BodyBytes = req.RequestBody
-
-	// TODO: Adding this for manual testing for now, but should be checked
-	//       through a test case.
-	if os.Getenv("VAULT_AGENT_REQ_DELAY") != "" {
-		time.Sleep(50 * time.Millisecond)
-	}
 
 	query := req.Request.URL.Query()
 	if len(query) != 0 {

@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -194,47 +193,48 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
-	if os.Getenv("VAULT_AGENT_INFLIGHT_CACHE") == "" {
-		// Check the inflight cache to see if there are other inflight requests
-		// of the same kind, based on the computer ID. If so, we increment a counter
+	// Check the inflight cache to see if there are other inflight requests
+	// of the same kind, based on the computer ID. If so, we increment a counter
 
-		var inflight *inflightRequest
+	var inflight *inflightRequest
 
-		defer func() {
-			// Cleanup on the cache if there are no remaining inflight requests.
-			// This is the last step, so we defer the call first
-			if inflight != nil && inflight.remaining.Load() == 0 {
-				c.inflightCache.Delete(id)
-			}
-		}()
-
-		idLock := locksutil.LockForKey(c.idLocks, id)
-
-		idLock.Lock()
-		inflightRaw, found := c.inflightCache.Get(id)
-		if found {
-			idLock.Unlock()
-			inflight = inflightRaw.(*inflightRequest)
-			inflight.remaining.Inc()
-			defer inflight.remaining.Dec()
-
-			// If found it means that there's an inflight request being processed.
-			// We wait until that's finished before proceeding further.
-			select {
-			case <-ctx.Done():
-			case <-inflight.ch:
-			}
-		} else {
-			inflight = newInflightRequest()
-			inflight.remaining.Inc()
-			defer inflight.remaining.Dec()
-
-			c.inflightCache.Set(id, inflight, gocache.NoExpiration)
-			idLock.Unlock()
-
-			// Signal that the processing request is done
-			defer close(inflight.ch)
+	defer func() {
+		// Cleanup on the cache if there are no remaining inflight requests.
+		// This is the last step, so we defer the call first
+		if inflight != nil && inflight.remaining.Load() == 0 {
+			c.inflightCache.Delete(id)
 		}
+	}()
+
+	idLock := locksutil.LockForKey(c.idLocks, id)
+
+	// Briefly grab an ID-based lock in here to emulate a load-or-store behavior
+	// and prevent concurrent cacheable requests to be proxied twice if they
+	// both miss the cache due to it being clean when peeking the cache entry.
+	idLock.Lock()
+	inflightRaw, found := c.inflightCache.Get(id)
+	if found {
+		idLock.Unlock()
+		inflight = inflightRaw.(*inflightRequest)
+		inflight.remaining.Inc()
+		defer inflight.remaining.Dec()
+
+		// If found it means that there's an inflight request being processed.
+		// We wait until that's finished before proceeding further.
+		select {
+		case <-ctx.Done():
+		case <-inflight.ch:
+		}
+	} else {
+		inflight = newInflightRequest()
+		inflight.remaining.Inc()
+		defer inflight.remaining.Dec()
+
+		c.inflightCache.Set(id, inflight, gocache.NoExpiration)
+		idLock.Unlock()
+
+		// Signal that the processing request is done
+		defer close(inflight.ch)
 	}
 
 	// Check if the response for this request is already in the cache
