@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -96,7 +97,8 @@ func (p *mockDelayProxier) Send(ctx context.Context, req *SendRequest) (*SendRes
 
 	// If this is a cacheable response, we return a unique response every time
 	if p.cacheableResp {
-		s := fmt.Sprintf(`{"lease_id": "foo", "renewable": true, "data": {"date": %q}}`, time.Now())
+		rand.Seed(time.Now().Unix())
+		s := fmt.Sprintf(`{"lease_id": "%d", "renewable": true, "data": {"foo": "bar"}}`, rand.Int())
 		return newTestSendResponse(http.StatusOK, s), nil
 	}
 
