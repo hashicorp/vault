@@ -542,7 +542,12 @@ func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 		Request: httptest.NewRequest("GET", "http://example.com", nil),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// We are going to send 100 requests, each taking 50ms to process. If these
+	// requests are processed serially, it will take ~5seconds to finish. we
+	// use a ContextWithTimeout to tell us if this is the case by giving ample
+	// time for it process them concurrently but time out if they get processed
+	// serially.
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	wgDoneCh := make(chan struct{})
@@ -590,9 +595,9 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 	}
 
 	// We are going to send 100 requests, each taking 50ms to process. If these
-	// requests are processed serially, it will take ~5seconds to finish, so
-	// we use a ContextWithTimeout to tell us if this is the case.
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// requests are processed serially, it will take ~5seconds to finish, so we
+	// use a ContextWithTimeout to tell us if this is the case.
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	var cacheCount atomic.Uint32
