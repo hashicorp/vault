@@ -209,8 +209,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	idLock := locksutil.LockForKey(c.idLocks, id)
 
 	// Briefly grab an ID-based lock in here to emulate a load-or-store behavior
-	// and prevent concurrent cacheable requests to be proxied twice if they
-	// both miss the cache due to it being clean when peeking the cache entry.
+	// and prevent concurrent cacheable requests from being proxied twice if
+	// they both miss the cache due to it being clean when peeking the cache
+	// entry.
 	idLock.Lock()
 	inflightRaw, found := c.inflightCache.Get(id)
 	if found {
