@@ -16,10 +16,12 @@ export default Route.extend({
 
     let connection = this.store.query('database/connection', {});
     let role = this.store.query('database/role', {});
-    // ARG TODO add static roles to count here
+    let staticRole = this.store.query('database/static-role', {});
+
     return hash({
       connections: connection,
       roles: role,
+      staticRoles: staticRole,
       engineType: 'database',
       id: type,
     });
