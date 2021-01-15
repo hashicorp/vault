@@ -1,13 +1,13 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
-// Template grabs model from ember-data
-
 export default class DatabaseConnectionEdit extends Component {
   constructor(owner, args) {
     super(owner, args);
     const thisForm = this;
-    console.log('<<<< CONSTRUCTED ARGS', args.model.fieldAttrs);
+
+    // iterate over fields and set each one on the model for
+    // form inputs
     args.model.allFields.forEach(field => {
       // iterate over all possible fields for the secret engine
       // and fill in either ember data value or default
@@ -17,7 +17,6 @@ export default class DatabaseConnectionEdit extends Component {
     });
   }
 
-  key = '';
   // mode = 'show';
   // tab
   // model
@@ -34,7 +33,7 @@ export default class DatabaseConnectionEdit extends Component {
     evt.preventDefault();
     // this.args.sendMessage(this.body);
     // this.body = '';
-    console.log('submit');
+    console.log('submit', this.args.model);
   }
 
   @action
