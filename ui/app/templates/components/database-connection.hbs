@@ -23,16 +23,43 @@
 <form
   {{on 'submit' this.handleSubmit}}>
   {{#each @model.fieldAttrs as |attr|}}
-    <p>{{attr.name}}: {{get @model attr.name}}</p>
-    <input
-      {{on 'input' (fn this.updateValue attr.name)}}
-      id="form-{{attr.name}}"
-      placeholder={{attr.name}}
-      value={{get this attr.name}}
-      type="text">
+    {{#if (eq attr.name "plugin_config")}}
+      <div class="form-section">
+        <h3 class="title is-5">Plugin config</h3>
+        {{#unless @model.plugin_name}}
+          <EmptyState
+            @title="No plugin selected"
+            @message="Select a plugin type to be able to configure it."
+          />
+        {{else}}
+          {{#each @model.pluginFieldGroups as |fieldGroup|}}
+            {{#each-in fieldGroup as |group fields|}}
+              {{#if (eq group "default")}}
+                {{#each fields as |attr|}}
+                  {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
+                    {{form-field data-test-field attr=attr model=@model}}
+                  {{/unless}}
+                {{/each}}
+              {{else}}
+                <ToggleButton @class="is-block" @toggleAttr={{concat "show" (camelize group)}} @toggleTarget={{this}} @openLabel={{concat "Hide " group}} @closedLabel={{group}} @data-test-toggle-group={{group}} />
+                {{#if (get this (concat "show" (camelize group)))}}
+                  <div class="box is-marginless">
+                    {{#each fields as |attr|}}
+                      {{form-field data-test-field attr=attr model=@model}}
+                    {{/each}}
+                  </div>
+                {{/if}}
+              {{/if}}
+            {{/each-in}}
+          {{/each}}
+        {{/unless}}
+      </div>
+    {{else}}
+      {{form-field data-test-field attr=attr model=@model}}
+    {{/if}}
   {{/each}}
 
-    <input type="submit" value="SEND" />
+  <input type="submit" value="SEND" />
 </form>
 {{else if (eq @mode 'edit')}}
 [Edit form]

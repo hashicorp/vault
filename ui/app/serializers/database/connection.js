@@ -8,6 +8,14 @@ export default RESTSerializer.extend({
       const connections = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
       return connections;
     }
+    // Query single record response:
+    return {
+      id: payload.id,
+      name: payload.id,
+      backend: payload.backend,
+      ...payload.data,
+      ...payload.data.connection_details,
+    };
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -18,7 +26,8 @@ export default RESTSerializer.extend({
     const { modelName } = primaryModelClass;
     let transformedPayload = { [modelName]: connections };
     if (requestType === 'queryRecord') {
-      transformedPayload = { [modelName]: connections };
+      // comes back as object anyway
+      transformedPayload = { [modelName]: { id, ...connections } };
     }
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },

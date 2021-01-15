@@ -2,9 +2,18 @@ import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 import attachCapabilities from 'vault/lib/attach-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const AVAILABLE_PLUGIN_TYPES = ['MongoDB', 'MongoDBA'];
+const AVAILABLE_PLUGIN_TYPES = [
+  {
+    value: 'mongodb-database-plugin',
+    displayName: 'MongoDB',
+  },
+  {
+    value: 'mongodbatlas-database-plugin',
+    displayName: 'MongoDBA',
+  },
+];
 
 const M = Model.extend({
   // ARG TODO API docs for connection https://www.vaultproject.io/api-docs/secret/databases#configure-connection
@@ -21,7 +30,6 @@ const M = Model.extend({
   plugin_name: attr('string', {
     label: 'Database plugin',
     possibleValues: AVAILABLE_PLUGIN_TYPES,
-    defaultFormValue: '',
   }),
   verify_connection: attr('boolean', {
     defaultValue: true,
@@ -30,50 +38,42 @@ const M = Model.extend({
     readOnly: true,
   }),
 
-  password_policy: attr('string'),
+  password_policy: attr('string', {
+    editType: 'optionalText',
+    subText:
+      'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
+  }),
 
-  hosts: attr('string', {
-    defaultValue: '',
-  }),
-  host: attr('string', {
-    defaultValue: '',
-  }),
-  url: attr('string', {
-    defaultValue: '',
-  }),
-  port: attr('string', {
-    defaultValue: '',
-  }),
+  hosts: attr('string', {}),
+  host: attr('string', {}),
+  url: attr('string', {}),
+  port: attr('string', {}),
   // connection_details
-  username: attr('string', {
-    defaultValue: '',
-  }),
-  password: attr('string', {
-    defaultValue: '',
-  }),
+  username: attr('string', {}),
+  password: attr('string', {}),
   connection_url: attr('string', {
-    defaultValue: '',
+    subText:
+      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
   }),
 
-  write_concern: attr('string', {
-    defaultValue: '',
-  }),
-  max_open_connections: attr('string', {
-    defaultValue: '',
-  }),
+  write_concern: attr('string', {}),
+  max_open_connections: attr('string', {}),
   max_idle_connections: attr('string'),
   max_connection_lifetime: attr('string'),
   tls: attr('string', {
     label: 'TLS Certificate Key',
-    helpText: 'x509 certificate for connecting to the database.',
+    subText: 'x509 certificate for connecting to the database.',
     editType: 'file',
   }),
   tls_ca: attr('string', {
     label: 'TLS CA',
-    helpText: 'x509 CA file for validating the certificate presented by the MongoDB server.',
+    subText: 'x509 CA file for validating the certificate presented by the MongoDB server.',
     editType: 'file',
   }),
-  root_rotation_statements: attr('array'),
+  root_rotation_statements: attr({
+    label: 'Root rotation statements',
+    editType: 'stringArray',
+  }),
 
   allFields: computed(function() {
     return [
@@ -102,26 +102,49 @@ const M = Model.extend({
     ];
   }),
 
-  allGroups: computed('plugin_name', function() {
-    let groups = [
-      { default: ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'] },
-      // { 'Plugin config': [] },
-      // {}
+  mainFields: computed('plugin_name', function() {
+    return [
+      'plugin_name',
+      'name',
+      'connection_url',
+      'verify_connection',
+      'password_policy',
+      'plugin_config',
+      'root_rotation_statements',
     ];
-    // Get plugin options
-    if (this.plugin_name === 'MongoDB') {
-      groups.push({
-        'Plugin config': ['username', 'password', 'write_concern', { 'TLS options': ['tls', 'tls_ca'] }],
-      });
-    }
+  }),
+
+  pluginGroups: computed('plugin_name', function() {
+    let groups = [{ default: ['username', 'password', 'write_concern'] }];
+    // Get plugin options based on plugin
+    console.log(this.plugin_name);
+    groups.push({
+      'TLS options': ['tls', 'tls_ca'],
+    });
     // get other options
-    groups.push({ 'Root rotation statements': ['root_rotation_statements'] });
+    // groups.push({ 'Root rotation statements': ['root_rotation_statements'] });
     return groups;
   }),
 
-  fieldAttrs: computed('allFields', function() {
-    const expanded = expandAttributeMeta(this, this.allFields);
-    console.log(expanded);
+  pluginFieldGroups: computed('pluginGroups', function() {
+    return fieldToAttrs(this, this.pluginGroups);
+  }),
+
+  // TODO: Experimental
+  formSections: computed('pluginGroups', function() {
+    const plugin_config = fieldToAttrs(this, this.pluginGroups);
+    const rotation_config = fieldToAttrs(this, [
+      {
+        default: ['root_rotation_statements'],
+      },
+    ]);
+    return [{ 'Plugin config': plugin_config }, { default: rotation_config }];
+  }),
+
+  fieldAttrs: computed('mainFields', function() {
+    // Main Field Attrs only
+    const expanded = expandAttributeMeta(this, this.mainFields);
+    console.log({ expanded });
     return expanded;
   }),
 });
