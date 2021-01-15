@@ -39,7 +39,9 @@ other mechanisms to provide access to cloud resources.
   oldest ones will be deleted.
 
 - `path_prefix` `(string: <required>)` - For `storage_type=local`, the directory to
-  write the snapshots in. For cloud storage types, the bucket prefix to use.
+  write the snapshots in. For cloud storage types, the bucket prefix to use. 
+  Types `azure-s3` and `google-gcs` require a trailing `/` (slash). 
+  Types `local` and `aws-s3` the trailing `/` is optional. 
 
 - `file_prefix` `(string: "vault-snapshot")` - Within the directory or bucket
   prefix given by `path_prefix`, the file or object name of snapshot files
