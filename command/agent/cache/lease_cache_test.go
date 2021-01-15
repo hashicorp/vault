@@ -541,7 +541,7 @@ func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 	// use a ContextWithTimeout to tell us if this is the case by giving ample
 	// time for it process them concurrently but time out if they get processed
 	// serially.
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	wgDoneCh := make(chan struct{})
@@ -590,7 +590,7 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 	// We are going to send 100 requests, each taking 50ms to process. If these
 	// requests are processed serially, it will take ~5seconds to finish, so we
 	// use a ContextWithTimeout to tell us if this is the case.
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	var cacheCount atomic.Uint32
@@ -605,8 +605,6 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				// Send a request through the lease cache which is not cacheable (there is
-				// no lease information or auth information in the response)
 				sendReq := &SendRequest{
 					Token:   "autoauthtoken",
 					Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", nil),
