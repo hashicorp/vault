@@ -224,6 +224,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// We wait until that's finished before proceeding further.
 		select {
 		case <-ctx.Done():
+			return nil, ctx.Err()
 		case <-inflight.ch:
 		}
 	} else {
