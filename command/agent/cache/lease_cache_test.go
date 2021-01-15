@@ -573,7 +573,6 @@ func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 
 	select {
 	case <-ctx.Done():
-		// If the context returned first, it means that the request timed out
 		t.Fatalf("request timed out: %s", ctx.Err())
 	case <-wgDoneCh:
 	}
@@ -628,7 +627,6 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 
 	select {
 	case <-ctx.Done():
-		// If the context returned first, it means that the request timed out
 		t.Fatalf("request timed out: %s", ctx.Err())
 	case <-wgDoneCh:
 	}
