@@ -4,9 +4,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 
 const FEATURE_FLAGS_RESPONSE = {
-  data: {
-    feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
-  },
+  feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
 };
 
 module('Acceptance | Enterprise | Managed namespace root', function(hooks) {
