@@ -82,8 +82,7 @@ type LeaseCache struct {
 	idLocks []*locksutil.LockEntry
 
 	// inflightCache keeps track of inflight requests
-	inflightCache     *gocache.Cache
-	inflightCacheLock sync.Mutex
+	inflightCache *gocache.Cache
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
