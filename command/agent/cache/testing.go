@@ -91,6 +91,7 @@ func (p *mockDelayProxier) Send(ctx context.Context, req *SendRequest) (*SendRes
 	if p.delay > 0 {
 		select {
 		case <-ctx.Done():
+			return nil, ctx.Err()
 		case <-time.After(time.Duration(p.delay) * time.Millisecond):
 		}
 	}

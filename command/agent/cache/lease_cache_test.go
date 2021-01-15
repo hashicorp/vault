@@ -636,6 +636,6 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 	// Ensure that all but one request got proxied. The other 99 should be
 	// returned from the cache.
 	if cacheCount.Load() != 99 {
-		t.Fatalf("Should have returned a cache response 99 times, got %d", cacheCount.Load())
+		t.Fatalf("Should have returned a cached response 99 times, got %d", cacheCount.Load())
 	}
 }
