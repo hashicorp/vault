@@ -194,7 +194,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Check the inflight cache to see if there are other inflight requests
-	// of the same kind, based on the computer ID. If so, we increment a counter
+	// of the same kind, based on the computed ID. If so, we increment a counter
 
 	var inflight *inflightRequest
 
