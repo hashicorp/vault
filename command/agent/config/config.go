@@ -28,6 +28,7 @@ type Config struct {
 	Cache         *Cache                     `hcl:"cache"`
 	Vault         *Vault                     `hcl:"vault"`
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
+	TemplateRetry *TemplateRetry             `hcl:"template_retry"`
 }
 
 // Vault contains configuration for connecting to Vault servers
@@ -40,7 +41,6 @@ type Vault struct {
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
 	TLSServerName    string      `hcl:"tls_server_name"`
-	Retry            *Retry      `hcl:"retry"`
 }
 
 // Cache contains any configuration needed for Cache mode
@@ -83,7 +83,7 @@ type Sink struct {
 	Config     map[string]interface{}
 }
 
-type Retry struct {
+type TemplateRetry struct {
 	Enabled       bool          `hcl:"enabled"`
 	Attempts      int           `hcl:"attempts"`
 	BackoffRaw    interface{}   `hcl:"backoff"`
@@ -179,6 +179,10 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
 	}
 
+	if err := parseRetry(result, list); err != nil {
+		return nil, errwrap.Wrapf("error parsing 'retry': {{err}}", err)
+	}
+
 	return result, nil
 }
 
@@ -211,16 +215,6 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 
 	result.Vault = &v
 
-	subs, ok := item.Val.(*ast.ObjectType)
-	if !ok {
-		return fmt.Errorf("could not parse %q as an object", name)
-	}
-	subList := subs.List
-
-	if err := parseRetry(result, subList); err != nil {
-		return errwrap.Wrapf("error parsing 'retry': {{err}}", err)
-	}
-
 	return nil
 }
 
@@ -238,7 +232,7 @@ func parseRetry(result *Config, list *ast.ObjectList) error {
 
 	item := retryList.Items[0]
 
-	var r Retry
+	var r TemplateRetry
 	err := hcl.DecodeObject(&r, item.Val)
 	if err != nil {
 		return err
@@ -267,7 +261,7 @@ func parseRetry(result *Config, list *ast.ObjectList) error {
 		r.MaxBackoffRaw = nil
 	}
 
-	result.Vault.Retry = &r
+	result.TemplateRetry = &r
 
 	return nil
 }

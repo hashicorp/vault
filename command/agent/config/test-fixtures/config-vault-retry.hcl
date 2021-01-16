@@ -23,10 +23,11 @@ auto_auth {
 
 vault {
   address = "http://127.0.0.1:1111"
-  retry {
-    enabled = true
-    attempts = 5
-    backoff = "100ms"
-    max_backoff = "400ms"
-  }
+}
+
+retry {
+  enabled = true
+  attempts = 5
+  backoff = "100ms"
+  max_backoff = "400ms"
 }
