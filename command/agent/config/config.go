@@ -219,7 +219,7 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 }
 
 func parseRetry(result *Config, list *ast.ObjectList) error {
-	name := "retry"
+	name := "template_retry"
 
 	retryList := list.Filter(name)
 	if len(retryList.Items) == 0 {

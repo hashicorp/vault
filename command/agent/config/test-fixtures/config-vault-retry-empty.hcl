@@ -25,4 +25,4 @@ vault {
   address = "http://127.0.0.1:1111"
 }
 
-retry {}
+template_retry {}
