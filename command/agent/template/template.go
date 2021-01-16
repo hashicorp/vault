@@ -29,8 +29,8 @@ type ServerConfig struct {
 	// Client        *api.Client
 	VaultConf     *config.Vault
 	ExitAfterAuth bool
-
-	Namespace string
+	TemplateRetry *config.TemplateRetry
+	Namespace     string
 
 	// LogLevel is needed to set the internal Consul Template Runner's log level
 	// to match the log level of Vault Agent. The internal Runner creates it's own
@@ -164,12 +164,12 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					},
 				}
 
-				if ts.config.VaultConf.Retry != nil && ts.config.VaultConf.Retry.Enabled {
+				if ts.config.TemplateRetry != nil && ts.config.TemplateRetry.Enabled {
 					ctv.Vault.Retry = &ctconfig.RetryConfig{
-						Attempts:   &ts.config.VaultConf.Retry.Attempts,
-						Backoff:    &ts.config.VaultConf.Retry.Backoff,
-						MaxBackoff: &ts.config.VaultConf.Retry.MaxBackoff,
-						Enabled:    &ts.config.VaultConf.Retry.Enabled,
+						Attempts:   &ts.config.TemplateRetry.Attempts,
+						Backoff:    &ts.config.TemplateRetry.Backoff,
+						MaxBackoff: &ts.config.TemplateRetry.MaxBackoff,
+						Enabled:    &ts.config.TemplateRetry.Enabled,
 					}
 				} else if ts.testingLimitRetry != 0 {
 					// If we're testing, limit retries to 3 attempts to avoid
