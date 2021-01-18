@@ -103,10 +103,26 @@ return the public key for the given context.`,
 			logical.DeleteOperation: b.pathPolicyDelete,
 			logical.ReadOperation:   b.pathPolicyRead,
 		},
-
+		ExistenceCheck:  b.pathTransitKeyExistenceCheck,
 		HelpSynopsis:    pathPolicyHelpSyn,
 		HelpDescription: pathPolicyHelpDesc,
 	}
+}
+
+func (b *backend) pathTransitKeyExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		Storage: req.Storage,
+		Name:    name,
+	}, b.GetRandomReader())
+	if err != nil {
+		return false, err
+	}
+	if p == nil {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
