@@ -10,12 +10,16 @@ import (
 	UUID "github.com/hashicorp/go-uuid"
 )
 
-func nowSeconds() string {
+func unixTime() string {
 	return strconv.FormatInt(time.Now().Unix(), 10)
 }
 
-func nowNano() string {
-	return strconv.FormatInt(time.Now().UnixNano(), 10)
+func unixTimeMillis() string {
+	return strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
+}
+
+func timestamp(format string) string {
+	return time.Now().Format(format)
 }
 
 func truncate(maxLen int, str string) (string, error) {
