@@ -1,4 +1,5 @@
 const withHashicorp = require('@hashicorp/nextjs-scripts')
+const redirects = require('./redirects.next')
 
 module.exports = withHashicorp({
   transpileModules: ['is-absolute-url', '@hashicorp/react-.*'],
@@ -10,13 +11,7 @@ module.exports = withHashicorp({
       destination: '/api-docs/:path*',
     },
   ],
-  redirects: () => [
-    {
-      source: '/intro',
-      destination: '/intro/getting-started',
-      permanent: false,
-    },
-  ],
+  redirects: () => redirects,
   env: {
     HASHI_ENV: process.env.HASHI_ENV || 'development',
     SEGMENT_WRITE_KEY: 'OdSFDq9PfujQpmkZf03dFpcUlywme4sC',
