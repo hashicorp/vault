@@ -99,7 +99,6 @@
     "ember-engines": "^0.8.3",
     "ember-export-application-global": "^2.0.1",
     "ember-fetch": "^8.0.2",
-    "ember-href-to": "^4.1.0",
     "ember-inflector": "^3.0.0",
     "ember-link-action": "^1.0.0",
     "ember-load-initializers": "^2.1.2",

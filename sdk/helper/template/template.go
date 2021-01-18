@@ -36,21 +36,21 @@ func Function(name string, f interface{}) Opt {
 // StringTemplate creates strings based on the provided template.
 // This uses the go templating language, so anything that adheres to that language will function in this struct.
 // There are several custom functions available for use in the template:
-// - random (rand)
+// - random
 //   - Randomly generated characters. This uses the charset specified in RandomCharset. Must include a length.
 //     Example: {{ rand 20 }}
-// - truncate (trunc)
+// - truncate
 //   - Truncates the previous value to the specified length. Must include a maximum length.
 //     Example: {{ .DisplayName | truncate 10 }}
-// - truncate_sha256 (trunc_sha256)
+// - truncate_sha256
 //   - Truncates the previous value to the specified length. If the original length is greater than the length
 //     specified, the remaining characters will be sha256 hashed and appended to the end. The hash will be only the first 8 characters The maximum length will
 //     be no longer than the length specified.
 //     Example: {{ .DisplayName | truncate_sha256 30 }}
-// - uppercase (upper)
+// - uppercase
 //   - Uppercases the previous value.
 //     Example: {{ .RoleName | uppercase }}
-// - lowercase (lower)
+// - lowercase
 //   - Lowercases the previous value.
 //     Example: {{ .DisplayName | lowercase }}
 // - replace
@@ -59,12 +59,14 @@ func Function(name string, f interface{}) Opt {
 // - sha256
 //   - SHA256 hashes the previous value.
 //     Example: {{ .DisplayName | sha256 }}
-// - timestamp (now_seconds)
+// - unix_time
 //   - Provides the current unix time in seconds.
-//     Example: {{ now_seconds}}
-// - now_nano
-//   - Provides the current unix time in nanoseconds.
-//     Example: {{ now_nano}}
+//     Example: {{ unix_time }}
+// - unix_time_millis
+//   - Provides the current unix time in milliseconds.
+//     Example: {{ unix_time_millis }}
+// - timestamp
+//   - Provides the current time. Must include a standard Go format string
 // - uuid
 //   - Generates a UUID
 //     Example: {{ uuid }}
@@ -81,22 +83,17 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 	up = StringTemplate{
 		funcMap: map[string]interface{}{
 			"random":          base62.Random,
-			"rand":            base62.Random,
 			"truncate":        truncate,
-			"trunc":           truncate,
 			"truncate_sha256": truncateSHA256,
-			"trunc_sha256":    truncateSHA256,
 			"uppercase":       uppercase,
-			"upper":           uppercase,
 			"lowercase":       lowercase,
-			"lower":           lowercase,
 			"replace":         replace,
 			"sha256":          hashSHA256,
 
-			"timestamp":   nowSeconds,
-			"now_seconds": nowSeconds,
-			"now_nano":    nowNano,
-			"uuid":        uuid,
+			"unix_time":        unixTime,
+			"unix_time_millis": unixTimeMillis,
+			"timestamp":        timestamp,
+			"uuid":             uuid,
 		},
 	}
 
