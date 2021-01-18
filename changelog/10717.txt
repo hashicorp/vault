@@ -1,0 +1,3 @@
+```release-note:bug
+transit: Fix for Vault OSS PR 10706, which allows create capability in policies to create transit keys
+```
