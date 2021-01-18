@@ -21,6 +21,10 @@ config:
   circleci-project-slug: gh/hashicorp/vault
   circleci-host:         circleci.com
   on-publish:            create-github-release
+  circleci-branch-filters:
+    ignore:
+      - /^docs\/.*/
+      - /^ui\/.*/
 
 # inputs are a set of environment variables that may affect the set of bytes produced
 # for a given package. Note that a package is a zip file containing the binary, so

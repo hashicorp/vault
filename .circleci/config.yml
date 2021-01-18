@@ -268,6 +268,23 @@ jobs:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
+  Fast Tests:
+    docker:
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    resource_class: large
+    working_directory: /go/src/github.com/hashicorp/vault
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO111MODULE: 'off'
+    - AUTO_INSTALL_TOOLS: 'YES'
+    - BUILDKIT_PROGRESS: plain
+    steps:
+    - checkout:
+        path: .
+    - run:
+        command: echo testing
+        name: Fast Tests
   build-common-layers:
     machine:
       image: ubuntu-1604:202007-01
@@ -2158,11 +2175,26 @@ jobs:
 workflows:
   build-1973802ee6f7e7e5:
     jobs:
-    - build-common-layers
+    - build-common-layers:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
     - darwin_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - bundle-releases:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - darwin_amd64_package
         - freebsd_386_package
@@ -2180,45 +2212,115 @@ workflows:
         - windows_386_package
         - windows_amd64_package
     - freebsd_386_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - freebsd_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - freebsd_arm_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - linux_386_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - linux_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - linux_arm_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - linux_arm64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - netbsd_386_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - netbsd_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - openbsd_386_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - openbsd_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - solaris_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - windows_386_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
     - windows_amd64_package:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-common-layers
   ci:
@@ -2288,4 +2390,12 @@ workflows:
             only:
             - stable-website
         context: vault-docs
+  test:
+    jobs:
+    - Fast Tests:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
   version: 2

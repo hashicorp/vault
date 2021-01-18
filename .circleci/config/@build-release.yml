@@ -17,7 +17,32 @@ executors:
       AUTO_INSTALL_TOOLS: "YES"
       BUILDKIT_PROGRESS: plain
       PRODUCT_REVISION: ""
+  default-machine:
+    machine:
+      image: ubuntu-1604:202007-01
+    environment:
+      INSTALL_PATH: /home/circleci/bin
+  docker-env-go-test:
+    docker:
+      - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    resource_class: large
+    working_directory: /go/src/github.com/hashicorp/vault
+    environment:
+      CIRCLECI_CLI_VERSION: 0.1.5546
+      GO_TAGS: ""
+      GO111MODULE: "off"
 jobs:
+  Fast Tests:
+    executor: docker-env-go-test
+    steps:
+      - checkout:
+          path: .
+      - run:
+          command: echo testing
+          name: Fast Tests
+    environment:
+      AUTO_INSTALL_TOOLS: "YES"
+      BUILDKIT_PROGRESS: plain
   build-common-layers:
     executor: builder-machine
     steps:
@@ -1355,10 +1380,20 @@ jobs:
 workflows:
   build-1973802ee6f7e7e5:
     jobs:
-      - build-common-layers: {}
+      - build-common-layers:
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - darwin_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - bundle-releases:
           requires:
             - darwin_amd64_package
@@ -1376,45 +1411,128 @@ workflows:
             - solaris_amd64_package
             - windows_386_package
             - windows_amd64_package
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - freebsd_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - freebsd_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - freebsd_arm_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_arm_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - linux_arm64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - netbsd_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - netbsd_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - openbsd_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - openbsd_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - solaris_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - windows_386_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
       - windows_amd64_package:
           requires:
             - build-common-layers
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
+  test:
+    jobs:
+      - Fast Tests:
+          filters:
+            branches:
+              ignore:
+                - /^docs\/.*/
+                - /^ui\/.*/
