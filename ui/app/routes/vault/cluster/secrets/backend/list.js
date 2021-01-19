@@ -73,6 +73,7 @@ export default Route.extend({
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine.get('engineType');
     let types = {
+      // ARG TODO, list both static and dynamic roles
       database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
@@ -87,14 +88,40 @@ export default Route.extend({
     return types[type];
   },
 
-  model(params) {
+  async model(params) {
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
+    const modelType = this.getModelType(backend, params.tab);
+
+    if (modelType === 'database/role') {
+      let queryResponse = await this.store.query('database/role', {});
+      let staticRoles = await this.store.query('database/static-role', {});
+      // concat the internal models of static roles to the role.content internal models
+      let combinedContent = [];
+      queryResponse.content.forEach(item => {
+        combinedContent.push(item);
+      });
+      staticRoles.content.forEach(item => {
+        combinedContent.push(item);
+      });
+      queryResponse.content = combinedContent;
+      return hash({
+        secret,
+        secrets: this.store.lazyPaginatedQueryTwoModels(queryResponse, {
+          id: secret,
+          backend,
+          responsePath: 'data.keys',
+          page: params.page || 1,
+          pageFilter: params.pageFilter,
+        }),
+      });
+    }
+
     return hash({
       secret,
       secrets: this.store
-        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+        .lazyPaginatedQuery(modelType, {
           id: secret,
           backend,
           responsePath: 'data.keys',
@@ -170,6 +197,7 @@ export default Route.extend({
       } else if (pageFilter) {
         filter = pageFilter;
       }
+
       controller.setProperties({
         filter: filter || '',
         page: model.get('meta.currentPage') || 1,

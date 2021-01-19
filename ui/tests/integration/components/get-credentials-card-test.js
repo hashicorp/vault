@@ -8,7 +8,7 @@ import hbs from 'htmlbars-inline-precompile';
 
 const TITLE = 'Get Credentials';
 const SEARCH_LABEL = 'Role to use';
-
+// ARG TODO add both static and dynamic roles
 const storeService = Service.extend({
   query(modelType) {
     return new Promise((resolve, reject) => {
