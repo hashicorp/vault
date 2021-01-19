@@ -5,9 +5,8 @@ import (
 	"net/http"
 )
 
-// Can we remove this entirely, and only depend on the system backend?
-// I suspect this has to remain, to answer queries while Core exists,
-// but the system backend does not?
+// This endpoint is needed to answer queries before Vault unseals
+// or becomes the leader.
 func handleSysLeader(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
