@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add retry configuration for vault agent.
+```
