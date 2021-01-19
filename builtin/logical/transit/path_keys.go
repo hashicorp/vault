@@ -99,7 +99,6 @@ return the public key for the given context.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathPolicyWrite,
-			logical.CreateOperation: b.pathPolicyWrite,
 			logical.DeleteOperation: b.pathPolicyDelete,
 			logical.ReadOperation:   b.pathPolicyRead,
 		},
