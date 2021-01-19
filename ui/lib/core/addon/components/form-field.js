@@ -72,6 +72,9 @@ export default Component.extend({
     return '';
   }),
 
+  // This is only used for `optional-text` editType
+  showInput: false,
+
   // both the path to mutate on the model, and the path to read the value from
   /*
    * @private
@@ -128,6 +131,14 @@ export default Component.extend({
       if (!hasErrors) {
         this.model.set(path, valToSet);
         this.onChange(path, valToSet);
+      }
+    },
+
+    toggleShow(path) {
+      const value = !this.showInput;
+      this.set('showInput', value);
+      if (!value) {
+        this.send('setAndBroadcast', path, null);
       }
     },
   },
