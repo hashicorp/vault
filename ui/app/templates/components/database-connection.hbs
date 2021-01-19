@@ -9,14 +9,86 @@
       {{else if (eq @mode "edit")}}
         Edit Connection
       {{else}}
-        Connection <code>{{@model.id}}</code>
+        {{@model.id}}
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 {{#if (eq @mode "show")}}
-[Toolbar with actions]
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs sub-nav">
+    <ul>
+      <LinkTo @route="vault.cluster.secrets.backend.list" @model={{@model.id}} @tagName="li">
+        <LinkTo @route="vault.cluster.secrets.backend.list" @model={{@model.id}}>
+          Roles
+        </LinkTo>
+      </LinkTo>
+      <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @tagName="li">
+        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}}>
+          Configuration
+        </LinkTo>
+      </LinkTo>
+    </ul>
+  </nav>
+</div>
+<Toolbar>
+  <ToolbarActions>
+    {{!-- {{#if capabilities.canDelete}} --}}
+    <button
+      type="button"
+      class="toolbar-link"
+      {{!-- on 'click' this.delete --}}
+      data-test-database-connection-delete
+    >
+      Delete connection
+    </button>
+    {{!-- {{#if capabilities.canReset}} --}}
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      {{!-- @onConfirmAction={{action "delete"}} --}}
+      @confirmTitle="Reset connection?"
+      @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
+      @confirmButtonText="Reset"
+      data-test-database-connection-reset
+    >
+      Reset connection
+    </ConfirmAction>
+    {{!-- {{#if (and capabilities.canReset capabilities.canDelete)}} --}}
+    <div class="toolbar-separator" />
+    {{!-- {{#if capabilities.canRotate }} --}}
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      {{!-- @onConfirmAction={{action "delete"}} --}}
+      @confirmTitle="Rotate credentials?"
+      @confirmMessage={{'This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'}}
+      @confirmButtonText="Rotate"
+      data-test-database-connection-rotate
+    >
+      Rotate root credentials
+    </ConfirmAction>
+    {{!-- {{#if capabilities.canAddRole}} --}}
+    <ToolbarSecretLink
+      @secret=''
+      @mode="create"
+      @type="add"
+      @queryParams={{query-params initialKey=(or filter baseKey.id) itemType="role"}}
+      @data-test-secret-create=true
+    >
+      Add role
+    </ToolbarSecretLink>
+    {{!-- {{#if capabilities.canEdit}} --}}
+    {{log @model}}
+    <ToolbarSecretLink
+      @secret={{@model.id}}
+      @mode="edit"
+      @data-test-edit-link=true
+      @replace=true
+    >
+      Edit configuration
+    </ToolbarSecretLink>
+  </ToolbarActions>
+</Toolbar>
 {{/if}}
 
 {{#if (eq @mode 'create')}}
@@ -59,7 +131,25 @@
     {{/if}}
   {{/each}}
 
-  <input type="submit" value="SEND" />
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button
+          data-test-secret-save
+          type="submit"
+          disabled={{buttonDisabled}}
+          class="button is-primary"
+        >
+          Save
+        </button>
+      </div>
+      <div class="control">
+        <SecretLink @mode="list" @class="button">
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </div>
 </form>
 {{else if (eq @mode 'edit')}}
 [Edit form]
