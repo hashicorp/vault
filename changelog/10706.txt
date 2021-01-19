@@ -1,3 +1,0 @@
-```release-note:bug
-transit: Allow create capability in policies to create transit keys
-```
