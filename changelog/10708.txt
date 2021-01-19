@@ -1,0 +1,3 @@
+```release-note:bug
+ metrics: Protect emitMetrics from panicking during post-seal
+ ```
