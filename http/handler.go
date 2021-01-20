@@ -146,6 +146,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
+		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 		}
@@ -287,6 +288,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
+		// if maxRequestSize < 0, no need to set context value
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
