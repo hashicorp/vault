@@ -1,11 +1,10 @@
 import Model, { attr } from '@ember-data/model';
-import { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import { alias } from '@ember/object/computed';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-const ModelExport = Model.extend({
+export default Model.extend({
   backend: attr('string', { readOnly: true }),
-});
-
-export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/roles/${'id'}`,
+  secretPath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
+  canRead: alias('secretPath.canRead'),
+  canEdit: alias('secretPath.canUpdate'),
 });
