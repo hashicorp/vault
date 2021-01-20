@@ -93,22 +93,37 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const modelType = this.getModelType(backend, params.tab);
+    let combinedContent = [];
+    let emptyArray = [];
+    let dynamicRoles;
+    let staticRoles;
 
     if (modelType === 'database/role') {
-      let queryResponse = await this.store.query('database/role', {});
-      let staticRoles = await this.store.query('database/static-role', {});
+      // if there are no dynamic or static roles return an empty array with property content that is also an empty array.
+      try {
+        dynamicRoles = await this.store.query('database/role', {});
+      } catch {
+        dynamicRoles = emptyArray;
+        dynamicRoles.content = [];
+      }
+      try {
+        staticRoles = await this.store.query('database/static-role', {});
+      } catch {
+        staticRoles = emptyArray;
+        staticRoles.content = [];
+      }
+
       // concat the internal models of static roles to the role.content internal models
-      let combinedContent = [];
-      queryResponse.content.forEach(item => {
+      dynamicRoles.content.forEach(item => {
         combinedContent.push(item);
       });
       staticRoles.content.forEach(item => {
         combinedContent.push(item);
       });
-      queryResponse.content = combinedContent;
+      dynamicRoles.content = combinedContent;
       return hash({
         secret,
-        secrets: this.store.lazyPaginatedQueryTwoModels(queryResponse, {
+        secrets: this.store.lazyPaginatedQueryTwoModels(dynamicRoles, {
           id: secret,
           backend,
           responsePath: 'data.keys',
