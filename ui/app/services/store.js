@@ -99,9 +99,6 @@ export default Store.extend({
   // instead of querying the data here, we send the combined data to this method.
   // the combing of the models should happen the the service store
   lazyPaginatedQueryTwoModels(combinedModels, query /*, options*/) {
-    const responsePath = query.responsePath;
-    assert('responsePath is required', responsePath);
-    assert('page is required', typeof query.page === 'number');
     if (!query.size) {
       query.size = DEFAULT_PAGE_SIZE;
     }
@@ -157,8 +154,7 @@ export default Store.extend({
   // this should be called from the lazyPaginatedQueryTwoModels
   // it is a modified version of the constructResponse to handle two models that have already been queried and combined
   constructResponseTwoModels(combinedModels, query) {
-    // ARG TODO unsure what responsePath does
-    const { pageFilter, responsePath, size, page } = query;
+    const { pageFilter, size, page } = query;
     const data = this.filterData(pageFilter, combinedModels);
     const lastPage = Math.ceil(data.length / size);
     const currentPage = clamp(page, 1, lastPage);
@@ -166,7 +162,6 @@ export default Store.extend({
     const start = end - size;
     const slicedDataSet = data.slice(start, end);
 
-    // set(response, responsePath || '', slicedDataSet);
     combinedModels.meta = {
       currentPage,
       lastPage,

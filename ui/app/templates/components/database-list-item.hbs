@@ -23,7 +23,7 @@
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{#if @item.updatePath.canRead}}
+            {{#if @item.canRead}}
               <li class="action">
                 <SecretLink
                   @mode="show"
@@ -33,7 +33,7 @@
                 </SecretLink>
               </li>
             {{/if}}
-            {{#if @item.updatePath.canUpdate}}
+            {{#if @item.canEdit}}
               <li class="action">
                 <SecretLink
                   @mode="edit"
