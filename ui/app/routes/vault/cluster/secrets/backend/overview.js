@@ -11,12 +11,12 @@ export default Route.extend({
   },
   model() {
     let backend = this.enginePathParam();
+    let queryOptions = { backend, id: '' };
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine && secretEngine.get('engineType');
-
-    let connection = this.store.query('database/connection', {});
-    let role = this.store.query('database/role', {});
-    let staticRole = this.store.query('database/static-role', {});
+    let connection = this.store.query('database/connection', queryOptions);
+    let role = this.store.query('database/role', queryOptions);
+    let staticRole = this.store.query('database/static-role', queryOptions);
 
     return hash({
       connections: connection,

@@ -17,16 +17,16 @@ export default ApplicationAdapter.extend({
     }
     return { data };
   },
-  fetchByQuery() {
+  fetchByQuery(store, query) {
     // ARG todo pass in id later.
-    const backendName = 'database'; // TODO: grab this dynamically
-    return this.ajax(this.urlFor(backendName), 'GET', this.optionsForQuery()).then(resp => {
+    const { backend, id } = query;
+    return this.ajax(this.urlFor(backend), 'GET', this.optionsForQuery()).then(resp => {
       // resp.id = id;
-      resp.backend = backendName;
+      resp.backend = backend;
       return resp;
     });
   },
-  query() {
-    return this.fetchByQuery();
+  query(store, type, query) {
+    return this.fetchByQuery(store, query);
   },
 });

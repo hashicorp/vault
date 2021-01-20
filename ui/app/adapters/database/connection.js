@@ -17,25 +17,24 @@ export default ApplicationAdapter.extend({
     }
     return { data };
   },
-  fetchByQuery(id) {
-    // ARG todo pass in id later.
-    const backendName = 'database'; // TODO: grab this dynamically
-    return this.ajax(this.urlFor(backendName, id), 'GET', this.optionsForQuery(id)).then(resp => {
+  fetchByQuery(store, query) {
+    const { backend, id } = query;
+    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
       // resp.id = id;
-      resp.backend = backendName;
+      resp.backend = backend;
       if (id) {
         resp.id = id;
       }
       return resp;
     });
   },
-  query() {
-    return this.fetchByQuery();
+  query(store, type, query) {
+    // ARG TODO pass in id
+    return this.fetchByQuery(store, query);
   },
 
   queryRecord(store, type, query) {
-    const { id, backend } = query;
-    console.log('querying record for ', backend, id);
-    return this.fetchByQuery(id);
+    // ARG TODO unsure if using??
+    return this.fetchByQuery(store, query);
   },
 });
