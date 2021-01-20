@@ -93,7 +93,7 @@
 
 {{#if (eq @mode 'create')}}
 <form
-  {{on 'submit' this.handleSubmit}}>
+  {{on 'submit' this.handleCreateConnection}}>
   {{#each @model.fieldAttrs as |attr|}}
     {{#if (eq attr.name "plugin_config")}}
       <div class="form-section">
@@ -154,13 +154,14 @@
 {{else if (eq @mode 'edit')}}
 [Edit form]
 {{else}}
-[Show]
   {{#each @model.fieldAttrs as |attr|}}
-    {{#if (eq attr.type "object")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
-    {{else}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get @model attr.name}} />
-    {{/if}}
+    {{#unless (eq attr.name "name")}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
+      {{else}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get @model attr.name}} />
+      {{/if}}
+    {{/unless}}
   {{/each}}
 
 {{/if}}
