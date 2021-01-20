@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -150,6 +151,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
@@ -3658,6 +3660,168 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	}
 
 	return resp, nil
+}
+
+type SealStatusResponse struct {
+	Type         string `json:"type"`
+	Initialized  bool   `json:"initialized"`
+	Sealed       bool   `json:"sealed"`
+	T            int    `json:"t"`
+	N            int    `json:"n"`
+	Progress     int    `json:"progress"`
+	Nonce        string `json:"nonce"`
+	Version      string `json:"version"`
+	Migration    bool   `json:"migration"`
+	ClusterName  string `json:"cluster_name,omitempty"`
+	ClusterID    string `json:"cluster_id,omitempty"`
+	RecoverySeal bool   `json:"recovery_seal"`
+	StorageType  string `json:"storage_type,omitempty"`
+}
+
+func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+	sealed := core.Sealed()
+
+	initialized, err := core.Initialized(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var sealConfig *SealConfig
+	if core.SealAccess().RecoveryKeySupported() {
+		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
+	} else {
+		sealConfig, err = core.SealAccess().BarrierConfig(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if sealConfig == nil {
+		return &SealStatusResponse{
+			Type:         core.SealAccess().BarrierType(),
+			Initialized:  initialized,
+			Sealed:       true,
+			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+			StorageType:  core.StorageType(),
+			Version:      version.GetVersion().VersionNumber(),
+		}, nil
+	}
+
+	// Fetch the local cluster name and identifier
+	var clusterName, clusterID string
+	if !sealed {
+		cluster, err := core.Cluster(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if cluster == nil {
+			return nil, fmt.Errorf("failed to fetch cluster details")
+		}
+		clusterName = cluster.Name
+		clusterID = cluster.ID
+	}
+
+	progress, nonce := core.SecretProgress()
+
+	return &SealStatusResponse{
+		Type:         sealConfig.Type,
+		Initialized:  initialized,
+		Sealed:       sealed,
+		T:            sealConfig.SecretThreshold,
+		N:            sealConfig.SecretShares,
+		Progress:     progress,
+		Nonce:        nonce,
+		Version:      version.GetVersion().VersionNumber(),
+		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
+		ClusterName:  clusterName,
+		ClusterID:    clusterID,
+		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+		StorageType:  core.StorageType(),
+	}, nil
+}
+
+type LeaderResponse struct {
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
+	LeaderAddress            string    `json:"leader_address"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address"`
+	PerfStandby              bool      `json:"performance_standby"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64    `json:"last_wal,omitempty"`
+
+	// Raft Indexes for this node
+	RaftCommittedIndex uint64 `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
+}
+
+func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+	haEnabled := true
+	isLeader, address, clusterAddr, err := core.Leader()
+	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
+		haEnabled = false
+		err = nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &LeaderResponse{
+		HAEnabled:            haEnabled,
+		IsSelf:               isLeader,
+		LeaderAddress:        address,
+		LeaderClusterAddress: clusterAddr,
+		PerfStandby:          core.PerfStandby(),
+	}
+	if isLeader {
+		resp.ActiveTime = core.ActiveTime()
+	}
+	if resp.PerfStandby {
+		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+	} else if isLeader || !haEnabled {
+		resp.LastWAL = LastWAL(core)
+	}
+
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	return resp, nil
+}
+
+func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	status, err := b.Core.GetSealStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buf, err := json.Marshal(status)
+	if err != nil {
+		return nil, err
+	}
+	httpResp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+	return httpResp, nil
+}
+
+func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	status, err := b.Core.GetLeaderStatus()
+	if err != nil {
+		return nil, err
+	}
+	buf, err := json.Marshal(status)
+	if err != nil {
+		return nil, err
+	}
+	httpResp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+	return httpResp, nil
 }
 
 func sanitizePath(path string) string {
