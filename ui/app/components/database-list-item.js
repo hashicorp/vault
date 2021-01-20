@@ -11,13 +11,13 @@
  * @param {object} item - item refers to the model item used on the list item partial
  */
 
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+import { tracked } from '@glimmer/tracking';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  item: null,
-  keyType: computed('item._internalModel.modelName', function() {
-    const item = this.item;
+export default class DatabaseListItem extends Component {
+  @tracked keyType;
+  get keyTypeValue() {
+    const item = this.args.item;
     const internalModel = item._internalModel;
     if (internalModel.modelName === 'database/role') {
       return 'dynamic';
@@ -26,5 +26,5 @@ export default Component.extend({
     } else {
       return '';
     }
-  }),
-});
+  }
+}
