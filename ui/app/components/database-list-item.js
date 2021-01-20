@@ -1,4 +1,3 @@
-// ARG TODO update to glimmer
 /**
  * @module DatabaseListItem
  * DatabaseListItem components are used for the list items for the Database Secret Engines for Roles.

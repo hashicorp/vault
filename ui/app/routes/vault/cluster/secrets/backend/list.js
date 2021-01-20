@@ -100,14 +100,15 @@ export default Route.extend({
 
     if (modelType === 'database/role') {
       // if there are no dynamic or static roles return an empty array with property content that is also an empty array.
+      let queryOptions = { backend, id: secret };
       try {
-        dynamicRoles = await this.store.query('database/role', {});
+        dynamicRoles = await this.store.query('database/role', queryOptions);
       } catch {
         dynamicRoles = emptyArray;
         dynamicRoles.content = [];
       }
       try {
-        staticRoles = await this.store.query('database/static-role', {});
+        staticRoles = await this.store.query('database/static-role', queryOptions);
       } catch {
         staticRoles = emptyArray;
         staticRoles.content = [];

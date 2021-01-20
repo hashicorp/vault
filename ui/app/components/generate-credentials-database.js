@@ -24,6 +24,7 @@ export default class GenerateCredentialsDatabase extends Component {
   backendType = null;
   backendPath = null;
   roleName = null;
+  roleType = 'dynamic';
   @tracked model = null;
 
   constructor() {
@@ -31,10 +32,11 @@ export default class GenerateCredentialsDatabase extends Component {
     this.fetchCredentials.perform();
   }
   @task(function*() {
-    let { roleName, backendType } = this.args;
+    let { roleType, roleName, backendType } = this.args;
     let newModel = yield this.store.queryRecord('database/credential', {
       backend: backendType,
       secret: roleName,
+      roleType,
     });
     this.model = newModel;
   })

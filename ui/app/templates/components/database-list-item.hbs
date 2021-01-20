@@ -22,24 +22,21 @@
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{#if @item.canRead}}
-              <li class="action">
-                <SecretLink
-                  @mode="show"
-                  @secret={{@itemPath}}
-                  @class="has-text-black has-text-weight-semibold">
-                  Details
-                </SecretLink>
-              </li>
-            {{/if}}
             {{#if @item.canEdit}}
               <li class="action">
                 <SecretLink
-                  @mode="edit"
-                  @secret={{@itemPath}}
+                  @mode="show"
+                  @secret={{@item.id}}
                   @class="has-text-black has-text-weight-semibold">
-                  Edit
+                  Edit Role
                 </SecretLink>
+              </li>
+            {{/if}}
+            {{#if @item.canGenerateCredentials}}
+              <li class="action">
+                <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
+                  Generate credentials
+                </LinkTo>
               </li>
             {{/if}}
           </ul>

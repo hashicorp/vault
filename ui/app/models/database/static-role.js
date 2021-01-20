@@ -7,4 +7,6 @@ export default Model.extend({
   secretPath: lazyCapabilities(apiPath`${'backend'}/static-roles/${'id'}`, 'backend', 'id'),
   canRead: alias('secretPath.canRead'),
   canEdit: alias('secretPath.canUpdate'),
+  credentialPath: lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id'),
+  canGenerateCredentials: alias('credentialPath.canRead'),
 });
