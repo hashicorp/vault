@@ -19,6 +19,7 @@ type SharedConfig struct {
 
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
+	Barrier *Barrier `hcl:"-"`
 
 	DisableMlock    bool        `hcl:"-"`
 	DisableMlockRaw interface{} `hcl:"disable_mlock"`

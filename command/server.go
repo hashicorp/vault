@@ -1186,6 +1186,7 @@ func (c *ServerCommand) Run(args []string) int {
 		MetricsHelper:             metricsHelper,
 		MetricSink:                metricSink,
 		SecureRandomReader:        secureRandomReader,
+		Barrier:                   *config.Barrier,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

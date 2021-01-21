@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"strconv"
 	"strings"
@@ -35,8 +36,9 @@ const (
 
 // Versions of the AESGCM storage methodology
 const (
-	AESGCMVersion1 = 0x1
-	AESGCMVersion2 = 0x2
+	AESGCMVersion1           = 0x1
+	AESGCMVersion2           = 0x2
+	absoluteOperationMaximum = 1 << 31
 )
 
 // barrierInit is the JSON encoded value stored
@@ -76,17 +78,26 @@ type AESGCMBarrier struct {
 	currentAESGCMVersionByte byte
 
 	initialized atomic.Bool
+
+	RotationConfig *configutil.BarrierRotationConfig
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
+func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierRotationConfig) (*AESGCMBarrier, error) {
+	// Should we have minimums?
+	if rotConfig != nil && (rotConfig.Operations > absoluteOperationMaximum || rotConfig.Operations == 0) {
+		rotConfig.Operations = absoluteOperationMaximum
+	}
+
 	b := &AESGCMBarrier{
 		backend:                  physical,
 		sealed:                   true,
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
+		RotationConfig:           rotConfig,
 	}
+
 	return b, nil
 }
 

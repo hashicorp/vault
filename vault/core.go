@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"net"
 	"net/http"
@@ -644,6 +645,9 @@ type CoreConfig struct {
 
 	// Activity log controls
 	ActivityLogConfig ActivityLogCoreConfig
+
+	// Barrier config
+	Barrier configutil.Barrier
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -870,7 +874,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	var err error
 
 	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical)
+	c.barrier, err = NewAESGCMBarrier(c.physical, &conf.Barrier.BarrierRotationConfig)
 	if err != nil {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}
