@@ -202,34 +202,6 @@ export default Store.extend({
     return response;
   },
 
-  // this should be called from the lazyPaginatedQueryTwoModels
-  // it is a modified version of the constructResponse to handle two models that have already been queried and combined
-  constructResponseTwoModels(combinedModels, query) {
-    const { pageFilter, size, page } = query;
-    const data = this.filterData(pageFilter, combinedModels);
-    const lastPage = Math.ceil(data.length / size);
-    const currentPage = clamp(page, 1, lastPage);
-    const end = currentPage * size;
-    const start = end - size;
-    const slicedDataSet = data.slice(start, end);
-
-    combinedModels.meta = {
-      currentPage,
-      lastPage,
-      nextPage: clamp(currentPage + 1, 1, lastPage),
-      prevPage: clamp(currentPage - 1, 1, lastPage),
-      total: get(combinedModels, 'length') || 0,
-      filteredTotal: get(data, 'length') || 0,
-    };
-
-    let formattedResponse = [];
-    formattedResponse['meta'] = combinedModels.meta;
-    slicedDataSet.forEach(internalModel => {
-      formattedResponse.push(internalModel);
-    });
-    return formattedResponse;
-  },
-
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
@@ -262,7 +234,6 @@ export default Store.extend({
   // store data cache as { response, dataset}
   // also populated `lazyCaches` attribute
   storeDataset(modelName, query, response, array) {
-    console.log('storeDataset:', response, array);
     const dataSet = {
       response,
       dataset: array,

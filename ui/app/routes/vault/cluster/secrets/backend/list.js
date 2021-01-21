@@ -113,7 +113,6 @@ export default Route.extend({
             return model;
           })
           .catch(err => {
-            console.error(err, 'error getting combined list');
             // if we're at the root we don't want to throw
             if (backendModel && err.httpStatus === 404 && secret === '') {
               return [];
@@ -140,7 +139,6 @@ export default Route.extend({
           return model;
         })
         .catch(err => {
-          console.log(err, 'error');
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
@@ -203,7 +201,6 @@ export default Route.extend({
       } else if (pageFilter) {
         filter = pageFilter;
       }
-      console.log(model, 'WOEIGJWOIGJOWG');
       controller.setProperties({
         filter: filter || '',
         page: model.meta.currentPage || 1,
