@@ -93,44 +93,35 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const modelType = this.getModelType(backend, params.tab);
-    let combinedContent = [];
-    let emptyArray = [];
-    let dynamicRoles;
-    let staticRoles;
 
+    // For database roles, we actually want two different models
+    // returned in the same list
     if (modelType === 'database/role') {
-      // if there are no dynamic or static roles return an empty array with property content that is also an empty array.
-      let queryOptions = { backend, id: secret };
-      try {
-        dynamicRoles = await this.store.query('database/role', queryOptions);
-      } catch {
-        dynamicRoles = emptyArray;
-        dynamicRoles.content = [];
-      }
-      try {
-        staticRoles = await this.store.query('database/static-role', queryOptions);
-      } catch {
-        staticRoles = emptyArray;
-        staticRoles.content = [];
-      }
-
-      // concat the internal models of static roles to the role.content internal models
-      dynamicRoles.content.forEach(item => {
-        combinedContent.push(item);
-      });
-      staticRoles.content.forEach(item => {
-        combinedContent.push(item);
-      });
-      dynamicRoles.content = combinedContent;
+      const combinedModels = ['database/role', 'database/static-role'];
       return hash({
         secret,
-        secrets: this.store.lazyPaginatedQueryTwoModels(dynamicRoles, {
-          id: secret,
-          backend,
-          responsePath: 'data.keys',
-          page: params.page || 1,
-          pageFilter: params.pageFilter,
-        }),
+        secrets: this.store
+          .lazyPaginatedQueryTwoModels(combinedModels, {
+            id: secret,
+            backend,
+            responsePath: 'data.keys',
+            page: params.page || 1,
+            pageFilter: params.pageFilter,
+          })
+          .then(model => {
+            this.set('has404', false);
+            return model;
+          })
+          .catch(err => {
+            console.error(err, 'error getting combined list');
+            // if we're at the root we don't want to throw
+            if (backendModel && err.httpStatus === 404 && secret === '') {
+              return [];
+            } else {
+              // else we're throwing and dealing with this in the error action
+              throw err;
+            }
+          }),
       });
     }
 
@@ -195,7 +186,6 @@ export default Route.extend({
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
     }
-
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -213,10 +203,10 @@ export default Route.extend({
       } else if (pageFilter) {
         filter = pageFilter;
       }
-
+      console.log(model, 'WOEIGJWOIGJOWG');
       controller.setProperties({
         filter: filter || '',
-        page: model.get('meta.currentPage') || 1,
+        page: model.meta.currentPage || 1,
       });
     }
   },

@@ -95,19 +95,79 @@ export default Store.extend({
         throw e;
       });
   },
-  // This method should be used if you have two models of data. (ex: database/role and database/static-role)
-  // instead of querying the data here, we send the combined data to this method.
-  // the combing of the models should happen the the service store
-  lazyPaginatedQueryTwoModels(combinedModels, query /*, options*/) {
+
+  constructCombinedResponse(combinedData, query) {
+    // make a copy of the data
+    console.log(combinedData, '🌱🌱🌱');
+    let dataset = [...combinedData];
+    const { pageFilter, responsePath, size, page } = query;
+    let response = { data: {} };
+    const data = this.filterData(pageFilter, dataset);
+
+    const lastPage = Math.ceil(data.length / size);
+    const currentPage = clamp(page, 1, lastPage);
+    const end = currentPage * size;
+    const start = end - size;
+    const slicedDataSet = data.slice(start, end);
+
+    set(response, responsePath || '', slicedDataSet);
+
+    dataset.meta = {
+      currentPage,
+      lastPage,
+      nextPage: clamp(currentPage + 1, 1, lastPage),
+      prevPage: clamp(currentPage - 1, 1, lastPage),
+      total: get(dataset, 'length') || 0,
+      filteredTotal: get(data, 'length') || 0,
+    };
+    return dataset;
+    // return {
+    //   results: ['hello'],
+    //   meta: {
+    //     currentPage,
+    //     lastPage,
+    //     nextPage: clamp(currentPage + 1, 1, lastPage),
+    //     prevPage: clamp(currentPage - 1, 1, lastPage),
+    //     total: get(dataset, 'length') || 0,
+    //     filteredTotal: get(data, 'length') || 0,
+    //   }
+    // };
+  },
+
+  // This method should be used if you have two models of data that need to be
+  // combined in the list result. (ex: database/role and database/static-role)
+  lazyPaginatedQueryTwoModels(combinedModelNames, query /*, options*/) {
+    const responsePath = query.responsePath;
+    assert('responsePath is required', responsePath);
+    assert('page is required', typeof query.page === 'number');
     if (!query.size) {
       query.size = DEFAULT_PAGE_SIZE;
     }
-    let dataset = [];
-    combinedModels.content.forEach(item => {
-      dataset.push(item.id);
+    const promises = combinedModelNames.map(modelName => {
+      const adapter = this.adapterFor(modelName);
+      return adapter
+        .query(this, modelName, query)
+        .then(res => {
+          const data = get(res, responsePath);
+          return data.map(key => ({
+            id: key,
+            modelName,
+          }));
+        })
+        .catch(() => {
+          // if it errors, return empty array
+          return [];
+        });
     });
-    // we don't need storeDataset or fetchPage because the model exist in the store already and we have the result
-    return this.constructResponseTwoModels(combinedModels, query);
+
+    return Promise.all(promises).then(results => {
+      let combinedData = [];
+      results.forEach(set => {
+        combinedData = combinedData.concat(set);
+      });
+      // return [];
+      return this.constructCombinedResponse(combinedData, query);
+    });
   },
 
   filterData(filter, dataset) {
