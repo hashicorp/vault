@@ -107,7 +107,11 @@ during this call.
 - `entity_alias` `(string: "")` - Name of the entity alias to associate with
   during token creation. Only works in combination with `role_name` argument
   and used entity alias must be listed in `allowed_entity_aliases`. If this has
-  been specified, the entity will not be inherited from the parent.
+  been specified, the entity will not be inherited from the parent. Note that 
+  `allowed_entity_aliases` is not case sensitive. For example, creating tokens 
+  with alias `aLiAs` and alias `alias` will both succeed even if the
+  `allowed_entity_aliases` list only allows for token creation for entity alias 
+  `alias`. 
 
 ### Sample Payload
 
