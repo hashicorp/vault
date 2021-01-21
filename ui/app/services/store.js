@@ -97,11 +97,8 @@ export default Store.extend({
   },
 
   constructCombinedResponse(combinedData, query) {
-    // make a copy of the data
-    console.log(combinedData, '🌱🌱🌱');
+    const { pageFilter, size, page } = query;
     let dataset = [...combinedData];
-    const { pageFilter, responsePath, size, page } = query;
-    let response = { data: {} };
     const data = this.filterData(pageFilter, dataset);
 
     const lastPage = Math.ceil(data.length / size);
@@ -110,9 +107,9 @@ export default Store.extend({
     const start = end - size;
     const slicedDataSet = data.slice(start, end);
 
-    set(response, responsePath || '', slicedDataSet);
+    let response = [...slicedDataSet];
 
-    dataset.meta = {
+    response.meta = {
       currentPage,
       lastPage,
       nextPage: clamp(currentPage + 1, 1, lastPage),
@@ -120,28 +117,22 @@ export default Store.extend({
       total: get(dataset, 'length') || 0,
       filteredTotal: get(data, 'length') || 0,
     };
-    return dataset;
-    // return {
-    //   results: ['hello'],
-    //   meta: {
-    //     currentPage,
-    //     lastPage,
-    //     nextPage: clamp(currentPage + 1, 1, lastPage),
-    //     prevPage: clamp(currentPage - 1, 1, lastPage),
-    //     total: get(dataset, 'length') || 0,
-    //     filteredTotal: get(data, 'length') || 0,
-    //   }
-    // };
+    return response;
   },
 
   // This method should be used if you have two models of data that need to be
   // combined in the list result. (ex: database/role and database/static-role)
   lazyPaginatedQueryTwoModels(combinedModelNames, query /*, options*/) {
+    const firstModel = combinedModelNames[0];
     const responsePath = query.responsePath;
+    const dataCache = this.getDataset(firstModel, query);
     assert('responsePath is required', responsePath);
     assert('page is required', typeof query.page === 'number');
     if (!query.size) {
       query.size = DEFAULT_PAGE_SIZE;
+    }
+    if (dataCache) {
+      return resolve(this.constructCombinedResponse(dataCache.dataset, query));
     }
     const promises = combinedModelNames.map(modelName => {
       const adapter = this.adapterFor(modelName);
@@ -165,7 +156,7 @@ export default Store.extend({
       results.forEach(set => {
         combinedData = combinedData.concat(set);
       });
-      // return [];
+      this.storeDataset(combinedModelNames[0], query, {}, combinedData);
       return this.constructCombinedResponse(combinedData, query);
     });
   },
@@ -271,6 +262,7 @@ export default Store.extend({
   // store data cache as { response, dataset}
   // also populated `lazyCaches` attribute
   storeDataset(modelName, query, response, array) {
+    console.log('storeDataset:', response, array);
     const dataSet = {
       response,
       dataset: array,
