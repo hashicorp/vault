@@ -38,7 +38,7 @@
     <button
       type="button"
       class="toolbar-link"
-      {{!-- on 'click' this.delete --}}
+      {{on 'click' this.delete}}
       data-test-database-connection-delete
     >
       Delete connection
@@ -46,7 +46,7 @@
     {{!-- {{#if capabilities.canReset}} --}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
-      {{!-- @onConfirmAction={{action "delete"}} --}}
+      @onConfirmAction={{action 'reset'}}
       @confirmTitle="Reset connection?"
       @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
       @confirmButtonText="Reset"
@@ -59,7 +59,7 @@
     {{!-- {{#if capabilities.canRotate }} --}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
-      {{!-- @onConfirmAction={{action "delete"}} --}}
+      @onConfirmAction={{this.rotate}}
       @confirmTitle="Rotate credentials?"
       @confirmMessage={{'This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'}}
       @confirmButtonText="Rotate"
@@ -95,7 +95,7 @@
 <form
   {{on 'submit' this.handleCreateConnection}}>
   {{#each @model.fieldAttrs as |attr|}}
-    {{#if (eq attr.name "plugin_config")}}
+    {{#if (eq attr.name "pluginConfig")}}
       <div class="form-section">
         <h3 class="title is-5">Plugin config</h3>
         {{#unless @model.plugin_name}}
@@ -126,7 +126,7 @@
           {{/each}}
         {{/unless}}
       </div>
-    {{else}}
+    {{else if (not-eq attr.options.readOnly true)}}
       {{form-field data-test-field attr=attr model=@model}}
     {{/if}}
   {{/each}}
@@ -154,14 +154,15 @@
 {{else if (eq @mode 'edit')}}
 [Edit form]
 {{else}}
-  {{#each @model.fieldAttrs as |attr|}}
-    {{#unless (eq attr.name "name")}}
+  {{#each @model.showAttrs as |attr|}}
+    {{log attr}}
+    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
       {{else}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get @model attr.name}} />
+        <InfoTableRow @renderBlank={{true}} @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{or (get @model attr.name) defaultDisplay}} />
       {{/if}}
-    {{/unless}}
+    {{/let}}
   {{/each}}
 
 {{/if}}

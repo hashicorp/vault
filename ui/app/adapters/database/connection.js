@@ -3,7 +3,12 @@ import ApplicationAdapter from '../application';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  urlFor(backend, id) {
+  urlFor(backend, id, type = 'REST') {
+    if (type === 'ROTATE') {
+      return `${this.buildURL()}/${backend}/rotate-root/${id}`;
+    } else if (type === 'RESET') {
+      return `${this.buildURL()}/${backend}/reset/${id}`;
+    }
     let url = `${this.buildURL()}/${backend}/config`;
     if (id) {
       url = `${this.buildURL()}/${backend}/config/${id}`;
@@ -58,5 +63,13 @@ export default ApplicationAdapter.extend({
   deleteRecord(store, type, snapshot) {
     const id = snapshot.id;
     return this.ajax(this.urlFor('database', id), 'DELETE');
+  },
+
+  rotateRootCredentials(backend, id) {
+    return this.ajax(this.urlFor('database', id, 'ROTATE'), 'POST');
+  },
+
+  resetConnection(backend, id) {
+    return this.ajax(this.urlFor(backend, id, 'RESET'), 'POST');
   },
 });
