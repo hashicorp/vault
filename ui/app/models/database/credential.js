@@ -16,4 +16,7 @@ export default Model.extend({
   password: attr('string'),
   leaseId: attr('string'),
   leaseDuration: attr('string'),
+  lastVaultRotation: attr('string'),
+  rotationPeriod: attr('number'),
+  ttl: attr('number'),
 });

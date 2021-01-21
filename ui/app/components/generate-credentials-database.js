@@ -24,7 +24,6 @@ export default class GenerateCredentialsDatabase extends Component {
   backendType = null;
   backendPath = null;
   roleName = null;
-  roleType = 'dynamic';
   @tracked model = null;
 
   constructor() {

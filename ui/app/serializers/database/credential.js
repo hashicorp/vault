@@ -11,6 +11,9 @@ export default RESTSerializer.extend({
         password: payload.data.password,
         leaseId: payload.lease_id,
         leaseDuration: payload.lease_duration,
+        lastVaultRotation: payload.data.last_vault_rotation,
+        rotationPeriod: payload.data.rotation_period,
+        ttl: payload.data.ttl,
       };
       return credentials;
     }

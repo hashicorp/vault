@@ -1,8 +1,6 @@
 import Route from '@ember/routing/route';
 import { hash } from 'rsvp';
 
-// ARG TODO query permissions!
-
 export default Route.extend({
   type: '',
   enginePathParam() {
