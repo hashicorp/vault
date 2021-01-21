@@ -17,18 +17,30 @@ import { tracked } from '@glimmer/tracking';
  */
 export default class GetCredentialsCard extends Component {
   @service router;
+  @service store;
   role = '';
+  dynamicRole = '';
+  staticRole = '';
   @tracked buttonDisabled = true;
 
   @action
   getSelectedValue(selectValue) {
     this.role = selectValue[0];
+    if (this.role) {
+      this.roleType = this.store.peekRecord('database/role', this.role) ? 'dynamic' : 'static';
+    }
     // Ember Octane way of getting away from toggleProperty
     this.buttonDisabled = !this.buttonDisabled;
   }
   @action
   transitionToCredential() {
+    if (!this.role) {
+      return;
+    }
     let role = this.role;
-    this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
+    let roleType = this.roleType;
+    this.router.transitionTo('vault.cluster.secrets.backend.credentials', role, {
+      queryParams: { roleType: roleType },
+    });
   }
 }
