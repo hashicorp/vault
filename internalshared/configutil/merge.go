@@ -31,6 +31,11 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.Telemetry = c2.Telemetry
 	}
 
+	result.Barrier = c.Barrier
+	if c2.Barrier != nil {
+		result.Barrier = c2.Barrier
+	}
+
 	result.DisableMlock = c.DisableMlock
 	if c2.DisableMlock {
 		result.DisableMlock = c2.DisableMlock

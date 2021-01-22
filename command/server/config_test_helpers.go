@@ -391,6 +391,11 @@ func testLoadConfigFile(t *testing.T) {
 				LeaseMetricsNameSpaceLabels: false,
 			},
 
+			Barrier: &configutil.BarrierConfig{
+				KeyRotationMaxOperations: 1073741824,
+				KeyRotationInterval:      365 * 24 * time.Hour,
+			},
+
 			DisableMlock: true,
 
 			Entropy: nil,
@@ -686,6 +691,10 @@ func testConfig_Sanitized(t *testing.T) {
 			"lease_metrics_epsilon":                  time.Hour,
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
+		},
+		"barrier": map[string]interface{}{
+			"key_rotation_max_operations": int64(1073741824),
+			"key_rotation_interval":       8760 * time.Hour,
 		},
 	}
 

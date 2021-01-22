@@ -647,7 +647,7 @@ type CoreConfig struct {
 	ActivityLogConfig ActivityLogCoreConfig
 
 	// Barrier config
-	Barrier configutil.Barrier
+	Barrier *configutil.BarrierConfig
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -874,7 +874,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	var err error
 
 	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical, &conf.Barrier.BarrierRotationConfig)
+	c.barrier, err = NewAESGCMBarrier(c.physical, conf.Barrier)
 	if err != nil {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}

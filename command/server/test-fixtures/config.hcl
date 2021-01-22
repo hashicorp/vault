@@ -34,6 +34,11 @@ telemetry {
     metrics_prefix = "myprefix"
 }
 
+barrier {
+    key_rotation_max_operations = 1073741824
+    key_rotation_interval = "8760h"
+}
+
 sentinel {
     additional_enabled_modules = []
 }

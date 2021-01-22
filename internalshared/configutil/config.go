@@ -19,12 +19,12 @@ type SharedConfig struct {
 
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
-	Barrier *Barrier `hcl:"-"`
 
 	DisableMlock    bool        `hcl:"-"`
 	DisableMlockRaw interface{} `hcl:"disable_mlock"`
 
-	Telemetry *Telemetry `hcl:"telemetry"`
+	Telemetry *Telemetry     `hcl:"telemetry"`
+	Barrier   *BarrierConfig `hcl:"barrier"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
@@ -127,6 +127,12 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		}
 	}
 
+	if o := list.Filter("barrier"); len(o.Items) > 0 {
+		if err := parseBarrier(&result, o); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'barrier': {{err}}", err)
+		}
+	}
+
 	entConfig := &(result.EntSharedConfig)
 	if err := entConfig.ParseConfig(list); err != nil {
 		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
@@ -220,6 +226,14 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
 		}
 		result["telemetry"] = sanitizedTelemetry
+	}
+
+	if c.Barrier != nil {
+		sanitizedBarrier := map[string]interface{}{
+			"key_rotation_max_operations": c.Barrier.KeyRotationMaxOperations,
+			"key_rotation_interval":       c.Barrier.KeyRotationInterval,
+		}
+		result["barrier"] = sanitizedBarrier
 	}
 
 	return result

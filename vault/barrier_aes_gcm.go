@@ -38,7 +38,7 @@ const (
 const (
 	AESGCMVersion1           = 0x1
 	AESGCMVersion2           = 0x2
-	absoluteOperationMaximum = 1 << 31
+	absoluteOperationMaximum = int64(3865470566) // 10% shy of the NIST recommended maximum
 )
 
 // barrierInit is the JSON encoded value stored
@@ -79,15 +79,15 @@ type AESGCMBarrier struct {
 
 	initialized atomic.Bool
 
-	RotationConfig *configutil.BarrierRotationConfig
+	RotationConfig *configutil.BarrierConfig
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierRotationConfig) (*AESGCMBarrier, error) {
+func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierConfig) (*AESGCMBarrier, error) {
 	// Should we have minimums?
-	if rotConfig != nil && (rotConfig.Operations > absoluteOperationMaximum || rotConfig.Operations == 0) {
-		rotConfig.Operations = absoluteOperationMaximum
+	if rotConfig != nil && (rotConfig.KeyRotationMaxOperations > absoluteOperationMaximum || rotConfig.KeyRotationMaxOperations == 0) {
+		rotConfig.KeyRotationMaxOperations = absoluteOperationMaximum
 	}
 
 	b := &AESGCMBarrier{
