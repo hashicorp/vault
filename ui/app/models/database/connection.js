@@ -1,3 +1,4 @@
+// ARG TODO need to replace with Lazy capabilities, don't want to step on toes for now.
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -16,7 +17,6 @@ const AVAILABLE_PLUGIN_TYPES = [
 ];
 
 const M = Model.extend({
-  // ARG TODO API docs for connection https://www.vaultproject.io/api-docs/secret/databases#configure-connection
   // URL: http://127.0.0.1:8200/v1/database/config/my-db
   backend: attr('string', {
     readOnly: true,

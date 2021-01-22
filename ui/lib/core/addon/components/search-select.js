@@ -127,6 +127,7 @@ export default Component.extend({
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       this.onChange(Array.from(this.selectedOptions, option => option.id));
+      // ARG TODO this is now broken, see console on transform searchSelect component
       this.getSelectedValue(Array.from(this.selectedOptions, option => option.id));
     } else {
       this.onChange(this.selectedOptions);

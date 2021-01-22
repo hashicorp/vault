@@ -41,6 +41,8 @@ export default Route.extend({
     let role = this.fetchDynamicRoles(queryOptions);
     let staticRole = this.fetchStaticRoles(queryOptions);
 
+    // GOAL TO return capabilities from role and connection and configuration from their models
+
     return hash({
       backend,
       connections: connection,
