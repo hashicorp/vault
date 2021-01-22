@@ -24,8 +24,6 @@ const M = Model.extend({
 
   name: attr('string', {
     label: 'Connection Name',
-    fieldValue: 'id',
-    readOnly: true,
   }),
   plugin_name: attr('string', {
     label: 'Database plugin',

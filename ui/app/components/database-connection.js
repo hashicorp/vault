@@ -1,44 +1,81 @@
 import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
+
 import { action } from '@ember/object';
 
-export default class DatabaseConnectionEdit extends Component {
-  constructor(owner, args) {
-    super(owner, args);
-    const thisForm = this;
+const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
+const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-    // iterate over fields and set each one on the model for
-    // form inputs
-    args.model.allFields.forEach(field => {
-      // iterate over all possible fields for the secret engine
-      // and fill in either ember data value or default
-      const matching = args.model[field];
-      console.log(matching, `matches ${field}`);
-      thisForm[field] = 'foo';
+const getErrorMessage = errors => {
+  let errorMessage = 'Something went wrong. Check the Vault logs for more information.';
+  if (errors?.join(' ').indexOf('failed to verify')) {
+    errorMessage =
+      'There was a verification error for this connection. Check the Vault logs for more information.';
+  }
+  return errorMessage;
+};
+
+export default class DatabaseConnectionEdit extends Component {
+  @service store;
+  @service router;
+  @service flashMessages;
+
+  transitionToRoute() {
+    return this.router.transitionTo(...arguments);
+  }
+
+  @action
+  async handleCreateConnection(evt) {
+    evt.preventDefault();
+    let secret = this.args.model;
+    let secretId = secret.name;
+    secret.set('id', secretId);
+    secret.save().then(() => {
+      this.transitionToRoute(SHOW_ROUTE, secretId);
     });
   }
 
-  // mode = 'show';
-  // tab
-  // model
-  // mode
-  // root
-  // capabilities
-  // onRefresh
-  // onToggleAdvancedEdit
-  // initialKey
-  // baseKey
-  // preferAdvancedEdit
   @action
-  async handleSubmit(evt) {
+  delete(evt) {
     evt.preventDefault();
-    // this.args.sendMessage(this.body);
-    // this.body = '';
-    console.log('submit', this.args.model);
+    // const adapter = this.store.adapterFor('cluster');
+    const secret = this.args.model;
+    const backend = secret.backend;
+    secret.destroyRecord().then(() => {
+      this.transitionToRoute(LIST_ROOT_ROUTE, backend);
+    });
   }
 
   @action
-  updateValue(key, evt) {
-    evt.preventDefault();
-    console.log('update value', key, evt.target.value);
+  reset() {
+    const { name, backend } = this.args.model;
+    let adapter = this.store.adapterFor('database/connection');
+    adapter
+      .resetConnection(backend, name)
+      .then(() => {
+        // TODO: Why isn't the confirmAction closing?
+        // this.args.onRefresh();
+        this.flashMessages.success('Successfully reset connection');
+      })
+      .catch(e => {
+        const errorMessage = getErrorMessage(e.errors);
+        this.flashMessages.danger(errorMessage);
+      });
+  }
+
+  @action
+  rotate() {
+    const { name, backend } = this.args.model;
+    let adapter = this.store.adapterFor('database/connection');
+    adapter
+      .rotateRootCredentials(backend, name)
+      .then(() => {
+        // TODO: Why isn't the confirmAction closing?
+        this.flashMessages.success('Successfully rotated credentials');
+      })
+      .catch(e => {
+        const errorMessage = getErrorMessage(e.errors);
+        this.flashMessages.danger(errorMessage);
+      });
   }
 }

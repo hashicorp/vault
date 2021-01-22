@@ -10,17 +10,14 @@
  * @param {object} item - item refers to the model item used on the list item partial
  */
 
-import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 
 export default class DatabaseListItem extends Component {
-  @tracked keyType;
   get keyTypeValue() {
     const item = this.args.item;
-    const internalModel = item._internalModel;
-    if (internalModel.modelName === 'database/role') {
+    if (item.modelName === 'database/role') {
       return 'dynamic';
-    } else if (internalModel.modelName === 'database/static-role') {
+    } else if (item.modelName === 'database/static-role') {
       return 'static';
     } else {
       return '';
