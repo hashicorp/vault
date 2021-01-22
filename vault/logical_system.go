@@ -178,6 +178,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	// operation token.
 	if core.IsDRSecondary() {
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
