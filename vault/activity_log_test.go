@@ -709,13 +709,15 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req.Data["enabled"] = "default"
 		req.Data["retention_months"] = 24
 		req.Data["default_report_months"] = 12
+
+		originalEnabled := core.activityLog.GetEnabled()
+		newEnabled := activityLogEnabledDefault
+
 		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
-		}
+		checkAPIWarnings(t, originalEnabled, newEnabled, resp)
 
 		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
 		req.Storage = view
@@ -1712,6 +1714,23 @@ func SkipAtEndOfMonth(t *testing.T) {
 	}
 }
 
+// checkAPIWarnings ensures there is a warning if switching from enabled -> disabled,
+// and no response otherwise
+func checkAPIWarnings(t *testing.T, originalEnabled, newEnabled bool, resp *logical.Response) {
+	t.Helper()
+
+	expectWarning := originalEnabled == true && newEnabled == false
+
+	switch {
+	case !expectWarning && resp != nil:
+		t.Fatalf("got unexpected response: %#v", resp)
+	case expectWarning && resp == nil:
+		t.Fatal("expected response (containing warning) when switching from enabled to disabled")
+	case expectWarning && len(resp.Warnings) == 0:
+		t.Fatal("expected warning when switching from enabled to disabled")
+	}
+}
+
 func TestActivityLog_EnableDisable(t *testing.T) {
 	SkipAtEndOfMonth(t)
 
@@ -1722,6 +1741,8 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 
 	enableRequest := func() {
 		t.Helper()
+		originalEnabled := a.GetEnabled()
+
 		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["enabled"] = "enable"
@@ -1729,12 +1750,13 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
-		}
+		// don't really need originalEnabled, but might as well be correct
+		checkAPIWarnings(t, originalEnabled, true, resp)
 	}
 	disableRequest := func() {
 		t.Helper()
+		originalEnabled := a.GetEnabled()
+
 		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["enabled"] = "disable"
@@ -1742,9 +1764,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
-			t.Fatalf("bad: %#v", resp)
-		}
+		checkAPIWarnings(t, originalEnabled, false, resp)
 	}
 
 	// enable (if not already) and write a segment
