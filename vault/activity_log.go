@@ -1499,6 +1499,17 @@ func (a *ActivityLog) HandleTokenCreation(entry *logical.TokenEntry) {
 	}
 }
 
+func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {
+	ns, err := NamespaceByID(ctx, nsID, a.core)
+	if err != nil || ns == nil {
+		return fmt.Sprintf("deleted-%v", nsID)
+	}
+	if ns.Path == "" {
+		return "root"
+	}
+	return ns.Path
+}
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -1603,7 +1614,11 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 	}
 
 	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
-	activePeriodStart := endTime.AddDate(0, -a.defaultReportMonths, 0)
+	activePeriodStart := timeutil.MonthsPreviousTo(a.defaultReportMonths, endTime)
+	// If not enough data, report as much as we have in the window
+	if activePeriodStart.Before(times[len(times)-1]) {
+		activePeriodStart = times[len(times)-1]
+	}
 
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
@@ -1637,12 +1652,22 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 				NonEntityTokens: counts.Tokens,
 			})
 
-			if startTime.After(activePeriodStart) {
+			// If this is the most recent month, or the start of the reporting period, output
+			// a metric for each namespace.
+			if startTime == times[0] {
+				a.metrics.SetGaugeWithLabels(
+					[]string{"identity", "entity", "active", "monthly"},
+					float32(len(counts.Entities)),
+					[]metricsutil.Label{
+						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+					},
+				)
+			} else if startTime == activePeriodStart {
 				a.metrics.SetGaugeWithLabels(
 					[]string{"identity", "entity", "active", "reporting_period"},
 					float32(len(counts.Entities)),
 					[]metricsutil.Label{
-						{Name: "namespace", Value: nsID},
+						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 					},
 				)
 			}
@@ -1656,17 +1681,6 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 
 	// delete the intent log
 	a.view.Delete(ctx, activityIntentLogKey)
-
-	// emit active entity metrics for the interval (times[0], endTime)
-	for nsID, counts := range byNamespace {
-		a.metrics.SetGaugeWithLabels(
-			[]string{"identity", "entity", "active", "monthly"},
-			float32(len(counts.Entities)),
-			[]metricsutil.Label{
-				{Name: "namespace", Value: nsID},
-			},
-		)
-	}
 
 	a.logger.Info("finished computing queries", "month", endTime)
 
