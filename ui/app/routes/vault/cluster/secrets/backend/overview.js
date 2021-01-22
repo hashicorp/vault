@@ -42,6 +42,7 @@ export default Route.extend({
     let staticRole = this.fetchStaticRoles(queryOptions);
 
     return hash({
+      backend,
       connections: connection,
       roles: role,
       staticRoles: staticRole,

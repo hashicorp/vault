@@ -1,0 +1,14 @@
+<div class="field is-grouped">
+  <div class="control is-expanded">
+    {{input
+      class="input"
+      value=data.value
+      name=(concat elementId "-" index)
+      id=(concat elementId "-" index)
+      key-up=(action "inputChanged" index)
+      change=(action (action "inputChanged" index) value="target.value")
+    }}
+  </div>
+</div>
+
+{{!-- ARG TODO: turn into glimmer and send up, see if can't turn into input and send as would --}}
