@@ -39,7 +39,9 @@ other mechanisms to provide access to cloud resources.
   oldest ones will be deleted.
 
 - `path_prefix` `(string: <required>)` - For `storage_type=local`, the directory to
-  write the snapshots in. For cloud storage types, the bucket prefix to use.
+  write the snapshots in. For cloud storage types, the bucket prefix to use. 
+  Types `azure-s3` and `google-gcs` require a trailing `/` (slash). 
+  Types `local` and `aws-s3` the trailing `/` is optional. 
 
 - `file_prefix` `(string: "vault-snapshot")` - Within the directory or bucket
   prefix given by `path_prefix`, the file or object name of snapshot files
@@ -87,7 +89,23 @@ other mechanisms to provide access to cloud resources.
 
 - `google_gcs_bucket` `(string: <required>)` GCS bucket to write snapshots to.
 
-- `google_service_account_key` `(string)` - Google service account key in JSON format
+- `google_service_account_key` `(string)` - Google service account key in JSON format.  Depending
+on how the API is invoked, this may be need to be JSON-escaped, e.g. for newlines and double quotes.
+The raw value looks like this:
+```json
+{
+ "type": "service_account",
+ "project_id": "project-id",
+ "private_key_id": "key-id",
+ "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQ ... /WZs=\n-----END RSA PRIVATE KEY-----\n",
+ "client_email": "service-account-email",
+ "client_id": "client-id",
+ "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+ "token_uri": "https://accounts.google.com/o/oauth2/token",
+ "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+ "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/service-account-email"
+}
+```
 
 - `google_endpoint` `(string)` - GCS endpoint. This is typically only set when
   using a non-Google GCS implementation like fake-gcs-server.

@@ -557,7 +557,7 @@ github.com/hashicorp/vault-plugin-database-couchbase
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
 github.com/hashicorp/vault-plugin-database-mongodbatlas
-# github.com/hashicorp/vault-plugin-database-snowflake v0.1.0
+# github.com/hashicorp/vault-plugin-database-snowflake v0.1.1
 github.com/hashicorp/vault-plugin-database-snowflake
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
