@@ -20,9 +20,10 @@ import (
 // when a new key is added to the keyring, we can encrypt with the master key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey  []byte
-	keys       map[uint32]*Key
-	activeTerm uint32
+	masterKey        []byte
+	keys             map[uint32]*Key
+	activeTerm       uint32
+	LocalEncryptions uint64 `json:"-"`
 }
 
 // EncodedKeyring is used for serialization of the keyring
@@ -33,12 +34,11 @@ type EncodedKeyring struct {
 
 // Key represents a single term, along with the key used.
 type Key struct {
-	Term                uint32
-	Version             int
-	Value               []byte
-	InstallTime         time.Time
-	Encryptions         uint64
-	ReportedEncryptions uint64 `json:",omitempty"`
+	Term        uint32
+	Version     int
+	Value       []byte
+	InstallTime time.Time
+	Encryptions uint64 `json:"encryptions,omitempty"`
 }
 
 // Serialize is used to create a byte encoded key

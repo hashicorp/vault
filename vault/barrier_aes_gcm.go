@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -22,7 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"go.uber.org/atomic"
+	atomic2 "go.uber.org/atomic"
 )
 
 const (
@@ -77,7 +78,7 @@ type AESGCMBarrier struct {
 	// of const to allow for testing
 	currentAESGCMVersionByte byte
 
-	initialized atomic.Bool
+	initialized atomic2.Bool
 
 	RotationConfig *configutil.BarrierConfig
 }
@@ -172,7 +173,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 			return err
 		}
 
-		err = b.putInternal(ctx, 1, primary, &logical.StorageEntry{
+		err = b.putInternal(ctx, keyring, 1, primary, &logical.StorageEntry{
 			Key:   shamirKekPath,
 			Value: sealKey,
 		})
@@ -233,7 +234,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	if err != nil {
 		return err
 	}
-	value, err = b.encrypt(masterKeyPath, activeKey.Term, aead, keyBuf)
+	value, err = b.encryptTracked(keyring, masterKeyPath, activeKey.Term, aead, keyBuf)
 	if err != nil {
 		return err
 	}
@@ -505,6 +506,21 @@ func (b *AESGCMBarrier) Seal() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
+	if b.keyring != nil {
+		// Attempt to persist the encryption operation tracking
+		term := b.keyring.ActiveTerm()
+		// Read the underlying key
+		key := b.keyring.TermKey(term)
+		if key != nil {
+			key.Encryptions += b.keyring.LocalEncryptions
+			b.keyring.LocalEncryptions = 0
+		}
+		// Persist the new keyring.
+		if err := b.persistKeyring(context.Background(), b.keyring); err != nil {
+			return err
+		}
+	}
+
 	// Remove the primary key, and seal the vault
 	b.cache = make(map[uint32]cipher.AEAD)
 	b.keyring.Zeroize(true)
@@ -578,7 +594,7 @@ func (b *AESGCMBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
 	}
 
 	key := fmt.Sprintf("%s%d", keyringUpgradePrefix, prevTerm)
-	value, err := b.encrypt(key, prevTerm, primary, buf)
+	value, err := b.encryptTracked(b.keyring, key, prevTerm, primary, buf)
 	b.l.RUnlock()
 	if err != nil {
 		return err
@@ -755,11 +771,11 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *logical.StorageEntry) er
 		return err
 	}
 
-	return b.putInternal(ctx, term, primary, entry)
+	return b.putInternal(ctx, b.keyring, term, primary, entry)
 }
 
-func (b *AESGCMBarrier) putInternal(ctx context.Context, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
-	value, err := b.encrypt(entry.Key, term, primary, entry.Value)
+func (b *AESGCMBarrier) putInternal(ctx context.Context, keyring *Keyring, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
+	value, err := b.encryptTracked(keyring, entry.Key, term, primary, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -946,8 +962,6 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 		return nil, errors.New("unable to read enough random bytes to fill gcm nonce")
 	}
 
-	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
-
 	// Seal the output
 	switch b.currentAESGCMVersionByte {
 	case AESGCMVersion1:
@@ -1011,7 +1025,7 @@ func (b *AESGCMBarrier) Encrypt(_ context.Context, key string, plaintext []byte)
 		return nil, err
 	}
 
-	ciphertext, err := b.encrypt(key, term, primary, plaintext)
+	ciphertext, err := b.encryptTracked(b.keyring, key, term, primary, plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -1059,4 +1073,17 @@ func (b *AESGCMBarrier) Keyring() (*Keyring, error) {
 	}
 
 	return b.keyring.Clone(), nil
+}
+
+func (b *AESGCMBarrier) encryptTracked(keyring *Keyring, path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
+	ct, err := b.encrypt(path, term, gcm, buf)
+	if err != nil {
+		return nil, err
+	}
+	// Increment the local encryption count, and track metrics
+	atomic.AddUint64(&keyring.LocalEncryptions, 1)
+	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
+
+	return ct, nil
+
 }
