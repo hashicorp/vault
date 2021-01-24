@@ -11,6 +11,7 @@ import (
 
 func (b *SystemBackend) verifyDROperationToken(f framework.OperationFunc, lock bool) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		// Always succeed
 		return f(ctx, req, d)
 	}
 }
