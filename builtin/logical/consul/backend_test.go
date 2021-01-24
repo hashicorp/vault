@@ -21,16 +21,24 @@ func TestBackend_Config_Access(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "1.3.0")
+			testBackendConfigAccess(t, "1.3.0", true)
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "")
+			testBackendConfigAccess(t, "", true)
+		})
+		t.Run("pre-1.4.0 automatic-bootstrap", func(t *testing.T) {
+			t.Parallel()
+			testBackendConfigAccess(t, "1.3.0", false)
+		})
+		t.Run("post-1.4.0 automatic-bootstrap", func(t *testing.T) {
+			t.Parallel()
+			testBackendConfigAccess(t, "", false)
 		})
 	})
 }
 
-func testBackendConfigAccess(t *testing.T, version string) {
+func testBackendConfigAccess(t *testing.T, version string, bootstrap bool) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -38,7 +46,7 @@ func testBackendConfigAccess(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, bootstrap)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -103,7 +111,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -209,7 +217,7 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -319,7 +327,7 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "")
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -462,7 +470,7 @@ func testBackendManagement(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -507,7 +515,7 @@ func testBackendBasic(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{

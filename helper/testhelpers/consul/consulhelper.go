@@ -26,7 +26,7 @@ func (c *Config) APIConfig() *consulapi.Config {
 // the Consul version used will be given by the environment variable
 // CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
 // the latest Consul version.
-func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
+func PrepareTestContainer(t *testing.T, version string, bootstrap bool) (func(), *Config) {
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
 		shp, err := docker.NewServiceHostPortParse(retAddress)
 		if err != nil {
@@ -41,7 +41,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		if consulVersion != "" {
 			version = consulVersion
 		} else {
-			version = "1.7.2" // Latest Consul version, update as new releases come out
+			version = "1.9.2" // Latest Consul version, update as new releases come out
 		}
 	}
 	if strings.HasPrefix(version, "1.3") {
@@ -74,6 +74,11 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 			return nil, err
 		}
 
+		// Make sure Consul is up
+		if _, err = consul.Status().Leader(); err != nil {
+			return nil, err
+		}
+
 		// For version of Consul < 1.4
 		if strings.HasPrefix(version, "1.3") {
 			consulToken := "test"
@@ -93,29 +98,32 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		}
 
 		// New default behavior
-		aclbootstrap, _, err := consul.ACL().Bootstrap()
-		if err != nil {
-			return nil, err
-		}
-		consulToken := aclbootstrap.SecretID
-		policy := &consulapi.ACLPolicy{
-			Name:        "test",
-			Description: "test",
-			Rules: `node_prefix "" {
-                policy = "write"
-              }
+		var consulToken string
+		if bootstrap {
+			aclbootstrap, _, err := consul.ACL().Bootstrap()
+			if err != nil {
+				return nil, err
+			}
+			consulToken = aclbootstrap.SecretID
+			policy := &consulapi.ACLPolicy{
+				Name:        "test",
+				Description: "test",
+				Rules: `node_prefix "" {
+					policy = "write"
+				}
 
-              service_prefix "" {
-                policy = "read"
-              }
-      `,
-		}
-		q := &consulapi.WriteOptions{
-			Token: consulToken,
-		}
-		_, _, err = consul.ACL().PolicyCreate(policy, q)
-		if err != nil {
-			return nil, err
+				service_prefix "" {
+					policy = "read"
+				}
+		`,
+			}
+			q := &consulapi.WriteOptions{
+				Token: consulToken,
+			}
+			_, _, err = consul.ACL().PolicyCreate(policy, q)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return &Config{
 			ServiceHostPort: *shp,

@@ -157,7 +157,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4")
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
@@ -187,7 +187,7 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsul_TooLarge(t *testing.T) {
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4")
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
@@ -250,7 +250,7 @@ func TestConsul_TooLarge(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4")
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
