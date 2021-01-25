@@ -221,3 +221,8 @@ func (k *Keyring) AddEncryptionEstimate(term uint32, delta uint64) {
 		atomic.AddUint64(&key.Encryptions, delta)
 	}
 }
+
+// Mostly for testing, returns the total number of encryption operations performed on the active term
+func (k *Keyring) encryptions() int64 {
+	return k.LocalEncryptions + int64(k.TermKey(k.ActiveTerm()).Encryptions)
+}

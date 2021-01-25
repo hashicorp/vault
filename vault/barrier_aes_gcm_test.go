@@ -133,6 +133,41 @@ func TestAESGCMBarrier_AutoRotate_Time(t *testing.T) {
 	t.Fatal("rotation should have occurred")
 }
 
+func TestAESGCMBarrier_EncryptionEstimatePersistence(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b, err := NewAESGCMBarrier(inm, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err, _, key := testInitAndUnseal(t, b)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	for i := 0; i <= 42; i++ {
+		b.Put(context.Background(), &logical.StorageEntry{Key: "test"})
+	}
+
+	ops := b.keyring.encryptions()
+	err = b.Seal()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	err = b.Unseal(context.Background(), key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	ops2 := b.keyring.encryptions()
+
+	if ops != ops2 {
+		t.Fatalf("expected operations %d does not match actual %d", ops, ops2)
+	}
+}
+
 func TestAESGCMBarrier_Upgrade(t *testing.T) {
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {

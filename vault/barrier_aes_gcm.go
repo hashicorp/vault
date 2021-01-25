@@ -1130,7 +1130,9 @@ func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, pa
 }
 
 func (b *AESGCMBarrier) shouldRotate(ops int64, keyring *Keyring) bool {
-	return ops > b.RotationConfig.KeyRotationMaxOperations || (b.RotationConfig.KeyRotationInterval > 0 && ops%keyRotationTimeSampleRate == 0 && time.Now().After(keyring.keys[keyring.ActiveTerm()].rotationTime))
+	return ops > b.RotationConfig.KeyRotationMaxOperations ||
+		(b.RotationConfig.KeyRotationInterval > 0 && ops%keyRotationTimeSampleRate == 0 &&
+			time.Now().After(keyring.keys[keyring.ActiveTerm()].rotationTime))
 }
 
 func (b *AESGCMBarrier) autorotateBarrierKey(ctx context.Context) {
