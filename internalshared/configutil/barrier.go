@@ -13,6 +13,7 @@ type BarrierConfig struct {
 	KeyRotationMaxOperations int64 `hcl:"key_rotation_max_operations"`
 	KeyRotationInterval      time.Duration
 	KeyRotationIntervalRaw   interface{} `hcl:"key_rotation_interval"`
+	nextRotation             time.Time
 }
 
 func parseBarrier(result *SharedConfig, list *ast.ObjectList) error {

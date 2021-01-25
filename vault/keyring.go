@@ -23,7 +23,7 @@ type Keyring struct {
 	masterKey        []byte
 	keys             map[uint32]*Key
 	activeTerm       uint32
-	LocalEncryptions uint64 `json:"-"`
+	LocalEncryptions int64 `json:"-"`
 }
 
 // EncodedKeyring is used for serialization of the keyring
@@ -34,11 +34,12 @@ type EncodedKeyring struct {
 
 // Key represents a single term, along with the key used.
 type Key struct {
-	Term        uint32
-	Version     int
-	Value       []byte
-	InstallTime time.Time
-	Encryptions uint64 `json:"encryptions,omitempty"`
+	Term         uint32
+	Version      int
+	Value        []byte
+	InstallTime  time.Time
+	Encryptions  uint64    `json:"encryptions,omitempty"`
+	rotationTime time.Time `json:"-"`
 }
 
 // Serialize is used to create a byte encoded key
@@ -101,7 +102,16 @@ func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 	// Update the active term if newer
 	if key.Term > clone.activeTerm {
 		clone.activeTerm = key.Term
+		clone.LocalEncryptions = 0
 	}
+
+	// Zero out encryption estimates for previous terms
+	for term, key := range clone.keys {
+		if term != clone.activeTerm {
+			key.Encryptions = 0
+		}
+	}
+
 	return clone, nil
 }
 

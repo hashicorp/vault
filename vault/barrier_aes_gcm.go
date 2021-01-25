@@ -19,6 +19,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -49,9 +50,11 @@ type barrierInit struct {
 }
 
 // Validate AESGCMBarrier satisfies SecurityBarrier interface
-var _ SecurityBarrier = &AESGCMBarrier{}
-
-var barrierEncryptsMetric = []string{"barrier", "estimated_encryptions"}
+var (
+	_                      SecurityBarrier = &AESGCMBarrier{}
+	barrierEncryptsMetric                  = []string{"barrier", "estimated_encryptions"}
+	barrierRotationsMetric                 = []string{"barrier", "auto_rotation"}
+)
 
 // AESGCMBarrier is a SecurityBarrier implementation that uses the AES
 // cipher core and the Galois Counter Mode block mode. It defaults to
@@ -60,6 +63,8 @@ var barrierEncryptsMetric = []string{"barrier", "estimated_encryptions"}
 // and integrity.
 type AESGCMBarrier struct {
 	backend physical.Backend
+
+	logger log.Logger
 
 	l      sync.RWMutex
 	sealed bool
@@ -80,22 +85,35 @@ type AESGCMBarrier struct {
 
 	initialized atomic2.Bool
 
-	RotationConfig *configutil.BarrierConfig
+	randomReaderAccessor func() io.Reader
+	RotationConfig       *configutil.BarrierConfig
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierConfig) (*AESGCMBarrier, error) {
+func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierConfig, randomReaderAccessor func() io.Reader, l log.Logger) (*AESGCMBarrier, error) {
 	// Should we have minimums?
-	if rotConfig != nil && (rotConfig.KeyRotationMaxOperations > absoluteOperationMaximum || rotConfig.KeyRotationMaxOperations == 0) {
+	if rotConfig == nil {
+		rotConfig = &configutil.BarrierConfig{
+			KeyRotationMaxOperations: absoluteOperationMaximum,
+		}
+	} else if rotConfig.KeyRotationMaxOperations > absoluteOperationMaximum || rotConfig.KeyRotationMaxOperations == 0 {
 		rotConfig.KeyRotationMaxOperations = absoluteOperationMaximum
+	}
+
+	if randomReaderAccessor == nil {
+		randomReaderAccessor = func() io.Reader {
+			return rand.Reader
+		}
 	}
 
 	b := &AESGCMBarrier{
 		backend:                  physical,
+		logger:                   l,
 		sealed:                   true,
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
+		randomReaderAccessor:     randomReaderAccessor,
 		RotationConfig:           rotConfig,
 	}
 
@@ -234,7 +252,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	if err != nil {
 		return err
 	}
-	value, err = b.encryptTracked(keyring, masterKeyPath, activeKey.Term, aead, keyBuf)
+	value, err = b.encryptTracked(ctx, keyring, masterKeyPath, activeKey.Term, aead, keyBuf)
 	if err != nil {
 		return err
 	}
@@ -327,10 +345,19 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 		return err
 	}
 
-	// Recover the keyring
-	keyring, err := DeserializeKeyring(plain)
+	return b.recoverKeyring(plain)
+}
+
+func (b *AESGCMBarrier) recoverKeyring(plaintext []byte) error {
+	keyring, err := DeserializeKeyring(plaintext)
 	if err != nil {
 		return errwrap.Wrapf("keyring deserialization failed: {{err}}", err)
+	}
+
+	// Set rotation time if applicable
+	if b.RotationConfig.KeyRotationInterval > 0 {
+		activeKey := keyring.TermKey(keyring.ActiveTerm())
+		activeKey.rotationTime = activeKey.InstallTime.Add(b.RotationConfig.KeyRotationInterval)
 	}
 
 	// Setup the keyring and finish
@@ -428,13 +455,11 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 		}
 
 		// Recover the keyring
-		keyring, err := DeserializeKeyring(plain)
+		err = b.recoverKeyring(plain)
 		if err != nil {
 			return errwrap.Wrapf("keyring deserialization failed: {{err}}", err)
 		}
 
-		// Setup the keyring and finish
-		b.keyring = keyring
 		b.sealed = false
 		return nil
 	}
@@ -512,7 +537,7 @@ func (b *AESGCMBarrier) Seal() error {
 		// Read the underlying key
 		key := b.keyring.TermKey(term)
 		if key != nil {
-			key.Encryptions += b.keyring.LocalEncryptions
+			key.Encryptions += uint64(b.keyring.LocalEncryptions)
 			b.keyring.LocalEncryptions = 0
 		}
 		// Persist the new keyring.
@@ -594,7 +619,7 @@ func (b *AESGCMBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
 	}
 
 	key := fmt.Sprintf("%s%d", keyringUpgradePrefix, prevTerm)
-	value, err := b.encryptTracked(b.keyring, key, prevTerm, primary, buf)
+	value, err := b.encryptTracked(ctx, b.keyring, key, prevTerm, primary, buf)
 	b.l.RUnlock()
 	if err != nil {
 		return err
@@ -775,7 +800,7 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *logical.StorageEntry) er
 }
 
 func (b *AESGCMBarrier) putInternal(ctx context.Context, keyring *Keyring, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
-	value, err := b.encryptTracked(keyring, entry.Key, term, primary, entry.Value)
+	value, err := b.encryptTracked(ctx, keyring, entry.Key, term, primary, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -1011,7 +1036,7 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 }
 
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
-func (b *AESGCMBarrier) Encrypt(_ context.Context, key string, plaintext []byte) ([]byte, error) {
+func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
 	if b.sealed {
 		b.l.RUnlock()
@@ -1025,7 +1050,7 @@ func (b *AESGCMBarrier) Encrypt(_ context.Context, key string, plaintext []byte)
 		return nil, err
 	}
 
-	ciphertext, err := b.encryptTracked(b.keyring, key, term, primary, plaintext)
+	ciphertext, err := b.encryptTracked(ctx, b.keyring, key, term, primary, plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -1075,15 +1100,27 @@ func (b *AESGCMBarrier) Keyring() (*Keyring, error) {
 	return b.keyring.Clone(), nil
 }
 
-func (b *AESGCMBarrier) encryptTracked(keyring *Keyring, path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
+func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
 	ct, err := b.encrypt(path, term, gcm, buf)
 	if err != nil {
 		return nil, err
 	}
 	// Increment the local encryption count, and track metrics
-	atomic.AddUint64(&keyring.LocalEncryptions, 1)
+	newVal := atomic.AddInt64(&keyring.LocalEncryptions, 1)
 	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
+	// time.Now is expensive, don't check time based rotation on every operation
+	if newVal > b.RotationConfig.KeyRotationMaxOperations || (b.RotationConfig.KeyRotationInterval > 0 && newVal%100 == 0 && time.Now().After(keyring.keys[keyring.ActiveTerm()].rotationTime)) {
+		go b.autorotateBarrierKey(ctx)
+	}
 	return ct, nil
 
+}
+
+func (b *AESGCMBarrier) autorotateBarrierKey(ctx context.Context) {
+	_, err := b.Rotate(ctx, b.randomReaderAccessor())
+
+	if err != nil {
+		b.logger.Error("error auto-rotating barrier key: %s", err.Error())
+	}
 }
