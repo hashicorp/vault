@@ -89,7 +89,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
@@ -122,6 +122,7 @@ require (
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
+	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.6.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
