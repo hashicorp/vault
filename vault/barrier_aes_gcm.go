@@ -34,6 +34,9 @@ const (
 
 	// termSize the number of bytes used for the key term.
 	termSize = 4
+
+	// After N encryptions, test whether the rotation time has elapsed.
+	keyRotationTimeSampleRate = 100
 )
 
 // Versions of the AESGCM storage methodology
@@ -559,6 +562,10 @@ func (b *AESGCMBarrier) Seal() error {
 func (b *AESGCMBarrier) Rotate(ctx context.Context, reader io.Reader) (uint32, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
+	return b.rotateLocked(ctx, reader)
+}
+
+func (b *AESGCMBarrier) rotateLocked(ctx context.Context, reader io.Reader) (uint32, error) {
 	if b.sealed {
 		return 0, ErrBarrierSealed
 	}
@@ -1106,21 +1113,31 @@ func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, pa
 		return nil, err
 	}
 	// Increment the local encryption count, and track metrics
-	newVal := atomic.AddInt64(&keyring.LocalEncryptions, 1)
+	ops := atomic.AddInt64(&keyring.LocalEncryptions, 1)
 	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	// time.Now is expensive, don't check time based rotation on every operation
-	if newVal > b.RotationConfig.KeyRotationMaxOperations || (b.RotationConfig.KeyRotationInterval > 0 && newVal%100 == 0 && time.Now().After(keyring.keys[keyring.ActiveTerm()].rotationTime)) {
-		go b.autorotateBarrierKey(ctx)
+	if b.shouldRotate(ops, keyring) {
+		b.l.Lock()
+		defer b.l.Unlock()
+		// Retest the precondition
+		if b.shouldRotate(ops, keyring) {
+			go b.autorotateBarrierKey(ctx)
+		}
 	}
 	return ct, nil
 
 }
 
+func (b *AESGCMBarrier) shouldRotate(ops int64, keyring *Keyring) bool {
+	return ops > b.RotationConfig.KeyRotationMaxOperations || (b.RotationConfig.KeyRotationInterval > 0 && ops%keyRotationTimeSampleRate == 0 && time.Now().After(keyring.keys[keyring.ActiveTerm()].rotationTime))
+}
+
 func (b *AESGCMBarrier) autorotateBarrierKey(ctx context.Context) {
-	_, err := b.Rotate(ctx, b.randomReaderAccessor())
+	_, err := b.rotateLocked(ctx, b.randomReaderAccessor())
 
 	if err != nil {
 		b.logger.Error("error auto-rotating barrier key: %s", err.Error())
+
 	}
 }
