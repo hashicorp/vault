@@ -1,11 +1,13 @@
 package dependency
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
 
 	"encoding/json"
+
 	"github.com/hashicorp/vault/api"
 )
 
@@ -300,6 +302,9 @@ func isKVv2(client *api.Client, path string) (string, bool, error) {
 	secret, err := api.ParseSecret(resp.Body)
 	if err != nil {
 		return "", false, err
+	}
+	if secret == nil {
+		return "", false, fmt.Errorf("secret at path %s does not exist", path)
 	}
 	var mountPath string
 	if mountPathRaw, ok := secret.Data["path"]; ok {
