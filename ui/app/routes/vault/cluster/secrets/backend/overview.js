@@ -11,24 +11,21 @@ export default Route.extend({
     try {
       return await this.store.query('database/connection', queryOptions);
     } catch (e) {
-      console.log('catch');
-      return [];
+      return e;
     }
   },
   async fetchStaticRoles(queryOptions) {
     try {
       return await this.store.query('database/static-role', queryOptions);
     } catch (e) {
-      console.log('catch');
-      return [];
+      return e;
     }
   },
   async fetchDynamicRoles(queryOptions) {
     try {
       return await this.store.query('database/role', queryOptions);
     } catch (e) {
-      console.log('catch');
-      return [];
+      return e;
     }
   },
   model() {
@@ -40,8 +37,6 @@ export default Route.extend({
     let connection = this.fetchConnection(queryOptions);
     let role = this.fetchDynamicRoles(queryOptions);
     let staticRole = this.fetchStaticRoles(queryOptions);
-
-    // GOAL TO return capabilities from role and connection and configuration from their models
 
     return hash({
       backend,
