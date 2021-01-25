@@ -24,20 +24,43 @@ export default class GenerateCredentialsDatabase extends Component {
   backendType = null;
   backendPath = null;
   roleName = null;
+  @tracked roleType = '';
   @tracked model = null;
 
   constructor() {
     super(...arguments);
     this.fetchCredentials.perform();
   }
+
   @task(function*() {
-    let { roleType, roleName, backendType } = this.args;
-    let newModel = yield this.store.queryRecord('database/credential', {
-      backend: backendType,
-      secret: roleName,
-      roleType,
-    });
-    this.model = newModel;
+    let { roleName, backendType } = this.args;
+    let errors = [];
+    try {
+      let newModel = yield this.store.queryRecord('database/credential', {
+        backend: backendType,
+        secret: roleName,
+        roleType: 'static',
+      });
+      // if successful will return result
+      this.model = newModel;
+      this.roleType = 'static';
+      return;
+    } catch (error) {
+      errors.push(error.errors);
+    }
+    try {
+      let newModel = yield this.store.queryRecord('database/credential', {
+        backend: backendType,
+        secret: roleName,
+        roleType: 'dynamic',
+      });
+      this.model = newModel;
+      this.roleType = 'dynamic';
+      return;
+    } catch (error) {
+      errors.push(error.errors);
+    }
+    this.roleType = 'noRoleFound';
   })
   fetchCredentials;
 
