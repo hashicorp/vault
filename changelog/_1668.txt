@@ -1,0 +1,4 @@
+```release-note: bug
+storage/raft (enterprise): Autosnapshots config and storage weren't excluded from
+performance replication, causing conflicts and errors.
+```

@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/golang-lru v0.5.3
-	github.com/hashicorp/hcl v1.0.0
+	github.com/hashicorp/hcl v1.0.1-vault
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
 	github.com/hashicorp/raft-snapshot v1.0.3
@@ -78,7 +78,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.7.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.7.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.8.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.8.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.6.0
@@ -95,7 +95,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0
 	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201109203410-5e6e24692b32
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210120201726-9db963e11e2e
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

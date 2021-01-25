@@ -5,6 +5,7 @@ import Route from '@ember/routing/route';
 import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
+import getStorage from '../../lib/token-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
@@ -16,6 +17,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   permissions: service(),
   store: service(),
   auth: service(),
+  featureFlagService: service('featureFlag'),
   currentCluster: service(),
   modelTypes: computed(function() {
     return ['node', 'secret', 'secret-engine'];
@@ -40,7 +42,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // this method clears all of the ember data cached models except
     // the model types blacklisted in `globalNamespaceModels`
     let store = this.store;
-    let modelsToKeep = this.get('globalNamespaceModels');
+    let modelsToKeep = this.globalNamespaceModels;
     for (let model of getOwner(this)
       .lookup('data-adapter:main')
       .getModelTypes()) {
@@ -55,12 +57,26 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
     this.clearNonGlobalModels();
-    this.get('namespaceService').setNamespace(params.namespaceQueryParam);
+    let namespace = params.namespaceQueryParam;
+    const currentTokenName = this.auth.get('currentTokenName');
+    // if no namespace queryParam and user authenticated,
+    // use user's root namespace to redirect to properly param'd url
+    if (!namespace && currentTokenName && !Ember.testing) {
+      const storage = getStorage().getItem(currentTokenName);
+      namespace = storage.userRootNamespace;
+      // only redirect if something other than nothing
+      if (namespace) {
+        this.transitionTo({ queryParams: { namespace } });
+      }
+    } else if (!namespace && !!this.featureFlagService.managedNamespaceRoot) {
+      this.transitionTo({ queryParams: { namespace: this.featureFlagService.managedNamespaceRoot } });
+    }
+    this.namespaceService.setNamespace(namespace);
     const id = this.getClusterId(params);
     if (id) {
-      this.get('auth').setCluster(id);
-      await this.get('permissions').getPaths.perform();
-      return this.get('version').fetchFeatures();
+      this.auth.setCluster(id);
+      await this.permissions.getPaths.perform();
+      return this.version.fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
@@ -68,7 +84,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     const id = this.getClusterId(params);
-    return this.get('store').findRecord('cluster', id);
+    return this.store.findRecord('cluster', id);
   },
 
   poll: task(function*() {
@@ -92,7 +108,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   afterModel(model, transition) {
     this._super(...arguments);
-    this.get('currentCluster').setCluster(model);
+    this.currentCluster.setCluster(model);
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
