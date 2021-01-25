@@ -535,6 +535,10 @@ type Core struct {
 
 	activityLogConfig ActivityLogCoreConfig
 
+	// activeTime is set on active nodes indicating the time at which this node
+	// became active.
+	activeTime time.Time
+
 	// KeyRotateGracePeriod is how long we allow an upgrade path
 	// for standby instances before we delete the upgrade keys
 	keyRotateGracePeriod *int64
@@ -1856,6 +1860,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Mark the active time. We do this first so it can be correlated to the logs
+	// for the active startup.
+	c.activeTime = time.Now().UTC()
+
 	if err := postUnsealPhysical(c); err != nil {
 		return err
 	}
@@ -2047,6 +2055,7 @@ func (c *Core) preSeal() error {
 
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
+	c.activeTime = time.Time{}
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil

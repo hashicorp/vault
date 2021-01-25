@@ -94,7 +94,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Default: false,
 		Usage: "Print the current initialization status. An exit code of 0 means " +
 			"the Vault is already initialized. An exit code of 1 means an error " +
-			"occurred. An exit code of 2 means the mean is not initialized.",
+			"occurred. An exit code of 2 means the Vault is not initialized.",
 	})
 
 	f.IntVar(&IntVar{

@@ -84,6 +84,18 @@ github.com/SAP/go-hdb/internal/unicode/cesu8
 github.com/Sectorbob/mlab-ns2/gae/ns/digest
 # github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
 github.com/StackExchange/wmi
+# github.com/aerospike/aerospike-client-go v3.1.1+incompatible
+github.com/aerospike/aerospike-client-go
+github.com/aerospike/aerospike-client-go/internal/atomic
+github.com/aerospike/aerospike-client-go/internal/lua
+github.com/aerospike/aerospike-client-go/internal/lua/resources
+github.com/aerospike/aerospike-client-go/internal/particle_type
+github.com/aerospike/aerospike-client-go/logger
+github.com/aerospike/aerospike-client-go/pkg/bcrypt
+github.com/aerospike/aerospike-client-go/pkg/ripemd160
+github.com/aerospike/aerospike-client-go/types
+github.com/aerospike/aerospike-client-go/types/rand
+github.com/aerospike/aerospike-client-go/utils/buffer
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 github.com/aliyun/alibaba-cloud-sdk-go/sdk
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth
@@ -101,6 +113,18 @@ github.com/aliyun/alibaba-cloud-sdk-go/services/ram
 github.com/aliyun/alibaba-cloud-sdk-go/services/sts
 # github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 github.com/aliyun/aliyun-oss-go-sdk/oss
+# github.com/apache/arrow/go/arrow v0.0.0-20200601151325-b2287a20f230
+github.com/apache/arrow/go/arrow
+github.com/apache/arrow/go/arrow/array
+github.com/apache/arrow/go/arrow/arrio
+github.com/apache/arrow/go/arrow/bitutil
+github.com/apache/arrow/go/arrow/decimal128
+github.com/apache/arrow/go/arrow/float16
+github.com/apache/arrow/go/arrow/internal/cpu
+github.com/apache/arrow/go/arrow/internal/debug
+github.com/apache/arrow/go/arrow/internal/flatbuf
+github.com/apache/arrow/go/arrow/ipc
+github.com/apache/arrow/go/arrow/memory
 # github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
@@ -240,6 +264,8 @@ github.com/denisenkom/go-mssqldb/internal/querytext
 github.com/denverdino/aliyungo/common
 github.com/denverdino/aliyungo/ecs
 github.com/denverdino/aliyungo/util
+# github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
+github.com/dgrijalva/jwt-go/v4
 # github.com/digitalocean/godo v1.7.5
 github.com/digitalocean/godo
 # github.com/dimchansky/utfbom v1.1.0
@@ -352,6 +378,8 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
+# github.com/google/flatbuffers v1.11.0
+github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.5.2
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
@@ -515,7 +543,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 # github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.8.0
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201203001230-e35700fcc0d5
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
 github.com/hashicorp/vault-plugin-auth-kerberos
@@ -529,6 +557,8 @@ github.com/hashicorp/vault-plugin-database-couchbase
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
 github.com/hashicorp/vault-plugin-database-mongodbatlas
+# github.com/hashicorp/vault-plugin-database-snowflake v0.1.1
+github.com/hashicorp/vault-plugin-database-snowflake
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
 # github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
@@ -540,7 +570,7 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.8.0
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
@@ -861,6 +891,8 @@ github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.5.2+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
+# github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
+github.com/pkg/browser
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -918,6 +950,10 @@ github.com/shirou/gopsutil/net
 github.com/shirou/gopsutil/process
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
+# github.com/snowflakedb/glog v0.0.0-20180824191149-f5055e6f21ce
+github.com/snowflakedb/glog
+# github.com/snowflakedb/gosnowflake v1.3.11
+github.com/snowflakedb/gosnowflake
 # github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d
 github.com/softlayer/softlayer-go/config
 github.com/softlayer/softlayer-go/datatypes
@@ -969,6 +1005,11 @@ github.com/xdg/scram
 github.com/xdg/stringprep
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
+# github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da
+github.com/yuin/gopher-lua
+github.com/yuin/gopher-lua/ast
+github.com/yuin/gopher-lua/parse
+github.com/yuin/gopher-lua/pm
 # go.etcd.io/bbolt v1.3.5
 go.etcd.io/bbolt
 # go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547

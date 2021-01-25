@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
@@ -178,6 +179,7 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			sealStatusResponseMock,
 			true,                     // HAEnabled
 			true,                     // IsSelf
+			time.Time{}.UTC(),        // ActiveTime
 			"leader address",         // LeaderAddress
 			"leader cluster address", // LeaderClusterAddress
 			true,                     // PerfStandby
@@ -206,15 +208,16 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 		// must initialize this struct without explicit field names due to embedding
 		status = SealStatusOutput{
 			sealStatusResponseMock,
-			false, // HAEnabled
-			false, // IsSelf
-			"",    // LeaderAddress
-			"",    // LeaderClusterAddress
-			false, // PerfStandby
-			0,     // PerfStandbyLastRemoteWAL
-			0,     // LastWAL
-			0,     // RaftCommittedIndex
-			0,     // RaftAppliedIndex
+			false,             // HAEnabled
+			false,             // IsSelf
+			time.Time{}.UTC(), // ActiveTime
+			"",                // LeaderAddress
+			"",                // LeaderClusterAddress
+			false,             // PerfStandby
+			0,                 // PerfStandbyLastRemoteWAL
+			0,                 // LastWAL
+			0,                 // RaftCommittedIndex
+			0,                 // RaftAppliedIndex
 		}
 	}
 	return status

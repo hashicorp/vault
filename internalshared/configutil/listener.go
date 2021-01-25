@@ -147,10 +147,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 					return multierror.Prefix(fmt.Errorf("error parsing max_request_size: %w", err), fmt.Sprintf("listeners.%d", i))
 				}
 
-				if l.MaxRequestSize < 0 {
-					return multierror.Prefix(errors.New("max_request_size cannot be negative"), fmt.Sprintf("listeners.%d", i))
-				}
-
 				l.MaxRequestSizeRaw = nil
 			}
 

@@ -166,6 +166,10 @@ type LeaderJoinInfo struct {
 	// only be provided via Vault's configuration file.
 	LeaderClientKeyFile string `json:"leader_client_key_file"`
 
+	// LeaderTLSServerName is the optional ServerName to expect in the leader's
+	// certificate, instead of the host/IP we're actually connecting to.
+	LeaderTLSServerName string `json:"leader_tls_servername"`
+
 	// Retry indicates if the join process should automatically be retried
 	Retry bool `json:"-"`
 
@@ -226,6 +230,7 @@ func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
 			return nil, err
 		}
 	}
+	tlsConfig.ServerName = leaderInfo.LeaderTLSServerName
 
 	return tlsConfig, nil
 }

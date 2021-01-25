@@ -814,6 +814,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				if err != nil {
 					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
 				}
+				leaderInfo.TLSConfig.ServerName = leaderInfo.LeaderTLSServerName
 			}
 
 			if leaderInfo.TLSConfig != nil {
