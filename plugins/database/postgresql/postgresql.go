@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
@@ -17,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/lib/pq"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
