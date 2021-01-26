@@ -898,7 +898,7 @@ func TestNewUser_CustomUsername(t *testing.T) {
 			expectedRegex: "^foo-bar$",
 		},
 		"custom prefix": {
-			usernameTemplate: "foobar-{{.DisplayName | trunc 8}}-{{.RoleName | trunc 8}}-{{rand 20}}-{{timestamp}}",
+			usernameTemplate: "foobar-{{.DisplayName | truncate 8}}-{{.RoleName | truncate 8}}-{{random 20}}-{{unix_time}}",
 			newUserData: dbplugin.UsernameMetadata{
 				DisplayName: "displayname",
 				RoleName:    "longrolename",
@@ -906,7 +906,7 @@ func TestNewUser_CustomUsername(t *testing.T) {
 			expectedRegex: "^foobar-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
 		},
 		"totally custom template": {
-			usernameTemplate: "foobar_{{rand 10}}-{{.RoleName | upper}}.{{timestamp}}x{{.DisplayName | trunc 5}}",
+			usernameTemplate: "foobar_{{random 10}}-{{.RoleName | uppercase}}.{{unix_time}}x{{.DisplayName | truncate 5}}",
 			newUserData: dbplugin.UsernameMetadata{
 				DisplayName: "displayname",
 				RoleName:    "longrolename",
