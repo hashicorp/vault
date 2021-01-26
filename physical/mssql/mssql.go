@@ -13,6 +13,7 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -25,7 +26,7 @@ type MSSQLBackend struct {
 	client     *sql.DB
 	statements map[string]*sql.Stmt
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -147,7 +148,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "mssql"),
 	}
 
 	statements := map[string]string{
