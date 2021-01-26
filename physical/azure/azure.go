@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/permits"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -34,7 +35,7 @@ const (
 type AzureBackend struct {
 	container  *azblob.ContainerURL
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // Verify AzureBackend satisfies the correct interfaces
@@ -181,7 +182,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	a := &AzureBackend{
 		container:  &containerURL,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "azure"),
 	}
 	return a, nil
 }
