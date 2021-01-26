@@ -3822,6 +3822,13 @@ func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Req
 	return httpResp, nil
 }
 
+func (b *SystemBackend) verifyDROperationTokenOnSecondary(f framework.OperationFunc, lock bool) framework.OperationFunc {
+	if b.Core.IsDRSecondary() {
+		return b.verifyDROperationToken(f, lock)
+	}
+	return f
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
