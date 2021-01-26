@@ -185,6 +185,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	// operation token.
 	if core.IsDRSecondary() {
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -3832,6 +3833,13 @@ func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Req
 		},
 	}
 	return httpResp, nil
+}
+
+func (b *SystemBackend) verifyDROperationTokenOnSecondary(f framework.OperationFunc, lock bool) framework.OperationFunc {
+	if b.Core.IsDRSecondary() {
+		return b.verifyDROperationToken(f, lock)
+	}
+	return f
 }
 
 func sanitizePath(path string) string {
