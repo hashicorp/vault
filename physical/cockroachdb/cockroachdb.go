@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -40,7 +41,7 @@ type CockroachDBBackend struct {
 	rawStatements map[string]string
 	statements    map[string]*sql.Stmt
 	logger        log.Logger
-	permitPool    *physical.PermitPool
+	permitPool    *permits.InstrumentedPermitPool
 }
 
 // NewCockroachDBBackend constructs a CockroachDB backend using the given
@@ -101,7 +102,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 		},
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "cockroachdb"),
 	}
 
 	// Prepare all the statements required
