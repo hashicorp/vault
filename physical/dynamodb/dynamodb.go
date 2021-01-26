@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -82,7 +83,7 @@ type DynamoDBBackend struct {
 	client     *dynamodb.DynamoDB
 	logger     log.Logger
 	haEnabled  bool
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -238,7 +239,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	return &DynamoDBBackend{
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "dynamodb"),
 		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}, nil
