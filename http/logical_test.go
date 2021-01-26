@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,11 +25,6 @@ import (
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -273,8 +274,32 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
-	testResponseStatus(t, resp, 413)
+	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
 }
+func TestLogical_RequestSizeDisableLimit(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestListener(t)
+	props := &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			MaxRequestSize: -1,
+			Address: "127.0.0.1",
+			TLSDisable: true,
+		},
+	}
+	TestServerWithListenerAndProperties(t, ln, addr, core, props)
+
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// Write a very large object, should pass as MaxRequestSize set to -1/Negative value
+
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": make([]byte, DefaultMaxRequestSize),
+	})
+	testResponseStatus(t, resp,http.StatusNoContent)
+}
+
 
 func TestLogical_ListSuffix(t *testing.T) {
 	core, _, rootToken := vault.TestCoreUnsealed(t)

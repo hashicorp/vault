@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNowSeconds(t *testing.T) {
+func TestUnixTimestamp(t *testing.T) {
 	now := time.Now().Unix()
 	for i := 0; i < 100; i++ {
-		str := nowSeconds()
+		str := unixTime()
 		actual, err := strconv.Atoi(str)
 		require.NoError(t, err)
 		// Make sure the value generated is from now (or later if the clock ticked over)
@@ -20,9 +20,9 @@ func TestNowSeconds(t *testing.T) {
 }
 
 func TestNowNano(t *testing.T) {
-	now := time.Now().UnixNano()
+	now := time.Now().UnixNano() / int64(time.Millisecond)
 	for i := 0; i < 100; i++ {
-		str := nowNano()
+		str := unixTimeMillis()
 		actual, err := strconv.Atoi(str)
 		require.NoError(t, err)
 		// Make sure the value generated is from now (or later if the clock ticked over)

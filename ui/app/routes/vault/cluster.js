@@ -4,6 +4,7 @@ import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
+import getStorage from '../../lib/token-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
@@ -15,6 +16,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   permissions: service(),
   store: service(),
   auth: service(),
+  featureFlagService: service('featureFlag'),
   currentCluster: service(),
   modelTypes: computed(function() {
     return ['node', 'secret', 'secret-engine'];
@@ -34,7 +36,21 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
-    this.namespaceService.setNamespace(params.namespaceQueryParam);
+    let namespace = params.namespaceQueryParam;
+    const currentTokenName = this.auth.get('currentTokenName');
+    // if no namespace queryParam and user authenticated,
+    // use user's root namespace to redirect to properly param'd url
+    if (!namespace && currentTokenName && !Ember.testing) {
+      const storage = getStorage().getItem(currentTokenName);
+      namespace = storage.userRootNamespace;
+      // only redirect if something other than nothing
+      if (namespace) {
+        this.transitionTo({ queryParams: { namespace } });
+      }
+    } else if (!namespace && !!this.featureFlagService.managedNamespaceRoot) {
+      this.transitionTo({ queryParams: { namespace: this.featureFlagService.managedNamespaceRoot } });
+    }
+    this.namespaceService.setNamespace(namespace);
     const id = this.getClusterId(params);
     if (id) {
       this.auth.setCluster(id);
