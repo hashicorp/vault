@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/permits"
 	"io/ioutil"
 	"net/http"
 	"sort"
@@ -65,7 +66,7 @@ type Backend struct {
 	client         *objectstorage.ObjectStorageClient
 	bucketName     string
 	logger         log.Logger
-	permitPool     *physical.PermitPool
+	permitPool     *permits.InstrumentedPermitPool
 	namespaceName  string
 	haEnabled      bool
 	lockBucketName string
@@ -142,7 +143,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 		client:         &objectStorageClient,
 		bucketName:     bucketName,
 		logger:         logger,
-		permitPool:     physical.NewPermitPool(MaxNumberOfPermits),
+		permitPool:     permits.NewInstrumentedPermitPool(MaxNumberOfPermits, "oci"),
 		namespaceName:  namespaceName,
 		haEnabled:      haEnabled,
 		lockBucketName: lockBucketName,
