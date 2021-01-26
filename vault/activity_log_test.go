@@ -1895,7 +1895,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _ := TestCoreUnsealed(t)
+	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -2137,8 +2137,84 @@ func TestActivityLog_Precompute(t *testing.T) {
 		for i := 0; i <= tc.ExpectedUpTo; i++ {
 			checkPrecomputedQuery(i)
 		}
-
 	}
+
+	// Check metrics on the last precomputed query
+	// (otherwise we need a way to reset the in-memory metrics between test cases.)
+
+	intervals := sink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+	expectedGauges := []struct {
+		Name           string
+		NamespaceLabel string
+		Value          float32
+	}{
+		// october values
+		{
+			"identity.entity.active.monthly",
+			"root",
+			15.0,
+		},
+		{
+			"identity.entity.active.monthly",
+			"deleted-bbbbb", // No namespace entry for this fake ID
+			5.0,
+		},
+		{
+			"identity.entity.active.monthly",
+			"deleted-ccccc",
+			5.0,
+		},
+		// august-september values
+		{
+			"identity.entity.active.reporting_period",
+			"root",
+			20.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-aaaaa",
+			5.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-bbbbb",
+			10.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-ccccc",
+			5.0,
+		},
+	}
+	for _, g := range expectedGauges {
+		found := false
+		for _, actual := range intervals[0].Gauges {
+			actualNamespaceLabel := ""
+			for _, l := range actual.Labels {
+				if l.Name == "namespace" {
+					actualNamespaceLabel = l.Value
+					break
+				}
+			}
+			if actual.Name == g.Name && actualNamespaceLabel == g.NamespaceLabel {
+				found = true
+				if actual.Value != g.Value {
+					t.Errorf("Mismatched value for %v %v %v != %v",
+						g.Name, g.NamespaceLabel, actual.Value, g.Value)
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("No guage found for %v %v",
+				g.Name, g.NamespaceLabel)
+		}
+	}
+
 }
 
 type BlockingInmemStorage struct {
