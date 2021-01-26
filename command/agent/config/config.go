@@ -28,6 +28,7 @@ type Config struct {
 	Cache         *Cache                     `hcl:"cache"`
 	Vault         *Vault                     `hcl:"vault"`
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
+	TemplateRetry *TemplateRetry             `hcl:"template_retry"`
 }
 
 // Vault contains configuration for connecting to Vault servers
@@ -80,6 +81,15 @@ type Sink struct {
 	AAD        string        `hcl:"aad"`
 	AADEnvVar  string        `hcl:"aad_env_var"`
 	Config     map[string]interface{}
+}
+
+type TemplateRetry struct {
+	Enabled       bool          `hcl:"enabled"`
+	Attempts      int           `hcl:"attempts"`
+	BackoffRaw    interface{}   `hcl:"backoff"`
+	Backoff       time.Duration `hcl:"-"`
+	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
+	MaxBackoff    time.Duration `hcl:"-"`
 }
 
 func NewConfig() *Config {
@@ -169,6 +179,10 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
 	}
 
+	if err := parseRetry(result, list); err != nil {
+		return nil, errwrap.Wrapf("error parsing 'retry': {{err}}", err)
+	}
+
 	return result, nil
 }
 
@@ -200,6 +214,54 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Vault = &v
+
+	return nil
+}
+
+func parseRetry(result *Config, list *ast.ObjectList) error {
+	name := "template_retry"
+
+	retryList := list.Filter(name)
+	if len(retryList.Items) == 0 {
+		return nil
+	}
+
+	if len(retryList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := retryList.Items[0]
+
+	var r TemplateRetry
+	err := hcl.DecodeObject(&r, item.Val)
+	if err != nil {
+		return err
+	}
+
+	// Set defaults
+	if r.Attempts < 1 {
+		r.Attempts = ctconfig.DefaultRetryAttempts
+	}
+	r.Backoff = ctconfig.DefaultRetryBackoff
+	r.MaxBackoff = ctconfig.DefaultRetryMaxBackoff
+
+	if r.BackoffRaw != nil {
+		var err error
+		if r.Backoff, err = parseutil.ParseDurationSecond(r.BackoffRaw); err != nil {
+			return err
+		}
+		r.BackoffRaw = nil
+	}
+
+	if r.MaxBackoffRaw != nil {
+		var err error
+		if r.MaxBackoff, err = parseutil.ParseDurationSecond(r.MaxBackoffRaw); err != nil {
+			return err
+		}
+		r.MaxBackoffRaw = nil
+	}
+
+	result.TemplateRetry = &r
 
 	return nil
 }

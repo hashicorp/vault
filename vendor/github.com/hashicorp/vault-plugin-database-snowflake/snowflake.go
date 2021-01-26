@@ -160,6 +160,7 @@ func (s *SnowflakeSQL) generateUsername(req dbplugin.NewUserRequest) (string, er
 		credsutil.RoleName(req.UsernameConfig.RoleName, maxRolenameChunkLen),
 		credsutil.MaxLength(maxIdentifierLength),
 	)
+	username = strings.ReplaceAll(username, "-", "_")
 	if err != nil {
 		return "", errwrap.Wrapf("error generating username: {{err}}", err)
 	}

@@ -84,6 +84,18 @@ github.com/SAP/go-hdb/internal/unicode/cesu8
 github.com/Sectorbob/mlab-ns2/gae/ns/digest
 # github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
 github.com/StackExchange/wmi
+# github.com/aerospike/aerospike-client-go v3.1.1+incompatible
+github.com/aerospike/aerospike-client-go
+github.com/aerospike/aerospike-client-go/internal/atomic
+github.com/aerospike/aerospike-client-go/internal/lua
+github.com/aerospike/aerospike-client-go/internal/lua/resources
+github.com/aerospike/aerospike-client-go/internal/particle_type
+github.com/aerospike/aerospike-client-go/logger
+github.com/aerospike/aerospike-client-go/pkg/bcrypt
+github.com/aerospike/aerospike-client-go/pkg/ripemd160
+github.com/aerospike/aerospike-client-go/types
+github.com/aerospike/aerospike-client-go/types/rand
+github.com/aerospike/aerospike-client-go/utils/buffer
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 github.com/aliyun/alibaba-cloud-sdk-go/sdk
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth
@@ -545,7 +557,7 @@ github.com/hashicorp/vault-plugin-database-couchbase
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
 github.com/hashicorp/vault-plugin-database-mongodbatlas
-# github.com/hashicorp/vault-plugin-database-snowflake v0.1.0
+# github.com/hashicorp/vault-plugin-database-snowflake v0.1.1
 github.com/hashicorp/vault-plugin-database-snowflake
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
@@ -993,6 +1005,11 @@ github.com/xdg/scram
 github.com/xdg/stringprep
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
+# github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da
+github.com/yuin/gopher-lua
+github.com/yuin/gopher-lua/ast
+github.com/yuin/gopher-lua/parse
+github.com/yuin/gopher-lua/pm
 # go.etcd.io/bbolt v1.3.5
 go.etcd.io/bbolt
 # go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
