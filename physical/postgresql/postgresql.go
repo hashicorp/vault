@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	log "github.com/hashicorp/go-hclog"
@@ -63,7 +64,7 @@ type PostgreSQLBackend struct {
 
 	haEnabled  bool
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // PostgreSQLLock implements a lock using an PostgreSQL client.
@@ -191,7 +192,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		// $1=ha_identity $2=ha_key
 		" DELETE FROM " + quoted_ha_table + " WHERE ha_identity=$1 AND ha_key=$2 ",
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "postgres"),
 		haEnabled:  conf["ha_enabled"] == "true",
 	}
 
