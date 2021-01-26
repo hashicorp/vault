@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"sync/atomic"
 	"time"
 
@@ -20,9 +21,10 @@ import (
 // when a new key is added to the keyring, we can encrypt with the master key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey  []byte
-	keys       map[uint32]*Key
-	activeTerm uint32
+	masterKey      []byte
+	keys           map[uint32]*Key
+	activeTerm     uint32
+	rotationConfig configutil.KeyRotationConfig
 }
 
 // EncodedKeyring is used for serialization of the keyring

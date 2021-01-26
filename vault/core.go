@@ -647,7 +647,7 @@ type CoreConfig struct {
 	ActivityLogConfig ActivityLogCoreConfig
 
 	// Barrier config
-	Barrier *configutil.BarrierConfig
+	Barrier *configutil.KeyRotationConfig
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does

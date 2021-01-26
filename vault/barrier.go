@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"time"
 
@@ -135,6 +136,12 @@ type SecurityBarrier interface {
 
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)
+
+	// RotationConfig returns the auto-rotation config for the barrier key
+	RotationConfig() (configutil.KeyRotationConfig, error)
+
+	// SetRotationConfig updates the auto-rotation config for the barrier key
+	SetRotationConfig(ctx context.Context, config configutil.KeyRotationConfig) error
 
 	// Rekey is used to change the master key used to protect the keyring
 	Rekey(context.Context, []byte) error

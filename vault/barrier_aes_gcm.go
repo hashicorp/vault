@@ -36,9 +36,8 @@ const (
 
 // Versions of the AESGCM storage methodology
 const (
-	AESGCMVersion1           = 0x1
-	AESGCMVersion2           = 0x2
-	absoluteOperationMaximum = int64(3865470566) // 10% shy of the NIST recommended maximum
+	AESGCMVersion1 = 0x1
+	AESGCMVersion2 = 0x2
 )
 
 // barrierInit is the JSON encoded value stored
@@ -48,9 +47,11 @@ type barrierInit struct {
 }
 
 // Validate AESGCMBarrier satisfies SecurityBarrier interface
-var _ SecurityBarrier = &AESGCMBarrier{}
+var (
+	_ SecurityBarrier = &AESGCMBarrier{}
 
-var barrierEncryptsMetric = []string{"barrier", "estimated_encryptions"}
+	barrierEncryptsMetric = []string{"barrier", "estimated_encryptions"}
+)
 
 // AESGCMBarrier is a SecurityBarrier implementation that uses the AES
 // cipher core and the Galois Counter Mode block mode. It defaults to
@@ -78,26 +79,30 @@ type AESGCMBarrier struct {
 	currentAESGCMVersionByte byte
 
 	initialized atomic.Bool
+}
 
-	RotationConfig *configutil.BarrierConfig
+func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
+	return b.keyring.rotationConfig, nil
+}
+
+func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig configutil.KeyRotationConfig) error {
+	if !rotConfig.Equals(b.keyring.rotationConfig) {
+		b.keyring.rotationConfig = rotConfig
+
+		return b.persistKeyring(ctx, b.keyring)
+	}
+	return nil
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierConfig) (*AESGCMBarrier, error) {
-	// Should we have minimums?
-	if rotConfig != nil && (rotConfig.KeyRotationMaxOperations > absoluteOperationMaximum || rotConfig.KeyRotationMaxOperations == 0) {
-		rotConfig.KeyRotationMaxOperations = absoluteOperationMaximum
-	}
-
+func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	b := &AESGCMBarrier{
 		backend:                  physical,
 		sealed:                   true,
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
-		RotationConfig:           rotConfig,
 	}
-
 	return b, nil
 }
 
