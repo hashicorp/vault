@@ -371,6 +371,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// Check if a default namespace has been set
 		mountPath := config.AutoAuth.Method.MountPath
 		if cns := config.AutoAuth.Method.Namespace; cns != "" {
+			namespace = cns
 			// Only set this value if the env var is empty, otherwise we end up with a nested namespace
 			if ens := os.Getenv(api.EnvVaultNamespace); ens == "" {
 				mountPath = path.Join(cns, mountPath)
@@ -589,6 +590,7 @@ func (c *AgentCommand) Run(args []string) int {
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
 			VaultConf:     config.Vault,
+			TemplateRetry: config.TemplateRetry,
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
