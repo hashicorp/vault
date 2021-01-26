@@ -17,6 +17,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/hashicorp/vault/helper/permits"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 
@@ -44,7 +46,7 @@ type MySQLBackend struct {
 	client       *sql.DB
 	statements   map[string]*sql.Stmt
 	logger       log.Logger
-	permitPool   *physical.PermitPool
+	permitPool   *permits.InstrumentedPermitPool
 	conf         map[string]string
 	redirectHost string
 	redirectPort int64
@@ -172,7 +174,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:      db,
 		statements:  make(map[string]*sql.Stmt),
 		logger:      logger,
-		permitPool:  physical.NewPermitPool(maxParInt),
+		permitPool:  permits.NewInstrumentedPermitPool(maxParInt, "mysql"),
 		conf:        conf,
 		haEnabled:   haEnabled,
 	}
