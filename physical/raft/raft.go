@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	snapshot "github.com/hashicorp/raft-snapshot"
+	"github.com/hashicorp/vault/helper/permits"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -114,7 +115,7 @@ type RaftBackend struct {
 	serverAddressProvider raft.ServerAddressProvider
 
 	// permitPool is used to limit the number of concurrent storage calls.
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 
 	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
@@ -374,7 +375,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snapStore:    snap,
 		dataDir:      path,
 		localID:      localID,
-		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:   permits.NewInstrumentedPermitPool(physical.DefaultParallelOperations, "raft-storage"),
 		maxEntrySize: maxEntrySize,
 	}, nil
 }
