@@ -1499,6 +1499,17 @@ func (a *ActivityLog) HandleTokenCreation(entry *logical.TokenEntry) {
 	}
 }
 
+func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {
+	ns, err := NamespaceByID(ctx, nsID, a.core)
+	if err != nil || ns == nil {
+		return fmt.Sprintf("deleted-%v", nsID)
+	}
+	if ns.Path == "" {
+		return "root"
+	}
+	return ns.Path
+}
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -1601,7 +1612,13 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 			byNamespace[nsID].Tokens += v
 		}
 	}
+
 	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
+	activePeriodStart := timeutil.MonthsPreviousTo(a.defaultReportMonths, endTime)
+	// If not enough data, report as much as we have in the window
+	if activePeriodStart.Before(times[len(times)-1]) {
+		activePeriodStart = times[len(times)-1]
+	}
 
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
@@ -1627,12 +1644,33 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 			EndTime:    endTime,
 			Namespaces: make([]*activity.NamespaceRecord, 0, len(byNamespace)),
 		}
+
 		for nsID, counts := range byNamespace {
 			pq.Namespaces = append(pq.Namespaces, &activity.NamespaceRecord{
 				NamespaceID:     nsID,
 				Entities:        uint64(len(counts.Entities)),
 				NonEntityTokens: counts.Tokens,
 			})
+
+			// If this is the most recent month, or the start of the reporting period, output
+			// a metric for each namespace.
+			if startTime == times[0] {
+				a.metrics.SetGaugeWithLabels(
+					[]string{"identity", "entity", "active", "monthly"},
+					float32(len(counts.Entities)),
+					[]metricsutil.Label{
+						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+					},
+				)
+			} else if startTime == activePeriodStart {
+				a.metrics.SetGaugeWithLabels(
+					[]string{"identity", "entity", "active", "reporting_period"},
+					float32(len(counts.Entities)),
+					[]metricsutil.Label{
+						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+					},
+				)
+			}
 		}
 
 		err = a.queryStore.Put(ctx, pq)
@@ -1641,7 +1679,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 		}
 	}
 
-	// Delete the intent log
+	// delete the intent log
 	a.view.Delete(ctx, activityIntentLogKey)
 
 	a.logger.Info("finished computing queries", "month", endTime)
@@ -1693,4 +1731,34 @@ func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int
 	}
 
 	return nil
+}
+
+// Periodic report of number of active entities, with the current month.
+// We don't break this down by namespace because that would require going to storage (that information
+// is not currently stored in memory.)
+func (a *ActivityLog) PartialMonthMetrics(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+	if !a.enabled {
+		// Empty list
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	count := len(a.activeEntities)
+
+	return []metricsutil.GaugeLabelValues{
+		{
+			Labels: []metricsutil.Label{},
+			Value:  float32(count),
+		},
+	}, nil
+}
+
+func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	a := c.activityLog
+	c.stateLock.RUnlock()
+	if a == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	return a.PartialMonthMetrics(ctx)
 }
