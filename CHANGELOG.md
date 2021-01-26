@@ -43,7 +43,7 @@ initialized=true when a Raft join is in progress. [[GH-10498](https://github.com
 SECURITY:
 
 * LDAP Auth Method: We addressed an issue where error messages returned by the
-  LDAP auth methold allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
+  LDAP auth method allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
   Enterprise and is fixed in 1.5.6 and 1.6.1 (CVE-2020-35177).
 * Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
   users within namespaces from applying Sentinel EGP policies to paths above
