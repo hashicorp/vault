@@ -1732,3 +1732,33 @@ func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int
 
 	return nil
 }
+
+// Periodic report of number of active entities, with the current month.
+// We don't break this down by namespace because that would require going to storage (that information
+// is not currently stored in memory.)
+func (a *ActivityLog) PartialMonthMetrics(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+	if !a.enabled {
+		// Empty list
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	count := len(a.activeEntities)
+
+	return []metricsutil.GaugeLabelValues{
+		{
+			Labels: []metricsutil.Label{},
+			Value:  float32(count),
+		},
+	}, nil
+}
+
+func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	a := c.activityLog
+	c.stateLock.RUnlock()
+	if a == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	return a.PartialMonthMetrics(ctx)
+}
