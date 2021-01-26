@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/permits"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -74,7 +75,7 @@ type Backend struct {
 	// client is the API client and permitPool is the allowed concurrent uses of
 	// the client.
 	client     *storage.Client
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 
 	// haEnabled indicates if HA is enabled.
 	haEnabled bool
@@ -170,7 +171,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		bucket:     bucket,
 		chunkSize:  chunkSize,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParallel),
+		permitPool: permits.NewInstrumentedPermitPool(maxParallel, "gcs"),
 
 		haEnabled: haEnabled,
 		haClient:  haClient,
