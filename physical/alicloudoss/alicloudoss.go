@@ -16,6 +16,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -37,7 +38,7 @@ type AliCloudOSSBackend struct {
 	bucket     string
 	client     *oss.Client
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // NewAliCloudOSSBackend constructs an OSS backend using a pre-existing
@@ -111,7 +112,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 		client:     client,
 		bucket:     bucket,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, AlibabaMetricKey),
 	}
 	return a, nil
 }
