@@ -14,6 +14,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/physical"
 	"go.etcd.io/etcd/client"
 	"go.etcd.io/etcd/pkg/transport"
@@ -51,7 +52,7 @@ const (
 type Etcd2Backend struct {
 	path       string
 	kAPI       client.KeysAPI
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 	logger     log.Logger
 	haEnabled  bool
 }
@@ -117,7 +118,7 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	return &Etcd2Backend{
 		path:       path,
 		kAPI:       kAPI,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool: permits.NewInstrumentedPermitPool(physical.DefaultParallelOperations, "etcd"),
 		logger:     logger,
 		haEnabled:  haEnabledBool,
 	}, nil
