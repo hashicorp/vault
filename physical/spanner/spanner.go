@@ -12,6 +12,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -53,6 +54,10 @@ const (
 )
 
 var (
+
+	// metricGroup is the top level key for metrics for this backend
+	metricGroup = "spanner"
+
 	// metricDelete is the key for the metric for measuring a Delete call.
 	metricDelete = []string{"spanner", "delete"}
 
@@ -82,7 +87,7 @@ type Backend struct {
 	// client is the API client and permitPool is the allowed concurrent uses of
 	// the client.
 	client     *spanner.Client
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 
 	// haTable is the name of the table to use for HA in the database.
 	haTable string
@@ -187,7 +192,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		database:   database,
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParallel),
+		permitPool: permits.NewInstrumentedPermitPool(maxParallel, metricGroup),
 
 		haEnabled: haEnabled,
 		haTable:   haTable,
