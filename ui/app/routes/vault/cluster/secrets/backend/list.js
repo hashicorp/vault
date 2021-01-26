@@ -97,6 +97,19 @@ export default Route.extend({
     // For database roles, we actually want two different models
     // returned in the same list
     if (modelType === 'database/role') {
+      // Store service creates instance of the model, which we need for returning lazyCapabilities
+      let queryOptions = { backend, id: secret };
+      try {
+        await this.store.query('database/role', queryOptions);
+      } catch {
+        // do nothing
+      }
+      try {
+        await this.store.query('database/static-role', queryOptions);
+      } catch {
+        // do nothing
+      }
+
       const combinedModels = ['database/role', 'database/static-role'];
       return hash({
         secret,

@@ -22,7 +22,7 @@
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{#if @item.canEdit}}
+            {{#if this.permissions.canEdit}}
               <li class="action">
                 <SecretLink
                   @mode="show"
@@ -32,7 +32,7 @@
                 </SecretLink>
               </li>
             {{/if}}
-            {{#if @item.canGenerateCredentials}}
+            {{#if this.permissions.canGenerateCredentials}}
               <li class="action">
                 <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
                   Generate credentials

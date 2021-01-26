@@ -1,3 +1,4 @@
+// ARG TODO unsure if needed
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
