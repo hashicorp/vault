@@ -174,7 +174,7 @@ It is important to add all new components into Storybook and to keep the story a
 
 ### Storybook Deployment
 
-A Netlify integration deploys a static Storybook build for any PR on the Vault GitHub repo. A preview link will show up in the PR checks. Once items are merged, the auto-deployed integration will publish that build making it available at [https://vault-storybook.netlify.com](https://vault-storybook.netlify.com). Currently the Netlify integration will cd into the `ui/` directory and then run `yarn deploy:storybook` so troubleshooting any issues can be done locally by running this same command. The logs for this build are public and will be linked from the PR checks.
+A Vercel integration deploys a static Storybook build for any PR on the Vault GitHub repo. A preview link will show up in the PR checks. Once items are merged, the auto-deployed integration will publish that build making it available at [https://vault-storybook.vercel.app](https://vault-storybook.vercel.app). Currently the Vercel integration will cd into the `ui/` directory and then run `yarn deploy:storybook` so troubleshooting any issues can be done locally by running this same command. The logs for this build are public and will be linked from the PR checks.
 
 ## Further Reading / Useful Links
 
@@ -183,7 +183,7 @@ A Netlify integration deploys a static Storybook build for any PR on the Vault G
 - Development Browser Extensions
   - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
   - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
-- [Storybook for Ember Live Example](https://storybooks-ember.netlify.com/?path=/story/addon-centered--button)
+- [Storybook for Ember Live Example](https://vault-storybook.vercel.app/?path=/story/addon-centered--button)
 - [Storybook Addons](https://github.com/storybooks/storybook/tree/master/addons/)
 - [Storybook Docs](https://storybook.js.org/docs/basics/introduction/)
 - [Browserstack Automate](https://automate.browserstack.com/)

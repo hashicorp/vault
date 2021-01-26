@@ -12,7 +12,7 @@ description: >-
 # Vault Agent Templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files
-using [Consul Template markup](https://github.com/hashicorp/consul-template#templating-language).
+using [Consul Template markup](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md).
 
 ## Functionality
 
@@ -74,7 +74,8 @@ The top level `template` block has multiple configurations entries:
 
 ## Example Template
 
-Template with Vault Agent requires the use of the `secret` [function from Consul Template](https://github.com/hashicorp/consul-template#secret).  
+Template with Vault Agent requires the use of the `secret` [function from Consul
+Template](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret).
 The following is an example of a template that retrieves a generic secret from Vault's
 KV store:
 
@@ -134,8 +135,8 @@ high level overview of different behaviors.
 
 ### Renewable Secrets
 
-If a secret or token is renewable, Vault Agent will renew the secret at 1/3
-of the secret's lease.
+If a secret or token is renewable, Vault Agent will renew the secret after 2/3 
+of the secret's lease duration has elapsed.
 
 ### Non-Renewable Secrets
 
