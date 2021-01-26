@@ -19,13 +19,13 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -108,7 +108,7 @@ type ExpirationManager struct {
 	logLeaseExpirations bool
 	expireFunc          ExpireLeaseStrategy
 
-	revokePermitPool *physical.PermitPool
+	revokePermitPool *permits.InstrumentedPermitPool
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -177,7 +177,7 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseI
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	var permitPool *physical.PermitPool
+	var permitPool *permits.InstrumentedPermitPool
 	if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" {
 		permitPoolSize := 50
 		permitPoolSizeRaw, err := strconv.Atoi(os.Getenv("VAULT_16_REVOKE_PERMITPOOL"))
@@ -185,8 +185,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 			permitPoolSize = permitPoolSizeRaw
 		}
 
-		permitPool = physical.NewPermitPool(permitPoolSize)
-
+		permitPool = permits.NewInstrumentedPermitPool(permitPoolSize, "expire", "revoke")
 	}
 
 	exp := &ExpirationManager{
