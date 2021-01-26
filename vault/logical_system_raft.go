@@ -93,10 +93,24 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 		{
 			Pattern: "storage/raft/configuration",
 
+			Fields: map[string]*framework.FieldSchema{
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRaftConfigurationGet(),
 					Summary:  "Returns the configuration of the raft cluster.",
+				},
+				// Reading configuration on a DR secondary cluster is an update
+				// operation to allow consuming the DR operation token for
+				// authenticating the request.
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.verifyDROperationToken(b.handleRaftConfigurationGet(), false),
+					Summary:  "Returns the configuration of the raft cluster in a DR secondary cluster.",
 				},
 			},
 
@@ -446,7 +460,8 @@ var sysRaftHelp = map[string][2]string{
 	},
 	"raft-configuration": {
 		"Returns the raft cluster configuration.",
-		"",
+		`On a DR secondary cluster, instead of a GET, this must be a POST or
+		PUT, and furthermore a DR operation token must be provided.`,
 	},
 	"raft-remove-peer": {
 		"Removes a peer from the raft cluster.",
