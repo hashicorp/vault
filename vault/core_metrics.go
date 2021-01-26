@@ -259,6 +259,13 @@ func (c *Core) findKvMounts() []*kvMount {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
+	// emitMetrics doesn't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.mounts is nil. If we do not, emitMetrics will panic if this is
+	// run after seal.
+	if c.mounts == nil {
+		return mounts
+	}
+
 	for _, entry := range c.mounts.Entries {
 		if entry.Type == "kv" {
 			version, ok := entry.Options["version"]
