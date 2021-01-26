@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"
@@ -28,7 +28,7 @@ type SwiftBackend struct {
 	container  string
 	client     *swift.Connection
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // NewSwiftBackend constructs a Swift backend using a pre-existing
@@ -147,7 +147,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     &c,
 		container:  container,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "swift"),
 	}
 	return s, nil
 }
