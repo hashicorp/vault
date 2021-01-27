@@ -44,11 +44,10 @@
               </li>
             {{/if}}
             {{#if @item.canReset}}
-            {{!-- ARG TODO this needs to be an action --}}
               <li class="action">
-                <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
+                <button type="button" class="link" onclick={{action "resetConnection" @item.id}}>
                   Reset connection
-                </LinkTo>
+                </button>
               </li>
             {{/if}}
             {{#if this.permissions.canGenerateCredentials}}
@@ -59,11 +58,10 @@
               </li>
             {{/if}}
             {{#if @item.canRotateRoot}}
-            {{!-- ARG TODO this needs to be an action --}}
               <li class="action">
-                <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
+                <button type="button" class="link" onclick={{action "rotateRootCred" @item.id}}>
                   Rotate root credentials
-                </LinkTo>
+                </button>
               </li>
             {{/if}}
           </ul>

@@ -13,11 +13,13 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 
 export default class DatabaseListItem extends Component {
   @tracked permissions = null;
   @tracked roleType = '';
   @service store;
+  @service flashMessages;
   constructor() {
     super(...arguments);
     this.fetchPermissions();
@@ -44,5 +46,32 @@ export default class DatabaseListItem extends Component {
     }
     let roleModel = await this.store.peekRecord(modelName, id);
     this.permissions = roleModel;
+  }
+
+  @action
+  resetConnection(id) {
+    const { backend } = this.args.item;
+    let adapter = this.store.adapterFor('database/connection');
+    adapter
+      .resetConnection(backend, id)
+      .then(() => {
+        this.flashMessages.success(`Success: ${id} connection was reset`);
+      })
+      .catch(e => {
+        this.flashMessages.danger(e.errors);
+      });
+  }
+  @action
+  rotateRootCred(id) {
+    const { backend } = this.args.item;
+    let adapter = this.store.adapterFor('database/connection');
+    adapter
+      .rotateRootCredentials(backend, id)
+      .then(() => {
+        this.flashMessages.success(`Success: ${id} connection was reset`);
+      })
+      .catch(e => {
+        this.flashMessages.danger(e.errors);
+      });
   }
 }
