@@ -170,11 +170,30 @@ corresponding path and capability - even Vault's internal core configuration
 endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
-~> Policy paths are matched using the **most specific path match**. This may be
-an exact match or the longest-prefix match of a glob. This means if you define a
-policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
+~> The policy rules that Vault applies are determined by the most-specific match
+available, using the priority rules described below. This may be an exact match
+or the longest-prefix match of a glob. If the same pattern appears in multiple
+policies, we take the union of the capabilities. If different patterns appear in
+the applicable policies, we take only the highest-priority match from those
+policies.
 
-!> The glob character referred to in this documentation is the asterisk (`*`). It _is not a regular expression_ and is only supported **as the last character of the path**!
+This means if you define a policy for `"secret/foo*"`, the policy would
+also match `"secret/foobar"`. Specifically, when there are potentially multiple
+matching policy paths, `P1` and `P2`, the following matching criteria is applied:
+
+1. If the first wildcard (`+`) or glob (`*`) occurs earlier in `P1`, `P1` is lower priority
+2. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
+3. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
+4. If `P1` is shorter, it is lower priority
+5. If `P1` is smaller lexicographically, it is lower priority
+
+For example, given the two paths, `"secret/*"` and `"secret/+/+/foo/*"`, the first
+wildcard appears in the same place, both end in `*` and the latter has two wildcard
+segments while the former has zero. So we end at rule (3), and give `"secret/+/+/foo/*"`
+_lower_ priority.
+
+!> The glob character referred to in this documentation is the asterisk (`*`).
+It _is not a regular expression_ and is only supported **as the last character of the path**!
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
