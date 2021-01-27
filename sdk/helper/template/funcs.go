@@ -2,6 +2,7 @@ package template
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -53,6 +54,10 @@ func truncateSHA256(maxLen int, str string) (string, error) {
 
 func hashSHA256(str string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(str)))
+}
+
+func encodeBase64(str string) string {
+	return base64.StdEncoding.EncodeToString([]byte(str))
 }
 
 func uppercase(str string) string {
