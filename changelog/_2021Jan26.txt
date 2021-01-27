@@ -1,7 +1,7 @@
 ```release-note:security
-Limited Unauthenticated Remove Peer: As of Vault 1.5.5+, the remove-peer command
+Limited Unauthenticated Remove Peer: As of Vault 1.6, the remove-peer command
 on DR secondaries did not require authentication. This issue impacts the
 stability of HA architecture, as a bad actor could remove all peers from a DR
-secondary. This issue affects Vault Enterprise 1.5.5 and 1.5.6, and is fixed in
-1.5.7 and 1.6.2 (CVE-2021-3282).
+secondary. This issue affects Vault Enterprise 1.6.0 and 1.6.1, and is fixed in
+1.6.2 (CVE-2021-3282).
 ```
