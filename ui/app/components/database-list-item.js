@@ -11,8 +11,18 @@
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 
 export default class DatabaseListItem extends Component {
+  @tracked permissions = null;
+  @tracked roleType = '';
+  @service store;
+  constructor() {
+    super(...arguments);
+    this.fetchPermissions();
+  }
+
   get keyTypeValue() {
     const item = this.args.item;
     if (item.modelName === 'database/role') {
@@ -22,5 +32,11 @@ export default class DatabaseListItem extends Component {
     } else {
       return '';
     }
+  }
+
+  async fetchPermissions() {
+    let { id, modelName } = this.args.item;
+    let roleModel = await this.store.peekRecord(modelName, id);
+    this.permissions = roleModel;
   }
 }
