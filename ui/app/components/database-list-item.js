@@ -36,6 +36,12 @@ export default class DatabaseListItem extends Component {
 
   async fetchPermissions() {
     let { id, modelName } = this.args.item;
+    // only the combined model for roles (static and dynamic) will return a model name
+    // for connections, we follow the normal process of permissions, which automatically has permissions added to model via lazy capabilities
+    // therefore no need to peekRecord, just call @item.canEdit in the template
+    if (!modelName) {
+      return;
+    }
     let roleModel = await this.store.peekRecord(modelName, id);
     this.permissions = roleModel;
   }
