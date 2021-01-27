@@ -96,6 +96,67 @@
   {{on 'submit' this.handleCreateConnection}}>
   {{#each @model.fieldAttrs as |attr|}}
     {{#if (eq attr.name "pluginConfig")}}
+      {{!-- Plugin Config Section --}}
+      <div class="form-section">
+        <h3 class="title is-5">Plugin config</h3>
+        {{#unless @model.plugin_name}}
+          <EmptyState
+            @title="No plugin selected"
+            @message="Select a plugin type to be able to configure it."
+          />
+        {{else}}
+          {{#each @model.pluginFieldGroups as |fieldGroup|}}
+            {{#each-in fieldGroup as |group fields|}}
+              {{#if (eq group "default")}}
+                {{#each fields as |attr|}}
+                  {{!-- TODO: special password edit mode --}}
+                  {{form-field data-test-field attr=attr model=@model}}
+                {{/each}}
+              {{else}}
+                <ToggleButton @class="is-block" @toggleAttr={{concat "show" (camelize group)}} @toggleTarget={{this}} @openLabel={{concat "Hide " group}} @closedLabel={{group}} @data-test-toggle-group={{group}} />
+                {{#if (get this (concat "show" (camelize group)))}}
+                  <div class="box is-marginless">
+                    {{#each fields as |attr|}}
+                      {{form-field data-test-field attr=attr model=@model}}
+                    {{/each}}
+                  </div>
+                {{/if}}
+              {{/if}}
+            {{/each-in}}
+          {{/each}}
+        {{/unless}}
+      </div>
+    {{else if (not-eq attr.options.readOnly true)}}
+      <h1>{{attr.name}}</h1>
+      {{form-field data-test-field attr=attr model=@model}}
+    {{/if}}
+  {{/each}}
+
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button
+          data-test-secret-save
+          type="submit"
+          disabled={{buttonDisabled}}
+          class="button is-primary"
+        >
+          Save
+        </button>
+      </div>
+      <div class="control">
+        <SecretLink @mode="list" @class="button">
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </div>
+</form>
+{{else if (eq @mode 'edit')}}
+<form
+  {{on 'submit' this.handleUpdateConnection}}>
+  {{#each @model.fieldAttrs as |attr|}}
+    {{#if (eq attr.name "pluginConfig")}}
       <div class="form-section">
         <h3 class="title is-5">Plugin config</h3>
         {{#unless @model.plugin_name}}
@@ -151,8 +212,6 @@
     </div>
   </div>
 </form>
-{{else if (eq @mode 'edit')}}
-[Edit form]
 {{else}}
   {{#each @model.showAttrs as |attr|}}
     {{log attr}}
