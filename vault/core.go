@@ -874,7 +874,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	var err error
 
 	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical, conf.Barrier)
+	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}

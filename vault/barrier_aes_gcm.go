@@ -86,6 +86,7 @@ func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
 }
 
 func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig configutil.KeyRotationConfig) error {
+	rotConfig.Sanitize()
 	if !rotConfig.Equals(b.keyring.rotationConfig) {
 		b.keyring.rotationConfig = rotConfig
 

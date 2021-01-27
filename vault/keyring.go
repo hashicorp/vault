@@ -29,8 +29,9 @@ type Keyring struct {
 
 // EncodedKeyring is used for serialization of the keyring
 type EncodedKeyring struct {
-	MasterKey []byte
-	Keys      []*Key
+	MasterKey      []byte
+	Keys           []*Key
+	RotationConfig configutil.KeyRotationConfig
 }
 
 // Key represents a single term, along with the key used.
@@ -60,8 +61,9 @@ func DeserializeKey(buf []byte) (*Key, error) {
 // NewKeyring creates a new keyring
 func NewKeyring() *Keyring {
 	k := &Keyring{
-		keys:       make(map[uint32]*Key),
-		activeTerm: 0,
+		keys:           make(map[uint32]*Key),
+		activeTerm:     0,
+		rotationConfig: configutil.DefaultRotationConfig,
 	}
 	return k
 }
@@ -69,9 +71,10 @@ func NewKeyring() *Keyring {
 // Clone returns a new copy of the keyring
 func (k *Keyring) Clone() *Keyring {
 	clone := &Keyring{
-		masterKey:  k.masterKey,
-		keys:       make(map[uint32]*Key, len(k.keys)),
-		activeTerm: k.activeTerm,
+		masterKey:      k.masterKey,
+		keys:           make(map[uint32]*Key, len(k.keys)),
+		activeTerm:     k.activeTerm,
+		rotationConfig: k.rotationConfig,
 	}
 	for idx, key := range k.keys {
 		clone.keys[idx] = key
@@ -158,7 +161,8 @@ func (k *Keyring) MasterKey() []byte {
 func (k *Keyring) Serialize() ([]byte, error) {
 	// Create the encoded entry
 	enc := EncodedKeyring{
-		MasterKey: k.masterKey,
+		MasterKey:      k.masterKey,
+		RotationConfig: k.rotationConfig,
 	}
 	for _, key := range k.keys {
 		enc.Keys = append(enc.Keys, key)
@@ -180,6 +184,7 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Create a new keyring
 	k := NewKeyring()
 	k.masterKey = enc.MasterKey
+	k.rotationConfig = enc.RotationConfig
 	for _, key := range enc.Keys {
 		k.keys[key.Term] = key
 		if key.Term > k.activeTerm {

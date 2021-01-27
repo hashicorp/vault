@@ -2541,9 +2541,11 @@ func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logica
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"rotation_max_operations": rotConfig.KeyRotationMaxOperations,
-			"rotation_interval":       rotConfig.KeyRotationInterval.String(),
+			"max_operations": rotConfig.KeyRotationMaxOperations,
 		},
+	}
+	if rotConfig.KeyRotationInterval > 0 {
+		resp.Data["interval"] = rotConfig.KeyRotationInterval.String()
 	}
 	return resp, nil
 }
@@ -2551,23 +2553,23 @@ func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logica
 // handleKeyRotationConfigRead returns the barrier key rotation config
 func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var rotConfig configutil.KeyRotationConfig
-	maxOps, ok, err := data.GetOkErr("rotation_max_operations")
+	maxOps, ok, err := data.GetOkErr("max_operations")
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		rotConfig.KeyRotationMaxOperations = maxOps.(int64)
+		rotConfig.KeyRotationMaxOperations = int64(maxOps.(int))
 	}
-	interval, ok, err := data.GetOkErr("rotation_interval")
+	interval, ok, err := data.GetOkErr("interval")
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		rotConfig.KeyRotationInterval = interval.(time.Duration)
+		rotConfig.KeyRotationInterval = time.Second * time.Duration(interval.(int))
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(rotConfig)
+	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -4383,6 +4385,7 @@ Enable a new audit backend or disable an existing backend.
 		Provides the current backend encryption key term and installation time.
 		`,
 	},
+
 	"rotate-config": {
 		"Configures settings related to the backend encryption key management.",
 		`
