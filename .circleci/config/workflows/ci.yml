@@ -24,21 +24,9 @@ jobs:
   - test-go:
       requires:
         - pre-flight-checks
-      filters:
-        branches:
-          # UI and Docs-only branches should skip go tests
-          ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
   - test-go-remote-docker:
       requires:
         - pre-flight-checks
-      filters:
-        branches:
-          # UI and Docs-only branches should skip go tests
-          ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
   - test-go-race:
       requires:
         - pre-flight-checks
