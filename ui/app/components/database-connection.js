@@ -34,6 +34,16 @@ export default class DatabaseConnectionEdit extends Component {
       this.transitionToRoute(SHOW_ROUTE, secretId);
     });
   }
+  async handleUpdateConnection(evt) {
+    evt.preventDefault();
+    let secret = this.args.model;
+    let secretId = secret.name;
+    secret.set('id', secretId);
+    console.log(this.args.mode, this.args.model);
+    // secret.save().then(() => {
+    //   this.transitionToRoute(SHOW_ROUTE, secretId);
+    // });
+  }
 
   @action
   delete(evt) {

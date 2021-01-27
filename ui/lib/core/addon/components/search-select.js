@@ -39,6 +39,7 @@ export default Component.extend({
   store: service(),
 
   onChange: () => {},
+  getSelectedValue: () => {},
   inputValue: computed(function() {
     return [];
   }),
@@ -129,6 +130,7 @@ export default Component.extend({
       this.onChange(Array.from(this.selectedOptions, option => option.id));
       // ARG TODO this is now broken, see console on transform searchSelect component
       this.getSelectedValue(Array.from(this.selectedOptions, option => option.id));
+      // TODO: this.getSelectedValue is not a fn -- investigate
     } else {
       this.onChange(this.selectedOptions);
     }

@@ -127,7 +127,10 @@ export default Store.extend({
     const responsePath = query.responsePath;
     const dataCache = this.getDataset(firstModel, query);
     assert('responsePath is required', responsePath);
-    assert('page is required', typeof query.page === 'number');
+    // assert('page is required', typeof query.page === 'number');
+    if (!query.page) {
+      query.page = 1;
+    }
     if (!query.size) {
       query.size = DEFAULT_PAGE_SIZE;
     }

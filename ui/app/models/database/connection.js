@@ -5,10 +5,27 @@ import { apiPath } from 'vault/macros/lazy-capabilities';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
+const STANDARD_FIELDS = [
+  { attr: 'name', required: true },
+  { attr: 'plugin_name', required: true },
+  { attr: 'verify_connection' },
+  { attr: 'allowed_roles' },
+];
+
 const AVAILABLE_PLUGIN_TYPES = [
   {
     value: 'mongodb-database-plugin',
     displayName: 'MongoDB',
+    fields: [
+      { attr: 'name' },
+      { attr: 'plugin_name' },
+      { attr: 'password_policy' },
+      { attr: 'username', group: 'pluginConfig' },
+      { attr: 'password', group: 'pluginConfig' },
+      { attr: 'connection_url', group: 'pluginConfig' },
+      { attr: 'write_concern' },
+      { attr: 'creation_statements' },
+    ],
   },
   {
     value: 'mongodbatlas-database-plugin',
@@ -48,13 +65,18 @@ const M = Model.extend({
   port: attr('string', {}),
   // connection_details
   username: attr('string', {}),
-  password: attr('string', {}),
+  password: attr('string', {
+    editType: 'password',
+  }),
   connection_url: attr('string', {
     subText:
       'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
   }),
 
-  write_concern: attr('string', {}),
+  write_concern: attr('string', {
+    editType: 'json',
+    // defaultValue: '# For example: { "wmode": "majority", "wtimeout": 5000 }',
+  }),
   max_open_connections: attr('string', {}),
   max_idle_connections: attr('string'),
   max_connection_lifetime: attr('string'),
@@ -68,12 +90,13 @@ const M = Model.extend({
     subText: 'x509 CA file for validating the certificate presented by the MongoDB server.',
     editType: 'file',
   }),
-  root_rotation_statements: attr({
-    label: 'Root rotation statements',
-    editType: 'stringArray',
+  root_rotation_statements: attr('string', {
+    // label: 'Root rotation statements',
+    editType: 'json',
+    // short: true,
   }),
 
-  allFields: computed(function() {
+  allowedFields: computed(function() {
     return [
       // required
       'plugin_name',
@@ -100,6 +123,7 @@ const M = Model.extend({
     ];
   }),
 
+  // for both create and edit fields
   mainFields: computed('plugin_name', function() {
     return [
       'plugin_name',
@@ -107,25 +131,52 @@ const M = Model.extend({
       'connection_url',
       'verify_connection',
       'password_policy',
-      'plugin_config',
+      'pluginConfig',
       'root_rotation_statements',
     ];
   }),
 
-  pluginGroups: computed('plugin_name', function() {
+  // showFields: computed('plugin_name', function() {
+  //   const f = [
+  //     'name',
+  //     'plugin_name',
+  //     'connection_url',
+  //     'write_concern',
+  //     'verify_connection',
+  //     'root_rotation_statements',
+  //     'allowed_roles',
+  //   ];
+  //   return fieldToAttrs(this, f);
+  // }),
+  showAttrs: computed('plugin_name', function() {
+    const f = [
+      'name',
+      'plugin_name',
+      'connection_url',
+      'write_concern',
+      'verify_connection',
+      'root_rotation_statements',
+      'allowed_roles',
+    ];
+    return expandAttributeMeta(this, f);
+  }),
+
+  // pluginGroups: computed('plugin_name', function() {
+  //   let groups = [{ default: ['username', 'password', 'write_concern'] }];
+  //   // TODO: Get plugin options based on plugin
+  //   groups.push({
+  //     'TLS options': ['tls', 'tls_ca'],
+  //   });
+  //   return groups;
+  // }),
+
+  pluginFieldGroups: computed('plugin_name', function() {
     let groups = [{ default: ['username', 'password', 'write_concern'] }];
-    // Get plugin options based on plugin
-    console.log(this.plugin_name);
+    // TODO: Get plugin options based on plugin
     groups.push({
       'TLS options': ['tls', 'tls_ca'],
     });
-    // get other options
-    // groups.push({ 'Root rotation statements': ['root_rotation_statements'] });
-    return groups;
-  }),
-
-  pluginFieldGroups: computed('pluginGroups', function() {
-    return fieldToAttrs(this, this.pluginGroups);
+    return fieldToAttrs(this, groups);
   }),
 
   // TODO: Experimental
@@ -141,9 +192,7 @@ const M = Model.extend({
 
   fieldAttrs: computed('mainFields', function() {
     // Main Field Attrs only
-    const expanded = expandAttributeMeta(this, this.mainFields);
-    console.log({ expanded });
-    return expanded;
+    return expandAttributeMeta(this, this.mainFields);
   }),
 });
 
