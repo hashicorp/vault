@@ -11,21 +11,21 @@ export default Route.extend({
     try {
       return await this.store.query('database/connection', queryOptions);
     } catch (e) {
-      return e;
+      return e.httpStatus;
     }
   },
   async fetchStaticRoles(queryOptions) {
     try {
       return await this.store.query('database/static-role', queryOptions);
     } catch (e) {
-      return e;
+      return e.httpStatus;
     }
   },
   async fetchDynamicRoles(queryOptions) {
     try {
       return await this.store.query('database/role', queryOptions);
     } catch (e) {
-      return e;
+      return e.httpStatus;
     }
   },
   model() {
