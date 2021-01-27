@@ -23,8 +23,7 @@ type SharedConfig struct {
 	DisableMlock    bool        `hcl:"-"`
 	DisableMlockRaw interface{} `hcl:"disable_mlock"`
 
-	Telemetry *Telemetry         `hcl:"telemetry"`
-	Barrier   *KeyRotationConfig `hcl:"barrier"`
+	Telemetry *Telemetry `hcl:"telemetry"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
@@ -220,14 +219,6 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
 		}
 		result["telemetry"] = sanitizedTelemetry
-	}
-
-	if c.Barrier != nil {
-		sanitizedBarrier := map[string]interface{}{
-			"key_rotation_max_operations": c.Barrier.KeyRotationMaxOperations,
-			"key_rotation_interval":       c.Barrier.KeyRotationInterval,
-		}
-		result["barrier"] = sanitizedBarrier
 	}
 
 	return result
