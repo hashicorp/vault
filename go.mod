@@ -84,7 +84,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
 	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201214222416-c1b71d763597
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210127192841-e638993ca1f5
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
