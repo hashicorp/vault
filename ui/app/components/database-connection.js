@@ -34,15 +34,18 @@ export default class DatabaseConnectionEdit extends Component {
       this.transitionToRoute(SHOW_ROUTE, secretId);
     });
   }
+
+  @action
   async handleUpdateConnection(evt) {
     evt.preventDefault();
     let secret = this.args.model;
     let secretId = secret.name;
-    secret.set('id', secretId);
-    console.log(this.args.mode, this.args.model);
-    // secret.save().then(() => {
-    //   this.transitionToRoute(SHOW_ROUTE, secretId);
-    // });
+    // TODO: remove password unless toggled on
+    // Set to null, and remove null values from request
+    // in serializer if `update`?
+    secret.save().then(() => {
+      this.transitionToRoute(SHOW_ROUTE, secretId);
+    });
   }
 
   @action

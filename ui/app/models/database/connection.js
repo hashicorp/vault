@@ -74,7 +74,9 @@ const M = Model.extend({
   }),
 
   write_concern: attr('string', {
+    subText: 'Optional. Must be in JSON. See our documentation for help.',
     editType: 'json',
+    theme: 'hashi short',
     // defaultValue: '# For example: { "wmode": "majority", "wtimeout": 5000 }',
   }),
   max_open_connections: attr('string', {}),
@@ -92,8 +94,9 @@ const M = Model.extend({
   }),
   root_rotation_statements: attr('string', {
     // label: 'Root rotation statements',
+    subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
     editType: 'json',
-    // short: true,
+    theme: 'hashi short',
   }),
 
   allowedFields: computed(function() {
