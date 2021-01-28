@@ -22,7 +22,18 @@
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{#if this.permissions.canEdit}}
+            {{!-- ARG TODO unsure if this is the correct link --}}
+            {{#if @item.canEdit}}
+              <li class="action">
+                <SecretLink
+                  @mode="show"
+                  @secret={{@item.id}}
+                  @class="has-text-black has-text-weight-semibold">
+                  Edit connection
+                </SecretLink>
+              </li>
+            {{/if}}
+            {{#if this.permissions.canEditRole}}
               <li class="action">
                 <SecretLink
                   @mode="show"
@@ -32,11 +43,25 @@
                 </SecretLink>
               </li>
             {{/if}}
+            {{#if @item.canReset}}
+              <li class="action">
+                <button type="button" class="link" onclick={{action "resetConnection" @item.id}}>
+                  Reset connection
+                </button>
+              </li>
+            {{/if}}
             {{#if this.permissions.canGenerateCredentials}}
               <li class="action">
                 <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
                   Generate credentials
                 </LinkTo>
+              </li>
+            {{/if}}
+            {{#if @item.canRotateRoot}}
+              <li class="action">
+                <button type="button" class="link" onclick={{action "rotateRootCred" @item.id}}>
+                  Rotate root credentials
+                </button>
               </li>
             {{/if}}
           </ul>

@@ -1,8 +1,8 @@
 // ARG TODO need to replace with Lazy capabilities, don't want to step on toes for now.
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import { alias } from '@ember/object/computed';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const STANDARD_FIELDS = [
@@ -33,11 +33,17 @@ const AVAILABLE_PLUGIN_TYPES = [
   },
 ];
 
-const M = Model.extend({
+export default Model.extend({
   // URL: http://127.0.0.1:8200/v1/database/config/my-db
   backend: attr('string', {
     readOnly: true,
   }),
+  editConnectionPath: lazyCapabilities(apiPath`${'backend'}/config/${'id'}`, 'backend', 'id'),
+  canEdit: alias('editConnectionPath.canUpdate'),
+  resetConnectionPath: lazyCapabilities(apiPath`${'backend'}/reset/${'id'}`, 'backend', 'id'),
+  canReset: computed.or('resetConnectionPath.canUpdate', 'resetConnectionPath.canCreate'),
+  rotateRootPath: lazyCapabilities(apiPath`${'backend'}/rotate-root/${'id'}`, 'backend', 'id'),
+  canRotateRoot: computed.or('rotateRootPath.canUpdate', 'rotateRootPath.canCreate'),
 
   name: attr('string', {
     label: 'Connection Name',
@@ -197,8 +203,4 @@ const M = Model.extend({
     // Main Field Attrs only
     return expandAttributeMeta(this, this.mainFields);
   }),
-});
-
-export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/config/${'id'}`,
 });
