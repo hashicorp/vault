@@ -90,24 +90,6 @@ type AESGCMBarrier struct {
 	randomReaderAccessor func() io.Reader
 }
 
-// NewAESGCMBarrier is used to construct a new barrier that uses
-// the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend, randomReaderAccessor func() io.Reader, l log.Logger) (*AESGCMBarrier, error) {
-
-func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
-	return b.keyring.rotationConfig, nil
-}
-
-func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig configutil.KeyRotationConfig) error {
-	rotConfig.Sanitize()
-	if !rotConfig.Equals(b.keyring.rotationConfig) {
-		b.keyring.rotationConfig = rotConfig
-
-		return b.persistKeyring(ctx, b.keyring)
-	}
-	return nil
-}
-
 func NewAESGCMBarrier(physical physical.Backend, randomReaderAccessor func() io.Reader, l log.Logger) (*AESGCMBarrier, error) {
 	if randomReaderAccessor == nil {
 		randomReaderAccessor = func() io.Reader {
@@ -124,6 +106,20 @@ func NewAESGCMBarrier(physical physical.Backend, randomReaderAccessor func() io.
 		randomReaderAccessor:     randomReaderAccessor,
 	}
 	return b, nil
+}
+
+func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
+	return b.keyring.rotationConfig, nil
+}
+
+func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig configutil.KeyRotationConfig) error {
+	rotConfig.Sanitize()
+	if !rotConfig.Equals(b.keyring.rotationConfig) {
+		b.keyring.rotationConfig = rotConfig
+
+		return b.persistKeyring(ctx, b.keyring)
+	}
+	return nil
 }
 
 // Initialized checks if the barrier has been initialized
@@ -361,9 +357,9 @@ func (b *AESGCMBarrier) recoverKeyring(plaintext []byte) error {
 	}
 
 	// Set rotation time if applicable
-	if b.RotationConfig.KeyRotationInterval > 0 {
+	if keyring.rotationConfig.KeyRotationInterval > 0 {
 		activeKey := keyring.TermKey(keyring.ActiveTerm())
-		activeKey.rotationTime = activeKey.InstallTime.Add(b.RotationConfig.KeyRotationInterval)
+		activeKey.rotationTime = activeKey.InstallTime.Add(keyring.rotationConfig.KeyRotationInterval)
 	}
 
 	// Setup the keyring and finish
@@ -1133,8 +1129,8 @@ func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, pa
 }
 
 func (b *AESGCMBarrier) shouldRotate(ops int64, keyring *Keyring) bool {
-	return ops > b.RotationConfig.KeyRotationMaxOperations ||
-		(b.RotationConfig.KeyRotationInterval > 0 && ops%keyRotationTimeSampleRate == 0 &&
+	return ops > keyring.rotationConfig.KeyRotationMaxOperations ||
+		(keyring.rotationConfig.KeyRotationInterval > 0 && ops%keyRotationTimeSampleRate == 0 &&
 			time.Now().After(keyring.keys[keyring.ActiveTerm()].rotationTime))
 }
 
