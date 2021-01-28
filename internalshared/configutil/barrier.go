@@ -1,45 +1,30 @@
 package configutil
 
 import (
-	"fmt"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/hcl"
-	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"time"
 )
 
-type BarrierConfig struct {
+// 10% shy of the NIST recommended maximum, leaving a buffer to account for
+// tracking losses.
+const AbsoluteOperationMaximum = int64(3865470566)
+
+var DefaultRotationConfig = KeyRotationConfig{
+	KeyRotationMaxOperations: AbsoluteOperationMaximum,
+}
+
+type KeyRotationConfig struct {
 	KeyRotationMaxOperations int64 `hcl:"key_rotation_max_operations"`
 	KeyRotationInterval      time.Duration
 	KeyRotationIntervalRaw   interface{} `hcl:"key_rotation_interval"`
 	nextRotation             time.Time
 }
 
-func parseBarrier(result *SharedConfig, list *ast.ObjectList) error {
-	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'barrier' block is permitted")
+func (c *KeyRotationConfig) Sanitize() {
+	if c.KeyRotationMaxOperations == 0 || c.KeyRotationMaxOperations > AbsoluteOperationMaximum {
+		c.KeyRotationMaxOperations = AbsoluteOperationMaximum
 	}
+}
 
-	// Get our one item
-	item := list.Items[0]
-
-	if result.Barrier == nil {
-		result.Barrier = &BarrierConfig{}
-	}
-
-	if err := hcl.DecodeObject(&result.Barrier, item.Val); err != nil {
-		return multierror.Prefix(err, "telemetry:")
-	}
-
-	if result.Barrier.KeyRotationIntervalRaw != nil {
-		var err error
-		if result.Barrier.KeyRotationInterval, err = parseutil.ParseDurationSecond(result.Barrier.KeyRotationIntervalRaw); err != nil {
-			return err
-		}
-		result.Barrier.KeyRotationIntervalRaw = nil
-	} else {
-		result.Barrier.KeyRotationInterval = 0
-	}
-	return nil
+func (c *KeyRotationConfig) Equals(config KeyRotationConfig) bool {
+	return c.KeyRotationMaxOperations == config.KeyRotationMaxOperations && c.KeyRotationInterval == c.KeyRotationInterval
 }

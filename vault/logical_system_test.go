@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -2044,6 +2045,45 @@ func TestSystemBackend_keyStatus(t *testing.T) {
 		"term": 1,
 	}
 	delete(resp.Data, "install_time")
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_rotateConfig(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "rotate/config")
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"max_operations": configutil.AbsoluteOperationMaximum,
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "rotate/config")
+	req2.Data["max_operations"] = 2345678910
+	req2.Data["interval"] = "5432h0m0s"
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"max_operations": int64(2345678910),
+		"interval":       "5432h0m0s",
+	}
+
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}

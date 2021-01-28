@@ -44,11 +44,6 @@ seal "awskms" {
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 }
 
-barrier {
-  key_rotation_max_operations = 1073741824
-  key_rotation_interval = "8760h"
-}
-
 max_lease_ttl = "10h"
 default_lease_ttl = "10h"
 cluster_name = "testcluster"

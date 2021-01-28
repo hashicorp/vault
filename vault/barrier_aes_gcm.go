@@ -41,9 +41,8 @@ const (
 
 // Versions of the AESGCM storage methodology
 const (
-	AESGCMVersion1           = 0x1
-	AESGCMVersion2           = 0x2
-	absoluteOperationMaximum = int64(3865470566) // 10% shy of the NIST recommended maximum
+	AESGCMVersion1 = 0x1
+	AESGCMVersion2 = 0x2
 )
 
 // barrierInit is the JSON encoded value stored
@@ -89,21 +88,27 @@ type AESGCMBarrier struct {
 	initialized atomic2.Bool
 
 	randomReaderAccessor func() io.Reader
-	RotationConfig       *configutil.BarrierConfig
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
 // the provided physical backend for storage.
-func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierConfig, randomReaderAccessor func() io.Reader, l log.Logger) (*AESGCMBarrier, error) {
-	// Should we have minimums?
-	if rotConfig == nil {
-		rotConfig = &configutil.BarrierConfig{
-			KeyRotationMaxOperations: absoluteOperationMaximum,
-		}
-	} else if rotConfig.KeyRotationMaxOperations > absoluteOperationMaximum || rotConfig.KeyRotationMaxOperations == 0 {
-		rotConfig.KeyRotationMaxOperations = absoluteOperationMaximum
-	}
+func NewAESGCMBarrier(physical physical.Backend, randomReaderAccessor func() io.Reader, l log.Logger) (*AESGCMBarrier, error) {
 
+func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
+	return b.keyring.rotationConfig, nil
+}
+
+func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig configutil.KeyRotationConfig) error {
+	rotConfig.Sanitize()
+	if !rotConfig.Equals(b.keyring.rotationConfig) {
+		b.keyring.rotationConfig = rotConfig
+
+		return b.persistKeyring(ctx, b.keyring)
+	}
+	return nil
+}
+
+func NewAESGCMBarrier(physical physical.Backend, randomReaderAccessor func() io.Reader, l log.Logger) (*AESGCMBarrier, error) {
 	if randomReaderAccessor == nil {
 		randomReaderAccessor = func() io.Reader {
 			return rand.Reader
@@ -117,9 +122,7 @@ func NewAESGCMBarrier(physical physical.Backend, rotConfig *configutil.BarrierCo
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
 		randomReaderAccessor:     randomReaderAccessor,
-		RotationConfig:           rotConfig,
 	}
-
 	return b, nil
 }
 

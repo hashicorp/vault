@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"hash"
 	"net/http"
 	"path"
@@ -2530,6 +2531,52 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"max_operations": rotConfig.KeyRotationMaxOperations,
+		},
+	}
+	if rotConfig.KeyRotationInterval > 0 {
+		resp.Data["interval"] = rotConfig.KeyRotationInterval.String()
+	}
+	return resp, nil
+}
+
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var rotConfig configutil.KeyRotationConfig
+	maxOps, ok, err := data.GetOkErr("max_operations")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.KeyRotationMaxOperations = int64(maxOps.(int))
+	}
+	interval, ok, err := data.GetOkErr("interval")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.KeyRotationInterval = time.Second * time.Duration(interval.(int))
+	}
+
+	// Store the rotation config
+	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -3835,6 +3882,13 @@ func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Req
 	return httpResp, nil
 }
 
+func (b *SystemBackend) verifyDROperationTokenOnSecondary(f framework.OperationFunc, lock bool) framework.OperationFunc {
+	if b.Core.IsDRSecondary() {
+		return b.verifyDROperationToken(f, lock)
+	}
+	return f
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4329,6 +4383,13 @@ Enable a new audit backend or disable an existing backend.
 		"Provides information about the backend encryption key.",
 		`
 		Provides the current backend encryption key term and installation time.
+		`,
+	},
+
+	"rotate-config": {
+		"Configures settings related to the backend encryption key management.",
+		`
+		Configures settings related to the automatic rotation of the backend encryption key.
 		`,
 	},
 
