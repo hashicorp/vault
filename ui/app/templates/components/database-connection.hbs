@@ -154,23 +154,59 @@
 {{else if (eq @mode 'edit')}}
 <form {{on 'submit' this.handleUpdateConnection}}>
   {{#each @model.fieldAttrs as |attr|}}
-    {{log "DISABLE" attr.name}}
     {{#if (eq attr.name "pluginConfig")}}
       <div class="form-section">
         <h3 class="title is-5">Plugin config</h3>
-        {{#unless @model.plugin_name}}
-          <EmptyState
-            @title="No plugin selected"
-            @message="Select a plugin type to be able to configure it."
-          />
-        {{else}}
           {{#each @model.pluginFieldGroups as |fieldGroup|}}
             {{#each-in fieldGroup as |group fields|}}
               {{#if (eq group "default")}}
                 {{#each fields as |attr|}}
-                  {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
+                  {{#if (eq attr.name "password")}}
+                    <label for="{{attr.name}}" class="is-label">
+                      {{capitalize (or attr.options.label attr.name)}}
+                    </label>
+                    <div class="field">
+                      <Toggle
+                        @name="show-{{attr.name}}"
+                        @status="success"
+                        @size="small"
+                        @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
+                        @checked={{this.showPasswordField}}
+                        data-test-toggle={{attr.name}}
+                      >
+                        <span class="ttl-picker-label has-text-grey">Update password</span><br/>
+                        <div class="description has-text-grey">
+                          <span>{{if this.showPasswordField 'The new password that will be used when connecting to the database' 'Vault will use the existing password'}}</span>
+                        </div>
+                        {{#if this.showPasswordField}}
+                          <Input
+                            {{on "change" (fn this.updatePassword attr.name)}}
+                            @type="password"
+                            @value={{get @model attr.name}}
+                            @name={{attr.name}}
+                            class="input"
+                            {{!-- Prevents browsers from auto-filling --}}
+                            @autocomplete="new-password"
+                            @spellcheck="false" />
+                          {{!-- <input
+                            type="password"
+                            data-test-input={{attr.name}}
+                            id={{attr.name}}
+                            autocomplete="off"
+                            spellcheck="false"
+                            value={{or (get @model attr.name)
+                            attr.options.defaultValue}}
+                            onChange={{fn this.updatePassword attr.name}}
+                            class="input"
+                            maxLength={{attr.options.characterLimit}}
+                            autocomplete="new-password"
+                            spellcheck="false" /> --}}
+                        {{/if}}
+                      </Toggle>
+                    </div>
+                  {{else}}
                     {{form-field data-test-field attr=attr model=@model}}
-                  {{/unless}}
+                  {{/if}}
                 {{/each}}
               {{else}}
                 <ToggleButton @class="is-block" @toggleAttr={{concat "show" (camelize group)}} @toggleTarget={{this}} @openLabel={{concat "Hide " group}} @closedLabel={{group}} @data-test-toggle-group={{group}} />
@@ -184,7 +220,6 @@
               {{/if}}
             {{/each-in}}
           {{/each}}
-        {{/unless}}
       </div>
     {{else if (or (eq attr.name 'name') (eq attr.name 'plugin_name'))}}
       <label for="{{attr.name}}" class="is-label">
