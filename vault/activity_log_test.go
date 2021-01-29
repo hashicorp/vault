@@ -1770,8 +1770,8 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	month0 := time.Now().UTC()
 	segment0 := a.GetStartTimestamp()
-	month1 := month0.AddDate(0, 1, 0)
-	month2 := month0.AddDate(0, 2, 0)
+	month1 := timeutil.StartOfNextMonth(month0)
+	month2 := timeutil.StartOfNextMonth(month1)
 
 	// Trigger end-of-month
 	a.HandleEndOfMonth(month1)
