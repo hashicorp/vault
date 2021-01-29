@@ -1,3 +1,28 @@
+## 1.5.7
+### January 29, 2021
+
+SECURITY:
+
+* IP Address Disclosure: We fixed a vulnerability where, under some error
+conditions, Vault would return an error message disclosing internal IP
+addresses. This vulnerability affects Vault and Vault Enterprise and is fixed in
+1.6.2 and 1.5.7 (CVE-2021-3024).
+* Mount Path Disclosure: Vault previously returned different HTTP status codes for
+existent and non-existent mount paths. This behavior would allow unauthenticated
+brute force attacks to reveal which paths had valid mounts. This issue affects
+Vault and Vault Enterprise and is fixed in 1.6.2 and 1.5.7 (CVE-2020-25594).
+
+IMPROVEMENTS:
+
+* storage/raft (enterprise): Listing of peers is now allowed on DR secondary
+cluster nodes, as an update operation that takes in DR operation token for
+authenticating the request.
+
+BUG FIXES:
+
+* core: Avoid disclosing IP addresses in the errors of unauthenticated requests [[GH-10579](https://github.com/hashicorp/vault/pull/10579)]
+* core: Make the response to an unauthenticated request to sys/internal endpoints consistent regardless of mount existence. [[GH-10650](https://github.com/hashicorp/vault/pull/10650)]
+
 ## 1.5.6
 ### December 16, 2020
 
