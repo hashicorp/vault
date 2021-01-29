@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/cenkalti/backoff/v3"
 	"math/rand"
 	"net/http"
 	"time"
@@ -116,6 +117,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	var watcher *api.LifetimeWatcher
+	eb := backoff.NewExponentialBackOff()
 
 	for {
 		select {
@@ -126,7 +128,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		// Create a fresh backoff value
-		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
+		backoff := eb.NextBackOff()
 
 		ah.logger.Info("authenticating")
 
