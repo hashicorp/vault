@@ -217,16 +217,13 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return nil, err
 		}
 
-		// If this is a new group and if there already exists a group by this
-		// name, error out. If the name of an existing group is about to be
-		// modified into something which is already tied to a different group,
-		// error out.
+		// If no existing group has this name, go ahead with the creation or rename.
+		// If there is a group, it must match the group passed in; groupByName
+		// should not be modified as it's in memdb.
 		switch {
 		case groupByName == nil:
 			// Allowed
-		case group.ID == "":
-			group = groupByName
-		case group.ID != "" && groupByName.ID != group.ID:
+		case groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
 		group.Name = groupName
