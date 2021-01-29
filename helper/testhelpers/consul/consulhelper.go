@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Masterminds/semver"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
@@ -41,7 +42,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		if consulVersion != "" {
 			version = consulVersion
 		} else {
-			version = "1.7.2" // Latest Consul version, update as new releases come out
+			version = "1.9.1" // Latest Consul version, update as new releases come out
 		}
 	}
 	if strings.HasPrefix(version, "1.3") {
@@ -116,6 +117,33 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		_, _, err = consul.ACL().PolicyCreate(policy, q)
 		if err != nil {
 			return nil, err
+		}
+
+		// Only do this if asked to run Consul > 1.5.0
+		c, err := semver.NewConstraint(">=1.5.0")
+		if err != nil {
+			return nil, err
+		}
+
+		v, err := semver.NewVersion(version)
+		if err != nil {
+			return nil, err
+		}
+
+		if c.Check(v) {
+			role := &consulapi.ACLRole{
+				Name:        "test_role",
+				Description: "test role",
+				Policies: []*consulapi.ACLRolePolicyLink{
+					{
+						Name: "test",
+					},
+				},
+			}
+			_, _, err = consul.ACL().RoleCreate(role, q)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return &Config{
 			ServiceHostPort: *shp,

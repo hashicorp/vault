@@ -617,7 +617,7 @@ func (t FieldType) Zero() interface{} {
 		return 0
 	case TypeSlice:
 		return []interface{}{}
-	case TypeStringSlice, TypeCommaStringSlice:
+	case TypeStringSlice, TypeCommaStringSlice, TypeSemicolonStringSlice:
 		return []string{}
 	case TypeCommaIntSlice:
 		return []int{}

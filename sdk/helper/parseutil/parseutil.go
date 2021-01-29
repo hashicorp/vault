@@ -189,6 +189,27 @@ func ParseCommaStringSlice(in interface{}) ([]string, error) {
 	return strutil.TrimStrings(result), nil
 }
 
+func ParseSemicolonStringSlice(in interface{}) ([]string, error) {
+	rawString, ok := in.(string)
+	if ok && rawString == "" {
+		return []string{}, nil
+	}
+	var result []string
+	config := &mapstructure.DecoderConfig{
+		Result:           &result,
+		WeaklyTypedInput: true,
+		DecodeHook:       mapstructure.StringToSliceHookFunc(";"),
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return nil, err
+	}
+	if err := decoder.Decode(in); err != nil {
+		return nil, err
+	}
+	return strutil.TrimStrings(result), nil
+}
+
 func ParseAddrs(addrs interface{}) ([]*sockaddr.SockAddrMarshaler, error) {
 	out := make([]*sockaddr.SockAddrMarshaler, 0)
 	stringAddrs := make([]string, 0)

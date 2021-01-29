@@ -566,7 +566,7 @@ func convertType(t FieldType) schemaType {
 	case TypeSlice:
 		ret.baseType = "array"
 		ret.items = "object"
-	case TypeStringSlice, TypeCommaStringSlice:
+	case TypeStringSlice, TypeCommaStringSlice, TypeSemicolonStringSlice:
 		ret.baseType = "array"
 		ret.items = "string"
 	case TypeCommaIntSlice:
