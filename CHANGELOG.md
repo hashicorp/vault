@@ -1,3 +1,52 @@
+## 1.6.2
+### January 29, 2021
+
+SECURITY:
+
+* IP Address Disclosure: We fixed a vulnerability where, under some error
+conditions, Vault would return an error message disclosing internal IP
+addresses. This vulnerability affects Vault and Vault Enterprise and is fixed in
+1.6.2 (CVE-2021-3024).
+* Limited Unauthenticated Remove Peer: As of Vault 1.6, the remove-peer command
+on DR secondaries did not require authentication. This issue impacts the
+stability of HA architecture, as a bad actor could remove all standby
+nodes from a DR
+secondary. This issue affects Vault Enterprise 1.6.0 and 1.6.1, and is fixed in
+1.6.2 (CVE-2021-3282).
+* Mount Path Disclosure: Vault previously returned different HTTP status codes for
+existent and non-existent mount paths. This behavior would allow unauthenticated
+brute force attacks to reveal which paths had valid mounts. This issue affects
+Vault and Vault Enterprise and is fixed in 1.6.2 (CVE-2020-25594).
+
+CHANGES:
+
+* go: Update go version to 1.15.7 [[GH-10730](https://github.com/hashicorp/vault/pull/10730)]
+
+FEATURES:
+
+* ui: Adds check for feature flag on application, and updates namespace toolbar on login if present [[GH-10588](https://github.com/hashicorp/vault/pull/10588)]
+
+IMPROVEMENTS:
+
+* core (enterprise): "vault status" command works when a namespace is set. [[GH-10725](https://github.com/hashicorp/vault/pull/10725)]
+* core: reduce memory used by leases [[GH-10726](https://github.com/hashicorp/vault/pull/10726)]
+* storage/raft (enterprise): Listing of peers is now allowed on DR secondary
+cluster nodes, as an update operation that takes in DR operation token for
+authenticating the request.
+
+BUG FIXES:
+
+* agent: Set namespace for template server in agent. [[GH-10757](https://github.com/hashicorp/vault/pull/10757)]
+* core: Make the response to an unauthenticated request to sys/internal endpoints consistent regardless of mount existence. [[GH-10650](https://github.com/hashicorp/vault/pull/10650)]
+* metrics: Protect emitMetrics from panicking during post-seal [[GH-10708](https://github.com/hashicorp/vault/pull/10708)]
+* secrets/gcp: Fix issue with account and iam_policy roleset WALs not being removed after attempts when GCP project no longer exists [[GH-10759](https://github.com/hashicorp/vault/pull/10759)]
+* storage/raft (enterprise): Automated snapshots with Azure required specifying
+`azure_blob_environment`, which should have had as a default `AZUREPUBLICCLOUD`.
+* storage/raft (enterprise): Autosnapshots config and storage weren't excluded from
+performance replication, causing conflicts and errors.
+* ui: Fix bug that double encodes secret route when there are spaces in the path and makes you unable to view the version history. [[GH-10596](https://github.com/hashicorp/vault/pull/10596)]
+* ui: Fix expected response from feature-flags endpoint [[GH-10684](https://github.com/hashicorp/vault/pull/10684)]
+
 ## 1.6.1
 ### December 16, 2020
 
