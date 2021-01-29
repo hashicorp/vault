@@ -14,6 +14,7 @@ export default function GuidesLayout(props) {
       product={{ name: productName, slug: productSlug }}
       subpath={subpath}
       order={order}
+      mainBranch="master"
       staticProps={props}
     />
   )
