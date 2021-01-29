@@ -60,6 +60,10 @@ export default ApplicationAdapter.extend({
     });
   },
 
+  updateRecord() {
+    return this.createRecord(...arguments);
+  },
+
   deleteRecord(store, type, snapshot) {
     const id = snapshot.id;
     return this.ajax(this.urlFor('database', id), 'DELETE');
