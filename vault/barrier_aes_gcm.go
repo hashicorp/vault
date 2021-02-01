@@ -87,7 +87,7 @@ type AESGCMBarrier struct {
 	// of const to allow for testing
 	currentAESGCMVersionByte byte
 
-	initialized atomic.Bool
+	initialized atomic2.Bool
 }
 
 func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
@@ -351,9 +351,9 @@ func (b *AESGCMBarrier) recoverKeyring(plaintext []byte) error {
 	}
 
 	// Set rotation time if applicable
-	if keyring.rotationConfig.KeyRotationInterval > 0 {
+	if keyring.rotationConfig.Interval > 0 {
 		activeKey := keyring.TermKey(keyring.ActiveTerm())
-		activeKey.rotationTime = activeKey.InstallTime.Add(keyring.rotationConfig.KeyRotationInterval)
+		activeKey.rotationTime = activeKey.InstallTime.Add(keyring.rotationConfig.Interval)
 	}
 
 	// Setup the keyring and finish
@@ -1111,7 +1111,7 @@ func (b *AESGCMBarrier) ConsumeEncryptionCount(consumer func(int64) error) error
 		err = consumer(c)
 		if err != nil {
 			// Consumer succeeded, remove those from local encryptions
-			atomic2.AddInt64(&b.keyring.LocalEncryptions, -c)
+			atomic.AddInt64(&b.keyring.LocalEncryptions, -c)
 		}
 	}
 	return err
@@ -1120,7 +1120,7 @@ func (b *AESGCMBarrier) ConsumeEncryptionCount(consumer func(int64) error) error
 func (b *AESGCMBarrier) AddRemoteEncryptions(encryptions int64) {
 	b.l.RLock()
 	defer b.l.RUnlock()
-	atomic2.AddInt64(&b.keyring.LocalEncryptions, encryptions)
+	atomic.AddInt64(&b.keyring.LocalEncryptions, encryptions)
 }
 
 func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
@@ -1129,24 +1129,24 @@ func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, pa
 		return nil, err
 	}
 	// Increment the local encryption count, and track metrics
-	atomic2.AddInt64(&keyring.LocalEncryptions, 1)
+	atomic.AddInt64(&keyring.LocalEncryptions, 1)
 	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	return ct, nil
 }
 
-func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, logger log.Logger, rand io.Reader) {
+func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Reader) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
 	ops := b.keyring.encryptions()
 	// Don't check/persist on every operation
 	activeKey := b.keyring.keys[b.keyring.ActiveTerm()]
-	if ops > b.keyring.rotationConfig.KeyRotationMaxOperations ||
-		(b.keyring.rotationConfig.KeyRotationInterval > 0 && time.Now().After(activeKey.rotationTime)) {
+	if ops > b.keyring.rotationConfig.MaxOperations ||
+		(b.keyring.rotationConfig.Interval > 0 && time.Now().After(activeKey.rotationTime)) {
 		_, err := b.rotateLocked(ctx, rand)
 		if err != nil {
-			logger.Error("error auto-rotating barrier key: %s", err.Error())
+			return err
 		}
 	} else if b.keyring.LocalEncryptions > 0 {
 		// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
@@ -1155,7 +1155,8 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, logger log.L
 		b.keyring.LocalEncryptions = 0
 		err := b.persistKeyring(ctx, b.keyring)
 		if err != nil {
-			logger.Error("error persisting barrier encryptions estimate: %s", err.Error())
+			return err
 		}
 	}
+	return nil
 }

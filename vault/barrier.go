@@ -3,12 +3,11 @@ package vault
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/vault/sdk/logical"
 	"io"
 	"time"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	log "github.com/hashicorp/go-hclog"
 )
 
 var (
@@ -161,7 +160,7 @@ type SecurityBarrier interface {
 	AddRemoteEncryptions(encryptions int64)
 
 	// Check whether an automatic rotation is due
-	CheckBarrierAutoRotate(ctx context.Context, logger log.Logger, rand io.Reader)
+	CheckBarrierAutoRotate(ctx context.Context, rand io.Reader) error
 
 	// SecurityBarrier must provide the storage APIs
 	logical.Storage

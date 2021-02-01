@@ -2104,6 +2104,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, err)
 	}
 
+	if err := c.barrier.CheckBarrierAutoRotate(context.Background(), c.secureRandomReader); err != nil {
+		result = multierror.Append(result, err)
+	}
+
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -2696,7 +2700,10 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
-			c.barrier.CheckBarrierAutoRotate(ctx, c.Logger(), c.secureRandomReader)
+			err := c.barrier.CheckBarrierAutoRotate(ctx, c.secureRandomReader)
+			if err != nil {
+				c.logger.Error("error in barrier auto rotation", "error", err)
+			}
 		case <-ctx.Done():
 			return
 		}
