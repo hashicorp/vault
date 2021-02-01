@@ -2547,7 +2547,7 @@ func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logica
 	if rotConfig.Interval > 0 {
 		resp.Data["interval"] = rotConfig.Interval.String()
 	} else {
-		resp.Data["interval"] = "disabled"
+		resp.Data["interval"] = 0
 	}
 	return resp, nil
 }

@@ -2060,6 +2060,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"max_operations": configutil.AbsoluteOperationMaximum,
+		"interval":       0,
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
