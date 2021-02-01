@@ -21,10 +21,10 @@ import (
 // when a new key is added to the keyring, we can encrypt with the master key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey      []byte
-	keys           map[uint32]*Key
-	activeTerm     uint32
-	rotationConfig configutil.KeyRotationConfig
+	masterKey        []byte
+	keys             map[uint32]*Key
+	activeTerm       uint32
+	rotationConfig   configutil.KeyRotationConfig
 	LocalEncryptions int64 `json:"-"`
 }
 
@@ -41,7 +41,7 @@ type Key struct {
 	Version      int
 	Value        []byte
 	InstallTime  time.Time
-	Encryptions  uint64    `json:"encryptions,omitempty"`
+	Encryptions  uint64    `json:"Encryptions,omitempty"`
 	rotationTime time.Time `json:"-"`
 }
 
@@ -219,13 +219,6 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	}
 	for _, key := range k.keys {
 		memzero(key.Value)
-	}
-}
-
-func (k *Keyring) AddEncryptionEstimate(term uint32, delta uint64) {
-	key := k.TermKey(term)
-	if key != nil {
-		atomic.AddUint64(&key.Encryptions, delta)
 	}
 }
 

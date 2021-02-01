@@ -870,10 +870,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	var err error
 
 	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical, func() io.Reader {
-		return c.secureRandomReader
-	}, c.logger)
-
+	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}
@@ -1881,6 +1878,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.persistFeatureFlags(ctx); err != nil {
 			return err
 		}
+
+		go c.autoRotateBarrierLoop(c.activeContext)
 	}
 
 	if !c.IsDRSecondary() {
@@ -2689,4 +2688,17 @@ func (c *Core) KeyRotateGracePeriod() time.Duration {
 
 func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
+}
+
+// Periodically test whether to automatically rotate the barrier key
+func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
+	t := time.NewTicker(autoRotateCheckInterval)
+	for {
+		select {
+		case <-t.C:
+			c.barrier.CheckBarrierAutoRotate(ctx, c.Logger(), c.secureRandomReader)
+		case <-ctx.Done():
+			return
+		}
+	}
 }

@@ -3,11 +3,12 @@ package vault
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	log "github.com/hashicorp/go-hclog"
 )
 
 var (
@@ -66,6 +67,9 @@ const (
 	// used by standbys to handle rekeys.  It also comes into play when restoring
 	// raft snapshots.
 	shamirKekPath = "core/shamir-kek"
+
+	// How often to ship encryption counts to the primary
+	barrierEncryptionCountShipInterval = time.Minute
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -148,6 +152,16 @@ type SecurityBarrier interface {
 
 	// For replication we must send over the keyring, so this must be available
 	Keyring() (*Keyring, error)
+
+	// For encryption count shipping, a function which handles updating local encryption counts if the consumer succeeds.
+	// This isolates the barrier code from the replication system
+	ConsumeEncryptionCount(consumer func(int64) error) error
+
+	// Add encryption counts from a remote source (downstream cluster node)
+	AddRemoteEncryptions(encryptions int64)
+
+	// Check whether an automatic rotation is due
+	CheckBarrierAutoRotate(ctx context.Context, logger log.Logger, rand io.Reader)
 
 	// SecurityBarrier must provide the storage APIs
 	logical.Storage
