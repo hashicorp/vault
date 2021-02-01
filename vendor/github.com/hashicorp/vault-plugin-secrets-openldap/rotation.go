@@ -54,7 +54,7 @@ func (b *backend) populateQueue(ctx context.Context, s logical.Storage) {
 		default:
 		}
 
-		role, err := b.StaticRole(ctx, s, roleName)
+		role, err := b.staticRole(ctx, s, roleName)
 		if err != nil {
 			log.Warn("unable to read static role", "error", err, "role", roleName)
 			continue
@@ -159,7 +159,7 @@ func (b *backend) rotateCredential(ctx context.Context, s logical.Storage) bool 
 	defer lock.Unlock()
 
 	// Validate the role still exists
-	role, err := b.StaticRole(ctx, s, item.Key)
+	role, err := b.staticRole(ctx, s, item.Key)
 	if err != nil {
 		b.Logger().Error("unable to load role", "role", item.Key, "error", err)
 		item.Priority = time.Now().Add(10 * time.Second).Unix()
@@ -457,7 +457,7 @@ func (b *backend) loadStaticWALs(ctx context.Context, s logical.Storage) (map[st
 
 		// Verify the static role still exists
 		roleName := walEntry.RoleName
-		role, err := b.StaticRole(ctx, s, roleName)
+		role, err := b.staticRole(ctx, s, roleName)
 		if err != nil {
 			b.Logger().Warn("unable to read static role", "error", err, "role", roleName)
 			continue
