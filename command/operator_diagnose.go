@@ -3,6 +3,7 @@ package command
 import (
 	"strings"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -111,22 +112,46 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 		// TODO: set up a different one?
 		// In particular, a UI instance that won't output?
 		BaseCommand: c.BaseCommand,
+
+		// TODO: refactor to a common place?
+		AuditBackends:        auditBackends,
+		CredentialBackends:   credentialBackends,
+		LogicalBackends:      logicalBackends,
+		PhysicalBackends:     physicalBackends,
+		ServiceRegistrations: serviceRegistrations,
+
 		// TODO: other ServerCommand options?
+
+		logger:     log.NewInterceptLogger(nil),
+		allLoggers: []log.Logger{},
 	}
 
-	c.UI.Output(status_unknown + "Parse configuration")
-
+	phase := "Parse configuration"
+	c.UI.Output(status_unknown + phase)
 	server.flagConfigs = c.flagConfigs
-	_, err := server.parseConfig()
-
+	config, err := server.parseConfig()
 	if err != nil {
-		c.UI.Output(same_line + status_failed + "Parse configuration")
+		c.UI.Output(same_line + status_failed + phase)
 		c.UI.Output("Error while reading configuration files:")
 		c.UI.Output(err.Error())
 		return 1
 	}
 
-	c.UI.Output(same_line + status_ok + "Parse configuration")
+	// Errors in these items could stop Vault from starting but are not yet covered:
+	// TODO: logging configuration
+	// TODO: SetupTelemetry
+	// TODO: check for storage backend
+	c.UI.Output(same_line + status_ok + phase)
+
+	phase = "Access storage"
+	c.UI.Output(status_unknown + phase)
+	_, err = server.setupStorage(config)
+	if err != nil {
+		c.UI.Output(same_line + status_failed + phase)
+		c.UI.Output(err.Error())
+		return 1
+	}
+	c.UI.Output(same_line + status_ok + phase)
 
 	return 0
 }
