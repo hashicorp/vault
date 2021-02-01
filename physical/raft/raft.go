@@ -230,7 +230,9 @@ func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
 			return nil, err
 		}
 	}
-	tlsConfig.ServerName = leaderInfo.LeaderTLSServerName
+	if tlsConfig != nil {
+		tlsConfig.ServerName = leaderInfo.LeaderTLSServerName
+	}
 
 	return tlsConfig, nil
 }
