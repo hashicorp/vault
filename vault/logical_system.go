@@ -2541,11 +2541,13 @@ func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logica
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"max_operations": rotConfig.KeyRotationMaxOperations,
+			"max_operations": rotConfig.MaxOperations,
 		},
 	}
-	if rotConfig.KeyRotationInterval > 0 {
-		resp.Data["interval"] = rotConfig.KeyRotationInterval.String()
+	if rotConfig.Interval > 0 {
+		resp.Data["interval"] = rotConfig.Interval.String()
+	} else {
+		resp.Data["interval"] = "disabled"
 	}
 	return resp, nil
 }
@@ -2558,14 +2560,14 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 		return nil, err
 	}
 	if ok {
-		rotConfig.KeyRotationMaxOperations = int64(maxOps.(int))
+		rotConfig.MaxOperations = int64(maxOps.(int))
 	}
 	interval, ok, err := data.GetOkErr("interval")
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		rotConfig.KeyRotationInterval = time.Second * time.Duration(interval.(int))
+		rotConfig.Interval = time.Second * time.Duration(interval.(int))
 	}
 
 	// Store the rotation config
@@ -4393,6 +4395,14 @@ Enable a new audit backend or disable an existing backend.
 		`,
 	},
 
+	"rotation-max-operations": {
+		"The number of encryption operations performed before the barrier key is automatically rotated.",
+		"",
+	},
+	"rotation-interval": {
+		"How long after installation of an active key term that the key will be automatically rotated.",
+		"",
+	},
 	"rotate": {
 		"Rotates the backend encryption key used to persist data.",
 		`

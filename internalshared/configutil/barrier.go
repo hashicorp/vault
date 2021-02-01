@@ -9,21 +9,20 @@ import (
 const AbsoluteOperationMaximum = int64(3865470566)
 
 var DefaultRotationConfig = KeyRotationConfig{
-	KeyRotationMaxOperations: AbsoluteOperationMaximum,
+	MaxOperations: AbsoluteOperationMaximum,
 }
 
 type KeyRotationConfig struct {
-	KeyRotationMaxOperations int64 `hcl:"key_rotation_max_operations"`
-	KeyRotationInterval      time.Duration
-	KeyRotationIntervalRaw   interface{} `hcl:"key_rotation_interval"`
+	MaxOperations int64
+	Interval      time.Duration
 }
 
 func (c *KeyRotationConfig) Sanitize() {
-	if c.KeyRotationMaxOperations == 0 || c.KeyRotationMaxOperations > AbsoluteOperationMaximum {
-		c.KeyRotationMaxOperations = AbsoluteOperationMaximum
+	if c.MaxOperations == 0 || c.MaxOperations > AbsoluteOperationMaximum {
+		c.MaxOperations = AbsoluteOperationMaximum
 	}
 }
 
 func (c *KeyRotationConfig) Equals(config KeyRotationConfig) bool {
-	return c.KeyRotationMaxOperations == config.KeyRotationMaxOperations && c.KeyRotationInterval == c.KeyRotationInterval
+	return c.MaxOperations == config.MaxOperations && c.Interval == config.Interval
 }
