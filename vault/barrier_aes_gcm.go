@@ -720,6 +720,7 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 	info := &KeyInfo{
 		Term:        int(term),
 		InstallTime: key.InstallTime,
+		Encryptions: key.Encryptions,
 	}
 	return info, nil
 }
