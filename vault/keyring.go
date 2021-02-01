@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
