@@ -100,7 +100,10 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+	return c.RunWithParsedFlags()
+}
 
+func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
