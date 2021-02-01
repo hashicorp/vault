@@ -28,34 +28,23 @@ export default Route.extend({
       return e.httpStatus;
     }
   },
-  pathQuery(role, backend, endpoint) {
+  pathQuery(backend, endpoint) {
     return {
-      id: `${backend}/${endpoint}/${role}`,
+      id: `${backend}/${endpoint}/`,
     };
   },
   async fetchCapabilitiesRole(queryOptions) {
-    return this.store.queryRecord(
-      'capabilities',
-      this.pathQuery(queryOptions.id, queryOptions.backend, 'roles')
-    );
+    return this.store.queryRecord('capabilities', this.pathQuery(queryOptions.backend, 'roles'));
   },
   async fetchCapabilitiesStaticRole(queryOptions) {
-    return this.store.queryRecord(
-      'capabilities',
-      this.pathQuery(queryOptions.id, queryOptions.backend, 'static-roles')
-    );
+    return this.store.queryRecord('capabilities', this.pathQuery(queryOptions.backend, 'static-roles'));
   },
   async fetchCapabilitiesConnection(queryOptions) {
-    return this.store.queryRecord(
-      'capabilities',
-      this.pathQuery(queryOptions.id, queryOptions.backend, 'connections')
-    );
+    return this.store.queryRecord('capabilities', this.pathQuery(queryOptions.backend, 'config'));
   },
   model() {
     let backend = this.enginePathParam();
     let queryOptions = { backend, id: '' };
-    let secretEngine = this.store.peekRecord('secret-engine', backend);
-    let type = secretEngine && secretEngine.get('engineType');
 
     let connection = this.fetchConnection(queryOptions);
     let role = this.fetchDynamicRoles(queryOptions);
@@ -70,7 +59,7 @@ export default Route.extend({
       roles: role,
       staticRoles: staticRole,
       engineType: 'database',
-      id: type,
+      id: backend,
       roleCapabilities,
       staticRoleCapabilities,
       connectionCapabilities,
