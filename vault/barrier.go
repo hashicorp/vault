@@ -197,5 +197,5 @@ type BarrierEncryptor interface {
 type KeyInfo struct {
 	Term        int
 	InstallTime time.Time
-	Encryptions uint64
+	Encryptions int64
 }

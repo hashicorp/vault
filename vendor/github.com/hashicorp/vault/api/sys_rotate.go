@@ -74,4 +74,5 @@ func (c *Sys) KeyStatus() (*KeyStatus, error) {
 type KeyStatus struct {
 	Term        int       `json:"term"`
 	InstallTime time.Time `json:"install_time"`
+	Encryptions int       `json:"encryptions"`
 }

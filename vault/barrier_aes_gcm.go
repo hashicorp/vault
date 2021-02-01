@@ -720,7 +720,7 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 	info := &KeyInfo{
 		Term:        int(term),
 		InstallTime: key.InstallTime,
-		Encryptions: key.Encryptions,
+		Encryptions: b.keyring.encryptions(),
 	}
 	return info, nil
 }
@@ -1151,10 +1151,12 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Read
 		}
 	} else if b.keyring.LocalEncryptions > 0 {
 		// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
-		// there has been no activity
-		activeKey.Encryptions += uint64(b.keyring.LocalEncryptions)
-		b.keyring.LocalEncryptions = 0
+		// there has been no activity. Since persistence performs an encryption, perversely we zero out after
+		// persistence and add 1 to the count to avoid this operation guaranteeing we need another
+		// autoRotateCheckInterval later.
+		activeKey.Encryptions += uint64(b.keyring.LocalEncryptions) + 1
 		err := b.persistKeyring(ctx, b.keyring)
+		b.keyring.LocalEncryptions = 0
 		if err != nil {
 			return err
 		}
