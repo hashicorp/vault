@@ -3,6 +3,7 @@ package command
 import (
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -46,7 +47,7 @@ Usage: vault operator diagnose
 }
 
 func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetNone)
+	set := NewFlagSets(c.UI)
 	f := set.NewFlagSet("Command Options")
 
 	f.StringSliceVar(&StringSliceVar{
@@ -86,6 +87,12 @@ func (c *OperatorDiagnoseCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
+const status_unknown = "[      ] "
+const status_ok = "\u001b[32m[  ok  ]\u001b[0m "
+const status_failed = "\u001b[31m[failed]\u001b[0m "
+const status_warn = "\u001b[33m[ warn ]\u001b[0m "
+const same_line = "\u001b[F"
+
 func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
@@ -93,6 +100,33 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.UI.Output("No implementation yet.")
+	if len(c.flagConfigs) == 0 {
+		c.UI.Error("Must specify a configuration file using -config.")
+		return 1
+	}
+
+	c.UI.Output(version.GetVersion().FullVersionNumber(true))
+
+	server := &ServerCommand{
+		// TODO: set up a different one?
+		// In particular, a UI instance that won't output?
+		BaseCommand: c.BaseCommand,
+		// TODO: other ServerCommand options?
+	}
+
+	c.UI.Output(status_unknown + "Parse configuration")
+
+	server.flagConfigs = c.flagConfigs
+	_, err := server.parseConfig()
+
+	if err != nil {
+		c.UI.Output(same_line + status_failed + "Parse configuration")
+		c.UI.Output("Error while reading configuration files:")
+		c.UI.Output(err.Error())
+		return 1
+	}
+
+	c.UI.Output(same_line + status_ok + "Parse configuration")
+
 	return 0
 }
