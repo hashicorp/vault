@@ -16,22 +16,6 @@
 </PageHeader>
 
 {{#if (eq @mode "show")}}
-<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs sub-nav">
-    <ul>
-      <LinkTo @route="vault.cluster.secrets.backend.list" @model={{@model.id}} @tagName="li">
-        <LinkTo @route="vault.cluster.secrets.backend.list" @model={{@model.id}}>
-          Roles
-        </LinkTo>
-      </LinkTo>
-      <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @tagName="li">
-        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}}>
-          Configuration
-        </LinkTo>
-      </LinkTo>
-    </ul>
-  </nav>
-</div>
 <Toolbar>
   <ToolbarActions>
     {{!-- {{#if capabilities.canDelete}} --}}
@@ -188,19 +172,6 @@
                             {{!-- Prevents browsers from auto-filling --}}
                             @autocomplete="new-password"
                             @spellcheck="false" />
-                          {{!-- <input
-                            type="password"
-                            data-test-input={{attr.name}}
-                            id={{attr.name}}
-                            autocomplete="off"
-                            spellcheck="false"
-                            value={{or (get @model attr.name)
-                            attr.options.defaultValue}}
-                            onChange={{fn this.updatePassword attr.name}}
-                            class="input"
-                            maxLength={{attr.options.characterLimit}}
-                            autocomplete="new-password"
-                            spellcheck="false" /> --}}
                         {{/if}}
                       </Toggle>
                     </div>
