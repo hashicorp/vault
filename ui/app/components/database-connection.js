@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-
+import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -20,8 +20,26 @@ export default class DatabaseConnectionEdit extends Component {
   @service router;
   @service flashMessages;
 
+  @tracked
+  showPasswordField = false;
+
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
+  }
+
+  @action
+  updateShowPassword(showForm) {
+    this.showPasswordField = showForm;
+    if (!showForm) {
+      // unset password if hidden
+      this.args.model.password = undefined;
+    }
+  }
+
+  @action
+  updatePassword(attr, evt) {
+    const value = evt.target.value;
+    this.args.model[attr] = value;
   }
 
   @action
@@ -34,15 +52,18 @@ export default class DatabaseConnectionEdit extends Component {
       this.transitionToRoute(SHOW_ROUTE, secretId);
     });
   }
+
+  @action
   async handleUpdateConnection(evt) {
     evt.preventDefault();
     let secret = this.args.model;
     let secretId = secret.name;
-    secret.set('id', secretId);
-    console.log(this.args.mode, this.args.model);
-    // secret.save().then(() => {
-    //   this.transitionToRoute(SHOW_ROUTE, secretId);
-    // });
+    // TODO: remove password unless toggled on
+    // Set to null, and remove null values from request
+    // in serializer if `update`?
+    secret.save().then(() => {
+      this.transitionToRoute(SHOW_ROUTE, secretId);
+    });
   }
 
   @action

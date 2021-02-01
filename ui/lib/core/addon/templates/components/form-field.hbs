@@ -179,6 +179,15 @@
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }} class="textarea"></textarea>
+    {{else if (eq attr.options.editType "password")}}
+      <Input
+        @type="password"
+        @value={{get model valuePath}}
+        @name={{attr.name}}
+        class="input"
+        {{!-- Prevents browsers from auto-filling --}}
+        @autocomplete="new-password"
+        @spellcheck="false" />
     {{else if (eq attr.options.editType "json")}}
       {{!-- JSON Editor --}}
       <label for="{{attr.name}}" class="is-label">
@@ -191,12 +200,20 @@
           {{/info-tooltip}}
         {{/if}}
       </label>
-      {{json-editor
-        value=(if
-          (get model valuePath) (stringify (jsonify (get model valuePath)))
-        )
-        valueUpdated=(action "codemirrorUpdated" attr.name "string")
-      }}
+      {{#if attr.options.subText}}
+        <p class="sub-text">{{attr.options.subText}}</p>
+      {{/if}}
+      <JsonEditor
+        @value={{if
+          (get model valuePath)
+          (stringify (jsonify (get model valuePath)))
+          attr.options.defaultValue
+        }}
+        @valueUpdated={{action "codemirrorUpdated" attr.name "string"}}
+        @options={{hash
+          theme=(or attr.options.theme attr.options.theme 'hashi')
+        }}
+      />
     {{else}}
       {{!-- Regular Text Input --}}
       <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
