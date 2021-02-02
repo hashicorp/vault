@@ -88,6 +88,9 @@ type AESGCMBarrier struct {
 	currentAESGCMVersionByte byte
 
 	initialized atomic2.Bool
+
+	// Used only for testing
+	totalLocalEncryptions int64
 }
 
 func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
@@ -518,6 +521,8 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	// Set the vault as unsealed
 	b.keyring = keyring
 	b.sealed = false
+	b.totalLocalEncryptions = keyring.encryptions()
+
 	return nil
 }
 
@@ -718,9 +723,10 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 
 	// Return the key info
 	info := &KeyInfo{
-		Term:        int(term),
-		InstallTime: key.InstallTime,
-		Encryptions: b.keyring.encryptions(),
+		Term:             int(term),
+		InstallTime:      key.InstallTime,
+		Encryptions:      b.keyring.encryptions(),
+		LocalEncryptions: b.LocalEncryptions(),
 	}
 	return info, nil
 }
@@ -1136,6 +1142,11 @@ func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, pa
 	return ct, nil
 }
 
+// LocalEncryptions returns the number of encryptions made on the local instance only for the current key term
+func (b *AESGCMBarrier) LocalEncryptions() int64 {
+	return b.totalLocalEncryptions
+}
+
 func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Reader) error {
 	b.l.Lock()
 	defer b.l.Unlock()
@@ -1154,7 +1165,9 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Read
 		// there has been no activity. Since persistence performs an encryption, perversely we zero out after
 		// persistence and add 1 to the count to avoid this operation guaranteeing we need another
 		// autoRotateCheckInterval later.
-		activeKey.Encryptions += uint64(b.keyring.LocalEncryptions) + 1
+		newEncs := b.keyring.LocalEncryptions + 1
+		activeKey.Encryptions += uint64(newEncs)
+		b.totalLocalEncryptions += newEncs
 		err := b.persistKeyring(ctx, b.keyring)
 		b.keyring.LocalEncryptions = 0
 		if err != nil {

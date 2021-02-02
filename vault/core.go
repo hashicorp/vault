@@ -2104,10 +2104,6 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, err)
 	}
 
-	if err := c.barrier.CheckBarrierAutoRotate(context.Background(), c.secureRandomReader); err != nil {
-		result = multierror.Append(result, err)
-	}
-
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")

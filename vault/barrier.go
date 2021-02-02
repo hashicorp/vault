@@ -195,7 +195,8 @@ type BarrierEncryptor interface {
 
 // KeyInfo is used to convey information about the encryption key
 type KeyInfo struct {
-	Term        int
-	InstallTime time.Time
-	Encryptions int64
+	Term             int
+	InstallTime      time.Time
+	Encryptions      int64
+	LocalEncryptions int64
 }
