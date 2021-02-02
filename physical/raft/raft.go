@@ -3,15 +3,19 @@ package raft
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
@@ -21,10 +25,12 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -120,6 +126,51 @@ type RaftBackend struct {
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
+
+	autopilot        *autopilot.Autopilot
+	disableAutopilot bool
+	autopilotConfig  *AutopilotConfig
+	followerStates   *FollowerStates
+}
+
+type AutopilotConfig struct {
+	CleanupDeadServers      bool          `json:"cleanup_dead_servers" mapstructure:"cleanup_dead_servers"`
+	LastContactThreshold    time.Duration `json:"last_contact_threshold" mapstructure:"-"`
+	MaxTrailingLogs         uint64        `json:"max_trailing_logs" mapstructure:"max_trailing_logs"`
+	MinQuorum               uint          `json:"min_quorum" mapstructure:"min_quorum"`
+	ServerStabilizationTime time.Duration `json:"server_stabilization_time" mapstructure:"-"`
+}
+
+func (ac *AutopilotConfig) Clone() *AutopilotConfig {
+	return &AutopilotConfig{
+		CleanupDeadServers:      ac.CleanupDeadServers,
+		LastContactThreshold:    ac.LastContactThreshold,
+		MaxTrailingLogs:         ac.MaxTrailingLogs,
+		MinQuorum:               ac.MinQuorum,
+		ServerStabilizationTime: ac.ServerStabilizationTime,
+	}
+
+}
+
+func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
+	var data interface{}
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
+
+	conf := data.(map[string]interface{})
+	if err = mapstructure.WeakDecode(conf, ac); err != nil {
+		return err
+	}
+	if ac.LastContactThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_threshold"]); err != nil {
+		return err
+	}
+	if ac.ServerStabilizationTime, err = parseutil.ParseDurationSecond(conf["server_stabilization_time"]); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -175,6 +226,213 @@ type LeaderJoinInfo struct {
 
 	// TLSConfig for the API client to use when communicating with the leader node
 	TLSConfig *tls.Config `json:"-"`
+}
+
+type FollowerState struct {
+	AppliedIndex  uint64
+	LastHeartbeat time.Time
+	LastTerm      uint64
+}
+
+type FollowerStates struct {
+	l         sync.RWMutex
+	followers map[string]FollowerState
+}
+
+func NewFollowerStates() *FollowerStates {
+	return &FollowerStates{
+		followers: make(map[string]FollowerState),
+	}
+}
+
+func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64) {
+	state := FollowerState{
+		AppliedIndex: appliedIndex,
+		LastTerm:     term,
+	}
+	if appliedIndex > 0 {
+		state.LastHeartbeat = time.Now()
+	}
+
+	s.l.Lock()
+	s.followers[nodeID] = state
+	s.l.Unlock()
+}
+
+func (s *FollowerStates) Clear() {
+	s.l.Lock()
+	for i := range s.followers {
+		delete(s.followers, i)
+	}
+	s.l.Unlock()
+}
+
+func (s *FollowerStates) Delete(nodeID string) {
+	s.l.RLock()
+	delete(s.followers, nodeID)
+	s.l.RUnlock()
+}
+
+func (s *FollowerStates) Get(nodeID string) FollowerState {
+	s.l.RLock()
+	state := s.followers[nodeID]
+	s.l.RUnlock()
+	return state
+}
+
+func (s *FollowerStates) MinIndex() uint64 {
+	var min uint64 = math.MaxUint64
+	minFunc := func(a, b uint64) uint64 {
+		if a > b {
+			return b
+		}
+		return a
+	}
+
+	s.l.RLock()
+	for _, state := range s.followers {
+		min = minFunc(min, state.AppliedIndex)
+	}
+	s.l.RUnlock()
+
+	if min == math.MaxUint64 {
+		return 0
+	}
+
+	return min
+}
+
+var _ autopilot.ApplicationIntegration = (*Delegate)(nil)
+
+type Delegate struct {
+	*RaftBackend
+	once *sync.Once
+}
+
+func newDelegate(b *RaftBackend) *Delegate {
+	return &Delegate{
+		RaftBackend: b,
+		once:        new(sync.Once),
+	}
+}
+
+func (d *Delegate) AutopilotConfig() *autopilot.Config {
+	d.l.RLock()
+	defer d.l.RUnlock()
+
+	return &autopilot.Config{
+		CleanupDeadServers:      d.autopilotConfig.CleanupDeadServers,
+		LastContactThreshold:    d.autopilotConfig.LastContactThreshold,
+		MaxTrailingLogs:         d.autopilotConfig.MaxTrailingLogs,
+		MinQuorum:               d.autopilotConfig.MinQuorum,
+		ServerStabilizationTime: d.autopilotConfig.ServerStabilizationTime,
+	}
+}
+
+func (d *Delegate) NotifyState(state *autopilot.State) {
+	// TODO: implement
+}
+
+func (d *Delegate) FetchServerStats(ctx context.Context, servers map[raft.ServerID]*autopilot.Server) map[raft.ServerID]*autopilot.ServerStats {
+	ret := make(map[raft.ServerID]*autopilot.ServerStats)
+
+	followerStates := d.RaftBackend.followerStates
+	followerStates.l.RLock()
+	defer followerStates.l.RUnlock()
+
+	now := time.Now()
+	for id, followerState := range followerStates.followers {
+		ret[raft.ServerID(id)] = &autopilot.ServerStats{
+			LastContact: now.Sub(followerState.LastHeartbeat),
+			LastTerm:    followerState.LastTerm,
+			LastIndex:   followerState.AppliedIndex,
+		}
+	}
+
+	leaderState, _ := d.fsm.LatestState()
+	ret[raft.ServerID(d.localID)] = &autopilot.ServerStats{
+		LastTerm:  leaderState.Term,
+		LastIndex: leaderState.Index,
+	}
+
+	return ret
+}
+
+func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
+	followerStates := d.RaftBackend.followerStates
+	followerStates.l.RLock()
+	defer followerStates.l.RUnlock()
+
+	ret := make(map[raft.ServerID]*autopilot.Server)
+	for id := range d.RaftBackend.followerStates.followers {
+		ret[raft.ServerID(id)] = &autopilot.Server{
+			ID:          raft.ServerID(id),
+			Name:        id,
+			RaftVersion: raft.ProtocolVersionMax,
+			NodeType:    autopilot.NodeVoter,
+		}
+	}
+
+	ret[raft.ServerID(d.localID)] = &autopilot.Server{
+		ID:          raft.ServerID(d.localID),
+		Name:        d.localID,
+		RaftVersion: raft.ProtocolVersionMax,
+		NodeType:    autopilot.NodeVoter,
+	}
+
+	return ret
+}
+
+func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
+	//TODO: implement
+}
+
+func (b *RaftBackend) SetFollowerStates(states *FollowerStates) {
+	b.l.Lock()
+	b.followerStates = states
+	b.l.Unlock()
+}
+
+func (b *RaftBackend) SetAutopilotConfig(config *AutopilotConfig) {
+	b.l.Lock()
+	b.autopilotConfig = config
+	b.l.Unlock()
+}
+
+func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
+	b.l.RLock()
+	conf := b.autopilotConfig
+	b.l.RUnlock()
+	return conf
+}
+
+func (b *RaftBackend) autopilotConfDefault() *AutopilotConfig {
+	return &AutopilotConfig{
+		CleanupDeadServers:      true,
+		LastContactThreshold:    time.Second,
+		MaxTrailingLogs:         1024,
+		MinQuorum:               3,
+		ServerStabilizationTime: 10 * time.Second,
+	}
+}
+
+func (b *RaftBackend) autopilotConf() (*AutopilotConfig, error) {
+	config := b.conf["autopilot"]
+	if config == "" {
+		return nil, nil
+	}
+
+	// TODO: Find out why we are getting a list instead of a single item
+	var configs []*AutopilotConfig
+	err := jsonutil.DecodeJSON([]byte(config), &configs)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decode autopilot config: {{err}}", err)
+	}
+	if len(configs) != 1 {
+		return nil, fmt.Errorf("expected a single block of autopilot config")
+	}
+
+	return configs[0], nil
 }
 
 // JoinConfig returns a list of information about possible leader nodes that
@@ -771,6 +1029,49 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
+	// Setup the configuration for autopilot
+	var autopilotConfig *AutopilotConfig
+
+	// If there is a autopilot config in storage that takes precedence
+	b.logger.Info("=====checking autopilot configuration in storage")
+	entry, err := b.Get(ctx, "autopilot/configuration")
+	if err != nil {
+		return err
+	}
+	if entry != nil {
+		if err := jsonutil.DecodeJSON(entry.Value, &autopilotConfig); err != nil {
+			return err
+		}
+		// Use the config present in storage
+		b.logger.Info("=====setting autopilot configuration retrieved from storage")
+		b.autopilotConfig = autopilotConfig
+	}
+
+	if b.autopilotConfig == nil {
+		conf, err := b.autopilotConf()
+		if err != nil {
+			return err
+		}
+		if conf == nil {
+			// Autopilot config is not in both storage and config file. This is the case for
+			// existing customers who have not yet enabled autopilot. Disable autopilot.
+			b.logger.Info("=====autopilot configuration not found; disabling autopilot")
+			b.disableAutopilot = true
+			b.autopilotConfig = b.autopilotConfDefault()
+		} else {
+			b.logger.Info("=====setting autopilot configuration retrieved from config file")
+			// Use the config present in config file
+			b.autopilotConfig = conf
+		}
+	}
+
+	b.logger.Info("=====autopilot configuration", "config", b.autopilotConfig)
+
+	if !b.disableAutopilot {
+		// Create the autopilot instance
+		b.autopilot = autopilot.New(b.raft, newDelegate(b), autopilot.WithLogger(b.logger), autopilot.WithPromoter(autopilot.DefaultPromoter()))
+	}
+
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
 		opts.ClusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
@@ -784,6 +1085,20 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
+}
+
+func (b *RaftBackend) StartAutopilot(ctx context.Context) {
+	if b.autopilot == nil {
+		return
+	}
+	b.autopilot.Start(ctx)
+}
+
+func (b *RaftBackend) StopAutopilot() {
+	if b.autopilot == nil {
+		return
+	}
+	b.autopilot.Stop()
 }
 
 // TeardownCluster shuts down the raft cluster
@@ -852,9 +1167,13 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 		return errors.New("raft storage is not initialized")
 	}
 
-	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
-
-	return future.Error()
+	switch b.disableAutopilot {
+	case true:
+		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+		return future.Error()
+	default:
+		return b.autopilot.RemoveServer(raft.ServerID(peerID))
+	}
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
@@ -901,8 +1220,19 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
 
-	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
-	return future.Error()
+	switch b.disableAutopilot {
+	case true:
+		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
+		return future.Error()
+	default:
+		return b.autopilot.AddServer(&autopilot.Server{
+			ID:          raft.ServerID(peerID),
+			Name:        peerID,
+			Address:     raft.ServerAddress(clusterAddr),
+			RaftVersion: raft.ProtocolVersionMax,
+			NodeType:    autopilot.NodeVoter,
+		})
+	}
 }
 
 // Peers returns all the servers present in the raft cluster

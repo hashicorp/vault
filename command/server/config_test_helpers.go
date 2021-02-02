@@ -895,3 +895,36 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+func testConfigRaftAutopilot(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/raft_autopilot.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	autopilotConfig := `[{"cleanup_dead_servers":"true","last_contact_threshold":"500ms","max_trailing_logs":"250","min_quorum":"3","server_stabilization_time":"10s"}]`
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
+				},
+			},
+			DisableMlock: true,
+		},
+
+		Storage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":      "/storage/path/raft",
+				"node_id":   "raft1",
+				"autopilot": autopilotConfig,
+			},
+		},
+	}
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}

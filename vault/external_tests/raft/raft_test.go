@@ -41,6 +41,20 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 	return cluster
 }
 
+func TestRaft_Autopilot(t *testing.T) {
+	t.Parallel()
+	cluster := raftCluster(t)
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	})
+}
+
 func TestRaft_RetryAutoJoin(t *testing.T) {
 	t.Parallel()
 
