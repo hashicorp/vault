@@ -1151,27 +1151,29 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Read
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	ops := b.keyring.encryptions()
-	// Don't check/persist on every operation
-	activeKey := b.keyring.keys[b.keyring.ActiveTerm()]
-	if ops > b.keyring.rotationConfig.MaxOperations ||
-		(b.keyring.rotationConfig.Interval > 0 && time.Now().After(activeKey.rotationTime)) {
-		_, err := b.rotateLocked(ctx, rand)
-		if err != nil {
-			return err
-		}
-	} else if b.keyring.LocalEncryptions > 0 {
-		// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
-		// there has been no activity. Since persistence performs an encryption, perversely we zero out after
-		// persistence and add 1 to the count to avoid this operation guaranteeing we need another
-		// autoRotateCheckInterval later.
-		newEncs := b.keyring.LocalEncryptions + 1
-		activeKey.Encryptions += uint64(newEncs)
-		b.totalLocalEncryptions += newEncs
-		err := b.persistKeyring(ctx, b.keyring)
-		b.keyring.LocalEncryptions = 0
-		if err != nil {
-			return err
+	if b.keyring != nil {
+		ops := b.keyring.encryptions()
+		// Don't check/persist on every operation
+		activeKey := b.keyring.keys[b.keyring.ActiveTerm()]
+		if ops > b.keyring.rotationConfig.MaxOperations ||
+			(b.keyring.rotationConfig.Interval > 0 && time.Now().After(activeKey.rotationTime)) {
+			_, err := b.rotateLocked(ctx, rand)
+			if err != nil {
+				return err
+			}
+		} else if b.keyring.LocalEncryptions > 0 {
+			// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
+			// there has been no activity. Since persistence performs an encryption, perversely we zero out after
+			// persistence and add 1 to the count to avoid this operation guaranteeing we need another
+			// autoRotateCheckInterval later.
+			newEncs := b.keyring.LocalEncryptions + 1
+			activeKey.Encryptions += uint64(newEncs)
+			b.totalLocalEncryptions += newEncs
+			err := b.persistKeyring(ctx, b.keyring)
+			b.keyring.LocalEncryptions = 0
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
