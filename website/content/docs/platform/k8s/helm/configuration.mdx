@@ -142,7 +142,7 @@ and consider if they're appropriate for your deployment.
     # Recommended default server affinity:
     affinity: |
       podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
+        requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchLabels:
               app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
