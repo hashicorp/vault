@@ -16,10 +16,15 @@ export default RESTSerializer.extend({
       });
       return roles;
     }
+    let path = 'roles';
+    if (payload.data.type === 'static') {
+      path = 'static-roles';
+    }
     return {
       id: payload.secret,
       name: payload.secret,
       backend: payload.backend,
+      path,
       ...payload.data,
     };
   },
