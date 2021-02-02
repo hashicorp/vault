@@ -2,7 +2,7 @@ import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-// ARG TODO confirm that canRead is the correct policy path
+
 export default Model.extend({
   backend: attr('string', { readOnly: true }),
   name: attr('string'),

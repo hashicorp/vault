@@ -29,8 +29,6 @@ export default RESTSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    console.log(store, primaryModelClass, payload, id, requestType);
-
     const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
     const connections = nullResponses.includes(requestType)
       ? { name: id, backend: payload.backend }

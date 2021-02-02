@@ -58,7 +58,7 @@ export default Route.extend({
   },
   setupController(controller, model) {
     this._super(...arguments);
-    let showEmptyState = model.connections === 404 && model.roles === 404 && model.staticRoles === 404;
+    let showEmptyState = model.connections === 404 && model.roles === 404;
     let noConnectionCapabilities =
       !model.connectionCapabilities.canList &&
       !model.connectionCapabilities.canCreate &&
