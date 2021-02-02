@@ -3,7 +3,8 @@ export const ALERT_BANNER_ACTIVE = true
 // https://github.com/hashicorp/react-components/tree/master/packages/alert-banner
 export default {
   tag: 'Announcement',
-  url: 'https://cloud.hashicorp.com/',
+  url:
+    'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=alert_banner',
   text: 'HashiCorp Vault is now available on HCP in Public Beta',
   linkText: 'Learn More',
   // Set the `expirationDate prop with a datetime string (e.g. `2020-01-31T12:00:00-07:00`)

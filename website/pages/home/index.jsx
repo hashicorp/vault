@@ -37,7 +37,8 @@ export default function Homepage({ content }) {
             {
               type: 'inbound',
               title: 'Try Cloud',
-              url: 'https://cloud.hashicorp.com',
+              url:
+                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
               theme: { variant: 'tertiary' },
             },
           ]}
@@ -155,7 +156,8 @@ export default function Homepage({ content }) {
           links={[
             {
               text: 'Learn More',
-              url: 'https://cloud.hashicorp.com/',
+              url:
+                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
             },
           ]}
         />
