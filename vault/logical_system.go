@@ -2524,9 +2524,10 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"term":         info.Term,
-			"install_time": info.InstallTime.Format(time.RFC3339Nano),
-			"encryptions":  info.Encryptions,
+			"term":              info.Term,
+			"install_time":      info.InstallTime.Format(time.RFC3339Nano),
+			"encryptions":       info.Encryptions,
+			"local_encryptions": info.LocalEncryptions,
 		},
 	}
 	return resp, nil
