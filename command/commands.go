@@ -359,6 +359,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot health": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotHealthCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator raft list-peers": func() (cli.Command, error) {
 			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),

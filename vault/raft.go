@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,49 +37,6 @@ var (
 	// TestingUpdateClusterAddr is used in tests to override the cluster address
 	TestingUpdateClusterAddr uint32
 )
-
-type raftFollowerStates struct {
-	l         sync.RWMutex
-	followers map[string]uint64
-}
-
-func (s *raftFollowerStates) update(nodeID string, appliedIndex uint64) {
-	s.l.Lock()
-	s.followers[nodeID] = appliedIndex
-	s.l.Unlock()
-}
-func (s *raftFollowerStates) delete(nodeID string) {
-	s.l.RLock()
-	delete(s.followers, nodeID)
-	s.l.RUnlock()
-}
-func (s *raftFollowerStates) get(nodeID string) uint64 {
-	s.l.RLock()
-	index := s.followers[nodeID]
-	s.l.RUnlock()
-	return index
-}
-func (s *raftFollowerStates) minIndex() uint64 {
-	var min uint64 = math.MaxUint64
-	minFunc := func(a, b uint64) uint64 {
-		if a > b {
-			return b
-		}
-		return a
-	}
-
-	s.l.RLock()
-	for _, i := range s.followers {
-		min = minFunc(min, i)
-	}
-	s.l.RUnlock()
-
-	if min == math.MaxUint64 {
-		return 0
-	}
-
-	return min
-}
 
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
@@ -160,11 +116,20 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
+	raftBackend.SetFollowerStates(c.raftFollowerStates)
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
+
+	// Read autopilot configuration from storage
+	autopilotConfig, err := c.autopilotConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+
 	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      raftTLS,
 		ClusterListener: c.getClusterListener(),
 		StartAsLeader:   creating,
+		AutopilotConfig: autopilotConfig,
 	}); err != nil {
 		return err
 	}
@@ -198,11 +163,27 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 }
 
 func (c *Core) setupRaftActiveNode(ctx context.Context) error {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return nil
+	}
+
+	c.logger.Info("starting raft active node")
+	raftBackend.StartAutopilot(c.activeContext)
+
 	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 
 func (c *Core) stopRaftActiveNode() {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return
+	}
+
+	c.logger.Info("stopping raft active node")
+	raftBackend.StopAutopilot()
+
 	c.pendingRaftPeers = nil
 	c.stopPeriodicRaftTLSRotate()
 }
@@ -334,9 +315,8 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 // to reconnect with the cluster. Additionally, only one outstanding key
 // is allowed for this same reason (max keyring size of 2).
 func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raftBackend *raft.RaftBackend, stopCh chan struct{}) error {
-	followerStates := &raftFollowerStates{
-		followers: make(map[string]uint64),
-	}
+	followerStates := c.raftFollowerStates
+	followerStates.Clear()
 
 	// Pre-populate the follower list with the set of peers.
 	raftConfig, err := raftBackend.GetConfiguration(ctx)
@@ -345,10 +325,9 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.update(server.NodeID, 0)
+			followerStates.Update(server.NodeID, 0, 0)
 		}
 	}
-	c.raftFollowerStates = followerStates
 
 	// rotateKeyring writes new key data to the keyring and adds an applied
 	// index that is used to verify it has been committed. The keys written in
@@ -437,7 +416,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		case keyring.Keys[1].AppliedIndex != keyring.AppliedIndex:
 			// We haven't fully committed the new key, continue here
 			return nil
-		case followerStates.minIndex() < keyring.AppliedIndex:
+		case followerStates.MinIndex() < keyring.AppliedIndex:
 			// Not all the followers have applied the latest key
 			return nil
 		}
@@ -574,7 +553,7 @@ func (c *Core) stopPeriodicRaftTLSRotate() {
 		close(c.raftTLSRotationStopCh)
 	}
 	c.raftTLSRotationStopCh = nil
-	c.raftFollowerStates = nil
+	c.raftFollowerStates.Clear()
 }
 
 func (c *Core) checkRaftTLSKeyUpgrades(ctx context.Context) error {
@@ -1105,15 +1084,34 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 	}
 
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-	err = raftBackend.SetupCluster(ctx, raft.SetupOpts{
+	opts := raft.SetupOpts{
 		TLSKeyring:      answerResp.Data.TLSKeyring,
 		ClusterListener: c.getClusterListener(),
-	})
+	}
+	err = raftBackend.SetupCluster(ctx, opts)
 	if err != nil {
 		return errwrap.Wrapf("failed to setup raft cluster: {{err}}", err)
 	}
 
 	return nil
+}
+
+func (c *Core) autopilotConfiguration(ctx context.Context) (*raft.AutopilotConfig, error) {
+	var autopilotConfig *raft.AutopilotConfig
+	entry, err := c.barrier.Get(ctx, "core/raft/autopilot/configuration")
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	if err := jsonutil.DecodeJSON(entry.Value, &autopilotConfig); err != nil {
+		return nil, err
+	}
+
+	return autopilotConfig, nil
 }
 
 // RaftBootstrap performs bootstrapping of a raft cluster if core contains a raft

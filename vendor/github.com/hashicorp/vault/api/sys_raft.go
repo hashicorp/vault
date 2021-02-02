@@ -2,9 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -25,6 +28,35 @@ type RaftJoinRequest struct {
 	LeaderClientKey  string `json:"leader_client_key"`
 	Retry            bool   `json:"retry"`
 	NonVoter         bool   `json:"non_voter"`
+}
+
+// AutopilotHealth represents the response of the raft autopilot health API
+type AutopilotHealth struct {
+	Healthy                    bool                       `json:"healthy" mapstructure:"healthy"`
+	FailureTolerance           int                        `json:"failure_tolerance" mapstructure:"failure_tolerance"`
+	OptimisticFailureTolerance int                        `json:"optimistic_failure_tolerance" mapstructure:"optimistic_failure_tolerance"`
+	Servers                    map[string]AutopilotServer `json:"servers" mapstructure:"servers"`
+	Leader                     string                     `json:"leader" mapstructure:"leader"`
+	Voters                     []string                   `json:"voters" mapstructure:"voters"`
+	ReadReplicas               []string                   `json:"read_replicas,omitempty" mapstructure:"read_replicas"`
+}
+
+// AutopilotServer represents the server blocks in the response of the raft
+// autopilot health API.
+type AutopilotServer struct {
+	ID          string            `json:"id" mapstructure:"id"`
+	Name        string            `json:"name" mapstructure:"name"`
+	Address     string            `json:"address" mapstructure:"address"`
+	NodeStatus  string            `json:"node_status" mapstructure:"node_status"`
+	LastContact string            `json:"last_contact" mapstructure:"last_contact"`
+	LastTerm    uint64            `json:"last_term" mapstructure:"last_term"`
+	LastIndex   uint64            `json:"last_index" mapstructure:"last_index"`
+	Healthy     bool              `json:"healthy" mapstructure:"healthy"`
+	StableSince string            `json:"stable_since" mapstructure:"stable_since"`
+	ReadReplica bool              `json:"read_replica" mapstructure:"read_replica"`
+	Status      string            `json:"status" mapstructure:"status"`
+	Meta        map[string]string `json:"meta" mapstructure:"meta"`
+	NodeType    string            `json:"node_type" mapstructure:"node_type"`
 }
 
 // RaftJoin adds the node from which this call is invoked from to the raft
@@ -159,4 +191,33 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 	defer resp.Body.Close()
 
 	return nil
+}
+
+// RaftAutopilotHealth returns the health of the raft cluster as seen by autopilot.
+func (c *Sys) RaftAutopilotHealth() (*AutopilotHealth, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/health")
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	var result AutopilotHealth
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, err
 }

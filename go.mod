@@ -72,7 +72,8 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
-	github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
+	github.com/hashicorp/raft v1.2.0
+	github.com/hashicorp/raft-autopilot v0.1.2
 	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.6.0
@@ -150,6 +151,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.2
 	go.uber.org/atomic v1.6.0
+	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
