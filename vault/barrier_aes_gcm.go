@@ -521,7 +521,6 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	// Set the vault as unsealed
 	b.keyring = keyring
 	b.sealed = false
-	b.totalLocalEncryptions = keyring.encryptions()
 
 	return nil
 }
@@ -1137,6 +1136,7 @@ func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, pa
 	}
 	// Increment the local encryption count, and track metrics
 	atomic.AddInt64(&keyring.LocalEncryptions, 1)
+	atomic.AddInt64(&b.totalLocalEncryptions, 1)
 	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	return ct, nil
@@ -1168,7 +1168,6 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Read
 			// autoRotateCheckInterval later.
 			newEncs := b.keyring.LocalEncryptions + 1
 			activeKey.Encryptions += uint64(newEncs)
-			b.totalLocalEncryptions += newEncs
 			err := b.persistKeyring(ctx, b.keyring)
 			b.keyring.LocalEncryptions = 0
 			if err != nil {

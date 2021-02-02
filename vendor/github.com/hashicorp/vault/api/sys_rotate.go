@@ -84,11 +84,11 @@ func (c *Sys) KeyStatus() (*KeyStatus, error) {
 
 	localEncryptionsRaw, ok := secret.Data["local_encryptions"]
 	if !ok {
-		return nil, errors.New("encryptions not found in response")
+		return nil, errors.New("local encryptions not found in response")
 	}
 	localEncryptions, ok := localEncryptionsRaw.(json.Number)
 	if !ok {
-		return nil, errors.New("could not convert encryptions to a number")
+		return nil, errors.New("could not convert local_encryptions to a number")
 	}
 
 	localEncryptions64, err := localEncryptions.Int64()
