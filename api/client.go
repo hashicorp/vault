@@ -38,6 +38,7 @@ const EnvVaultNamespace = "VAULT_NAMESPACE"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
+const EnvVaultBearerAuthToken = "VAULT_BEARER_AUTH_TOKEN"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
@@ -454,6 +455,10 @@ func NewClient(c *Config) (*Client, error) {
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
+	}
+
+	if bearerAuthToken := os.Getenv(EnvVaultBearerAuthToken); bearerAuthToken != "" {
+		client.AddHeader("Authorization", "Bearer "+bearerAuthToken)
 	}
 
 	if namespace := os.Getenv(EnvVaultNamespace); namespace != "" {

@@ -72,6 +72,34 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
 	}
 }
+func TestClientBearerAuthToken(t *testing.T) {
+	var seenBearerToken string
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		seenBearerToken = req.Header.Get("Authentication")
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	oldBearerAuthToken := os.Getenv(EnvVaultBearerAuthToken)
+	defer os.Setenv(EnvVaultBearerAuthToken, oldBearerAuthToken)
+	os.Setenv(EnvVaultBearerAuthToken, "test")
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err = client.RawRequest(client.NewRequest("GET", "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// oauth2.0 haas `Bearer` as schema
+	// https://tools.ietf.org/html/rfc6750#section-6.1.1
+	if seenBearerToken != "Bearer test" {
+		t.Fatalf("Bad: %s", seenBearerToken)
+	}
+}
 
 func TestClientToken(t *testing.T) {
 	tokenValue := "foo"
