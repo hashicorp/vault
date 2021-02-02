@@ -6,15 +6,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -145,6 +147,51 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
 			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
 		},
+		{
+			Pattern: "storage/raft/autopilot/health",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftAutopilotHealth(),
+					Summary:  "Report on autopilot health status",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-health"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-health"][1]),
+		},
+		{
+			Pattern: "storage/raft/autopilot/configuration",
+
+			Fields: map[string]*framework.FieldSchema{
+				"cleanup_dead_servers": {
+					Type: framework.TypeBool,
+				},
+				"last_contact_threshold": {
+					Type: framework.TypeDurationSecond,
+				},
+				"max_trailing_logs": {
+					Type: framework.TypeInt,
+				},
+				"min_quorum": {
+					Type: framework.TypeInt,
+				},
+				"server_stabilization_time": {
+					Type: framework.TypeDurationSecond,
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftAutopilotConfigRead(),
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftAutopilotConfigUpdate(),
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
+		},
 	}
 }
 
@@ -184,7 +231,7 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 			return nil, err
 		}
 		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.delete(serverID)
+			b.Core.raftFollowerStates.Delete(serverID)
 		}
 
 		return nil, nil
@@ -297,7 +344,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		}
 
 		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.update(serverID, 0)
+			b.Core.raftFollowerStates.Update(serverID, 0, 0)
 		}
 
 		peers, err := raftBackend.Peers(ctx)
@@ -330,6 +377,112 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 		if err != nil {
 			return nil, err
 		}
+
+		return nil, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftAutopilotHealth() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftBackend, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		health, err := raftBackend.GetAutopilotServerHealth(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"healthy":                      health.Healthy,
+				"failure_tolerance":            health.FailureTolerance,
+				"optimistic_failure_tolerance": health.OptimisticFailureTolerance,
+				"servers":                      health.Servers,
+				"leader":                       health.Leader,
+				"voters":                       health.Voters,
+				"read_replicas":                health.ReadReplicas,
+			},
+		}, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+		config := raftStorage.AutopilotConfig()
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"cleanup_dead_servers":      config.CleanupDeadServers,
+				"last_contact_threshold":    config.LastContactThreshold.String(),
+				"max_trailing_logs":         config.MaxTrailingLogs,
+				"min_quorum":                config.MinQuorum,
+				"server_stabilization_time": config.ServerStabilizationTime.String(),
+			},
+		}, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		// Get the config present in the backend
+		config := raftStorage.AutopilotConfig()
+
+		// Mutate the clone of the actual config to avoid setting values in
+		// failure cases.
+		configClone := config.Clone()
+
+		persist := false
+		cleanupDeadServers, ok := d.GetOk("cleanup_dead_servers")
+		if ok {
+			configClone.CleanupDeadServers = cleanupDeadServers.(bool)
+			persist = true
+		}
+		lastContactThreshold, ok := d.GetOk("last_contact_threshold")
+		if ok {
+			configClone.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
+			persist = true
+		}
+		maxTrailingLogs, ok := d.GetOk("max_trailing_logs")
+		if ok {
+			configClone.MaxTrailingLogs = uint64(maxTrailingLogs.(int))
+			persist = true
+		}
+		minQuorum, ok := d.GetOk("min_quorum")
+		if ok {
+			configClone.MinQuorum = uint(minQuorum.(int))
+			persist = true
+		}
+		serverStabilizationTime, ok := d.GetOk("server_stabilization_time")
+		if ok {
+			configClone.ServerStabilizationTime = time.Duration(serverStabilizationTime.(int)) * time.Second
+			persist = true
+		}
+
+		if configClone.CleanupDeadServers && configClone.MinQuorum < 3 {
+			return logical.ErrorResponse("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3"), logical.ErrInvalidRequest
+		}
+
+		if persist {
+			entry, err := logical.StorageEntryJSON("core/raft/autopilot/configuration", configClone)
+			if err != nil {
+				return nil, err
+			}
+			if err := b.Core.barrier.Put(ctx, entry); err != nil {
+				return nil, err
+			}
+		}
+
+		raftStorage.SetAutopilotConfig(configClone)
 
 		return nil, nil
 	}

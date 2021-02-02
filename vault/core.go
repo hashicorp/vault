@@ -19,6 +19,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -505,7 +507,7 @@ type Core struct {
 	counters counters
 
 	// Stores the raft applied index for standby nodes
-	raftFollowerStates *raftFollowerStates
+	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
@@ -785,6 +787,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
 		activityLogConfig:        conf.ActivityLogConfig,
 		keyRotateGracePeriod:     new(int64),
+		raftFollowerStates:       raft.NewFollowerStates(),
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
