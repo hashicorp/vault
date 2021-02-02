@@ -54,8 +54,15 @@ message PerfStandbyElectionResponse {
     ClientKey client_key = 6;
 }
 
+message SyncBarrierEncryptionsRequest {
+	uint64 encryptions = 1;
+}
+
+message SyncBarrierEncryptionsResponse {}
+
 service RequestForwarding {
 	rpc ForwardRequest(forwarding.Request) returns (forwarding.Response) {}
 	rpc Echo(EchoRequest) returns (EchoReply) {}
 	rpc PerformanceStandbyElectionRequest(PerfStandbyElectionInput) returns (stream PerfStandbyElectionResponse) {}
+	rpc SyncBarrierEncryptions(SyncBarrierEncryptionsRequest) returns (SyncBarrierEncryptionsResponse) {}
 }
