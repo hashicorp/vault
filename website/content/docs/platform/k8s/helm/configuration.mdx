@@ -144,10 +144,10 @@ and consider if they're appropriate for your deployment.
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
-          matchLabels:
-            app: {{ template "vault.name" . }}
-            release: "{{ .Release.Name }}"
-            component: injector
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: webhook
           topologyKey: kubernetes.io/hostname
     ```
 
