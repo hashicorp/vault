@@ -2,6 +2,8 @@ package openldap
 
 import (
 	"context"
+	"fmt"
+	"path"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -14,13 +16,13 @@ const (
 	staticRolePath = "static-role/"
 )
 
-func (b *backend) pathListRoles() []*framework.Path {
+func (b *backend) pathListStaticRoles() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: staticRolePath + "?$",
+			Pattern: path.Join(staticRolePath, framework.OptionalParamRegex("prefix")),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
-					Callback: b.pathRoleList,
+					Callback: b.pathStaticRoleList,
 				},
 			},
 			HelpSynopsis:    staticRolesListHelpSynopsis,
@@ -29,7 +31,7 @@ func (b *backend) pathListRoles() []*framework.Path {
 	}
 }
 
-func (b *backend) pathRoles() []*framework.Path {
+func (b *backend) pathStaticRoles() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern:        staticRolePath + framework.GenericNameRegex("name"),
@@ -109,7 +111,7 @@ func staticFields() map[string]*framework.FieldSchema {
 }
 
 func (b *backend) pathStaticRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
+	role, err := b.staticRole(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return false, err
 	}
@@ -132,7 +134,7 @@ func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	role, err := b.StaticRole(ctx, req.Storage, name)
+	role, err := b.staticRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +151,7 @@ func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	role, err := b.StaticRole(ctx, req.Storage, d.Get("name").(string))
+	role, err := b.staticRole(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +181,7 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
+	role, err := b.staticRole(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -311,22 +313,16 @@ func (s *staticAccount) PasswordTTL() time.Duration {
 	return ttl
 }
 
-func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	path := staticRolePath
-	entries, err := req.Storage.List(ctx, path)
+func (b *backend) pathStaticRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roles, err := req.Storage.List(ctx, staticRolePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list roles: %w", err)
 	}
-
-	return logical.ListResponse(entries), nil
+	return logical.ListResponse(roles), nil
 }
 
-func (b *backend) StaticRole(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
-	return b.roleAtPath(ctx, s, roleName, staticRolePath)
-}
-
-func (b *backend) roleAtPath(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
-	entry, err := s.Get(ctx, pathPrefix+roleName)
+func (b *backend) staticRole(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, staticRolePath+roleName)
 	if err != nil {
 		return nil, err
 	}

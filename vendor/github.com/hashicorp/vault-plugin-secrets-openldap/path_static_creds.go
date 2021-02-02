@@ -9,7 +9,7 @@ import (
 
 const staticCredPath = "static-cred/"
 
-func (b *backend) pathCredsCreate() []*framework.Path {
+func (b *backend) pathStaticCredsCreate() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: staticCredPath + framework.GenericNameRegex("name"),
@@ -33,7 +33,7 @@ func (b *backend) pathCredsCreate() []*framework.Path {
 func (b *backend) pathStaticCredsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	role, err := b.StaticRole(ctx, req.Storage, name)
+	role, err := b.staticRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
