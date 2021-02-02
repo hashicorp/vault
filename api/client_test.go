@@ -75,7 +75,7 @@ func TestClientSetAddress(t *testing.T) {
 func TestClientBearerAuthToken(t *testing.T) {
 	var seenBearerToken string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		seenBearerToken = req.Header.Get("Authentication")
+		seenBearerToken = req.Header.Get("Authorization")
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
