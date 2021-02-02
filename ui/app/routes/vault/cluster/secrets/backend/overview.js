@@ -21,21 +21,57 @@ export default Route.extend({
       return e.httpStatus;
     }
   },
+  pathQuery(backend, endpoint) {
+    return {
+      id: `${backend}/${endpoint}/`,
+    };
+  },
+  async fetchCapabilitiesRole(queryOptions) {
+    return this.store.queryRecord('capabilities', this.pathQuery(queryOptions.backend, 'roles'));
+  },
+  async fetchCapabilitiesStaticRole(queryOptions) {
+    return this.store.queryRecord('capabilities', this.pathQuery(queryOptions.backend, 'static-roles'));
+  },
+  async fetchCapabilitiesConnection(queryOptions) {
+    return this.store.queryRecord('capabilities', this.pathQuery(queryOptions.backend, 'config'));
+  },
   model() {
     let backend = this.enginePathParam();
     let queryOptions = { backend, id: '' };
-    let secretEngine = this.store.peekRecord('secret-engine', backend);
-    let type = secretEngine && secretEngine.get('engineType');
 
     let connection = this.fetchConnection(queryOptions);
     let role = this.fetchAllRoles(queryOptions);
+    let roleCapabilities = this.fetchCapabilitiesRole(queryOptions);
+    let staticRoleCapabilities = this.fetchCapabilitiesStaticRole(queryOptions);
+    let connectionCapabilities = this.fetchCapabilitiesConnection(queryOptions);
 
     return hash({
       backend,
       connections: connection,
       roles: role,
       engineType: 'database',
-      id: type,
+      id: backend,
+      roleCapabilities,
+      staticRoleCapabilities,
+      connectionCapabilities,
     });
+  },
+  setupController(controller, model) {
+    this._super(...arguments);
+    let showEmptyState = model.connections === 404 && model.roles === 404 && model.staticRoles === 404;
+    let noConnectionCapabilities =
+      !model.connectionCapabilities.canList &&
+      !model.connectionCapabilities.canCreate &&
+      !model.connectionCapabilities.canUpdate;
+
+    let emptyStateMessage = function() {
+      if (noConnectionCapabilities) {
+        return 'You cannot yet generate credentials.  Ask your administrator if you think you should have access.';
+      } else {
+        return 'You can connect and external database to Vault.  We recommend that you create a user for Vault rather than using the database root user.';
+      }
+    };
+    controller.set('showEmptyState', showEmptyState);
+    controller.set('emptyStateMessage', emptyStateMessage());
   },
 });

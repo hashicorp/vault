@@ -33,11 +33,12 @@ export default class GenerateCredentialsDatabase extends Component {
   }
 
   @task(function*() {
-    let { roleName, backendType } = this.args;
+    let { roleName, backendPath } = this.args;
     let errors = [];
+    console.log(this.args.backendPath, 'ARGS');
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
-        backend: backendType,
+        backend: backendPath,
         secret: roleName,
         roleType: 'static',
       });
@@ -50,7 +51,7 @@ export default class GenerateCredentialsDatabase extends Component {
     }
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
-        backend: backendType,
+        backend: backendPath,
         secret: roleName,
         roleType: 'dynamic',
       });
