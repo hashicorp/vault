@@ -94,49 +94,6 @@ export default Route.extend({
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const modelType = this.getModelType(backend, params.tab);
 
-    // For database roles, we actually want two different models
-    // returned in the same list
-    if (modelType === 'database/role') {
-      // Store service creates instance of the model, which we need for returning lazyCapabilities
-      let queryOptions = { backend, id: secret };
-      try {
-        await this.store.query('database/role', queryOptions);
-      } catch {
-        // do nothing
-      }
-      try {
-        await this.store.query('database/static-role', queryOptions);
-      } catch {
-        // do nothing
-      }
-
-      const combinedModels = ['database/role', 'database/static-role'];
-      return hash({
-        secret,
-        secrets: this.store
-          .lazyPaginatedQueryTwoModels(combinedModels, {
-            id: secret,
-            backend,
-            responsePath: 'data.keys',
-            page: params.page || 1,
-            pageFilter: params.pageFilter,
-          })
-          .then(model => {
-            this.set('has404', false);
-            return model;
-          })
-          .catch(err => {
-            // if we're at the root we don't want to throw
-            if (backendModel && err.httpStatus === 404 && secret === '') {
-              return [];
-            } else {
-              // else we're throwing and dealing with this in the error action
-              throw err;
-            }
-          }),
-      });
-    }
-
     return hash({
       secret,
       secrets: this.store

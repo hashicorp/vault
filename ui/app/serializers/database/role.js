@@ -5,9 +5,23 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const roles = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
+      const roles = payload.data.keys.map(secret => {
+        let type = 'dynamic';
+        let path = 'roles';
+        if (payload.data.staticRoles.includes(secret)) {
+          type = 'static';
+          path = 'static-roles';
+        }
+        return { name: secret, backend: payload.backend, type, path };
+      });
       return roles;
     }
+    return {
+      id: payload.secret,
+      name: payload.secret,
+      backend: payload.backend,
+      ...payload.data,
+    };
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
