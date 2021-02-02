@@ -221,6 +221,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 			Default: notSetValue,
 			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
 		})
+	} else {
+		// Ensure diagnose is *not* run when feature flag is off.
+		c.flagDiagnose = notSetValue
 	}
 
 	f = set.NewFlagSet("Dev Options")
