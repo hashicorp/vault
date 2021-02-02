@@ -14,14 +14,7 @@ export default Route.extend({
       return e.httpStatus;
     }
   },
-  async fetchStaticRoles(queryOptions) {
-    try {
-      return await this.store.query('database/static-role', queryOptions);
-    } catch (e) {
-      return e.httpStatus;
-    }
-  },
-  async fetchDynamicRoles(queryOptions) {
+  async fetchAllRoles(queryOptions) {
     try {
       return await this.store.query('database/role', queryOptions);
     } catch (e) {
@@ -47,8 +40,7 @@ export default Route.extend({
     let queryOptions = { backend, id: '' };
 
     let connection = this.fetchConnection(queryOptions);
-    let role = this.fetchDynamicRoles(queryOptions);
-    let staticRole = this.fetchStaticRoles(queryOptions);
+    let role = this.fetchAllRoles(queryOptions);
     let roleCapabilities = this.fetchCapabilitiesRole(queryOptions);
     let staticRoleCapabilities = this.fetchCapabilitiesStaticRole(queryOptions);
     let connectionCapabilities = this.fetchCapabilitiesConnection(queryOptions);
@@ -57,7 +49,6 @@ export default Route.extend({
       backend,
       connections: connection,
       roles: role,
-      staticRoles: staticRole,
       engineType: 'database',
       id: backend,
       roleCapabilities,

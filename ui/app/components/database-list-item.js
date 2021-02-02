@@ -27,9 +27,10 @@ export default class DatabaseListItem extends Component {
 
   get keyTypeValue() {
     const item = this.args.item;
-    if (item.modelName === 'database/role') {
+    // basing this on path in case we want to remove 'type' later
+    if (item.path === 'roles') {
       return 'dynamic';
-    } else if (item.modelName === 'database/static-role') {
+    } else if (item.path === 'static-roles') {
       return 'static';
     } else {
       return '';
