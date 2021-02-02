@@ -33,7 +33,7 @@
                 </SecretLink>
               </li>
             {{/if}}
-            {{#if this.permissions.canEditRole}}
+            {{#if @item.canEditRole}}
               <li class="action">
                 <SecretLink
                   @mode="show"
@@ -50,7 +50,7 @@
                 </button>
               </li>
             {{/if}}
-            {{#if this.permissions.canGenerateCredentials}}
+            {{#if @item.canGenerateCredentials}}
               <li class="action">
                 <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
                   Generate credentials

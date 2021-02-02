@@ -16,14 +16,9 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class DatabaseListItem extends Component {
-  @tracked permissions = null;
   @tracked roleType = '';
   @service store;
   @service flashMessages;
-  constructor() {
-    super(...arguments);
-    this.fetchPermissions();
-  }
 
   get keyTypeValue() {
     const item = this.args.item;
@@ -35,18 +30,6 @@ export default class DatabaseListItem extends Component {
     } else {
       return '';
     }
-  }
-
-  async fetchPermissions() {
-    let { id, modelName } = this.args.item;
-    // only the combined model for roles (static and dynamic) will return a model name
-    // for connections, we follow the normal process of permissions, which automatically has permissions added to model via lazy capabilities
-    // therefore no need to peekRecord, just call @item.canEdit in the template
-    if (!modelName) {
-      return;
-    }
-    let roleModel = await this.store.peekRecord(modelName, id);
-    this.permissions = roleModel;
   }
 
   @action
