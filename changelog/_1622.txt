@@ -1,6 +1,12 @@
 ```release-note:bug
 transform (enterprise): Fix bug tokenization handling metadata on exportable stores
+```
+```release-note:bug
 transform (enterprise): Fix transform configuration not handling `stores` parameter on the legacy path
+```
+```release-note:bug
 transform (enterprise): Make expiration timestamps human readable
+```
+```release-note:bug
 transform (enterprise): Return false for invalid tokens on the validate endpoint rather than returning an HTTP error
 ```

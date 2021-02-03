@@ -41,6 +41,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
+	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
@@ -132,6 +133,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"aerospike":              physAerospike.NewAerospikeBackend,
 		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
@@ -683,6 +685,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
+	}
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		Commands["operator diagnose"] = func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		}
 	}
 }
 

@@ -64,6 +64,7 @@ export default [
       {
         category: 'storage',
         content: [
+          'aerospike',
           'azure',
           'cassandra',
           'cockroachdb',
@@ -234,6 +235,7 @@ export default [
           'oracle',
           'postgresql',
           'redshift',
+          'snowflake',
           'custom',
         ],
       },

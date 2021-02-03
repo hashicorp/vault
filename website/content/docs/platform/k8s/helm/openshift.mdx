@@ -69,8 +69,8 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 "hashicorp" has been added to your repositories
 
 $ helm search repo hashicorp/vault
-NAME            	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault 	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
 ```
 
 -> **Important:** The Helm chart is new and under significant development.
@@ -89,12 +89,14 @@ Or install a specific version of the chart.
 # List the available releases
 $ helm search repo hashicorp/vault -l
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
+hashicorp/vault	0.9.0        	1.6.1      	Official HashiCorp Vault Chart
 hashicorp/vault	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
 hashicorp/vault	0.7.0        	1.5.2      	Official HashiCorp Vault Chart
 hashicorp/vault	0.6.0        	1.4.2      	Official HashiCorp Vault Chart
 
-# Install version 0.8.0
-$ helm install vault hashicorp/vault --version 0.8.0
+# Install version 0.9.1
+$ helm install vault hashicorp/vault --version 0.9.1
 ```
 
 The `helm install` command accepts parameters to override default configuration

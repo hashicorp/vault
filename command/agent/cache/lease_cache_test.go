@@ -8,15 +8,17 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
-
-	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"time"
 
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"go.uber.org/atomic"
 )
 
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
@@ -31,6 +33,27 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
+		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return lc
+}
+
+func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseCache {
+	t.Helper()
+
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lc, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:      client,
+		BaseContext: context.Background(),
+		Proxier:     &mockDelayProxier{cacheable, delay},
 		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 	})
 	if err != nil {
@@ -507,5 +530,110 @@ func TestCache_DeriveNamespaceAndRevocationPath(t *testing.T) {
 				t.Errorf("deriveNamespaceAndRevocationPath() gotRelativePath = %v, want %v", gotRelativePath, tt.wantRelativePath)
 			}
 		})
+	}
+}
+
+func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
+	lc := testNewLeaseCacheWithDelay(t, false, 50)
+
+	// We are going to send 100 requests, each taking 50ms to process. If these
+	// requests are processed serially, it will take ~5seconds to finish. we
+	// use a ContextWithTimeout to tell us if this is the case by giving ample
+	// time for it process them concurrently but time out if they get processed
+	// serially.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	wgDoneCh := make(chan struct{})
+
+	go func() {
+		var wg sync.WaitGroup
+		// 100 concurrent requests
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				// Send a request through the lease cache which is not cacheable (there is
+				// no lease information or auth information in the response)
+				sendReq := &SendRequest{
+					Request: httptest.NewRequest("GET", "http://example.com", nil),
+				}
+
+				_, err := lc.Send(ctx, sendReq)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}()
+		}
+
+		wg.Wait()
+		close(wgDoneCh)
+	}()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("request timed out: %s", ctx.Err())
+	case <-wgDoneCh:
+	}
+
+}
+
+func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
+	lc := testNewLeaseCacheWithDelay(t, true, 50)
+
+	if err := lc.RegisterAutoAuthToken("autoauthtoken"); err != nil {
+		t.Fatal(err)
+	}
+
+	// We are going to send 100 requests, each taking 50ms to process. If these
+	// requests are processed serially, it will take ~5seconds to finish, so we
+	// use a ContextWithTimeout to tell us if this is the case.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var cacheCount atomic.Uint32
+	wgDoneCh := make(chan struct{})
+
+	go func() {
+		var wg sync.WaitGroup
+		// Start 100 concurrent requests
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				sendReq := &SendRequest{
+					Token:   "autoauthtoken",
+					Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", nil),
+				}
+
+				resp, err := lc.Send(ctx, sendReq)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if resp.CacheMeta != nil && resp.CacheMeta.Hit {
+					cacheCount.Inc()
+				}
+			}()
+		}
+
+		wg.Wait()
+		close(wgDoneCh)
+	}()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("request timed out: %s", ctx.Err())
+	case <-wgDoneCh:
+	}
+
+	// Ensure that all but one request got proxied. The other 99 should be
+	// returned from the cache.
+	if cacheCount.Load() != 99 {
+		t.Fatalf("Should have returned a cached response 99 times, got %d", cacheCount.Load())
 	}
 }

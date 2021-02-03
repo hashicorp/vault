@@ -42,30 +42,24 @@ func TestGenerate(t *testing.T) {
 		},
 		"template with builtin functions": {
 			template: `{{.String | truncate 10}}
-{{.String | trunc 8}}
 {{.String | uppercase}}
-{{.String | upper}}
 {{.String | lowercase}}
-{{.String | lower}}
 {{.String | replace " " "."}}
 {{.String | sha256}}
-{{.String | truncate_sha256 20}}
-{{.String | trunc_sha256 25}}`,
+{{.String | base64}}
+{{.String | truncate_sha256 20}}`,
 			data: struct {
 				String string
 			}{
 				String: "Some string with Multiple Capitals LETTERS",
 			},
 			expected: `Some strin
-Some str
 SOME STRING WITH MULTIPLE CAPITALS LETTERS
-SOME STRING WITH MULTIPLE CAPITALS LETTERS
-some string with multiple capitals letters
 some string with multiple capitals letters
 Some.string.with.Multiple.Capitals.LETTERS
 da9872dd96609c72897defa11fe81017a62c3f44339d9d3b43fe37540ede3601
-Some string 6841cf80
-Some string with 058f6eeb`,
+U29tZSBzdHJpbmcgd2l0aCBNdWx0aXBsZSBDYXBpdGFscyBMRVRURVJT
+Some string 6841cf80`,
 			expectErr: false,
 		},
 		"custom function": {
@@ -112,59 +106,45 @@ Some string with 058f6eeb`,
 		}
 	})
 
-	t.Run("rand", func(t *testing.T) {
-		for i := 1; i < 100; i++ {
+	t.Run("unix_time", func(t *testing.T) {
+		for i := 0; i < 100; i++ {
 			st, err := NewTemplate(
-				Template(fmt.Sprintf("{{random %d}}", i)),
+				Template("{{unix_time}}"),
 			)
 			require.NoError(t, err)
 
 			actual, err := st.Generate(nil)
 			require.NoError(t, err)
 
-			require.Regexp(t, fmt.Sprintf("^[a-zA-Z0-9]{%d}$", i), actual)
+			require.Regexp(t, "^[0-9]+$", actual)
+		}
+	})
+
+	t.Run("unix_time_millis", func(t *testing.T) {
+		for i := 0; i < 100; i++ {
+			st, err := NewTemplate(
+				Template("{{unix_time_millis}}"),
+			)
+			require.NoError(t, err)
+
+			actual, err := st.Generate(nil)
+			require.NoError(t, err)
+
+			require.Regexp(t, "^[0-9]+$", actual)
 		}
 	})
 
 	t.Run("timestamp", func(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			st, err := NewTemplate(
-				Template("{{timestamp}}"),
+				Template(`{{timestamp "2006-01-02T15:04:05.000Z"}}`),
 			)
 			require.NoError(t, err)
 
 			actual, err := st.Generate(nil)
 			require.NoError(t, err)
 
-			require.Regexp(t, "^[0-9]+$", actual)
-		}
-	})
-
-	t.Run("now_seconds", func(t *testing.T) {
-		for i := 0; i < 100; i++ {
-			st, err := NewTemplate(
-				Template("{{now_seconds}}"),
-			)
-			require.NoError(t, err)
-
-			actual, err := st.Generate(nil)
-			require.NoError(t, err)
-
-			require.Regexp(t, "^[0-9]+$", actual)
-		}
-	})
-
-	t.Run("now_nano", func(t *testing.T) {
-		for i := 0; i < 100; i++ {
-			st, err := NewTemplate(
-				Template("{{now_nano}}"),
-			)
-			require.NoError(t, err)
-
-			actual, err := st.Generate(nil)
-			require.NoError(t, err)
-
-			require.Regexp(t, "^[0-9]+$", actual)
+			require.Regexp(t, `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$`, actual)
 		}
 	})
 }

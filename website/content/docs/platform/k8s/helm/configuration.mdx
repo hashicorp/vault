@@ -56,11 +56,25 @@ and consider if they're appropriate for your deployment.
   - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
     A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server to use.
 
+  - `replicas` (`int: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault K8s 0.7.0 to have more than 1 replica.
+
+  - `leaderElector` - Values that configure the Vault Agent Injector leader election for HA deployments.
+
+    - `enabled` (`boolean: true`) - When set to `true`, enables leader election for Vault Agent Injector. This is required when using auto-tls and more than 1 replica.
+
+    - `image` - Values that configure the Vault Agent Injector Leader Election image.
+
+      - `repository` (`string: "gcr.io/google_containers/leader-elector"`) - The name of the leader election image for the Vault Agent Injector.
+
+      - `tag` (`string: "0.4"`) - The tag of the Docker image for the Leader Election. **This should be pinned to a specific version when running in production.**
+    
+    - `ttl` (`string: "60s"`) - The frequency in which leader elections are performed in the Vault Agent Injector cluster.
+
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "0.6.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "0.7.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -68,7 +82,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.5.4"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.6.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `metrics` - Values that configure the Vault Agent Injector metric exporter.
 
@@ -102,6 +116,14 @@ and consider if they're appropriate for your deployment.
         injection: enabled
     ```
 
+  - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
+
+    ```yaml
+    extraLabels:
+      'sample/label1': 'foo'
+      'sample/label2': 'bar'
+    ```
+
   - `certs` - The certs section configures how the webhook TLS certs are configured. These are the TLS certs for the Kube apiserver communicating to the webhook. By default, the injector will generate and manage its own certs, but this requires the ability for the injector to update its own `MutatingWebhookConfiguration`. In a production environment, custom certs should probably be used. Configure the values below to enable this.
 
     - `secretName` (`string: ""`) - secretName is the name of the Kubernetes secret that has the TLS certificate and private key to serve the injector webhook. If this is null, then the injector will default to its automatic management mode.
@@ -114,7 +136,20 @@ and consider if they're appropriate for your deployment.
 
   - `extraEnvironmentVars` (`dictionary: {}`) - Extra environment variables to set in the injector deployment.
 
-  - `affinity` (`string: null`) - Affinity Settings for injector pods. This should be a multi-line string matching the affinity section of a PodSpec.
+  - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
+
+    ```yaml
+    # Recommended default server affinity:
+    affinity: |
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: webhook
+          topologyKey: kubernetes.io/hostname
+    ```
 
   - `tolerations` (`string: null`) - Toleration Settings for injector pods. This should be a multi-line string matching the Toleration array in a PodSpec.
 
@@ -134,8 +169,24 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string : ""`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
+  - `failurePolicy` (`string: "Ignore"`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
     When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
+
+  - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
+
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+        add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted
+        multi-line templated string.
+
+      ```yaml
+      annotations:
+        "sample/annotation1": "foo"
+        "sample/annotation2": "bar"
+      # or
+      annotations: |
+        "sample/annotation1": "foo"
+        "sample/annotation2": "bar"
+      ```
 
 - `server` - Values that configure running a Vault server within Kubernetes.
 
@@ -143,7 +194,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.5.4"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.6.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -415,6 +466,18 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) - When set to `true`, enables a Network Policy for the Vault cluster.
 
+      - `egress` (`array: []`) - This value configures the [egress](https://kubernetes.io/docs/concepts/services-networking/network-policies/) network policy rules.
+
+      ```yaml
+      egress:
+      - to:
+        - ipBlock:
+            cidr: 10.0.0.0/24
+        ports:
+        - protocol: TCP
+          port: 8200
+      ```
+
     - `priorityClassName` (`string: ""`) - Priority class for server pods
 
     - `extraLabels` (`dictionary: {}`) - This value defines additional labels for server pods.
@@ -543,6 +606,8 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) -
         Enables `dev` mode for the Vault server. This mode is useful for experimenting with Vault without needing to unseal.
+
+      - `devRootToken` (`string: "root"`) - Configures the root token for the Vault development server.
 
       ~> **Security Warning:** Never, ever, ever run a "dev" mode server in production. It is insecure and will lose data on every restart (since it stores data in-memory). It is only made for development or experimentation.
 
