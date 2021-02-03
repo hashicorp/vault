@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -2358,12 +2359,27 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		return nil, errwrap.Wrapf("failed to store secret_id: {{err}}", err)
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
 		},
-	}, nil
+	}
+
+	// Follow the behavior from registerSecretIDEntry and set the response TTL
+	// to the entry's TTL unless it's negative or greater than the system's max
+	// lease TTL.
+	switch {
+	case secretIDStorage.SecretIDTTL < time.Duration(0):
+		// This case should not be possible since TypeDurationSecond does not
+		// support negative values, but we follow the same convention as
+		// registerSecretIDEntry
+		resp.Data["ttl"] = int(b.System().MaxLeaseTTL().Seconds())
+	case secretIDStorage.SecretIDTTL > time.Duration(0):
+		resp.Data["ttl"] = int(math.Min(secretIDStorage.SecretIDTTL.Seconds(), b.System().MaxLeaseTTL().Seconds()))
+	}
+
+	return resp, nil
 }
 
 func (b *backend) roleIDLock(roleID string) *locksutil.LockEntry {

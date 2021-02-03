@@ -1931,3 +1931,92 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 		})
 	}
 }
+
+func TestAppRole_SecretID_WithTTL(t *testing.T) {
+	tests := []struct {
+		name      string
+		roleName  string
+		ttl       int
+		sysTTLCap bool
+	}{
+		{
+			"zero ttl",
+			"role-no-ttl",
+			0,
+			false,
+		},
+		{
+			"custom ttl",
+			"role-custom-ttl",
+			60,
+			false,
+		},
+		{
+			"system ttl capped",
+			"role-sys-ttl-cap",
+			700000000,
+			true,
+		},
+	}
+
+	b, storage := createBackendWithStorage(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create role
+			roleData := map[string]interface{}{
+				"policies":      "default",
+				"secret_id_ttl": tt.ttl,
+			}
+
+			roleReq := &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "role/" + tt.roleName,
+				Storage:   storage,
+				Data:      roleData,
+			}
+			resp, err := b.HandleRequest(context.Background(), roleReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			// Generate secret ID
+			secretIDReq := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "role/" + tt.roleName + "/secret-id",
+				Storage:   storage,
+			}
+			resp, err = b.HandleRequest(context.Background(), secretIDReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			// Extract the "ttl" value from the response data if it exists
+			var respTTL int
+			ttlRaw, okTTL := resp.Data["ttl"]
+			if okTTL {
+				var ok bool
+				respTTL, ok = ttlRaw.(int)
+				if !ok {
+					t.Fatalf("expected ttl to be an integer, got: %v", respTTL)
+				}
+			}
+
+			// Verify secret ID response for different cases
+			switch {
+			case tt.ttl == 0 && okTTL:
+				t.Fatalf("expected no TTL in response, got: %v", ttlRaw)
+			case tt.ttl != 0 && !okTTL:
+				t.Fatalf("expected TTL value in response")
+			case tt.sysTTLCap:
+				if respTTL != int(b.System().MaxLeaseTTL().Seconds()) {
+					t.Fatalf("expected TTL value to be system's max lease TTL, got: %d", respTTL)
+				}
+			default:
+				if respTTL != tt.ttl {
+					t.Fatalf("expected TTL value to be %d, got: %d", tt.ttl, respTTL)
+				}
+			}
+		})
+	}
+}
