@@ -67,6 +67,10 @@ This endpoint configures the LDAP auth method.
   string for the authenticating user. The constructed UPN will appear as
   `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind
   as `username@example.com`.
+- `searchfilter` `(string: "")` – An optional LDAP search filter.
+  The template can access the following context variables: UserAttr, Username.
+  The default is `({{.UserAttr}}={{.Username}})`, or `({{.UserAttr}}={{.Username@.upndomain}})`
+  if `upndomain` is set.
 - `anonymous_group_search` `(bool: false)` - Use anonymous binds when performing
   LDAP group searches (note: even when `true`, the initial credentials will still
   be used for the initial connection test).

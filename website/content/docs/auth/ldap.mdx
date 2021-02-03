@@ -109,7 +109,7 @@ management tool.
 
 ### Binding parameters
 
-There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>).
+There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>). You can also create a complex user search filter as described below.
 
 #### Binding - Authenticated Search
 
@@ -117,12 +117,14 @@ There are two alternate methods of resolving the user object used to authenticat
 - `bindpass` (string, optional) - Password to use along with `binddn` when performing user search.
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+- `searchfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default searchfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@{{upndomain}})` if the upndomain parameter is set. A search filter can be used to create complex LDAP queries. For example, to find a user by either `mail` or `uid` attribute, while `uid` attribute for its entity alias `(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))`.
 
 #### Binding - Anonymous Search
 
 - `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+- `searchfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default searchfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@{{upndomain}})` if the upndomain parameter is set. A search filter can be used to create complex LDAP queries. For example, to find a user by either `mail` or `uid` attribute, while `uid` attribute for its entity alias `(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))`.
 - `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
 - `anonymous_group_search` (bool, optional) - Use anonymous binds when performing LDAP group searches. Defaults to `false`.
 
