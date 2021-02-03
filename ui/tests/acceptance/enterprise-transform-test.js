@@ -71,11 +71,11 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     );
     assert.ok(transformationsPage.isEmpty, 'renders empty state');
     assert
-      .dom('.is-active[data-test-tab="Transformations"]')
+      .dom('.is-active[data-test-secret-list-tab="Transformations"]')
       .exists('Has Transformations tab which is active');
-    assert.dom('[data-test-tab="Roles"]').exists('Has Roles tab');
-    assert.dom('[data-test-tab="Templates"]').exists('Has Templates tab');
-    assert.dom('[data-test-tab="Alphabets"]').exists('Has Alphabets tab');
+    assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
+    assert.dom('[data-test-secret-list-tab="Templates"]').exists('Has Templates tab');
+    assert.dom('[data-test-secret-list-tab="Alphabets"]').exists('Has Alphabets tab');
   });
 
   test('it can create a transformation and add itself to the role attached', async function(assert) {
@@ -124,7 +124,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     await newTransformation(backend, 'a-transformation', true);
     await click(`[data-test-secret-breadcrumb="${backend}"]`);
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Links back to list view from breadcrumb');
-    await click('[data-test-tab="Roles"]');
+    await click('[data-test-secret-list-tab="Roles"]');
     assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=role`, 'links to role list page');
     // create role with transformation attached
     await rolesPage.createLink();
@@ -199,7 +199,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
   test('it allows creation and edit of a template', async function(assert) {
     const templateName = 'my-template';
     let backend = await mount();
-    await click('[data-test-tab="Templates"]');
+    await click('[data-test-secret-list-tab="Templates"]');
     await settled();
     assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=template`, 'links to template list page');
     await settled();
@@ -237,7 +237,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
   test('it allows creation and edit of an alphabet', async function(assert) {
     const alphabetName = 'vowels-only';
     let backend = await mount();
-    await click('[data-test-tab="Alphabets"]');
+    await click('[data-test-secret-list-tab="Alphabets"]');
     await settled();
     assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=alphabet`, 'links to alphabet list page');
     await alphabetsPage.createLink();
