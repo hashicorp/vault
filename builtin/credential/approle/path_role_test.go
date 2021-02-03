@@ -1936,12 +1936,12 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 	tests := []struct {
 		name      string
 		roleName  string
-		ttl       int
+		ttl       int64
 		sysTTLCap bool
 	}{
 		{
 			"zero ttl",
-			"role-no-ttl",
+			"role-zero-ttl",
 			0,
 			false,
 		},
@@ -1992,24 +1992,24 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 			}
 
 			// Extract the "ttl" value from the response data if it exists
-			var respTTL int
-			ttlRaw, okTTL := resp.Data["ttl"]
-			if okTTL {
-				var ok bool
-				respTTL, ok = ttlRaw.(int)
-				if !ok {
-					t.Fatalf("expected ttl to be an integer, got: %v", respTTL)
-				}
+			ttlRaw, okTTL := resp.Data["secret_id_ttl"]
+			if !okTTL {
+				t.Fatalf("expected TTL value in response")
+			}
+
+			var (
+				respTTL int64
+				ok      bool
+			)
+			respTTL, ok = ttlRaw.(int64)
+			if !ok {
+				t.Fatalf("expected ttl to be an integer, got: %s", err)
 			}
 
 			// Verify secret ID response for different cases
 			switch {
-			case tt.ttl == 0 && okTTL:
-				t.Fatalf("expected no TTL in response, got: %v", ttlRaw)
-			case tt.ttl != 0 && !okTTL:
-				t.Fatalf("expected TTL value in response")
 			case tt.sysTTLCap:
-				if respTTL != int(b.System().MaxLeaseTTL().Seconds()) {
+				if respTTL != int64(b.System().MaxLeaseTTL().Seconds()) {
 					t.Fatalf("expected TTL value to be system's max lease TTL, got: %d", respTTL)
 				}
 			default:
