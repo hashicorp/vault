@@ -599,3 +599,69 @@ func TestStrUtil_EqualStringMaps(t *testing.T) {
 		}
 	}
 }
+
+func TestGetString(t *testing.T) {
+	type testCase struct {
+		m   map[string]interface{}
+		key string
+
+		expectedStr string
+		expectErr   bool
+	}
+
+	tests := map[string]testCase{
+		"nil map": {
+			m:           nil,
+			key:         "foo",
+			expectedStr: "",
+			expectErr:   true,
+		},
+		"empty key": {
+			m: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:         "",
+			expectedStr: "",
+			expectErr:   true,
+		},
+		"missing key": {
+			m: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:         "baz",
+			expectedStr: "",
+			expectErr:   false,
+		},
+		"value is not a string": {
+			m: map[string]interface{}{
+				"foo": 42,
+			},
+			key:         "foo",
+			expectedStr: "",
+			expectErr:   true,
+		},
+		"happy path": {
+			m: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:         "foo",
+			expectedStr: "bar",
+			expectErr:   false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual, err := GetString(test.m, test.key)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if actual != test.expectedStr {
+				t.Fatalf("Actual: [%s] Expected: [%s]", actual, test.expectedStr)
+			}
+		})
+	}
+}

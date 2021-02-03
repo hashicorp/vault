@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-
 	"github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
@@ -17,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/lib/pq"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -82,7 +80,10 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		return dbplugin.InitializeResponse{}, err
 	}
 
-	usernameTemplate := getString(req.Config, "username_template")
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
 	if usernameTemplate == "" {
 		usernameTemplate = defaultUserNameTemplate
 	}
@@ -95,21 +96,13 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 
 	_, err = p.usernameProducer.Generate(dbplugin.UsernameMetadata{})
 	if err != nil {
-		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template - did you reference a field that isn't available? : %w", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
 	return resp, nil
-}
-
-func getString(m map[string]interface{}, key string) string {
-	var result string
-	if err := mapstructure.Decode(m[key], &result); err != nil {
-		return ""
-	}
-	return result
 }
 
 func (p *PostgreSQL) Type() (string, error) {
