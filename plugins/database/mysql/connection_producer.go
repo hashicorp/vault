@@ -37,7 +37,6 @@ type mySQLConnectionProducer struct {
 
 	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
-	Legacy                bool
 	Initialized           bool
 	db                    *sql.DB
 	sync.Mutex
@@ -106,20 +105,6 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		}
 
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
-	}
-
-	// Set initialized to true at this point since all fields are set,
-	// and the connection can be established at a later time.
-	c.Initialized = true
-
-	if verifyConnection {
-		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-
-		if err := c.db.PingContext(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
 	}
 
 	return c.RawConfig, nil
