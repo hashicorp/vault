@@ -17,7 +17,7 @@ export default create({
   createIsPresent: isPresent('[data-test-secret-create]'),
   configure: clickable('[data-test-secret-backend-configure]'),
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
-  tabs: collection('[data-test-tab]'),
+  tabs: collection('[data-test-secret-list-tab]'),
   filterInput: fillable('[data-test-nav-input] input'),
   filterInputValue: value('[data-test-nav-input] input'),
   secrets: collection('[data-test-secret-link]', {
