@@ -1,5 +1,41 @@
 # Change History
 
+## January 25 2021: v4.1.0
+
+  Major feature release.
+
+  * **New Features**:
+
+    - [CLIENT-1417] Adds Circuit-Breaker. Rejects command when assigned node's error rate exceeds `ClientPolicy.MaxErrorRate` over `ClientPolicy.ErrorRateWindow`.
+    - [CLIENT-1410] Adds `Client.SetXDRFilter()`.
+    - [CLIENT-1433] Adds `ExpMemorySize()` to expression filters.
+
+  * **Improvements**
+
+    - [CLIENT-1434] Reset peers, partition and rebalance generations on node tend errors.
+
+  * **Changes**
+    - Pack byte array header with string header codes when using msgpack to be consistent with server.
+    - Adds `ResultCode.LOST_CONFLICT`
+
+## November 27 2020: v4.0.0
+
+  Major feature release. Deprecates `PredExp` filters and replaces them with the far more capable Expressions.
+
+  * **New Features**:
+
+    - [CLIENT-1361] Replace predicate filters with new Aerospike Expressions.
+
+  * **Fixes**
+
+    - Allows unmarshalling of bool fields to sub objects in reflection API. (Github #325)
+    - Fixes an issue where BatchIndexGet commands were not retried in some circumstances.
+
+  * **Incompatible changes**:
+
+    - Changes the `BitResizeFlagsXXX` enum types to  `BitResizeFlags` type. This should not affect any code if the enums were used.
+    - Changes the `ListSortFlagsXXX` enum types to`ListSortFlags` are now typed. This should not affect any code if the enums were used.
+
 ## November 9 2020: v3.1.1
 
   Hotfix release. We recommend upgrading to this version, or cherry-picking the changeset to your vendored version if possible.
@@ -8,6 +44,10 @@
 
     - Handle cleanup cases in `Offer` and `DropIdleTail` for `singleConnectionHeap`. (Github #318)
     - Unlock the mutex in `singleConnectionHeap.Poll` if called after cleanup. (Github #323) thanks to [linchuan4028](https://github.com/linchuan4028)
+
+  * **Changes**
+
+    - Removes support for versions prior to Go v1.12 due to incompatibility in the testing library we use. Go v1.9+ should still work, though they will not be tested in our tests.
 
 ## September 10 2020: v3.1.0
 

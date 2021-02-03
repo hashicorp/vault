@@ -112,7 +112,7 @@ func (t *BatchReadOnlyTransaction) PartitionReadUsingIndex(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	resp, err = client.PartitionRead(ctx, &sppb.PartitionReadRequest{
+	resp, err = client.PartitionRead(contextWithOutgoingMetadata(ctx, sh.getMetadata()), &sppb.PartitionReadRequest{
 		Session:          sid,
 		Transaction:      ts,
 		Table:            table,
@@ -173,7 +173,7 @@ func (t *BatchReadOnlyTransaction) partitionQuery(ctx context.Context, statement
 		Params:           params,
 		ParamTypes:       paramTypes,
 	}
-	resp, err := client.PartitionQuery(ctx, req)
+	resp, err := client.PartitionQuery(contextWithOutgoingMetadata(ctx, sh.getMetadata()), req)
 
 	// prepare ExecuteSqlRequest
 	r := &sppb.ExecuteSqlRequest{
@@ -233,7 +233,7 @@ func (t *BatchReadOnlyTransaction) Cleanup(ctx context.Context) {
 	}
 	t.sh = nil
 	sid, client := sh.getID(), sh.getClient()
-	err := client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: sid})
+	err := client.DeleteSession(contextWithOutgoingMetadata(ctx, sh.getMetadata()), &sppb.DeleteSessionRequest{Name: sid})
 	if err != nil {
 		var logger *log.Logger
 		if sh.session != nil {
@@ -261,18 +261,30 @@ func (t *BatchReadOnlyTransaction) Execute(ctx context.Context, p *Partition) *R
 	}
 	// Read or query partition.
 	if p.rreq != nil {
-		req := *p.rreq
-		req.PartitionToken = p.pt
 		rpc = func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
-			req.ResumeToken = resumeToken
-			return client.StreamingRead(ctx, &req)
+			return client.StreamingRead(ctx, &sppb.ReadRequest{
+				Session:        p.rreq.Session,
+				Transaction:    p.rreq.Transaction,
+				Table:          p.rreq.Table,
+				Index:          p.rreq.Index,
+				Columns:        p.rreq.Columns,
+				KeySet:         p.rreq.KeySet,
+				PartitionToken: p.pt,
+				ResumeToken:    resumeToken,
+			})
 		}
 	} else {
-		req := *p.qreq
-		req.PartitionToken = p.pt
 		rpc = func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
-			req.ResumeToken = resumeToken
-			return client.ExecuteStreamingSql(ctx, &req)
+			return client.ExecuteStreamingSql(ctx, &sppb.ExecuteSqlRequest{
+				Session:        p.qreq.Session,
+				Transaction:    p.qreq.Transaction,
+				Sql:            p.qreq.Sql,
+				Params:         p.qreq.Params,
+				ParamTypes:     p.qreq.ParamTypes,
+				QueryOptions:   p.qreq.QueryOptions,
+				PartitionToken: p.pt,
+				ResumeToken:    resumeToken,
+			})
 		}
 	}
 	return stream(

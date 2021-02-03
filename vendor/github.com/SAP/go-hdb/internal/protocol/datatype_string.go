@@ -4,9 +4,29 @@ package protocol
 
 import "strconv"
 
-const _DataType_name = "DtUnknownDtTinyintDtSmallintDtIntegerDtBigintDtRealDtDoubleDtDecimalDtTimeDtStringDtBytesDtLob"
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[DtUnknown-0]
+	_ = x[DtBoolean-1]
+	_ = x[DtTinyint-2]
+	_ = x[DtSmallint-3]
+	_ = x[DtInteger-4]
+	_ = x[DtBigint-5]
+	_ = x[DtReal-6]
+	_ = x[DtDouble-7]
+	_ = x[DtDecimal-8]
+	_ = x[DtTime-9]
+	_ = x[DtString-10]
+	_ = x[DtBytes-11]
+	_ = x[DtLob-12]
+	_ = x[DtRows-13]
+}
 
-var _DataType_index = [...]uint8{0, 9, 18, 28, 37, 45, 51, 59, 68, 74, 82, 89, 94}
+const _DataType_name = "DtUnknownDtBooleanDtTinyintDtSmallintDtIntegerDtBigintDtRealDtDoubleDtDecimalDtTimeDtStringDtBytesDtLobDtRows"
+
+var _DataType_index = [...]uint8{0, 9, 18, 27, 37, 46, 54, 60, 68, 77, 83, 91, 98, 103, 109}
 
 func (i DataType) String() string {
 	if i >= DataType(len(_DataType_index)-1) {

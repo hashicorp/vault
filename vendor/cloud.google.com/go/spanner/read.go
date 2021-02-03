@@ -102,6 +102,11 @@ type RowIterator struct {
 	// iterator.Done.
 	RowCount int64
 
+	// The metadata of the results of the query. The metadata are available
+	// after the first call to RowIterator.Next(), unless the first call to
+	// RowIterator.Next() returned an error that is not equal to iterator.Done.
+	Metadata *sppb.ResultSetMetadata
+
 	streamd      *resumableStreamDecoder
 	rowd         *partialResultSetDecoder
 	setTimestamp func(time.Time)
@@ -133,7 +138,11 @@ func (r *RowIterator) Next() (*Row, error) {
 				r.RowCount = rc
 			}
 		}
-		r.rows, r.err = r.rowd.add(prs)
+		var metadata *sppb.ResultSetMetadata
+		r.rows, metadata, r.err = r.rowd.add(prs)
+		if metadata != nil {
+			r.Metadata = metadata
+		}
 		if r.err != nil {
 			return nil, r.err
 		}
@@ -148,7 +157,7 @@ func (r *RowIterator) Next() (*Row, error) {
 		return row, nil
 	}
 	if err := r.streamd.lastErr(); err != nil {
-		r.err = toSpannerError(err)
+		r.err = ToSpannerError(err)
 	} else if !r.rowd.done() {
 		r.err = errEarlyReadEnd()
 	} else {
@@ -200,7 +209,11 @@ func (r *RowIterator) Do(f func(r *Row) error) error {
 // iterator.
 func (r *RowIterator) Stop() {
 	if r.streamd != nil {
-		defer trace.EndSpan(r.streamd.ctx, r.err)
+		if r.err != nil && r.err != iterator.Done {
+			defer trace.EndSpan(r.streamd.ctx, r.err)
+		} else {
+			defer trace.EndSpan(r.streamd.ctx, nil)
+		}
 	}
 	if r.cancel != nil {
 		r.cancel()
@@ -211,7 +224,6 @@ func (r *RowIterator) Stop() {
 			r.err = spannerErrorf(codes.FailedPrecondition, "Next called after Stop")
 		}
 		r.release = nil
-
 	}
 }
 
@@ -457,7 +469,7 @@ var (
 )
 
 func (d *resumableStreamDecoder) next() bool {
-	retryer := gax.OnCodes([]codes.Code{codes.Unavailable, codes.Internal}, d.backoff)
+	retryer := onCodes(d.backoff, codes.Unavailable, codes.Internal)
 	for {
 		switch d.state {
 		case unConnected:
@@ -648,7 +660,7 @@ func errChunkedEmptyRow() error {
 
 // add tries to merge a new PartialResultSet into buffered Row. It returns any
 // rows that have been completed as a result.
-func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, error) {
+func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, *sppb.ResultSetMetadata, error) {
 	var rows []*Row
 	if r.Metadata != nil {
 		// Metadata should only be returned in the first result.
@@ -663,20 +675,20 @@ func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, error) 
 		}
 	}
 	if len(r.Values) == 0 {
-		return nil, nil
+		return nil, r.Metadata, nil
 	}
 	if p.chunked {
 		p.chunked = false
 		// Try to merge first value in r.Values into uncompleted row.
 		last := len(p.row.vals) - 1
-		if last < 0 { // sanity check
-			return nil, errChunkedEmptyRow()
+		if last < 0 { // confidence check
+			return nil, nil, errChunkedEmptyRow()
 		}
 		var err error
 		// If p is chunked, then we should always try to merge p.last with
 		// r.first.
 		if p.row.vals[last], err = p.merge(p.row.vals[last], r.Values[0]); err != nil {
-			return nil, err
+			return nil, r.Metadata, err
 		}
 		r.Values = r.Values[1:]
 		// Merge is done, try to yield a complete Row.
@@ -698,7 +710,7 @@ func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, error) 
 		// also chunked.
 		p.chunked = true
 	}
-	return rows, nil
+	return rows, r.Metadata, nil
 }
 
 // isMergeable returns if a protobuf Value can be potentially merged with other

@@ -1,18 +1,6 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 // Package cesu8 implements functions and constants to support text encoded in CESU-8.
 // It implements functions comparable to the unicode/utf8 package for UTF-8 de- and encoding.
@@ -142,7 +130,7 @@ func encodeRune(p []byte, r rune) int {
 		p[0] = t2 | byte(r>>6)
 		p[1] = tx | byte(r)&maskx
 		return 2
-	//case i > MaxRune, surrogateMin <= i && i <= surrogateMax: // replaced (*)
+	// case i > MaxRune, surrogateMin <= i && i <= surrogateMax: // replaced (*)
 	case i > utf8.MaxRune: // (*)
 		r = utf8.RuneError
 		fallthrough
@@ -211,8 +199,8 @@ func decodeRune(p []byte) (r rune, size int, short bool) {
 			return utf8.RuneError, 1, false
 		}
 		// do not throw error on surrogates // (*)
-		//if surrogateMin <= r && r <= surrogateMax {
-		//	return RuneError, 1, false
+		// if surrogateMin <= r && r <= surrogateMax {
+		//	 return RuneError, 1, false
 		//}
 		return r, 3, false
 	}

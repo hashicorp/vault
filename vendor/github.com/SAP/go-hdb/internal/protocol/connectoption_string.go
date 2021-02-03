@@ -4,38 +4,76 @@ package protocol
 
 import "strconv"
 
-const (
-	_connectOption_name_0 = "coConnectionIDcoCompleteArrayExecutioncoClientLocalecoSupportsLargeBulkOperations"
-	_connectOption_name_1 = "coLargeNumberOfParameterSupportcoSystemID"
-	_connectOption_name_2 = "coAbapVarcharModecoSelectForUpdateSupportedcoClientDistributionModecoEngineDataFormatVersioncoDistributionProtocolVersioncoSplitBatchCommandscoUseTransactionFlagsOnly"
-	_connectOption_name_3 = "coIgnoreUnknownPartscoTableOutputParametercoDataFormatVersion2coItabParametercoDescribeTableOutputParametercoColumnarResultsetcoScrollablResultSetcoClientInfoNullValueSupportedcoAssociatedConnectionIDcoNoTransactionalPreparecoFDAEnabledcoOSUsercoRowslotImageResultcoEndianess"
-	_connectOption_name_4 = "coImplicitLobStreaming"
-)
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[coConnectionID-1]
+	_ = x[coCompleteArrayExecution-2]
+	_ = x[coClientLocale-3]
+	_ = x[coSupportsLargeBulkOperations-4]
+	_ = x[coDistributionEnabled-5]
+	_ = x[coPrimaryConnectionID-6]
+	_ = x[coPrimaryConnectionHost-7]
+	_ = x[coPrimaryConnectionPort-8]
+	_ = x[coCompleteDatatypeSupport-9]
+	_ = x[coLargeNumberOfParametersSupport-10]
+	_ = x[coSystemID-11]
+	_ = x[coDataFormatVersion-12]
+	_ = x[coAbapVarcharMode-13]
+	_ = x[coSelectForUpdateSupported-14]
+	_ = x[coClientDistributionMode-15]
+	_ = x[coEngineDataFormatVersion-16]
+	_ = x[coDistributionProtocolVersion-17]
+	_ = x[coSplitBatchCommands-18]
+	_ = x[coUseTransactionFlagsOnly-19]
+	_ = x[coRowSlotImageParameter-20]
+	_ = x[coIgnoreUnknownParts-21]
+	_ = x[coTableOutputParameterMetadataSupport-22]
+	_ = x[coDataFormatVersion2-23]
+	_ = x[coItabParameter-24]
+	_ = x[coDescribeTableOutputParameter-25]
+	_ = x[coColumnarResultSet-26]
+	_ = x[coScrollableResultSet-27]
+	_ = x[coClientInfoNullValueSupported-28]
+	_ = x[coAssociatedConnectionID-29]
+	_ = x[coNonTransactionalPrepare-30]
+	_ = x[coFdaEnabled-31]
+	_ = x[coOSUser-32]
+	_ = x[coRowSlotImageResultSet-33]
+	_ = x[coEndianness-34]
+	_ = x[coUpdateTopologyAnwhere-35]
+	_ = x[coEnableArrayType-36]
+	_ = x[coImplicitLobStreaming-37]
+	_ = x[coCachedViewProperty-38]
+	_ = x[coXOpenXAProtocolSupported-39]
+	_ = x[coPrimaryCommitRedirectionSupported-40]
+	_ = x[coActiveActiveProtocolVersion-41]
+	_ = x[coActiveActiveConnectionOriginSite-42]
+	_ = x[coQueryTimeoutSupported-43]
+	_ = x[coFullVersionString-44]
+	_ = x[coDatabaseName-45]
+	_ = x[coBuildPlatform-46]
+	_ = x[coImplicitXASessionSupported-47]
+	_ = x[coClientSideColumnEncryptionVersion-48]
+	_ = x[coCompressionLevelAndFlags-49]
+	_ = x[coClientSideReExecutionSupported-50]
+	_ = x[coClientReconnectWaitTimeout-51]
+	_ = x[coOriginalAnchorConnectionID-52]
+	_ = x[coFlagSet1-53]
+	_ = x[coTopologyNetworkGroup-54]
+	_ = x[coIPAddress-55]
+	_ = x[coLRRPingTime-56]
+}
 
-var (
-	_connectOption_index_0 = [...]uint8{0, 14, 38, 52, 81}
-	_connectOption_index_1 = [...]uint8{0, 31, 41}
-	_connectOption_index_2 = [...]uint8{0, 17, 43, 67, 92, 121, 141, 166}
-	_connectOption_index_3 = [...]uint16{0, 20, 42, 62, 77, 107, 126, 146, 176, 200, 224, 236, 244, 264, 275}
-)
+const _connectOption_name = "coConnectionIDcoCompleteArrayExecutioncoClientLocalecoSupportsLargeBulkOperationscoDistributionEnabledcoPrimaryConnectionIDcoPrimaryConnectionHostcoPrimaryConnectionPortcoCompleteDatatypeSupportcoLargeNumberOfParametersSupportcoSystemIDcoDataFormatVersioncoAbapVarcharModecoSelectForUpdateSupportedcoClientDistributionModecoEngineDataFormatVersioncoDistributionProtocolVersioncoSplitBatchCommandscoUseTransactionFlagsOnlycoRowSlotImageParametercoIgnoreUnknownPartscoTableOutputParameterMetadataSupportcoDataFormatVersion2coItabParametercoDescribeTableOutputParametercoColumnarResultSetcoScrollableResultSetcoClientInfoNullValueSupportedcoAssociatedConnectionIDcoNonTransactionalPreparecoFdaEnabledcoOSUsercoRowSlotImageResultSetcoEndiannesscoUpdateTopologyAnwherecoEnableArrayTypecoImplicitLobStreamingcoCachedViewPropertycoXOpenXAProtocolSupportedcoPrimaryCommitRedirectionSupportedcoActiveActiveProtocolVersioncoActiveActiveConnectionOriginSitecoQueryTimeoutSupportedcoFullVersionStringcoDatabaseNamecoBuildPlatformcoImplicitXASessionSupportedcoClientSideColumnEncryptionVersioncoCompressionLevelAndFlagscoClientSideReExecutionSupportedcoClientReconnectWaitTimeoutcoOriginalAnchorConnectionIDcoFlagSet1coTopologyNetworkGroupcoIPAddresscoLRRPingTime"
+
+var _connectOption_index = [...]uint16{0, 14, 38, 52, 81, 102, 123, 146, 169, 194, 226, 236, 255, 272, 298, 322, 347, 376, 396, 421, 444, 464, 501, 521, 536, 566, 585, 606, 636, 660, 685, 697, 705, 728, 740, 763, 780, 802, 822, 848, 883, 912, 946, 969, 988, 1002, 1017, 1045, 1080, 1106, 1138, 1166, 1194, 1204, 1226, 1237, 1250}
 
 func (i connectOption) String() string {
-	switch {
-	case 1 <= i && i <= 4:
-		i -= 1
-		return _connectOption_name_0[_connectOption_index_0[i]:_connectOption_index_0[i+1]]
-	case 10 <= i && i <= 11:
-		i -= 10
-		return _connectOption_name_1[_connectOption_index_1[i]:_connectOption_index_1[i+1]]
-	case 13 <= i && i <= 19:
-		i -= 13
-		return _connectOption_name_2[_connectOption_index_2[i]:_connectOption_index_2[i+1]]
-	case 21 <= i && i <= 34:
-		i -= 21
-		return _connectOption_name_3[_connectOption_index_3[i]:_connectOption_index_3[i+1]]
-	case i == 37:
-		return _connectOption_name_4
-	default:
-		return "connectOption(" + strconv.FormatInt(int64(i), 10) + ")"
+	i -= 1
+	if i < 0 || i >= connectOption(len(_connectOption_index)-1) {
+		return "connectOption(" + strconv.FormatInt(int64(i+1), 10) + ")"
 	}
+	return _connectOption_name[_connectOption_index[i]:_connectOption_index[i+1]]
 }

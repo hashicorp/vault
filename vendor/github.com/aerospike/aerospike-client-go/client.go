@@ -53,6 +53,8 @@ type Client struct {
 	DefaultQueryPolicy *QueryPolicy
 	// DefaultAdminPolicy is used for all security commands without a specific policy.
 	DefaultAdminPolicy *AdminPolicy
+	// DefaultInfoPolicy is used for all info commands without a specific policy.
+	DefaultInfoPolicy *InfoPolicy
 }
 
 func clientFinalizer(f *Client) {
@@ -878,6 +880,57 @@ func (clnt *Client) ExecuteUDFNode(policy *QueryPolicy,
 	return NewExecuteTask(clnt.cluster, statement), err
 }
 
+// SetXDRFilter sets XDR filter for given datacenter name and namespace. The expression filter indicates
+// which records XDR should ship to the datacenter.
+// Pass nil as filter to remove the currentl filter on the server.
+func (clnt *Client) SetXDRFilter(policy *InfoPolicy, datacenter string, namespace string, filter *FilterExpression) error {
+	policy = clnt.getUsableInfoPolicy(policy)
+
+	var strCmd string
+	if filter == nil {
+		strCmd = "xdr-set-filter:dc=" + datacenter + ";namespace=" + namespace + ";exp=null"
+	} else {
+		b64, err := filter.base64()
+		if err != nil {
+			return NewAerospikeError(SERIALIZE_ERROR, "FilterExpression could not be serialized to Base64")
+		}
+
+		strCmd = "xdr-set-filter:dc=" + datacenter + ";namespace=" + namespace + ";exp=" + b64
+	}
+
+	// Send command to one node. That node will distribute it to other nodes.
+	responseMap, err := clnt.sendInfoCommand(policy.Timeout, strCmd)
+	if err != nil {
+		return err
+	}
+
+	response := responseMap[strCmd]
+	if strings.EqualFold(response, "ok") {
+		return nil
+	}
+
+	code := parseIndexErrorCode(response)
+	return NewAerospikeError(code, response)
+}
+
+func parseIndexErrorCode(response string) ResultCode {
+	var code ResultCode = 0
+
+	list := strings.Split(response, ":")
+	if len(list) >= 2 && list[0] == "FAIL" {
+		i, err := strconv.ParseInt(list[1], 10, 64)
+		if err == nil {
+			code = ResultCode(i)
+		}
+	}
+
+	if code == 0 {
+		code = SERVER_ERROR
+	}
+
+	return code
+}
+
 //--------------------------------------------------------
 // Query functions (Supported by Aerospike 3+ servers only)
 //--------------------------------------------------------
@@ -1472,6 +1525,16 @@ func (clnt *Client) getUsableAdminPolicy(policy *AdminPolicy) *AdminPolicy {
 			return clnt.DefaultAdminPolicy
 		}
 		return NewAdminPolicy()
+	}
+	return policy
+}
+
+func (clnt *Client) getUsableInfoPolicy(policy *InfoPolicy) *InfoPolicy {
+	if policy == nil {
+		if clnt.DefaultInfoPolicy != nil {
+			return clnt.DefaultInfoPolicy
+		}
+		return NewInfoPolicy()
 	}
 	return policy
 }

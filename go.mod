@@ -7,48 +7,49 @@ replace github.com/hashicorp/vault/api => ./api
 replace github.com/hashicorp/vault/sdk => ./sdk
 
 require (
-	cloud.google.com/go v0.56.0
-	cloud.google.com/go/spanner v1.5.1
-	cloud.google.com/go/storage v1.6.0
-	github.com/Azure/azure-storage-blob-go v0.11.0
-	github.com/Azure/go-autorest/autorest v0.11.10
-	github.com/Azure/go-autorest/autorest/adal v0.9.5
+	cloud.google.com/go v0.76.0
+	cloud.google.com/go/spanner v1.13.0
+	cloud.google.com/go/storage v1.12.0
+	github.com/Azure/azure-storage-blob-go v0.13.0
+	github.com/Azure/go-autorest/autorest v0.11.17
+	github.com/Azure/go-autorest/autorest/adal v0.9.10
 	github.com/NYTimes/gziphandler v1.1.1
-	github.com/SAP/go-hdb v0.14.1
+	github.com/SAP/go-hdb v0.102.7
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/aerospike/aerospike-client-go v3.1.1+incompatible
-	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
-	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
-	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.3.4
-	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
+	github.com/aerospike/aerospike-client-go v4.1.0+incompatible
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.905
+	github.com/aliyun/aliyun-oss-go-sdk v2.1.6+incompatible
+	github.com/apple/foundationdb/bindings/go v0.0.0-20210201213539-a8313422e220
+	github.com/armon/go-metrics v0.3.6
+	github.com/armon/go-proxyproto v0.0.0-20200108142055-f0b8253b1507
 	github.com/armon/go-radix v1.0.0
-	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
-	github.com/aws/aws-sdk-go v1.34.28
+	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
+	github.com/aws/aws-sdk-go v1.37.3
 	github.com/bitly/go-hostpool v0.1.0 // indirect
-	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/client9/misspell v0.3.4
-	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
-	github.com/coreos/go-semver v0.2.0
-	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
+	github.com/cockroachdb/cockroach-go v2.0.1+incompatible
+	github.com/coreos/go-semver v0.3.0
+	github.com/denisenkom/go-mssqldb v0.9.0
+	github.com/docker/docker v20.10.3+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
-	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
-	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
-	github.com/fatih/color v1.9.0
+	github.com/duosecurity/duo_api_golang v0.0.0-20201112143038-0e07e9f869e3
+	github.com/elazarl/go-bindata-assetfs v1.0.1
+	github.com/fatih/color v1.10.0
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-errors/errors v1.0.1
-	github.com/go-ldap/ldap/v3 v3.1.10
-	github.com/go-ole/go-ole v1.2.4 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.3 // indirect
+	github.com/go-errors/errors v1.1.1
+	github.com/go-ldap/ldap/v3 v3.2.4
+	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.4.3
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
@@ -107,7 +108,7 @@ require (
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.8.0
-	github.com/mattn/go-colorable v0.1.7
+	github.com/mattn/go-colorable v0.1.8
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/mitchellh/cli v1.1.1
@@ -117,6 +118,7 @@ require (
 	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mitchellh/reflectwalk v1.0.1
+	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
@@ -149,17 +151,21 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.2
+	go.opencensus.io v0.22.6 // indirect
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
-	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
-	google.golang.org/api v0.29.0
-	google.golang.org/grpc v1.29.1
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
+	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+	golang.org/x/tools v0.1.0
+	google.golang.org/api v0.38.0
+	google.golang.org/genproto v0.0.0-20210203152818-3206188e46ba // indirect
+	google.golang.org/grpc v1.35.0
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 )

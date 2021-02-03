@@ -77,6 +77,25 @@ type ClientPolicy struct {
 	// Default: 0
 	MinConnectionsPerNode int
 
+	// MaxErrorRate defines the maximum number of errors allowed per node per ErrorRateWindow before
+	// the circuit-breaker algorithm returns MAX_ERROR_RATE on database commands to that node.
+	// If MaxErrorRate is zero, there is no error limit and
+	// the exception will never be thrown.
+	//
+	// The counted error types are any error that causes the connection to close (socket errors
+	// and client timeouts) and ResultCode.DEVICE_OVERLOAD.
+	//
+	// Default: 0
+	MaxErrorRate int
+
+	// ErrorRateWindow defined the number of cluster tend iterations that defines the window for MaxErrorRate.
+	// One tend iteration is defined as TendInterval plus the time to tend all nodes.
+	// At the end of tend iteration, the error count is reset to zero and backoff state is removed
+	// on all nodes.
+	//
+	// Default: 1
+	ErrorRateWindow int //= 1
+
 	// If set to true, will not create a new connection
 	// to the node if there are already `ConnectionQueueSize` active connections.
 	// Note: One connection per node is reserved for tend operations and is not used for transactions.
@@ -148,6 +167,8 @@ func NewClientPolicy() *ClientPolicy {
 		TendInterval:                time.Second,
 		LimitConnectionsToQueueSize: true,
 		IgnoreOtherSubnetAliases:    false,
+		MaxErrorRate:                0,
+		ErrorRateWindow:             1,
 	}
 }
 

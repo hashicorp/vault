@@ -62,15 +62,21 @@ func NewRequestLogPolicyFactory(o RequestLogOptions) pipeline.Factory {
 				logLevel, forceLog = pipeline.LogWarning, true
 			}
 
-			if err == nil { // We got a response from the service
-				sc := response.Response().StatusCode
-				if ((sc >= 400 && sc <= 499) && sc != http.StatusNotFound && sc != http.StatusConflict && sc != http.StatusPreconditionFailed && sc != http.StatusRequestedRangeNotSatisfiable) || (sc >= 500 && sc <= 599) {
-					logLevel, forceLog = pipeline.LogError, true // Promote to Error any 4xx (except those listed is an error) or any 5xx
-				} else {
-					// For other status codes, we leave the level as is.
+			var sc int
+			if err == nil { // We got a valid response from the service
+				sc = response.Response().StatusCode
+			} else { // We got an error, so we should inspect if we got a response
+				if se, ok := err.(StorageError); ok {
+					if r := se.Response(); r != nil {
+						sc = r.StatusCode
+					}
 				}
-			} else { // This error did not get an HTTP response from the service; upgrade the severity to Error
-				logLevel, forceLog = pipeline.LogError, true
+			}
+
+			if sc == 0 || ((sc >= 400 && sc <= 499) && sc != http.StatusNotFound && sc != http.StatusConflict && sc != http.StatusPreconditionFailed && sc != http.StatusRequestedRangeNotSatisfiable) || (sc >= 500 && sc <= 599) {
+				logLevel, forceLog = pipeline.LogError, true // Promote to Error any 4xx (except those listed is an error) or any 5xx
+			} else {
+				// For other status codes, we leave the level as is.
 			}
 
 			if shouldLog := po.ShouldLog(logLevel); forceLog || shouldLog {

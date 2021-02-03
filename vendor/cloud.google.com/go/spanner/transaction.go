@@ -28,6 +28,7 @@ import (
 	"google.golang.org/api/iterator"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // transactionID stores a transaction ID which uniquely identifies a transaction
@@ -71,6 +72,10 @@ type txReadOnly struct {
 
 	// qo provides options for executing a sql query.
 	qo QueryOptions
+}
+
+// TransactionOptions provides options for a transaction.
+type TransactionOptions struct {
 }
 
 // errSessionClosed returns error for using a recycled/destroyed session
@@ -119,8 +124,8 @@ func (t *txReadOnly) ReadWithOptions(ctx context.Context, table string, keys Key
 		return &RowIterator{err: err}
 	}
 	// Cloud Spanner will return "Session not found" on bad sessions.
-	sid, client := sh.getID(), sh.getClient()
-	if sid == "" || client == nil {
+	client := sh.getClient()
+	if client == nil {
 		// Might happen if transaction is closed in the middle of a API call.
 		return &RowIterator{err: errSessionClosed(sh)}
 	}
@@ -132,13 +137,13 @@ func (t *txReadOnly) ReadWithOptions(ctx context.Context, table string, keys Key
 			limit = opts.Limit
 		}
 	}
-	return stream(
+	return streamWithReplaceSessionFunc(
 		contextWithOutgoingMetadata(ctx, sh.getMetadata()),
 		sh.session.logger,
 		func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
 			return client.StreamingRead(ctx,
 				&sppb.ReadRequest{
-					Session:     sid,
+					Session:     t.sh.getID(),
 					Transaction: ts,
 					Table:       table,
 					Index:       index,
@@ -148,6 +153,7 @@ func (t *txReadOnly) ReadWithOptions(ctx context.Context, table string, keys Key
 					Limit:       int64(limit),
 				})
 		},
+		t.replaceSessionFunc,
 		t.setTimestamp,
 		t.release,
 	)
@@ -483,7 +489,7 @@ func (t *ReadOnlyTransaction) begin(ctx context.Context) error {
 				rts = time.Unix(res.ReadTimestamp.Seconds, int64(res.ReadTimestamp.Nanos))
 			}
 		} else {
-			err = toSpannerError(err)
+			err = ToSpannerError(err)
 		}
 		break
 	}
@@ -819,9 +825,9 @@ func (t *ReadWriteTransaction) update(ctx context.Context, stmt Statement, opts 
 	if err != nil {
 		return 0, err
 	}
-	resultSet, err := sh.getClient().ExecuteSql(ctx, req)
+	resultSet, err := sh.getClient().ExecuteSql(contextWithOutgoingMetadata(ctx, sh.getMetadata()), req)
 	if err != nil {
-		return 0, toSpannerError(err)
+		return 0, ToSpannerError(err)
 	}
 	if resultSet.Stats == nil {
 		return 0, spannerErrorf(codes.InvalidArgument, "query passed to Update: %q", stmt.SQL)
@@ -863,14 +869,14 @@ func (t *ReadWriteTransaction) BatchUpdate(ctx context.Context, stmts []Statemen
 		})
 	}
 
-	resp, err := sh.getClient().ExecuteBatchDml(ctx, &sppb.ExecuteBatchDmlRequest{
+	resp, err := sh.getClient().ExecuteBatchDml(contextWithOutgoingMetadata(ctx, sh.getMetadata()), &sppb.ExecuteBatchDmlRequest{
 		Session:     sh.getID(),
 		Transaction: ts,
 		Statements:  sppbStmts,
 		Seqno:       atomic.AddInt64(&t.sequenceNumber, 1),
 	})
 	if err != nil {
-		return nil, toSpannerError(err)
+		return nil, ToSpannerError(err)
 	}
 
 	var counts []int64
@@ -881,7 +887,7 @@ func (t *ReadWriteTransaction) BatchUpdate(ctx context.Context, stmts []Statemen
 		}
 		counts = append(counts, count)
 	}
-	if resp.Status.Code != 0 {
+	if resp.Status != nil && resp.Status.Code != 0 {
 		return counts, spannerErrorf(codes.Code(uint32(resp.Status.Code)), resp.Status.Message)
 	}
 	return counts, nil
@@ -952,22 +958,28 @@ func (t *ReadWriteTransaction) begin(ctx context.Context) error {
 	return err
 }
 
+// CommitResponse provides a response of a transaction commit in a database.
+type CommitResponse struct {
+	// CommitTs is the commit time for a transaction.
+	CommitTs time.Time
+}
+
 // commit tries to commit a readwrite transaction to Cloud Spanner. It also
-// returns the commit timestamp for the transactions.
-func (t *ReadWriteTransaction) commit(ctx context.Context) (time.Time, error) {
-	var ts time.Time
+// returns the commit response for the transactions.
+func (t *ReadWriteTransaction) commit(ctx context.Context) (CommitResponse, error) {
+	resp := CommitResponse{}
 	t.mu.Lock()
 	t.state = txClosed // No further operations after commit.
 	mPb, err := mutationsProto(t.wb)
 	t.mu.Unlock()
 	if err != nil {
-		return ts, err
+		return resp, err
 	}
 	// In case that sessionHandle was destroyed but transaction body fails to
 	// report it.
 	sid, client := t.sh.getID(), t.sh.getClient()
 	if sid == "" || client == nil {
-		return ts, errSessionClosed(t.sh)
+		return resp, errSessionClosed(t.sh)
 	}
 
 	res, e := client.Commit(contextWithOutgoingMetadata(ctx, t.sh.getMetadata()), &sppb.CommitRequest{
@@ -978,15 +990,15 @@ func (t *ReadWriteTransaction) commit(ctx context.Context) (time.Time, error) {
 		Mutations: mPb,
 	})
 	if e != nil {
-		return ts, toSpannerErrorWithCommitInfo(e, true)
+		return resp, toSpannerErrorWithCommitInfo(e, true)
 	}
 	if tstamp := res.GetCommitTimestamp(); tstamp != nil {
-		ts = time.Unix(tstamp.Seconds, int64(tstamp.Nanos))
+		resp.CommitTs = time.Unix(tstamp.Seconds, int64(tstamp.Nanos))
 	}
 	if isSessionNotFoundError(err) {
 		t.sh.destroy()
 	}
-	return ts, err
+	return resp, err
 }
 
 // rollback is called when a commit is aborted or the transaction body runs
@@ -1012,27 +1024,27 @@ func (t *ReadWriteTransaction) rollback(ctx context.Context) {
 }
 
 // runInTransaction executes f under a read-write transaction context.
-func (t *ReadWriteTransaction) runInTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error) (time.Time, error) {
+func (t *ReadWriteTransaction) runInTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error) (CommitResponse, error) {
 	var (
-		ts              time.Time
+		resp            CommitResponse
 		err             error
 		errDuringCommit bool
 	)
 	if err = f(context.WithValue(ctx, transactionInProgressKey{}, 1), t); err == nil {
 		// Try to commit if transaction body returns no error.
-		ts, err = t.commit(ctx)
+		resp, err = t.commit(ctx)
 		errDuringCommit = err != nil
 	}
 	if err != nil {
-		if isAbortErr(err) {
+		if isAbortedErr(err) {
 			// Retry the transaction using the same session on ABORT error.
 			// Cloud Spanner will create the new transaction with the previous
 			// one's wound-wait priority.
-			return ts, err
+			return resp, err
 		}
 		if isSessionNotFoundError(err) {
 			t.sh.destroy()
-			return ts, err
+			return resp, err
 		}
 		// Rollback the transaction unless the error occurred during the
 		// commit. Executing a rollback after a commit has failed will
@@ -1043,10 +1055,96 @@ func (t *ReadWriteTransaction) runInTransaction(ctx context.Context, f func(cont
 		if !errDuringCommit {
 			t.rollback(ctx)
 		}
-		return ts, err
+		return resp, err
 	}
-	// err == nil, return commit timestamp.
-	return ts, nil
+	// err == nil, return commit response.
+	return resp, nil
+}
+
+// ReadWriteStmtBasedTransaction provides a wrapper of ReadWriteTransaction in
+// order to run a read-write transaction in a statement-based way.
+//
+// This struct is returned by NewReadWriteStmtBasedTransaction and contains
+// Commit() and Rollback() methods to end a transaction.
+type ReadWriteStmtBasedTransaction struct {
+	// ReadWriteTransaction contains methods for performing transactional reads.
+	ReadWriteTransaction
+}
+
+// NewReadWriteStmtBasedTransaction starts a read-write transaction. Commit() or
+// Rollback() must be called to end a transaction. If Commit() or Rollback() is
+// not called, the session that is used by the transaction will not be returned
+// to the pool and cause a session leak.
+//
+// This method should only be used when manual error handling and retry
+// management is needed. Cloud Spanner may abort a read/write transaction at any
+// moment, and each statement that is executed on the transaction should be
+// checked for an Aborted error, including queries and read operations.
+//
+// For most use cases, client.ReadWriteTransaction should be used, as it will
+// handle all Aborted and 'Session not found' errors automatically.
+func NewReadWriteStmtBasedTransaction(ctx context.Context, c *Client) (*ReadWriteStmtBasedTransaction, error) {
+	return NewReadWriteStmtBasedTransactionWithOptions(ctx, c, TransactionOptions{})
+}
+
+// NewReadWriteStmtBasedTransactionWithOptions starts a read-write transaction
+// with configurable options. Commit() or Rollback() must be called to end a
+// transaction. If Commit() or Rollback() is not called, the session that is
+// used by the transaction will not be returned to the pool and cause a session
+// leak.
+//
+// NewReadWriteStmtBasedTransactionWithOptions is a configurable version of
+// NewReadWriteStmtBasedTransaction.
+func NewReadWriteStmtBasedTransactionWithOptions(ctx context.Context, c *Client, options TransactionOptions) (*ReadWriteStmtBasedTransaction, error) {
+	var (
+		sh  *sessionHandle
+		err error
+		t   *ReadWriteStmtBasedTransaction
+	)
+	sh, err = c.idleSessions.takeWriteSession(ctx)
+	if err != nil {
+		// If session retrieval fails, just fail the transaction.
+		return nil, err
+	}
+	t = &ReadWriteStmtBasedTransaction{
+		ReadWriteTransaction: ReadWriteTransaction{
+			tx: sh.getTransactionID(),
+		},
+	}
+	t.txReadOnly.sh = sh
+	t.txReadOnly.txReadEnv = t
+	t.txReadOnly.qo = c.qo
+
+	if err = t.begin(ctx); err != nil {
+		if sh != nil {
+			sh.recycle()
+		}
+		return nil, err
+	}
+	return t, err
+}
+
+// Commit tries to commit a readwrite transaction to Cloud Spanner. It also
+// returns the commit timestamp for the transactions.
+func (t *ReadWriteStmtBasedTransaction) Commit(ctx context.Context) (time.Time, error) {
+	resp, err := t.commit(ctx)
+	// Rolling back an aborted transaction is not necessary.
+	if err != nil && status.Code(err) != codes.Aborted {
+		t.rollback(ctx)
+	}
+	if t.sh != nil {
+		t.sh.recycle()
+	}
+	return resp.CommitTs, err
+}
+
+// Rollback is called to cancel the ongoing transaction that has not been
+// committed yet.
+func (t *ReadWriteStmtBasedTransaction) Rollback(ctx context.Context) {
+	t.rollback(ctx)
+	if t.sh != nil {
+		t.sh.recycle()
+	}
 }
 
 // writeOnlyTransaction provides the most efficient way of doing write-only
@@ -1098,7 +1196,7 @@ func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Muta
 			},
 			Mutations: mPb,
 		})
-		if err != nil && !isAbortErr(err) {
+		if err != nil && !isAbortedErr(err) {
 			if isSessionNotFoundError(err) {
 				// Discard the bad session.
 				sh.destroy()
@@ -1111,12 +1209,12 @@ func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Muta
 			break
 		}
 	}
-	return ts, toSpannerError(err)
+	return ts, ToSpannerError(err)
 }
 
 // isAbortedErr returns true if the error indicates that an gRPC call is
 // aborted on the server side.
-func isAbortErr(err error) bool {
+func isAbortedErr(err error) bool {
 	if err == nil {
 		return false
 	}

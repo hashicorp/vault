@@ -18,6 +18,7 @@ package aerospike
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"strings"
@@ -185,7 +186,14 @@ func setValue(f reflect.Value, value interface{}, supportsFloat bool) error {
 			}
 			f.Set(rv)
 		case reflect.Bool:
-			f.SetBool(value.(int) == 1)
+			switch v := value.(type) {
+			case int:
+				f.SetBool(v == 1)
+			case bool:
+				f.SetBool(v)
+			default:
+				return fmt.Errorf("Invalid value `%#v` for boolean field", value)
+			}
 		case reflect.Interface:
 			if value != nil {
 				f.Set(reflect.ValueOf(value))
@@ -285,7 +293,16 @@ func setValue(f reflect.Value, value interface{}, supportsFloat bool) error {
 				}
 				f.Set(rv)
 			case reflect.Bool:
-				tempV := bool(value.(int) == 1)
+				var tempV bool
+				switch v := value.(type) {
+				case int:
+					tempV = (v == 1)
+				case bool:
+					tempV = v
+				default:
+					return fmt.Errorf("Invalid value `%#v` for boolean field", value)
+				}
+
 				rv := reflect.ValueOf(&tempV)
 				if rv.Type() != f.Type() {
 					rv = rv.Convert(f.Type())

@@ -84,8 +84,8 @@ type CreatePolicyRequest struct {
 // CreatePolicyResponse is the response struct for api CreatePolicy
 type CreatePolicyResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
-	Policy    Policy `json:"Policy" xml:"Policy"`
+	RequestId string               `json:"RequestId" xml:"RequestId"`
+	Policy    PolicyInCreatePolicy `json:"Policy" xml:"Policy"`
 }
 
 // CreateCreatePolicyRequest creates a request to invoke CreatePolicy API
@@ -93,7 +93,7 @@ func CreateCreatePolicyRequest() (request *CreatePolicyRequest) {
 	request = &CreatePolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreatePolicy", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreatePolicy", "Ram", "openAPI")
 	return
 }
 

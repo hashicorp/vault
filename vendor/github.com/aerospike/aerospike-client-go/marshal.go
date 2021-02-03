@@ -172,7 +172,7 @@ func setBinMap(s reflect.Value, clusterSupportsFloat bool, typeOfT reflect.Type,
 		}
 
 		// skip unexported fields
-		if fld.PkgPath != "" {
+		if fld.PkgPath != "" && !fld.Anonymous {
 			continue
 		}
 
@@ -318,7 +318,7 @@ func fillMapping(objType reflect.Type, mapping map[string][]int, fields []string
 		}
 
 		// skip unexported fields
-		if f.PkgPath != "" {
+		if f.PkgPath != "" && !f.Anonymous {
 			continue
 		}
 

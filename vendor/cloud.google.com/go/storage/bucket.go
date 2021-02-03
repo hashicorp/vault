@@ -389,7 +389,8 @@ type RetentionPolicy struct {
 }
 
 const (
-	// RFC3339 date with only the date segment, used for CreatedBefore in LifecycleRule.
+	// RFC3339 timestamp with only the date segment, used for CreatedBefore,
+	// CustomTimeBefore, and NoncurrentTimeBefore in LifecycleRule.
 	rfc3339Date = "2006-01-02"
 
 	// DeleteAction is a lifecycle action that deletes a live and/or archived
@@ -455,6 +456,21 @@ type LifecycleCondition struct {
 	// the specified date in UTC.
 	CreatedBefore time.Time
 
+	// CustomTimeBefore is the CustomTime metadata field of the object. This
+	// condition is satisfied when an object's CustomTime timestamp is before
+	// midnight of the specified date in UTC.
+	//
+	// This condition can only be satisfied if CustomTime has been set.
+	CustomTimeBefore time.Time
+
+	// DaysSinceCustomTime is the days elapsed since the CustomTime date of the
+	// object. This condition can only be satisfied if CustomTime has been set.
+	DaysSinceCustomTime int64
+
+	// DaysSinceNoncurrentTime is the days elapsed since the noncurrent timestamp
+	// of the object. This condition is relevant only for versioned objects.
+	DaysSinceNoncurrentTime int64
+
 	// Liveness specifies the object's liveness. Relevant only for versioned objects
 	Liveness Liveness
 
@@ -463,6 +479,13 @@ type LifecycleCondition struct {
 	//
 	// Values include "STANDARD", "NEARLINE", "COLDLINE" and "ARCHIVE".
 	MatchesStorageClasses []string
+
+	// NoncurrentTimeBefore is the noncurrent timestamp of the object. This
+	// condition is satisfied when an object's noncurrent timestamp is before
+	// midnight of the specified date in UTC.
+	//
+	// This condition is relevant only for versioned objects.
+	NoncurrentTimeBefore time.Time
 
 	// NumNewerVersions is the condition matching objects with a number of newer versions.
 	//
@@ -750,6 +773,7 @@ func (ua *BucketAttrsToUpdate) toRawBucket() *raw.Bucket {
 	}
 	if ua.Lifecycle != nil {
 		rb.Lifecycle = toRawLifecycle(*ua.Lifecycle)
+		rb.ForceSendFields = append(rb.ForceSendFields, "Lifecycle")
 	}
 	if ua.Logging != nil {
 		if *ua.Logging == (BucketLogging{}) {
@@ -936,7 +960,7 @@ func toCORS(rc []*raw.BucketCors) []CORS {
 func toRawLifecycle(l Lifecycle) *raw.BucketLifecycle {
 	var rl raw.BucketLifecycle
 	if len(l.Rules) == 0 {
-		return nil
+		rl.ForceSendFields = []string{"Rule"}
 	}
 	for _, r := range l.Rules {
 		rr := &raw.BucketLifecycleRule{
@@ -945,9 +969,11 @@ func toRawLifecycle(l Lifecycle) *raw.BucketLifecycle {
 				StorageClass: r.Action.StorageClass,
 			},
 			Condition: &raw.BucketLifecycleRuleCondition{
-				Age:                 r.Condition.AgeInDays,
-				MatchesStorageClass: r.Condition.MatchesStorageClasses,
-				NumNewerVersions:    r.Condition.NumNewerVersions,
+				Age:                     r.Condition.AgeInDays,
+				DaysSinceCustomTime:     r.Condition.DaysSinceCustomTime,
+				DaysSinceNoncurrentTime: r.Condition.DaysSinceNoncurrentTime,
+				MatchesStorageClass:     r.Condition.MatchesStorageClasses,
+				NumNewerVersions:        r.Condition.NumNewerVersions,
 			},
 		}
 
@@ -962,6 +988,12 @@ func toRawLifecycle(l Lifecycle) *raw.BucketLifecycle {
 
 		if !r.Condition.CreatedBefore.IsZero() {
 			rr.Condition.CreatedBefore = r.Condition.CreatedBefore.Format(rfc3339Date)
+		}
+		if !r.Condition.CustomTimeBefore.IsZero() {
+			rr.Condition.CustomTimeBefore = r.Condition.CustomTimeBefore.Format(rfc3339Date)
+		}
+		if !r.Condition.NoncurrentTimeBefore.IsZero() {
+			rr.Condition.NoncurrentTimeBefore = r.Condition.NoncurrentTimeBefore.Format(rfc3339Date)
 		}
 		rl.Rule = append(rl.Rule, rr)
 	}
@@ -980,9 +1012,11 @@ func toLifecycle(rl *raw.BucketLifecycle) Lifecycle {
 				StorageClass: rr.Action.StorageClass,
 			},
 			Condition: LifecycleCondition{
-				AgeInDays:             rr.Condition.Age,
-				MatchesStorageClasses: rr.Condition.MatchesStorageClass,
-				NumNewerVersions:      rr.Condition.NumNewerVersions,
+				AgeInDays:               rr.Condition.Age,
+				DaysSinceCustomTime:     rr.Condition.DaysSinceCustomTime,
+				DaysSinceNoncurrentTime: rr.Condition.DaysSinceNoncurrentTime,
+				MatchesStorageClasses:   rr.Condition.MatchesStorageClass,
+				NumNewerVersions:        rr.Condition.NumNewerVersions,
 			},
 		}
 
@@ -996,6 +1030,12 @@ func toLifecycle(rl *raw.BucketLifecycle) Lifecycle {
 
 		if rr.Condition.CreatedBefore != "" {
 			r.Condition.CreatedBefore, _ = time.Parse(rfc3339Date, rr.Condition.CreatedBefore)
+		}
+		if rr.Condition.CustomTimeBefore != "" {
+			r.Condition.CustomTimeBefore, _ = time.Parse(rfc3339Date, rr.Condition.CustomTimeBefore)
+		}
+		if rr.Condition.NoncurrentTimeBefore != "" {
+			r.Condition.NoncurrentTimeBefore, _ = time.Parse(rfc3339Date, rr.Condition.NoncurrentTimeBefore)
 		}
 		l.Rules = append(l.Rules, r)
 	}
@@ -1090,8 +1130,9 @@ func toUniformBucketLevelAccess(b *raw.BucketIamConfiguration) UniformBucketLeve
 	}
 }
 
-// Objects returns an iterator over the objects in the bucket that match the Query q.
-// If q is nil, no filtering is done.
+// Objects returns an iterator over the objects in the bucket that match the
+// Query q. If q is nil, no filtering is done. Objects will be iterated over
+// lexicographically by name.
 //
 // Note: The returned iterator is not safe for concurrent operations without explicit synchronization.
 func (b *BucketHandle) Objects(ctx context.Context, q *Query) *ObjectIterator {
@@ -1130,6 +1171,13 @@ func (it *ObjectIterator) PageInfo() *iterator.PageInfo { return it.pageInfo }
 // there are no more results. Once Next returns iterator.Done, all subsequent
 // calls will return iterator.Done.
 //
+// In addition, if Next returns an error other than iterator.Done, all
+// subsequent calls will return the same error. To continue iteration, a new
+// `ObjectIterator` must be created. Since objects are ordered lexicographically
+// by name, `Query.StartOffset` can be used to create a new iterator which will
+// start at the desired place. See
+// https://pkg.go.dev/cloud.google.com/go/storage?tab=doc#hdr-Listing_objects.
+//
 // If Query.Delimiter is non-empty, some of the ObjectAttrs returned by Next will
 // have a non-empty Prefix field, and a zero value for all other fields. These
 // represent prefixes.
@@ -1150,6 +1198,8 @@ func (it *ObjectIterator) fetch(pageSize int, pageToken string) (string, error) 
 	req.Projection("full")
 	req.Delimiter(it.query.Delimiter)
 	req.Prefix(it.query.Prefix)
+	req.StartOffset(it.query.StartOffset)
+	req.EndOffset(it.query.EndOffset)
 	req.Versions(it.query.Versions)
 	if len(it.query.fieldSelection) > 0 {
 		req.Fields("nextPageToken", googleapi.Field(it.query.fieldSelection))

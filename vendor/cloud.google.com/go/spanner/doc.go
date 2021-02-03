@@ -275,16 +275,20 @@ To apply a list of mutations to the database, use Apply:
     _, err := client.Apply(ctx, []*spanner.Mutation{m1, m2, m3})
 
 If you need to read before writing in a single transaction, use a
-ReadWriteTransaction. ReadWriteTransactions may abort and need to be retried.
-You pass in a function to ReadWriteTransaction, and the client will handle the
-retries automatically. Use the transaction's BufferWrite method to buffer
-mutations, which will all be executed at the end of the transaction:
+ReadWriteTransaction. ReadWriteTransactions may be aborted automatically by the
+backend and need to be retried. You pass in a function to ReadWriteTransaction,
+and the client will handle the retries automatically. Use the transaction's
+BufferWrite method to buffer mutations, which will all be executed at the end
+of the transaction:
 
     _, err := client.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
         var balance int64
         row, err := txn.ReadRow(ctx, "Accounts", spanner.Key{"alice"}, []string{"balance"})
         if err != nil {
-            // This function will be called again if this is an IsAborted error.
+            // The transaction function will be called again if the error code
+            // of this error is Aborted. The backend may automatically abort
+            // any read/write transaction if it detects a deadlock or other
+            // problems.
             return err
         }
         if err := row.Column(0, &balance); err != nil {
@@ -299,7 +303,7 @@ mutations, which will all be executed at the end of the transaction:
         txn.BufferWrite([]*spanner.Mutation{m})
 
         // The buffered mutation will be committed.  If the commit
-        // fails with an IsAborted error, this function will be called
+        // fails with an Aborted error, this function will be called
         // again.
         return nil
     })
@@ -353,3 +357,8 @@ at https://godoc.org/go.opencensus.io/trace. OpenCensus tracing requires Go 1.8
 or higher.
 */
 package spanner // import "cloud.google.com/go/spanner"
+
+// clientUserAgent identifies the version of this package.
+// It should be the same as https://pkg.go.dev/cloud.google.com/go/spanner.
+// TODO: We will want to automate the version with a bash script.
+const clientUserAgent = "spanner-go/v1.12.0"

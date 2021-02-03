@@ -14,96 +14,46 @@
 1. Sign one of the
 [contributor license agreements](#contributor-license-agreements) below.
 
-1. Run `go get golang.org/x/review/git-codereview && go install golang.org/x/review/git-codereview`
-to install the code reviewing tool.
+1. Clone the repo:
+    `git clone https://github.com/googleapis/google-cloud-go`
 
-    1. Ensure it's working by running `git codereview` (check your `PATH` if
-    not).
+1. Change into the checked out source:
+    `cd google-cloud-go`
 
-    1. If you would like, you may want to set up aliases for `git-codereview`,
-    such that `git codereview change` becomes `git change`. See the
-    [godoc](https://pkg.go.dev/golang.org/x/review/git-codereview) for details.
+1. Fork the repo.
 
-        * Should you run into issues with the `git-codereview` tool, please note
-        that all error messages will assume that you have set up these aliases.
+1. Set your fork as a remote:
+    `git remote add fork git@github.com:GITHUB_USERNAME/google-cloud-go.git`
 
-1. Change to a directory of your choosing and clone the repo.
+1. Make changes, commit to your fork.
 
-    ```
-    cd ~/code
-    git clone https://code.googlesource.com/gocloud
-    ```
+   Commit messages should follow the
+   [Conventional Commits Style](https://www.conventionalcommits.org). The scope
+   portion should always be filled with the name of the package affected by the
+   changes being made. For example:
+   ```
+   feat(functions): add gophers codelab
+   ```
 
-    * If you have already checked out the source, make sure that the remote
-    `git` `origin` is https://code.googlesource.com/gocloud:
+1. Send a pull request with your changes.
 
-        ```
-        git remote -v
-        # ...
-        git remote set-url origin https://code.googlesource.com/gocloud
-        ```
+   To minimize friction, consider setting `Allow edits from maintainers` on the
+   PR, which will enable project committers and automation to update your PR.
 
-    * The project uses [Go Modules](https://blog.golang.org/using-go-modules)
-    for dependency management See
-    [`gopls`](https://github.com/golang/go/wiki/gopls) for making your editor
-    work with modules.
+1. A maintainer will review the pull request and make comments.
 
-1. Change to the project directory:
+   Prefer adding additional commits over amending and force-pushing since it can
+   be difficult to follow code reviews when the commit history changes.
 
-    ```
-    cd ~/code/gocloud
-    ```
+   Commits will be squashed when they're merged.
 
-1. Make sure your `git` auth is configured correctly by visiting
-https://code.googlesource.com, clicking "Generate Password" at the top-right,
-and following the directions. Otherwise, `git codereview mail` in the next step
-will fail.
+## Testing
 
-1. Now you are ready to make changes. Don't create a new branch or make commits in the traditional
-way. Use the following`git codereview` commands to create a commit and create a Gerrit CL:
+We test code against two versions of Go, the minimum and maximum versions
+supported by our clients. To see which versions these are checkout our
+[README](README.md#supported-versions).
 
-    ```
-    git codereview change <branch-name> # Use this instead of git checkout -b <branch-name>
-    # Make changes.
-    git add ...
-    git codereview change # Use this instead of git commit
-    git codereview mail # If this fails, the error message will contain instructions to fix it.
-    ```
-
-    * This will create a new `git` branch for you to develop on. Once your
-    change is merged, you can delete this branch.
-
-1. As you make changes for code review, ammend the commit and re-mail the
-change:
-
-    ```
-    # Make more changes.
-    git add ...
-    git codereview change
-    git codereview mail
-    ```
-
-    * **Warning**: do not change the `Change-Id` at the bottom of the commit
-    message - it's how Gerrit knows which change this is (or if it's new).
-
-    * When you fixes issues from code review, respond to each code review
-    message then click **Reply** at the top of the page.
-
-    * Each new mailed amendment will create a new patch set for
-    your change in Gerrit. Patch sets can be compared and reviewed.
-
-    * **Note**: if your change includes a breaking change, our breaking change
-    detector will cause CI/CD to fail. If your breaking change is acceptable
-    in some way, add a `BREAKING_CHANGE_ACCEPTABLE=<reason>` line to the commit
-    message to cause the detector not to be run and to make it clear why that is
-    acceptable.
-
-1. Finally, add reviewers to your CL when it's ready for review. Reviewers will
-not be added automatically. If you're not sure who to add for your code review,
-add tbp@, cbro@, and codyoss@.
-
-
-## Integration Tests
+### Integration Tests
 
 In addition to the unit tests, you may run the integration test suite. These
 directions describe setting up your environment to run integration tests for
@@ -153,7 +103,8 @@ Next, ensure the following APIs are enabled in the general project:
 - Google Compute Engine Instance Group Updater API
 - Google Compute Engine Instance Groups API
 - Kubernetes Engine API
-- Stackdriver Error Reporting API
+- Cloud Error Reporting API
+- Pub/Sub Lite API
 
 Next, create a Datastore database in the general project, and a Firestore
 database in the Firestore project.
@@ -178,10 +129,13 @@ project's service account.
 (e.g. doorway-cliff-677) for the Firestore project.
 - `GCLOUD_TESTS_GOLANG_FIRESTORE_KEY`: The path to the JSON key file of the
 Firestore project's service account.
+- `GCLOUD_TESTS_API_KEY`: API key for using the Translate API created above.
+
+As part of the setup that follows, the following variables will be configured:
+
 - `GCLOUD_TESTS_GOLANG_KEYRING`: The full name of the keyring for the tests,
 in the form
 "projects/P/locations/L/keyRings/R". The creation of this is described below.
-- `GCLOUD_TESTS_API_KEY`: API key for using the Translate API.
 - `GCLOUD_TESTS_GOLANG_ZONE`: Compute Engine zone.
 
 Install the [gcloud command-line tool][gcloudcli] to your machine and use it to
@@ -200,7 +154,7 @@ $ gcloud auth login
 $ gcloud datastore indexes create datastore/testdata/index.yaml
 
 # Creates a Google Cloud storage bucket with the same name as your test project,
-# and with the Stackdriver Logging service account as owner, for the sink
+# and with the Cloud Logging service account as owner, for the sink
 # integration tests in logging.
 $ gsutil mb gs://$GCLOUD_TESTS_GOLANG_PROJECT_ID
 $ gsutil acl ch -g cloud-logs@google.com:O gs://$GCLOUD_TESTS_GOLANG_PROJECT_ID
@@ -208,7 +162,7 @@ $ gsutil acl ch -g cloud-logs@google.com:O gs://$GCLOUD_TESTS_GOLANG_PROJECT_ID
 # Creates a PubSub topic for integration tests of storage notifications.
 $ gcloud beta pubsub topics create go-storage-notification-test
 # Next, go to the Pub/Sub dashboard in GCP console. Authorize the user
-# "service-<numberic project id>@gs-project-accounts.iam.gserviceaccount.com"
+# "service-<numeric project id>@gs-project-accounts.iam.gserviceaccount.com"
 # as a publisher to that topic.
 
 # Creates a Spanner instance for the spanner integration tests.
@@ -227,7 +181,38 @@ $ gcloud kms keys create key2 --keyring $MY_KEYRING --location $MY_LOCATION --pu
 # Sets the GCLOUD_TESTS_GOLANG_KEYRING environment variable.
 $ export GCLOUD_TESTS_GOLANG_KEYRING=projects/$GCLOUD_TESTS_GOLANG_PROJECT_ID/locations/$MY_LOCATION/keyRings/$MY_KEYRING
 # Authorizes Google Cloud Storage to encrypt and decrypt using key1.
-gsutil kms authorize -p $GCLOUD_TESTS_GOLANG_PROJECT_ID -k $GCLOUD_TESTS_GOLANG_KEYRING/cryptoKeys/key1
+$ gsutil kms authorize -p $GCLOUD_TESTS_GOLANG_PROJECT_ID -k $GCLOUD_TESTS_GOLANG_KEYRING/cryptoKeys/key1
+```
+
+It may be useful to add exports to your shell initialization for future use.
+For instance, in `.zshrc`:
+
+```sh
+#### START GO SDK Test Variables
+# Developers Console project's ID (e.g. bamboo-shift-455) for the general project.
+export GCLOUD_TESTS_GOLANG_PROJECT_ID=your-project
+
+# The path to the JSON key file of the general project's service account.
+export GCLOUD_TESTS_GOLANG_KEY=~/directory/your-project-abcd1234.json
+
+# Developers Console project's ID (e.g. doorway-cliff-677) for the Firestore project.
+export GCLOUD_TESTS_GOLANG_FIRESTORE_PROJECT_ID=your-firestore-project
+
+# The path to the JSON key file of the Firestore project's service account.
+export GCLOUD_TESTS_GOLANG_FIRESTORE_KEY=~/directory/your-firestore-project-abcd1234.json
+
+# The full name of the keyring for the tests, in the form "projects/P/locations/L/keyRings/R".
+# The creation of this is described below.
+export MY_KEYRING=my-golang-sdk-test
+export MY_LOCATION=global
+export GCLOUD_TESTS_GOLANG_KEYRING=projects/$GCLOUD_TESTS_GOLANG_PROJECT_ID/locations/$MY_LOCATION/keyRings/$MY_KEYRING
+
+# API key for using the Translate API.
+export GCLOUD_TESTS_API_KEY=abcdefghijk123456789
+
+# Compute Engine zone. (https://cloud.google.com/compute/docs/regions-zones)
+export GCLOUD_TESTS_GOLANG_ZONE=your-chosen-region
+#### END GO SDK Test Variables
 ```
 
 #### Running
@@ -236,7 +221,15 @@ Once you've done the necessary setup, you can run the integration tests by
 running:
 
 ``` sh
-$ go test -v cloud.google.com/go/...
+$ go test -v ./...
+```
+
+Note that the above command will not run the tests in other modules. To run
+tests on other modules, first navigate to the appropriate
+subdirectory. For instance, to run only the tests for datastore:
+``` sh
+$ cd datastore
+$ go test -v ./...
 ```
 
 #### Replay

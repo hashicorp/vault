@@ -63,6 +63,8 @@ type Node struct {
 	referenceCount      AtomicInt
 	failures            AtomicInt
 	partitionChanged    AtomicBool
+	errorCount          AtomicInt
+	rebalanceGeneration AtomicInt
 
 	active AtomicBool
 
@@ -87,6 +89,8 @@ func newNode(cluster *Cluster, nv *nodeValidator) *Node {
 		failures:            *NewAtomicInt(0),
 		active:              *NewAtomicBool(true),
 		partitionChanged:    *NewAtomicBool(false),
+		errorCount:          *NewAtomicInt(0),
+		rebalanceGeneration: *NewAtomicInt(-1),
 
 		supportsFloat:             *NewAtomicBool(nv.supportsFloat),
 		supportsBatchIndex:        *NewAtomicBool(nv.supportsBatchIndex),
@@ -474,6 +478,13 @@ func (nd *Node) refreshPartitions(peers *peers, partitions partitionMap) {
 }
 
 func (nd *Node) refreshFailed(e error) {
+	nd.peersGeneration.Set(-1)
+	nd.partitionGeneration.Set(-1)
+
+	if nd.cluster.clientPolicy.RackAware {
+		nd.rebalanceGeneration.Set(-1)
+	}
+
 	nd.failures.IncrementAndGet()
 	atomic.AddInt64(&nd.stats.TendsFailed, 1)
 
@@ -559,6 +570,7 @@ func (nd *Node) newConnection(overrideThreshold bool) (*Connection, error) {
 	atomic.AddInt64(&nd.stats.ConnectionsAttempts, 1)
 	conn, err := NewConnection(&nd.cluster.clientPolicy, nd.host)
 	if err != nil {
+		nd.incrErrorCount()
 		nd.connectionCount.DecrementAndGet()
 		atomic.AddInt64(&nd.stats.ConnectionsFailed, 1)
 		return nil, err
@@ -567,6 +579,10 @@ func (nd *Node) newConnection(overrideThreshold bool) (*Connection, error) {
 
 	// need to authenticate
 	if err = conn.login(&nd.cluster.clientPolicy, nd.cluster.Password(), nd.sessionToken()); err != nil {
+		// increment node errors if authenitocation hit a network error
+		if networkError(err) {
+			nd.incrErrorCount()
+		}
 		atomic.AddInt64(&nd.stats.ConnectionsFailed, 1)
 
 		// Socket not authenticated. Do not put back into pool.
@@ -966,4 +982,30 @@ func (nd *Node) fillMinConns() (int, error) {
 		}
 	}
 	return 0, nil
+}
+
+// Increments error count for the node. If errorCount goes above the threshold,
+// the node will not accept any more requests until the next window.
+func (nd *Node) incrErrorCount() {
+	if nd.cluster.clientPolicy.MaxErrorRate > 0 {
+		nd.errorCount.GetAndIncrement()
+	}
+}
+
+// Resets the error count
+func (nd *Node) resetErrorCount() {
+	nd.errorCount.Set(0)
+}
+
+// checks if the errorCount is within set limits
+func (nd *Node) errorCountWithinLimit() bool {
+	return nd.cluster.clientPolicy.MaxErrorRate <= 0 || nd.errorCount.Get() <= nd.cluster.clientPolicy.MaxErrorRate
+}
+
+// returns error if errorCount has gone above the threshold set in the policy
+func (nd *Node) validateErrorCount() error {
+	if !nd.errorCountWithinLimit() {
+		return NewAerospikeError(MAX_ERROR_RATE)
+	}
+	return nil
 }

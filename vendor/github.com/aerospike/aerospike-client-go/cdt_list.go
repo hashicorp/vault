@@ -158,15 +158,15 @@ const (
 )
 
 // ListSortFlags detemines sort flags for CDT lists
-// type ListSortFlags int
+type ListSortFlags int
 
 const (
 	// ListSortFlagsDefault is the default sort flag for CDT lists, and sort in Ascending order.
-	ListSortFlagsDefault = 0
+	ListSortFlagsDefault ListSortFlags = 0
 	// ListSortFlagsDescending will sort the contents of the list in descending order.
-	ListSortFlagsDescending = 1
+	ListSortFlagsDescending ListSortFlags = 1
 	// ListSortFlagsDropDuplicates will drop duplicate values in the results of the CDT list operation.
-	ListSortFlagsDropDuplicates = 2
+	ListSortFlagsDropDuplicates ListSortFlags = 2
 )
 
 // ListWriteFlags detemines write flags for CDT lists
@@ -700,7 +700,7 @@ func ListGetRangeFromOp(binName string, index int, ctx ...*CDTContext) *Operatio
 // ListSortOp creates list sort operation.
 // Server sorts list according to sortFlags.
 // Server does not return a result by default.
-func ListSortOp(binName string, sortFlags int, ctx ...*CDTContext) *Operation {
+func ListSortOp(binName string, sortFlags ListSortFlags, ctx ...*CDTContext) *Operation {
 	return &Operation{opType: _CDT_MODIFY, ctx: ctx, binName: binName, binValue: ListValue{_CDT_LIST_SORT, IntegerValue(sortFlags)}, encoder: listGenericOpEncoder}
 }
 

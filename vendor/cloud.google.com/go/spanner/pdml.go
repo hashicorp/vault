@@ -48,25 +48,20 @@ func (c *Client) partitionedUpdate(ctx context.Context, statement Statement, opt
 	if err := checkNestedTxn(ctx); err != nil {
 		return 0, err
 	}
-	var (
-		s  *session
-		sh *sessionHandle
-	)
-	// Create session.
-	s, err = c.sc.createSession(ctx)
+
+	sh, err := c.idleSessions.take(ctx)
 	if err != nil {
-		return 0, toSpannerError(err)
+		return 0, ToSpannerError(err)
 	}
-	// Delete the session at the end of the request. If the PDML statement
-	// timed out or was cancelled, the DeleteSession request might not succeed,
-	// but the session will eventually be garbage collected by the server.
-	defer s.delete(ctx)
-	sh = &sessionHandle{session: s}
+	if sh != nil {
+		defer sh.recycle()
+	}
+
 	// Create the parameters and the SQL request, but without a transaction.
 	// The transaction reference will be added by the executePdml method.
 	params, paramTypes, err := statement.convertParams()
 	if err != nil {
-		return 0, toSpannerError(err)
+		return 0, ToSpannerError(err)
 	}
 	req := &sppb.ExecuteSqlRequest{
 		Session:      sh.getID(),
@@ -76,9 +71,8 @@ func (c *Client) partitionedUpdate(ctx context.Context, statement Statement, opt
 		QueryOptions: options.Options,
 	}
 
-	// Make a retryer for Aborted errors.
-	// TODO: use generic Aborted retryer when merged with master
-	retryer := gax.OnCodes([]codes.Code{codes.Aborted}, DefaultRetryBackoff)
+	// Make a retryer for Aborted and certain Internal errors.
+	retryer := onCodes(DefaultRetryBackoff, codes.Aborted, codes.Internal)
 	// Execute the PDML and retry if the transaction is aborted.
 	executePdmlWithRetry := func(ctx context.Context) (int64, error) {
 		for {
@@ -113,13 +107,13 @@ func executePdml(ctx context.Context, sh *sessionHandle, req *sppb.ExecuteSqlReq
 		},
 	})
 	if err != nil {
-		return 0, toSpannerError(err)
+		return 0, ToSpannerError(err)
 	}
 	// Add a reference to the PDML transaction on the ExecuteSql request.
 	req.Transaction = &sppb.TransactionSelector{
 		Selector: &sppb.TransactionSelector_Id{Id: res.Id},
 	}
-	resultSet, err := sh.getClient().ExecuteSql(ctx, req)
+	resultSet, err := sh.getClient().ExecuteSql(contextWithOutgoingMetadata(ctx, sh.getMetadata()), req)
 	if err != nil {
 		return 0, err
 	}

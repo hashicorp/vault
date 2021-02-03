@@ -1,41 +1,21 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
 import (
 	"fmt"
 
-	"github.com/SAP/go-hdb/internal/bufio"
-)
-
-// data format version
-const (
-	dfvBaseline intType = 1
-	dfvDoNotUse intType = 3
-	dfvSPS06    intType = 4 //see docu
-	dfvBINTEXT  intType = 6
+	"github.com/SAP/go-hdb/internal/protocol/encoding"
 )
 
 // client distribution mode
 const (
-	cdmOff                 intType = 0
-	cdmConnection                  = 1
-	cdmStatement                   = 2
-	cdmConnectionStatement         = 3
+	cdmOff                 optIntType = 0
+	cdmConnection          optIntType = 1
+	cdmStatement           optIntType = 2
+	cdmConnectionStatement optIntType = 3
 )
 
 // distribution protocol version
@@ -44,66 +24,37 @@ const (
 	dpvClientHandlesStatementSequence = 1
 )
 
-type connectOptions struct {
-	po      plainOptions
-	_numArg int
-}
+type connectOptions plainOptions
 
-func newConnectOptions() *connectOptions {
-	return &connectOptions{
-		po: plainOptions{},
-	}
-}
-
-func (o *connectOptions) String() string {
+func (o connectOptions) String() string {
 	m := make(map[connectOption]interface{})
-	for k, v := range o.po {
+	for k, v := range o {
 		m[connectOption(k)] = v
 	}
-	return fmt.Sprintf("%s", m)
+	return fmt.Sprintf("options %s", m)
 }
 
-func (o *connectOptions) kind() partKind {
-	return pkConnectOptions
-}
+func (o connectOptions) size() int   { return plainOptions(o).size() }
+func (o connectOptions) numArg() int { return len(o) }
 
-func (o *connectOptions) size() (int, error) {
-	return o.po.size(), nil
-}
-
-func (o *connectOptions) numArg() int {
-	return len(o.po)
-}
-
-func (o *connectOptions) setNumArg(numArg int) {
-	o._numArg = numArg
-}
-
-func (o *connectOptions) set(k connectOption, v interface{}) {
-	o.po[int8(k)] = v
-}
-
-func (o *connectOptions) get(k connectOption) (interface{}, bool) {
-	v, ok := o.po[int8(k)]
-	return v, ok
-}
-
-func (o *connectOptions) read(rd *bufio.Reader) error {
-	o.po.read(rd, o._numArg)
-
-	if trace {
-		outLogger.Printf("connect options: %v", o)
+func (o connectOptions) fullVersionString() (version string) {
+	v, ok := o[int8(coFullVersionString)]
+	if !ok {
+		return
 	}
-
-	return rd.GetError()
+	if s, ok := v.(optStringType); ok {
+		return string(s)
+	}
+	return
 }
 
-func (o *connectOptions) write(wr *bufio.Writer) error {
-	o.po.write(wr)
+func (o *connectOptions) decode(dec *encoding.Decoder, ph *partHeader) error {
+	*o = connectOptions{} // no reuse of maps - create new one
+	plainOptions(*o).decode(dec, ph.numArg())
+	return dec.Error()
+}
 
-	if trace {
-		outLogger.Printf("connect options: %v", o)
-	}
-
+func (o connectOptions) encode(enc *encoding.Encoder) error {
+	plainOptions(o).encode(enc)
 	return nil
 }

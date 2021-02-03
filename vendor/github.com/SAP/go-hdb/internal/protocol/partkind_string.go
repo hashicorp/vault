@@ -4,6 +4,67 @@ package protocol
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[pkNil-0]
+	_ = x[pkCommand-3]
+	_ = x[pkResultset-5]
+	_ = x[pkError-6]
+	_ = x[pkStatementID-10]
+	_ = x[pkTransactionID-11]
+	_ = x[pkRowsAffected-12]
+	_ = x[pkResultsetID-13]
+	_ = x[pkTopologyInformation-15]
+	_ = x[pkTableLocation-16]
+	_ = x[pkReadLobRequest-17]
+	_ = x[pkReadLobReply-18]
+	_ = x[pkAbapIStream-25]
+	_ = x[pkAbapOStream-26]
+	_ = x[pkCommandInfo-27]
+	_ = x[pkWriteLobRequest-28]
+	_ = x[pkClientContext-29]
+	_ = x[pkWriteLobReply-30]
+	_ = x[pkParameters-32]
+	_ = x[pkAuthentication-33]
+	_ = x[pkSessionContext-34]
+	_ = x[pkClientID-35]
+	_ = x[pkProfile-38]
+	_ = x[pkStatementContext-39]
+	_ = x[pkPartitionInformation-40]
+	_ = x[pkOutputParameters-41]
+	_ = x[pkConnectOptions-42]
+	_ = x[pkCommitOptions-43]
+	_ = x[pkFetchOptions-44]
+	_ = x[pkFetchSize-45]
+	_ = x[pkParameterMetadata-47]
+	_ = x[pkResultMetadata-48]
+	_ = x[pkFindLobRequest-49]
+	_ = x[pkFindLobReply-50]
+	_ = x[pkItabSHM-51]
+	_ = x[pkItabChunkMetadata-53]
+	_ = x[pkItabMetadata-55]
+	_ = x[pkItabResultChunk-56]
+	_ = x[pkClientInfo-57]
+	_ = x[pkStreamData-58]
+	_ = x[pkOStreamResult-59]
+	_ = x[pkFDARequestMetadata-60]
+	_ = x[pkFDAReplyMetadata-61]
+	_ = x[pkBatchPrepare-62]
+	_ = x[pkBatchExecute-63]
+	_ = x[pkTransactionFlags-64]
+	_ = x[pkRowSlotImageParamMetadata-65]
+	_ = x[pkRowSlotImageResultset-66]
+	_ = x[pkDBConnectInfo-67]
+	_ = x[pkLobFlags-68]
+	_ = x[pkResultsetOptions-69]
+	_ = x[pkXATransactionInfo-70]
+	_ = x[pkSessionVariable-71]
+	_ = x[pkWorkLoadReplayContext-72]
+	_ = x[pkSQLReplyOptions-73]
+}
+
 const _partKind_name = "pkNilpkCommandpkResultsetpkErrorpkStatementIDpkTransactionIDpkRowsAffectedpkResultsetIDpkTopologyInformationpkTableLocationpkReadLobRequestpkReadLobReplypkAbapIStreampkAbapOStreampkCommandInfopkWriteLobRequestpkClientContextpkWriteLobReplypkParameterspkAuthenticationpkSessionContextpkClientIDpkProfilepkStatementContextpkPartitionInformationpkOutputParameterspkConnectOptionspkCommitOptionspkFetchOptionspkFetchSizepkParameterMetadatapkResultMetadatapkFindLobRequestpkFindLobReplypkItabSHMpkItabChunkMetadatapkItabMetadatapkItabResultChunkpkClientInfopkStreamDatapkOStreamResultpkFDARequestMetadatapkFDAReplyMetadatapkBatchPreparepkBatchExecutepkTransactionFlagspkRowSlotImageParamMetadatapkRowSlotImageResultsetpkDBConnectInfopkLobFlagspkResultsetOptionspkXATransactionInfopkSessionVariablepkWorkLoadReplayContextpkSQLReplyOptions"
 
 var _partKind_map = map[partKind]string{

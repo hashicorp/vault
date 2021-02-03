@@ -28,7 +28,7 @@ func newBatchIndexCommandGet(
 		node = batch.Node
 	}
 
-	return &batchIndexCommandGet{
+	res := &batchIndexCommandGet{
 		batchCommandGet{
 			batchCommand: batchCommand{
 				baseMultiCommand: *newMultiCommand(node, nil),
@@ -39,6 +39,8 @@ func newBatchIndexCommandGet(
 			indexRecords: records,
 		},
 	}
+	res.oneShot = false
+	return res
 }
 
 func (cmd *batchIndexCommandGet) cloneBatchCommand(batch *batchNode) batcher {

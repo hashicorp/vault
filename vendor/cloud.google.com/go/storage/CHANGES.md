@@ -1,5 +1,44 @@
 # Changes
 
+## v1.12.0
+- V4 signed URL fixes:
+  - Fix encoding of spaces in query parameters.
+  - Add fields that were missing from PostPolicyV4 policy conditions.
+- Fix Query to correctly list prefixes as well as objects when SetAttrSelection
+  is used.
+
+## v1.11.0
+- Add support for CustomTime and NoncurrentTime object lifecycle management
+  features.
+
+## v1.10.0
+- Bump dependency on google.golang.org/api to capture changes to retry logic
+  which will make retries on writes more resilient.
+- Improve documentation for Writer.ChunkSize.
+- Fix a bug in lifecycle to allow callers to clear lifecycle rules on a bucket.
+
+## v1.9.0
+- Add retry for transient network errors on most operations (with the exception
+  of writes).
+- Bump dependency for google.golang.org/api to capture a change in the default
+  HTTP transport which will improve performance for reads under heavy load.
+- Add CRC32C checksum validation option to Composer.
+
+## v1.8.0
+- Add support for V4 signed post policies.
+
+## v1.7.0
+- V4 signed URL support:
+  - Add support for bucket-bound domains and virtual hosted style URLs.
+  - Add support for query parameters in the signature.
+  - Fix text encoding to align with standards.
+- Add the object name to query parameters for write calls.
+- Fix retry behavior when reading files with Content-Encoding gzip.
+- Fix response header in reader.
+- New code examples:
+   - Error handling for `ObjectHandle` preconditions.
+   - Existence checks for buckets and objects.
+
 ## v1.6.0
 
 - Updated option handling:

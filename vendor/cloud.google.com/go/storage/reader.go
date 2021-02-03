@@ -86,6 +86,11 @@ func (o *ObjectHandle) NewReader(ctx context.Context) (*Reader, error) {
 // until the end. If offset is negative, the object is read abs(offset) bytes
 // from the end, and length must also be negative to indicate all remaining
 // bytes will be read.
+//
+// If the object's metadata property "Content-Encoding" is set to "gzip" or satisfies
+// decompressive transcoding per https://cloud.google.com/storage/docs/transcoding
+// that file will be served back whole, regardless of the requested range as
+// Google Cloud Storage dictates.
 func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64) (r *Reader, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Object.NewRangeReader")
 	defer func() { trace.EndSpan(ctx, err) }()
@@ -160,10 +165,25 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 					Body:   string(body),
 				}
 			}
-			if start > 0 && length != 0 && res.StatusCode != http.StatusPartialContent {
+
+			partialContentNotSatisfied :=
+				!decompressiveTranscoding(res) &&
+					start > 0 && length != 0 &&
+					res.StatusCode != http.StatusPartialContent
+
+			if partialContentNotSatisfied {
 				res.Body.Close()
 				return errors.New("storage: partial request not satisfied")
 			}
+
+			// With "Content-Encoding": "gzip" aka decompressive transcoding, GCS serves
+			// back the whole file regardless of the range count passed in as per:
+			//      https://cloud.google.com/storage/docs/transcoding#range,
+			// thus we have to manually move the body forward by seen bytes.
+			if decompressiveTranscoding(res) && seen > 0 {
+				_, _ = io.CopyN(ioutil.Discard, res.Body, seen)
+			}
+
 			// If a generation hasn't been specified, and this is the first response we get, let's record the
 			// generation. In future requests we'll use this generation as a precondition to avoid data races.
 			if gen < 0 && res.Header.Get("X-Goog-Generation") != "" {
@@ -232,7 +252,7 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 		body = emptyBody
 	}
 	var metaGen int64
-	if res.Header.Get("X-Goog-Generation") != "" {
+	if res.Header.Get("X-Goog-Metageneration") != "" {
 		metaGen, err = strconv.ParseInt(res.Header.Get("X-Goog-Metageneration"), 10, 64)
 		if err != nil {
 			return nil, err
@@ -266,6 +286,18 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 		checkCRC: checkCRC,
 		reopen:   reopen,
 	}, nil
+}
+
+// decompressiveTranscoding returns true if the request was served decompressed
+// and different than its original storage form. This happens when the "Content-Encoding"
+// header is "gzip".
+// See:
+//  * https://cloud.google.com/storage/docs/transcoding#transcoding_and_gzip
+//  * https://github.com/googleapis/google-cloud-go/issues/1800
+func decompressiveTranscoding(res *http.Response) bool {
+	// Decompressive Transcoding.
+	return res.Header.Get("Content-Encoding") == "gzip" ||
+		res.Header.Get("X-Goog-Stored-Content-Encoding") == "gzip"
 }
 
 func uncompressedByServer(res *http.Response) bool {

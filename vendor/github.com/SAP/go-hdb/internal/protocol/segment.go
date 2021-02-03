@@ -1,25 +1,13 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
 import (
 	"fmt"
 
-	"github.com/SAP/go-hdb/internal/bufio"
+	"github.com/SAP/go-hdb/internal/protocol/encoding"
 )
 
 const (
@@ -74,7 +62,7 @@ func (h *segmentHeader) String() string {
 
 	default: //error
 		return fmt.Sprintf(
-			"segment length %d segment ofs %d noOfParts %d, segmentNo %d segmentKind %s",
+			"segmentLength %d segmentOfs %d noOfParts %d, segmentNo %d segmentKind %s",
 			h.segmentLength,
 			h.segmentOfs,
 			h.noOfParts,
@@ -83,7 +71,7 @@ func (h *segmentHeader) String() string {
 		)
 	case skRequest:
 		return fmt.Sprintf(
-			"segment length %d segment ofs %d noOfParts %d, segmentNo %d segmentKind %s messageType %s commit %t commandOptions %s",
+			"segmentLength %d segmentOfs %d noOfParts %d, segmentNo %d segmentKind %s messageType %s commit %t commandOptions %s",
 			h.segmentLength,
 			h.segmentOfs,
 			h.noOfParts,
@@ -95,7 +83,7 @@ func (h *segmentHeader) String() string {
 		)
 	case skReply:
 		return fmt.Sprintf(
-			"segment length %d segment ofs %d noOfParts %d, segmentNo %d segmentKind %s functionCode %s",
+			"segmentLength %d segmentOfs %d noOfParts %d, segmentNo %d segmentKind %s functionCode %s",
 			h.segmentLength,
 			h.segmentOfs,
 			h.noOfParts,
@@ -107,68 +95,55 @@ func (h *segmentHeader) String() string {
 }
 
 //  request
-func (h *segmentHeader) write(wr *bufio.Writer) error {
-	wr.WriteInt32(h.segmentLength)
-	wr.WriteInt32(h.segmentOfs)
-	wr.WriteInt16(h.noOfParts)
-	wr.WriteInt16(h.segmentNo)
-	wr.WriteInt8(int8(h.segmentKind))
+func (h *segmentHeader) encode(enc *encoding.Encoder) error {
+	enc.Int32(h.segmentLength)
+	enc.Int32(h.segmentOfs)
+	enc.Int16(h.noOfParts)
+	enc.Int16(h.segmentNo)
+	enc.Int8(int8(h.segmentKind))
 
 	switch h.segmentKind {
 
 	default: //error
-		wr.WriteZeroes(11) //segmentHeaderLength
+		enc.Zeroes(11) //segmentHeaderLength
 
 	case skRequest:
-		wr.WriteInt8(int8(h.messageType))
-		wr.WriteBool(h.commit)
-		wr.WriteInt8(int8(h.commandOptions))
-		wr.WriteZeroes(8) //segmentHeaderSize
+		enc.Int8(int8(h.messageType))
+		enc.Bool(h.commit)
+		enc.Int8(int8(h.commandOptions))
+		enc.Zeroes(8) //segmentHeaderSize
 
 	case skReply:
-
-		wr.WriteZeroes(1) //reserved
-		wr.WriteInt16(int16(h.functionCode))
-		wr.WriteZeroes(8) //segmentHeaderSize
-
+		enc.Zeroes(1) //reserved
+		enc.Int16(int16(h.functionCode))
+		enc.Zeroes(8) //segmentHeaderSize
 	}
-
-	if trace {
-		outLogger.Printf("write segment header: %s", h)
-	}
-
 	return nil
 }
 
 //  reply || error
-func (h *segmentHeader) read(rd *bufio.Reader) error {
-	h.segmentLength = rd.ReadInt32()
-	h.segmentOfs = rd.ReadInt32()
-	h.noOfParts = rd.ReadInt16()
-	h.segmentNo = rd.ReadInt16()
-	h.segmentKind = segmentKind(rd.ReadInt8())
+func (h *segmentHeader) decode(dec *encoding.Decoder) error {
+	h.segmentLength = dec.Int32()
+	h.segmentOfs = dec.Int32()
+	h.noOfParts = dec.Int16()
+	h.segmentNo = dec.Int16()
+	h.segmentKind = segmentKind(dec.Int8())
 
 	switch h.segmentKind {
 
 	default: //error
-		rd.Skip(11) //segmentHeaderLength
+		dec.Skip(11) //segmentHeaderLength
 
 	case skRequest:
-		h.messageType = messageType(rd.ReadInt8())
-		h.commit = rd.ReadBool()
-		h.commandOptions = commandOptions(rd.ReadInt8())
-		rd.Skip(8) //segmentHeaderLength
+		h.messageType = messageType(dec.Int8())
+		h.commit = dec.Bool()
+		h.commandOptions = commandOptions(dec.Int8())
+		dec.Skip(8) //segmentHeaderLength
 
 	case skReply:
-		rd.Skip(1) //reserved
-		h.functionCode = functionCode(rd.ReadInt16())
-		rd.Skip(8) //segmentHeaderLength
-
+		dec.Skip(1) //reserved
+		h.functionCode = functionCode(dec.Int16())
+		dec.Skip(8) //segmentHeaderLength
 	}
-
-	if trace {
-		outLogger.Printf("read segment header: %s", h)
-	}
-
-	return rd.GetError()
+	return dec.Error()
 }

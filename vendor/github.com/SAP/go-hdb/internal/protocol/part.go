@@ -1,50 +1,21 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
 import (
 	"fmt"
+	"math"
 
-	"github.com/SAP/go-hdb/internal/bufio"
+	"github.com/SAP/go-hdb/internal/protocol/encoding"
 )
 
 const (
 	partHeaderSize = 16
+	// MaxNumArg is the maximum number of arguments allowed to send in a part.
+	MaxNumArg = math.MaxInt16
 )
-
-type requestPart interface {
-	kind() partKind
-	size() (int, error)
-	numArg() int
-	write(*bufio.Writer) error
-}
-
-type replyPart interface {
-	//kind() partKind
-	setNumArg(int)
-	read(*bufio.Reader) error
-}
-
-// PartAttributes is an interface defining methods for reading query resultset parts.
-type PartAttributes interface {
-	ResultsetClosed() bool
-	LastPacket() bool
-	NoRows() bool
-}
 
 type partAttributes int8
 
@@ -99,7 +70,7 @@ type partHeader struct {
 }
 
 func (h *partHeader) String() string {
-	return fmt.Sprintf("part kind %s partAttributes %s argumentCount %d bigArgumentCount %d bufferLength %d bufferSize %d",
+	return fmt.Sprintf("kind %s partAttributes %s argumentCount %d bigArgumentCount %d bufferLength %d bufferSize %d",
 		h.partKind,
 		h.partAttributes,
 		h.argumentCount,
@@ -109,36 +80,48 @@ func (h *partHeader) String() string {
 	)
 }
 
-func (h *partHeader) write(wr *bufio.Writer) error {
-	wr.WriteInt8(int8(h.partKind))
-	wr.WriteInt8(int8(h.partAttributes))
-	wr.WriteInt16(h.argumentCount)
-	wr.WriteInt32(h.bigArgumentCount)
-	wr.WriteInt32(h.bufferLength)
-	wr.WriteInt32(h.bufferSize)
+func (h *partHeader) setNumArg(numArg int) error {
+	switch {
+	default:
+		return fmt.Errorf("maximum number of arguments %d exceeded", numArg)
+	case numArg <= MaxNumArg:
+		h.argumentCount = int16(numArg)
+		h.bigArgumentCount = 0
 
-	//no filler
-
-	if trace {
-		outLogger.Printf("write part header: %s", h)
+		// TODO: seems not to work: see bulk insert test
+		// case numArg <= math.MaxInt32:
+		// 	s.ph.argumentCount = 0
+		// 	s.ph.bigArgumentCount = int32(numArg)
+		//
 	}
-
 	return nil
 }
 
-func (h *partHeader) read(rd *bufio.Reader) error {
-	h.partKind = partKind(rd.ReadInt8())
-	h.partAttributes = partAttributes(rd.ReadInt8())
-	h.argumentCount = rd.ReadInt16()
-	h.bigArgumentCount = rd.ReadInt32()
-	h.bufferLength = rd.ReadInt32()
-	h.bufferSize = rd.ReadInt32()
-
-	// no filler
-
-	if trace {
-		outLogger.Printf("read part header: %s", h)
+func (h *partHeader) numArg() int {
+	if h.bigArgumentCount != 0 {
+		panic("part header: bigArgumentCount is set")
 	}
+	return int(h.argumentCount)
+}
 
-	return rd.GetError()
+func (h *partHeader) encode(enc *encoding.Encoder) error {
+	enc.Int8(int8(h.partKind))
+	enc.Int8(int8(h.partAttributes))
+	enc.Int16(h.argumentCount)
+	enc.Int32(h.bigArgumentCount)
+	enc.Int32(h.bufferLength)
+	enc.Int32(h.bufferSize)
+	//no filler
+	return nil
+}
+
+func (h *partHeader) decode(dec *encoding.Decoder) error {
+	h.partKind = partKind(dec.Int8())
+	h.partAttributes = partAttributes(dec.Int8())
+	h.argumentCount = dec.Int16()
+	h.bigArgumentCount = dec.Int32()
+	h.bufferLength = dec.Int32()
+	h.bufferSize = dec.Int32()
+	// no filler
+	return dec.Error()
 }
