@@ -46,6 +46,7 @@ func TestGenerate(t *testing.T) {
 {{.String | lowercase}}
 {{.String | replace " " "."}}
 {{.String | sha256}}
+{{.String | base64}}
 {{.String | truncate_sha256 20}}`,
 			data: struct {
 				String string
@@ -57,6 +58,7 @@ SOME STRING WITH MULTIPLE CAPITALS LETTERS
 some string with multiple capitals letters
 Some.string.with.Multiple.Capitals.LETTERS
 da9872dd96609c72897defa11fe81017a62c3f44339d9d3b43fe37540ede3601
+U29tZSBzdHJpbmcgd2l0aCBNdWx0aXBsZSBDYXBpdGFscyBMRVRURVJT
 Some string 6841cf80`,
 			expectErr: false,
 		},

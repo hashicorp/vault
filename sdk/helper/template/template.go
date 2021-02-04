@@ -59,6 +59,9 @@ func Function(name string, f interface{}) Opt {
 // - sha256
 //   - SHA256 hashes the previous value.
 //     Example: {{ .DisplayName | sha256 }}
+// - base64
+//   - base64 encodes the previous value.
+//     Example: {{ .DisplayName | base64 }}
 // - unix_time
 //   - Provides the current unix time in seconds.
 //     Example: {{ unix_time }}
@@ -89,6 +92,7 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 			"lowercase":       lowercase,
 			"replace":         replace,
 			"sha256":          hashSHA256,
+			"base64":          encodeBase64,
 
 			"unix_time":        unixTime,
 			"unix_time_millis": unixTimeMillis,
