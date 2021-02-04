@@ -44,6 +44,8 @@ func TestSysRotate(t *testing.T) {
 	expected["install_time"] = actualInstallTime
 
 	expected["request_id"] = actual["request_id"]
+	expected["encryptions"] = actual["encryptions"]
+	expected["local_encryptions"] = actual["local_encryptions"]
 
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)

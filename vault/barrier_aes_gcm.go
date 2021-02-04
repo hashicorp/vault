@@ -37,7 +37,7 @@ const (
 	// After N encryptions, test whether the rotation time has elapsed.
 	keyRotationTimeSampleRate = 100
 
-	autoRotateCheckInterval = 5 * time.Second
+	autoRotateCheckInterval = 5 * time.Minute
 )
 
 // Versions of the AESGCM storage methodology

@@ -2718,7 +2718,6 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 
 func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		c.logger.Info("Persisting barrier key tracking")
 		err := c.barrier.CheckBarrierAutoRotate(ctx, c.secureRandomReader)
 		if err != nil {
 			c.logger.Error("error in barrier auto rotation", "error", err)

@@ -2045,6 +2045,8 @@ func TestSystemBackend_keyStatus(t *testing.T) {
 		"term": 1,
 	}
 	delete(resp.Data, "install_time")
+	delete(resp.Data, "encryptions")
+	delete(resp.Data, "local_encryptions")
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
@@ -2112,6 +2114,8 @@ func TestSystemBackend_rotate(t *testing.T) {
 		"term": 2,
 	}
 	delete(resp.Data, "install_time")
+	delete(resp.Data, "encryptions")
+	delete(resp.Data, "local_encryptions")
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
