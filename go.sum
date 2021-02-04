@@ -537,8 +537,6 @@ github.com/grpc-ecosystem/grpc-gateway v1.9.5 h1:UImYN5qQ8tuGpGE16ZmjvcTtTw24zw1
 github.com/grpc-ecosystem/grpc-gateway v1.9.5/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/hashicorp/consul-template v0.25.1 h1:+D2s8eyRqWyX7GPNxeUi8tsyh8pRn3J6k8giEchPfKQ=
-github.com/hashicorp/consul-template v0.25.1/go.mod h1:/vUsrJvDuuQHcxEw0zik+YXTS7ZKWZjQeaQhshBmfH0=
 github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d h1:DSrhJ8Nqyr3oleIu0rCjRV4j6f4CJSPUp5DljXKKu4w=
 github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d/go.mod h1:kNLSN13aPJz/P0we1XNU+ZDsjkbzX+iHJ+dJOqFZck0=
 github.com/hashicorp/consul/api v1.3.0/go.mod h1:MmDNSzIMUjNpY/mQ398R4bk2FnqQLoPndWW5VkKPlCE=
@@ -548,6 +546,7 @@ github.com/hashicorp/consul/sdk v0.1.1/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyN
 github.com/hashicorp/consul/sdk v0.3.0/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
 github.com/hashicorp/consul/sdk v0.4.0 h1:zBtCfKJZcJDBvSCkQJch4ulp59m1rATFLKwNo/LYY30=
 github.com/hashicorp/consul/sdk v0.4.0/go.mod h1:fY08Y9z5SvJqevyZNy6WWPXiG3KwBPAvlcdx16zZ0fM=
+github.com/hashicorp/consul/sdk v0.4.1-0.20200910203702-bb2b5dd871ca h1:DYR7hPxUqDQP4h3eX9/wI4J2yzL3QEsXi3TCXYtAgGI=
 github.com/hashicorp/consul/sdk v0.4.1-0.20200910203702-bb2b5dd871ca/go.mod h1:fY08Y9z5SvJqevyZNy6WWPXiG3KwBPAvlcdx16zZ0fM=
 github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
@@ -630,8 +629,7 @@ github.com/hashicorp/mdns v1.0.0/go.mod h1:tL+uN++7HEJ6SQLQ2/p+z2pH24WQKWjBPkE0m
 github.com/hashicorp/mdns v1.0.1 h1:XFSOubp8KWB+Jd2PDyaX5xUd5bhSP/+pTDZVDMzZJM8=
 github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg2DmyNY=
 github.com/hashicorp/memberlist v0.1.3/go.mod h1:ajVTdAv/9Im8oMAAj5G31PhhMCZJV2pPBoIllUwCN7I=
-github.com/hashicorp/memberlist v0.1.4 h1:gkyML/r71w3FL8gUi74Vk76avkj/9lYAY9lvg0OcoGs=
-github.com/hashicorp/memberlist v0.1.4/go.mod h1:ajVTdAv/9Im8oMAAj5G31PhhMCZJV2pPBoIllUwCN7I=
+github.com/hashicorp/memberlist v0.2.2 h1:5+RffWKwqJ71YPu9mWsF7ZOscZmwfasdA8kbdC7AO2g=
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d h1:BXqsASWhyiAiEVm6FcltF0dg8XvoookQwmpHn8lstu8=
 github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d/go.mod h1:WKCL+tLVhN1D+APwH3JiTRZoxcdwRk86bWu1LVCUPaE=
@@ -643,8 +641,6 @@ github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pN
 github.com/hashicorp/raft-snapshot v1.0.3 h1:lTgBBGMFcuKBTwHqWZ4r0TLzNsqo/OByCga/kM6F0uM=
 github.com/hashicorp/raft-snapshot v1.0.3/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
-github.com/hashicorp/serf v0.8.3 h1:MWYcmct5EtKz0efYooPcL0yNkem+7kWxqXDi/UIh+8k=
-github.com/hashicorp/serf v0.8.3/go.mod h1:UpNcs7fFbpKIyZaUuSW6EPiH+eZC7OuyFD+wc1oal+k=
 github.com/hashicorp/serf v0.9.4 h1:xrZ4ZR0wT5Dz8oQHHdfOzr0ei1jMToWlFFz3hh/DI7I=
 github.com/hashicorp/serf v0.9.4/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0 h1:qCTaVIb+FUWatLXszACH47Q/yTMrbedHt0CMGX9X41w=
@@ -682,12 +678,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0 h1:VoB3Q11LX+wF5w5TC8j
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0/go.mod h1:SSkKpSTOMnX84PfgYiWHgwVg+YMhxHNjo+YCJGNBoZk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.8.0 h1:3BAhoqqDN198vynAfS3rcxUW2STBjREluGPsYCOy2mA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.8.0/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3 h1:Nvc8t0AjBKD8vCvJvLBRDiPAOM9PRLnSMXX7Xkw5juY=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20210121193032-bb12fd5092bd h1:l+yD2mcdsZrtUhakzylE/7cMN6bJMZJU06l2w4MeXNA=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20210121193032-bb12fd5092bd/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2 h1:iZDbNQnlNzwXnuUwOykQ54ReRmKc0VoxXz/b8V48EDM=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0 h1:dKPQIr6tLcMmhNKdc2A9pbwaIFLooC80UfNZL+jWMlA=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0/go.mod h1:hhwps56f2ATeC4Smgghrc5JH9dXR31b4ehSf1HblP5Q=
 github.com/hashicorp/vault-plugin-secrets-kv v0.7.0 h1:Sq5CmKWxQu+MtO6AXYM+STPHGnrGD50iKuwzaw87OVM=
@@ -696,8 +688,6 @@ github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0 h1:uTtKxt5qfwTj6Pq
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0/go.mod h1:JOqn2mWJJbTp9NaC0CSCc3q5HQA99LfeSqgpC3YS+oA=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.1.6-0.20210201204049-4f0f91977798 h1:G3S7rF/zHfQnYZglk+WvjzBuJyjQAnP0xdGL/4i3jzM=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.1.6-0.20210201204049-4f0f91977798/go.mod h1:GiFI8Bxwx3+fn0A3SyVp9XdYQhm3cOgN8GzwKxyJ9So=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0 h1:aDdWZMdr93OtwZRE3TPKJyZgY6ZTe09G7bb2GL1HeAo=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0/go.mod h1:pRE6pJzEVTSn3reeEn6YOV73R/6PcyylwQBz33zZKds=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443/go.mod h1:bEpDU35nTu0ey1EXjwNwPjI9xErAsoOCmcMb9GKvyxo=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
@@ -831,8 +821,6 @@ github.com/mattn/go-isatty v0.0.12 h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHX
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-runewidth v0.0.2/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
 github.com/mattn/go-runewidth v0.0.3/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
-github.com/mattn/go-shellwords v1.0.5 h1:JhhFTIOslh5ZsPrpa3Wdg8bF0WI3b44EMblmU9wIsXc=
-github.com/mattn/go-shellwords v1.0.5/go.mod h1:3xCvwCdWdlDJUrvuMn7Wuy9eWs4pE8vqg+NOMyg4B2o=
 github.com/mattn/go-shellwords v1.0.10 h1:Y7Xqm8piKOO3v10Thp7Z36h4FYFjt5xB//6XvOrs2Gw=
 github.com/mattn/go-shellwords v1.0.10/go.mod h1:EZzvwXDESEeg03EKmM+RmDnNOPKG4lLtQsUlTZDWQ8Y=
 github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0jegS5sx/RkqARlsWZ6pIwiU=
@@ -842,8 +830,6 @@ github.com/mholt/archiver v3.1.1+incompatible/go.mod h1:Dh2dOXnSdiLxRiPoVfIr/fI1
 github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5 h1:uA3b4GgZMZxAJsTkd+CVQ85b7KBlD7HLpd/FfTNlGN0=
 github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5/go.mod h1:+pmbihVqjC3GPdfWv1V2TnRSuVvwrWLKfEP/MZVB/Wc=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
-github.com/miekg/dns v1.1.15 h1:CSSIDtllwGLMoA6zjdKnaE6Tx6eVUxQ29LUgGetiDCI=
-github.com/miekg/dns v1.1.15/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/miekg/dns v1.1.26 h1:gPxPSwALAeHJSjarOs00QjVdV9QoBvc1D2ujQUr5BzU=
 github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKjuso=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
@@ -986,7 +972,6 @@ github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 h1:q2e307iGHPdTGp
 github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5/go.mod h1:jvVRKCrJTQWu0XVbaOlby/2lO20uSCHEMzzplHXte1o=
 github.com/pierrec/lz4 v1.0.2-0.20190131084431-473cd7ce01a1/go.mod h1:3/3N9NVKO0jef7pBehbT1qWhCMrIgbYNnFAZCqQ5LRc=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
-github.com/pierrec/lz4 v2.2.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pierrec/lz4 v2.2.6+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pierrec/lz4 v2.5.2+incompatible h1:WCjObylUIOlKy/+7Abdn34TLIkXiA4UWUMhxq9m9ZXI=
 github.com/pierrec/lz4 v2.5.2+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
@@ -1001,8 +986,6 @@ github.com/pkg/profile v1.2.1/go.mod h1:hJw3o1OdXxsrSjjVksARp5W95eeEaEfptyVZyv6J
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
-github.com/posener/complete v1.2.1 h1:LrvDIY//XNo65Lq84G/akBuMGlawHvGBABv8f/ZN6DI=
-github.com/posener/complete v1.2.1/go.mod h1:6gapUrK/U1TAN7ciCoNRIdVC5sbdBTUh1DKN0g6uH7E=
 github.com/posener/complete v1.2.3 h1:NP0eAhjcjImqslEwo/1hq7gpajME0fTLTezBKDqfXqo=
 github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
 github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 h1:J9b7z+QKAmPf4YLrFg6oQUotqHQeUNWwkvo7jZp1GLU=
