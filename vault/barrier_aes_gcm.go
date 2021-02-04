@@ -712,7 +712,7 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 		Term:             int(term),
 		InstallTime:      key.InstallTime,
 		Encryptions:      b.encryptions(),
-		LocalEncryptions: b.TotalLocalEncryptions(),
+		LocalEncryptions: atomic.LoadInt64(&b.totalLocalEncryptions),
 	}
 	return info, nil
 }
@@ -1130,11 +1130,6 @@ func (b *AESGCMBarrier) encryptTracked(path string, term uint32, gcm cipher.AEAD
 	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	return ct, nil
-}
-
-// UnpersistedEncryptions returns the number of encryptions made on the local instance only for the current key term
-func (b *AESGCMBarrier) TotalLocalEncryptions() int64 {
-	return atomic.LoadInt64(&b.totalLocalEncryptions)
 }
 
 func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Reader) error {
