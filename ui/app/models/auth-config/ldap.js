@@ -33,7 +33,7 @@ export default AuthConfig.extend({
         ],
       },
       {
-        'Customize User Search': ['binddn', 'userdn', 'bindpass'],
+        'Customize User Search': ['binddn', 'userdn', 'bindpass', 'userfilter'],
       },
       {
         'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn', 'useTokenGroups'],
