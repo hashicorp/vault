@@ -7,6 +7,7 @@ export default function ProductSubnav() {
 
   return (
     <Subnav
+      hideGithubStars={true}
       titleLink={{
         text: 'vault',
         url: '/',
@@ -15,6 +16,11 @@ export default function ProductSubnav() {
         {
           text: 'GitHub',
           url: 'https://www.github.com/hashicorp/vault',
+        },
+        {
+          text: 'Try Cloud',
+          url:
+            'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=top_nav',
         },
         {
           text: 'Download',

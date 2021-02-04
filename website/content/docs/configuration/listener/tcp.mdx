@@ -54,8 +54,8 @@ advertise the correct address to other nodes.
   label suffix like `"30s"` or `"1h"`.
 
 - `max_request_size` `(int: 33554432)` – Specifies a hard maximum allowed
-  request size, in bytes. Defaults to 32 MB. Specifying a number less than or
-  equal to `0` turns off limiting altogether.
+  request size, in bytes. Defaults to 32 MB if not set or set to `0`. 
+  Specifying a number less than `0` turns off limiting altogether.
 
 - `max_request_duration` `(string: "90s")` – Specifies the maximum
   request duration allowed before Vault cancels the request. This overrides

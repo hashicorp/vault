@@ -686,6 +686,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			}, nil
 		},
 	}
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		Commands["operator diagnose"] = func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		}
+	}
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

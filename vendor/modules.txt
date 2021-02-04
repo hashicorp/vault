@@ -333,12 +333,14 @@ github.com/gammazero/deque
 github.com/gammazero/workerpool
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 github.com/ghodss/yaml
-# github.com/go-asn1-ber/asn1-ber v1.3.1
+# github.com/go-asn1-ber/asn1-ber v1.4.1
 github.com/go-asn1-ber/asn1-ber
 # github.com/go-errors/errors v1.0.1
 github.com/go-errors/errors
 # github.com/go-ldap/ldap/v3 v3.1.10
 github.com/go-ldap/ldap/v3
+# github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3
+github.com/go-ldap/ldif
 # github.com/go-ole/go-ole v1.2.4
 github.com/go-ole/go-ole
 github.com/go-ole/go-ole/oleutil
@@ -376,7 +378,7 @@ github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
-# github.com/golang/snappy v0.0.1
+# github.com/golang/snappy v0.0.2
 github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
@@ -420,7 +422,7 @@ github.com/gorhill/cronexpr
 github.com/gorilla/websocket
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
-# github.com/hashicorp/consul-template v0.25.1
+# github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
 github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
 github.com/hashicorp/consul-template/dependency
@@ -433,7 +435,7 @@ github.com/hashicorp/consul-template/version
 github.com/hashicorp/consul-template/watch
 # github.com/hashicorp/consul/api v1.4.0
 github.com/hashicorp/consul/api
-# github.com/hashicorp/errwrap v1.0.0
+# github.com/hashicorp/errwrap v1.1.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 github.com/hashicorp/go-bindata
@@ -460,7 +462,7 @@ github.com/hashicorp/go-discover/provider/vsphere
 github.com/hashicorp/go-gcp-common/gcputil
 # github.com/hashicorp/go-hclog v0.14.1
 github.com/hashicorp/go-hclog
-# github.com/hashicorp/go-immutable-radix v1.1.0
+# github.com/hashicorp/go-immutable-radix v1.3.0
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-kms-wrapping v0.5.16
 github.com/hashicorp/go-kms-wrapping
@@ -499,7 +501,7 @@ github.com/hashicorp/go-syslog
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.1
 github.com/hashicorp/go-version
-# github.com/hashicorp/golang-lru v0.5.3
+# github.com/hashicorp/golang-lru v0.5.4
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.1-vault
@@ -524,7 +526,7 @@ github.com/hashicorp/nomad/api/contexts
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.3
 github.com/hashicorp/raft-snapshot
-# github.com/hashicorp/serf v0.8.3
+# github.com/hashicorp/serf v0.9.4
 github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
 github.com/hashicorp/vault-plugin-auth-alicloud
@@ -570,7 +572,7 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20201124222157-51537e030ec3
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20210121193032-bb12fd5092bd
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
@@ -580,12 +582,12 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.6-0.20210201204049-4f0f91977798
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20201022214319-d87657199d4b => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20210127185906-6b455835fa8c => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
 github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto
@@ -755,13 +757,13 @@ github.com/lib/pq/oid
 github.com/lib/pq/scram
 # github.com/linode/linodego v0.7.1
 github.com/linode/linodego
-# github.com/mattn/go-colorable v0.1.6
+# github.com/mattn/go-colorable v0.1.7
 github.com/mattn/go-colorable
 # github.com/mattn/go-ieproxy v0.0.1
 github.com/mattn/go-ieproxy
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/mattn/go-shellwords v1.0.5
+# github.com/mattn/go-shellwords v1.0.10
 github.com/mattn/go-shellwords
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
@@ -769,7 +771,7 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mholt/archiver
 # github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 github.com/michaelklishin/rabbit-hole
-# github.com/miekg/dns v1.1.15
+# github.com/miekg/dns v1.1.26
 github.com/miekg/dns
 # github.com/mitchellh/cli v1.1.1
 github.com/mitchellh/cli
@@ -898,11 +900,10 @@ github.com/pkg/browser
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/posener/complete v1.2.1
+# github.com/posener/complete v1.2.3
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-github.com/posener/complete/match
 # github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
 github.com/pquerna/cachecontrol
 github.com/pquerna/cachecontrol/cacheobject
@@ -1134,7 +1135,7 @@ golang.org/x/lint/golint
 # golang.org/x/mod v0.2.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200625001655-4c5254603344
+# golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -1162,7 +1163,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -1181,7 +1182,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
+# golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 golang.org/x/time/rate
 # golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 golang.org/x/tools/cmd/goimports

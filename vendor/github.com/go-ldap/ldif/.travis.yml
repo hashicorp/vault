@@ -1,0 +1,22 @@
+language: go
+go:
+    - 1.11
+    - 1.13
+    - 1.14
+    - tip
+matrix:
+    fast_finish: true
+    allow_failures:
+        - go: tip
+go_import_path: github.com/go-ldap/ldif
+install:
+    - go get github.com/go-ldap/ldap/v3
+    - go get code.google.com/p/go.tools/cmd/cover || go get golang.org/x/tools/cmd/cover
+    - go get golang.org/x/lint/golint || true
+    - go install golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
+    - go build -v ./...
+script:
+    - make test
+    - make fmt
+    - make vet
+    - if [ "${TRAVIS_GO_VERSION}" != "1.6" ]; then make lint; fi

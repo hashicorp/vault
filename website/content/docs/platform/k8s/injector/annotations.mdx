@@ -153,6 +153,10 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-cache-listener-port` - configures Vault Agent cache
   listening port. Defaults to `8080`.
 
+- `vault.hashicorp.com/agent-copy-volume-mounts` - copies the mounts from the specified 
+  container and mounts them to the Vault Agent containers. The service account volume is 
+  ignored.
+
 ## Vault Annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault. For
@@ -183,6 +187,9 @@ etc.
 
 - `vault.hashicorp.com/log-level` - configures the verbosity of the Vault Agent
   log level. Default is `info`.
+
+- `vault.hashicorp.com/log-format` - configures the log type for Vault Agent. Possible 
+  values are `standard` and `json`. Default is `standard`.
 
 - `vault.hashicorp.com/namespace` - configures the Vault Enterprise namespace to
   be used when requesting secrets from Vault.

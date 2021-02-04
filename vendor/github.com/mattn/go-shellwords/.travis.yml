@@ -1,8 +1,13 @@
 language: go
+sudo: false
 go:
   - tip
+
 before_install:
-  - go get github.com/mattn/goveralls
-  - go get golang.org/x/tools/cmd/cover
+  - go get -t -v ./...
+
 script:
-    - $HOME/gopath/bin/goveralls -repotoken 2FMhp57u8LcstKL9B190fLTcEnBtAAiEL
+  - ./go.test.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
