@@ -20,11 +20,10 @@ import (
 // when a new key is added to the keyring, we can encrypt with the master key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey        []byte
-	keys             map[uint32]*Key
-	activeTerm       uint32
-	rotationConfig   configutil.KeyRotationConfig
-	LocalEncryptions int64 `json:"-"`
+	masterKey      []byte
+	keys           map[uint32]*Key
+	activeTerm     uint32
+	rotationConfig configutil.KeyRotationConfig
 }
 
 // EncodedKeyring is used for serialization of the keyring
@@ -106,7 +105,6 @@ func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 	// Update the active term if newer
 	if key.Term > clone.activeTerm {
 		clone.activeTerm = key.Term
-		clone.LocalEncryptions = 0
 	}
 
 	// Zero out encryption estimates for previous terms
@@ -219,9 +217,4 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	for _, key := range k.keys {
 		memzero(key.Value)
 	}
-}
-
-// Mostly for testing, returns the total number of encryption operations performed on the active term
-func (k *Keyring) encryptions() int64 {
-	return k.LocalEncryptions + int64(k.TermKey(k.ActiveTerm()).Encryptions)
 }

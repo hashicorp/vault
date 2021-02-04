@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"strconv"
 	"strings"
@@ -19,7 +18,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -68,8 +67,6 @@ var (
 type AESGCMBarrier struct {
 	backend physical.Backend
 
-	logger log.Logger
-
 	l      sync.RWMutex
 	sealed bool
 
@@ -89,7 +86,10 @@ type AESGCMBarrier struct {
 
 	initialized atomic2.Bool
 
+	UnpersistedEncryptions int64
+	UndeliveredEncryptions int64
 	// Used only for testing
+	RemoteEncryptions     int64
 	totalLocalEncryptions int64
 }
 
@@ -98,6 +98,8 @@ func (b *AESGCMBarrier) RotationConfig() (configutil.KeyRotationConfig, error) {
 }
 
 func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig configutil.KeyRotationConfig) error {
+	b.l.Lock()
+	defer b.l.Unlock()
 	rotConfig.Sanitize()
 	if !rotConfig.Equals(b.keyring.rotationConfig) {
 		b.keyring.rotationConfig = rotConfig
@@ -190,7 +192,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 			return err
 		}
 
-		err = b.putInternal(ctx, keyring, 1, primary, &logical.StorageEntry{
+		err = b.putInternal(ctx, 1, primary, &logical.StorageEntry{
 			Key:   shamirKekPath,
 			Value: sealKey,
 		})
@@ -251,7 +253,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	if err != nil {
 		return err
 	}
-	value, err = b.encryptTracked(ctx, keyring, masterKeyPath, activeKey.Term, aead, keyBuf)
+	value, err = b.encryptTracked(masterKeyPath, activeKey.Term, aead, keyBuf)
 	if err != nil {
 		return err
 	}
@@ -531,21 +533,6 @@ func (b *AESGCMBarrier) Seal() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if b.keyring != nil {
-		// Attempt to persist the encryption operation tracking
-		term := b.keyring.ActiveTerm()
-		// Read the underlying key
-		key := b.keyring.TermKey(term)
-		if key != nil {
-			key.Encryptions += uint64(b.keyring.LocalEncryptions)
-			b.keyring.LocalEncryptions = 0
-		}
-		// Persist the new keyring.
-		if err := b.persistKeyring(context.Background(), b.keyring); err != nil {
-			return err
-		}
-	}
-
 	// Remove the primary key, and seal the vault
 	b.cache = make(map[uint32]cipher.AEAD)
 	b.keyring.Zeroize(true)
@@ -623,7 +610,7 @@ func (b *AESGCMBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
 	}
 
 	key := fmt.Sprintf("%s%d", keyringUpgradePrefix, prevTerm)
-	value, err := b.encryptTracked(ctx, b.keyring, key, prevTerm, primary, buf)
+	value, err := b.encryptTracked(key, prevTerm, primary, buf)
 	b.l.RUnlock()
 	if err != nil {
 		return err
@@ -724,8 +711,8 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 	info := &KeyInfo{
 		Term:             int(term),
 		InstallTime:      key.InstallTime,
-		Encryptions:      b.keyring.encryptions(),
-		LocalEncryptions: b.LocalEncryptions(),
+		Encryptions:      b.encryptions(),
+		LocalEncryptions: b.TotalLocalEncryptions(),
 	}
 	return info, nil
 }
@@ -802,11 +789,11 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *logical.StorageEntry) er
 		return err
 	}
 
-	return b.putInternal(ctx, b.keyring, term, primary, entry)
+	return b.putInternal(ctx, term, primary, entry)
 }
 
-func (b *AESGCMBarrier) putInternal(ctx context.Context, keyring *Keyring, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
-	value, err := b.encryptTracked(ctx, keyring, entry.Key, term, primary, entry.Value)
+func (b *AESGCMBarrier) putInternal(ctx context.Context, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
+	value, err := b.encryptTracked(entry.Key, term, primary, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -1056,7 +1043,7 @@ func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byt
 		return nil, err
 	}
 
-	ciphertext, err := b.encryptTracked(ctx, b.keyring, key, term, primary, plaintext)
+	ciphertext, err := b.encryptTracked(key, term, primary, plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -1111,40 +1098,43 @@ func (b *AESGCMBarrier) ConsumeEncryptionCount(consumer func(int64) error) error
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	c := b.keyring.LocalEncryptions
-	var err error
-	if c > 0 {
-		err = consumer(c)
-		if err != nil {
+	if b.keyring != nil {
+		c := atomic.LoadInt64(&b.UndeliveredEncryptions)
+		err := consumer(c)
+		if err == nil && c > 0 {
 			// Consumer succeeded, remove those from local encryptions
-			atomic.AddInt64(&b.keyring.LocalEncryptions, -c)
+			atomic.AddInt64(&b.UndeliveredEncryptions, -c)
 		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func (b *AESGCMBarrier) AddRemoteEncryptions(encryptions int64) {
-	b.l.RLock()
-	defer b.l.RUnlock()
-	atomic.AddInt64(&b.keyring.LocalEncryptions, encryptions)
+	// For rollup and persistence
+	atomic.AddInt64(&b.UndeliveredEncryptions, encryptions)
+	atomic.AddInt64(&b.UnpersistedEncryptions, encryptions)
+	// For testing
+	atomic.AddInt64(&b.RemoteEncryptions, encryptions)
 }
 
-func (b *AESGCMBarrier) encryptTracked(ctx context.Context, keyring *Keyring, path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
+func (b *AESGCMBarrier) encryptTracked(path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
 	ct, err := b.encrypt(path, term, gcm, buf)
 	if err != nil {
 		return nil, err
 	}
 	// Increment the local encryption count, and track metrics
-	atomic.AddInt64(&keyring.LocalEncryptions, 1)
+	atomic.AddInt64(&b.UnpersistedEncryptions, 1)
+	atomic.AddInt64(&b.UndeliveredEncryptions, 1)
 	atomic.AddInt64(&b.totalLocalEncryptions, 1)
 	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	return ct, nil
 }
 
-// LocalEncryptions returns the number of encryptions made on the local instance only for the current key term
-func (b *AESGCMBarrier) LocalEncryptions() int64 {
-	return b.totalLocalEncryptions
+// UnpersistedEncryptions returns the number of encryptions made on the local instance only for the current key term
+func (b *AESGCMBarrier) TotalLocalEncryptions() int64 {
+	return atomic.LoadInt64(&b.totalLocalEncryptions)
 }
 
 func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Reader) error {
@@ -1152,7 +1142,7 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Read
 	defer b.l.Unlock()
 
 	if b.keyring != nil {
-		ops := b.keyring.encryptions()
+		ops := b.encryptions()
 		// Don't check/persist on every operation
 		activeKey := b.keyring.keys[b.keyring.ActiveTerm()]
 		if ops > b.keyring.rotationConfig.MaxOperations ||
@@ -1161,19 +1151,27 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context, rand io.Read
 			if err != nil {
 				return err
 			}
-		} else if b.keyring.LocalEncryptions > 0 {
-			// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
-			// there has been no activity. Since persistence performs an encryption, perversely we zero out after
-			// persistence and add 1 to the count to avoid this operation guaranteeing we need another
-			// autoRotateCheckInterval later.
-			newEncs := b.keyring.LocalEncryptions + 1
-			activeKey.Encryptions += uint64(newEncs)
-			err := b.persistKeyring(ctx, b.keyring)
-			b.keyring.LocalEncryptions = 0
-			if err != nil {
-				return err
+		} else {
+			upe := atomic.LoadInt64(&b.UnpersistedEncryptions)
+			if upe > 0 {
+				// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
+				// there has been no activity. Since persistence performs an encryption, perversely we zero out after
+				// persistence and add 1 to the count to avoid this operation guaranteeing we need another
+				// autoRotateCheckInterval later.
+				newEncs := upe + 1
+				activeKey.Encryptions += uint64(newEncs)
+				err := b.persistKeyring(ctx, b.keyring)
+				atomic.AddInt64(&b.UnpersistedEncryptions, -newEncs)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	return nil
+}
+
+// Mostly for testing, returns the total number of encryption operations performed on the active term
+func (b *AESGCMBarrier) encryptions() int64 {
+	return b.UnpersistedEncryptions + int64(b.keyring.TermKey(b.keyring.activeTerm).Encryptions)
 }

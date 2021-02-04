@@ -3,11 +3,11 @@ package vault
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io"
 	"time"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -66,9 +66,6 @@ const (
 	// used by standbys to handle rekeys.  It also comes into play when restoring
 	// raft snapshots.
 	shamirKekPath = "core/shamir-kek"
-
-	// How often to ship encryption counts to the primary
-	barrierEncryptionCountShipInterval = time.Minute
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap

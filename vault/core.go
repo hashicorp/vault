@@ -542,6 +542,8 @@ type Core struct {
 	// KeyRotateGracePeriod is how long we allow an upgrade path
 	// for standby instances before we delete the upgrade keys
 	keyRotateGracePeriod *int64
+	autoRotateCtx        context.Context
+	autoRotateCancel     context.CancelFunc
 }
 
 // CoreConfig is used to parameterize a core
@@ -1879,6 +1881,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
+	}
+
+	if c.autoRotateCtx == nil {
+		c.autoRotateCtx, c.autoRotateCancel = context.WithCancel(c.activeContext)
 		go c.autoRotateBarrierLoop(c.activeContext)
 	}
 
@@ -2102,6 +2108,10 @@ func (c *Core) preSeal() error {
 	}
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
+	}
+
+	if c.autoRotateCancel != nil {
+		c.autoRotateCancel()
 	}
 
 	preSealPhysical(c)
@@ -2696,12 +2706,22 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
-			err := c.barrier.CheckBarrierAutoRotate(ctx, c.secureRandomReader)
-			if err != nil {
-				c.logger.Error("error in barrier auto rotation", "error", err)
-			}
+			c.checkBarrierAutoRotate(ctx)
 		case <-ctx.Done():
-			return
+			break
+		case <-c.autoRotateCtx.Done():
+			break
+		}
+	}
+	c.checkBarrierAutoRotate(ctx)
+}
+
+func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		c.logger.Info("Persisting barrier key tracking")
+		err := c.barrier.CheckBarrierAutoRotate(ctx, c.secureRandomReader)
+		if err != nil {
+			c.logger.Error("error in barrier auto rotation", "error", err)
 		}
 	}
 }
