@@ -1,93 +1,124 @@
-{{!--  ARG TODO COPIED FROM TRANSFORM --}}
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{hash display=model.id id=model.idForNav}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader @baseKey={{@model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{@root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq mode "create") }}
+      {{#if (eq @mode "create") }}
         Create Role
-      {{else if (eq mode "edit")}}
+      {{else if (eq @mode "edit")}}
         Edit Role
       {{else}}
-        Role <code>{{model.id}}</code>
+        {{@model.id}}
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq mode "show")}}
-  <Toolbar>
-    <ToolbarActions>
-      {{#if capabilities.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-          @confirmTitle="Are you sure?"
-          @confirmMessage="Deleting this role means that you’ll need to recreate it and reassign any existing transformations to use it again."
-          @confirmButtonText="Delete"
-          data-test-transformation-role-delete
-        >
-          Delete role
-        </ConfirmAction>
-      {{/if}}
-      {{#if capabilities.canUpdate }}
-        <ToolbarSecretLink
-          @secret={{concat model.idPrefix model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
-          Edit role
-        </ToolbarSecretLink>
-      {{/if}}
-    </ToolbarActions>
-  </Toolbar>
+{{#if (eq @mode "show")}}
+<Toolbar>
+  <ToolbarActions>
+    {{#if @model.canGenerateCredentials}}
+    <button 
+      type="button"
+      class="toolbar-link"
+      {{on 'click' (fn this.generateCreds @model.id)}}
+      data-test-database-role-generate-creds
+    >
+      Generate credentials
+    </button>
+    {{/if}}
+    {{#if @model.canDelete}}
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @onConfirmAction={{action 'delete'}}
+      @confirmTitle="Delete role?"
+      @confirmMessage="This role will be permanently deleted. You will need to re-create it to use it again."
+      @confirmButtonText="Delete"
+      data-test-database-role-delete
+    >
+      Delete role
+    </ConfirmAction>
+    {{/if}}
+    {{#if @model.canEditRole}}
+    <ToolbarSecretLink
+      @secret={{concat 'role/' @model.id}}
+      @mode="edit"
+      @replace=true
+      @queryParams={{query-params itemType="role"}}
+      @data-test-edit-link=true
+    >
+      Edit role
+    </ToolbarSecretLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 {{/if}}
 
-{{#if (or (eq mode 'edit') (eq mode 'create'))}}
-<form onsubmit={{action "createOrUpdate" mode}}>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{model}} />
-    <NamespaceReminder @mode={{mode}} @noun="Transform role" />
-    {{#each model.attrs as |attr|}}
-      <FormField
-        data-test-field
-        @attr={{attr}}
-        @model={{model}}
-      />
-    {{/each}}
-  </div>
-  <div class="field is-grouped-split box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="submit"
-        disabled={{buttonDisabled}}
-        class="button is-primary"
-        data-test-role-transform-create=true
-      >
-        {{#if (eq mode 'create')}}
-          Create role
-        {{else if (eq mode 'edit')}}
+{{#if (eq @mode 'create')}}
+<form
+  {{on 'submit' this.handleCreateRole}}>
+  {{#each @model.fieldAttrs as |attr|}}
+    {{#if (not-eq attr.options.readOnly true)}}
+      {{form-field data-test-field attr=attr model=@model}}
+    {{/if}}
+  {{/each}}
+
+  <DatabaseRoleSettingForm
+    @attrs={{@model.roleSettingAttrs}}
+    @roleType={{@model.type}}
+    @model={{@model}}
+    @mode={{@mode}}
+  />
+
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        {{#if (eq @model.canUpdateDb false)}}
+          <ToolTip @horizontalPosition="left" as |T|>
+            <T.trigger>
+              <button
+                data-test-secret-save
+                type="submit"
+                disabled={{this.buttonDisabled}}
+                class="button is-primary"
+              >
+                Save
+              </button>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                You don't have permissions to update the connection {{array (get @model 'database')}}, so this role cannot be created.
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+        <button
+          data-test-secret-save
+          type="submit"
+          disabled={{this.buttonDisabled}}
+          class="button is-primary"
+        >
           Save
+        </button>
         {{/if}}
-      </button>
-      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{concat "role/" model.id}}>
-        Cancel
-      </SecretLink>
+      </div>
+      <div class="control">
+        <SecretLink @mode="list" @class="button">
+          Cancel
+        </SecretLink>
+      </div>
     </div>
   </div>
 </form>
 {{else}}
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each model.attrs as |attr|}}
-    {{#if (eq attr.type "object")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
-    {{else if (eq attr.type "array")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} @isLink={{eq attr.name "transformations"}} @viewAll="transformations" />
-    {{else}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
-    {{/if}}
+  {{#each @model.fieldAttrs as |attr|}}
+    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
+      {{else}}
+        <InfoTableRow @renderBlank={{true}} @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{or (get @model attr.name) defaultDisplay}} />
+      {{/if}}
+    {{/let}}
   {{/each}}
-</div>
 {{/if}}

@@ -116,4 +116,24 @@ export default ApplicationAdapter.extend({
       return resp;
     });
   },
+
+  async createRecord(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const data = serializer.serialize(snapshot);
+    const roleType = snapshot.attr('type');
+    const backend = snapshot.attr('backend');
+    const id = snapshot.attr('name');
+    const db = snapshot.attr('database');
+    const connection = await store.queryRecord('database/connection', { backend, id: db[0] });
+    let allowedRoles = [...connection.allowed_roles];
+    allowedRoles.push(id);
+    connection.allowed_roles = allowedRoles;
+    await connection.save();
+    return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
+      // ember data doesn't like 204s if it's not a DELETE
+      return {
+        data: assign({}, data, { id }),
+      };
+    });
+  },
 });

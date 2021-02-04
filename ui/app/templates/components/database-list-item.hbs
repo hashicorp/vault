@@ -1,9 +1,11 @@
+{{log @item.id tab}}
 {{#linked-block
   "vault.cluster.secrets.backend.show"
-  @item.id
+  (if keyTypeValue (concat 'role/' @item.id) @item.id)
   class="list-item-row"
   data-test-secret-link=item.id
   encode=true
+  queryParams=(secret-query-params backendType)
 }}
   <div class="columns is-mobile">
     <div class="column is-10">

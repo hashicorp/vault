@@ -1,115 +1,52 @@
-// ARG TODO COPIED FROM TRANFSORm
-// import DatabaseBase, { addToList, removeFromList } from './database-edit-base';
-import DatabaseBase from './database-edit-base';
+// import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 
-export default DatabaseBase.extend({
-  initialTransformations: null,
+// import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
+// import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 
-  init() {
-    this._super(...arguments);
-    // this.set('initialTransformations', this.model.transformations);
-  },
+const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
+const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-  // handleUpdateTransformations(updateTransformations, roleId, type = 'update') {
-  //   if (!updateTransformations) return;
-  //   const backend = this.model.backend;
-  //   const promises = updateTransformations.map(transform => {
-  //     return this.store
-  //       .queryRecord('transform', {
-  //         backend,
-  //         id: transform.id,
-  //       })
-  //       .then(function(transformation) {
-  //         let roles = transformation.allowed_roles;
-  //         if (transform.action === 'ADD') {
-  //           roles = addToList(roles, roleId);
-  //         } else if (transform.action === 'REMOVE') {
-  //           roles = removeFromList(roles, roleId);
-  //         }
+export default class DatabaseRoleEdit extends Component {
+  @service router;
 
-  //         transformation.setProperties({
-  //           backend,
-  //           allowed_roles: roles,
-  //         });
+  get buttonDisabled() {
+    if (this.args.model.canUpdateDb === false) {
+      return true;
+    }
+    return true;
+  }
 
-  //         return transformation.save().catch(e => {
-  //           return { errorStatus: e.httpStatus, ...transform };
-  //         });
-  //       });
-  //   });
+  @action
+  generateCreds(roleId) {
+    this.router.transitionTo('vault.cluster.secrets.backend.credentials', roleId);
+  }
 
-  //   Promise.all(promises).then(res => {
-  //     let hasError = res.find(r => !!r.errorStatus);
-  //     if (hasError) {
-  //       let errorAdding = res.find(r => r.errorStatus === 403 && r.action === 'ADD');
-  //       let errorRemoving = res.find(r => r.errorStatus === 403 && r.action === 'REMOVE');
+  @action
+  delete(evt) {
+    evt.preventDefault();
+    // const adapter = this.store.adapterFor('cluster');
+    const secret = this.args.model;
+    const backend = secret.backend;
+    secret.destroyRecord().then(() => {
+      // TODO: Update database allowed roles
+      this.router.transitionTo(LIST_ROOT_ROUTE, backend);
+    });
+  }
 
-  //       let message =
-  //         'The edits to this role were successful, but allowed_roles for its transformations was not edited due to a lack of permissions.';
-  //       if (type === 'create') {
-  //         message =
-  //           'Transformations have been attached to this role, but the role was not added to those transformations’ allowed_roles due to a lack of permissions.';
-  //       } else if (errorAdding && errorRemoving) {
-  //         message =
-  //           'This role was edited to both add and remove transformations; however, this role was not added or removed from those transformations’ allowed_roles due to a lack of permissions.';
-  //       } else if (errorAdding) {
-  //         message =
-  //           'This role was edited to include new transformations, but this role was not added to those transformations’ allowed_roles due to a lack of permissions.';
-  //       } else if (errorRemoving) {
-  //         message =
-  //           'This role was edited to remove transformations, but this role was not removed from those transformations’ allowed_roles due to a lack of permissions.';
-  //       }
-  //       this.flashMessages.stickyInfo(message);
-  //     }
-  //   });
-  // },
-
-  actions: {
-    // createOrUpdate(type, event) {
-    //   event.preventDefault();
-    //   this.applyChanges('save', () => {
-    //     const roleId = this.model.id;
-    //     const newModelTransformations = this.model.transformations;
-    //     if (!this.initialTransformations) {
-    //       this.handleUpdateTransformations(
-    //         newModelTransformations.map(t => ({
-    //           id: t,
-    //           action: 'ADD',
-    //         })),
-    //         roleId,
-    //         type
-    //       );
-    //       return;
-    //     }
-    //     const updateTransformations = [...newModelTransformations, ...this.initialTransformations]
-    //       .map(t => {
-    //         if (this.initialTransformations.indexOf(t) < 0) {
-    //           return {
-    //             id: t,
-    //             action: 'ADD',
-    //           };
-    //         }
-    //         if (newModelTransformations.indexOf(t) < 0) {
-    //           return {
-    //             id: t,
-    //             action: 'REMOVE',
-    //           };
-    //         }
-    //         return null;
-    //       })
-    //       .filter(t => !!t);
-    //     this.handleUpdateTransformations(updateTransformations, roleId);
-    //   });
-    // },
-    // delete() {
-    //   const roleId = this.model?.id;
-    //   const roleTransformations = this.model?.transformations || [];
-    //   const updateTransformations = roleTransformations.map(t => ({
-    //     id: t,
-    //     action: 'REMOVE',
-    //   }));
-    //   this.handleUpdateTransformations(updateTransformations, roleId);
-    //   this.applyDelete();
-    // },
-  },
-});
+  @action
+  handleCreateRole(evt) {
+    evt.preventDefault();
+    let roleSecret = this.args.model;
+    let secretId = roleSecret.name;
+    roleSecret.set('id', secretId);
+    let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
+    roleSecret.set('path', path);
+    roleSecret.save().then(() => {
+      // TODO: Update database with allowed roles + id
+      this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+    });
+  }
+}

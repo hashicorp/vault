@@ -1,0 +1,6 @@
+<div class="form-section">
+  <h3 class="title is-5">Role settings</h3>
+  {{#each this.allowedFields as |attr|}}
+    {{form-field data-test-field attr=attr model=@model}}
+  {{/each}}
+</div>
