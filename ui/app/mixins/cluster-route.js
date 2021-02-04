@@ -51,7 +51,7 @@ export default Mixin.create({
   },
 
   authToken() {
-    return get(this, 'auth.currentToken');
+    return this.auth.currentToken;
   },
 
   hasKeyData() {

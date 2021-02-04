@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -115,10 +116,10 @@ type ExpirationManager struct {
 	testRegisterAuthFailure uberAtomic.Bool
 }
 
-type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
+type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *namespace.Namespace)
 
 // revokeIDFunc is invoked when a given ID is expired
-func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *leaseEntry) {
+func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		releasePermit := func() {}
 		if m.revokePermitPool != nil {
@@ -128,10 +129,10 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			m.logger.Trace("expiring lease; got permit pool")
 		}
 
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", le.namespace.ID}})
+		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", ns.ID}})
 
 		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
-		revokeCtx = namespace.ContextWithNamespace(revokeCtx, le.namespace)
+		revokeCtx = namespace.ContextWithNamespace(revokeCtx, ns)
 
 		go func() {
 			select {
@@ -144,12 +145,12 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 
 		select {
 		case <-m.quitCh:
-			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
 			releasePermit()
 			cancel()
 			return
 		case <-m.quitContext.Done():
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
 			releasePermit()
 			cancel()
 			return
@@ -157,7 +158,7 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 		}
 
 		m.coreStateLock.RLock()
-		err := m.Revoke(revokeCtx, le.LeaseID)
+		err := m.Revoke(revokeCtx, leaseID)
 		m.coreStateLock.RUnlock()
 		releasePermit()
 		cancel()
@@ -165,12 +166,12 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			return
 		}
 
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", le.namespace.ID}})
+		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", ns.ID}})
 
-		m.logger.Error("failed to revoke lease", "lease_id", le.LeaseID, "error", err)
+		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-	m.logger.Error("maximum revoke attempts reached", "lease_id", le.LeaseID)
+	m.logger.Error("maximum revoke attempts reached", "lease_id", leaseID)
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -1523,9 +1524,10 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		pending.timer.Reset(leaseTotal)
 		// No change to lease count in this case
 	} else {
+		leaseID, namespace := le.LeaseID, le.namespace
 		// Extend the timer by the lease total
 		timer := time.AfterFunc(leaseTotal, func() {
-			m.expireFunc(m.quitContext, m, le)
+			m.expireFunc(m.quitContext, m, leaseID, namespace)
 		})
 		pending = pendingInfo{
 			timer: timer,
@@ -1989,12 +1991,72 @@ func (m *ExpirationManager) emitMetrics() {
 	// Check if lease count is greater than the threshold
 	if num > maxLeaseThreshold {
 		if atomic.LoadUint32(m.leaseCheckCounter) > 59 {
-			m.logger.Warn("lease count exceeds warning lease threshold")
+			m.logger.Warn("lease count exceeds warning lease threshold", "have", num, "threshold", maxLeaseThreshold)
 			atomic.StoreUint32(m.leaseCheckCounter, 0)
 		} else {
 			atomic.AddUint32(m.leaseCheckCounter, 1)
 		}
 	}
+}
+
+func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts metricsutil.TelemetryConstConfig) ([]metricsutil.GaugeLabelValues, error) {
+	expiryTimes := make(map[metricsutil.LeaseExpiryLabel]int)
+	leaseEpsilon := consts.LeaseMetricsEpsilon
+	nsLabel := consts.LeaseMetricsNameSpaceLabels
+
+	rollingWindow := time.Now().Add(time.Duration(consts.NumLeaseMetricsTimeBuckets) * leaseEpsilon)
+
+	err := m.walkLeases(func(entryID string, expireTime time.Time) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			if entryID == "" {
+				return true
+			}
+			_, nsID := namespace.SplitIDFromString(entryID)
+			if nsID == "" {
+				nsID = "root" // this is what metricsutil.NamespaceLabel does
+			}
+			label := metricsutil.ExpiryBucket(expireTime, leaseEpsilon, rollingWindow, nsID, nsLabel)
+			if label != nil {
+				expiryTimes[*label] += 1
+			}
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0, len(expiryTimes))
+
+	for bucket, count := range expiryTimes {
+		if nsLabel {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{{"expiring", bucket.LabelName}, {"namespace", bucket.LabelNS}},
+					Value:  float32(count),
+				})
+		} else {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{{"expiring", bucket.LabelName}},
+					Value:  float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
 }
 
 // Callback function type to walk tokens referenced in the expiration
@@ -2023,6 +2085,30 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 			return walkFn(key.(string), lease.Auth, lease.Path)
 		}
 		return true
+	}
+
+	m.pending.Range(callback)
+	m.nonexpiring.Range(callback)
+
+	return nil
+}
+
+// leaseWalkFunction can only be used by the core package.
+type leaseWalkFunction = func(leaseID string, expireTime time.Time) bool
+
+func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
+	if m.inRestoreMode() {
+		return ErrInRestoreMode
+	}
+
+	callback := func(key, value interface{}) bool {
+		p := value.(pendingInfo)
+		if p.cachedLeaseInfo == nil {
+			return true
+		}
+		lease := p.cachedLeaseInfo
+		expireTime := lease.ExpireTime
+		return walkFn(key.(string), expireTime)
 	}
 
 	m.pending.Range(callback)

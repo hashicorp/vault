@@ -28,6 +28,15 @@ type ClusterMetricSink struct {
 
 	// Sink is the go-metrics instance to send to.
 	Sink metrics.MetricSink
+
+	// Constants that are helpful for metrics within the metrics sink
+	TelemetryConsts TelemetryConstConfig
+}
+
+type TelemetryConstConfig struct {
+	LeaseMetricsEpsilon         time.Duration
+	NumLeaseMetricsTimeBuckets  int
+	LeaseMetricsNameSpaceLabels bool
 }
 
 type Metrics interface {
@@ -83,8 +92,9 @@ func BlackholeSink() *ClusterMetricSink {
 
 func NewClusterMetricSink(clusterName string, sink metrics.MetricSink) *ClusterMetricSink {
 	cms := &ClusterMetricSink{
-		ClusterName: atomic.Value{},
-		Sink:        sink,
+		ClusterName:     atomic.Value{},
+		Sink:            sink,
+		TelemetryConsts: TelemetryConstConfig{},
 	}
 	cms.ClusterName.Store(clusterName)
 	return cms

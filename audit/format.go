@@ -434,3 +434,25 @@ func parseVaultTokenFromJWT(token string) *string {
 
 	return &claims.ID
 }
+
+// Create a formatter not backed by a persistent salt.
+func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
+	temporarySalt := func(ctx context.Context) (*salt.Salt, error) {
+		return salt.NewNonpersistentSalt(), nil
+	}
+	ret := &AuditFormatter{}
+
+	switch format {
+	case "jsonx":
+		ret.AuditFormatWriter = &JSONxFormatWriter{
+			Prefix:   prefix,
+			SaltFunc: temporarySalt,
+		}
+	default:
+		ret.AuditFormatWriter = &JSONFormatWriter{
+			Prefix:   prefix,
+			SaltFunc: temporarySalt,
+		}
+	}
+	return ret
+}

@@ -37,3 +37,22 @@ func TTLBucket(ttl time.Duration) string {
 	}
 
 }
+
+func ExpiryBucket(expiryTime time.Time, leaseEpsilon time.Duration, rollingWindow time.Time, labelNS string, useNS bool) *LeaseExpiryLabel {
+	if !useNS {
+		labelNS = ""
+	}
+	leaseExpiryLabel := LeaseExpiryLabel{LabelNS: labelNS}
+
+	// calculate rolling window
+	if expiryTime.Before(rollingWindow) {
+		leaseExpiryLabel.LabelName = expiryTime.Round(leaseEpsilon).String()
+		return &leaseExpiryLabel
+	}
+	return nil
+}
+
+type LeaseExpiryLabel = struct {
+	LabelName string
+	LabelNS   string
+}

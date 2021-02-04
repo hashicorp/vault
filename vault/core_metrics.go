@@ -116,6 +116,17 @@ func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.Gau
 	return ts.gaugeCollectorByPolicy(ctx)
 }
 
+func (c *Core) leaseExpiryGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	e := c.expiration
+	metricsConsts := c.MetricSink().TelemetryConsts
+	c.stateLock.RUnlock()
+	if e == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil expiration manager")
+	}
+	return e.leaseAggregationMetrics(ctx, metricsConsts)
+}
+
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	c.stateLock.RLock()
 	ts := c.tokenStore
@@ -165,6 +176,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			"",
 		},
 		{
+			[]string{"expire", "leases", "by_expiration"},
+			[]metrics.Label{{"gauge", "leases_by_expiration"}},
+			c.leaseExpiryGaugeCollector,
+			"",
+		},
+		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
@@ -192,6 +209,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
+			"",
+		},
+		{
+			[]string{"identity", "entity", "active", "partial_month"},
+			[]metrics.Label{{"gauge", "identity_active_month"}},
+			c.activeEntityGaugeCollector,
 			"",
 		},
 	}
@@ -241,6 +264,13 @@ func (c *Core) findKvMounts() []*kvMount {
 
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
+
+	// emitMetrics doesn't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.mounts is nil. If we do not, emitMetrics will panic if this is
+	// run after seal.
+	if c.mounts == nil {
+		return mounts
+	}
 
 	for _, entry := range c.mounts.Entries {
 		if entry.Type == "kv" {

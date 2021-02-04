@@ -65,12 +65,12 @@ export default Component.extend({
    *
    */
   /* eslint-disable ember/no-side-effects */
-  inputList: computed(function() {
+  inputList: computed('content', function() {
     return ArrayProxy.create({
       content: [],
       // trim the `value` when accessing objects
       objectAtContent: function(idx) {
-        const obj = this.get('content').objectAt(idx);
+        const obj = this.content.objectAt(idx);
         if (obj && obj.value) {
           set(obj, 'value', obj.value.trim());
         }
@@ -106,7 +106,7 @@ export default Component.extend({
 
   toVal() {
     const inputs = this.inputList.filter(x => x.value).mapBy('value');
-    if (this.get('format') === 'string') {
+    if (this.format === 'string') {
       return inputs.join(',');
     }
     return inputs;

@@ -207,6 +207,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		delete(config.ConnectionDetails, "password")
+		delete(config.ConnectionDetails, "private_key")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),

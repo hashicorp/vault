@@ -1,3 +1,4 @@
+import { or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
@@ -60,14 +61,15 @@ export default Component.extend({
    *
    */
   labelString: computed('attr.{name,options.label}', function() {
-    const label = this.get('attr.options.label');
-    const name = this.get('attr.name');
+    const label = this.attr.options ? this.attr.options.label : '';
+    const name = this.attr.name;
     if (label) {
       return label;
     }
     if (name) {
       return capitalize([humanize([dasherize([name])])]);
     }
+    return '';
   }),
 
   // both the path to mutate on the model, and the path to read the value from
@@ -78,9 +80,7 @@ export default Component.extend({
    * Computed property used to set values on the passed model
    *
    */
-  valuePath: computed('attr.{name,options.fieldValue}', function() {
-    return this.get('attr.options.fieldValue') || this.get('attr.name');
-  }),
+  valuePath: or('attr.options.fieldValue', 'attr.name'),
 
   model: null,
 
@@ -97,16 +97,16 @@ export default Component.extend({
 
   actions: {
     setFile(_, keyFile) {
-      const path = this.get('valuePath');
+      const path = this.valuePath;
       const { value } = keyFile;
-      this.get('model').set(path, value);
-      this.get('onChange')(path, value);
+      this.model.set(path, value);
+      this.onChange(path, value);
       this.set('file', keyFile);
     },
 
     setAndBroadcast(path, value) {
-      this.get('model').set(path, value);
-      this.get('onChange')(path, value);
+      this.model.set(path, value);
+      this.onChange(path, value);
     },
 
     setAndBroadcastBool(path, trueVal, falseVal, value) {
@@ -126,8 +126,8 @@ export default Component.extend({
       let valToSet = isString ? value : JSON.parse(value);
 
       if (!hasErrors) {
-        this.get('model').set(path, valToSet);
-        this.get('onChange')(path, valToSet);
+        this.model.set(path, valToSet);
+        this.onChange(path, valToSet);
       }
     },
   },
