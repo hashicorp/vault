@@ -29,7 +29,7 @@ module('Integration | Helper | date-format', function(hooks) {
     let todayString = new Date().getFullYear().toString();
     this.set('todayString', todayString);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format todayString}}</p>`);
+    await render(hbs`<p data-test-date-format>Date: {{date-format todayString "yyyy"}}</p>`);
     assert
       .dom('[data-test-date-format]')
       .includesText(todayString, 'it renders the a date if passed in as a string');
