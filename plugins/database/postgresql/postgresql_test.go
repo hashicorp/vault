@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/stretchr/testify/require"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
@@ -77,8 +79,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      true,
-			credsAssertion: assertCredsDoNotExist,
+			expectErr: true,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^$"),
+				assertCredsDoNotExist,
+			),
 		},
 		"admin name": {
 			req: dbplugin.NewUserRequest{
@@ -98,8 +103,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		"admin username": {
 			req: dbplugin.NewUserRequest{
@@ -119,8 +127,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		"read only name": {
 			req: dbplugin.NewUserRequest{
@@ -141,8 +152,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		"read only username": {
 			req: dbplugin.NewUserRequest{
@@ -163,8 +177,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		// https://github.com/hashicorp/vault/issues/6098
 		"reproduce GH-6098": {
@@ -182,8 +199,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsDoNotExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsDoNotExist,
+			),
 		},
 		"reproduce issue with template": {
 			req: dbplugin.NewUserRequest{
@@ -199,8 +219,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsDoNotExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsDoNotExist,
+			),
 		},
 		"large block statements": {
 			req: dbplugin.NewUserRequest{
@@ -214,8 +237,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 	}
 
@@ -578,6 +604,22 @@ func TestDeleteUser(t *testing.T) {
 
 type credsAssertion func(t testing.TB, connURL, username, password string)
 
+func assertCreds(assertions ...credsAssertion) credsAssertion {
+	return func(t testing.TB, connURL, username, password string) {
+		t.Helper()
+		for _, assertion := range assertions {
+			assertion(t, connURL, username, password)
+		}
+	}
+}
+
+func assertUsernameRegex(rawRegex string) credsAssertion {
+	return func(t testing.TB, _, username, _ string) {
+		t.Helper()
+		require.Regexp(t, rawRegex, username)
+	}
+}
+
 func assertCredsExist(t testing.TB, connURL, username, password string) {
 	t.Helper()
 	err := testCredsExist(t, connURL, username, password)
@@ -742,6 +784,176 @@ func TestExtractQuotedStrings(t *testing.T) {
 					t.Fatalf(`expected %q but received %q`, tCase.Expected, results[i])
 				}
 			}
+		})
+	}
+}
+
+func TestUsernameGeneration(t *testing.T) {
+	type testCase struct {
+		data          dbplugin.UsernameMetadata
+		expectedRegex string
+	}
+
+	tests := map[string]testCase{
+		"simple display and role names": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"display name has dash": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token-foo",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token-fo-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"display name has underscore": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token_foo",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token_fo-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"display name has period": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token.foo",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token.fo-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"role name has dash": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole-foo",
+			},
+			expectedRegex: `v-token-myrole-f-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"role name has underscore": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole_foo",
+			},
+			expectedRegex: `v-token-myrole_f-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"role name has period": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole.foo",
+			},
+			expectedRegex: `v-token-myrole.f-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(fmt.Sprintf("new-%s", name), func(t *testing.T) {
+			up, err := template.NewTemplate(
+				template.Template(defaultUserNameTemplate),
+			)
+			require.NoError(t, err)
+
+			for i := 0; i < 1000; i++ {
+				username, err := up.Generate(test.data)
+				require.NoError(t, err)
+				require.Regexp(t, test.expectedRegex, username)
+			}
+		})
+	}
+}
+
+func TestNewUser_CustomUsername(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	type testCase struct {
+		usernameTemplate string
+		newUserData      dbplugin.UsernameMetadata
+		expectedRegex    string
+	}
+
+	tests := map[string]testCase{
+		"default template": {
+			usernameTemplate: "",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"explicit default template": {
+			usernameTemplate: defaultUserNameTemplate,
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"unique template": {
+			usernameTemplate: "foo-bar",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^foo-bar$",
+		},
+		"custom prefix": {
+			usernameTemplate: "foobar-{{.DisplayName | truncate 8}}-{{.RoleName | truncate 8}}-{{random 20}}-{{unix_time}}",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^foobar-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"totally custom template": {
+			usernameTemplate: "foobar_{{random 10}}-{{.RoleName | uppercase}}.{{unix_time}}x{{.DisplayName | truncate 5}}",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: `^foobar_[a-zA-Z0-9]{10}-LONGROLENAME\.[0-9]{10}xdispl$`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
+				},
+				VerifyConnection: true,
+			}
+
+			db := new()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			_, err := db.Initialize(ctx, initReq)
+			require.NoError(t, err)
+
+			newUserReq := dbplugin.NewUserRequest{
+				UsernameConfig: test.newUserData,
+				Statements: dbplugin.Statements{
+					Commands: []string{`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+					},
+				},
+				Password:   "myReally-S3curePassword",
+				Expiration: time.Now().Add(1 * time.Hour),
+			}
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			newUserResp, err := db.NewUser(ctx, newUserReq)
+			require.NoError(t, err)
+
+			require.Regexp(t, test.expectedRegex, newUserResp.Username)
 		})
 	}
 }
