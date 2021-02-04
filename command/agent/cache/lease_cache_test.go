@@ -162,6 +162,18 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
+	// Check TokenParent
+	cachedItem, err := lc.db.Get(cachememdb.IndexNameToken, "testtoken")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cachedItem == nil {
+		t.Fatalf("expected token entry from cache")
+	}
+	if cachedItem.TokenParent != "autoauthtoken" {
+		t.Fatalf("unexpected value for tokenparent: %s", cachedItem.TokenParent)
+	}
+
 	// Modify the request a little bit to ensure the second response is
 	// returned to the lease cache.
 	sendReq = &SendRequest{
