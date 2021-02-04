@@ -622,6 +622,7 @@ github.com/hashicorp/vault/sdk/helper/pointerutil
 github.com/hashicorp/vault/sdk/helper/policyutil
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
+github.com/hashicorp/vault/sdk/helper/template
 github.com/hashicorp/vault/sdk/helper/tlsutil
 github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/useragent

@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -77,7 +76,7 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 		return dbplugin.InitializeResponse{}, err
 	}
 
-	usernameTemplate := getString(req.Config, "username_template")
+	usernameTemplate := strutil.GetString(req.Config, "username_template")
 	if usernameTemplate == "" {
 		usernameTemplate = defaultUserNameTemplate
 	}
@@ -97,14 +96,6 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 		Config: newConf,
 	}
 	return resp, nil
-}
-
-func getString(m map[string]interface{}, key string) string {
-	var result string
-	if err := mapstructure.Decode(m[key], &result); err != nil {
-		return ""
-	}
-	return result
 }
 
 // NewUser generates the username/password on the underlying MSSQL secret backend as instructed by
