@@ -42,8 +42,9 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/go-asn1-ber/asn1-ber v1.5.3 // indirect
 	github.com/go-errors/errors v1.0.1
-	github.com/go-ldap/ldap/v3 v3.1.10
+	github.com/go-ldap/ldap/v3 v3.2.4
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
@@ -117,7 +118,6 @@ require (
 	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mitchellh/reflectwalk v1.0.1
-	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/nwaples/rardecode v1.1.0 // indirect
@@ -148,9 +148,10 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
+	go.mongodb.org/atlas v0.7.2
 	go.mongodb.org/mongo-driver v1.4.2
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f

@@ -56,6 +56,8 @@ github.com/Azure/go-autorest/autorest/validation
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
+# github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c
+github.com/Azure/go-ntlmssp
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/DataDog/datadog-go v3.2.0+incompatible
@@ -333,11 +335,11 @@ github.com/gammazero/deque
 github.com/gammazero/workerpool
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 github.com/ghodss/yaml
-# github.com/go-asn1-ber/asn1-ber v1.4.1
+# github.com/go-asn1-ber/asn1-ber v1.5.3
 github.com/go-asn1-ber/asn1-ber
 # github.com/go-errors/errors v1.0.1
 github.com/go-errors/errors
-# github.com/go-ldap/ldap/v3 v3.1.10
+# github.com/go-ldap/ldap/v3 v3.2.4
 github.com/go-ldap/ldap/v3
 # github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3
 github.com/go-ldap/ldif
@@ -800,10 +802,6 @@ github.com/moby/term/windows
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
-# github.com/mongodb/go-client-mongodb-atlas v0.1.2
-github.com/mongodb/go-client-mongodb-atlas/mongodbatlas
-# github.com/mwielbut/pointy v1.1.0
-github.com/mwielbut/pointy
 # github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 github.com/natefinch/atomic
 # github.com/ncw/swift v1.0.47
@@ -1042,7 +1040,7 @@ go.etcd.io/etcd/raft/quorum
 go.etcd.io/etcd/raft/raftpb
 go.etcd.io/etcd/raft/tracker
 go.etcd.io/etcd/version
-# go.mongodb.org/atlas v0.5.0
+# go.mongodb.org/atlas v0.7.2
 go.mongodb.org/atlas/mongodbatlas
 # go.mongodb.org/mongo-driver v1.4.2
 go.mongodb.org/mongo-driver/bson
@@ -1106,7 +1104,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+# golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
@@ -1166,10 +1164,13 @@ golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc
+# golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
+golang.org/x/term
 # golang.org/x/text v0.3.3
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
