@@ -74,13 +74,22 @@
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        {{#if (eq @model.canUpdateDb false)}}
+        {{#unless this.tooltipMessage}}
+          <button
+            data-test-secret-save
+            type="submit"
+            {{!-- disabled={{this.missingFields}} // TODO validation --}}
+            class="button is-primary"
+          >
+            Save
+          </button>
+        {{else}}
           <ToolTip @horizontalPosition="left" as |T|>
             <T.trigger>
               <button
                 data-test-secret-save
                 type="submit"
-                disabled={{this.buttonDisabled}}
+                disabled={{true}}
                 class="button is-primary"
               >
                 Save
@@ -88,20 +97,11 @@
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">
-                You don't have permissions to update the connection {{array (get @model 'database')}}, so this role cannot be created.
+                {{this.tooltipMessage}}
               </div>
             </T.content>
           </ToolTip>
-        {{else}}
-        <button
-          data-test-secret-save
-          type="submit"
-          disabled={{this.buttonDisabled}}
-          class="button is-primary"
-        >
-          Save
-        </button>
-        {{/if}}
+        {{/unless}}
       </div>
       <div class="control">
         <SecretLink @mode="list" @class="button">

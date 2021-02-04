@@ -228,6 +228,9 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);
     }
+    if (modelType === 'database/role') {
+      secret = secret.replace('role/', '');
+    }
     let secretModel;
 
     let capabilities = this.capabilities(secret, modelType);

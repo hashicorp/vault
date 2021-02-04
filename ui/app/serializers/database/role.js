@@ -20,10 +20,15 @@ export default RESTSerializer.extend({
     if (payload.data.type === 'static') {
       path = 'static-roles';
     }
+    let database = [];
+    if (payload.data.db_name) {
+      database = [payload.data.db_name];
+    }
     return {
       id: payload.secret,
       name: payload.secret,
       backend: payload.backend,
+      database,
       path,
       ...payload.data,
     };
@@ -40,5 +45,25 @@ export default RESTSerializer.extend({
       transformedPayload = { [modelName]: roles };
     }
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
+  },
+
+  serializeAttribute(snapshot, json, key, attributes) {
+    // Don't send values that are undefined
+    if (
+      undefined !== snapshot.attr(key) &&
+      (snapshot.record.get('isNew') || snapshot.changedAttributes()[key])
+    ) {
+      this._super(snapshot, json, key, attributes);
+    }
+  },
+
+  serialize() {
+    let data = this._super(...arguments);
+    // database should be string not array
+    const db = data.database[0];
+    data.db_name = db;
+    delete data.path;
+    delete data.database;
+    return data;
   },
 });

@@ -1,6 +1,8 @@
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from '../application';
 import { allSettled } from 'rsvp';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -52,7 +54,6 @@ export default ApplicationAdapter.extend({
     const dynamicReq = this.dynamicRoles(backend, id);
 
     return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      console.log(staticResp, dynamicResp);
       if (!staticResp.value && !dynamicResp.value) {
         // Throw error, both reqs failed
         throw dynamicResp.reason;
@@ -79,21 +80,16 @@ export default ApplicationAdapter.extend({
     const dynamicReq = this.dynamicRoles(backend);
 
     return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      // return hash(fetches).then((results) => {
-      console.log('--------- FETCHES COMPLETE ---------');
-      console.log(staticResp, dynamicResp);
-      // if [].reason.httpStatus === 405, no permissions
       let resp = {
         backend,
         data: { keys: [] },
       };
 
       if (staticResp.reason && dynamicResp.reason) {
-        console.log('Both failed');
+        // both failed, throw error
         throw dynamicResp.reason;
       }
       // at least one request has data
-      console.log('at least one successful req');
       let staticRoles = [];
       let dynamicRoles = [];
 
@@ -112,9 +108,16 @@ export default ApplicationAdapter.extend({
         { staticRoles, dynamicRoles }
       );
 
-      console.log(resp, 'RESPONDING THIS');
       return resp;
     });
+  },
+
+  async _updateAllowedRoles(store, { role, backend, db, type = 'add' }) {
+    const connection = await store.queryRecord('database/connection', { backend, id: db });
+    let roles = [...connection.allowed_roles];
+    const allowedRoles = type === 'add' ? addToArray([roles, role]) : removeFromArray([roles, role]);
+    connection.allowed_roles = allowedRoles;
+    return connection.save();
   },
 
   async createRecord(store, type, snapshot) {
@@ -124,16 +127,32 @@ export default ApplicationAdapter.extend({
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
     const db = snapshot.attr('database');
-    const connection = await store.queryRecord('database/connection', { backend, id: db[0] });
-    let allowedRoles = [...connection.allowed_roles];
-    allowedRoles.push(id);
-    connection.allowed_roles = allowedRoles;
-    await connection.save();
+    await this._updateAllowedRoles(store, {
+      role: id,
+      backend,
+      db: db[0],
+    });
+
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE
       return {
         data: assign({}, data, { id }),
       };
     });
+  },
+
+  async deleteRecord(store, type, snapshot) {
+    const roleType = snapshot.attr('type');
+    const backend = snapshot.attr('backend');
+    const id = snapshot.attr('name');
+    const db = snapshot.attr('database');
+    await this._updateAllowedRoles(store, {
+      role: id,
+      backend,
+      db: db[0],
+      type: 'remove',
+    });
+
+    return this.ajax(this.urlFor(backend, id, roleType), 'DELETE');
   },
 });

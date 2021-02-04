@@ -35,7 +35,6 @@ export default class GenerateCredentialsDatabase extends Component {
   @task(function*() {
     let { roleName, backendPath } = this.args;
     let errors = [];
-    console.log(this.args.backendPath, 'ARGS');
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
         backend: backendPath,

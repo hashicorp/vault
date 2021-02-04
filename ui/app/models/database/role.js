@@ -2,7 +2,7 @@ import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default Model.extend({
   idPrefix: 'role/',
@@ -55,7 +55,6 @@ export default Model.extend({
   },
 
   roleSettingAttrs: computed(function() {
-    console.log('get role setting');
     // actual display for which ones is set on DatabaseRoleSettingForm
     let allRoleSettingFields = ['ttl', 'max_ttl', 'username', 'rotation_period'];
     return expandAttributeMeta(this, allRoleSettingFields);
@@ -75,6 +74,10 @@ export default Model.extend({
   secretPath: lazyCapabilities(apiPath`${'backend'}/${'path'}/${'id'}`, 'backend', 'path', 'id'),
   canEditRole: alias('secretPath.canUpdate'),
   canDelete: alias('secretPath.canDelete'),
+  dynamicPath: lazyCapabilities(apiPath`${'backend'}/roles/+`, 'backend'),
+  canCreateDynamic: alias('dynamicPath.canCreate'),
+  staticPath: lazyCapabilities(apiPath`${'backend'}/static-roles/+`, 'backend'),
+  canCreateStatic: alias('staticPath.canCreate'),
   credentialPath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   canGenerateCredentials: alias('credentialPath.canRead'),
   databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),

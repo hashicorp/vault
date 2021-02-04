@@ -12,11 +12,19 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
 
-  get buttonDisabled() {
+  get tooltipMessage() {
     if (this.args.model.canUpdateDb === false) {
-      return true;
+      return `You don't have permissions to update the connection "${
+        this.args.model.database[0]
+      }", so this role cannot be created.`;
     }
-    return true;
+    if (!this.args.model.canCreateDynamic && this.args.model.type === 'dynamic') {
+      return `You don't have permissions to create dynamic roles.`;
+    }
+    if (!this.args.model.canCreateStatic && this.args.model.type === 'static') {
+      return `You don't have permissions to create static roles.`;
+    }
+    return null;
   }
 
   @action
@@ -25,14 +33,11 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   @action
-  delete(evt) {
-    evt.preventDefault();
-    // const adapter = this.store.adapterFor('cluster');
+  delete() {
     const secret = this.args.model;
     const backend = secret.backend;
     secret.destroyRecord().then(() => {
-      // TODO: Update database allowed roles
-      this.router.transitionTo(LIST_ROOT_ROUTE, backend);
+      this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
     });
   }
 
@@ -45,7 +50,6 @@ export default class DatabaseRoleEdit extends Component {
     let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
     roleSecret.set('path', path);
     roleSecret.save().then(() => {
-      // TODO: Update database with allowed roles + id
       this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
     });
   }
