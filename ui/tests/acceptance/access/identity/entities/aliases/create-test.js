@@ -21,6 +21,7 @@ module('Acceptance | /access/identity/entities/aliases/add', function(hooks) {
   test('it allows delete from the edit form', async function(assert) {
     let name = `alias-${Date.now()}`;
     await testAliasDeleteFromForm(name, 'entities', assert);
+
     await settled();
   });
 });

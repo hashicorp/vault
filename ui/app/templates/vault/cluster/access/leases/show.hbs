@@ -30,7 +30,7 @@
 
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
   <InfoTableRow @label="Issue time" @value={{model.issueTime}}>
-    {{date-format model.issueTime 'MMM DD, YYYY hh:mm:ss A'}}
+    {{date-format model.issueTime 'MMM dd, yyyy hh:mm:ss a'}}
     <br/>
     <code>
       {{model.issueTime}}
@@ -38,7 +38,7 @@
   </InfoTableRow>
   <InfoTableRow @label="Renewable" @value={{model.renewable}} />
   <InfoTableRow @label="Last renewal" @value={{model.lastRenewal}}>
-    {{date-format model.lastRenewal 'MMM DD, YYYY hh:mm:ss A'}}
+    {{date-format model.lastRenewal 'MMM dd, yyyy hh:mm:ss a'}}
     <br/>
     <code>
       {{model.lastRenewal}}
@@ -46,7 +46,7 @@
   </InfoTableRow>
   {{#if model.expireTime}}
     <InfoTableRow @label="Expiration time" @value={{model.expireTime}}>
-      {{date-format model.expireTime 'MMM DD, YYYY hh:mm:ss A'}}
+      {{date-format model.expireTime 'MMM dd, yyyy hh:mm:ss a'}}
       <br/>
       <code>
         {{model.expireTime}}
