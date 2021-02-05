@@ -10,12 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+
+	"github.com/go-sql-driver/mysql"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-uuid"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -105,6 +106,19 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		}
 
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
+	}
+
+	// and the connection can be established at a later time.
+	c.Initialized = true
+
+	if verifyConnection {
+		if _, err := c.Connection(ctx); err != nil {
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+		}
+
+		if err := c.db.PingContext(ctx); err != nil {
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+		}
 	}
 
 	return c.RawConfig, nil

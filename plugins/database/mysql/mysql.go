@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	stdmysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/errwrap"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -77,12 +76,7 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (m *MySQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
-	err := m.mySQLConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
-	if err != nil {
-		return dbplugin.InitializeResponse{}, err
-	}
-
-	usernameTemplate, err := getString(req.Config, "username_template")
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
@@ -103,21 +97,15 @@ func (m *MySQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
-	m.Initialized = true
-
-	if req.VerifyConnection {
-		if _, err := m.Connection(ctx); err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-
-		if err := m.db.PingContext(ctx); err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
+	err = m.mySQLConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
+	if err != nil {
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
+
 	return resp, nil
 }
 
@@ -302,17 +290,4 @@ func (m *MySQL) executePreparedStatementsWithMap(ctx context.Context, statements
 		return err
 	}
 	return nil
-}
-
-func getString(m map[string]interface{}, key string) (string, error) {
-	rawVal, ok := m[key]
-	if !ok {
-		return "", nil
-	}
-
-	str, ok := rawVal.(string)
-	if !ok {
-		return "", fmt.Errorf("invalid value at %s: is a %T", key, rawVal)
-	}
-	return str, nil
 }
