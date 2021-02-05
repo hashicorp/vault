@@ -353,7 +353,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			c.logger.Debug("setting parent context", "method", req.Request.Method, "path", req.Request.URL.Path)
 			parentCtx = entry.RenewCtxInfo.Ctx
 
-			entry.TokenParent = req.Token
+			index.TokenParent = req.Token
 		}
 
 		renewCtxInfo = c.createCtxInfo(parentCtx)
