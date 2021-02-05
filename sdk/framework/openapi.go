@@ -575,6 +575,9 @@ func convertType(t FieldType) schemaType {
 	case TypeTime:
 		ret.baseType = "string"
 		ret.format = "date-time"
+	case TypeFloat:
+		ret.baseType = "number"
+		ret.format = "float"
 	default:
 		log.L().Warn("error parsing field type", "type", t)
 		ret.format = "unknown"
