@@ -76,7 +76,10 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 		return dbplugin.InitializeResponse{}, err
 	}
 
-	usernameTemplate := strutil.GetString(req.Config, "username_template")
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
 	if usernameTemplate == "" {
 		usernameTemplate = defaultUserNameTemplate
 	}
