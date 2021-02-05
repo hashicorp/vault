@@ -7,6 +7,8 @@ with open(filename) as f:
         name = l.split()[0]
         print(name)
         if "k8s" not in name:
-            os.system("go get -u " + name) # google.golang.org/grpc also 
+            os.system("go get -u " + name)
+            # google.golang.org/grpc also 
+            # github.com/hashicorp/go-discover (go mod vendor CI issue)
         else:
             print("skippin: " + name)

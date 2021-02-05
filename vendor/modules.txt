@@ -503,7 +503,7 @@ github.com/hashicorp/errwrap
 github.com/hashicorp/go-bindata
 # github.com/hashicorp/go-cleanhttp v0.5.2
 github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
+# github.com/hashicorp/go-discover v0.0.0-20200812215701-c4b85f6ed31f
 github.com/hashicorp/go-discover
 github.com/hashicorp/go-discover/provider/aliyun
 github.com/hashicorp/go-discover/provider/aws
