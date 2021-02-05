@@ -153,11 +153,11 @@ type ThresholdLoggingOptions struct {
 	ManagementThreshold    time.Duration
 }
 
-// thresholdLoggingTracer is a specialized Tracer implementation which will automatically
+// ThresholdLoggingTracer is a specialized Tracer implementation which will automatically
 // log operations which fall outside of a set of thresholds.  Note that this tracer is
 // only safe for use within the Couchbase SDK, uses by external event sources are
 // likely to fail.
-type thresholdLoggingTracer struct {
+type ThresholdLoggingTracer struct {
 	Interval            time.Duration
 	SampleSize          uint32
 	KVThreshold         time.Duration
@@ -178,7 +178,7 @@ type thresholdLoggingTracer struct {
 	managementGroup thresholdLogGroup
 }
 
-func newThresholdLoggingTracer(opts *ThresholdLoggingOptions) *thresholdLoggingTracer {
+func NewThresholdLoggingTracer(opts *ThresholdLoggingOptions) *ThresholdLoggingTracer {
 	if opts == nil {
 		opts = &ThresholdLoggingOptions{}
 	}
@@ -207,7 +207,7 @@ func newThresholdLoggingTracer(opts *ThresholdLoggingOptions) *thresholdLoggingT
 		opts.ManagementThreshold = 1 * time.Second
 	}
 
-	t := &thresholdLoggingTracer{
+	t := &ThresholdLoggingTracer{
 		Interval:            opts.Interval,
 		SampleSize:          opts.SampleSize,
 		KVThreshold:         opts.KVThreshold,
@@ -239,7 +239,7 @@ func newThresholdLoggingTracer(opts *ThresholdLoggingOptions) *thresholdLoggingT
 // AddRef is used internally to keep track of the number of Cluster instances referring to it.
 // This is used to correctly shut down the aggregation routines once there are no longer any
 // instances tracing to it.
-func (t *thresholdLoggingTracer) AddRef() int32 {
+func (t *ThresholdLoggingTracer) AddRef() int32 {
 	newRefCount := atomic.AddInt32(&t.refCount, 1)
 	if newRefCount == 1 {
 		t.startLoggerRoutine()
@@ -248,7 +248,7 @@ func (t *thresholdLoggingTracer) AddRef() int32 {
 }
 
 // DecRef is the counterpart to AddRef (see AddRef for more information).
-func (t *thresholdLoggingTracer) DecRef() int32 {
+func (t *ThresholdLoggingTracer) DecRef() int32 {
 	newRefCount := atomic.AddInt32(&t.refCount, -1)
 	if newRefCount == 0 {
 		t.killCh <- struct{}{}
@@ -256,7 +256,7 @@ func (t *thresholdLoggingTracer) DecRef() int32 {
 	return newRefCount
 }
 
-func (t *thresholdLoggingTracer) logRecordedRecords() {
+func (t *ThresholdLoggingTracer) logRecordedRecords() {
 	t.kvGroup.logRecordedRecords(t.SampleSize)
 	t.viewsGroup.logRecordedRecords(t.SampleSize)
 	t.queryGroup.logRecordedRecords(t.SampleSize)
@@ -265,11 +265,11 @@ func (t *thresholdLoggingTracer) logRecordedRecords() {
 	t.managementGroup.logRecordedRecords(t.SampleSize)
 }
 
-func (t *thresholdLoggingTracer) startLoggerRoutine() {
+func (t *ThresholdLoggingTracer) startLoggerRoutine() {
 	go t.loggerRoutine()
 }
 
-func (t *thresholdLoggingTracer) loggerRoutine() {
+func (t *ThresholdLoggingTracer) loggerRoutine() {
 	for {
 		select {
 		case <-time.After(time.Until(t.nextTick)):
@@ -282,7 +282,7 @@ func (t *thresholdLoggingTracer) loggerRoutine() {
 	}
 }
 
-func (t *thresholdLoggingTracer) recordOp(span *thresholdLogSpan) {
+func (t *ThresholdLoggingTracer) recordOp(span *thresholdLogSpan) {
 	switch span.serviceName {
 	case "mgmt":
 		t.managementGroup.recordOp(span)
@@ -300,7 +300,7 @@ func (t *thresholdLoggingTracer) recordOp(span *thresholdLogSpan) {
 }
 
 // StartSpan belongs to the Tracer interface.
-func (t *thresholdLoggingTracer) StartSpan(operationName string, parentContext requestSpanContext) requestSpan {
+func (t *ThresholdLoggingTracer) StartSpan(operationName string, parentContext requestSpanContext) requestSpan {
 	span := &thresholdLogSpan{
 		tracer:    t,
 		opName:    operationName,
@@ -315,7 +315,7 @@ func (t *thresholdLoggingTracer) StartSpan(operationName string, parentContext r
 }
 
 type thresholdLogSpan struct {
-	tracer                *thresholdLoggingTracer
+	tracer                *ThresholdLoggingTracer
 	parent                *thresholdLogSpan
 	opName                string
 	startTime             time.Time

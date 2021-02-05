@@ -254,6 +254,11 @@ type QueryMeta struct {
 	// CacheAge is set if request was ?cached and indicates how stale the cached
 	// response is.
 	CacheAge time.Duration
+
+	// DefaultACLPolicy is used to control the ACL interaction when there is no
+	// defined policy. This can be "allow" which means ACLs are used to
+	// deny-list, or "deny" which means ACLs are allow-lists.
+	DefaultACLPolicy string
 }
 
 // WriteMeta is used to return meta data about a write
@@ -305,7 +310,7 @@ type Config struct {
 	TokenFile string
 
 	// Namespace is the name of the namespace to send along for the request
-	// when no other Namespace ispresent in the QueryOptions
+	// when no other Namespace is present in the QueryOptions
 	Namespace string
 
 	TLSConfig TLSConfig
@@ -551,11 +556,11 @@ func NewClient(config *Config) (*Client, error) {
 	// bootstrap the config
 	defConfig := DefaultConfig()
 
-	if len(config.Address) == 0 {
+	if config.Address == "" {
 		config.Address = defConfig.Address
 	}
 
-	if len(config.Scheme) == 0 {
+	if config.Scheme == "" {
 		config.Scheme = defConfig.Scheme
 	}
 
@@ -599,7 +604,7 @@ func NewClient(config *Config) (*Client, error) {
 	if len(parts) == 2 {
 		switch parts[0] {
 		case "http":
-			config.Scheme = "http"
+			// Never revert to http if TLS was explicitly requested.
 		case "https":
 			config.Scheme = "https"
 		case "unix":
@@ -607,9 +612,11 @@ func NewClient(config *Config) (*Client, error) {
 			trans.DialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
 				return net.Dial("unix", parts[1])
 			}
-			config.HttpClient = &http.Client{
-				Transport: trans,
+			httpClient, err := NewHttpClient(trans, config.TLSConfig)
+			if err != nil {
+				return nil, err
 			}
+			config.HttpClient = httpClient
 		default:
 			return nil, fmt.Errorf("Unknown protocol scheme: %s", parts[0])
 		}
@@ -958,6 +965,12 @@ func parseQueryMeta(resp *http.Response, q *QueryMeta) error {
 		q.AddressTranslationEnabled = true
 	default:
 		q.AddressTranslationEnabled = false
+	}
+
+	// Parse X-Consul-Default-ACL-Policy
+	switch v := header.Get("X-Consul-Default-ACL-Policy"); v {
+	case "allow", "deny":
+		q.DefaultACLPolicy = v
 	}
 
 	// Parse Cache info

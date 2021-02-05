@@ -18,6 +18,7 @@ package spanner
 
 import (
 	"encoding/base64"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -62,6 +63,14 @@ func floatProto(n float64) *proto3.Value {
 
 func floatType() *sppb.Type {
 	return &sppb.Type{Code: sppb.TypeCode_FLOAT64}
+}
+
+func numericProto(n *big.Rat) *proto3.Value {
+	return &proto3.Value{Kind: &proto3.Value_StringValue{StringValue: NumericString(n)}}
+}
+
+func numericType() *sppb.Type {
+	return &sppb.Type{Code: sppb.TypeCode_NUMERIC}
 }
 
 func bytesProto(b []byte) *proto3.Value {

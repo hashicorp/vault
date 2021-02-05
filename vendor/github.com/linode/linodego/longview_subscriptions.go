@@ -39,20 +39,11 @@ func (resp *LongviewSubscriptionsPagedResponse) appendData(r *LongviewSubscripti
 func (c *Client) ListLongviewSubscriptions(ctx context.Context, opts *ListOptions) ([]LongviewSubscription, error) {
 	response := LongviewSubscriptionsPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
 	return response.Data, nil
-}
-
-// fixDates converts JSON timestamps to Go time.Time values
-func (v *LongviewSubscription) fixDates() *LongviewSubscription {
-	// v.Created, _ = parseDates(v.CreatedStr)
-	// v.Updated, _ = parseDates(v.UpdatedStr)
-	return v
 }
 
 // GetLongviewSubscription gets the template with the provided ID
@@ -66,5 +57,5 @@ func (c *Client) GetLongviewSubscription(ctx context.Context, id string) (*Longv
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*LongviewSubscription).fixDates(), nil
+	return r.Result().(*LongviewSubscription), nil
 }

@@ -145,7 +145,31 @@ func (pc *pollerController) PollerError() error {
 	return controller.Error()
 }
 
+func (pc *pollerController) ForceHTTPPoller() {
+	go func() {
+		pc.controllerLock.Lock()
+		if pc.activeController == pc.cccpPoller {
+			logDebugf("Stopping CCCP poller for HTTP polling takeover")
+			pc.cccpPoller.Stop()
+			pollerCh := pc.cccpPoller.Done()
+			if pollerCh != nil {
+				<-pollerCh
+			}
+			pc.httpPoller.Reset()
+			pc.cccpPoller.Reset()
+		} else if pc.activeController == pc.httpPoller {
+			pc.controllerLock.Unlock()
+			return
+		}
+
+		pc.activeController = pc.httpPoller
+		pc.controllerLock.Unlock()
+
+		pc.httpPoller.DoLoop()
+	}()
+}
+
 func isPollingFallbackError(err error) bool {
 	return errors.Is(err, ErrDocumentNotFound) || errors.Is(err, ErrUnsupportedOperation) ||
-		errors.Is(err, errNoCCCPHosts)
+		errors.Is(err, errNoCCCPHosts) || errors.Is(err, ErrBucketNotFound)
 }

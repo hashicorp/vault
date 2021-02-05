@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"go.etcd.io/etcd/version"
+	"github.com/coreos/etcd/version"
 )
 
 var (
@@ -640,11 +640,11 @@ func (r *redirectFollowingHTTPClient) Do(ctx context.Context, act httpAction) (*
 		if resp.StatusCode/100 == 3 {
 			hdr := resp.Header.Get("Location")
 			if hdr == "" {
-				return nil, nil, fmt.Errorf("location header not set")
+				return nil, nil, fmt.Errorf("Location header not set")
 			}
 			loc, err := url.Parse(hdr)
 			if err != nil {
-				return nil, nil, fmt.Errorf("location header not valid URL: %s", hdr)
+				return nil, nil, fmt.Errorf("Location header not valid URL: %s", hdr)
 			}
 			next = &redirectedHTTPAction{
 				action:   act,

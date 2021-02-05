@@ -171,25 +171,27 @@ type Software_Component_AntivirusSpyware_Mcafee_Epo_Version45 struct {
 	// The version of ePolicy Orchestrator that the anti-virus/spyware client communicates with.
 	EpoVersion *string `json:"epoVersion,omitempty" xmlrpc:"epoVersion,omitempty"`
 
-	// A count of the latest access protection events.
-	LatestAccessProtectionEventCount *uint `json:"latestAccessProtectionEventCount,omitempty" xmlrpc:"latestAccessProtectionEventCount,omitempty"`
-
-	// The latest access protection events.
-	LatestAccessProtectionEvents []McAfee_Epolicy_Orchestrator_Version45_Event `json:"latestAccessProtectionEvents,omitempty" xmlrpc:"latestAccessProtectionEvents,omitempty"`
-
-	// A count of the latest anti-virus events.
-	LatestAntivirusEventCount *uint `json:"latestAntivirusEventCount,omitempty" xmlrpc:"latestAntivirusEventCount,omitempty"`
-
-	// The latest anti-virus events.
-	LatestAntivirusEvents []McAfee_Epolicy_Orchestrator_Version45_Event `json:"latestAntivirusEvents,omitempty" xmlrpc:"latestAntivirusEvents,omitempty"`
-
-	// A count of the latest spyware events
-	LatestSpywareEventCount *uint `json:"latestSpywareEventCount,omitempty" xmlrpc:"latestSpywareEventCount,omitempty"`
-
-	// The latest spyware events
-	LatestSpywareEvents []McAfee_Epolicy_Orchestrator_Version45_Event `json:"latestSpywareEvents,omitempty" xmlrpc:"latestSpywareEvents,omitempty"`
-
 	// The current transaction status of a server.
+	TransactionStatus *string `json:"transactionStatus,omitempty" xmlrpc:"transactionStatus,omitempty"`
+}
+
+// The SoftLayer_Software_Component_AntivirusSpyware_Mcafee_Epo_Version51 data type represents a single McAfee Secure anti-virus/spyware software component that contacts the McAfee ePO Server version 5.1 backend.
+type Software_Component_AntivirusSpyware_Mcafee_Epo_Version51 struct {
+	Software_Component_AntivirusSpyware_Mcafee
+
+	// The virus scan agent details.
+	AgentDetails *McAfee_Epolicy_Orchestrator_Version51_Agent_Details `json:"agentDetails,omitempty" xmlrpc:"agentDetails,omitempty"`
+
+	// The current anti-virus policy.
+	CurrentAntivirusPolicy *int `json:"currentAntivirusPolicy,omitempty" xmlrpc:"currentAntivirusPolicy,omitempty"`
+
+	// The virus definition file version.
+	DataFileVersion *McAfee_Epolicy_Orchestrator_Version51_Product_Properties `json:"dataFileVersion,omitempty" xmlrpc:"dataFileVersion,omitempty"`
+
+	// The version of  McAfee ePO Server that the anti-virus/spyware client communicates with.
+	EpoVersion *string `json:"epoVersion,omitempty" xmlrpc:"epoVersion,omitempty"`
+
+	// The version of ePolicy Server that the host IPS client communicates with.
 	TransactionStatus *string `json:"transactionStatus,omitempty" xmlrpc:"transactionStatus,omitempty"`
 }
 
@@ -377,12 +379,6 @@ type Software_Component_HostIps_Mcafee_Epo_Version45_Hips struct {
 	// The names of the possible policy options for the application rule set setting.
 	ApplicationRuleSetPolicyNames []McAfee_Epolicy_Orchestrator_Version45_Policy_Object `json:"applicationRuleSetPolicyNames,omitempty" xmlrpc:"applicationRuleSetPolicyNames,omitempty"`
 
-	// A count of the blocked application events for this software component.
-	BlockedApplicationEventCount *uint `json:"blockedApplicationEventCount,omitempty" xmlrpc:"blockedApplicationEventCount,omitempty"`
-
-	// The blocked application events for this software component.
-	BlockedApplicationEvents []McAfee_Epolicy_Orchestrator_Version45_Event `json:"blockedApplicationEvents,omitempty" xmlrpc:"blockedApplicationEvents,omitempty"`
-
 	// A count of the names of the possible options for the enforcement policy setting.
 	EnforcementPolicyNameCount *uint `json:"enforcementPolicyNameCount,omitempty" xmlrpc:"enforcementPolicyNameCount,omitempty"`
 
@@ -403,12 +399,6 @@ type Software_Component_HostIps_Mcafee_Epo_Version45_Hips struct {
 
 	// The names of the possible policy options for the firewall rule set setting.
 	FirewallRuleSetPolicyNames []McAfee_Epolicy_Orchestrator_Version45_Policy_Object `json:"firewallRuleSetPolicyNames,omitempty" xmlrpc:"firewallRuleSetPolicyNames,omitempty"`
-
-	// A count of the host IPS events for this software component.
-	IpsEventCount *uint `json:"ipsEventCount,omitempty" xmlrpc:"ipsEventCount,omitempty"`
-
-	// The host IPS events for this software component.
-	IpsEvents []McAfee_Epolicy_Orchestrator_Version45_Event `json:"ipsEvents,omitempty" xmlrpc:"ipsEvents,omitempty"`
 
 	// A count of the names of the possible policy options for the host IPS mode setting.
 	IpsModePolicyNameCount *uint `json:"ipsModePolicyNameCount,omitempty" xmlrpc:"ipsModePolicyNameCount,omitempty"`
@@ -434,6 +424,32 @@ type Software_Component_HostIps_Mcafee_Epo_Version45_Hips_Version7 struct {
 // The SoftLayer_Software_Component_HostIps_Mcafee_Epo_Version45_Hips_Version8 data type represents a single McAfee Secure Host IPS software component for version 8 of the Host IPS client and uses the ePolicy Orchestrator version 4.5 backend.
 type Software_Component_HostIps_Mcafee_Epo_Version45_Hips_Version8 struct {
 	Software_Component_HostIps_Mcafee_Epo_Version45_Hips
+}
+
+// The SoftLayer_Software_Component_HostIps_Mcafee_Epo_Version51 data type represents a single McAfee Secure Host IPS software component that uses the ePO Server.
+type Software_Component_HostIps_Mcafee_Epo_Version51 struct {
+	Software_Component_HostIps_Mcafee
+
+	// The virus scan agent details.
+	AgentDetails *McAfee_Epolicy_Orchestrator_Version51_Agent_Details `json:"agentDetails,omitempty" xmlrpc:"agentDetails,omitempty"`
+
+	// no documentation yet
+	EpoVersion *string `json:"epoVersion,omitempty" xmlrpc:"epoVersion,omitempty"`
+
+	// no documentation yet
+	FirewallModePolicyNames []McAfee_Epolicy_Orchestrator_Version51_Policy_Object `json:"firewallModePolicyNames,omitempty" xmlrpc:"firewallModePolicyNames,omitempty"`
+
+	// no documentation yet
+	FirewallRuleSetPolicyNames []McAfee_Epolicy_Orchestrator_Version51_Policy_Object `json:"firewallRuleSetPolicyNames,omitempty" xmlrpc:"firewallRuleSetPolicyNames,omitempty"`
+
+	// no documentation yet
+	IpsModePolicyNames []McAfee_Epolicy_Orchestrator_Version51_Policy_Object `json:"ipsModePolicyNames,omitempty" xmlrpc:"ipsModePolicyNames,omitempty"`
+
+	// no documentation yet
+	IpsProtectionPolicyNames []McAfee_Epolicy_Orchestrator_Version51_Policy_Object `json:"ipsProtectionPolicyNames,omitempty" xmlrpc:"ipsProtectionPolicyNames,omitempty"`
+
+	// no documentation yet
+	TransactionStatus *string `json:"transactionStatus,omitempty" xmlrpc:"transactionStatus,omitempty"`
 }
 
 // SoftLayer_Software_Component_OperatingSystem extends the [[SoftLayer_Software_Component]] data type to include operating system specific properties.

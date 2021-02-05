@@ -1,18 +1,6 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
@@ -21,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SAP/go-hdb/internal/bufio"
+	"github.com/SAP/go-hdb/internal/protocol/encoding"
 )
 
 type clientID []byte
@@ -33,23 +21,18 @@ func newClientID() clientID {
 	return clientID(strconv.Itoa(os.Getpid()))
 }
 
-func (id clientID) kind() partKind {
-	return partKind(pkClientID)
-}
-
-func (id clientID) size() (int, error) {
-	return len(id), nil
-}
-
-func (id clientID) numArg() int {
-	return 1
-}
-
-func (id clientID) write(wr *bufio.Writer) error {
-	wr.Write(id)
-
-	if trace {
-		outLogger.Printf("client id: %s", id)
+func (id clientID) String() string { return string(id) }
+func (id *clientID) resize(size int) {
+	if id == nil || size > cap(*id) {
+		*id = make([]byte, size)
+	} else {
+		*id = (*id)[:size]
 	}
-	return nil
 }
+func (id clientID) size() int { return len(id) }
+func (id *clientID) decode(dec *encoding.Decoder, ph *partHeader) error {
+	id.resize(int(ph.bufferLength))
+	dec.Bytes(*id)
+	return dec.Error()
+}
+func (id clientID) encode(enc *encoding.Encoder) error { enc.Bytes(id); return nil }

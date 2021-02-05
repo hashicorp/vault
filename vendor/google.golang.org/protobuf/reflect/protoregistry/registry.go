@@ -21,7 +21,9 @@ import (
 	"strings"
 	"sync"
 
+	"google.golang.org/protobuf/internal/encoding/messageset"
 	"google.golang.org/protobuf/internal/errors"
+	"google.golang.org/protobuf/internal/flags"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -560,13 +562,25 @@ func (r *Types) FindEnumByName(enum protoreflect.FullName) (protoreflect.EnumTyp
 	return nil, NotFound
 }
 
-// FindMessageByName looks up a message by its full name.
-// E.g., "google.protobuf.Any"
+// FindMessageByName looks up a message by its full name,
+// e.g. "google.protobuf.Any".
 //
-// This return (nil, NotFound) if not found.
+// This returns (nil, NotFound) if not found.
 func (r *Types) FindMessageByName(message protoreflect.FullName) (protoreflect.MessageType, error) {
-	// The full name by itself is a valid URL.
-	return r.FindMessageByURL(string(message))
+	if r == nil {
+		return nil, NotFound
+	}
+	if r == GlobalTypes {
+		globalMutex.RLock()
+		defer globalMutex.RUnlock()
+	}
+	if v := r.typesByName[message]; v != nil {
+		if mt, _ := v.(protoreflect.MessageType); mt != nil {
+			return mt, nil
+		}
+		return nil, errors.New("found wrong type: got %v, want message", typeName(v))
+	}
+	return nil, NotFound
 }
 
 // FindMessageByURL looks up a message by a URL identifier.
@@ -574,6 +588,8 @@ func (r *Types) FindMessageByName(message protoreflect.FullName) (protoreflect.M
 //
 // This returns (nil, NotFound) if not found.
 func (r *Types) FindMessageByURL(url string) (protoreflect.MessageType, error) {
+	// This function is similar to FindMessageByName but
+	// truncates anything before and including '/' in the URL.
 	if r == nil {
 		return nil, NotFound
 	}
@@ -613,6 +629,26 @@ func (r *Types) FindExtensionByName(field protoreflect.FullName) (protoreflect.E
 		if xt, _ := v.(protoreflect.ExtensionType); xt != nil {
 			return xt, nil
 		}
+
+		// MessageSet extensions are special in that the name of the extension
+		// is the name of the message type used to extend the MessageSet.
+		// This naming scheme is used by text and JSON serialization.
+		//
+		// This feature is protected by the ProtoLegacy flag since MessageSets
+		// are a proto1 feature that is long deprecated.
+		if flags.ProtoLegacy {
+			if _, ok := v.(protoreflect.MessageType); ok {
+				field := field.Append(messageset.ExtensionName)
+				if v := r.typesByName[field]; v != nil {
+					if xt, _ := v.(protoreflect.ExtensionType); xt != nil {
+						if messageset.IsMessageSetExtension(xt.TypeDescriptor()) {
+							return xt, nil
+						}
+					}
+				}
+			}
+		}
+
 		return nil, errors.New("found wrong type: got %v, want extension", typeName(v))
 	}
 	return nil, NotFound

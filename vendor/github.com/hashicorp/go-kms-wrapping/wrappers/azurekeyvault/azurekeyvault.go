@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
-
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 )
 
@@ -40,8 +40,11 @@ type Wrapper struct {
 
 	currentKeyID *atomic.Value
 
-	environment azure.Environment
-	client      *keyvault.BaseClient
+	environment    azure.Environment
+	client         *keyvault.BaseClient
+	logger         hclog.Logger
+	keyNotRequired bool
+	baseURL        string
 }
 
 // Ensure that we are implementing Wrapper
@@ -53,7 +56,9 @@ func NewWrapper(opts *wrapping.WrapperOptions) *Wrapper {
 		opts = new(wrapping.WrapperOptions)
 	}
 	v := &Wrapper{
-		currentKeyID: new(atomic.Value),
+		currentKeyID:   new(atomic.Value),
+		logger:         opts.Logger,
+		keyNotRequired: opts.KeyNotRequired,
 	}
 	v.currentKeyID.Store("")
 	return v
@@ -124,9 +129,14 @@ func (v *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 		v.keyName = os.Getenv(EnvVaultAzureKeyVaultKeyName)
 	case config["key_name"] != "":
 		v.keyName = config["key_name"]
+	case v.keyNotRequired:
+		// key not required to set config
 	default:
 		return nil, errors.New("key name is required")
 	}
+
+	// Set the base URL
+	v.baseURL = v.buildBaseURL()
 
 	if v.client == nil {
 		client, err := v.getKeyVaultClient()
@@ -134,15 +144,17 @@ func (v *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 			return nil, fmt.Errorf("error initializing Azure Key Vault wrapper client: %w", err)
 		}
 
-		// Test the client connection using provided key ID
-		keyInfo, err := client.GetKey(context.Background(), v.buildBaseURL(), v.keyName, "")
-		if err != nil {
-			return nil, fmt.Errorf("error fetching Azure Key Vault wrapper key information: %w", err)
+		if !v.keyNotRequired {
+			// Test the client connection using provided key ID
+			keyInfo, err := client.GetKey(context.Background(), v.baseURL, v.keyName, "")
+			if err != nil {
+				return nil, fmt.Errorf("error fetching Azure Key Vault wrapper key information: %w", err)
+			}
+			if keyInfo.Key == nil {
+				return nil, errors.New("no key information returned")
+			}
+			v.currentKeyID.Store(ParseKeyVersion(to.String(keyInfo.Key.Kid)))
 		}
-		if keyInfo.Key == nil {
-			return nil, errors.New("no key information returned")
-		}
-		v.currentKeyID.Store(parseKeyVersion(to.String(keyInfo.Key.Kid)))
 
 		v.client = client
 	}
@@ -206,7 +218,7 @@ func (v *Wrapper) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wra
 	}
 
 	// Store the current key version
-	keyVersion := parseKeyVersion(to.String(resp.Kid))
+	keyVersion := ParseKeyVersion(to.String(resp.Kid))
 	v.currentKeyID.Store(keyVersion)
 
 	ret := &wrapping.EncryptedBlobInfo{
@@ -285,9 +297,25 @@ func (v *Wrapper) getKeyVaultClient() (*keyvault.BaseClient, error) {
 	return &client, nil
 }
 
+// Client returns the AzureKeyVault client used by the wrapper.
+func (v *Wrapper) Client() *keyvault.BaseClient {
+	return v.client
+}
+
+// Logger returns the logger used by the wrapper.
+func (v *Wrapper) Logger() hclog.Logger {
+	return v.logger
+}
+
+// BaseURL returns the base URL for key management operation requests based
+// on the Azure Vault name and environment.
+func (v *Wrapper) BaseURL() string {
+	return v.baseURL
+}
+
 // Kid gets returned as a full URL, get the last bit which is just
 // the version
-func parseKeyVersion(kid string) string {
+func ParseKeyVersion(kid string) string {
 	keyVersionParts := strings.Split(kid, "/")
 	return keyVersionParts[len(keyVersionParts)-1]
 }

@@ -4,6 +4,14 @@ package protocol
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[bigEndian-0]
+	_ = x[littleEndian-1]
+}
+
 const _endianess_name = "bigEndianlittleEndian"
 
 var _endianess_index = [...]uint8{0, 9, 21}

@@ -63,6 +63,7 @@ type Cluster struct {
 	wgTend      sync.WaitGroup
 	tendChannel chan struct{}
 	closed      AtomicBool
+	tendCount   int
 
 	// Aerospike v3.6.0+
 	supportsFloat, supportsBatchIndex, supportsReplicasAll, supportsGeo *AtomicBool
@@ -368,6 +369,9 @@ func (clstr *Cluster) tend() error {
 		clstr.addNodes(peers.nodes())
 	}
 
+	// add to the number of successful tends
+	clstr.tendCount++
+
 	if !floatSupport {
 		Logger.Warn("Some cluster nodes do not support float type. Disabling native float support in the client library...")
 	}
@@ -391,7 +395,7 @@ func (clstr *Cluster) tend() error {
 	}
 
 	if err := clstr.getPartitions().validate(); err != nil {
-		Logger.Debug("Error validating the cluster partition map after tend: %s", err.Error())
+		Logger.Error("Error validating the cluster partition map after tend: %s", err.Error())
 	}
 
 	// only log if node count is changed
@@ -400,6 +404,13 @@ func (clstr *Cluster) tend() error {
 	}
 
 	clstr.aggregateNodestats(clstr.GetNodes())
+
+	// Reset connection error window for all nodes every connErrorWindow tend iterations.
+	if clstr.clientPolicy.MaxErrorRate > 0 && clstr.tendCount%clstr.clientPolicy.ErrorRateWindow == 0 {
+		for _, node := range clstr.GetNodes() {
+			node.resetErrorCount()
+		}
+	}
 
 	return nil
 }

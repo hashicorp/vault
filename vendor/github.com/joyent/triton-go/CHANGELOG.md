@@ -1,5 +1,44 @@
 ## Unreleased
 
+## 1.8.5 (Aug 19 2020)
+
+- Added delegate_dataset support to instance creation
+
+## 1.8.4 (May 11 2020)
+
+- Fix panic when testing images without TRITON_TEST set [#186]
+
+## 1.8.3 (May 6 2020)
+
+- Add support for `brand`, `flexible_disk` and `disks` for packages [#182].
+
+## 1.8.2 (May 5 2020)
+
+- Fix panic when TRITON_TRACE_HTTP is set and resp is nil [#180].
+
+## 1.8.1 (May 4 2020)
+
+- Add ability to trace CloudAPI HTTP requests [#180]. You can set the
+  TRITON_TRACE_HTTP environment variable to have the CloudAPI HTTP requests and
+  responses be printed to stderr.
+
+## 1.8.0 (April 27 2020)
+
+- Update Triton acceptance tests to work with any Triton [#178]
+
+## 1.7.2 (April 27 2020)
+
+- Unable to connect to CloudAPI using wildcard certificates [#117]. You can now
+  set the TRITON_SKIP_TLS_VERIFY environment variable to skip TLS checking.
+
+## 1.7.1 (April 24 2020)
+
+- Add support for volume tags [#175]
+
+## 1.7.0 (June 26 2019)
+
+- Expected instance to have Tags
+
 ## 1.6.1 (June 26 2019)
 
 - compute/networks: support network objects for AddNIC [#169]

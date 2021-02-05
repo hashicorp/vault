@@ -22,7 +22,7 @@ package datatypes
 
 // The SoftLayer_Brand data type contains brand information relating to the single SoftLayer customer account.
 //
-// SoftLayer customers are unable to change their brand information in the portal or the API.
+// IBM Cloud Infrastructure customers are unable to change their brand information in the portal or the API.
 type Brand struct {
 	Entity
 
@@ -76,6 +76,9 @@ type Brand struct {
 
 	// A count of an account's associated hardware objects.
 	HardwareCount *uint `json:"hardwareCount,omitempty" xmlrpc:"hardwareCount,omitempty"`
+
+	// no documentation yet
+	HasAgentAdvancedSupportFlag *bool `json:"hasAgentAdvancedSupportFlag,omitempty" xmlrpc:"hasAgentAdvancedSupportFlag,omitempty"`
 
 	// no documentation yet
 	HasAgentSupportFlag *bool `json:"hasAgentSupportFlag,omitempty" xmlrpc:"hasAgentSupportFlag,omitempty"`

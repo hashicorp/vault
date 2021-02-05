@@ -51,5 +51,6 @@ func (config *AgentGroupConfig) toAgentConfig() *AgentConfig {
 		UseZombieLogger:           config.UseZombieLogger,
 		ZombieLoggerInterval:      config.ZombieLoggerInterval,
 		ZombieLoggerSampleSize:    config.ZombieLoggerSampleSize,
+		AuthMechanisms:            config.AuthMechanisms,
 	}
 }

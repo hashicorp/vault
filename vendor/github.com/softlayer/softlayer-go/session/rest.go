@@ -56,7 +56,7 @@ func (r *RestTransport) DoRequest(sess *Session, service string, method string, 
 		sess,
 		path,
 		restMethod,
-		bytes.NewBuffer(parameters),
+		parameters,
 		options)
 
 	if err != nil {
@@ -167,7 +167,7 @@ func encodeQuery(opts *sl.Options) string {
 
 func sendHTTPRequest(
 	sess *Session, path string, requestType string,
-	requestBody *bytes.Buffer, options *sl.Options) ([]byte, int, error) {
+	requestBody []byte, options *sl.Options) ([]byte, int, error) {
 
 	retries := sess.Retries
 	if retries < 2 {
@@ -184,7 +184,7 @@ func sendHTTPRequest(
 
 func tryHTTPRequest(
 	retries int, wait time.Duration, sess *Session,
-	path string, requestType string, requestBody *bytes.Buffer,
+	path string, requestType string, requestBody []byte,
 	options *sl.Options) ([]byte, int, error) {
 
 	resp, code, err := makeHTTPRequest(sess, path, requestType, requestBody, options)
@@ -207,7 +207,7 @@ func tryHTTPRequest(
 
 func makeHTTPRequest(
 	session *Session, path string, requestType string,
-	requestBody *bytes.Buffer, options *sl.Options) ([]byte, int, error) {
+	requestBody []byte, options *sl.Options) ([]byte, int, error) {
 	log := Logger
 
 	client := session.HTTPClient
@@ -227,15 +227,18 @@ func makeHTTPRequest(
 		url = url + session.Endpoint
 	}
 	url = fmt.Sprintf("%s/%s", strings.TrimRight(url, "/"), path)
-	req, err := http.NewRequest(requestType, url, requestBody)
+	req, err := http.NewRequest(requestType, url, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, 0, err
 	}
 
-	if session.APIKey != "" {
+	switch {
+	case session.APIKey != "":
 		req.SetBasicAuth(session.UserName, session.APIKey)
-	} else if session.AuthToken != "" {
+	case session.AuthToken != "":
 		req.SetBasicAuth(fmt.Sprintf("%d", session.UserId), session.AuthToken)
+	case session.IAMToken != "":
+		req.Header.Set("Authorization", session.IAMToken)
 	}
 
 	// For cases where session is built from the raw structure and not using New() , the UserAgent would be empty
@@ -255,7 +258,12 @@ func makeHTTPRequest(
 
 	if session.Debug {
 		log.Println("[DEBUG] Request URL: ", requestType, req.URL)
-		log.Println("[DEBUG] Parameters: ", requestBody.String())
+		log.Println("[DEBUG] Parameters: ", string(requestBody))
+	}
+
+	// Apply custom context.Context, if supplied
+	if session.Context != nil {
+		req = req.WithContext(session.Context)
 	}
 
 	resp, err := client.Do(req)

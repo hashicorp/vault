@@ -11,6 +11,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/Masterminds/sprig"
 	"github.com/armon/go-radix"
 	"github.com/posener/complete"
 )
@@ -513,7 +514,7 @@ func (c *CLI) commandHelp(out io.Writer, command Command) {
 	}
 
 	// Parse it
-	t, err := template.New("root").Parse(tpl)
+	t, err := template.New("root").Funcs(sprig.TxtFuncMap()).Parse(tpl)
 	if err != nil {
 		t = template.Must(template.New("root").Parse(fmt.Sprintf(
 			"Internal error! Failed to parse command help template: %s\n", err)))
@@ -521,8 +522,9 @@ func (c *CLI) commandHelp(out io.Writer, command Command) {
 
 	// Template data
 	data := map[string]interface{}{
-		"Name": c.Name,
-		"Help": command.Help(),
+		"Name":           c.Name,
+		"SubcommandName": c.Subcommand(),
+		"Help":           command.Help(),
 	}
 
 	// Build subcommand list if we have it

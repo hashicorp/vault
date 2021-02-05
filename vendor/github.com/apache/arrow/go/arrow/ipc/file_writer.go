@@ -28,9 +28,12 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type payloadWriter interface {
-	start() error
-	write(payload) error
+// PayloadWriter is an interface for injecting a different payloadwriter
+// allowing more reusability with the Writer object with other scenarios,
+// such as with Flight data
+type PayloadWriter interface {
+	Start() error
+	WritePayload(Payload) error
 	Close() error
 }
 
@@ -43,7 +46,7 @@ type pwriter struct {
 	recs   []fileBlock
 }
 
-func (w *pwriter) start() error {
+func (w *pwriter) Start() error {
 	var err error
 
 	err = w.updatePos()
@@ -65,7 +68,7 @@ func (w *pwriter) start() error {
 	return err
 }
 
-func (w *pwriter) write(p payload) error {
+func (w *pwriter) WritePayload(p Payload) error {
 	blk := fileBlock{Offset: w.pos, Meta: 0, Body: p.size}
 	n, err := writeIPCPayload(w, p)
 	if err != nil {
@@ -152,7 +155,7 @@ func (w *pwriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func writeIPCPayload(w io.Writer, p payload) (int, error) {
+func writeIPCPayload(w io.Writer, p Payload) (int, error) {
 	n, err := writeMessage(p.meta, kArrowIPCAlignment, w)
 	if err != nil {
 		return n, err
@@ -189,14 +192,50 @@ func writeIPCPayload(w io.Writer, p payload) (int, error) {
 	return n, err
 }
 
-type payload struct {
+// Payload is the underlying message object which is passed to the payload writer
+// for actually writing out ipc messages
+type Payload struct {
 	msg  MessageType
 	meta *memory.Buffer
 	body []*memory.Buffer
 	size int64 // length of body
 }
 
-func (p *payload) Release() {
+// Meta returns the buffer containing the metadata for this payload,
+// callers must call Release on the buffer
+func (p *Payload) Meta() *memory.Buffer {
+	if p.meta != nil {
+		p.meta.Retain()
+	}
+	return p.meta
+}
+
+// SerializeBody serializes the body buffers and writes them to the provided
+// writer.
+func (p *Payload) SerializeBody(w io.Writer) error {
+	for _, data := range p.body {
+		if data == nil {
+			continue
+		}
+
+		size := int64(data.Len())
+		padding := bitutil.CeilByte64(size) - size
+		if size > 0 {
+			if _, err := w.Write(data.Bytes()); err != nil {
+				return xerrors.Errorf("arrow/ipc: could not write payload message body: %w", err)
+			}
+
+			if padding > 0 {
+				if _, err := w.Write(paddingBytes[:padding]); err != nil {
+					return xerrors.Errorf("arrow/ipc: could not write payload message padding bytes: %w", err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (p *Payload) Release() {
 	if p.meta != nil {
 		p.meta.Release()
 		p.meta = nil
@@ -210,7 +249,7 @@ func (p *payload) Release() {
 	}
 }
 
-type payloads []payload
+type payloads []Payload
 
 func (ps payloads) Release() {
 	for i := range ps {
@@ -233,7 +272,7 @@ type FileWriter struct {
 		written bool
 	}
 
-	pw payloadWriter
+	pw PayloadWriter
 
 	schema *arrow.Schema
 }
@@ -292,7 +331,7 @@ func (f *FileWriter) Write(rec array.Record) error {
 
 	const allow64b = true
 	var (
-		data = payload{msg: MessageRecordBatch}
+		data = Payload{msg: MessageRecordBatch}
 		enc  = newRecordEncoder(f.mem, 0, kMaxNestingDepth, allow64b)
 	)
 	defer data.Release()
@@ -301,7 +340,7 @@ func (f *FileWriter) Write(rec array.Record) error {
 		return xerrors.Errorf("arrow/ipc: could not encode record to payload: %w", err)
 	}
 
-	return f.pw.write(data)
+	return f.pw.WritePayload(data)
 }
 
 func (f *FileWriter) checkStarted() error {
@@ -313,7 +352,7 @@ func (f *FileWriter) checkStarted() error {
 
 func (f *FileWriter) start() error {
 	f.header.started = true
-	err := f.pw.start()
+	err := f.pw.Start()
 	if err != nil {
 		return err
 	}
@@ -323,7 +362,7 @@ func (f *FileWriter) start() error {
 	defer ps.Release()
 
 	for _, data := range ps {
-		err = f.pw.write(data)
+		err = f.pw.WritePayload(data)
 		if err != nil {
 			return err
 		}

@@ -243,6 +243,17 @@ func (agent *Agent) GetCollectionManifest(opts GetCollectionManifestOptions, cb 
 	return agent.collections.GetCollectionManifest(opts, cb)
 }
 
+// GetAllCollectionManifestsCallback is invoked upon completion of a GetAllCollectionManifests operation.
+type GetAllCollectionManifestsCallback func(*GetAllCollectionManifestsResult, error)
+
+// GetAllCollectionManifests fetches the collection manifest from each server in the cluster, note that it's possible
+// for one or mode nodes to be slightly behind when creating scopes/collections. This function will not update the
+// client's collection id cache.
+func (agent *Agent) GetAllCollectionManifests(opts GetAllCollectionManifestsOptions,
+	cb GetAllCollectionManifestsCallback) (PendingOp, error) {
+	return agent.collections.GetAllCollectionManifests(opts, cb)
+}
+
 // GetCollectionIDCallback is invoked upon completion of a GetCollectionID operation.
 type GetCollectionIDCallback func(*GetCollectionIDResult, error)
 

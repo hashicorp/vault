@@ -17,5 +17,5 @@ package ram
 
 // VirtualMFADevices is a nested struct in ram response
 type VirtualMFADevices struct {
-	VirtualMFADevice []VirtualMFADevice `json:"VirtualMFADevice" xml:"VirtualMFADevice"`
+	VirtualMFADevice []VirtualMFADeviceInListVirtualMFADevices `json:"VirtualMFADevice" xml:"VirtualMFADevice"`
 }

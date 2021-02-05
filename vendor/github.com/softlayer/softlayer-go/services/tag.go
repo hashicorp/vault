@@ -78,6 +78,15 @@ func (r Tag) AutoComplete(tag *string) (resp []datatypes.Tag, err error) {
 	return
 }
 
+// Delete a tag for an object.
+func (r Tag) DeleteTag(tagName *string) (resp bool, err error) {
+	params := []interface{}{
+		tagName,
+	}
+	err = r.Session.DoRequest("SoftLayer_Tag", "deleteTag", params, &r.Options, &resp)
+	return
+}
+
 // Retrieve The account to which the tag is tied.
 func (r Tag) GetAccount() (resp datatypes.Account, err error) {
 	err = r.Session.DoRequest("SoftLayer_Tag", "getAccount", nil, &r.Options, &resp)
@@ -87,6 +96,12 @@ func (r Tag) GetAccount() (resp datatypes.Account, err error) {
 // Returns all tags of a given object type.
 func (r Tag) GetAllTagTypes() (resp []datatypes.Tag_Type, err error) {
 	err = r.Session.DoRequest("SoftLayer_Tag", "getAllTagTypes", nil, &r.Options, &resp)
+	return
+}
+
+// Get all tags with at least one reference attached to it for the current account. The total items header for this method contains the total number of attached tags even if a result limit is applied.
+func (r Tag) GetAttachedTagsForCurrentUser() (resp []datatypes.Tag, err error) {
+	err = r.Session.DoRequest("SoftLayer_Tag", "getAttachedTagsForCurrentUser", nil, &r.Options, &resp)
 	return
 }
 
@@ -111,7 +126,13 @@ func (r Tag) GetTagByTagName(tagList *string) (resp []datatypes.Tag, err error) 
 	return
 }
 
-// Tag an object by passing in one or more tags separated by a comma.  Tag references are cleared out every time this method is called. If your object is already tagged you will need to pass the current tags along with any new ones.  To remove all tag references pass an empty string. To remove one or more tags omit them from the tag list.  The characters permitted are A-Z, 0-9, whitespace, _ (underscore), - (hypen), . (period), and : (colon). All other characters will be stripped away.
+// Get all tags with no references attached to it for the current account. The total items header for this method contains the total number of unattached tags even if a result limit is applied.
+func (r Tag) GetUnattachedTagsForCurrentUser() (resp []datatypes.Tag, err error) {
+	err = r.Session.DoRequest("SoftLayer_Tag", "getUnattachedTagsForCurrentUser", nil, &r.Options, &resp)
+	return
+}
+
+// Tag an object by passing in one or more tags separated by a comma. Tag references are cleared out every time this method is called. If your object is already tagged you will need to pass the current tags along with any new ones. To remove all tag references pass an empty string. To remove one or more tags omit them from the tag list. The characters permitted are A-Z, 0-9, whitespace, _ (underscore), - (hypen), . (period), and : (colon). All other characters will be stripped away. You must pass 3 string arguments into this method or you will receive an exception.
 func (r Tag) SetTags(tags *string, keyName *string, resourceTableId *int) (resp bool, err error) {
 	params := []interface{}{
 		tags,

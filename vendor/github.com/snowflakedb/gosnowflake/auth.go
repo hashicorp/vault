@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/form3tech-oss/jwt-go"
 	"github.com/google/uuid"
 
 	"crypto/sha256"
@@ -195,11 +195,11 @@ func postAuth(
 	body []byte,
 	timeout time.Duration) (
 	data *authResponse, err error) {
-	params.Add(requestIDKey, uuid.New().String())
+	params.Add(requestIDKey, getOrGenerateRequestIDFromContext(ctx))
 	params.Add(requestGUIDKey, uuid.New().String())
 
 	fullURL := sr.getFullURL(loginRequestPath, params)
-	glog.V(2).Infof("full URL: %v", fullURL)
+	logger.Infof("full URL: %v", fullURL)
 	resp, err := sr.FuncPost(ctx, sr, fullURL, headers, body, timeout, true)
 	if err != nil {
 		return nil, err
@@ -209,8 +209,7 @@ func postAuth(
 		var respd authResponse
 		err = json.NewDecoder(resp.Body).Decode(&respd)
 		if err != nil {
-			glog.V(1).Infof("failed to decode JSON. err: %v", err)
-			glog.Flush()
+			logger.Error("failed to decode JSON. err: %v", err)
 			return nil, err
 		}
 		return &respd, nil
@@ -235,13 +234,11 @@ func postAuth(
 	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		glog.V(1).Infof("failed to extract HTTP response body. err: %v", err)
-		glog.Flush()
+		logger.Errorf("failed to extract HTTP response body. err: %v", err)
 		return nil, err
 	}
-	glog.V(1).Infof("HTTP: %v, URL: %v, Body: %v", resp.StatusCode, fullURL, b)
-	glog.V(1).Infof("Header: %v", resp.Header)
-	glog.Flush()
+	logger.Infof("HTTP: %v, URL: %v, Body: %v", resp.StatusCode, fullURL, b)
+	logger.Infof("Header: %v", resp.Header)
 	return nil, &SnowflakeError{
 		Number:      ErrFailedToAuth,
 		SQLState:    SQLStateConnectionRejected,
@@ -313,7 +310,7 @@ func authenticate(
 		}
 		requestMain.Token = jwtTokenString
 	case AuthTypeSnowflake:
-		glog.V(2).Info("Username and password")
+		logger.Info("Username and password")
 		requestMain.LoginName = sc.cfg.User
 		requestMain.Password = sc.cfg.Password
 		switch {
@@ -347,7 +344,7 @@ func authenticate(
 		return
 	}
 
-	glog.V(2).Infof("PARAMS for Auth: %v, %v, %v, %v, %v, %v",
+	logger.WithContext(sc.ctx).Infof("PARAMS for Auth: %v, %v, %v, %v, %v, %v",
 		params, sc.rest.Protocol, sc.rest.Host, sc.rest.Port, sc.rest.LoginTimeout, sc.cfg.Authenticator.String())
 
 	respd, err := sc.rest.FuncPostAuth(ctx, sc.rest, params, headers, jsonBody, sc.rest.LoginTimeout)
@@ -355,8 +352,7 @@ func authenticate(
 		return nil, err
 	}
 	if !respd.Success {
-		glog.V(1).Infoln("Authentication FAILED")
-		glog.Flush()
+		logger.Errorln("Authentication FAILED")
 		sc.rest.Token = ""
 		sc.rest.MasterToken = ""
 		sc.rest.SessionID = -1
@@ -371,7 +367,7 @@ func authenticate(
 			Message:  respd.Message,
 		}
 	}
-	glog.V(2).Info("Authentication SUCCESS")
+	logger.Info("Authentication SUCCESS")
 	sc.rest.Token = respd.Data.Token
 	sc.rest.MasterToken = respd.Data.MasterToken
 	sc.rest.SessionID = respd.Data.SessionID

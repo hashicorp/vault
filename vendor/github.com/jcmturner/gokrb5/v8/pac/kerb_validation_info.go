@@ -26,11 +26,6 @@ const (
 )
 
 // KerbValidationInfo implement https://msdn.microsoft.com/en-us/library/cc237948.aspx
-// The KERB_VALIDATION_INFO structure defines the user's logon and authorization information
-// provided by the DC. The KERB_VALIDATION_INFO structure is a subset of the
-// NETLOGON_VALIDATION_SAM_INFO4 structure ([MS-NRPC] section 2.2.1.4.13).
-// It is a subset due to historical reasons and to the use of the common Active Directory to generate this information.
-// The KERB_VALIDATION_INFO structure is marshaled by RPC [MS-RPCE].
 type KerbValidationInfo struct {
 	LogOnTime              mstypes.FileTime
 	LogOffTime             mstypes.FileTime

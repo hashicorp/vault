@@ -33,6 +33,7 @@ import (
 
 const (
 	PropRuntimePowerState = "summary.runtime.powerState"
+	PropConfigTemplate    = "summary.config.template"
 )
 
 type VirtualMachine struct {
@@ -54,6 +55,17 @@ func (v VirtualMachine) PowerState(ctx context.Context) (types.VirtualMachinePow
 	}
 
 	return o.Summary.Runtime.PowerState, nil
+}
+
+func (v VirtualMachine) IsTemplate(ctx context.Context) (bool, error) {
+	var o mo.VirtualMachine
+
+	err := v.Properties(ctx, v.Reference(), []string{PropConfigTemplate}, &o)
+	if err != nil {
+		return false, err
+	}
+
+	return o.Summary.Config.Template, nil
 }
 
 func (v VirtualMachine) PowerOn(ctx context.Context) (*Task, error) {
@@ -80,6 +92,20 @@ func (v VirtualMachine) PowerOff(ctx context.Context) (*Task, error) {
 	}
 
 	return NewTask(v.c, res.Returnval), nil
+}
+
+func (v VirtualMachine) PutUsbScanCodes(ctx context.Context, spec types.UsbScanCodeSpec) (int32, error) {
+	req := types.PutUsbScanCodes{
+		This: v.Reference(),
+		Spec: spec,
+	}
+
+	res, err := methods.PutUsbScanCodes(ctx, v.c, &req)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.Returnval, nil
 }
 
 func (v VirtualMachine) Reset(ctx context.Context) (*Task, error) {
@@ -155,6 +181,20 @@ func (v VirtualMachine) Clone(ctx context.Context, folder *Folder, name string, 
 	return NewTask(v.c, res.Returnval), nil
 }
 
+func (v VirtualMachine) InstantClone(ctx context.Context, config types.VirtualMachineInstantCloneSpec) (*Task, error) {
+	req := types.InstantClone_Task{
+		This: v.Reference(),
+		Spec: config,
+	}
+
+	res, err := methods.InstantClone_Task(ctx, v.c, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTask(v.c, res.Returnval), nil
+}
+
 func (v VirtualMachine) Customize(ctx context.Context, spec types.CustomizationSpec) (*Task, error) {
 	req := types.CustomizeVM_Task{
 		This: v.Reference(),
@@ -198,7 +238,18 @@ func (v VirtualMachine) Reconfigure(ctx context.Context, config types.VirtualMac
 	return NewTask(v.c, res.Returnval), nil
 }
 
-func (v VirtualMachine) WaitForIP(ctx context.Context) (string, error) {
+func (v VirtualMachine) RefreshStorageInfo(ctx context.Context) error {
+	req := types.RefreshStorageInfo{
+		This: v.Reference(),
+	}
+
+	_, err := methods.RefreshStorageInfo(ctx, v.c, &req)
+	return err
+}
+
+// WaitForIP waits for the VM guest.ipAddress property to report an IP address.
+// Waits for an IPv4 address if the v4 param is true.
+func (v VirtualMachine) WaitForIP(ctx context.Context, v4 ...bool) (string, error) {
 	var ip string
 
 	p := property.DefaultCollector(v.c)
@@ -215,6 +266,11 @@ func (v VirtualMachine) WaitForIP(ctx context.Context) (string, error) {
 			}
 
 			ip = c.Val.(string)
+			if len(v4) == 1 && v4[0] {
+				if net.ParseIP(ip).To4() == nil {
+					return false
+				}
+			}
 			return true
 		}
 
@@ -261,6 +317,10 @@ func (v VirtualMachine) WaitForNetIP(ctx context.Context, v4 bool, device ...str
 
 		return true
 	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	if len(device) != 0 {
 		// Only wait for specific NIC(s)
@@ -423,6 +483,41 @@ func (v VirtualMachine) RemoveDevice(ctx context.Context, keepFiles bool, device
 	return v.configureDevice(ctx, types.VirtualDeviceConfigSpecOperationRemove, fop, device...)
 }
 
+// AttachDisk attaches the given disk to the VirtualMachine
+func (v VirtualMachine) AttachDisk(ctx context.Context, id string, datastore *Datastore, controllerKey int32, unitNumber int32) error {
+	req := types.AttachDisk_Task{
+		This:          v.Reference(),
+		DiskId:        types.ID{Id: id},
+		Datastore:     datastore.Reference(),
+		ControllerKey: controllerKey,
+		UnitNumber:    &unitNumber,
+	}
+
+	res, err := methods.AttachDisk_Task(ctx, v.c, &req)
+	if err != nil {
+		return err
+	}
+
+	task := NewTask(v.c, res.Returnval)
+	return task.Wait(ctx)
+}
+
+// DetachDisk detaches the given disk from the VirtualMachine
+func (v VirtualMachine) DetachDisk(ctx context.Context, id string) error {
+	req := types.DetachDisk_Task{
+		This:   v.Reference(),
+		DiskId: types.ID{Id: id},
+	}
+
+	res, err := methods.DetachDisk_Task(ctx, v.c, &req)
+	if err != nil {
+		return err
+	}
+
+	task := NewTask(v.c, res.Returnval)
+	return task.Wait(ctx)
+}
+
 // BootOptions returns the VirtualMachine's config.bootOptions property.
 func (v VirtualMachine) BootOptions(ctx context.Context) (*types.VirtualMachineBootOptions, error) {
 	var o mo.VirtualMachine
@@ -546,7 +641,7 @@ func (v VirtualMachine) FindSnapshot(ctx context.Context, name string) (*types.M
 	}
 
 	if o.Snapshot == nil || len(o.Snapshot.RootSnapshotList) == 0 {
-		return nil, errors.New("No snapshots for this VM")
+		return nil, errors.New("no snapshots for this VM")
 	}
 
 	m := make(snapshotMap)
@@ -798,4 +893,83 @@ func (v VirtualMachine) UpgradeVM(ctx context.Context, version string) (*Task, e
 	}
 
 	return NewTask(v.c, res.Returnval), nil
+}
+
+// UUID is a helper to get the UUID of the VirtualMachine managed object.
+// This method returns an empty string if an error occurs when retrieving UUID from the VirtualMachine object.
+func (v VirtualMachine) UUID(ctx context.Context) string {
+	var o mo.VirtualMachine
+
+	err := v.Properties(ctx, v.Reference(), []string{"config.uuid"}, &o)
+	if err != nil {
+		return ""
+	}
+	if o.Config != nil {
+		return o.Config.Uuid
+	}
+	return ""
+}
+
+func (v VirtualMachine) QueryChangedDiskAreas(ctx context.Context, baseSnapshot, curSnapshot *types.ManagedObjectReference, disk *types.VirtualDisk, offset int64) (types.DiskChangeInfo, error) {
+	var noChange types.DiskChangeInfo
+	var err error
+
+	if offset > disk.CapacityInBytes {
+		return noChange, fmt.Errorf("offset is greater than the disk size (%#x and %#x)", offset, disk.CapacityInBytes)
+	} else if offset == disk.CapacityInBytes {
+		return types.DiskChangeInfo{StartOffset: offset, Length: 0}, nil
+	}
+
+	var b mo.VirtualMachineSnapshot
+	err = v.Properties(ctx, baseSnapshot.Reference(), []string{"config.hardware"}, &b)
+	if err != nil {
+		return noChange, fmt.Errorf("failed to fetch config.hardware of snapshot %s: %s", baseSnapshot, err)
+	}
+
+	var changeId *string
+	for _, vd := range b.Config.Hardware.Device {
+		d := vd.GetVirtualDevice()
+		if d.Key != disk.Key {
+			continue
+		}
+
+		// As per VDDK programming guide, these are the four types of disks
+		// that support CBT, see "Gathering Changed Block Information".
+		if b, ok := d.Backing.(*types.VirtualDiskFlatVer2BackingInfo); ok {
+			changeId = &b.ChangeId
+			break
+		}
+		if b, ok := d.Backing.(*types.VirtualDiskSparseVer2BackingInfo); ok {
+			changeId = &b.ChangeId
+			break
+		}
+		if b, ok := d.Backing.(*types.VirtualDiskRawDiskMappingVer1BackingInfo); ok {
+			changeId = &b.ChangeId
+			break
+		}
+		if b, ok := d.Backing.(*types.VirtualDiskRawDiskVer2BackingInfo); ok {
+			changeId = &b.ChangeId
+			break
+		}
+
+		return noChange, fmt.Errorf("disk %d has backing info without .ChangeId: %t", disk.Key, d.Backing)
+	}
+	if changeId == nil || *changeId == "" {
+		return noChange, fmt.Errorf("CBT is not enabled on disk %d", disk.Key)
+	}
+
+	req := types.QueryChangedDiskAreas{
+		This:        v.Reference(),
+		Snapshot:    curSnapshot,
+		DeviceKey:   disk.Key,
+		StartOffset: offset,
+		ChangeId:    *changeId,
+	}
+
+	res, err := methods.QueryChangedDiskAreas(ctx, v.Client(), &req)
+	if err != nil {
+		return noChange, err
+	}
+
+	return res.Returnval, nil
 }

@@ -119,6 +119,11 @@ var (
 	// NoPipelineSnapshotRetryReason indicates that there was no pipeline snapshot available
 	NoPipelineSnapshotRetryReason = retryReason{allowsNonIdempotentRetry: true, alwaysRetry: false, description: "NO_PIPELINE_SNAPSHOT"}
 
+	// BucketNotReadyReason indicates that the user has priviledges to access the bucket but the bucket doesn't exist
+	// or is in warm up.
+	// Uncommitted: This API may change in the future.
+	BucketNotReadyReason = retryReason{allowsNonIdempotentRetry: true, alwaysRetry: false, description: "BUCKET_NOT_FOUND"}
+
 	// ConnectionErrorRetryReason indicates that there were errors reported by underlying connections
 	ConnectionErrorRetryReason = retryReason{allowsNonIdempotentRetry: true, alwaysRetry: false, description: "CONNECTION_ERROR"}
 
@@ -167,7 +172,7 @@ type RetryStrategy interface {
 func retryOrchMaybeRetry(req RetryRequest, reason RetryReason) (bool, time.Time) {
 	if reason.AlwaysRetry() {
 		duration := ControlledBackoff(req.RetryAttempts())
-		logInfof("Will retry request. Backoff=%s, OperationID=%s. Reason=%s", duration, req.Identifier(), reason)
+		logDebugf("Will retry request. Backoff=%s, OperationID=%s. Reason=%s", duration, req.Identifier(), reason)
 
 		req.recordRetryAttempt(reason)
 
@@ -181,17 +186,17 @@ func retryOrchMaybeRetry(req RetryRequest, reason RetryReason) (bool, time.Time)
 
 	action := retryStrategy.RetryAfter(req, reason)
 	if action == nil {
-		logInfof("Won't retry request.  OperationID=%s. Reason=%s", req.Identifier(), reason)
+		logDebugf("Won't retry request.  OperationID=%s. Reason=%s", req.Identifier(), reason)
 		return false, time.Time{}
 	}
 
 	duration := action.Duration()
 	if duration == 0 {
-		logInfof("Won't retry request.  OperationID=%s. Reason=%s", req.Identifier(), reason)
+		logDebugf("Won't retry request.  OperationID=%s. Reason=%s", req.Identifier(), reason)
 		return false, time.Time{}
 	}
 
-	logInfof("Will retry request. Backoff=%s, OperationID=%s. Reason=%s", duration, req.Identifier(), reason)
+	logDebugf("Will retry request. Backoff=%s, OperationID=%s. Reason=%s", duration, req.Identifier(), reason)
 	req.recordRetryAttempt(reason)
 
 	return true, time.Now().Add(duration)

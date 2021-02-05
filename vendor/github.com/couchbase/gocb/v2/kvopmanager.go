@@ -29,16 +29,26 @@ type kvOpManager struct {
 	durabilityLevel DurabilityLevel
 	retryStrategy   *retryStrategyWrapper
 	cancelCh        chan struct{}
+	impersonate     []byte
 }
 
 func (m *kvOpManager) getTimeout() time.Duration {
 	if m.timeout > 0 {
+		if m.durabilityLevel > 0 && m.timeout < durabilityTimeoutFloor {
+			m.timeout = durabilityTimeoutFloor
+			logWarnf("Durable operation in use so timeout value coerced up to %s", m.timeout.String())
+		}
 		return m.timeout
 	}
 
 	defaultTimeout := m.parent.timeoutsConfig.KVTimeout
 	if m.durabilityLevel > DurabilityLevelMajority || m.persistTo > 0 {
 		defaultTimeout = m.parent.timeoutsConfig.KVDurableTimeout
+	}
+
+	if m.durabilityLevel > 0 && defaultTimeout < durabilityTimeoutFloor {
+		defaultTimeout = durabilityTimeoutFloor
+		logWarnf("Durable operation in user so timeout value coerced up to %s", defaultTimeout.String())
 	}
 
 	return defaultTimeout
@@ -111,6 +121,10 @@ func (m *kvOpManager) SetRetryStrategy(retryStrategy RetryStrategy) {
 	m.retryStrategy = wrapper
 }
 
+func (m *kvOpManager) SetImpersonate(user []byte) {
+	m.impersonate = user
+}
+
 func (m *kvOpManager) Finish() {
 	m.span.Finish()
 }
@@ -152,8 +166,18 @@ func (m *kvOpManager) DurabilityLevel() memd.DurabilityLevel {
 }
 
 func (m *kvOpManager) DurabilityTimeout() time.Duration {
+	if m.durabilityLevel == 0 {
+		return 0
+	}
+
 	timeout := m.getTimeout()
-	duraTimeout := timeout * 10 / 9
+
+	duraTimeout := time.Duration(float64(timeout) * 0.9)
+
+	if duraTimeout < durabilityTimeoutFloor {
+		duraTimeout = durabilityTimeoutFloor
+	}
+
 	return duraTimeout
 }
 
@@ -168,6 +192,10 @@ func (m *kvOpManager) Deadline() time.Time {
 
 func (m *kvOpManager) RetryStrategy() *retryStrategyWrapper {
 	return m.retryStrategy
+}
+
+func (m *kvOpManager) Impersonate() []byte {
+	return m.impersonate
 }
 
 func (m *kvOpManager) CheckReadyForOp() error {
@@ -240,6 +268,7 @@ func (m *kvOpManager) Wait(op gocbcore.PendingOp, err error) error {
 			m.persistTo,
 			m.Deadline(),
 			m.cancelCh,
+			m.impersonate,
 		)
 	}
 
@@ -268,6 +297,11 @@ func durationToExpiry(dura time.Duration) uint32 {
 		return 1
 	}
 
-	// Translate into a uint32 in seconds.
-	return uint32(dura / time.Second)
+	if dura < 30*24*time.Hour {
+		// Translate into a uint32 in seconds.
+		return uint32(dura / time.Second)
+	}
+
+	// Send the duration as a unix timestamp of now plus duration.
+	return uint32(time.Now().Add(dura).Unix())
 }

@@ -14,6 +14,66 @@ const (
 	PostPaid = InstanceChargeType("PostPaid")
 )
 
+var SpecialDeployedProducts = map[string]map[Region]interface{}{
+	"vpc": {
+		Hangzhou:     Hangzhou,
+		Shenzhen:     Shenzhen,
+		APSouthEast1: APSouthEast1,
+		USWest1:      USWest1,
+		USEast1:      USEast1,
+		Chengdu:      Chengdu,
+		Zhangjiakou:  Zhangjiakou,
+		Huhehaote:    Huhehaote,
+		APSouthEast3: APSouthEast3,
+		EUCentral1:   EUCentral1,
+		EUWest1:      EUWest1,
+		APSouth1:     APSouth1,
+		APNorthEast1: APNorthEast1,
+		APSouthEast5: APSouthEast5,
+		APSouthEast2: APSouthEast2,
+		MEEast1:      MEEast1,
+		CNNorth2Gov1: CNNorth2Gov1,
+	},
+}
+
+var CentralDomainServices = map[string]string{
+	"pvtz": "pvtz.vpc-proxy.aliyuncs.com",
+}
+
+var RegionalDomainServices = []string{
+	"ecs",
+	"vpc",
+	"slb",
+}
+
+// Unit-Domain of central product
+var UnitRegions = map[Region]interface{}{
+	Hangzhou:     Hangzhou,
+	Shenzhen:     Shenzhen,
+	APSouthEast1: APSouthEast1,
+	USWest1:      USWest1,
+	USEast1:      USEast1,
+	Chengdu:      Chengdu,
+	Zhangjiakou:  Zhangjiakou,
+	Huhehaote:    Huhehaote,
+	APSouthEast3: APSouthEast3,
+	EUCentral1:   EUCentral1,
+	EUWest1:      EUWest1,
+	APSouth1:     APSouth1,
+	APNorthEast1: APNorthEast1,
+	APSouthEast5: APSouthEast5,
+	APSouthEast2: APSouthEast2,
+	CNNorth2Gov1: CNNorth2Gov1,
+	//MEEast1:      MEEast1,
+	//RUSWest1:        RUSWest1,
+	//Beijing:         Beijing,
+	//Shanghai:        Shanghai,
+	//Hongkong:        Hongkong,
+	//ShanghaiFinance: ShanghaiFinance,
+	//ShenZhenFinance: ShenZhenFinance,
+	HangZhouFinance: Hangzhou,
+}
+
 type DescribeEndpointArgs struct {
 	Id          Region
 	ServiceCode string
@@ -36,6 +96,23 @@ type DescribeEndpointResponse struct {
 	EndpointItem
 }
 
+type DescribeEndpointsArgs struct {
+	Id          Region
+	ServiceCode string
+	Type        string
+}
+
+type DescribeEndpointsResponse struct {
+	Response
+	Endpoints APIEndpoints
+	RequestId string
+	Success   bool
+}
+
+type APIEndpoints struct {
+	Endpoint []EndpointItem
+}
+
 type NetType string
 
 const (
@@ -48,6 +125,7 @@ type TimeType string
 const (
 	Hour  = TimeType("Hour")
 	Day   = TimeType("Day")
+	Week  = TimeType("Week")
 	Month = TimeType("Month")
 	Year  = TimeType("Year")
 )

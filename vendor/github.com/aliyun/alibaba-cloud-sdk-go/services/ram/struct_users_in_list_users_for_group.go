@@ -17,5 +17,5 @@ package ram
 
 // UsersInListUsersForGroup is a nested struct in ram response
 type UsersInListUsersForGroup struct {
-	User []User `json:"User" xml:"User"`
+	User []UserInListUsersForGroup `json:"User" xml:"User"`
 }

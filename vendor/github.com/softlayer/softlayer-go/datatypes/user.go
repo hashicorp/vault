@@ -143,20 +143,14 @@ type User_Customer struct {
 	// A portal user's secondary phone number.
 	AlternatePhone *string `json:"alternatePhone,omitempty" xmlrpc:"alternatePhone,omitempty"`
 
-	// A count of a portal user's API Authentication keys. There is a max limit of two API keys per user.
+	// A count of a portal user's API Authentication keys. There is a max limit of one API key per user.
 	ApiAuthenticationKeyCount *uint `json:"apiAuthenticationKeyCount,omitempty" xmlrpc:"apiAuthenticationKeyCount,omitempty"`
 
-	// A portal user's API Authentication keys. There is a max limit of two API keys per user.
+	// A portal user's API Authentication keys. There is a max limit of one API key per user.
 	ApiAuthenticationKeys []User_Customer_ApiAuthentication `json:"apiAuthenticationKeys,omitempty" xmlrpc:"apiAuthenticationKeys,omitempty"`
 
 	// The authentication token used for logging into the SoftLayer customer portal.
 	AuthenticationToken *Container_User_Authentication_Token `json:"authenticationToken,omitempty" xmlrpc:"authenticationToken,omitempty"`
-
-	// A count of the CDN accounts associated with a portal user.
-	CdnAccountCount *uint `json:"cdnAccountCount,omitempty" xmlrpc:"cdnAccountCount,omitempty"`
-
-	// The CDN accounts associated with a portal user.
-	CdnAccounts []Network_ContentDelivery_Account `json:"cdnAccounts,omitempty" xmlrpc:"cdnAccounts,omitempty"`
 
 	// A count of a portal user's child users. Some portal users may not have child users.
 	ChildUserCount *uint `json:"childUserCount,omitempty" xmlrpc:"childUserCount,omitempty"`
@@ -236,6 +230,15 @@ type User_Customer struct {
 	// Whether or not a portal user has access to all hardware on their account.
 	HasFullVirtualGuestAccessFlag *bool `json:"hasFullVirtualGuestAccessFlag,omitempty" xmlrpc:"hasFullVirtualGuestAccessFlag,omitempty"`
 
+	// no documentation yet
+	IamAuthorizationStatus *int `json:"iamAuthorizationStatus,omitempty" xmlrpc:"iamAuthorizationStatus,omitempty"`
+
+	// The IAMid (realm-identifier) of the user being created by PaaS
+	IamId *string `json:"iamId,omitempty" xmlrpc:"iamId,omitempty"`
+
+	// no documentation yet
+	IbmIdLink *User_Customer_Link `json:"ibmIdLink,omitempty" xmlrpc:"ibmIdLink,omitempty"`
+
 	// A portal user's ICQ UIN.
 	Icq *string `json:"icq,omitempty" xmlrpc:"icq,omitempty"`
 
@@ -277,6 +280,9 @@ type User_Customer struct {
 
 	// Determines if this portal user is managed by IBMid federation.
 	ManagedByOpenIdConnectFlag *bool `json:"managedByOpenIdConnectFlag,omitempty" xmlrpc:"managedByOpenIdConnectFlag,omitempty"`
+
+	// The minimum number of hours that must pass between password resets.
+	MinimumPasswordLifeHours *int `json:"minimumPasswordLifeHours,omitempty" xmlrpc:"minimumPasswordLifeHours,omitempty"`
 
 	// A count of a portal user's associated mobile device profiles.
 	MobileDeviceCount *uint `json:"mobileDeviceCount,omitempty" xmlrpc:"mobileDeviceCount,omitempty"`
@@ -329,9 +335,6 @@ type User_Customer struct {
 	// A count of a portal user's permissions. These permissions control that user's access to functions within the SoftLayer customer portal and API.
 	PermissionCount *uint `json:"permissionCount,omitempty" xmlrpc:"permissionCount,omitempty"`
 
-	// no documentation yet
-	PermissionSystemVersion *int `json:"permissionSystemVersion,omitempty" xmlrpc:"permissionSystemVersion,omitempty"`
-
 	// A portal user's permissions. These permissions control that user's access to functions within the SoftLayer customer portal and API.
 	Permissions []User_Customer_CustomerPermission_Permission `json:"permissions,omitempty" xmlrpc:"permissions,omitempty"`
 
@@ -347,13 +350,16 @@ type User_Customer struct {
 	// no documentation yet
 	Preferences []User_Preference `json:"preferences,omitempty" xmlrpc:"preferences,omitempty"`
 
+	// no documentation yet
+	PreventPreviousPasswords *int `json:"preventPreviousPasswords,omitempty" xmlrpc:"preventPreviousPasswords,omitempty"`
+
 	// A count of
 	RoleCount *uint `json:"roleCount,omitempty" xmlrpc:"roleCount,omitempty"`
 
 	// no documentation yet
 	Roles []User_Permission_Role `json:"roles,omitempty" xmlrpc:"roles,omitempty"`
 
-	// no documentation yet
+	// [DEPRECATED]
 	SalesforceUserLink *User_Customer_Link `json:"salesforceUserLink,omitempty" xmlrpc:"salesforceUserLink,omitempty"`
 
 	// no documentation yet
@@ -695,16 +701,22 @@ type User_Customer_Link struct {
 	DestinationUserId *int `json:"destinationUserId,omitempty" xmlrpc:"destinationUserId,omitempty"`
 
 	// no documentation yet
-	IbmIdUniqueIdentifier *string `json:"ibmIdUniqueIdentifier,omitempty" xmlrpc:"ibmIdUniqueIdentifier,omitempty"`
+	IamIdVerificationFlag *int `json:"iamIdVerificationFlag,omitempty" xmlrpc:"iamIdVerificationFlag,omitempty"`
 
 	// no documentation yet
 	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// The realm of the IAMid unique identifier.
+	Realm *string `json:"realm,omitempty" xmlrpc:"realm,omitempty"`
 
 	// no documentation yet
 	ServiceProvider *Service_Provider `json:"serviceProvider,omitempty" xmlrpc:"serviceProvider,omitempty"`
 
 	// no documentation yet
 	ServiceProviderId *int `json:"serviceProviderId,omitempty" xmlrpc:"serviceProviderId,omitempty"`
+
+	// The IAMid Unique Identifier formed in the format of "realm-uniqueIdentifier"
+	UniqueIdentifier *string `json:"uniqueIdentifier,omitempty" xmlrpc:"uniqueIdentifier,omitempty"`
 
 	// no documentation yet
 	User *User_Customer `json:"user,omitempty" xmlrpc:"user,omitempty"`
@@ -714,12 +726,7 @@ type User_Customer_Link struct {
 }
 
 // no documentation yet
-type User_Customer_Link_ThePlanet struct {
-	User_Customer_Link
-}
-
-// no documentation yet
-type User_Customer_Link_VerifiedIBMidLinkCollection struct {
+type User_Customer_Link_VerifiedIamIdLinkCollection struct {
 	Entity
 
 	// no documentation yet
@@ -863,7 +870,7 @@ type User_Customer_Notification_Hardware struct {
 	UserId *int `json:"userId,omitempty" xmlrpc:"userId,omitempty"`
 }
 
-// The SoftLayer_User_Customer_Notification_Virtual_Guest object stores links between customers and the virtual guests they wish to monitor.  This link is not enough, the user must be sure to also create SoftLayer_Network_Monitor_Version1_Query_Host instance with the response action set to "notify users" in order for the users linked to that hardware object to be notified on failure.
+// The SoftLayer_User_Customer_Notification_Virtual_Guest object stores links between customers and the virtual guests they wish to monitor.  This link is not enough, the user must be sure to also create SoftLayer_Network_Monitor_Version1_Query_Host instance with the response action set to "notify users" in order for the users linked to that Virtual Guest object to be notified on failure.
 type User_Customer_Notification_Virtual_Guest struct {
 	Entity
 
@@ -886,6 +893,11 @@ type User_Customer_Notification_Virtual_Guest struct {
 // no documentation yet
 type User_Customer_OpenIdConnect struct {
 	User_Customer
+}
+
+// no documentation yet
+type User_Customer_Profile_Event_HyperWarp struct {
+	Entity
 }
 
 // no documentation yet
@@ -987,6 +999,9 @@ type User_Customer_Prospect_ServiceProvider_EnrollRequest struct {
 	// Service provider first name
 	FirstName *string `json:"firstName,omitempty" xmlrpc:"firstName,omitempty"`
 
+	// Service provider IBMid username, if different than the email.
+	IbmIdUsername *string `json:"ibmIdUsername,omitempty" xmlrpc:"ibmIdUsername,omitempty"`
+
 	// IBM partner world id
 	IbmPartnerWorldId *string `json:"ibmPartnerWorldId,omitempty" xmlrpc:"ibmPartnerWorldId,omitempty"`
 
@@ -1064,7 +1079,11 @@ type User_Customer_Security_Answer struct {
 	UserId *int `json:"userId,omitempty" xmlrpc:"userId,omitempty"`
 }
 
-// Each SoftLayer portal account is assigned a status code that determines how it's treated in the customer portal. This status is reflected in the SoftLayer_User_Customer_Status data type. Status differs from user permissions in that user status applies globally to the portal while user permissions are applied to specific portal functions.
+// Each SoftLayer User Customer instance is assigned a status code that determines how it's treated in the customer portal. This status is reflected in the SoftLayer_User_Customer_Status data type. Status differs from user permissions in that user status applies globally to the portal while user permissions are applied to specific portal functions.
+//
+// Note that a status of "PENDING" also has been added. This status is specific to users that are configured to use IBMid authentication. This would include some (not all) users on accounts that are linked to Platform Services (PaaS, formerly Bluemix) accounts, but is not limited to users in such accounts. Using IBMid authentication is optional for active users even if it is not required by the account type. PENDING status indicates that a relationship between an IBMid and a user is being set up but is not complete. To be complete, PENDING users need to perform an action ("accepting the invitation") before becoming an active user within IBM Cloud and/or IMS. PENDING is a system state, and can not be administered by users (including the account master user). SoftLayer Commercial is the only environment where IBMid and/or account linking are used.
+//
+//
 type User_Customer_Status struct {
 	Entity
 
@@ -1081,12 +1100,6 @@ type User_Customer_Status struct {
 // A SoftLayer_User_Employee models a single SoftLayer employee for the purposes of ticket updates created by SoftLayer employees. SoftLayer portal and API users cannot see individual employee names in ticket responses.  SoftLayer employees can be assigned to customer accounts as a personal support representative.  Employee names and email will be available if an employee is assigned to the account.
 type User_Employee struct {
 	User_Interface
-
-	// A count of
-	ActionCount *uint `json:"actionCount,omitempty" xmlrpc:"actionCount,omitempty"`
-
-	// no documentation yet
-	Actions []User_Permission_Action `json:"actions,omitempty" xmlrpc:"actions,omitempty"`
 
 	// no documentation yet
 	ChatTranscript []Ticket_Chat `json:"chatTranscript,omitempty" xmlrpc:"chatTranscript,omitempty"`
@@ -1123,12 +1136,6 @@ type User_Employee struct {
 
 	// no documentation yet
 	OfficePhone *string `json:"officePhone,omitempty" xmlrpc:"officePhone,omitempty"`
-
-	// A count of
-	RoleCount *uint `json:"roleCount,omitempty" xmlrpc:"roleCount,omitempty"`
-
-	// no documentation yet
-	Roles []User_Permission_Role `json:"roles,omitempty" xmlrpc:"roles,omitempty"`
 
 	// A count of
 	SecurityLevelCount *uint `json:"securityLevelCount,omitempty" xmlrpc:"securityLevelCount,omitempty"`
@@ -1252,7 +1259,9 @@ type User_Interface struct {
 	Entity
 }
 
-// no documentation yet
+// The SoftLayer_User_Permission_Action data type contains local attributes to identify and describe the valid actions a customer user can perform within IMS.  This includes a name, key name, and description.  This data can not be modified by users of IMS.
+//
+// It also contains relational attributes that indicate which SoftLayer_User_Permission_Group's include the action.
 type User_Permission_Action struct {
 	Entity
 
@@ -1278,7 +1287,9 @@ type User_Permission_Action struct {
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
 }
 
-// no documentation yet
+// The SoftLayer_User_Permission_Group data type contains local attributes to identify and describe the permission groups that have been created within IMS.  These includes a name, description, and account id.  Permission groups are defined specifically for a single [[SoftLayer_Account]].
+//
+// It also contains relational attributes that indicate what SoftLayer_User_Permission_Action objects belong to a particular group, and what SoftLayer_User_Permission_Role objects the group is linked.
 type User_Permission_Group struct {
 	Entity
 
@@ -1300,7 +1311,7 @@ type User_Permission_Group struct {
 	// The description of the permission group.
 	Description *string `json:"description,omitempty" xmlrpc:"description,omitempty"`
 
-	// The date the temporary group will be destroyed.
+	// The date the group will be destroyed.
 	ExpirationDate *Time `json:"expirationDate,omitempty" xmlrpc:"expirationDate,omitempty"`
 
 	// A permission groups internal identifying number.
@@ -1325,17 +1336,18 @@ type User_Permission_Group struct {
 	TypeId *int `json:"typeId,omitempty" xmlrpc:"typeId,omitempty"`
 }
 
-// no documentation yet
+// The SoftLayer_User_Permission_Group_Type class is one of several classes that make up the customer permission system.  This class defines the valid group types.  The SYSTEM group type is reserved for internal use.
+//
+// It is a role-based system that includes defined actions which can be "grouped" together using a SoftLayer_User_Permission_Group class. These groups of actions are then used to define roles, and the roles are assigned to users.
+//
+// When a [[SoftLayer_User_Customer]] is created, a SoftLayer_User_Permission_Group and SoftLayer_User_Permission_Role is created specifically for the user with a group type of SYSTEM.  When the UI is used to alter the permissions of a customer user, the actions are added or removed from this group.  The api can not be used to alter the permissions in this group.  If an account wants to create their own unique permission groups and roles, the UI can not be used to manage them.
 type User_Permission_Group_Type struct {
 	Entity
 
-	// no documentation yet
-	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
-
-	// A count of
+	// A count of the groups that are of this type.
 	GroupCount *uint `json:"groupCount,omitempty" xmlrpc:"groupCount,omitempty"`
 
-	// no documentation yet
+	// The groups that are of this type.
 	Groups []User_Permission_Group `json:"groups,omitempty" xmlrpc:"groups,omitempty"`
 
 	// no documentation yet
@@ -1345,20 +1357,19 @@ type User_Permission_Group_Type struct {
 	KeyName *string `json:"keyName,omitempty" xmlrpc:"keyName,omitempty"`
 
 	// no documentation yet
-	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
-
-	// no documentation yet
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
 }
 
-// no documentation yet
+// The SoftLayer_User_Permission_Role data type contains local attributes to identify and describe the permission roles that have been created within IMS.  These includes a name, description, and account id.  Permission groups are defined specifically for a single [[SoftLayer_Account]].
+//
+// It also contains relational attributes that indicate what SoftLayer_User_Permission_Group objects are linked to a particular role, and the SoftLayer_User_Customer objects assigned to the role.
 type User_Permission_Role struct {
 	Entity
 
 	// no documentation yet
 	Account *Account `json:"account,omitempty" xmlrpc:"account,omitempty"`
 
-	// A permission roles associated [[SoftLayer_Account|customer account]] id.
+	// Id of a [[SoftLayer_Account]] to which this role belongs.
 	AccountId *int `json:"accountId,omitempty" xmlrpc:"accountId,omitempty"`
 
 	// A count of
@@ -1391,7 +1402,7 @@ type User_Permission_Role struct {
 	// A flag showing if new users should be automatically added to this role.
 	NewUserDefaultFlag *int `json:"newUserDefaultFlag,omitempty" xmlrpc:"newUserDefaultFlag,omitempty"`
 
-	// A flag showing if the permission role was created by our internal system for a single user. If this flag is set only a single user can be assigned to this permission role and it can not be deleted.
+	// A flag showing if the permission role was created by our internal system for a single user. If this flag is set, only a single user can be assigned to this permission role and it can not be deleted.
 	SystemFlag *int `json:"systemFlag,omitempty" xmlrpc:"systemFlag,omitempty"`
 
 	// A count of

@@ -124,15 +124,6 @@ func (d decoder) unmarshalMessage(m pref.Message, skipTypeURL bool) error {
 		return d.unexpectedTokenError(tok)
 	}
 
-	if err := d.unmarshalFields(m, skipTypeURL); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// unmarshalFields unmarshals the fields into the given protoreflect.Message.
-func (d decoder) unmarshalFields(m pref.Message, skipTypeURL bool) error {
 	messageDesc := m.Descriptor()
 	if !flags.ProtoLegacy && messageset.IsMessageSet(messageDesc) {
 		return errors.New("no support for proto1 MessageSets")
@@ -170,7 +161,7 @@ func (d decoder) unmarshalFields(m pref.Message, skipTypeURL bool) error {
 		if strings.HasPrefix(name, "[") && strings.HasSuffix(name, "]") {
 			// Only extension names are in [name] format.
 			extName := pref.FullName(name[1 : len(name)-1])
-			extType, err := d.findExtension(extName)
+			extType, err := d.opts.Resolver.FindExtensionByName(extName)
 			if err != nil && err != protoregistry.NotFound {
 				return d.newError(tok.Pos(), "unable to resolve %s: %v", tok.RawString(), err)
 			}
@@ -184,17 +175,7 @@ func (d decoder) unmarshalFields(m pref.Message, skipTypeURL bool) error {
 			// The name can either be the JSON name or the proto field name.
 			fd = fieldDescs.ByJSONName(name)
 			if fd == nil {
-				fd = fieldDescs.ByName(pref.Name(name))
-				if fd == nil {
-					// The proto name of a group field is in all lowercase,
-					// while the textual field name is the group message name.
-					gd := fieldDescs.ByName(pref.Name(strings.ToLower(name)))
-					if gd != nil && gd.Kind() == pref.GroupKind && gd.Message().Name() == pref.Name(name) {
-						fd = gd
-					}
-				} else if fd.Kind() == pref.GroupKind && fd.Message().Name() != pref.Name(name) {
-					fd = nil // reset since field name is actually the message name
-				}
+				fd = fieldDescs.ByTextName(name)
 			}
 		}
 		if flags.ProtoLegacy {
@@ -255,15 +236,6 @@ func (d decoder) unmarshalFields(m pref.Message, skipTypeURL bool) error {
 			}
 		}
 	}
-}
-
-// findExtension returns protoreflect.ExtensionType from the resolver if found.
-func (d decoder) findExtension(xtName pref.FullName) (pref.ExtensionType, error) {
-	xt, err := d.opts.Resolver.FindExtensionByName(xtName)
-	if err == nil {
-		return xt, nil
-	}
-	return messageset.FindMessageSetExtension(d.opts.Resolver, xtName)
 }
 
 func isKnownValue(fd pref.FieldDescriptor) bool {

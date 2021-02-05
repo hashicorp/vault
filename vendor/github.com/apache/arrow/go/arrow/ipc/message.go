@@ -141,8 +141,14 @@ func (msg *Message) BodyLen() int64 {
 	return msg.msg.BodyLength()
 }
 
+type MessageReader interface {
+	Message() (*Message, error)
+	Release()
+	Retain()
+}
+
 // MessageReader reads messages from an io.Reader.
-type MessageReader struct {
+type messageReader struct {
 	r io.Reader
 
 	refCount int64
@@ -150,20 +156,20 @@ type MessageReader struct {
 }
 
 // NewMessageReader returns a reader that reads messages from an input stream.
-func NewMessageReader(r io.Reader) *MessageReader {
-	return &MessageReader{r: r, refCount: 1}
+func NewMessageReader(r io.Reader) MessageReader {
+	return &messageReader{r: r, refCount: 1}
 }
 
 // Retain increases the reference count by 1.
 // Retain may be called simultaneously from multiple goroutines.
-func (r *MessageReader) Retain() {
+func (r *messageReader) Retain() {
 	atomic.AddInt64(&r.refCount, 1)
 }
 
 // Release decreases the reference count by 1.
 // When the reference count goes to zero, the memory is freed.
 // Release may be called simultaneously from multiple goroutines.
-func (r *MessageReader) Release() {
+func (r *messageReader) Release() {
 	debug.Assert(atomic.LoadInt64(&r.refCount) > 0, "too many releases")
 
 	if atomic.AddInt64(&r.refCount, -1) == 0 {
@@ -177,7 +183,7 @@ func (r *MessageReader) Release() {
 // Message returns the current message that has been extracted from the
 // underlying stream.
 // It is valid until the next call to Message.
-func (r *MessageReader) Message() (*Message, error) {
+func (r *messageReader) Message() (*Message, error) {
 	var buf = make([]byte, 4)
 	_, err := io.ReadFull(r.r, buf)
 	if err != nil {

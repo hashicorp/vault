@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 package objectstorage
@@ -22,6 +23,9 @@ type HeadObjectRequest struct {
 	// Example: `test/object1.log`
 	ObjectName *string `mandatory:"true" contributesTo:"path" name:"objectName"`
 
+	// VersionId used to identify a particular version of the object
+	VersionId *string `mandatory:"false" contributesTo:"query" name:"versionId"`
+
 	// The entity tag (ETag) to match. For creating and committing a multipart upload to an object, this is the entity tag of the target object.
 	// For uploading a part, this is the entity tag of the target part.
 	IfMatch *string `mandatory:"false" contributesTo:"header" name:"if-match"`
@@ -33,6 +37,20 @@ type HeadObjectRequest struct {
 
 	// The client request ID for tracing.
 	OpcClientRequestId *string `mandatory:"false" contributesTo:"header" name:"opc-client-request-id"`
+
+	// The optional header that specifies "AES256" as the encryption algorithm. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSseCustomerAlgorithm *string `mandatory:"false" contributesTo:"header" name:"opc-sse-customer-algorithm"`
+
+	// The optional header that specifies the base64-encoded 256-bit encryption key to use to encrypt or
+	// decrypt the data. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSseCustomerKey *string `mandatory:"false" contributesTo:"header" name:"opc-sse-customer-key"`
+
+	// The optional header that specifies the base64-encoded SHA256 hash of the encryption key. This
+	// value is used to check the integrity of the encryption key. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSseCustomerKeySha256 *string `mandatory:"false" contributesTo:"header" name:"opc-sse-customer-key-sha256"`
 
 	// Metadata about the request. This information will not be transmitted to the service, but
 	// represents information that the SDK will consume to drive retry behavior.
@@ -75,7 +93,7 @@ type HeadObjectResponse struct {
 	// The object size in bytes.
 	ContentLength *int64 `presentIn:"header" name:"content-length"`
 
-	// Content-MD5 header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.15.
+	// Content-MD5 header, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.15).
 	// Unavailable for objects uploaded using multipart upload.
 	ContentMd5 *string `presentIn:"header" name:"content-md5"`
 
@@ -86,16 +104,22 @@ type HeadObjectResponse struct {
 	// and then calculating the MD5 hash of the concatenated values.
 	OpcMultipartMd5 *string `presentIn:"header" name:"opc-multipart-md5"`
 
-	// Content-Type header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.17.
+	// Content-Type header, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.17).
 	ContentType *string `presentIn:"header" name:"content-type"`
 
-	// Content-Language header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.12.
+	// Content-Language header, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.12).
 	ContentLanguage *string `presentIn:"header" name:"content-language"`
 
-	// Content-Encoding header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.11.
+	// Content-Encoding header, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.11).
 	ContentEncoding *string `presentIn:"header" name:"content-encoding"`
 
-	// The object modification time, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.29.
+	// Cache-Control header, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.9).
+	CacheControl *string `presentIn:"header" name:"cache-control"`
+
+	// Content-Disposition header, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-19.5.1).
+	ContentDisposition *string `presentIn:"header" name:"content-disposition"`
+
+	// The object modification time, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.29).
 	LastModified *common.SDKTime `presentIn:"header" name:"last-modified"`
 
 	// The current state of the object.
@@ -103,6 +127,9 @@ type HeadObjectResponse struct {
 
 	// Time that the object is returned to the archived state. This field is only present for restored objects.
 	TimeOfArchival *common.SDKTime `presentIn:"header" name:"time-of-archival"`
+
+	// VersionId of the object requested
+	VersionId *string `presentIn:"header" name:"version-id"`
 
 	// Flag to indicate whether or not the object was modified.  If this is true,
 	// the getter for the object itself will return null.  Callers should check this

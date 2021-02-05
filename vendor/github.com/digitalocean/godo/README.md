@@ -1,6 +1,7 @@
-[![Build Status](https://travis-ci.org/digitalocean/godo.svg)](https://travis-ci.org/digitalocean/godo)
-
 # Godo
+
+[![Build Status](https://travis-ci.org/digitalocean/godo.svg)](https://travis-ci.org/digitalocean/godo)
+[![GoDoc](https://godoc.org/github.com/digitalocean/godo?status.svg)](https://godoc.org/github.com/digitalocean/godo)
 
 Godo is a Go client library for accessing the DigitalOcean V2 API.
 
@@ -8,6 +9,18 @@ You can view the client API docs here: [http://godoc.org/github.com/digitalocean
 
 You can view DigitalOcean API docs here: [https://developers.digitalocean.com/documentation/v2/](https://developers.digitalocean.com/documentation/v2/)
 
+## Install
+```sh
+go get github.com/digitalocean/godo@vX.Y.Z
+```
+
+where X.Y.Z is the [version](https://github.com/digitalocean/godo/releases) you need.
+
+or
+```sh
+go get github.com/digitalocean/godo
+```
+for non Go modules usage or latest version.
 
 ## Usage
 
@@ -30,35 +43,15 @@ You can then use your token to create a new client:
 package main
 
 import (
-	"context"
-	"github.com/digitalocean/godo"
-	"golang.org/x/oauth2"
+    "github.com/digitalocean/godo"
 )
-
-const (
-    pat = "mytoken"
-)
-
-type TokenSource struct {
-	AccessToken string
-}
-
-func (t *TokenSource) Token() (*oauth2.Token, error) {
-	token := &oauth2.Token{
-		AccessToken: t.AccessToken,
-	}
-	return token, nil
-}
 
 func main() {
-	tokenSource := &TokenSource{
-		AccessToken: pat,
-	}
-
-	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
-	client := godo.NewClient(oauthClient)
+    client := godo.NewFromToken("my-digitalocean-api-token")
 }
 ```
+
+If you need to provide a `context.Context` to your new client, you should use [`godo.NewClient`](https://godoc.org/github.com/digitalocean/godo#NewClient) to manually construct a client instead.
 
 ## Examples
 
@@ -73,7 +66,7 @@ createRequest := &godo.DropletCreateRequest{
     Region: "nyc3",
     Size:   "s-1vcpu-1gb",
     Image: godo.DropletCreateImage{
-        Slug: "ubuntu-14-04-x64",
+        Slug: "ubuntu-20-04-x64",
     },
 }
 
@@ -105,9 +98,7 @@ func DropletList(ctx context.Context, client *godo.Client) ([]godo.Droplet, erro
         }
 
         // append the current page's droplets to our list
-        for _, d := range droplets {
-            list = append(list, d)
-        }
+        list = append(list, droplets...)
 
         // if we are at the last page, break out the for loop
         if resp.Links == nil || resp.Links.IsLastPage() {
@@ -130,10 +121,6 @@ func DropletList(ctx context.Context, client *godo.Client) ([]godo.Droplet, erro
 ## Versioning
 
 Each version of the client is tagged and the version is updated accordingly.
-
-Since Go does not have a built-in versioning, a package management tool is
-recommended - a good one that works with git tags is
-[gopkg.in](http://labix.org/gopkg.in).
 
 To see the list of past versions, run `git tag`.
 

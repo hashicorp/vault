@@ -1,25 +1,33 @@
 package packngo
 
+import "path"
+
 const planBasePath = "/plans"
 
 // PlanService interface defines available plan methods
 type PlanService interface {
-	List() ([]Plan, *Response, error)
+	List(*ListOptions) ([]Plan, *Response, error)
+	ProjectList(string, *ListOptions) ([]Plan, *Response, error)
+	OrganizationList(string, *ListOptions) ([]Plan, *Response, error)
 }
 
 type planRoot struct {
 	Plans []Plan `json:"plans"`
 }
 
-// Plan represents a Packet service plan
+// Plan represents an Equinix Metal service plan
 type Plan struct {
-	ID          string   `json:"id"`
-	Slug        string   `json:"slug,omitempty"`
-	Name        string   `json:"name,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Line        string   `json:"line,omitempty"`
-	Specs       *Specs   `json:"specs,omitempty"`
-	Pricing     *Pricing `json:"pricing,omitempty"`
+	ID              string     `json:"id"`
+	Slug            string     `json:"slug,omitempty"`
+	Name            string     `json:"name,omitempty"`
+	Description     string     `json:"description,omitempty"`
+	Line            string     `json:"line,omitempty"`
+	Legacy          bool       `json:"legacy,omitempty"`
+	Specs           *Specs     `json:"specs,omitempty"`
+	Pricing         *Pricing   `json:"pricing,omitempty"`
+	DeploymentTypes []string   `json:"deployment_types"`
+	Class           string     `json:"class"`
+	AvailableIn     []Facility `json:"available_in"`
 }
 
 func (p Plan) String() string {
@@ -91,8 +99,8 @@ func (f Features) String() string {
 
 // Pricing - the pricing options on a plan
 type Pricing struct {
-	Hourly  float32 `json:"hourly,omitempty"`
-	Monthly float32 `json:"monthly,omitempty"`
+	Hour  float32 `json:"hour,omitempty"`
+	Month float32 `json:"month,omitempty"`
 }
 
 func (p Pricing) String() string {
@@ -104,14 +112,31 @@ type PlanServiceOp struct {
 	client *Client
 }
 
-// List method returns all available plans
-func (s *PlanServiceOp) List() ([]Plan, *Response, error) {
+func planList(c *Client, apiPath string, opts *ListOptions) ([]Plan, *Response, error) {
 	root := new(planRoot)
+	apiPathQuery := opts.WithQuery(apiPath)
 
-	resp, err := s.client.DoRequest("GET", planBasePath, nil, root)
+	resp, err := c.DoRequest("GET", apiPathQuery, nil, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
 	return root.Plans, resp, err
+
+}
+
+// List method returns all available plans
+func (s *PlanServiceOp) List(opts *ListOptions) ([]Plan, *Response, error) {
+	return planList(s.client, planBasePath, opts)
+
+}
+
+// ProjectList method returns plans available in a project
+func (s *PlanServiceOp) ProjectList(projectID string, opts *ListOptions) ([]Plan, *Response, error) {
+	return planList(s.client, path.Join(projectBasePath, projectID, planBasePath), opts)
+}
+
+// OrganizationList method returns plans available in an organization
+func (s *PlanServiceOp) OrganizationList(organizationID string, opts *ListOptions) ([]Plan, *Response, error) {
+	return planList(s.client, path.Join(organizationBasePath, organizationID, planBasePath), opts)
 }

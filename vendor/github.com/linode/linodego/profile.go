@@ -11,6 +11,8 @@ package linodego
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // LishAuthMethod constants start with AuthMethod and include Linode API Lish Authentication Methods
@@ -76,14 +78,14 @@ func (i Profile) GetUpdateOptions() (o ProfileUpdateOptions) {
 	return
 }
 
-// GetProfile gets the profile with the provided ID
+// GetProfile returns the Profile of the authenticated user
 func (c *Client) GetProfile(ctx context.Context) (*Profile, error) {
 	e, err := c.Profile.Endpoint()
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&Profile{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&Profile{}).Get(e))
 	if err != nil {
 		return nil, err
 	}
@@ -103,10 +105,10 @@ func (c *Client) UpdateProfile(ctx context.Context, updateOpts ProfileUpdateOpti
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 

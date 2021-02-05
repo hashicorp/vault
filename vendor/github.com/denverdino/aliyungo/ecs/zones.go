@@ -1,6 +1,8 @@
 package ecs
 
-import "github.com/denverdino/aliyungo/common"
+import (
+	"github.com/denverdino/aliyungo/common"
+)
 
 type ResourceType string
 
@@ -15,19 +17,20 @@ const (
 type SupportedResourceType string
 
 const (
-	SupportedInstanceType            = SupportedResourceType("supportedInstanceType")
-	SupportedInstanceTypeFamily      = SupportedResourceType("supportedInstanceTypeFamily")
-	SupportedInstanceGeneration      = SupportedResourceType("supportedInstanceGeneration")
-	SupportedSystemDiskCategory      = SupportedResourceType("supportedSystemDiskCategory")
-	SupportedDataDiskCategory        = SupportedResourceType("supportedDataDiskCategory")
-	SupportedNetworkCategory         = SupportedResourceType("supportedNetworkCategory")
-
+	SupportedInstanceType       = SupportedResourceType("supportedInstanceType")
+	SupportedInstanceTypeFamily = SupportedResourceType("supportedInstanceTypeFamily")
+	SupportedInstanceGeneration = SupportedResourceType("supportedInstanceGeneration")
+	SupportedSystemDiskCategory = SupportedResourceType("supportedSystemDiskCategory")
+	SupportedDataDiskCategory   = SupportedResourceType("supportedDataDiskCategory")
+	SupportedNetworkCategory    = SupportedResourceType("supportedNetworkCategory")
 )
+
 //
 // You can read doc at https://help.aliyun.com/document_detail/25670.html?spm=5176.doc25640.2.1.J24zQt
 type ResourcesInfoType struct {
 	ResourcesInfo []AvailableResourcesType
 }
+
 // Because the sub-item of AvailableResourcesType starts with supported and golang struct cann't refer them, this uses map to parse ResourcesInfo
 type AvailableResourcesType struct {
 	IoOptimized          bool
@@ -64,7 +67,7 @@ type AvailableInstanceTypesType struct {
 type ZoneType struct {
 	ZoneId                    string
 	LocalName                 string
-	AvailableResources 	  ResourcesInfoType
+	AvailableResources        ResourcesInfoType
 	AvailableInstanceTypes    AvailableInstanceTypesType
 	AvailableResourceCreation AvailableResourceCreationType
 	AvailableDiskCategories   AvailableDiskCategoriesType
@@ -100,4 +103,56 @@ func (client *Client) DescribeZonesWithRaw(regionId common.Region) (response *De
 	}
 
 	return nil, err
+}
+
+type DescribeAvailableResourceArgs struct {
+	RegionId            string
+	DestinationResource string
+	ZoneId              string
+	InstanceChargeType  string
+	SpotStrategy        string
+	IoOptimized         string
+	InstanceType        string
+	SystemDiskCategory  string
+	DataDiskCategory    string
+	NetworkCategory     string
+}
+
+type DescribeAvailableResourceResponse struct {
+	common.Response
+	AvailableZones struct {
+		AvailableZone []AvailableZoneType
+	}
+}
+
+type AvailableZoneType struct {
+	RegionId           string
+	ZoneId             string
+	Status             string
+	AvailableResources struct {
+		AvailableResource []NewAvailableResourcesType
+	}
+}
+
+type NewAvailableResourcesType struct {
+	Type               string
+	SupportedResources struct {
+		SupportedResource []SupportedResourcesType
+	}
+}
+
+type SupportedResourcesType struct {
+	Value  string
+	Status string
+	Min    string
+	Max    string
+	Unit   string
+}
+
+// https://www.alibabacloud.com/help/doc-detail/66186.htm
+func (client *Client) DescribeAvailableResource(args *DescribeAvailableResourceArgs) (response *DescribeAvailableResourceResponse, err error) {
+
+	response = &DescribeAvailableResourceResponse{}
+	err = client.Invoke("DescribeAvailableResource", args, response)
+	return response, err
 }

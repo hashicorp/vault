@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018, Joyent, Inc. All rights reserved.
+// Copyright 2020 Joyent, Inc.
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -15,7 +15,7 @@ import (
 
 // Version represents main version number of the current release
 // of the Triton-go SDK.
-const Version = "1.7.0"
+const Version = "1.8.5"
 
 // Prerelease adds a pre-release marker to the version.
 //

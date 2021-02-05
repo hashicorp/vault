@@ -17,6 +17,8 @@ type Builder struct {
 	head      UOffsetT
 	nested    bool
 	finished  bool
+
+	sharedStrings map[string]UOffsetT
 }
 
 const fileIdentifierLength = 4
@@ -33,7 +35,6 @@ func NewBuilder(initialSize int) *Builder {
 	b.head = UOffsetT(initialSize)
 	b.minalign = 1
 	b.vtables = make([]UOffsetT, 0, 16) // sensible default capacity
-
 	return b
 }
 
@@ -305,6 +306,20 @@ func (b *Builder) EndVector(vectorNumElems int) UOffsetT {
 
 	b.nested = false
 	return b.Offset()
+}
+
+// CreateSharedString Checks if the string is already written
+// to the buffer before calling CreateString
+func (b *Builder) CreateSharedString(s string) UOffsetT {
+	if b.sharedStrings == nil {
+		b.sharedStrings = make(map[string]UOffsetT)
+	}
+	if v, ok := b.sharedStrings[s]; ok {
+		return v
+	}
+	off := b.CreateString(s)
+	b.sharedStrings[s] = off
+	return off
 }
 
 // CreateString writes a null-terminated string as a vector.

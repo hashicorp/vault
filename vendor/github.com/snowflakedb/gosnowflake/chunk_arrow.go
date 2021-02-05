@@ -18,7 +18,7 @@ type arrowResultChunk struct {
 }
 
 func (arc *arrowResultChunk) decodeArrowChunk(rowType []execResponseRowType) ([]chunkRowType, error) {
-	glog.V(2).Info("Arrow Decoder")
+	logger.Debug("Arrow Decoder")
 
 	var chunkRows []chunkRowType
 

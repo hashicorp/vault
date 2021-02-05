@@ -20,13 +20,13 @@ const (
 	PlainAuthMechanism = AuthMechanism("PLAIN")
 
 	// ScramSha1AuthMechanism represents that SCRAM SHA1 auth should be performed.
-	ScramSha1AuthMechanism = AuthMechanism("SCRAM_SHA1")
+	ScramSha1AuthMechanism = AuthMechanism("SCRAM-SHA1")
 
 	// ScramSha256AuthMechanism represents that SCRAM SHA256 auth should be performed.
-	ScramSha256AuthMechanism = AuthMechanism("SCRAM_SHA256")
+	ScramSha256AuthMechanism = AuthMechanism("SCRAM-SHA256")
 
 	// ScramSha512AuthMechanism represents that SCRAM SHA512 auth should be performed.
-	ScramSha512AuthMechanism = AuthMechanism("SCRAM_SHA512")
+	ScramSha512AuthMechanism = AuthMechanism("SCRAM-SHA512")
 )
 
 // AuthClient exposes an interface for performing authentication on a

@@ -40,9 +40,28 @@ type Service struct {
 }
 
 type ServiceSummary struct {
-	Guid          string `json:"guid"`
-	Name          string `json:"name"`
-	BoundAppCount int    `json:"bound_app_count"`
+	Guid              string          `json:"guid"`
+	Name              string          `json:"name"`
+	BoundAppCount     int             `json:"bound_app_count"`
+	DashboardURL      string          `json:"dashboard_url"`
+	ServiceBrokerName string          `json:"service_broker_name"`
+	MaintenanceInfo   MaintenanceInfo `json:"maintenance_info"`
+	ServicePlan       struct {
+		Guid            string          `json:"guid"`
+		Name            string          `json:"name"`
+		MaintenanceInfo MaintenanceInfo `json:"maintenance_info"`
+		Service         struct {
+			Guid     string `json:"guid"`
+			Label    string `json:"label"`
+			Provider string `json:"provider"`
+			Version  string `json:"version"`
+		} `json:"service"`
+	} `json:"service_plan"`
+}
+
+type MaintenanceInfo struct {
+	Version     string `json:"version"`
+	Description string `json:"description"`
 }
 
 func (c *Client) GetServiceByGuid(guid string) (Service, error) {

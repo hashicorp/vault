@@ -116,10 +116,10 @@ func (o UnmarshalOptions) unmarshalMessageSlow(b []byte, m protoreflect.Message)
 		// Parse the tag (field number and wire type).
 		num, wtyp, tagLen := protowire.ConsumeTag(b)
 		if tagLen < 0 {
-			return protowire.ParseError(tagLen)
+			return errDecode
 		}
 		if num > protowire.MaxValidNumber {
-			return errors.New("invalid field number")
+			return errDecode
 		}
 
 		// Find the field descriptor for this field number.
@@ -159,7 +159,7 @@ func (o UnmarshalOptions) unmarshalMessageSlow(b []byte, m protoreflect.Message)
 			}
 			valLen = protowire.ConsumeFieldValue(num, wtyp, b[tagLen:])
 			if valLen < 0 {
-				return protowire.ParseError(valLen)
+				return errDecode
 			}
 			if !o.DiscardUnknown {
 				m.SetUnknown(append(m.GetUnknown(), b[:tagLen+valLen]...))
@@ -194,7 +194,7 @@ func (o UnmarshalOptions) unmarshalMap(b []byte, wtyp protowire.Type, mapv proto
 	}
 	b, n = protowire.ConsumeBytes(b)
 	if n < 0 {
-		return 0, protowire.ParseError(n)
+		return 0, errDecode
 	}
 	var (
 		keyField = fd.MapKey()
@@ -213,10 +213,10 @@ func (o UnmarshalOptions) unmarshalMap(b []byte, wtyp protowire.Type, mapv proto
 	for len(b) > 0 {
 		num, wtyp, n := protowire.ConsumeTag(b)
 		if n < 0 {
-			return 0, protowire.ParseError(n)
+			return 0, errDecode
 		}
 		if num > protowire.MaxValidNumber {
-			return 0, errors.New("invalid field number")
+			return 0, errDecode
 		}
 		b = b[n:]
 		err = errUnknown
@@ -246,7 +246,7 @@ func (o UnmarshalOptions) unmarshalMap(b []byte, wtyp protowire.Type, mapv proto
 		if err == errUnknown {
 			n = protowire.ConsumeFieldValue(num, wtyp, b)
 			if n < 0 {
-				return 0, protowire.ParseError(n)
+				return 0, errDecode
 			}
 		} else if err != nil {
 			return 0, err
@@ -272,3 +272,5 @@ func (o UnmarshalOptions) unmarshalMap(b []byte, wtyp protowire.Type, mapv proto
 // to the unknown field set of a message. It is never returned from an exported
 // function.
 var errUnknown = errors.New("BUG: internal error (unknown)")
+
+var errDecode = errors.New("cannot parse invalid wire-format data")

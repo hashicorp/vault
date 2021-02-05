@@ -203,13 +203,8 @@ func packBytes(cmd BufferEx, b []byte) (int, error) {
 }
 
 func packByteArrayBegin(cmd BufferEx, length int) (int, error) {
-	if length < 32 {
-		return packAByte(cmd, 0xa0|byte(length))
-	} else if length < 65536 {
-		return packShort(cmd, 0xda, int16(length))
-	} else {
-		return packInt(cmd, 0xdb, int32(length))
-	}
+	// Use string header codes for byte arrays.
+	return packStringBegin(cmd, length)
 }
 
 func packObject(cmd BufferEx, obj interface{}, mapKey bool) (int, error) {
@@ -354,10 +349,21 @@ func PackString(cmd BufferEx, val string) (int, error) {
 	return packString(cmd, val)
 }
 
+func packStringBegin(cmd BufferEx, size int) (int, error) {
+	if size < 32 {
+		return packAByte(cmd, 0xa0|byte(size))
+	} else if size < 256 {
+		return packByte(cmd, 0xd9, byte(size))
+	} else if size < 65536 {
+		return packShort(cmd, 0xda, int16(size))
+	}
+	return packInt(cmd, 0xdb, int32(size))
+}
+
 func packString(cmd BufferEx, val string) (int, error) {
 	size := 0
 	slen := len(val) + 1
-	n, err := packByteArrayBegin(cmd, slen)
+	n, err := packStringBegin(cmd, slen)
 	if err != nil {
 		return n, err
 	}
@@ -377,6 +383,28 @@ func packString(cmd BufferEx, val string) (int, error) {
 		size += n
 	} else {
 		size += 1 + len(val)
+	}
+
+	return size, nil
+}
+
+func packRawString(cmd BufferEx, val string) (int, error) {
+	size := 0
+	slen := len(val)
+	n, err := packStringBegin(cmd, slen)
+	if err != nil {
+		return n, err
+	}
+	size += n
+
+	if cmd != nil {
+		n, err = cmd.WriteString(val)
+		if err != nil {
+			return size + n, err
+		}
+		size += n
+	} else {
+		size += len(val)
 	}
 
 	return size, nil

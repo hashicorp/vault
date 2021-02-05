@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 /*
@@ -33,9 +36,6 @@ const (
 
 // Instance represents a linode object
 type Instance struct {
-	CreatedStr string `json:"created"`
-	UpdatedStr string `json:"updated"`
-
 	ID              int             `json:"id"`
 	Created         *time.Time      `json:"-"`
 	Updated         *time.Time      `json:"-"`
@@ -81,6 +81,18 @@ type InstanceBackup struct {
 	}
 }
 
+// InstanceTransfer pool stats for a Linode Instance during the current billing month
+type InstanceTransfer struct {
+	// Bytes of transfer this instance has consumed
+	Used int `json:"used"`
+
+	// GB of billable transfer this instance has consumed
+	Billable int `json:"billable"`
+
+	// GB of transfer this instance adds to the Transfer pool
+	Quota int `json:"quota"`
+}
+
 // InstanceCreateOptions require only Region and Type
 type InstanceCreateOptions struct {
 	Region          string            `json:"region"`
@@ -113,15 +125,37 @@ type InstanceUpdateOptions struct {
 	Tags            *[]string       `json:"tags,omitempty"`
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *Instance) UnmarshalJSON(b []byte) error {
+	type Mask Instance
+
+	p := struct {
+		*Mask
+		Created *parseabletime.ParseableTime `json:"created"`
+		Updated *parseabletime.ParseableTime `json:"updated"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Created = (*time.Time)(p.Created)
+	i.Updated = (*time.Time)(p.Updated)
+
+	return nil
+}
+
 // GetUpdateOptions converts an Instance to InstanceUpdateOptions for use in UpdateInstance
-func (l *Instance) GetUpdateOptions() InstanceUpdateOptions {
+func (i *Instance) GetUpdateOptions() InstanceUpdateOptions {
 	return InstanceUpdateOptions{
-		Label:           l.Label,
-		Group:           l.Group,
-		Backups:         l.Backups,
-		Alerts:          l.Alerts,
-		WatchdogEnabled: &l.WatchdogEnabled,
-		Tags:            &l.Tags,
+		Label:           i.Label,
+		Group:           i.Group,
+		Backups:         i.Backups,
+		Alerts:          i.Alerts,
+		WatchdogEnabled: &i.WatchdogEnabled,
+		Tags:            &i.Tags,
 	}
 }
 
@@ -139,10 +173,12 @@ type InstanceCloneOptions struct {
 	Configs        []int  `json:"configs,omitempty"`
 }
 
-func (l *Instance) fixDates() *Instance {
-	l.Created, _ = parseDates(l.CreatedStr)
-	l.Updated, _ = parseDates(l.UpdatedStr)
-	return l
+// InstanceResizeOptions is an options struct used when resizing an instance
+type InstanceResizeOptions struct {
+	Type string `json:"type"`
+
+	// When enabled, an instance resize will also resize a data disk if the instance has no more than one data disk and one swap disk
+	AllowAutoDiskResize *bool `json:"allow_auto_disk_resize,omitempty"`
 }
 
 // InstancesPagedResponse represents a linode API response for listing
@@ -169,9 +205,7 @@ func (resp *InstancesPagedResponse) appendData(r *InstancesPagedResponse) {
 func (c *Client) ListInstances(ctx context.Context, opts *ListOptions) ([]Instance, error) {
 	response := InstancesPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -185,13 +219,29 @@ func (c *Client) GetInstance(ctx context.Context, linodeID int) (*Instance, erro
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d", e, linodeID)
-	r, err := coupleAPIErrors(c.R(ctx).
+	r, err := errors.CoupleAPIErrors(c.R(ctx).
 		SetResult(Instance{}).
 		Get(e))
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Instance).fixDates(), nil
+	return r.Result().(*Instance), nil
+}
+
+// GetInstanceTransfer gets the instance with the provided ID
+func (c *Client) GetInstanceTransfer(ctx context.Context, linodeID int) (*InstanceTransfer, error) {
+	e, err := c.Instances.Endpoint()
+	if err != nil {
+		return nil, err
+	}
+	e = fmt.Sprintf("%s/%d/transfer", e, linodeID)
+	r, err := errors.CoupleAPIErrors(c.R(ctx).
+		SetResult(InstanceTransfer{}).
+		Get(e))
+	if err != nil {
+		return nil, err
+	}
+	return r.Result().(*InstanceTransfer), nil
 }
 
 // CreateInstance creates a Linode instance
@@ -207,17 +257,17 @@ func (c *Client) CreateInstance(ctx context.Context, instance InstanceCreateOpti
 	if bodyData, err := json.Marshal(instance); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Instance).fixDates(), nil
+	return r.Result().(*Instance), nil
 }
 
 // UpdateInstance creates a Linode instance
@@ -234,17 +284,17 @@ func (c *Client) UpdateInstance(ctx context.Context, id int, instance InstanceUp
 	if bodyData, err := json.Marshal(instance); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Instance).fixDates(), nil
+	return r.Result().(*Instance), nil
 }
 
 // RenameInstance renames an Instance
@@ -260,7 +310,7 @@ func (c *Client) DeleteInstance(ctx context.Context, id int) error {
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 	return err
 }
 
@@ -273,7 +323,7 @@ func (c *Client) BootInstance(ctx context.Context, id int, configID int) error {
 		bodyMap := map[string]int{"config_id": configID}
 		bodyJSON, err := json.Marshal(bodyMap)
 		if err != nil {
-			return NewError(err)
+			return errors.New(err)
 		}
 		bodyStr = string(bodyJSON)
 	}
@@ -284,7 +334,7 @@ func (c *Client) BootInstance(ctx context.Context, id int, configID int) error {
 	}
 
 	e = fmt.Sprintf("%s/%d/boot", e, id)
-	_, err = coupleAPIErrors(c.R(ctx).
+	_, err = errors.CoupleAPIErrors(c.R(ctx).
 		SetBody(bodyStr).
 		Post(e))
 
@@ -305,10 +355,10 @@ func (c *Client) CloneInstance(ctx context.Context, id int, options InstanceClon
 	if bodyData, err := json.Marshal(options); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
@@ -316,7 +366,7 @@ func (c *Client) CloneInstance(ctx context.Context, id int, options InstanceClon
 		return nil, err
 	}
 
-	return r.Result().(*Instance).fixDates(), nil
+	return r.Result().(*Instance), nil
 }
 
 // RebootInstance reboots a Linode instance
@@ -328,7 +378,7 @@ func (c *Client) RebootInstance(ctx context.Context, id int, configID int) error
 		bodyMap := map[string]int{"config_id": configID}
 		bodyJSON, err := json.Marshal(bodyMap)
 		if err != nil {
-			return NewError(err)
+			return errors.New(err)
 		}
 		bodyStr = string(bodyJSON)
 	}
@@ -340,30 +390,30 @@ func (c *Client) RebootInstance(ctx context.Context, id int, configID int) error
 
 	e = fmt.Sprintf("%s/%d/reboot", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).
+	_, err = errors.CoupleAPIErrors(c.R(ctx).
 		SetBody(bodyStr).
 		Post(e))
 
 	return err
 }
 
-// RebuildInstanceOptions is a struct representing the options to send to the rebuild linode endpoint
-type RebuildInstanceOptions struct {
-	Image           string            `json:"image"`
-	RootPass        string            `json:"root_pass"`
-	AuthorizedKeys  []string          `json:"authorized_keys"`
-	AuthorizedUsers []string          `json:"authorized_users"`
-	StackscriptID   int               `json:"stackscript_id"`
-	StackscriptData map[string]string `json:"stackscript_data"`
-	Booted          bool              `json:"booted"`
+// InstanceRebuildOptions is a struct representing the options to send to the rebuild linode endpoint
+type InstanceRebuildOptions struct {
+	Image           string            `json:"image,omitempty"`
+	RootPass        string            `json:"root_pass,omitempty"`
+	AuthorizedKeys  []string          `json:"authorized_keys,omitempty"`
+	AuthorizedUsers []string          `json:"authorized_users,omitempty"`
+	StackScriptID   int               `json:"stackscript_id,omitempty"`
+	StackScriptData map[string]string `json:"stackscript_data,omitempty"`
+	Booted          *bool             `json:"booted,omitempty"`
 }
 
 // RebuildInstance Deletes all Disks and Configs on this Linode,
 // then deploys a new Image to this Linode with the given attributes.
-func (c *Client) RebuildInstance(ctx context.Context, id int, opts RebuildInstanceOptions) (*Instance, error) {
+func (c *Client) RebuildInstance(ctx context.Context, id int, opts InstanceRebuildOptions) (*Instance, error) {
 	o, err := json.Marshal(opts)
 	if err != nil {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 	b := string(o)
 	e, err := c.Instances.Endpoint()
@@ -371,18 +421,18 @@ func (c *Client) RebuildInstance(ctx context.Context, id int, opts RebuildInstan
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d/rebuild", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).
+	r, err := errors.CoupleAPIErrors(c.R(ctx).
 		SetBody(b).
 		SetResult(&Instance{}).
 		Post(e))
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Instance).fixDates(), nil
+	return r.Result().(*Instance), nil
 }
 
-// RescueInstanceOptions fields are those accepted by RescueInstance
-type RescueInstanceOptions struct {
+// InstanceRescueOptions fields are those accepted by RescueInstance
+type InstanceRescueOptions struct {
 	Devices InstanceConfigDeviceMap `json:"devices"`
 }
 
@@ -390,10 +440,10 @@ type RescueInstanceOptions struct {
 // Rescue Mode is based on the Finnix recovery distribution, a self-contained and bootable Linux distribution.
 // You can also use Rescue Mode for tasks other than disaster recovery, such as formatting disks to use different filesystems,
 // copying data between disks, and downloading files from a disk via SSH and SFTP.
-func (c *Client) RescueInstance(ctx context.Context, id int, opts RescueInstanceOptions) error {
+func (c *Client) RescueInstance(ctx context.Context, id int, opts InstanceRescueOptions) error {
 	o, err := json.Marshal(opts)
 	if err != nil {
-		return NewError(err)
+		return errors.New(err)
 	}
 	b := string(o)
 	e, err := c.Instances.Endpoint()
@@ -402,7 +452,7 @@ func (c *Client) RescueInstance(ctx context.Context, id int, opts RescueInstance
 	}
 	e = fmt.Sprintf("%s/%d/rescue", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).
+	_, err = errors.CoupleAPIErrors(c.R(ctx).
 		SetBody(b).
 		Post(e))
 
@@ -410,16 +460,19 @@ func (c *Client) RescueInstance(ctx context.Context, id int, opts RescueInstance
 }
 
 // ResizeInstance resizes an instance to new Linode type
-func (c *Client) ResizeInstance(ctx context.Context, id int, linodeType string) error {
-	body := fmt.Sprintf("{\"type\":\"%s\"}", linodeType)
-
+func (c *Client) ResizeInstance(ctx context.Context, id int, opts InstanceResizeOptions) error {
+	o, err := json.Marshal(opts)
+	if err != nil {
+		return errors.New(err)
+	}
+	body := string(o)
 	e, err := c.Instances.Endpoint()
 	if err != nil {
 		return err
 	}
 	e = fmt.Sprintf("%s/%d/resize", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).
+	_, err = errors.CoupleAPIErrors(c.R(ctx).
 		SetBody(body).
 		Post(e))
 
@@ -449,6 +502,6 @@ func (c *Client) simpleInstanceAction(ctx context.Context, action string, id int
 		return err
 	}
 	e = fmt.Sprintf("%s/%d/%s", e, id, action)
-	_, err = coupleAPIErrors(c.R(ctx).Post(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Post(e))
 	return err
 }

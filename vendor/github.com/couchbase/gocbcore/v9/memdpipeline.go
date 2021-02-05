@@ -11,7 +11,7 @@ var (
 	errPipelineFull   = errors.New("pipeline is too full")
 )
 
-type memdGetClientFn func() (*memdClient, error)
+type memdGetClientFn func(cancelSig <-chan struct{}) (*memdClient, error)
 
 type memdPipeline struct {
 	address     string

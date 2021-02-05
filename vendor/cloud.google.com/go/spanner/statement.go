@@ -29,8 +29,8 @@ import (
 // A Statement is a SQL query with named parameters.
 //
 // A parameter placeholder consists of '@' followed by the parameter name.
-// Parameter names consist of any combination of letters, numbers, and
-// underscores. Names may be entirely numeric (e.g., "WHERE m.id = @5").
+// The parameter name is an identifier which must conform to the naming
+// requirements in https://cloud.google.com/spanner/docs/lexical#identifiers.
 // Parameters may appear anywhere that a literal value is expected. The same
 // parameter name may be used more than once.  It is an error to execute a
 // statement with unbound parameters. On the other hand, it is allowable to

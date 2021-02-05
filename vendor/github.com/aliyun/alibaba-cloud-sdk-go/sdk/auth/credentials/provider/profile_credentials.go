@@ -40,7 +40,8 @@ func NewProfileProvider(name ...string) Provider {
 func (p *ProfileProvider) Resolve() (auth.Credential, error) {
 	path, ok := os.LookupEnv(ENVCredentialFile)
 	if !ok {
-		path, err := checkDefaultPath()
+		var err error
+		path, err = checkDefaultPath()
 		if err != nil {
 			return nil, err
 		}

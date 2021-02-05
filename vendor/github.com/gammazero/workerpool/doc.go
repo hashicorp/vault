@@ -10,12 +10,10 @@ Non-blocking task submission
 
 A task is a function submitted to the worker pool for execution.  Submitting
 tasks to this worker pool will not block, regardless of the number of tasks.
-Tasks read from the input task queue are immediately dispatched to an available
+Incoming tasks are immediately dispatched to an available
 worker.  If no worker is immediately available, or there are already tasks
 waiting for an available worker, then the task is put on a waiting queue to
-wait for an available worker.  This clears the incoming task from the input
-task queue immediately, whether or not a worker is currently available, and
-will not block the submission of tasks.
+wait for an available worker.
 
 The intent of the worker pool is to limit the concurrency of task execution,
 not limit the number of tasks queued to be executed.  Therefore, this unbounded
@@ -29,7 +27,7 @@ message queue, etc.
 Dispatcher
 
 This worker pool uses a single dispatcher goroutine to read tasks from the
-input task queue and dispatch them to a worker goroutine.  This allows for a
+input task queue and dispatch them to worker goroutines.  This allows for a
 small input channel, and lets the dispatcher queue as many tasks as are
 submitted when there are no available workers.  Additionally, the dispatcher
 can adjust the number of workers as appropriate for the work load, without
@@ -50,10 +48,12 @@ than tasks that use Y Mb of memory.
 Waiting queue vs goroutines
 
 When there are no available workers to handle incoming tasks, the tasks are put
-on a waiting queue.  In previous versions of workerpool, these tasks were
-passed to goroutines.  Using a queue is faster and has less memory overhead
-than creating a separate goroutine for each waiting task, allowing a much
-higher number of waiting tasks.
+on a waiting queue, in this implementation.  In implementations mentioned in
+the credits below, these tasks were passed to goroutines.  Using a queue is
+faster and has less memory overhead than creating a separate goroutine for each
+waiting task, allowing a much higher number of waiting tasks.  Also, using a
+waiting queue ensures that tasks are given to workers in the order the tasks
+were received.
 
 Credits
 

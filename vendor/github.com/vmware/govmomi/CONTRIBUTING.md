@@ -96,6 +96,9 @@ We follow the conventions on [How to Write a Git Commit Message](http://chris.be
 
 Be sure to include any related GitHub issue references in the commit message.
 
+### Running CI checks and tests
+You can run both `make check` and `make test` from the top level of the repository. While `make check` will catch formatting and import errors, it will not apply any fixes. The developer is expected to do that.
+
 ## Reporting Bugs and Creating Issues
 
 When opening a new issue, try to roughly follow the commit message format conventions above.

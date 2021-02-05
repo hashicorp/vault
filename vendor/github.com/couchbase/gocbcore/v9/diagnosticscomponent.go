@@ -37,7 +37,14 @@ func newDiagnosticsComponent(kvMux *kvMux, httpMux *httpMux, httpComponent *http
 }
 
 func (dc *diagnosticsComponent) pingKV(ctx context.Context, interval time.Duration, deadline time.Time,
-	retryStrat RetryStrategy, op *pingOp) {
+	retryStrat RetryStrategy, user []byte, op *pingOp) {
+
+	var userFrame *memd.UserImpersonationFrame
+	if len(user) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: user,
+		}
+	}
 
 	if !deadline.IsZero() {
 		// We have to setup a new child context with its own deadline because services have their own timeout values.
@@ -109,12 +116,13 @@ func (dc *diagnosticsComponent) pingKV(ctx context.Context, interval time.Durati
 
 					req := &memdQRequest{
 						Packet: memd.Packet{
-							Magic:    memd.CmdMagicReq,
-							Command:  memd.CmdNoop,
-							Datatype: 0,
-							Cas:      0,
-							Key:      nil,
-							Value:    nil,
+							Magic:                  memd.CmdMagicReq,
+							Command:                memd.CmdNoop,
+							Datatype:               0,
+							Cas:                    0,
+							Key:                    nil,
+							Value:                  nil,
+							UserImpersonationFrame: userFrame,
 						},
 						Callback:      handler,
 						RetryStrategy: retryStrat,
@@ -367,7 +375,7 @@ func (dc *diagnosticsComponent) Ping(opts PingOptions, cb PingCallback) (Pending
 	for _, serviceType := range serviceTypes {
 		switch serviceType {
 		case MemdService:
-			go dc.pingKV(ctx, interval, opts.KVDeadline, retryStrat, op)
+			go dc.pingKV(ctx, interval, opts.KVDeadline, retryStrat, opts.User, op)
 		case CapiService:
 			go dc.pingHTTP(ctx, CapiService, interval, opts.CapiDeadline, retryStrat, op, ignoreMissingServices)
 		case N1qlService:
@@ -594,7 +602,11 @@ func (dc *diagnosticsComponent) checkKVReady(desiredState ClusterState, op *wait
 			}
 		} else {
 			var shouldRetry bool
-			shouldRetry, until = retryOrchMaybeRetry(op, ConnectionErrorRetryReason)
+			if errors.Is(connectErr, ErrBucketNotFound) {
+				shouldRetry, until = retryOrchMaybeRetry(op, BucketNotReadyReason)
+			} else {
+				shouldRetry, until = retryOrchMaybeRetry(op, ConnectionErrorRetryReason)
+			}
 			if !shouldRetry {
 				op.cancel(connectErr)
 				return

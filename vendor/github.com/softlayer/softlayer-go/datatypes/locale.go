@@ -67,6 +67,9 @@ type Locale_Country struct {
 
 	// no documentation yet
 	VatIdRegex *string `json:"vatIdRegex,omitempty" xmlrpc:"vatIdRegex,omitempty"`
+
+	// no documentation yet
+	VatIdRequiredFlag *bool `json:"vatIdRequiredFlag,omitempty" xmlrpc:"vatIdRequiredFlag,omitempty"`
 }
 
 // This object represents a state or province for a country.

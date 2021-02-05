@@ -30,7 +30,10 @@ func newCollection(scope *Scope, collectionName string) *Collection {
 		scope:          scope.Name(),
 		bucket:         scope.bucket,
 
-		timeoutsConfig: scope.timeoutsConfig,
+		timeoutsConfig: kvTimeoutsConfig{
+			KVTimeout:        scope.timeoutsConfig.KVTimeout,
+			KVDurableTimeout: scope.timeoutsConfig.KVDurableTimeout,
+		},
 
 		transcoder:           scope.transcoder,
 		retryStrategyWrapper: scope.retryStrategyWrapper,

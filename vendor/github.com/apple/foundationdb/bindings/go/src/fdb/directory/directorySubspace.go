@@ -23,6 +23,8 @@
 package directory
 
 import (
+	"fmt"
+	"strings"
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 )
@@ -41,6 +43,18 @@ type directorySubspace struct {
 	dl    directoryLayer
 	path  []string
 	layer []byte
+}
+
+// String implements the fmt.Stringer interface and returns human-readable
+// string representation of this object.
+func (ds directorySubspace) String() string {
+	var path string
+	if len(ds.path) > 0 {
+		path = "(" + strings.Join(ds.path, ",") + ")"
+	} else {
+		path = "nil"
+	}
+	return fmt.Sprintf("DirectorySubspace(%s, %s)", path, fdb.Printable(ds.Bytes()))
 }
 
 func (d directorySubspace) CreateOrOpen(t fdb.Transactor, path []string, layer []byte) (DirectorySubspace, error) {

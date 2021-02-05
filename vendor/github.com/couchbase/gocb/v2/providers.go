@@ -46,6 +46,10 @@ type gocbcoreDiagnosticsProvider interface {
 	Ping(opts gocbcore.PingOptions, cb gocbcore.PingCallback) (gocbcore.PendingOp, error)
 }
 
+type gocbcoreHTTPProvider interface {
+	DoHTTPRequest(req *gocbcore.HTTPRequest, cb gocbcore.DoHTTPRequestCallback) (gocbcore.PendingOp, error)
+}
+
 type waitUntilReadyProviderWrapper struct {
 	provider gocbcoreWaitUntilReadyProvider
 }
@@ -96,7 +100,7 @@ func (dpw *diagnosticsProviderWrapper) Ping(opts gocbcore.PingOptions) (pOut *go
 }
 
 type httpProviderWrapper struct {
-	provider *gocbcore.AgentGroup
+	provider gocbcoreHTTPProvider
 }
 
 func (hpw *httpProviderWrapper) DoHTTPRequest(req *gocbcore.HTTPRequest) (respOut *gocbcore.HTTPResponse, errOut error) {
@@ -207,7 +211,7 @@ func (apw *searchProviderWrapper) SearchQuery(opts gocbcore.SearchQueryOptions) 
 }
 
 type viewProviderWrapper struct {
-	provider *gocbcore.AgentGroup
+	provider *gocbcore.Agent
 }
 
 func (apw *viewProviderWrapper) ViewQuery(opts gocbcore.ViewQueryOptions) (vOut viewRowReader, errOut error) {

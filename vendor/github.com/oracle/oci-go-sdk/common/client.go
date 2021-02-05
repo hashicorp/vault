@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 
 // Package common provides supporting functions and structs used by service packages
 package common
@@ -59,6 +60,9 @@ const (
 	// requestHeaderXContentSHA256 The key for passing a header to indicate SHA256 hash
 	requestHeaderXContentSHA256 = "X-Content-SHA256"
 
+	// requestHeaderOpcOboToken The key for passing a header to use obo token
+	requestHeaderOpcOboToken = "opc-obo-token"
+
 	// private constants
 	defaultScheme            = "https"
 	defaultSDKMarker         = "Oracle-GoSDK"
@@ -66,6 +70,7 @@ const (
 	defaultTimeout           = 60 * time.Second
 	defaultConfigFileName    = "config"
 	defaultConfigDirName     = ".oci"
+	configFilePathEnvVarName = "OCI_CONFIG_FILE"
 	secondaryConfigDirName   = ".oraclebmc"
 	maxBodyLenForDebug       = 1024 * 1000
 )
@@ -152,6 +157,26 @@ func NewClientWithConfig(configProvider ConfigurationProvider) (client BaseClien
 	}
 
 	client = defaultBaseClient(configProvider)
+
+	return
+}
+
+// NewClientWithOboToken Create a new client that will use oboToken for auth
+func NewClientWithOboToken(configProvider ConfigurationProvider, oboToken string) (client BaseClient, err error) {
+	client, err = NewClientWithConfig(configProvider)
+	if err != nil {
+		return
+	}
+
+	// Interceptor to add obo token header
+	client.Interceptor = func(request *http.Request) error {
+		request.Header.Add(requestHeaderOpcOboToken, oboToken)
+		return nil
+	}
+	// Obo token will also be signed
+	defaultHeaders := append(DefaultGenericHeaders(), requestHeaderOpcOboToken)
+	client.Signer = RequestSigner(configProvider, defaultHeaders, DefaultBodyHeaders())
+
 	return
 }
 
@@ -172,9 +197,11 @@ func getHomeFolder() string {
 // will look for configurations in 3 places: file in $HOME/.oci/config, HOME/.obmcs/config and
 // variables names starting with the string TF_VAR. If the same configuration is found in multiple
 // places the provider will prefer the first one.
+// If the config file is not placed in the default location, the environment variable
+// OCI_CONFIG_FILE can provide the config file location.
 func DefaultConfigProvider() ConfigurationProvider {
+	defaultConfigFile := getDefaultConfigFilePath()
 	homeFolder := getHomeFolder()
-	defaultConfigFile := path.Join(homeFolder, defaultConfigDirName, defaultConfigFileName)
 	secondaryConfigFile := path.Join(homeFolder, secondaryConfigDirName, defaultConfigFileName)
 
 	defaultFileProvider, _ := ConfigurationProviderFromFile(defaultConfigFile, "")
@@ -182,6 +209,42 @@ func DefaultConfigProvider() ConfigurationProvider {
 	environmentProvider := environmentConfigurationProvider{EnvironmentVariablePrefix: "TF_VAR"}
 
 	provider, _ := ComposingConfigurationProvider([]ConfigurationProvider{defaultFileProvider, secondaryFileProvider, environmentProvider})
+	Debugf("Configuration provided by: %s", provider)
+	return provider
+}
+
+func getDefaultConfigFilePath() string {
+	homeFolder := getHomeFolder()
+	defaultConfigFile := path.Join(homeFolder, defaultConfigDirName, defaultConfigFileName)
+	if _, err := os.Stat(defaultConfigFile); err == nil {
+		return defaultConfigFile
+	}
+	Debugf("The %s does not exist, will check env var %s for file path.", defaultConfigFile, configFilePathEnvVarName)
+	// Read configuration file path from OCI_CONFIG_FILE env var
+	fallbackConfigFile, existed := os.LookupEnv(configFilePathEnvVarName)
+	if !existed {
+		Debugf("The env var %s does not exist...", configFilePathEnvVarName)
+		return defaultConfigFile
+	}
+	if _, err := os.Stat(fallbackConfigFile); os.IsNotExist(err) {
+		Debugf("The specified cfg file path in the env var %s does not exist: %s", configFilePathEnvVarName, fallbackConfigFile)
+		return defaultConfigFile
+	}
+	return fallbackConfigFile
+}
+
+// CustomProfileConfigProvider returns the config provider of given profile. The custom profile config provider
+// will look for configurations in 2 places: file in $HOME/.oci/config,  and variables names starting with the
+// string TF_VAR. If the same configuration is found in multiple places the provider will prefer the first one.
+func CustomProfileConfigProvider(customConfigPath string, profile string) ConfigurationProvider {
+	homeFolder := getHomeFolder()
+	if customConfigPath == "" {
+		customConfigPath = path.Join(homeFolder, defaultConfigDirName, defaultConfigFileName)
+	}
+	customFileProvider, _ := ConfigurationProviderFromFileWithProfile(customConfigPath, profile, "")
+	defaultFileProvider, _ := ConfigurationProviderFromFileWithProfile(customConfigPath, "DEFAULT", "")
+	environmentProvider := environmentConfigurationProvider{EnvironmentVariablePrefix: "TF_VAR"}
+	provider, _ := ComposingConfigurationProvider([]ConfigurationProvider{customFileProvider, defaultFileProvider, environmentProvider})
 	Debugf("Configuration provided by: %s", provider)
 	return provider
 }

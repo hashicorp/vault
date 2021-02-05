@@ -7,24 +7,31 @@ import (
 	"sync/atomic"
 )
 
+type clientWait struct {
+	client *memdClient
+	err    error
+}
+
 type memdPipelineClient struct {
-	parent    *memdPipeline
-	address   string
-	client    *memdClient
-	consumer  *memdOpConsumer
-	lock      sync.Mutex
-	closedSig chan struct{}
-	state     uint32
+	parent        *memdPipeline
+	address       string
+	client        *memdClient
+	consumer      *memdOpConsumer
+	lock          sync.Mutex
+	closedSig     chan struct{}
+	cancelDialSig chan struct{}
+	state         uint32
 
 	connectError error
 }
 
 func newMemdPipelineClient(parent *memdPipeline) *memdPipelineClient {
 	return &memdPipelineClient{
-		parent:    parent,
-		address:   parent.address,
-		closedSig: make(chan struct{}),
-		state:     uint32(EndpointStateDisconnected),
+		parent:        parent,
+		address:       parent.address,
+		closedSig:     make(chan struct{}),
+		cancelDialSig: make(chan struct{}),
+		state:         uint32(EndpointStateDisconnected),
 	}
 }
 
@@ -208,22 +215,32 @@ func (pipecli *memdPipelineClient) Run() {
 		}
 
 		logDebugf("Pipeline Client `%s/%p` retrieving new client connection for parent %p", pipecli.address, pipecli, pipeline)
-		client, err := pipeline.getClientFn()
-		if err != nil {
+		wait := make(chan clientWait, 1)
+		go func() {
+			client, err := pipeline.getClientFn(pipecli.cancelDialSig)
+			wait <- clientWait{
+				client: client,
+				err:    err,
+			}
+		}()
+
+		cli := <-wait
+		if cli.err != nil {
 			atomic.StoreUint32(&pipecli.state, uint32(EndpointStateDisconnected))
 			pipecli.lock.Lock()
-			pipecli.connectError = err
+			pipecli.connectError = cli.err
 			pipecli.lock.Unlock()
 			continue
 		}
+
 		pipecli.lock.Lock()
 		pipecli.connectError = nil
 		pipecli.lock.Unlock()
 		atomic.StoreUint32(&pipecli.state, uint32(EndpointStateConnected))
 
 		// Runs until the connection has died (for whatever reason)
-		logDebugf("Pipeline Client `%s/%p` starting new client loop for %p", pipecli.address, pipecli, client)
-		pipecli.ioLoop(client)
+		logDebugf("Pipeline Client `%s/%p` starting new client loop for %p", pipecli.address, pipecli, cli.client)
+		pipecli.ioLoop(cli.client)
 	}
 
 	// Lets notify anyone who is watching that we are now shut down
@@ -244,6 +261,10 @@ func (pipecli *memdPipelineClient) Close() error {
 	activeConsumer := pipecli.consumer
 	pipecli.consumer = nil
 	pipecli.lock.Unlock()
+
+	// We might be currently waiting for a new client to be dialled, in which we need to abandon that wait so that
+	// it does not block our shutdown.
+	close(pipecli.cancelDialSig)
 
 	// If we have an active consumer, we need to close it to cause the running
 	// ioLoop to unpause and pick up that our parent has been removed.  Note

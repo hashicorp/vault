@@ -14,27 +14,8 @@ import (
 	"github.com/jcmturner/gokrb5/v8/iana/asnAppTag"
 )
 
-/*Authenticator   ::= [APPLICATION 2] SEQUENCE  {
-authenticator-vno       [0] INTEGER (5),
-crealm                  [1] Realm,
-cname                   [2] PrincipalName,
-cksum                   [3] Checksum OPTIONAL,
-cusec                   [4] Microseconds,
-ctime                   [5] KerberosTime,
-subkey                  [6] EncryptionKey OPTIONAL,
-seq-number              [7] UInt32 OPTIONAL,
-authorization-data      [8] AuthorizationData OPTIONAL
-}
-
-   cksum
-      This field contains a checksum of the application data that
-      accompanies the KRB_AP_REQ, computed using a key usage value of 10
-      in normal application exchanges, or 6 when used in the TGS-REQ
-      PA-TGS-REQ AP-DATA field.
-
-*/
-
-// Authenticator - A record containing information that can be shown to have been recently generated using the session key known only by the client and server.
+// Authenticator - A record containing information that can be shown to have been recently generated using the session
+// key known only by the client and server.
 // https://tools.ietf.org/html/rfc4120#section-5.5.1
 type Authenticator struct {
 	AVNO              int               `asn1:"explicit,tag:0"`

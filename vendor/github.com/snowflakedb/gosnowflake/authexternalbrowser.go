@@ -60,7 +60,7 @@ func buildResponse(application string) bytes.Buffer {
 func bindToPort() (net.Listener, error) {
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
-		glog.V(1).Infof("unable to bind to a port on localhost,  err: %v", err)
+		logger.Infof("unable to bind to a port on localhost,  err: %v", err)
 		return nil, err
 	}
 	return l, nil
@@ -72,7 +72,7 @@ func bindToPort() (net.Listener, error) {
 func openBrowser(idpURL string) error {
 	err := browser.OpenURL(idpURL)
 	if err != nil {
-		glog.V(1).Infof("failed to open a browser. err: %v", err)
+		logger.Infof("failed to open a browser. err: %v", err)
 		return err
 	}
 	return nil
@@ -115,7 +115,7 @@ func getIdpURLProofKey(
 
 	jsonBody, err := json.Marshal(authRequest)
 	if err != nil {
-		glog.V(1).Infof("failed to serialize json. err: %v", err)
+		logger.WithContext(ctx).Errorf("failed to serialize json. err: %v", err)
 		return "", "", err
 	}
 
@@ -141,7 +141,7 @@ func getTokenFromResponse(response string) (string, error) {
 	start := "GET /?token="
 	arr := strings.Split(response, "\r\n")
 	if !strings.HasPrefix(arr[0], start) {
-		glog.V(1).Info("response is malformed. ")
+		logger.Errorf("response is malformed. ")
 		return "", &SnowflakeError{
 			Number:      ErrFailedToParseResponse,
 			SQLState:    SQLStateConnectionRejected,
@@ -196,7 +196,7 @@ func authenticateByExternalBrowser(
 	var errFromGoroutine error
 	conn, err := l.Accept()
 	if err != nil {
-		glog.V(1).Infof("unable to accept connection. err: %v", err)
+		logger.WithContext(ctx).Errorf("unable to accept connection. err: %v", err)
 		log.Fatal(err)
 	}
 	go func(c net.Conn) {
@@ -209,7 +209,7 @@ func authenticateByExternalBrowser(
 			n, err := c.Read(b)
 			if err != nil {
 				if err != io.EOF {
-					glog.V(1).Infof("error reading from socket. err: %v", err)
+					logger.Infof("error reading from socket. err: %v", err)
 					errAccept = &SnowflakeError{
 						Number:      ErrFailedToGetExternalBrowserResponse,
 						SQLState:    SQLStateConnectionRejected,
@@ -247,7 +247,7 @@ func authenticateByExternalBrowser(
 
 	escapedSamlResponse, err := url.QueryUnescape(encodedSamlResponse)
 	if err != nil {
-		glog.V(1).Infof("unable to unescape saml response. err: %v", err)
+		logger.WithContext(ctx).Errorf("unable to unescape saml response. err: %v", err)
 		return nil, nil, err
 	}
 	return []byte(escapedSamlResponse), []byte(proofKey), nil

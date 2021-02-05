@@ -2,7 +2,7 @@ package memdb
 
 //go:generate sh -c "go run watch-gen/main.go >watch_few.go"
 
-import(
+import (
 	"context"
 )
 

@@ -1,9 +1,12 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Object Storage Service API
 //
 // Common set of Object Storage and Archive Storage APIs for managing buckets, objects, and related resources.
+// For more information, see Overview of Object Storage (https://docs.cloud.oracle.com/Content/Object/Concepts/objectstorageoverview.htm) and
+// Overview of Archive Storage (https://docs.cloud.oracle.com/Content/Archive/Concepts/archivestorageoverview.htm).
 //
 
 package objectstorage
@@ -22,7 +25,8 @@ type ObjectLifecycleRule struct {
 
 	// The action of the object lifecycle policy rule. Rules using the action 'ARCHIVE' move objects into the
 	// Archive Storage tier (https://docs.cloud.oracle.com/Content/Archive/Concepts/archivestorageoverview.htm). Rules using the action
-	// 'DELETE' permanently delete objects from buckets. 'ARCHIVE' and 'DELETE' are the only two supported
+	// 'DELETE' permanently delete objects from buckets. Rules using 'ABORT' abort the uncommitted multipart-uploads
+	// and permanently delete their parts from buckets. 'ARCHIVE', 'DELETE' and 'ABORT' are the only three supported
 	// actions at this time.
 	Action *string `mandatory:"true" json:"action"`
 
@@ -34,10 +38,11 @@ type ObjectLifecycleRule struct {
 	// Years are defined as 365.2425 days long and likewise round up to the next midnight UTC.
 	TimeUnit ObjectLifecycleRuleTimeUnitEnum `mandatory:"true" json:"timeUnit"`
 
-	// A boolean that determines whether this rule is currently enabled.
+	// A Boolean that determines whether this rule is currently enabled.
 	IsEnabled *bool `mandatory:"true" json:"isEnabled"`
 
-	// A filter limiting object names that the rule will apply to.
+	Target *string `mandatory:"false" json:"target"`
+
 	ObjectNameFilter *ObjectNameFilter `mandatory:"false" json:"objectNameFilter"`
 }
 

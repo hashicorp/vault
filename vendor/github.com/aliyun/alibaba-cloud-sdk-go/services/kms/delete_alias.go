@@ -21,7 +21,6 @@ import (
 )
 
 // DeleteAlias invokes the kms.DeleteAlias API synchronously
-// api document: https://help.aliyun.com/api/kms/deletealias.html
 func (client *Client) DeleteAlias(request *DeleteAliasRequest) (response *DeleteAliasResponse, err error) {
 	response = CreateDeleteAliasResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) DeleteAlias(request *DeleteAliasRequest) (response *Delete
 }
 
 // DeleteAliasWithChan invokes the kms.DeleteAlias API asynchronously
-// api document: https://help.aliyun.com/api/kms/deletealias.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DeleteAliasWithChan(request *DeleteAliasRequest) (<-chan *DeleteAliasResponse, <-chan error) {
 	responseChan := make(chan *DeleteAliasResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) DeleteAliasWithChan(request *DeleteAliasRequest) (<-chan *
 }
 
 // DeleteAliasWithCallback invokes the kms.DeleteAlias API asynchronously
-// api document: https://help.aliyun.com/api/kms/deletealias.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DeleteAliasWithCallback(request *DeleteAliasRequest, callback func(response *DeleteAliasResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -91,6 +86,7 @@ func CreateDeleteAliasRequest() (request *DeleteAliasRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "DeleteAlias", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

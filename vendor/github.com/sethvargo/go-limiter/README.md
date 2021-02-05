@@ -29,13 +29,15 @@ configurability and flexibility without compromising throughput.
 1.  Determine the limit by calling `Take()` on the store:
 
     ```golang
+    ctx := context.Background()
+
     // key is the unique value upon which you want to rate limit, like an IP or
     // MAC address.
     key := "127.0.0.1"
-    limit, remaining, reset, ok := store.Take(key)
+    tokens, remaining, reset, ok, err := store.Take(ctx, key)
 
-    // limit is the configured limit (15 in this example).
-    _ = limit
+    // tokens is the configured tokens (15 in this example).
+    _ = tokens
 
     // remaining is the number of tokens remaining (14 now).
     _ = remaining
@@ -141,7 +143,7 @@ machine since there's no way to share the state.
 #### Redis
 
 Redis uses Redis + Lua as a shared pool, but comes at a performance cost.
-[Learn more](https://pkg.go.dev/github.com/sethvargo/go-limiter/redisstore).
+[Learn more](https://pkg.go.dev/github.com/sethvargo/go-redisstore).
 
 #### Noop
 

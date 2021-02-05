@@ -383,6 +383,12 @@ func (r Ticket) GetAwaitingUserResponseFlag() (resp bool, err error) {
 	return
 }
 
+// Retrieve A ticket's associated BNPP compliant record
+func (r Ticket) GetBnppSupportedFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket", "getBnppSupportedFlag", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve A service cancellation request.
 func (r Ticket) GetCancellationRequest() (resp datatypes.Billing_Item_Cancellation_Request, err error) {
 	err = r.Session.DoRequest("SoftLayer_Ticket", "getCancellationRequest", nil, &r.Options, &resp)
@@ -413,6 +419,12 @@ func (r Ticket) GetFirstUpdate() (resp datatypes.Ticket_Update, err error) {
 	return
 }
 
+// Retrieve A ticket's associated FSBOA compliant record
+func (r Ticket) GetFsboaSupportedFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket", "getFsboaSupportedFlag", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve The SoftLayer department that a ticket is assigned to.
 func (r Ticket) GetGroup() (resp datatypes.Ticket_Group, err error) {
 	err = r.Session.DoRequest("SoftLayer_Ticket", "getGroup", nil, &r.Options, &resp)
@@ -440,12 +452,6 @@ func (r Ticket) GetLastEditor() (resp datatypes.User_Interface, err error) {
 // Retrieve The last update made to a ticket.
 func (r Ticket) GetLastUpdate() (resp datatypes.Ticket_Update, err error) {
 	err = r.Session.DoRequest("SoftLayer_Ticket", "getLastUpdate", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve A timestamp of the last time the Ticket was viewed by the active user.
-func (r Ticket) GetLastViewedDate() (resp datatypes.Time, err error) {
-	err = r.Session.DoRequest("SoftLayer_Ticket", "getLastViewedDate", nil, &r.Options, &resp)
 	return
 }
 
@@ -521,6 +527,12 @@ func (r Ticket) GetTicketsClosedSinceDate(closeDate *datatypes.Time) (resp []dat
 		closeDate,
 	}
 	err = r.Session.DoRequest("SoftLayer_Ticket", "getTicketsClosedSinceDate", params, &r.Options, &resp)
+	return
+}
+
+// Retrieve Whether employees' updates of this ticket could be rated by customer
+func (r Ticket) GetUpdateRatingFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket", "getUpdateRatingFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -675,6 +687,70 @@ func (r Ticket_Attachment_File) GetTicket() (resp datatypes.Ticket, err error) {
 // Retrieve The ticket that a file is attached to.
 func (r Ticket_Attachment_File) GetUpdate() (resp datatypes.Ticket_Update, err error) {
 	err = r.Session.DoRequest("SoftLayer_Ticket_Attachment_File", "getUpdate", nil, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+type Ticket_Attachment_File_ServiceNow struct {
+	Session *session.Session
+	Options sl.Options
+}
+
+// GetTicketAttachmentFileServiceNowService returns an instance of the Ticket_Attachment_File_ServiceNow SoftLayer service
+func GetTicketAttachmentFileServiceNowService(sess *session.Session) Ticket_Attachment_File_ServiceNow {
+	return Ticket_Attachment_File_ServiceNow{Session: sess}
+}
+
+func (r Ticket_Attachment_File_ServiceNow) Id(id int) Ticket_Attachment_File_ServiceNow {
+	r.Options.Id = &id
+	return r
+}
+
+func (r Ticket_Attachment_File_ServiceNow) Mask(mask string) Ticket_Attachment_File_ServiceNow {
+	if !strings.HasPrefix(mask, "mask[") && (strings.Contains(mask, "[") || strings.Contains(mask, ",")) {
+		mask = fmt.Sprintf("mask[%s]", mask)
+	}
+
+	r.Options.Mask = mask
+	return r
+}
+
+func (r Ticket_Attachment_File_ServiceNow) Filter(filter string) Ticket_Attachment_File_ServiceNow {
+	r.Options.Filter = filter
+	return r
+}
+
+func (r Ticket_Attachment_File_ServiceNow) Limit(limit int) Ticket_Attachment_File_ServiceNow {
+	r.Options.Limit = &limit
+	return r
+}
+
+func (r Ticket_Attachment_File_ServiceNow) Offset(offset int) Ticket_Attachment_File_ServiceNow {
+	r.Options.Offset = &offset
+	return r
+}
+
+// no documentation yet
+func (r Ticket_Attachment_File_ServiceNow) GetExtensionWhitelist() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket_Attachment_File_ServiceNow", "getExtensionWhitelist", nil, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+func (r Ticket_Attachment_File_ServiceNow) GetObject() (resp datatypes.Ticket_Attachment_File_ServiceNow, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket_Attachment_File_ServiceNow", "getObject", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
+func (r Ticket_Attachment_File_ServiceNow) GetTicket() (resp datatypes.Ticket, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket_Attachment_File_ServiceNow", "getTicket", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The ticket that a file is attached to.
+func (r Ticket_Attachment_File_ServiceNow) GetUpdate() (resp datatypes.Ticket_Update, err error) {
+	err = r.Session.DoRequest("SoftLayer_Ticket_Attachment_File_ServiceNow", "getUpdate", nil, &r.Options, &resp)
 	return
 }
 
@@ -904,24 +980,23 @@ func (r Ticket_Survey) Offset(offset int) Ticket_Survey {
 	return r
 }
 
-// Use this method to retrieve the ticket survey preferences. It will return your [[SoftLayer_Container_Ticket_Survey_Preference|survey preference]] which indicates if your account is applicable to receive a survey and if you're opted in. You can control the survey opt via the [[SoftLayer_Ticket_Survey::optIn|opt-in]] or [[SoftLayer_Ticket_Survey::optOut|opt-out]] method.
-func (r Ticket_Survey) GetPreference() (resp datatypes.Container_Ticket_Survey_Preference, err error) {
+// (DEPRECATED) To opt in or out of future surveys, please follow the link found in the email survey.
+func (r Ticket_Survey) GetPreference() (err error) {
+	var resp datatypes.Void
 	err = r.Session.DoRequest("SoftLayer_Ticket_Survey", "getPreference", nil, &r.Options, &resp)
 	return
 }
 
-// You will not receive a ticket survey if you are opted out. Use this method to opt back in if you wish to provide feedback to our support team. You may use the [[SoftLayer_Ticket_Survey::getPreference|getPreference]] method to check your current opt status.
-//
-// This method is depricated. Use [[SoftLayer_User_Customer::changePreference]] instead.
-func (r Ticket_Survey) OptIn() (resp datatypes.Container_Ticket_Survey_Preference, err error) {
+// (DEPRECATED) To opt in of future surveys, please follow the link found in the email survey.
+func (r Ticket_Survey) OptIn() (err error) {
+	var resp datatypes.Void
 	err = r.Session.DoRequest("SoftLayer_Ticket_Survey", "optIn", nil, &r.Options, &resp)
 	return
 }
 
-// By default, customers will occasionally receive a ticket survey upon closing of a ticket. Use this method to opt out of it for the next 90 days. Ticket surveys may not be applicable for some customers. Use the [[SoftLayer_Ticket_Survey::getPreference|getPreference]] method to retrieve your survey preference. The "applicable" property of the [[SoftLayer_Container_Ticket_Survey_Preference|survey preference]] indicates if the survey is relevant to your account or not.
-//
-// This method is depricated. Use [[SoftLayer_User_Customer::changePreference]] instead.
-func (r Ticket_Survey) OptOut() (resp datatypes.Container_Ticket_Survey_Preference, err error) {
+// (DEPRECATED) To opt out of future surveys, please follow the link found in the email survey.
+func (r Ticket_Survey) OptOut() (err error) {
+	var resp datatypes.Void
 	err = r.Session.DoRequest("SoftLayer_Ticket_Survey", "optOut", nil, &r.Options, &resp)
 	return
 }
@@ -967,9 +1042,10 @@ func (r Ticket_Update_Employee) Offset(offset int) Ticket_Update_Employee {
 }
 
 // As part of the customer service process SoftLayer has provided a quick feedback mechanism for its customers to rate the responses that its employees give on tickets. addResponseRating() sets the rating for a single ticket update made by a SoftLayer employee. Ticket ratings have the integer values 1 through 5, with 1 being the worst and 5 being the best. Once the rating is set ''addResponseRating()'' returns a boolean true.
-func (r Ticket_Update_Employee) AddResponseRating(responseRating *int) (resp bool, err error) {
+func (r Ticket_Update_Employee) AddResponseRating(responseRating *int, responseIndex *int) (resp bool, err error) {
 	params := []interface{}{
 		responseRating,
+		responseIndex,
 	}
 	err = r.Session.DoRequest("SoftLayer_Ticket_Update_Employee", "addResponseRating", params, &r.Options, &resp)
 	return

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Jeffail/gabs"
+	"github.com/Jeffail/gabs/v2"
 )
 
 const (
@@ -85,10 +85,7 @@ func transformContainer(o *bytes.Buffer, cont *namedContainer) error {
 
 	case []interface{}:
 		o.WriteString(fmt.Sprintf("<json:array%s>", printName))
-		arrayChildren, err := cont.Children()
-		if err != nil {
-			return err
-		}
+		arrayChildren := cont.Children()
 		for _, child := range arrayChildren {
 			if err := transformContainer(o, &namedContainer{Container: child}); err != nil {
 				return err
@@ -112,10 +109,7 @@ func transformContainer(o *bytes.Buffer, cont *namedContainer) error {
 // sortAndTransformObject sorts object keys to make the output predictable so
 // the package can be tested; logic is here to prevent code duplication
 func sortAndTransformObject(o *bytes.Buffer, cont *namedContainer) error {
-	objectChildren, err := cont.ChildrenMap()
-	if err != nil {
-		return err
-	}
+	objectChildren := cont.ChildrenMap()
 
 	sortedNames := make([]string, 0, len(objectChildren))
 	for name, _ := range objectChildren {

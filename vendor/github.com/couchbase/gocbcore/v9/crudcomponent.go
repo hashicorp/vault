@@ -12,11 +12,11 @@ type crudComponent struct {
 	defaultRetryStrategy RetryStrategy
 	tracer               *tracerComponent
 	errMapManager        *errMapComponent
-	featureVerifier      kvFeatureVerifier
+	featureVerifier      bucketCapabilityVerifier
 }
 
 func newCRUDComponent(cidMgr *collectionsComponent, defaultRetryStrategy RetryStrategy, tracerCmpt *tracerComponent,
-	errMapManager *errMapComponent, featureVerifier kvFeatureVerifier) *crudComponent {
+	errMapManager *errMapComponent, featureVerifier bucketCapabilityVerifier) *crudComponent {
 	return &crudComponent{
 		cidMgr:               cidMgr,
 		defaultRetryStrategy: defaultRetryStrategy,
@@ -52,20 +52,28 @@ func (crud *crudComponent) Get(opts GetOptions, cb GetCallback) (PendingOp, erro
 		cb(&res, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = crud.defaultRetryStrategy
 	}
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdGet,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       nil,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdGet,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 nil,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -128,6 +136,13 @@ func (crud *crudComponent) GetAndTouch(opts GetAndTouchOptions, cb GetAndTouchCa
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = crud.defaultRetryStrategy
 	}
@@ -137,14 +152,15 @@ func (crud *crudComponent) GetAndTouch(opts GetAndTouchOptions, cb GetAndTouchCa
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdGAT,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdGAT,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -207,6 +223,13 @@ func (crud *crudComponent) GetAndLock(opts GetAndLockOptions, cb GetAndLockCallb
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = crud.defaultRetryStrategy
 	}
@@ -216,14 +239,15 @@ func (crud *crudComponent) GetAndLock(opts GetAndLockOptions, cb GetAndLockCallb
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdGetLocked,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdGetLocked,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -269,17 +293,20 @@ func (crud *crudComponent) GetOneReplica(opts GetOneReplicaOptions, cb GetReplic
 
 	handler := func(resp *memdQResponse, _ *memdQRequest, err error) {
 		if err != nil {
+			tracer.Finish()
 			cb(nil, err)
 			return
 		}
 
 		if len(resp.Extras) != 4 {
+			tracer.Finish()
 			cb(nil, errProtocol)
 			return
 		}
 
 		flags := binary.BigEndian.Uint32(resp.Extras[0:])
 
+		tracer.Finish()
 		cb(&GetReplicaResult{
 			Value:    resp.Value,
 			Flags:    flags,
@@ -288,20 +315,28 @@ func (crud *crudComponent) GetOneReplica(opts GetOneReplicaOptions, cb GetReplic
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = crud.defaultRetryStrategy
 	}
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdGetReplica,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       nil,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdGetReplica,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 nil,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -362,6 +397,13 @@ func (crud *crudComponent) Touch(opts TouchOptions, cb TouchCallback) (PendingOp
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	extraBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Expiry)
 
@@ -371,14 +413,15 @@ func (crud *crudComponent) Touch(opts TouchOptions, cb TouchCallback) (PendingOp
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdTouch,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdTouch,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -438,20 +481,28 @@ func (crud *crudComponent) Unlock(opts UnlockOptions, cb UnlockCallback) (Pendin
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = crud.defaultRetryStrategy
 	}
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdUnlockKey,
-			Datatype:     0,
-			Cas:          uint64(opts.Cas),
-			Extras:       nil,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdUnlockKey,
+			Datatype:               0,
+			Cas:                    uint64(opts.Cas),
+			Extras:                 nil,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -514,7 +565,7 @@ func (crud *crudComponent) Delete(opts DeleteOptions, cb DeleteCallback) (Pendin
 	var duraLevelFrame *memd.DurabilityLevelFrame
 	var duraTimeoutFrame *memd.DurabilityTimeoutFrame
 	if opts.DurabilityLevel > 0 {
-		if crud.featureVerifier.HasDurabilityLevelStatus(durabilityLevelStatusUnsupported) {
+		if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityDurableWrites, BucketCapabilityStatusUnsupported) {
 			return nil, errFeatureNotAvailable
 		}
 		duraLevelFrame = &memd.DurabilityLevelFrame{
@@ -522,6 +573,13 @@ func (crud *crudComponent) Delete(opts DeleteOptions, cb DeleteCallback) (Pendin
 		}
 		duraTimeoutFrame = &memd.DurabilityTimeoutFrame{
 			DurabilityTimeout: opts.DurabilityLevelTimeout,
+		}
+	}
+
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
 		}
 	}
 
@@ -541,6 +599,7 @@ func (crud *crudComponent) Delete(opts DeleteOptions, cb DeleteCallback) (Pendin
 			DurabilityLevelFrame:   duraLevelFrame,
 			DurabilityTimeoutFrame: duraTimeoutFrame,
 			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -603,7 +662,7 @@ func (crud *crudComponent) store(opName string, opcode memd.CmdCode, opts storeO
 	var duraLevelFrame *memd.DurabilityLevelFrame
 	var duraTimeoutFrame *memd.DurabilityTimeoutFrame
 	if opts.DurabilityLevel > 0 {
-		if crud.featureVerifier.HasDurabilityLevelStatus(durabilityLevelStatusUnsupported) {
+		if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityDurableWrites, BucketCapabilityStatusUnsupported) {
 			return nil, errFeatureNotAvailable
 		}
 		duraLevelFrame = &memd.DurabilityLevelFrame{
@@ -611,6 +670,13 @@ func (crud *crudComponent) store(opName string, opcode memd.CmdCode, opts storeO
 		}
 		duraTimeoutFrame = &memd.DurabilityTimeoutFrame{
 			DurabilityTimeout: opts.DurabilityLevelTimeout,
+		}
+	}
+
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
 		}
 	}
 
@@ -632,6 +698,7 @@ func (crud *crudComponent) store(opName string, opcode memd.CmdCode, opts storeO
 			Value:                  opts.Value,
 			DurabilityLevelFrame:   duraLevelFrame,
 			DurabilityTimeoutFrame: duraTimeoutFrame,
+			UserImpersonationFrame: userFrame,
 			CollectionID:           opts.CollectionID,
 		},
 		Callback:         handler,
@@ -684,6 +751,7 @@ func (crud *crudComponent) Set(opts SetOptions, cb StoreCallback) (PendingOp, er
 		DurabilityLevelTimeout: opts.DurabilityLevelTimeout,
 		CollectionID:           opts.CollectionID,
 		Deadline:               opts.Deadline,
+		User:                   opts.User,
 	}, cb)
 }
 
@@ -703,6 +771,7 @@ func (crud *crudComponent) Add(opts AddOptions, cb StoreCallback) (PendingOp, er
 		DurabilityLevelTimeout: opts.DurabilityLevelTimeout,
 		CollectionID:           opts.CollectionID,
 		Deadline:               opts.Deadline,
+		User:                   opts.User,
 	}, cb)
 }
 
@@ -737,7 +806,7 @@ func (crud *crudComponent) adjoin(opName string, opcode memd.CmdCode, opts Adjoi
 	var duraLevelFrame *memd.DurabilityLevelFrame
 	var duraTimeoutFrame *memd.DurabilityTimeoutFrame
 	if opts.DurabilityLevel > 0 {
-		if crud.featureVerifier.HasDurabilityLevelStatus(durabilityLevelStatusUnsupported) {
+		if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityDurableWrites, BucketCapabilityStatusUnsupported) {
 			return nil, errFeatureNotAvailable
 		}
 		duraLevelFrame = &memd.DurabilityLevelFrame{
@@ -745,6 +814,13 @@ func (crud *crudComponent) adjoin(opName string, opcode memd.CmdCode, opts Adjoi
 		}
 		duraTimeoutFrame = &memd.DurabilityTimeoutFrame{
 			DurabilityTimeout: opts.DurabilityLevelTimeout,
+		}
+	}
+
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
 		}
 	}
 
@@ -764,6 +840,7 @@ func (crud *crudComponent) adjoin(opName string, opcode memd.CmdCode, opts Adjoi
 			DurabilityLevelFrame:   duraLevelFrame,
 			DurabilityTimeoutFrame: duraTimeoutFrame,
 			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -847,7 +924,7 @@ func (crud *crudComponent) counter(opName string, opcode memd.CmdCode, opts Coun
 	var duraLevelFrame *memd.DurabilityLevelFrame
 	var duraTimeoutFrame *memd.DurabilityTimeoutFrame
 	if opts.DurabilityLevel > 0 {
-		if crud.featureVerifier.HasDurabilityLevelStatus(durabilityLevelStatusUnsupported) {
+		if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityDurableWrites, BucketCapabilityStatusUnsupported) {
 			return nil, errFeatureNotAvailable
 		}
 		duraLevelFrame = &memd.DurabilityLevelFrame{
@@ -855,6 +932,13 @@ func (crud *crudComponent) counter(opName string, opcode memd.CmdCode, opts Coun
 		}
 		duraTimeoutFrame = &memd.DurabilityTimeoutFrame{
 			DurabilityTimeout: opts.DurabilityLevelTimeout,
+		}
+	}
+
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
 		}
 	}
 
@@ -884,6 +968,7 @@ func (crud *crudComponent) counter(opName string, opcode memd.CmdCode, opts Coun
 			DurabilityLevelFrame:   duraLevelFrame,
 			DurabilityTimeoutFrame: duraTimeoutFrame,
 			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -955,20 +1040,28 @@ func (crud *crudComponent) GetRandom(opts GetRandomOptions, cb GetRandomCallback
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = crud.defaultRetryStrategy
 	}
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdGetRandom,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       nil,
-			Key:          nil,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdGetRandom,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 nil,
+			Key:                    nil,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -1038,6 +1131,13 @@ func (crud *crudComponent) GetMeta(opts GetMetaOptions, cb GetMetaCallback) (Pen
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	extraBuf := make([]byte, 1)
 	extraBuf[0] = 2
 
@@ -1047,14 +1147,15 @@ func (crud *crudComponent) GetMeta(opts GetMetaOptions, cb GetMetaCallback) (Pen
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdGetMeta,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        nil,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdGetMeta,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  nil,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -1114,6 +1215,13 @@ func (crud *crudComponent) SetMeta(opts SetMetaOptions, cb SetMetaCallback) (Pen
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	extraBuf := make([]byte, 30+len(opts.Extra))
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Flags)
 	binary.BigEndian.PutUint32(extraBuf[4:], opts.Expiry)
@@ -1129,14 +1237,15 @@ func (crud *crudComponent) SetMeta(opts SetMetaOptions, cb SetMetaCallback) (Pen
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdSetMeta,
-			Datatype:     opts.Datatype,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        opts.Value,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdSetMeta,
+			Datatype:               opts.Datatype,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  opts.Value,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -1196,6 +1305,13 @@ func (crud *crudComponent) DeleteMeta(opts DeleteMetaOptions, cb DeleteMetaCallb
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	extraBuf := make([]byte, 30+len(opts.Extra))
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Flags)
 	binary.BigEndian.PutUint32(extraBuf[4:], opts.Expiry)
@@ -1211,14 +1327,15 @@ func (crud *crudComponent) DeleteMeta(opts DeleteMetaOptions, cb DeleteMetaCallb
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdDelMeta,
-			Datatype:     opts.Datatype,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        opts.Value,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdDelMeta,
+			Datatype:               opts.Datatype,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  opts.Value,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),

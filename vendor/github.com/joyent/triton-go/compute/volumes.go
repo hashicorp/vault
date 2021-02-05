@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018, Joyent, Inc. All rights reserved.
+// Copyright 2020 Joyent Inc.
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -24,15 +24,16 @@ type VolumesClient struct {
 }
 
 type Volume struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Owner          string   `json:"owner_uuid"`
-	Type           string   `json:"type"`
-	FileSystemPath string   `json:"filesystem_path"`
-	Size           int64    `json:"size"`
-	State          string   `json:"state"`
-	Networks       []string `json:"networks"`
-	Refs           []string `json:"refs"`
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Owner          string            `json:"owner_uuid"`
+	Type           string            `json:"type"`
+	FileSystemPath string            `json:"filesystem_path"`
+	Size           int64             `json:"size"`
+	State          string            `json:"state"`
+	Networks       []string          `json:"networks"`
+	Refs           []string          `json:"refs"`
+	Tags           map[string]string `json:"tags"`
 }
 
 type ListVolumesInput struct {
@@ -86,6 +87,7 @@ type CreateVolumeInput struct {
 	Size     int64
 	Networks []string
 	Type     string
+	Tags     map[string]string `json:"tags"`
 }
 
 func (input *CreateVolumeInput) toAPI() map[string]interface{} {
@@ -105,6 +107,10 @@ func (input *CreateVolumeInput) toAPI() map[string]interface{} {
 
 	if len(input.Networks) > 0 {
 		result["networks"] = input.Networks
+	}
+
+	if input.Tags != nil {
+		result["tags"] = input.Tags
 	}
 
 	return result

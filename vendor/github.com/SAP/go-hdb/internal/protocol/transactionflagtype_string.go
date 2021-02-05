@@ -4,6 +4,19 @@ package protocol
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[tfRolledback-0]
+	_ = x[tfCommited-1]
+	_ = x[tfNewIsolationLevel-2]
+	_ = x[tfDDLCommitmodeChanged-3]
+	_ = x[tfWriteTransactionStarted-4]
+	_ = x[tfNowriteTransactionStarted-5]
+	_ = x[tfSessionClosingTransactionError-6]
+}
+
 const _transactionFlagType_name = "tfRolledbacktfCommitedtfNewIsolationLeveltfDDLCommitmodeChangedtfWriteTransactionStartedtfNowriteTransactionStartedtfSessionClosingTransactionError"
 
 var _transactionFlagType_index = [...]uint8{0, 12, 22, 41, 63, 88, 115, 147}

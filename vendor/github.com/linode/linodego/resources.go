@@ -6,86 +6,116 @@ import (
 	"fmt"
 	"text/template"
 
-	"gopkg.in/resty.v1"
+	"github.com/go-resty/resty/v2"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 const (
-	stackscriptsName          = "stackscripts"
-	imagesName                = "images"
-	instancesName             = "instances"
-	instanceDisksName         = "disks"
-	instanceConfigsName       = "configs"
-	instanceIPsName           = "ips"
-	instanceSnapshotsName     = "snapshots"
-	instanceVolumesName       = "instancevolumes"
-	ipaddressesName           = "ipaddresses"
-	ipv6poolsName             = "ipv6pools"
-	ipv6rangesName            = "ipv6ranges"
-	regionsName               = "regions"
-	volumesName               = "volumes"
-	kernelsName               = "kernels"
-	typesName                 = "types"
-	domainsName               = "domains"
-	domainRecordsName         = "records"
-	longviewName              = "longview"
-	longviewclientsName       = "longviewclients"
-	longviewsubscriptionsName = "longviewsubscriptions"
-	nodebalancersName         = "nodebalancers"
-	nodebalancerconfigsName   = "nodebalancerconfigs"
-	nodebalancernodesName     = "nodebalancernodes"
-	notificationsName         = "notifications"
-	sshkeysName               = "sshkeys"
-	ticketsName               = "tickets"
-	tokensName                = "tokens"
-	accountName               = "account"
-	eventsName                = "events"
-	invoicesName              = "invoices"
-	invoiceItemsName          = "invoiceitems"
-	profileName               = "profile"
-	managedName               = "managed"
-	tagsName                  = "tags"
-	usersName                 = "users"
-	// notificationsName = "notifications"
+	accountName                = "account"
+	accountSettingsName        = "accountsettings"
+	domainRecordsName          = "records"
+	domainsName                = "domains"
+	eventsName                 = "events"
+	firewallsName              = "firewalls"
+	firewallDevicesName        = "firewalldevices"
+	firewallRulesName          = "firewallrules"
+	imagesName                 = "images"
+	instanceConfigsName        = "configs"
+	instanceDisksName          = "disks"
+	instanceIPsName            = "ips"
+	instanceSnapshotsName      = "snapshots"
+	instanceStatsName          = "instancestats"
+	instanceVolumesName        = "instancevolumes"
+	instancesName              = "instances"
+	invoiceItemsName           = "invoiceitems"
+	invoicesName               = "invoices"
+	ipaddressesName            = "ipaddresses"
+	ipv6poolsName              = "ipv6pools"
+	ipv6rangesName             = "ipv6ranges"
+	kernelsName                = "kernels"
+	lkeClusterAPIEndpointsName = "lkeclusterapiendpoints"
+	lkeClustersName            = "lkeclusters"
+	lkeClusterPoolsName        = "lkeclusterpools"
+	lkeVersionsName            = "lkeversions"
+	longviewName               = "longview"
+	longviewclientsName        = "longviewclients"
+	longviewsubscriptionsName  = "longviewsubscriptions"
+	managedName                = "managed"
+	nodebalancerconfigsName    = "nodebalancerconfigs"
+	nodebalancernodesName      = "nodebalancernodes"
+	nodebalancerStatsName      = "nodebalancerstats"
+	nodebalancersName          = "nodebalancers"
+	notificationsName          = "notifications"
+	oauthClientsName           = "oauthClients"
+	objectStorageBucketsName   = "objectstoragebuckets"
+	objectStorageClustersName  = "objectstorageclusters"
+	objectStorageKeysName      = "objectstoragekeys"
+	paymentsName               = "payments"
+	profileName                = "profile"
+	regionsName                = "regions"
+	sshkeysName                = "sshkeys"
+	stackscriptsName           = "stackscripts"
+	tagsName                   = "tags"
+	ticketsName                = "tickets"
+	tokensName                 = "tokens"
+	typesName                  = "types"
+	usersName                  = "users"
+	volumesName                = "volumes"
 
-	stackscriptsEndpoint          = "linode/stackscripts"
-	imagesEndpoint                = "images"
-	instancesEndpoint             = "linode/instances"
-	instanceConfigsEndpoint       = "linode/instances/{{ .ID }}/configs"
-	instanceDisksEndpoint         = "linode/instances/{{ .ID }}/disks"
-	instanceSnapshotsEndpoint     = "linode/instances/{{ .ID }}/backups"
-	instanceIPsEndpoint           = "linode/instances/{{ .ID }}/ips"
-	instanceVolumesEndpoint       = "linode/instances/{{ .ID }}/volumes"
-	ipaddressesEndpoint           = "networking/ips"
-	ipv6poolsEndpoint             = "networking/ipv6/pools"
-	ipv6rangesEndpoint            = "networking/ipv6/ranges"
-	regionsEndpoint               = "regions"
-	volumesEndpoint               = "volumes"
-	kernelsEndpoint               = "linode/kernels"
-	typesEndpoint                 = "linode/types"
-	domainsEndpoint               = "domains"
-	domainRecordsEndpoint         = "domains/{{ .ID }}/records"
-	longviewEndpoint              = "longview"
-	longviewclientsEndpoint       = "longview/clients"
-	longviewsubscriptionsEndpoint = "longview/subscriptions"
-	nodebalancersEndpoint         = "nodebalancers"
+	accountEndpoint                = "account"
+	accountSettingsEndpoint        = "account/settings"
+	domainRecordsEndpoint          = "domains/{{ .ID }}/records"
+	domainsEndpoint                = "domains"
+	eventsEndpoint                 = "account/events"
+	firewallsEndpoint              = "networking/firewalls"
+	firewallDevicesEndpoint        = "networking/firewalls/{{ .ID }}/devices"
+	firewallRulesEndpoint          = "networking/firewalls/{{ .ID }}/rules"
+	imagesEndpoint                 = "images"
+	instanceConfigsEndpoint        = "linode/instances/{{ .ID }}/configs"
+	instanceDisksEndpoint          = "linode/instances/{{ .ID }}/disks"
+	instanceIPsEndpoint            = "linode/instances/{{ .ID }}/ips"
+	instanceSnapshotsEndpoint      = "linode/instances/{{ .ID }}/backups"
+	instanceStatsEndpoint          = "linode/instances/{{ .ID }}/stats"
+	instanceVolumesEndpoint        = "linode/instances/{{ .ID }}/volumes"
+	instancesEndpoint              = "linode/instances"
+	invoiceItemsEndpoint           = "account/invoices/{{ .ID }}/items"
+	invoicesEndpoint               = "account/invoices"
+	ipaddressesEndpoint            = "networking/ips"
+	ipv6poolsEndpoint              = "networking/ipv6/pools"
+	ipv6rangesEndpoint             = "networking/ipv6/ranges"
+	kernelsEndpoint                = "linode/kernels"
+	lkeClustersEndpoint            = "lke/clusters"
+	lkeClusterAPIEndpointsEndpoint = "lke/clusters/{{ .ID }}/api-endpoints"
+	lkeClusterPoolsEndpoint        = "lke/clusters/{{ .ID }}/pools"
+	lkeVersionsEndpoint            = "lke/versions"
+	longviewEndpoint               = "longview"
+	longviewclientsEndpoint        = "longview/clients"
+	longviewsubscriptionsEndpoint  = "longview/subscriptions"
+	managedEndpoint                = "managed"
 	// @TODO we can't use these nodebalancer endpoints unless we include these templated fields
 	// The API seems inconsistent about including parent IDs in objects, (compare instance configs to nb configs)
 	// Parent IDs would be immutable for updates and are ignored in create requests ..
 	// Should we include these fields in CreateOpts and UpdateOpts?
-	nodebalancerconfigsEndpoint = "nodebalancers/{{ .ID }}/configs"
-	nodebalancernodesEndpoint   = "nodebalancers/{{ .ID }}/configs/{{ .SecondID }}/nodes"
-	sshkeysEndpoint             = "profile/sshkeys"
-	ticketsEndpoint             = "support/tickets"
-	tokensEndpoint              = "profile/tokens"
-	accountEndpoint             = "account"
-	eventsEndpoint              = "account/events"
-	invoicesEndpoint            = "account/invoices"
-	invoiceItemsEndpoint        = "account/invoices/{{ .ID }}/items"
-	profileEndpoint             = "profile"
-	managedEndpoint             = "managed"
-	tagsEndpoint                = "tags"
-	usersEndpoint               = "account/users"
-	notificationsEndpoint       = "account/notifications"
+	nodebalancerconfigsEndpoint   = "nodebalancers/{{ .ID }}/configs"
+	nodebalancernodesEndpoint     = "nodebalancers/{{ .ID }}/configs/{{ .SecondID }}/nodes"
+	nodebalancerStatsEndpoint     = "nodebalancers/{{ .ID }}/stats"
+	nodebalancersEndpoint         = "nodebalancers"
+	notificationsEndpoint         = "account/notifications"
+	oauthClientsEndpoint          = "account/oauth-clients"
+	objectStorageBucketsEndpoint  = "object-storage/buckets"
+	objectStorageClustersEndpoint = "object-storage/clusters"
+	objectStorageKeysEndpoint     = "object-storage/keys"
+	paymentsEndpoint              = "account/payments"
+	profileEndpoint               = "profile"
+	regionsEndpoint               = "regions"
+	sshkeysEndpoint               = "profile/sshkeys"
+	stackscriptsEndpoint          = "linode/stackscripts"
+	tagsEndpoint                  = "tags"
+	ticketsEndpoint               = "support/tickets"
+	tokensEndpoint                = "profile/tokens"
+	typesEndpoint                 = "linode/types"
+	usersEndpoint                 = "account/users"
+	volumesEndpoint               = "volumes"
 )
 
 // Resource represents a linode API resource
@@ -119,24 +149,27 @@ func NewResource(client *Client, name string, endpoint string, useTemplate bool,
 
 func (r Resource) render(data ...interface{}) (string, error) {
 	if data == nil {
-		return "", NewError("Cannot template endpoint with <nil> data")
+		return "", errors.New("Cannot template endpoint with <nil> data")
 	}
 	out := ""
 	buf := bytes.NewBufferString(out)
 
 	var substitutions interface{}
-	if len(data) == 1 {
+
+	switch len(data) {
+	case 1:
 		substitutions = struct{ ID interface{} }{data[0]}
-	} else if len(data) == 2 {
+	case 2:
 		substitutions = struct {
 			ID       interface{}
 			SecondID interface{}
 		}{data[0], data[1]}
-	} else {
-		return "", NewError("Too many arguments to render template (expected 1 or 2)")
+	default:
+		return "", errors.New("Too many arguments to render template (expected 1 or 2)")
 	}
+
 	if err := r.endpointTemplate.Execute(buf, substitutions); err != nil {
-		return "", NewError(err)
+		return "", errors.New(err)
 	}
 	return buf.String(), nil
 }
@@ -147,6 +180,7 @@ func (r Resource) endpointWithID(id ...int) (string, error) {
 		return r.endpoint, nil
 	}
 	data := make([]interface{}, len(id))
+
 	for i, v := range id {
 		data[i] = v
 	}
@@ -156,7 +190,7 @@ func (r Resource) endpointWithID(id ...int) (string, error) {
 // Endpoint will return the non-templated endpoint string for resource
 func (r Resource) Endpoint() (string, error) {
 	if r.isTemplate {
-		return "", NewError(fmt.Sprintf("Tried to get endpoint for %s without providing data for template", r.name))
+		return "", errors.New(fmt.Sprintf("Tried to get endpoint for %s without providing data for template", r.name))
 	}
 	return r.endpoint, nil
 }

@@ -98,6 +98,13 @@ type GetCollectionManifestOptions struct {
 	RetryStrategy RetryStrategy
 }
 
+// GetAllCollectionManifestsOptions are the options available to the GetAllCollectionManifests command.
+type GetAllCollectionManifestsOptions struct {
+	// Volatile: Tracer API is subject to change.
+	TraceContext  RequestSpanContext
+	RetryStrategy RetryStrategy
+}
+
 // GetCollectionIDOptions are the options available to the GetCollectionID command.
 type GetCollectionIDOptions struct {
 	RetryStrategy RetryStrategy
@@ -114,4 +121,16 @@ type GetCollectionIDResult struct {
 // GetCollectionManifestResult encapsulates the result of a GetCollectionManifest operation.
 type GetCollectionManifestResult struct {
 	Manifest []byte
+}
+
+// SingleServerManifestResult encapsulates the result from a single server when using the GetAllCollectionManifests
+// operation.
+type SingleServerManifestResult struct {
+	Manifest []byte
+	Error    error
+}
+
+// GetAllCollectionManifestsResult encapsulates the result of a GetAllCollectionManifests operation.
+type GetAllCollectionManifestsResult struct {
+	Manifests map[string]SingleServerManifestResult
 }

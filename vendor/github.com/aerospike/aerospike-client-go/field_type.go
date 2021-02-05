@@ -47,5 +47,5 @@ const (
 	QUERY_BINLIST        FieldType = 40
 	BATCH_INDEX          FieldType = 41
 	BATCH_INDEX_WITH_SET FieldType = 42
-	PREDEXP              FieldType = 43
+	FILTER_EXP           FieldType = 43
 )

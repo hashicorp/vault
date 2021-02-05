@@ -25,24 +25,26 @@ import (
 	"time"
 
 	"cloud.google.com/go/internal/trace"
-	instance "cloud.google.com/go/spanner/admin/instance/apiv1"
+	vkit "cloud.google.com/go/spanner/apiv1"
 	"google.golang.org/api/option"
+	"google.golang.org/api/option/internaloption"
 	gtransport "google.golang.org/api/transport/grpc"
-	instancepb "google.golang.org/genproto/googleapis/spanner/admin/instance/v1"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
-	field_mask "google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 const (
-	endpoint = "spanner.googleapis.com:443"
+	endpoint     = "spanner.googleapis.com:443"
+	mtlsEndpoint = "spanner.mtls.googleapis.com:443"
 
 	// resourcePrefixHeader is the name of the metadata header used to indicate
 	// the resource being operated on.
 	resourcePrefixHeader = "google-cloud-resource-prefix"
+
+	// numChannels is the default value for NumChannels of client.
+	numChannels = 4
 )
 
 const (
@@ -54,8 +56,7 @@ const (
 )
 
 var (
-	validDBPattern       = regexp.MustCompile("^projects/(?P<project>[^/]+)/instances/(?P<instance>[^/]+)/databases/(?P<database>[^/]+)$")
-	validInstancePattern = regexp.MustCompile("^projects/(?P<project>[^/]+)/instances/(?P<instance>[^/]+)")
+	validDBPattern = regexp.MustCompile("^projects/(?P<project>[^/]+)/instances/(?P<instance>[^/]+)/databases/(?P<database>[^/]+)$")
 )
 
 func validDatabaseName(db string) error {
@@ -64,15 +65,6 @@ func validDatabaseName(db string) error {
 			db, validDBPattern.String())
 	}
 	return nil
-}
-
-func getInstanceName(db string) (string, error) {
-	matches := validInstancePattern.FindStringSubmatch(db)
-	if len(matches) == 0 {
-		return "", fmt.Errorf("Failed to retrieve instance name from %q according to pattern %q",
-			db, validInstancePattern.String())
-	}
-	return matches[0], nil
 }
 
 func parseDatabaseName(db string) (project, instance, database string, err error) {
@@ -115,6 +107,10 @@ type ClientConfig struct {
 	// QueryOptions is the configuration for executing a sql query.
 	QueryOptions QueryOptions
 
+	// CallOptions is the configuration for providing custom retry settings that
+	// override the default values.
+	CallOptions *vkit.CallOptions
+
 	// logger is the logger to use for this client. If it is nil, all logging
 	// will be directed to the standard logger.
 	logger *log.Logger
@@ -122,7 +118,7 @@ type ClientConfig struct {
 
 // errDial returns error for dialing to Cloud Spanner.
 func errDial(ci int, err error) error {
-	e := toSpannerError(err).(*Error)
+	e := ToSpannerError(err).(*Error)
 	e.decorate(fmt.Sprintf("dialing fails for channel[%v]", ci))
 	return e
 }
@@ -133,42 +129,6 @@ func contextWithOutgoingMetadata(ctx context.Context, md metadata.MD) context.Co
 		md = metadata.Join(existing, md)
 	}
 	return metadata.NewOutgoingContext(ctx, md)
-}
-
-// getInstanceEndpoint returns an instance-specific endpoint if one exists. If
-// multiple endpoints exist, it returns the first one.
-func getInstanceEndpoint(ctx context.Context, database string, opts ...option.ClientOption) (string, error) {
-	instanceName, err := getInstanceName(database)
-	if err != nil {
-		return "", fmt.Errorf("Failed to resolve endpoint: %v", err)
-	}
-
-	c, err := instance.NewInstanceAdminClient(ctx, opts...)
-	if err != nil {
-		return "", err
-	}
-	defer c.Close()
-
-	req := &instancepb.GetInstanceRequest{
-		Name: instanceName,
-		FieldMask: &field_mask.FieldMask{
-			Paths: []string{"endpoint_uris"},
-		},
-	}
-
-	resp, err := c.GetInstance(ctx, req)
-	if err != nil {
-		return "", err
-	}
-
-	endpointURIs := resp.GetEndpointUris()
-
-	if len(endpointURIs) > 0 {
-		return endpointURIs[0], nil
-	}
-
-	// Return empty string when no endpoints exist.
-	return "", nil
 }
 
 // NewClient creates a client to a database. A valid database name has the
@@ -195,44 +155,20 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 			option.WithEndpoint(emulatorAddr),
 			option.WithGRPCDialOption(grpc.WithInsecure()),
 			option.WithoutAuthentication(),
+			internaloption.SkipDialSettingsValidation(),
 		}
 		opts = append(emulatorOpts, opts...)
-	} else if os.Getenv("GOOGLE_CLOUD_SPANNER_ENABLE_RESOURCE_BASED_ROUTING") == "true" {
-		// Fetch the instance-specific endpoint.
-		reqOpts := []option.ClientOption{option.WithEndpoint(endpoint)}
-		reqOpts = append(reqOpts, opts...)
-		instanceEndpoint, err := getInstanceEndpoint(ctx, database, reqOpts...)
-
-		if err != nil {
-			// If there is a PermissionDenied error, fall back to use the global endpoint
-			// or the user-specified endpoint.
-			if status.Code(err) == codes.PermissionDenied {
-				logf(config.logger, `
-Warning: The client library attempted to connect to an endpoint closer to your
-Cloud Spanner data but was unable to do so. The client library will fall back
-and route requests to the endpoint given in the client options, which may
-result in increased latency. We recommend including the scope
-https://www.googleapis.com/auth/spanner.admin so that the client library can
-get an instance-specific endpoint and efficiently route requests.
-`)
-			} else {
-				return nil, err
-			}
-		}
-
-		if instanceEndpoint != "" {
-			opts = append(opts, option.WithEndpoint(instanceEndpoint))
-		}
 	}
 
 	// Prepare gRPC channels.
-	configuredNumChannels := config.NumChannels
+	hasNumChannelsConfig := config.NumChannels > 0
 	if config.NumChannels == 0 {
 		config.NumChannels = numChannels
 	}
 	// gRPC options.
 	allOpts := []option.ClientOption{
-		option.WithEndpoint(endpoint),
+		internaloption.WithDefaultEndpoint(endpoint),
+		internaloption.WithDefaultMTLSEndpoint(mtlsEndpoint),
 		option.WithScopes(Scope),
 		option.WithGRPCDialOption(
 			grpc.WithDefaultCallOptions(
@@ -241,6 +177,8 @@ get an instance-specific endpoint and efficiently route requests.
 			),
 		),
 		option.WithGRPCConnectionPool(config.NumChannels),
+		option.WithUserAgent(clientUserAgent),
+		internaloption.EnableDirectPath(true),
 	}
 	// opts will take precedence above allOpts, as the values in opts will be
 	// applied after the values in allOpts.
@@ -249,7 +187,7 @@ get an instance-specific endpoint and efficiently route requests.
 	if err != nil {
 		return nil, err
 	}
-	if configuredNumChannels > 0 && pool.Num() != config.NumChannels {
+	if hasNumChannelsConfig && pool.Num() != config.NumChannels {
 		pool.Close()
 		return nil, spannerErrorf(codes.InvalidArgument, "Connection pool mismatch: NumChannels=%v, WithGRPCConnectionPool=%v. Only set one of these options, or set both to the same value.", config.NumChannels, pool.Num())
 	}
@@ -269,8 +207,11 @@ get an instance-specific endpoint and efficiently route requests.
 	if config.MaxBurst == 0 {
 		config.MaxBurst = DefaultSessionPoolConfig.MaxBurst
 	}
+	if config.incStep == 0 {
+		config.incStep = DefaultSessionPoolConfig.incStep
+	}
 	// Create a session client.
-	sc := newSessionClient(pool, database, sessionLabels, metadata.Pairs(resourcePrefixHeader, database), config.logger)
+	sc := newSessionClient(pool, database, sessionLabels, metadata.Pairs(resourcePrefixHeader, database), config.logger, config.CallOptions)
 	// Create a session pool.
 	config.SessionPoolConfig.sessionLabels = sessionLabels
 	sp, err := newSessionPool(sc, config.SessionPoolConfig)
@@ -404,7 +345,7 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 		},
 	})
 	if err != nil {
-		return nil, toSpannerError(err)
+		return nil, ToSpannerError(err)
 	}
 	tx = res.Id
 	if res.ReadTimestamp != nil {
@@ -487,13 +428,36 @@ func checkNestedTxn(ctx context.Context) error {
 func (c *Client) ReadWriteTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error) (commitTimestamp time.Time, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.ReadWriteTransaction")
 	defer func() { trace.EndSpan(ctx, err) }()
+	resp, err := c.rwTransaction(ctx, f, TransactionOptions{})
+	return resp.CommitTs, err
+}
+
+// ReadWriteTransactionWithOptions executes a read-write transaction with
+// configurable options, with retries as necessary.
+//
+// ReadWriteTransactionWithOptions is a configurable ReadWriteTransaction.
+//
+// See https://godoc.org/cloud.google.com/go/spanner#ReadWriteTransaction for
+// more details.
+func (c *Client) ReadWriteTransactionWithOptions(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error, options TransactionOptions) (resp CommitResponse, err error) {
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.ReadWriteTransactionWithOptions")
+	defer func() { trace.EndSpan(ctx, err) }()
+	resp, err = c.rwTransaction(ctx, f, options)
+	return resp, err
+}
+
+func (c *Client) rwTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error, options TransactionOptions) (resp CommitResponse, err error) {
 	if err := checkNestedTxn(ctx); err != nil {
-		return time.Time{}, err
+		return resp, err
 	}
 	var (
-		ts time.Time
 		sh *sessionHandle
 	)
+	defer func() {
+		if sh != nil {
+			sh.recycle()
+		}
+	}()
 	err = runWithRetryOnAbortedOrSessionNotFound(ctx, func(ctx context.Context) error {
 		var (
 			err error
@@ -520,13 +484,10 @@ func (c *Client) ReadWriteTransaction(ctx context.Context, f func(context.Contex
 		if err = t.begin(ctx); err != nil {
 			return err
 		}
-		ts, err = t.runInTransaction(ctx, f)
+		resp, err = t.runInTransaction(ctx, f)
 		return err
 	})
-	if sh != nil {
-		sh.recycle()
-	}
-	return ts, err
+	return resp, err
 }
 
 // applyOption controls the behavior of Client.Apply.

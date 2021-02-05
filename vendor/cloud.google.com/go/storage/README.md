@@ -1,8 +1,8 @@
-## Cloud Storage [![GoDoc](https://godoc.org/cloud.google.com/go/storage?status.svg)](https://godoc.org/cloud.google.com/go/storage)
+## Cloud Storage [![Go Reference](https://pkg.go.dev/badge/cloud.google.com/go/storage.svg)](https://pkg.go.dev/cloud.google.com/go/storage)
 
 - [About Cloud Storage](https://cloud.google.com/storage/)
 - [API documentation](https://cloud.google.com/storage/docs)
-- [Go client documentation](https://godoc.org/cloud.google.com/go/storage)
+- [Go client documentation](https://pkg.go.dev/cloud.google.com/go/storage)
 - [Complete sample programs](https://github.com/GoogleCloudPlatform/golang-samples/tree/master/storage)
 
 ### Example Usage

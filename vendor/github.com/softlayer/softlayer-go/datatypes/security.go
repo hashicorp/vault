@@ -58,6 +58,12 @@ type Security_Certificate struct {
 	// The size (number of bits) of the public key represented by the certificate.
 	KeySize *int `json:"keySize,omitempty" xmlrpc:"keySize,omitempty"`
 
+	// A count of cloud Load Balancer [LBaaS] listeners currently associated with the certificate.
+	LbaasListenerCount *uint `json:"lbaasListenerCount,omitempty" xmlrpc:"lbaasListenerCount,omitempty"`
+
+	// Cloud Load Balancer [LBaaS] listeners currently associated with the certificate.
+	LbaasListeners []Network_LBaaS_Listener `json:"lbaasListeners,omitempty" xmlrpc:"lbaasListeners,omitempty"`
+
 	// A count of the load balancers virtual IP addresses currently associated with the certificate.
 	LoadBalancerVirtualIpAddressCount *uint `json:"loadBalancerVirtualIpAddressCount,omitempty" xmlrpc:"loadBalancerVirtualIpAddressCount,omitempty"`
 
@@ -124,7 +130,7 @@ type Security_Certificate_Entry struct {
 	ValidityEnd *Time `json:"validityEnd,omitempty" xmlrpc:"validityEnd,omitempty"`
 }
 
-// SoftLayer_Security_Certificate_Request data type is used to harness your SSL certificate order to a Certificate Authority. This contains data that is required by a Certificate Authority to place an SSL certificate order.
+// The SoftLayer_Security_Certificate_Request data type is used to view details about your SSL certificate order. This contains data that is required by a Certificate Authority to place an SSL certificate order.
 type Security_Certificate_Request struct {
 	Entity
 
@@ -136,9 +142,6 @@ type Security_Certificate_Request struct {
 
 	// The email address of a person who will approve your SSL certificate order. This is usually an email address of your domain administrator.
 	ApproverEmailAddress *string `json:"approverEmailAddress,omitempty" xmlrpc:"approverEmailAddress,omitempty"`
-
-	// The Certificate Authority name
-	CertificateAuthorityName *string `json:"certificateAuthorityName,omitempty" xmlrpc:"certificateAuthorityName,omitempty"`
 
 	// A Certificate Signing Request (CSR) string
 	CertificateSigningRequest *string `json:"certificateSigningRequest,omitempty" xmlrpc:"certificateSigningRequest,omitempty"`

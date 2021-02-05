@@ -1,5 +1,4 @@
 run:
-  modules-download-mode: readonly
   tests: false
   skip-files:
     - logging.go  # Logging has some utility functions that are useful to have around which get flagged up

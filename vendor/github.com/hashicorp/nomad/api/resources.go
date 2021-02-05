@@ -7,17 +7,17 @@ import (
 // Resources encapsulates the required resources of
 // a given task or task group.
 type Resources struct {
-	CPU      *int
-	MemoryMB *int `mapstructure:"memory"`
-	DiskMB   *int `mapstructure:"disk"`
-	Networks []*NetworkResource
-	Devices  []*RequestedDevice
+	CPU      *int               `hcl:"cpu,optional"`
+	MemoryMB *int               `mapstructure:"memory" hcl:"memory,optional"`
+	DiskMB   *int               `mapstructure:"disk" hcl:"disk,optional"`
+	Networks []*NetworkResource `hcl:"network,block"`
+	Devices  []*RequestedDevice `hcl:"device,block"`
 
 	// COMPAT(0.10)
 	// XXX Deprecated. Please do not use. The field will be removed in Nomad
 	// 0.10 and is only being kept to allow any references to be removed before
 	// then.
-	IOPS *int
+	IOPS *int `hcl:"iops,optional"`
 }
 
 // Canonicalize will supply missing values in the cases
@@ -29,9 +29,6 @@ func (r *Resources) Canonicalize() {
 	}
 	if r.MemoryMB == nil {
 		r.MemoryMB = defaultResources.MemoryMB
-	}
-	for _, n := range r.Networks {
-		n.Canonicalize()
 	}
 	for _, d := range r.Devices {
 		d.Canonicalize()
@@ -56,7 +53,7 @@ func DefaultResources() *Resources {
 // IN nomad/structs/structs.go and should be kept in sync.
 func MinResources() *Resources {
 	return &Resources{
-		CPU:      intToPtr(20),
+		CPU:      intToPtr(1),
 		MemoryMB: intToPtr(10),
 	}
 }
@@ -84,27 +81,50 @@ func (r *Resources) Merge(other *Resources) {
 }
 
 type Port struct {
-	Label string
-	Value int `mapstructure:"static"`
-	To    int `mapstructure:"to"`
+	Label       string `hcl:",label"`
+	Value       int    `mapstructure:"static" hcl:"static,optional"`
+	To          int    `mapstructure:"to" hcl:"to,optional"`
+	HostNetwork string `mapstructure:"host_network" hcl:"host_network,optional"`
+}
+
+type DNSConfig struct {
+	Servers  []string `mapstructure:"servers" hcl:"servers,optional"`
+	Searches []string `mapstructure:"searches" hcl:"searches,optional"`
+	Options  []string `mapstructure:"options" hcl:"options,optional"`
 }
 
 // NetworkResource is used to describe required network
 // resources of a given task.
 type NetworkResource struct {
-	Mode          string
-	Device        string
-	CIDR          string
-	IP            string
-	MBits         *int
-	ReservedPorts []Port
-	DynamicPorts  []Port
+	Mode          string     `hcl:"mode,optional"`
+	Device        string     `hcl:"device,optional"`
+	CIDR          string     `hcl:"cidr,optional"`
+	IP            string     `hcl:"ip,optional"`
+	DNS           *DNSConfig `hcl:"dns,block"`
+	ReservedPorts []Port     `hcl:"reserved_ports,block"`
+	DynamicPorts  []Port     `hcl:"port,block"`
+
+	// COMPAT(0.13)
+	// XXX Deprecated. Please do not use. The field will be removed in Nomad
+	// 0.13 and is only being kept to allow any references to be removed before
+	// then.
+	MBits *int `hcl:"mbits,optional"`
+}
+
+// COMPAT(0.13)
+// XXX Deprecated. Please do not use. The method will be removed in Nomad
+// 0.13 and is only being kept to allow any references to be removed before
+// then.
+func (n *NetworkResource) Megabits() int {
+	if n == nil || n.MBits == nil {
+		return 0
+	}
+	return *n.MBits
 }
 
 func (n *NetworkResource) Canonicalize() {
-	if n.MBits == nil {
-		n.MBits = intToPtr(10)
-	}
+	// COMPAT(0.13)
+	// Noop to maintain backwards compatibility
 }
 
 func (n *NetworkResource) HasPorts() bool {
@@ -215,18 +235,18 @@ type RequestedDevice struct {
 	// * "gpu"
 	// * "nvidia/gpu"
 	// * "nvidia/gpu/GTX2080Ti"
-	Name string
+	Name string `hcl:",label"`
 
 	// Count is the number of requested devices
-	Count *uint64
+	Count *uint64 `hcl:"count,optional"`
 
 	// Constraints are a set of constraints to apply when selecting the device
 	// to use.
-	Constraints []*Constraint
+	Constraints []*Constraint `hcl:"constraint,block"`
 
 	// Affinities are a set of affinites to apply when selecting the device
 	// to use.
-	Affinities []*Affinity
+	Affinities []*Affinity `hcl:"affinity,block"`
 }
 
 func (d *RequestedDevice) Canonicalize() {

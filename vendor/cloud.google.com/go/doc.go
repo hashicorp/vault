@@ -34,9 +34,18 @@ in this package for details.
 
 Timeouts and Cancellation
 
-By default, all requests in sub-packages will run indefinitely, retrying on transient
-errors when correctness allows. To set timeouts or arrange for cancellation, use
-contexts. See the examples for details.
+By default, non-streaming methods, like Create or Get, will have a default deadline applied to the
+context provided at call time, unless a context deadline is already set. Streaming
+methods have no default deadline and will run indefinitely. To set timeouts or
+arrange for cancellation, use contexts. See the examples for details. Transient
+errors will be retried when correctness allows.
+
+To opt out of default deadlines, set the temporary environment variable
+GOOGLE_API_GO_EXPERIMENTAL_DISABLE_DEFAULT_DEADLINE to "true" prior to client
+creation. This affects all Google Cloud Go client libraries. This opt-out
+mechanism will be removed in a future release. File an issue at
+https://github.com/googleapis/google-cloud-go if the default deadlines
+cannot work for you.
 
 Do not attempt to control the initial connection (dialing) of a service by setting a
 timeout on the context passed to NewClient. Dialing is non-blocking, so timeouts

@@ -23,7 +23,7 @@ type GetResult struct {
 	transcoder Transcoder
 	flags      uint32
 	contents   []byte
-	expiry     *time.Duration
+	expiryTime *time.Time
 }
 
 // Content assigns the value of the result into the valuePtr using default decoding.
@@ -32,10 +32,27 @@ func (d *GetResult) Content(valuePtr interface{}) error {
 }
 
 // Expiry returns the expiry value for the result if it available.  Note that a nil
-// pointer indicates that the Expiry was fetched, while a valid pointer to a zero
+// pointer indicates that the Expiry was not fetched, while a valid pointer to a zero
 // Duration indicates that the document will never expire.
+// Deprecated: Use ExpiryTime instead.
 func (d *GetResult) Expiry() *time.Duration {
-	return d.expiry
+	if d.expiryTime == nil {
+		return nil
+	}
+
+	t := time.Until(*d.expiryTime)
+	return &t
+}
+
+// ExpiryTime returns the expiry time for the result if it available.
+// This function will return a zero time if the value either was not fetched or the
+// document does not have an expiry time.
+func (d *GetResult) ExpiryTime() time.Time {
+	if d.expiryTime == nil {
+		return time.Time{}
+	}
+
+	return *d.expiryTime
 }
 
 func (d *GetResult) fromFullProjection(ops []LookupInSpec, result *LookupInResult, fields []string) error {

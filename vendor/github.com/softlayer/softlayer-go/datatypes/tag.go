@@ -36,7 +36,7 @@ type Tag struct {
 	// Indicates whether a tag is internal.
 	Internal *int `json:"internal,omitempty" xmlrpc:"internal,omitempty"`
 
-	// Name of the tag. The characters permitted are A-Z, 0-9, whitespace, _ (underscore),
+	// Name of the tag. The characters permitted are A-Z, 0-9, whitespace,
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
 
 	// A count of references that tie object to the tag.

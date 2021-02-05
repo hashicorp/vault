@@ -17,7 +17,7 @@ const (
 )
 
 // ProjectsService is an interface for creating and managing Projects with the DigitalOcean API.
-// See: https://developers.digitalocean.com/documentation/documentation/v2/#projects
+// See: https://developers.digitalocean.com/documentation/v2/#projects
 type ProjectsService interface {
 	List(context.Context, *ListOptions) ([]Project, *Response, error)
 	GetDefault(context.Context) (*Project, *Response, error)
@@ -117,7 +117,7 @@ type ProjectResource struct {
 	Status     string                `json:"status,omitempty"`
 }
 
-// ProjetResourceLinks specify the link for more information about the resource.
+// ProjectResourceLinks specify the link for more information about the resource.
 type ProjectResourceLinks struct {
 	Self string `json:"self"`
 }
@@ -125,6 +125,7 @@ type ProjectResourceLinks struct {
 type projectsRoot struct {
 	Projects []Project `json:"projects"`
 	Links    *Links    `json:"links"`
+	Meta     *Meta     `json:"meta"`
 }
 
 type projectRoot struct {
@@ -134,6 +135,7 @@ type projectRoot struct {
 type projectResourcesRoot struct {
 	Resources []ProjectResource `json:"resources"`
 	Links     *Links            `json:"links,omitempty"`
+	Meta      *Meta             `json:"meta"`
 }
 
 var _ ProjectsService = &ProjectsServiceOp{}
@@ -157,6 +159,9 @@ func (p *ProjectsServiceOp) List(ctx context.Context, opts *ListOptions) ([]Proj
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Projects, resp, err
@@ -238,13 +243,15 @@ func (p *ProjectsServiceOp) ListResources(ctx context.Context, projectID string,
 	if l := root.Links; l != nil {
 		resp.Links = l
 	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
+	}
 
 	return root.Resources, resp, err
 }
 
 // AssignResources assigns one or more resources to a project. AssignResources
 // accepts resources in two possible formats:
-
 //  1. The resource type, like `&Droplet{ID: 1}` or `&FloatingIP{IP: "1.2.3.4"}`
 //  2. A valid DO URN as a string, like "do:droplet:1234"
 //

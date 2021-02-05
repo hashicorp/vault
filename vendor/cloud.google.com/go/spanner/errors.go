@@ -115,8 +115,15 @@ func spannerErrorf(code codes.Code, format string, args ...interface{}) error {
 	}
 }
 
-// toSpannerError converts general Go error to *spanner.Error.
-func toSpannerError(err error) error {
+// ToSpannerError converts a general Go error to *spanner.Error. If the given
+// error is already a *spanner.Error, the original error will be returned.
+//
+// Spanner Errors are normally created by the Spanner client library from the
+// returned status of a RPC. This method can also be used to create Spanner
+// errors for use in tests. The recommended way to create test errors is
+// calling this method with a status error, e.g.
+// ToSpannerError(status.New(codes.NotFound, "Table not found").Err())
+func ToSpannerError(err error) error {
 	return toSpannerErrorWithCommitInfo(err, false)
 }
 

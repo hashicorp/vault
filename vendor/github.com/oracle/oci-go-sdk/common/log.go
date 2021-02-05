@@ -1,14 +1,17 @@
-// Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 
 package common
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 //sdkLogger an interface for logging in the SDK
@@ -44,6 +47,7 @@ type defaultSDKLogger struct {
 //defaultLogger is the defaultLogger in the SDK
 var defaultLogger sdkLogger
 var loggerLock sync.Mutex
+var file *os.File
 
 //initializes the SDK defaultLogger as a defaultLogger
 func init() {
@@ -80,6 +84,7 @@ func newSDKLogger() (defaultSDKLogger, error) {
 	if !isLogEnabled {
 		logger.currentLoggingLevel = noLogging
 	} else {
+		logOutputModeConfig(logger)
 
 		switch strings.ToLower(configured) {
 		case "null":
@@ -121,6 +126,54 @@ func (l defaultSDKLogger) getLoggerForLevel(logLevel int) *log.Logger {
 	default:
 		return l.nullLogger
 	}
+}
+
+// Set SDK Log output mode
+// Output mode is switched based on environment variable "OCI_GO_SDK_LOG_OUPUT_MODE"
+// "file" outputs log to a specific file
+// "combine" outputs log to both stderr and specific file
+// other unsupported value ouputs log to stderr
+// output file can be set via environment variable "OCI_GO_SDK_LOG_FILE"
+// if this environment variable is not set, a default log file will be created under project root path
+func logOutputModeConfig(logger defaultSDKLogger) {
+	logMode, isLogOutputModeEnabled := os.LookupEnv("OCI_GO_SDK_LOG_OUTPUT_MODE")
+	if !isLogOutputModeEnabled {
+		return
+	}
+	fileName, isLogFileNameProvided := os.LookupEnv("OCI_GO_SDK_LOG_FILE")
+	if !isLogFileNameProvided {
+		fileName = fmt.Sprintf("logging_%v%s", time.Now().Unix(), ".log")
+	}
+
+	switch strings.ToLower(logMode) {
+	case "file", "f":
+		file = openLogOutputFile(logger, fileName)
+		logger.infoLogger.SetOutput(file)
+		logger.debugLogger.SetOutput(file)
+		logger.verboseLogger.SetOutput(file)
+		break
+	case "combine", "c":
+		file = openLogOutputFile(logger, fileName)
+		wrt := io.MultiWriter(os.Stderr, file)
+
+		logger.infoLogger.SetOutput(wrt)
+		logger.debugLogger.SetOutput(wrt)
+		logger.verboseLogger.SetOutput(wrt)
+		break
+	}
+}
+
+func openLogOutputFile(logger defaultSDKLogger, fileName string) *os.File {
+	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		logger.verboseLogger.Fatal(err)
+	}
+	return file
+}
+
+//CloseLogFile close the logging file and return error
+func CloseLogFile() error {
+	return file.Close()
 }
 
 //LogLevel returns the current debug level

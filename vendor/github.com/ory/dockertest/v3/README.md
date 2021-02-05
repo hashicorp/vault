@@ -120,6 +120,26 @@ Sometimes container clean up fails. Check out
 resource.Expire(60) // Tell docker to hard kill the container in 60 seconds
 ```
 
+To let stopped containers removed from file system automatically, use `pool.RunWithOptions()` instead of `pool.Run()` with `config.AutoRemove` set to true, e.g.:
+
+```go
+postgres, err := pool.RunWithOptions(&dockertest.RunOptions{
+	Repository: "postgres",
+	Tag:        "11",
+	Env: []string{
+		"POSTGRES_USER=test",
+		"POSTGRES_PASSWORD=test",
+		"listen_addresses = '*'",
+	},
+}, func(config *docker.HostConfig) {
+	// set AutoRemove to true so that stopped container goes away by itself
+	config.AutoRemove = true
+	config.RestartPolicy = docker.RestartPolicy{
+		Name: "no",
+	}
+})
+```
+
 ## Running dockertest in Gitlab CI
  
 ### How to run dockertest on shared gitlab runners?

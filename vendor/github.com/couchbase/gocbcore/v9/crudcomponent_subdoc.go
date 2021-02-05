@@ -114,6 +114,13 @@ func (crud *crudComponent) LookupIn(opts LookupInOptions, cb LookupInCallback) (
 		valueIter += 4 + pathBytesLen
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	var extraBuf []byte
 	if opts.Flags != 0 {
 		extraBuf = append(extraBuf, uint8(opts.Flags))
@@ -125,14 +132,15 @@ func (crud *crudComponent) LookupIn(opts LookupInOptions, cb LookupInCallback) (
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdSubDocMultiLookup,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       extraBuf,
-			Key:          opts.Key,
-			Value:        valueBuf,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdSubDocMultiLookup,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 extraBuf,
+			Key:                    opts.Key,
+			Value:                  valueBuf,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),
@@ -169,6 +177,10 @@ func (crud *crudComponent) LookupIn(opts LookupInOptions, cb LookupInCallback) (
 }
 
 func (crud *crudComponent) MutateIn(opts MutateInOptions, cb MutateInCallback) (PendingOp, error) {
+	if len(opts.Ops) == 0 {
+		return nil, wrapError(errInvalidArgument, "at least one op must be present")
+	}
+
 	tracer := crud.tracer.CreateOpTrace("MutateIn", opts.TraceContext)
 
 	results := make([]SubDocResult, len(opts.Ops))
@@ -231,7 +243,7 @@ func (crud *crudComponent) MutateIn(opts MutateInOptions, cb MutateInCallback) (
 	var duraLevelFrame *memd.DurabilityLevelFrame
 	var duraTimeoutFrame *memd.DurabilityTimeoutFrame
 	if opts.DurabilityLevel > 0 {
-		if crud.featureVerifier.HasDurabilityLevelStatus(durabilityLevelStatusUnsupported) {
+		if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityDurableWrites, BucketCapabilityStatusUnsupported) {
 			return nil, errFeatureNotAvailable
 		}
 		duraLevelFrame = &memd.DurabilityLevelFrame{
@@ -242,10 +254,17 @@ func (crud *crudComponent) MutateIn(opts MutateInOptions, cb MutateInCallback) (
 		}
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.Flags&memd.SubdocDocFlagCreateAsDeleted != 0 {
 		// We can get here before support status is actually known, we'll send the request unless we know for a fact
 		// that this is unsupported.
-		if crud.featureVerifier.HasCreateAsDeletedStatus(createAsDeletedStatusUnsupported) {
+		if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityCreateAsDeleted, BucketCapabilityStatusUnsupported) {
 			return nil, errFeatureNotAvailable
 		}
 	}
@@ -271,8 +290,17 @@ func (crud *crudComponent) MutateIn(opts MutateInOptions, cb MutateInCallback) (
 			op.Op != memd.SubDocOpArrayPushLast && op.Op != memd.SubDocOpArrayPushFirst &&
 			op.Op != memd.SubDocOpArrayInsert && op.Op != memd.SubDocOpArrayAddUnique &&
 			op.Op != memd.SubDocOpCounter && op.Op != memd.SubDocOpSetDoc &&
-			op.Op != memd.SubDocOpAddDoc && op.Op != memd.SubDocOpDeleteDoc {
+			op.Op != memd.SubDocOpAddDoc && op.Op != memd.SubDocOpDeleteDoc &&
+			op.Op != memd.SubDocOpReplaceBodyWithXattr {
 			return nil, errInvalidArgument
+		}
+
+		if op.Op == memd.SubDocOpReplaceBodyWithXattr {
+			// We can get here before support status is actually known, we'll send the request unless we know for a fact
+			// that this is unsupported.
+			if crud.featureVerifier.HasBucketCapabilityStatus(BucketCapabilityReplaceBodyWithXattr, BucketCapabilityStatusUnsupported) {
+				return nil, errFeatureNotAvailable
+			}
 		}
 
 		pathBytes := pathBytesList[i]
@@ -314,6 +342,7 @@ func (crud *crudComponent) MutateIn(opts MutateInOptions, cb MutateInCallback) (
 			DurabilityLevelFrame:   duraLevelFrame,
 			DurabilityTimeoutFrame: duraTimeoutFrame,
 			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		Callback:         handler,
 		RootTraceContext: tracer.RootContext(),

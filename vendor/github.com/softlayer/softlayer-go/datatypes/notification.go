@@ -273,7 +273,7 @@ type Notification_Occurrence_Resource_Network_Application_Delivery_Controller_Lo
 	ResourceType *string `json:"resourceType,omitempty" xmlrpc:"resourceType,omitempty"`
 }
 
-// This type contains general information related to a [[SoftLayer_Network_Storage_Iscsi_EqualLogic]] resource that is impacted by a [[SoftLayer_Notification_Occurrence_Event]].
+// This type contains general information related to a [[SoftLayer_Network_Storage_Iscsi]] resource that is impacted by a [[SoftLayer_Notification_Occurrence_Event]].
 type Notification_Occurrence_Resource_Network_Storage_Iscsi_EqualLogic struct {
 	Notification_Occurrence_Resource
 
@@ -329,7 +329,7 @@ type Notification_Occurrence_Resource_Network_Storage_Nas struct {
 	ResourceType *string `json:"resourceType,omitempty" xmlrpc:"resourceType,omitempty"`
 }
 
-// This type contains general information related to a [[SoftLayer_Network_Storage_NetApp_Volume]] resource that is impacted by a [[SoftLayer_Notification_Occurrence_Event]].
+// This type contains general information related to a [[SoftLayer_Network_Storage]] resource that is impacted by a [[SoftLayer_Notification_Occurrence_Event]].
 type Notification_Occurrence_Resource_Network_Storage_NetApp_Volume struct {
 	Notification_Occurrence_Resource
 
@@ -343,7 +343,7 @@ type Notification_Occurrence_Resource_Network_Storage_NetApp_Volume struct {
 	ResourceType *string `json:"resourceType,omitempty" xmlrpc:"resourceType,omitempty"`
 }
 
-// This type contains general information related to a [[SoftLayer_Network_Storage_NetApp_Volume_Replicant_Iscsi]] resource that is impacted by a [[SoftLayer_Notification_Occurrence_Event]].
+// This type contains general information related to a [[SoftLayer_Network_Storage_Iscsi]] resource that is impacted by a [[SoftLayer_Notification_Occurrence_Event]].
 type Notification_Occurrence_Resource_Network_Storage_NetApp_Volume_Replicant_Iscsi struct {
 	Notification_Occurrence_Resource
 
@@ -657,7 +657,7 @@ type Notification_User_Subscriber_Preference struct {
 	Value *string `json:"value,omitempty" xmlrpc:"value,omitempty"`
 }
 
-// Retrieve identifier cross-reference information.  SoftLayer_Notification_User_Subscriber_Resource provides the resource table id and subscriber id relation. The resource table id is the id of the service the subscriber receives alerts for.  This resource table id could be the unique identifier for a Storage Evault service, Global Load Balancer or CDN service.
+// Retrieve identifier cross-reference information.  SoftLayer_Notification_User_Subscriber_Resource provides the resource table id and subscriber id relation. The resource table id is the id of the service the subscriber receives alerts for.  This resource table id could be the unique identifier for a Storage Evault service or CDN service.
 type Notification_User_Subscriber_Resource struct {
 	Entity
 
@@ -669,7 +669,7 @@ type Notification_User_Subscriber_Resource struct {
 
 	// Unique identifier for a SoftLayer service that is subscribed to a notification.  Currently, the SoftLayer services that can be subscribed to notifications are:
 	//
-	// Storage EVault CDN Global Load Balancer
+	// Storage EVault CDN
 	//
 	//
 	ResourceTableId *int `json:"resourceTableId,omitempty" xmlrpc:"resourceTableId,omitempty"`

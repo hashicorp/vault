@@ -69,6 +69,7 @@ func (errMgr *errMapComponent) EnhanceKvError(err error, resp *memdQResponse, re
 	}
 
 	if req != nil {
+		enhErr.DocumentKey = string(req.Key)
 		enhErr.BucketName = errMgr.bucketName
 		enhErr.ScopeName = req.ScopeName
 		enhErr.CollectionName = req.CollectionName

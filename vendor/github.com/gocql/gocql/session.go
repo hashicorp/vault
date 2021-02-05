@@ -27,7 +27,7 @@ import (
 // scenario is to have one global session object to interact with the
 // whole Cassandra cluster.
 //
-// This type extends the Node interface by adding a convinient query builder
+// This type extends the Node interface by adding a convenient query builder
 // and automatically sets a default consistency level on all operations
 // that do not have a consistency level set.
 type Session struct {
@@ -227,17 +227,25 @@ func (s *Session) init() error {
 	}
 
 	hosts = hosts[:0]
+
+	var wg sync.WaitGroup
 	for _, host := range hostMap {
-		host = s.ring.addOrUpdate(host)
+		host := s.ring.addOrUpdate(host)
 		if s.cfg.filterHost(host) {
 			continue
 		}
 
 		host.setState(NodeUp)
-		s.pool.addHost(host)
-
 		hosts = append(hosts, host)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.pool.addHost(host)
+		}()
 	}
+
+	wg.Wait()
 
 	type bulkAddHosts interface {
 		AddHosts([]*HostInfo)
@@ -1094,12 +1102,17 @@ func (q *Query) speculativeExecutionPolicy() SpeculativeExecutionPolicy {
 	return q.spec
 }
 
+// IsIdempotent returns whether the query is marked as idempotent.
+// Non-idempotent query won't be retried.
+// See "Retries and speculative execution" in package docs for more details.
 func (q *Query) IsIdempotent() bool {
 	return q.idempotent
 }
 
 // Idempotent marks the query as being idempotent or not depending on
 // the value.
+// Non-idempotent query won't be retried.
+// See "Retries and speculative execution" in package docs for more details.
 func (q *Query) Idempotent(value bool) *Query {
 	q.idempotent = value
 	return q
@@ -1195,6 +1208,10 @@ func (q *Query) Scan(dest ...interface{}) error {
 // statement containing an IF clause). If the transaction fails because
 // the existing values did not match, the previous values will be stored
 // in dest.
+//
+// As for INSERT .. IF NOT EXISTS, previous values will be returned as if
+// SELECT * FROM. So using ScanCAS with INSERT is inherently prone to
+// column mismatching. Use MapScanCAS to capture them safely.
 func (q *Query) ScanCAS(dest ...interface{}) (applied bool, err error) {
 	q.disableSkipMetadata = true
 	iter := q.Iter()
@@ -1423,7 +1440,7 @@ func (iter *Iter) Scan(dest ...interface{}) bool {
 	}
 
 	if iter.next != nil && iter.pos >= iter.next.pos {
-		go iter.next.fetch()
+		iter.next.fetchAsync()
 	}
 
 	// currently only support scanning into an expand tuple, such that its the same
@@ -1518,10 +1535,17 @@ func (iter *Iter) NumRows() int {
 }
 
 type nextIter struct {
-	qry  *Query
-	pos  int
-	once sync.Once
-	next *Iter
+	qry   *Query
+	pos   int
+	oncea sync.Once
+	once  sync.Once
+	next  *Iter
+}
+
+func (n *nextIter) fetchAsync() {
+	n.oncea.Do(func() {
+		go n.fetch()
+	})
 }
 
 func (n *nextIter) fetch() *Iter {
@@ -1733,7 +1757,7 @@ func (b *Batch) WithTimestamp(timestamp int64) *Batch {
 
 func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
 	latency := end.Sub(start)
-	_, metricsForHost := b.metrics.attempt(1, latency, host, b.observer != nil)
+	attempt, metricsForHost := b.metrics.attempt(1, latency, host, b.observer != nil)
 
 	if b.observer == nil {
 		return
@@ -1753,6 +1777,7 @@ func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host 
 		Host:    host,
 		Metrics: metricsForHost,
 		Err:     iter.err,
+		Attempt: attempt,
 	})
 }
 
@@ -1999,6 +2024,11 @@ type ObservedBatch struct {
 
 	// The metrics per this host
 	Metrics *hostMetrics
+
+	// Attempt is the index of attempt at executing this query.
+	// An attempt might be either retry or fetching next page of a query.
+	// The first attempt is number zero and any retries have non-zero attempt number.
+	Attempt int
 }
 
 // BatchObserver is the interface implemented by batch observers / stat collectors.

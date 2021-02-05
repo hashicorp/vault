@@ -84,7 +84,7 @@ type GetPolicyRequest struct {
 type GetPolicyResponse struct {
 	*responses.BaseResponse
 	RequestId            string               `json:"RequestId" xml:"RequestId"`
-	Policy               Policy               `json:"Policy" xml:"Policy"`
+	Policy               PolicyInGetPolicy    `json:"Policy" xml:"Policy"`
 	DefaultPolicyVersion DefaultPolicyVersion `json:"DefaultPolicyVersion" xml:"DefaultPolicyVersion"`
 }
 
@@ -93,7 +93,7 @@ func CreateGetPolicyRequest() (request *GetPolicyRequest) {
 	request = &GetPolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetPolicy", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetPolicy", "Ram", "openAPI")
 	return
 }
 

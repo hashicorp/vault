@@ -364,6 +364,12 @@ type DataDisk struct {
 	// 该参数目前仅用于 `RunInstances` 接口。
 	// 注意：此字段可能返回 null，表示取不到有效值。
 	Encrypt *bool `json:"Encrypt,omitempty" name:"Encrypt"`
+
+	// 自定义CMK对应的ID，取值为UUID或者类似kms-abcd1234。用于加密云盘。
+	// 
+	// 该参数目前仅用于 `RunInstances` 接口。
+	// 注意：此字段可能返回 null，表示取不到有效值。
+	KmsKeyId *string `json:"KmsKeyId,omitempty" name:"KmsKeyId"`
 }
 
 type DeleteDisasterRecoverGroupsRequest struct {
@@ -2130,6 +2136,9 @@ type InquiryPriceRunInstancesRequest struct {
 
 	// 实例的市场相关选项，如竞价实例相关参数
 	InstanceMarketOptions *InstanceMarketOptionsRequest `json:"InstanceMarketOptions,omitempty" name:"InstanceMarketOptions"`
+
+	// 高性能计算集群ID。
+	HpcClusterId *string `json:"HpcClusterId,omitempty" name:"HpcClusterId"`
 }
 
 func (r *InquiryPriceRunInstancesRequest) ToJsonString() string {
@@ -2265,6 +2274,14 @@ type Instance struct {
 	// CAM角色名。
 	// 注意：此字段可能返回 null，表示取不到有效值。
 	CamRoleName *string `json:"CamRoleName,omitempty" name:"CamRoleName"`
+
+	// 高性能计算集群`ID`。
+	// 注意：此字段可能返回 null，表示取不到有效值。
+	HpcClusterId *string `json:"HpcClusterId,omitempty" name:"HpcClusterId"`
+
+	// 高性能计算集群`IP`列表。
+	// 注意：此字段可能返回 null，表示取不到有效值。
+	RdmaIpAddresses []*string `json:"RdmaIpAddresses,omitempty" name:"RdmaIpAddresses" list`
 }
 
 type InstanceChargePrepaid struct {
@@ -2369,6 +2386,27 @@ type InstanceTypeQuotaItem struct {
 	// 售罄原因。
 	// 注意：此字段可能返回 null，表示取不到有效值。
 	SoldOutReason *string `json:"SoldOutReason,omitempty" name:"SoldOutReason"`
+
+	// 内网带宽，单位Gbps。
+	InstanceBandwidth *float64 `json:"InstanceBandwidth,omitempty" name:"InstanceBandwidth"`
+
+	// 网络收发包能力，单位万PPS。
+	InstancePps *int64 `json:"InstancePps,omitempty" name:"InstancePps"`
+
+	// 本地存储块数量。
+	StorageBlockAmount *int64 `json:"StorageBlockAmount,omitempty" name:"StorageBlockAmount"`
+
+	// 处理器型号。
+	CpuType *string `json:"CpuType,omitempty" name:"CpuType"`
+
+	// 实例的GPU数量。
+	Gpu *int64 `json:"Gpu,omitempty" name:"Gpu"`
+
+	// 实例的FPGA数量。
+	Fpga *int64 `json:"Fpga,omitempty" name:"Fpga"`
+
+	// 实例备注信息。
+	Remark *string `json:"Remark,omitempty" name:"Remark"`
 }
 
 type InternetAccessible struct {
@@ -3461,7 +3499,7 @@ type RunInstancesRequest struct {
 	// 实例数据盘配置信息。若不指定该参数，则默认不购买数据盘。支持购买的时候指定21块数据盘，其中最多包含1块LOCAL_BASIC数据盘或者LOCAL_SSD数据盘，最多包含20块CLOUD_BASIC数据盘、CLOUD_PREMIUM数据盘或者CLOUD_SSD数据盘。
 	DataDisks []*DataDisk `json:"DataDisks,omitempty" name:"DataDisks" list`
 
-	// 私有网络相关信息配置。通过该参数可以指定私有网络的ID，子网ID等信息。若不指定该参数，则默认使用基础网络。若在此参数中指定了私有网络IP，表示每个实例的主网卡IP，而且InstanceCount参数必须与私有网络IP的个数一致。
+	// 私有网络相关信息配置。通过该参数可以指定私有网络的ID，子网ID等信息。若不指定该参数，则默认使用基础网络。若在此参数中指定了私有网络IP，即表示每个实例的主网卡IP；同时，InstanceCount参数必须与私有网络IP的个数一致且不能大于20。
 	VirtualPrivateCloud *VirtualPrivateCloud `json:"VirtualPrivateCloud,omitempty" name:"VirtualPrivateCloud"`
 
 	// 公网带宽相关信息设置。若不指定该参数，则默认公网带宽为0Mbps。
@@ -3509,6 +3547,9 @@ type RunInstancesRequest struct {
 	// 如果检查通过，则返回RequestId.
 	// false（默认）：发送正常请求，通过检查后直接创建实例
 	DryRun *bool `json:"DryRun,omitempty" name:"DryRun"`
+
+	// 高性能计算集群ID。若创建的实例为高性能计算实例，需指定实例放置的集群，否则不可指定。
+	HpcClusterId *string `json:"HpcClusterId,omitempty" name:"HpcClusterId"`
 }
 
 func (r *RunInstancesRequest) ToJsonString() string {

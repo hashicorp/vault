@@ -393,9 +393,12 @@ func numValidPaths(m proto.Message, paths []string) int {
 
 			// Identify the next message to search within.
 			md = fd.Message() // may be nil
-			if fd.IsMap() {
-				md = fd.MapValue().Message() // may be nil
+
+			// Repeated fields are only allowed at the last postion.
+			if fd.IsList() || fd.IsMap() {
+				md = nil
 			}
+
 			return true
 		}) {
 			return i

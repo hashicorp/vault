@@ -210,7 +210,7 @@ func (r *retryHTTP) setBody(body []byte) *retryHTTP {
 
 func (r *retryHTTP) execute() (res *http.Response, err error) {
 	totalTimeout := r.timeout
-	glog.V(2).Infof("retryHTTP.totalTimeout: %v", totalTimeout)
+	logger.WithContext(r.ctx).Infof("retryHTTP.totalTimeout: %v", totalTimeout)
 	retryCounter := 0
 	sleepTime := time.Duration(0)
 
@@ -237,7 +237,7 @@ func (r *retryHTTP) execute() (res *http.Response, err error) {
 				return res, err
 			}
 			// cannot just return 4xx and 5xx status as the error can be sporadic. run often helps.
-			glog.V(2).Infof(
+			logger.WithContext(r.ctx).Warningf(
 				"failed http connection. no response is returned. err: %v. retrying...\n", err)
 		} else {
 			if res.StatusCode == http.StatusOK || r.raise4XX && res != nil && res.StatusCode >= 400 && res.StatusCode < 500 {
@@ -247,7 +247,7 @@ func (r *retryHTTP) execute() (res *http.Response, err error) {
 				// This is currently used for Snowflake login. The caller must generate an error object based on HTTP status.
 				break
 			}
-			glog.V(2).Infof(
+			logger.WithContext(r.ctx).Warningf(
 				"failed http connection. HTTP Status: %v. retrying...\n", res.StatusCode)
 			res.Body.Close()
 		}
@@ -255,7 +255,7 @@ func (r *retryHTTP) execute() (res *http.Response, err error) {
 		sleepTime = defaultWaitAlgo.decorr(retryCounter, sleepTime)
 
 		if totalTimeout > 0 {
-			glog.V(2).Infof("to timeout: %v", totalTimeout)
+			logger.WithContext(r.ctx).Infof("to timeout: %v", totalTimeout)
 			// if any timeout is set
 			totalTimeout -= sleepTime
 			if totalTimeout <= 0 {
@@ -277,7 +277,7 @@ func (r *retryHTTP) execute() (res *http.Response, err error) {
 			rUpdater = newRetryUpdate(r.fullURL)
 		}
 		r.fullURL = rUpdater.replaceOrAdd(retryCounter)
-		glog.V(2).Infof("sleeping %v. to timeout: %v. retrying", sleepTime, totalTimeout)
+		logger.WithContext(r.ctx).Infof("sleeping %v. to timeout: %v. retrying", sleepTime, totalTimeout)
 
 		await := time.NewTimer(sleepTime)
 		select {

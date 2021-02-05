@@ -1,12 +1,24 @@
 package ecs
 
-import "github.com/denverdino/aliyungo/common"
+import (
+	"time"
+
+	"github.com/denverdino/aliyungo/common"
+)
+
+type SnatEntryStatus string
+
+const (
+	SnatEntryStatusPending   = SnatEntryStatus("Pending")
+	SnatEntryStatusAvailable = SnatEntryStatus("Available")
+)
 
 type CreateSnatEntryArgs struct {
 	RegionId        common.Region
 	SnatTableId     string
 	SourceVSwitchId string
 	SnatIp          string
+	SourceCIDR      string
 }
 
 type CreateSnatEntryResponse struct {
@@ -21,12 +33,17 @@ type SnatEntrySetType struct {
 	SnatTableId     string
 	SourceCIDR      string
 	SourceVSwitchId string
-	Status          string
+	Status          SnatEntryStatus
 }
 
 type DescribeSnatTableEntriesArgs struct {
-	RegionId    common.Region
-	SnatTableId string
+	RegionId        common.Region
+	SnatTableId     string
+	SnatEntryId     string
+	SnatEntryName   string
+	SnatIp          string
+	SourceCIDR      string
+	SourceVSwitchId string
 	common.Pagination
 }
 
@@ -39,10 +56,11 @@ type DescribeSnatTableEntriesResponse struct {
 }
 
 type ModifySnatEntryArgs struct {
-	RegionId    common.Region
-	SnatTableId string
-	SnatEntryId string
-	SnatIp      string
+	RegionId      common.Region
+	SnatTableId   string
+	SnatEntryId   string
+	SnatIp        string
+	SnatEntryName string
 }
 
 type ModifySnatEntryResponse struct {
@@ -78,7 +96,7 @@ func (client *Client) DescribeSnatTableEntries(args *DescribeSnatTableEntriesArg
 	return response.SnatTableEntries.SnatTableEntry, &response.PaginationResult, nil
 }
 
-func (client *Client) DescribeSnatTableEntriesWithRaw(args *DescribeSnatTableEntriesArgs) ( response *DescribeSnatTableEntriesResponse, err error) {
+func (client *Client) DescribeSnatTableEntriesWithRaw(args *DescribeSnatTableEntriesArgs) (response *DescribeSnatTableEntriesResponse, err error) {
 	args.Validate()
 	response = &DescribeSnatTableEntriesResponse{}
 
@@ -100,4 +118,38 @@ func (client *Client) DeleteSnatEntry(args *DeleteSnatEntryArgs) error {
 	response := DeleteSnatEntryResponse{}
 	err := client.Invoke("DeleteSnatEntry", args, &response)
 	return err
+}
+
+// WaitForSnatEntryAvailable waits for SnatEntry to available status
+func (client *Client) WaitForSnatEntryAvailable(regionId common.Region, snatTableId, snatEntryId string, timeout int) error {
+	if timeout <= 0 {
+		timeout = DefaultTimeout
+	}
+
+	args := &DescribeSnatTableEntriesArgs{
+		RegionId:    regionId,
+		SnatTableId: snatTableId,
+		SnatEntryId: snatEntryId,
+	}
+
+	for {
+		snatEntries, _, err := client.DescribeSnatTableEntries(args)
+		if err != nil {
+			return err
+		}
+
+		if len(snatEntries) == 0 {
+			return common.GetClientErrorFromString("Not found")
+		}
+		if snatEntries[0].Status == SnatEntryStatusAvailable {
+			break
+		}
+
+		timeout = timeout - DefaultWaitForInterval
+		if timeout <= 0 {
+			return common.GetClientErrorFromString("Timeout")
+		}
+		time.Sleep(DefaultWaitForInterval * time.Second)
+	}
+	return nil
 }

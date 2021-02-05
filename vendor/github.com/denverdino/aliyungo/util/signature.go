@@ -35,6 +35,5 @@ func CreateSignatureForRequest(method string, values *url.Values, accessKeySecre
 	canonicalizedQueryString := percentReplace(values.Encode())
 
 	stringToSign := method + "&%2F&" + url.QueryEscape(canonicalizedQueryString)
-
 	return CreateSignature(stringToSign, accessKeySecret)
 }

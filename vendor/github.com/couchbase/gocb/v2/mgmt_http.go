@@ -82,7 +82,7 @@ func (b *Bucket) executeMgmtRequest(req mgmtRequest) (mgmtRespOut *mgmtResponse,
 		timeout = b.timeoutsConfig.ManagementTimeout
 	}
 
-	provider, err := b.connectionManager.getHTTPProvider()
+	provider, err := b.connectionManager.getHTTPProvider(b.Name())
 	if err != nil {
 		return nil, err
 	}

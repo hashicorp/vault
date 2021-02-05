@@ -72,7 +72,7 @@ func genTimezone(offset int) *time.Location {
 		offsetSign = "+"
 		toffset = offset
 	}
-	glog.V(2).Infof("offset: %v", offset)
+	logger.Debugf("offset: %v", offset)
 	return time.FixedZone(
 		fmt.Sprintf("%v%02d%02d",
 			offsetSign, toffset/60, toffset%60), int(offset)*60)
@@ -83,7 +83,7 @@ func init() {
 	timezones = make(map[int]*time.Location, 48)
 	// pre-generate all common timezones
 	for i := -720; i <= 720; i += 30 {
-		glog.V(2).Infof("offset: %v", i)
+		logger.Debugf("offset: %v", i)
 		timezones[i] = genTimezone(i)
 	}
 }

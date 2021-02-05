@@ -372,6 +372,12 @@ func (r Product_Item_Price) GetAttributes() (resp []datatypes.Product_Item_Price
 	return
 }
 
+// Retrieve Signifies pricing that is only available on a bare metal reserved capacity order.
+func (r Product_Item_Price) GetBareMetalReservedCapacityFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getBareMetalReservedCapacityFlag", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve Whether the price is for Big Data OS/Journal disks only. (Deprecated)
 func (r Product_Item_Price) GetBigDataOsJournalDiskFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getBigDataOsJournalDiskFlag", nil, &r.Options, &resp)
@@ -420,6 +426,12 @@ func (r Product_Item_Price) GetDefinedSoftwareLicenseFlag() (resp bool, err erro
 	return
 }
 
+// Retrieve Eligibility strategy to assess if a customer can order using this price.
+func (r Product_Item_Price) GetEligibilityStrategy() (resp string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getEligibilityStrategy", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve The product item a price is tied to.
 func (r Product_Item_Price) GetItem() (resp datatypes.Product_Item, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getItem", nil, &r.Options, &resp)
@@ -456,7 +468,7 @@ func (r Product_Item_Price) GetPresetConfigurations() (resp []datatypes.Product_
 	return
 }
 
-// Retrieve The type keyname of this price which can be STANDARD or TIERED.
+// Retrieve The type keyname of this price which can be STANDARD, TIERED, or TERM.
 func (r Product_Item_Price) GetPriceType() (resp string, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getPriceType", nil, &r.Options, &resp)
 	return
@@ -471,6 +483,12 @@ func (r Product_Item_Price) GetPricingLocationGroup() (resp datatypes.Location_G
 // Retrieve The number of server cores required to order this item. This is deprecated. Use [[SoftLayer_Product_Item_Price/getCapacityRestrictionMinimum|getCapacityRestrictionMinimum]] and [[SoftLayer_Product_Item_Price/getCapacityRestrictionMaximum|getCapacityRestrictionMaximum]]
 func (r Product_Item_Price) GetRequiredCoreCount() (resp int, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getRequiredCoreCount", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Signifies pricing that is only available on a reserved capacity virtual server order.
+func (r Product_Item_Price) GetReservedCapacityInstanceFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Item_Price", "getReservedCapacityInstanceFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -669,11 +687,21 @@ func (r Product_Order) GetTaxCalculationResult(orderHash *string) (resp datatype
 //
 // For the selectedItems parameter, this is a comma-separated string of category codes and item values. For example:
 //
-// <ul> <li><code>port_speed=10,guest_disk0=LOCAL_DISK</code></li> <li><code>port_speed=100,disk0=SAN_DISK</code></li> <li><code>port_speed=100,private_network_only=1,guest_disk0=LOCAL_DISK</code></li> </ul>
+// - `port_speed=10,guest_disk0=LOCAL_DISK`
+//
+// - `port_speed=100,disk0=SAN_DISK`
+//
+// - `port_speed=100,private_network_only=1,guest_disk0=LOCAL_DISK`
 //
 // This parameter is used to narrow the available results down even further. It's not necessary when selecting a VLAN, but it will help avoid errors when attempting to place an order. The only acceptable category codes are:
 //
-// <ul> <li><code>port_speed</code></li> <li>A disk category, such as <code>guest_disk0</code> or <code>disk0</code>, with values of either <code>LOCAL_DISK</code> or <code>SAN_DISK</code></li> <li><code>private_network_only</code></li> <li><code>dual_path_network</code></li> </ul>
+// - `port_speed`
+//
+// - A disk category, such as `guest_disk0` or `disk0`, with values of either `LOCAL_DISK` or `SAN_DISK`
+//
+// - `private_network_only`
+//
+// - `dual_path_network`
 //
 // For most customers, it's sufficient to only provide the first 2 parameters.
 func (r Product_Order) GetVlans(locationId *int, packageId *int, selectedItems *string, vlanIds []int, subnetIds []int, accountId *int, orderContainer *datatypes.Container_Product_Order, hardwareFirewallOrderedFlag *bool) (resp datatypes.Container_Product_Order_Network_Vlans, err error) {
@@ -692,160 +720,81 @@ func (r Product_Order) GetVlans(locationId *int, packageId *int, selectedItems *
 }
 
 //
-// Use this method to place bare metal server, virtual server and additional service orders with SoftLayer. Upon success, your credit card or PayPal account will incur charges for the monthly order total (or prorated value if ordered mid billing cycle). If all products on the order are only billed hourly, you will be charged on your billing anniversary date, which occurs monthly on the day you ordered your first service with SoftLayer. For new customers, you are required to provide billing information when you place an order. For existing customers, the credit card on file will be charged. If you're a PayPal customer, a URL will be returned from the call to [[SoftLayer_Product_Order/placeOrder|placeOrder]] which is to be used to finish the authorization process. This authorization tells PayPal that you indeed want to place an order with SoftLayer. From PayPal's web site, you will be redirected back to SoftLayer for your order receipt.<br/><br/>
+// Use this method to place bare metal server, virtual server and additional service orders with SoftLayer.
+// Upon success, your credit card or PayPal account will incur charges for the monthly order total
+// (or prorated value if ordered mid billing cycle). If all products on the order are only billed hourly,
+// you will be charged on your billing anniversary date, which occurs monthly on the day you ordered your first
+// service with SoftLayer. For new customers, you are required to provide billing information when you place an order.
+// For existing customers, the credit card on file will be charged. If you're a PayPal customer, a URL will be
+// returned from the call to [[SoftLayer_Product_Order/placeOrder]] which is to be used to finish the authorization
+// process. This authorization tells PayPal that you indeed want to place an order with SoftLayer.
+// From PayPal's web site, you will be redirected back to SoftLayer for your order receipt.
 //
 //
-// When an order is placed, your order will be in a "pending approval" state. When all internal checks pass, your order will be automatically approved. For orders that may need extra attention, a Sales representative will review the order and contact you if necessary. Once the order is approved, your server or service will be provisioned and available to you shortly thereafter. Depending on the type of server or service ordered, provisioning times will vary.<br/><br/>
+// When an order is placed, your order will be in a "pending approval" state. When all internal checks pass,
+// your order will be automatically approved. For orders that may need extra attention, a Sales representative
+// will review the order and contact you if necessary. Once the order is approved, your server or service will
+// be provisioned and available to you shortly thereafter. Depending on the type of server or service ordered,
+// provisioning times will vary.
 //
 //
-// <h2>Order Containers</h2>
+// ## Order Containers
 //
 //
-// When placing API orders, it's important to order your server and services on the appropriate [[SoftLayer_Container_Product_Order (type)|order container]]. Failing to provide the correct container may delay your server or service from being provisioned in a timely manner. Some common order containers are included below.<br/><br/>
+//
+// When placing API orders, it's important to order your server and services on the appropriate
+// [[SoftLayer_Container_Product_Order]]. Failing to provide the correct container may delay your server or service
+// from being provisioned in a timely manner. Some common order containers are included below.
 //
 //
-// <strong>Note:</strong> <code>SoftLayer_Container_Product_Order_</code> has been removed from the containers in the table below for readability.<br/><br/>
+// **Note:** `SoftLayer_Container_Product_Order_` has been removed from the containers in the table below for readability.
 //
 //
-// <table style="word-wrap:break-word;">
-//   <tr style="text-align:left;">
-//     <th>Product</th>
-//     <th>Order container</th>
-//     <th>Package type</th>
-//   </tr>
-//   <tr>
-//     <td>Bare metal server by CPU</td>
-//     <td>[[SoftLayer_Container_Product_Order_Hardware_Server (type)|Hardware_Server]]</td>
-//     <td>BARE_METAL_CPU</td>
-//   </tr>
-//   <tr>
-//     <td>Bare metal server by core</td>
-//     <td>[[SoftLayer_Container_Product_Order_Hardware_Server (type)|Hardware_Server]]</td>
-//     <td>BARE_METAL_CORE</td>
-//   </tr>
-//   <tr>
-//     <td>Virtual server</td>
-//     <td>[[SoftLayer_Container_Product_Order_Virtual_Guest (type)|Virtual_Guest]]</td>
-//     <td>VIRTUAL_SERVER_INSTANCE</td>
-//   </tr>
-//   <tr>
-//     <td>DNS domain registration</td>
-//     <td>[[SoftLayer_Container_Product_Order_Dns_Domain_Registration (type)|Dns_Domain_Registration]]</td>
-//     <td>ADDITIONAL_SERVICES</td>
-//   </tr>
-//   <tr>
-//     <td>Local & dedicated load balancers</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_LoadBalancer (type)|Network_LoadBalancer]]</td>
-//     <td>ADDITIONAL_SERVICES_LOAD_BALANCER</td>
-//   </tr>
-//   <tr>
-//     <td>Content delivery network</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_ContentDelivery_Account (type)|Network_ContentDelivery_Account]]</td>
-//     <td>ADDITIONAL_SERVICES_CDN</td>
-//   </tr>
-//   <tr>
-//     <td>Content delivery network Addon</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_ContentDelivery_Account_Addon (type)|Network_ContentDelivery_Account_Addon]]</td>
-//     <td>ADDITIONAL_SERVICES_CDN_ADDON</td>
-//   </tr>
-//   <tr>
-//     <td>Hardware & software firewalls</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Protection_Firewall (type)|Network_Protection_Firewall]]</td>
-//     <td>ADDITIONAL_SERVICES_FIREWALL</td>
-//   </tr>
-//   <tr>
-//     <td>Dedicated firewall</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Protection_Firewall_Dedicated (type)|Network_Protection_Firewall_Dedicated]]</td>
-//     <td>ADDITIONAL_SERVICES_FIREWALL</td>
-//   </tr>
-//   <tr>
-//     <td>Object storage</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Storage_Object (type)|Network_Storage_Object]]</td>
-//     <td>ADDITIONAL_SERVICES_OBJECT_STORAGE</td>
-//   </tr>
-//   <tr>
-//     <td>Object storage (hub)</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Storage_Hub (type)|Network_Storage_Hub]]</td>
-//     <td>ADDITIONAL_SERVICES_OBJECT_STORAGE</td>
-//   </tr>
-//   <tr>
-//     <td>Network attached storage</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Storage_Nas (type)|Network_Storage_Nas]]</td>
-//     <td>ADDITIONAL_SERVICES_NETWORK_ATTACHED_STORAGE</td>
-//   </tr>
-//   <tr>
-//     <td>Iscsi storage</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Storage_Iscsi (type)|Network_Storage_Iscsi]]</td>
-//     <td>ADDITIONAL_SERVICES_ISCSI_STORAGE</td>
-//   </tr>
-//   <tr>
-//     <td>Evault</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Storage_Backup_Evault_Vault (type)|Network_Storage_Backup_Evault_Vault]]</td>
-//     <td>ADDITIONAL_SERVICES</td>
-//   </tr>
-//   <tr>
-//     <td>Evault Plugin</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Storage_Backup_Evault_Plugin (type)|Network_Storage_Backup_Evault_Plugin]]</td>
-//     <td>ADDITIONAL_SERVICES</td>
-//   </tr>
-//   <tr>
-//     <td>Application delivery appliance</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Application_Delivery_Controller (type)|Network_Application_Delivery_Controller]]</td>
-//     <td>ADDITIONAL_SERVICES_APPLICATION_DELIVERY_APPLIANCE</td>
-//   </tr>
-//   <tr>
-//     <td>Network subnet</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Subnet (type)|Network_Subnet]]</td>
-//     <td>ADDITIONAL_SERVICES</td>
-//   </tr>
-//   <tr>
-//     <td>Global IPv4</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Subnet (type)|Network_Subnet]]</td>
-//     <td>ADDITIONAL_SERVICES_GLOBAL_IP_ADDRESSES</td>
-//   </tr>
-//   <tr>
-//     <td>Global IPv6</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Subnet (type)|Network_Subnet]]</td>
-//     <td>ADDITIONAL_SERVICES_GLOBAL_IP_ADDRESSES</td>
-//   </tr>
-//   <tr>
-//     <td>Network VLAN</td>
-//     <td>[[SoftLayer_Container_Product_Order_Network_Vlan (type)|Network_Vlan]]</td>
-//     <td>ADDITIONAL_SERVICES_NETWORK_VLAN</td>
-//   </tr>
-//   <tr>
-//     <td>Portable storage</td>
-//     <td>[[SoftLayer_Container_Product_Order_Virtual_Disk_Image (type)|Virtual_Disk_Image]]</td>
-//     <td>ADDITIONAL_SERVICES_PORTABLE_STORAGE</td>
-//   </tr>
-//   <tr>
-//     <td>SSL certificate</td>
-//     <td>[[SoftLayer_Container_Product_Order_Security_Certificate (type)|Security_Certificate]]</td>
-//     <td>ADDITIONAL_SERVICES_SSL_CERTIFICATE</td>
-//   </tr>
-//   <tr>
-//     <td>External authentication</td>
-//     <td>[[SoftLayer_Container_Product_Order_User_Customer_External_Binding (type)|User_Customer_External_Binding]]</td>
-//     <td>ADDITIONAL_SERVICES</td>
-//   </tr>
-//   <tr>
-//     <td>Dedicated Host</td>
-//     <td>[[SoftLayer_Container_Product_Order_Virtual_DedicatedHost (type)|Virtual_DedicatedHosts]]</td>
-//     <td>DEDICATED_HOST</td>
-//   </tr>
-// </table>
+// | Product | Order Container | Package Type |
+// | ------- | --------------- | ------------ |
+// | Bare metal server by CPU | [[SoftLayer_Container_Product_Order_Hardware_Server]] | BARE_METAL_CPU |
+// | Bare metal server by core | [[SoftLayer_Container_Product_Order_Hardware_Server]] | BARE_METAL_CORE |
+// | Virtual server | [[SoftLayer_Container_Product_Order_Virtual_Guest]] | VIRTUAL_SERVER_INSTANCE |
+// | DNS domain registration | [[SoftLayer_Container_Product_Order_Dns_Domain_Registrationn]] | ADDITIONAL_SERVICES |
+// | Local & dedicated load balancers | [[SoftLayer_Container_Product_Order_Network_LoadBalancer]] | ADDITIONAL_SERVICES_LOAD_BALANCER |
+// | Content delivery network | [[SoftLayer_Container_Product_Order_Network_ContentDelivery_Account]] | ADDITIONAL_SERVICES_CDN |
+// | Content delivery network Addon | [[SoftLayer_Container_Product_Order_Network_ContentDelivery_Account_Addon]] | ADDITIONAL_SERVICES_CDN_ADDON |
+// | Hardware & software firewalls | [[SoftLayer_Container_Product_Order_Network_Protection_Firewall]] | ADDITIONAL_SERVICES_FIREWALL |
+// | Dedicated firewall | [[SoftLayer_Container_Product_Order_Network_Protection_Firewall_Dedicated]] | ADDITIONAL_SERVICES_FIREWALL |
+// | Object storage | [[SoftLayer_Container_Product_Order_Network_Storage_Object]] | ADDITIONAL_SERVICES_OBJECT_STORAGE |
+// | Object storage (hub) | [[SoftLayer_Container_Product_Order_Network_Storage_Hub]] | ADDITIONAL_SERVICES_OBJECT_STORAGE |
+// | Network attached storage | [[SoftLayer_Container_Product_Order_Network_Storage_Nas]] | ADDITIONAL_SERVICES_NETWORK_ATTACHED_STORAGE |
+// | Iscsi storage | [[SoftLayer_Container_Product_Order_Network_Storage_Iscsi]] | ADDITIONAL_SERVICES_ISCSI_STORAGE |
+// | Evault | [[SoftLayer_Container_Product_Order_Network_Storage_Backup_Evault_Vault]] | ADDITIONAL_SERVICES |
+// | Evault Plugin | [[SoftLayer_Container_Product_Order_Network_Storage_Backup_Evault_Plugin]] | ADDITIONAL_SERVICES |
+// | Application delivery appliance | [[SoftLayer_Container_Product_Order_Network_Application_Delivery_Controller]] | ADDITIONAL_SERVICES_APPLICATION_DELIVERY_APPLIANCE |
+// | Network subnet | [[SoftLayer_Container_Product_Order_Network_Subnet]] | ADDITIONAL_SERVICES |
+// | Global IPv4 | [[SoftLayer_Container_Product_Order_Network_Subnet]] | ADDITIONAL_SERVICES_GLOBAL_IP_ADDRESSES |
+// | Global IPv6 | [[SoftLayer_Container_Product_Order_Network_Subnet]] | ADDITIONAL_SERVICES_GLOBAL_IP_ADDRESSES |
+// | Network VLAN | [[SoftLayer_Container_Product_Order_Network_Vlan]] | ADDITIONAL_SERVICES_NETWORK_VLAN |
+// | Portable storage | [[SoftLayer_Container_Product_Order_Virtual_Disk_Image]] | ADDITIONAL_SERVICES_PORTABLE_STORAGE |
+// | SSL certificate | [[SoftLayer_Container_Product_Order_Security_Certificate]] | ADDITIONAL_SERVICES_SSL_CERTIFICATE |
+// | External authentication | [[SoftLayer_Container_Product_Order_User_Customer_External_Binding]] | ADDITIONAL_SERVICES |
+// | Dedicated Host | [[SoftLayer_Container_Product_Order_Virtual_DedicatedHost]] | DEDICATED_HOST |
 //
 //
-// <h2>Server example</h2>
+// ## Server example
 //
 //
-// This example includes a single bare metal server being ordered with monthly billing.<br/><br/>
+//
+// This example includes a single bare metal server being ordered with monthly billing.
 //
 //
-// <strong>Warning:</strong> the price ids provided below may be outdated or unavailable, so you will need to determine the available prices from the bare metal server [[SoftLayer_Product_Package/getAllObjects|packages]], which have a [[SoftLayer_Product_Package_Type (type)|package type]] of '''BARE_METAL_CPU''' or '''BARE_METAL_CORE'''. You can get a full list of [[SoftLayer_Product_Package_Type/getAllObjects|package types]] to see other potentially available server packages.<br/><br/>
+// **Warning:** the price ids provided below may be outdated or unavailable, so you will need to determine the
+//
+// available prices from the bare metal server [[SoftLayer_Product_Package/getAllObjects]], which have a
+// [[SoftLayer_Product_Package_Type]] of `BARE_METAL_CPU` or `BARE_METAL_CORE`. You can get a full list of
+// package types with [[SoftLayer_Product_Package_Type/getAllObjects]].
 //
 //
-// <http title="Bare metal server">
+// ### Bare Metal Ordering
+//
+// ```xml
 // <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://api.service.softlayer.com/soap/v3/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
 //   <SOAP-ENV:Header>
 //     <ns1:authenticate>
@@ -914,19 +863,27 @@ func (r Product_Order) GetVlans(locationId *int, packageId *int, selectedItems *
 //     </ns1:placeOrder>
 //   </SOAP-ENV:Body>
 // </SOAP-ENV:Envelope>
-// </http><br/><br/>
+// ```
 //
 //
-// <h2>Virtual server example</h2>
+// ## Virtual server example
 //
 //
-// This example includes 2 identical virtual servers (except for hostname) being ordered for hourly billing. It includes an optional image template id and VLAN data specified on the virtualGuest objects - <code>primaryBackendNetworkComponent</code> and <code>primaryNetworkComponent</code>.<br/><br/>
+//
+// This example includes 2 identical virtual servers (except for hostname) being ordered for hourly billing.
+// It includes an optional image template id and VLAN data specified on the virtualGuest objects -
+// `primaryBackendNetworkComponent` and `primaryNetworkComponent`.
 //
 //
-// <strong>Warning:</strong> the price ids provided below may be outdated or unavailable, so you will need to determine the available prices from the virtual server [[SoftLayer_Product_Package/getAllObjects|package]], which has a [[SoftLayer_Product_Package_Type (type)|package type]] of '''VIRTUAL_SERVER_INSTANCE'''.<br/><br/>
+// **Warning:** the price ids provided below may be outdated or unavailable, so you will need to determine the
+//
+// available prices from the virtual server package with [[SoftLayer_Product_Package/getAllObjects]],
+// which has a [[SoftLayer_Product_Package_Type]] of `VIRTUAL_SERVER_INSTANCE`.
 //
 //
-// <http title="Virtual server">
+// #### Virtual Ordering
+//
+// ```xml
 // <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://api.service.softlayer.com/soap/v3/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
 //   <SOAP-ENV:Header>
 //     <ns1:authenticate>
@@ -1018,16 +975,23 @@ func (r Product_Order) GetVlans(locationId *int, packageId *int, selectedItems *
 //     </ns1:placeOrder>
 //   </SOAP-ENV:Body>
 // </SOAP-ENV:Envelope>
-// </http><br/><br/>
+// ```
 //
 //
-// <h2>VLAN example</h2>
+// ## VLAN example
 //
 //
-// <strong>Warning:</strong> the price ids provided below may be outdated or unavailable, so you will need to determine the available prices from the additional services [[SoftLayer_Product_Package/getAllObjects|package]], which has a [[SoftLayer_Product_Package_Type (type)|package type]] of '''ADDITIONAL_SERVICES'''. You can get a full list of [[SoftLayer_Product_Package_Type/getAllObjects|package types]] to find other available additional service packages.<br/><br/>
+// **Warning:** the price ids provided below may be outdated or unavailable, so you will need to determine the
+//
+// available prices from the additional services pacakge with [[SoftLayer_Product_Package/getAllObjects]],
+// which has a [[SoftLayer_Product_Package_Type]] of `ADDITIONAL_SERVICES`.
+// You can get a full list of [[SoftLayer_Product_Package_Type/getAllObjects|]] to find other available additional
+// service packages.<br/><br/>
 //
 //
-// <http title="VLAN">
+// ### VLAN Ordering
+//
+// ```xml
 // <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://api.service.softlayer.com/soap/v3/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
 //   <SOAP-ENV:Header>
 //     <ns1:authenticate>
@@ -1054,19 +1018,30 @@ func (r Product_Order) GetVlans(locationId *int, packageId *int, selectedItems *
 //     </ns1:placeOrder>
 //   </SOAP-ENV:Body>
 // </SOAP-ENV:Envelope>
-// </http><br/><br/>
+// ```
 //
 //
-// <h2>Multiple products example</h2>
+// ## Multiple products example
 //
 //
-// This example includes a combination of the above examples in a single order. Note that all the configuration options for each individual order container are the same as above, except now we encapsulate each one within the <code>orderContainers</code> property on the base [[SoftLayer_Container_Product_Order (type)|order container]].<br/><br/>
+//
+// This example includes a combination of the above examples in a single order. Note that all the configuration
+// options for each individual order container are the same as above, except now we encapsulate each one within
+// the `orderContainers` property on the base [[SoftLayer_Container_Product_Order]].
 //
 //
-// <strong>Warning:</strong> not all products are available to be ordered with other products. For example, since SSL certificates require validation from a 3rd party, the approval process may take days or even weeks, and this would not be acceptable when you need your hourly virtual server right now. To better accommodate customers, we restrict several products to be ordered individually.<br/><br/>
+// **Warning:** not all products are available to be ordered with other products. For example, since
+//
+// SSL certificates require validation from a 3rd party, the approval process may take days or even weeks,
+// and this would not be acceptable when you need your hourly virtual server right now. To better accommodate
+// customers, we restrict several products to be ordered individually.
 //
 //
-// <http title="Bare metal server + virtual server + VLAN">
+// ### Bare metal server + virtual server + VLAN
+//
+//
+//
+// ```xml
 // <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://api.service.softlayer.com/soap/v3/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
 //   <SOAP-ENV:Header>
 //     <ns1:authenticate>
@@ -1093,7 +1068,7 @@ func (r Product_Order) GetVlans(locationId *int, packageId *int, selectedItems *
 //     </ns1:placeOrder>
 //   </SOAP-ENV:Body>
 // </SOAP-ENV:Envelope>
-// </http>
+// ```
 //
 //
 func (r Product_Order) PlaceOrder(orderData interface{}, saveAsQuote *bool) (resp datatypes.Container_Product_Order_Receipt, err error) {
@@ -1110,7 +1085,7 @@ func (r Product_Order) PlaceOrder(orderData interface{}, saveAsQuote *bool) (res
 }
 
 // Use this method for placing server quotes and additional services quotes. The same applies for this as with verifyOrder. Send in the SoftLayer_Container_Product_Order_Hardware_Server for server quotes. After placing the quote, you must go to this URL to finish the order process. After going to this URL, it will direct you back to a SoftLayer webpage that tells us you have finished the process. After this, it will go to sales for final approval.
-func (r Product_Order) PlaceQuote(orderData *datatypes.Container_Product_Order) (resp datatypes.Container_Product_Order_Receipt, err error) {
+func (r Product_Order) PlaceQuote(orderData interface{}) (resp datatypes.Container_Product_Order_Receipt, err error) {
 	params := []interface{}{
 		orderData,
 	}
@@ -1137,11 +1112,11 @@ func (r Product_Order) RequiredItems(itemPrices []datatypes.Product_Item_Price) 
 	return
 }
 
-// This service is used to verify that an order meets all the necessary requirements to purchase a server, virtual server or service from SoftLayer. It will verify that the products requested do not conflict. For example, you cannot order a Windows firewall with a Linux operating system. It will also check to make sure you have provided all the products that are required for the [[SoftLayer_Product_Package_Order_Configuration (type)|package configuration]] associated with the [[SoftLayer_Product_Package|package id]] on each of the [[SoftLayer_Container_Product_Order (type)|order containers]] specified.<br/><br/>
+// This service is used to verify that an order meets all the necessary requirements to purchase a server, virtual server or service from SoftLayer. It will verify that the products requested do not conflict. For example, you cannot order a Windows firewall with a Linux operating system. It will also check to make sure you have provided all the products that are required for the [[SoftLayer_Product_Package_Order_Configuration]] associated with the [[SoftLayer_Product_Package]] on each of the [[SoftLayer_Container_Product_Order]] specified.<br/><br/>
 //
 // This service returns the same container that was provided, but with additional information that can be used for debugging or validation. It will also contain pricing information (prorated if applicable) for each of the products on the order. If an exception occurs during verification, a container with the <code>SoftLayer_Exception_Order</code> exception type will be specified in the result.<br/><br/>
 //
-// <code>verifyOrder</code> accepts the same [[SoftLayer_Container_Product_Order (type)|container types]] as <code>placeOrder</code>, so see [[SoftLayer_Product_Order/placeOrder|placeOrder]] for more details.
+// <code>verifyOrder</code> accepts the same [[SoftLayer_Container_Product_Order]] as <code>placeOrder</code>, so see [[SoftLayer_Product_Order/placeOrder]] for more details.
 //
 //
 func (r Product_Order) VerifyOrder(orderData interface{}) (resp datatypes.Container_Product_Order, err error) {
@@ -1237,7 +1212,7 @@ func (r Product_Package) GetActivePresets() (resp []datatypes.Product_Package_Pr
 	return
 }
 
-// This method pulls all the active private hosted cloud packages. This will give you a basic description of the packages that are currently active and from which you can order private hosted cloud configurations.
+// [DEPRECATED] This method pulls all the active private hosted cloud packages. This will give you a basic description of the packages that are currently active and from which you can order private hosted cloud configurations.
 func (r Product_Package) GetActivePrivateHostedCloudPackages() (resp []datatypes.Product_Package, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Package", "getActivePrivateHostedCloudPackages", nil, &r.Options, &resp)
 	return
@@ -1340,6 +1315,12 @@ func (r Product_Package) GetCloudStorageItems(provider *int) (resp []datatypes.P
 // Retrieve The item categories associated with a package, including information detailing which item categories are required as part of a SoftLayer product order.
 func (r Product_Package) GetConfiguration() (resp []datatypes.Product_Package_Order_Configuration, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Package", "getConfiguration", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The default boot category code for the package.
+func (r Product_Package) GetDefaultBootCategoryCode() (resp string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Package", "getDefaultBootCategoryCode", nil, &r.Options, &resp)
 	return
 }
 
@@ -1498,6 +1479,12 @@ func (r Product_Package) GetMinimumPortSpeed() (resp uint, err error) {
 // Retrieve This flag indicates that this is a MongoDB engineered package. (Deprecated)
 func (r Product_Package) GetMongoDbEngineeredFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Package", "getMongoDbEngineeredFlag", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Services ordered from this package cannot have upgrades or downgrades performed.
+func (r Product_Package) GetNoUpgradesFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Package", "getNoUpgradesFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -1672,6 +1659,12 @@ func (r Product_Package_Preset) GetAllObjects() (resp []datatypes.Product_Packag
 // Retrieve
 func (r Product_Package_Preset) GetAvailableStorageUnits() (resp uint, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Package_Preset", "getAvailableStorageUnits", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve When true this preset is for ordering a Bare Metal Reserved server.
+func (r Product_Package_Preset) GetBareMetalReservedFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Package_Preset", "getBareMetalReservedFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -1957,6 +1950,61 @@ func (r Product_Package_Type) GetObject() (resp datatypes.Product_Package_Type, 
 // Retrieve All the packages associated with the given package type.
 func (r Product_Package_Type) GetPackages() (resp []datatypes.Product_Package, err error) {
 	err = r.Session.DoRequest("SoftLayer_Product_Package_Type", "getPackages", nil, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+type Product_Promotion struct {
+	Session *session.Session
+	Options sl.Options
+}
+
+// GetProductPromotionService returns an instance of the Product_Promotion SoftLayer service
+func GetProductPromotionService(sess *session.Session) Product_Promotion {
+	return Product_Promotion{Session: sess}
+}
+
+func (r Product_Promotion) Id(id int) Product_Promotion {
+	r.Options.Id = &id
+	return r
+}
+
+func (r Product_Promotion) Mask(mask string) Product_Promotion {
+	if !strings.HasPrefix(mask, "mask[") && (strings.Contains(mask, "[") || strings.Contains(mask, ",")) {
+		mask = fmt.Sprintf("mask[%s]", mask)
+	}
+
+	r.Options.Mask = mask
+	return r
+}
+
+func (r Product_Promotion) Filter(filter string) Product_Promotion {
+	r.Options.Filter = filter
+	return r
+}
+
+func (r Product_Promotion) Limit(limit int) Product_Promotion {
+	r.Options.Limit = &limit
+	return r
+}
+
+func (r Product_Promotion) Offset(offset int) Product_Promotion {
+	r.Options.Offset = &offset
+	return r
+}
+
+// Retrieves a promotion using its code.
+func (r Product_Promotion) FindByPromoCode(code *string) (resp datatypes.Container_Product_Promotion, err error) {
+	params := []interface{}{
+		code,
+	}
+	err = r.Session.DoRequest("SoftLayer_Product_Promotion", "findByPromoCode", params, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+func (r Product_Promotion) GetObject() (resp datatypes.Product_Promotion, err error) {
+	err = r.Session.DoRequest("SoftLayer_Product_Promotion", "getObject", nil, &r.Options, &resp)
 	return
 }
 

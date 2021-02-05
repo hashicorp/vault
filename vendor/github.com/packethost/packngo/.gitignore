@@ -23,6 +23,8 @@ _testmain.go
 *.exe
 *.test
 *.prof
+*.swp
 
-# idea
+# IDEs
 .idea**/**
+.vscode

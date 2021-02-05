@@ -67,15 +67,14 @@ func snowflakeTypeToGo(dbtype string, scale int64) reflect.Type {
 	case "boolean":
 		return reflect.TypeOf(true)
 	}
-	glog.V(1).Infof("unsupported dbtype is specified. %v", dbtype)
-	glog.Flush()
+	logger.Errorf("unsupported dbtype is specified. %v", dbtype)
 	return reflect.TypeOf("")
 }
 
 // valueToString converts arbitrary golang type to a string. This is mainly used in binding data with placeholders
 // in queries.
 func valueToString(v driver.Value, tsmode string) (*string, error) {
-	glog.V(2).Infof("TYPE: %v, %v", reflect.TypeOf(v), reflect.ValueOf(v))
+	logger.Debugf("TYPE: %v, %v", reflect.TypeOf(v), reflect.ValueOf(v))
 	if v == nil {
 		return nil, nil
 	}
@@ -133,7 +132,7 @@ func valueToString(v driver.Value, tsmode string) (*string, error) {
 
 // extractTimestamp extracts the internal timestamp data to epoch time in seconds and milliseconds
 func extractTimestamp(srcValue *string) (sec int64, nsec int64, err error) {
-	glog.V(2).Infof("SRC: %v", srcValue)
+	logger.Debugf("SRC: %v", srcValue)
 	var i int
 	for i = 0; i < len(*srcValue); i++ {
 		if (*srcValue)[i] == '.' {
@@ -158,7 +157,7 @@ func extractTimestamp(srcValue *string) (sec int64, nsec int64, err error) {
 			return 0, 0, err
 		}
 	}
-	glog.V(2).Infof("sec: %v, nsec: %v", sec, nsec)
+	logger.Infof("sec: %v, nsec: %v", sec, nsec)
 	return sec, nsec, nil
 }
 
@@ -166,11 +165,11 @@ func extractTimestamp(srcValue *string) (sec int64, nsec int64, err error) {
 // data.
 func stringToValue(dest *driver.Value, srcColumnMeta execResponseRowType, srcValue *string) error {
 	if srcValue == nil {
-		glog.V(3).Infof("snowflake data type: %v, raw value: nil", srcColumnMeta.Type)
+		logger.Debugf("snowflake data type: %v, raw value: nil", srcColumnMeta.Type)
 		*dest = nil
 		return nil
 	}
-	glog.V(3).Infof("snowflake data type: %v, raw value: %v", srcColumnMeta.Type, *srcValue)
+	logger.Debugf("snowflake data type: %v, raw value: %v", srcColumnMeta.Type, *srcValue)
 	switch srcColumnMeta.Type {
 	case "text", "fixed", "real", "variant", "object":
 		*dest = *srcValue
@@ -205,7 +204,7 @@ func stringToValue(dest *driver.Value, srcColumnMeta execResponseRowType, srcVal
 		*dest = time.Unix(sec, nsec)
 		return nil
 	case "timestamp_tz":
-		glog.V(2).Infof("tz: %v", *srcValue)
+		logger.Debugf("tz: %v", *srcValue)
 
 		tm := strings.Split(*srcValue, " ")
 		if len(tm) != 2 {
@@ -332,7 +331,7 @@ func arrowToValue(destcol *[]snowflakeValue, srcColumnMeta execResponseRowType, 
 	if len(*destcol) != srcValue.Data().Len() {
 		err = fmt.Errorf("array interface length mismatch")
 	}
-	glog.V(3).Infof("snowflake data type: %v, arrow data type: %v", srcColumnMeta.Type, srcValue.DataType())
+	logger.Debugf("snowflake data type: %v, arrow data type: %v", srcColumnMeta.Type, srcValue.DataType())
 
 	switch strings.ToUpper(srcColumnMeta.Type) {
 	case "FIXED":

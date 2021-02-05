@@ -1,6 +1,7 @@
 # linodego
 
 [![Build Status](https://travis-ci.org/linode/linodego.svg?branch=master)](https://travis-ci.org/linode/linodego)
+[![Release](https://img.shields.io/github/v/release/linode/linodego)](https://github.com/linode/linodego/releases/latest)
 [![GoDoc](https://godoc.org/github.com/linode/linodego?status.svg)](https://godoc.org/github.com/linode/linodego)
 [![Go Report Card](https://goreportcard.com/badge/github.com/linode/linodego)](https://goreportcard.com/report/github.com/linode/linodego)
 [![codecov](https://codecov.io/gh/linode/linodego/branch/master/graph/badge.svg)](https://codecov.io/gh/linode/linodego)
@@ -84,7 +85,7 @@ kernels, err := linodego.ListKernels(context.Background(), nil)
 Or, use a page value of "0":
 
 ```go
-opts := NewListOptions(0,"")
+opts := linodego.NewListOptions(0,"")
 kernels, err := linodego.ListKernels(context.Background(), opts)
 // len(kernels) == 218
 ```
@@ -92,8 +93,8 @@ kernels, err := linodego.ListKernels(context.Background(), opts)
 #### Single Page
 
 ```go
-opts := NewListOptions(2,"")
-// or opts := ListOptions{PageOptions: &PageOptions: {Page: 2 }}
+opts := linodego.NewListOptions(2,"")
+// or opts := linodego.ListOptions{PageOptions: &PageOptions: {Page: 2 }}
 kernels, err := linodego.ListKernels(context.Background(), opts)
 // len(kernels) == 100
 ```
@@ -108,8 +109,8 @@ values are set in the supplied ListOptions.
 #### Filtering
 
 ```go
-opts := ListOptions{Filter: "{\"mine\":true}"}
-// or opts := NewListOptions(0, "{\"mine\":true}")
+opts := linodego.ListOptions{Filter: "{\"mine\":true}"}
+// or opts := linodego.NewListOptions(0, "{\"mine\":true}")
 stackscripts, err := linodego.ListStackscripts(context.Background(), opts)
 ```
 
@@ -118,7 +119,7 @@ stackscripts, err := linodego.ListStackscripts(context.Background(), opts)
 #### Getting Single Entities
 
 ```go
-linode, err := linodego.GetLinode(context.Background(), 555) // any Linode ID that does not exist or is not yours
+linode, err := linodego.GetInstance(context.Background(), 555) // any Linode ID that does not exist or is not yours
 // linode == nil: true
 // err.Error() == "[404] Not Found"
 // err.Code == "404"
@@ -130,7 +131,7 @@ linode, err := linodego.GetLinode(context.Background(), 555) // any Linode ID th
 For lists, the list is still returned as `[]`, but `err` works the same way as on the `Get` request.
 
 ```go
-linodes, err := linodego.ListLinodes(context.Background(), NewListOptions(0, "{\"foo\":bar}"))
+linodes, err := linodego.ListInstances(context.Background(), linodego.NewListOptions(0, "{\"foo\":bar}"))
 // linodes == []
 // err.Error() == "[400] [X-Filter] Cannot filter on foo"
 ```
@@ -138,7 +139,7 @@ linodes, err := linodego.ListLinodes(context.Background(), NewListOptions(0, "{\
 Otherwise sane requests beyond the last page do not trigger an error, just an empty result:
 
 ```go
-linodes, err := linodego.ListLinodes(context.Background(), NewListOptions(9999, ""))
+linodes, err := linodego.ListInstances(context.Background(), linodego.NewListOptions(9999, ""))
 // linodes == []
 // err = nil
 ```
@@ -153,15 +154,9 @@ When performing a `POST` or `PUT` request, multiple field related errors will be
 
 ## Tests
 
-Run `make test` to run the unit tests.  This is the same as running `go test` except that `make test` will
-execute the tests while playing back API response fixtures that were recorded during a previous development build.
+Run `make testunit` to run the unit tests. 
 
-`go test` can be used without the fixtures. Copy `env.sample` to `.env` and configure your persistent test
-settings, including an API token.
-
-`go test -short` can be used to run live API tests that do not require an account token.
-
-This will be simplified in future versions.
+Run `make testint` to run the integration tests. The integration tests use fixtures.
 
 To update the test fixtures, run `make fixtures`.  This will record the API responses into the `fixtures/` directory.
 Be careful about committing any sensitive account details.  An attempt has been made to sanitize IP addresses and

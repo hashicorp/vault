@@ -32,13 +32,13 @@ type swriter struct {
 	pos int64
 }
 
-func (w *swriter) start() error { return nil }
+func (w *swriter) Start() error { return nil }
 func (w *swriter) Close() error {
 	_, err := w.Write(kEOS[:])
 	return err
 }
 
-func (w *swriter) write(p payload) error {
+func (w *swriter) WritePayload(p Payload) error {
 	_, err := writeIPCPayload(w, p)
 	if err != nil {
 		return err
@@ -57,10 +57,22 @@ type Writer struct {
 	w io.Writer
 
 	mem memory.Allocator
-	pw  payloadWriter
+	pw  PayloadWriter
 
 	started bool
 	schema  *arrow.Schema
+}
+
+// NewWriterWithPayloadWriter constructs a writer with the provided payload writer
+// instead of the default stream payload writer. This makes the writer more
+// reusable such as by the Arrow Flight writer.
+func NewWriterWithPayloadWriter(pw PayloadWriter, opts ...Option) *Writer {
+	cfg := newConfig(opts...)
+	return &Writer{
+		mem:    cfg.alloc,
+		pw:     pw,
+		schema: cfg.schema,
+	}
 }
 
 // NewWriter returns a writer that writes records to the provided output stream.
@@ -110,7 +122,7 @@ func (w *Writer) Write(rec array.Record) error {
 
 	const allow64b = true
 	var (
-		data = payload{msg: MessageRecordBatch}
+		data = Payload{msg: MessageRecordBatch}
 		enc  = newRecordEncoder(w.mem, 0, kMaxNestingDepth, allow64b)
 	)
 	defer data.Release()
@@ -119,7 +131,7 @@ func (w *Writer) Write(rec array.Record) error {
 		return xerrors.Errorf("arrow/ipc: could not encode record to payload: %w", err)
 	}
 
-	return w.pw.write(data)
+	return w.pw.WritePayload(data)
 }
 
 func (w *Writer) start() error {
@@ -130,7 +142,7 @@ func (w *Writer) start() error {
 	defer ps.Release()
 
 	for _, data := range ps {
-		err := w.pw.write(data)
+		err := w.pw.WritePayload(data)
 		if err != nil {
 			return err
 		}
@@ -159,7 +171,7 @@ func newRecordEncoder(mem memory.Allocator, startOffset, maxDepth int64, allow64
 	}
 }
 
-func (w *recordEncoder) Encode(p *payload, rec array.Record) error {
+func (w *recordEncoder) Encode(p *Payload, rec array.Record) error {
 
 	// perform depth-first traversal of the row-batch
 	for i, col := range rec.Columns() {
@@ -200,7 +212,7 @@ func (w *recordEncoder) Encode(p *payload, rec array.Record) error {
 	return w.encodeMetadata(p, rec.NumRows())
 }
 
-func (w *recordEncoder) visit(p *payload, arr array.Interface) error {
+func (w *recordEncoder) visit(p *Payload, arr array.Interface) error {
 	if w.depth <= 0 {
 		return errMaxRecursion
 	}
@@ -421,7 +433,7 @@ func (w *recordEncoder) getZeroBasedValueOffsets(arr array.Interface) (*memory.B
 	return voffsets, nil
 }
 
-func (w *recordEncoder) encodeMetadata(p *payload, nrows int64) error {
+func (w *recordEncoder) encodeMetadata(p *Payload, nrows int64) error {
 	p.meta = writeRecordMessage(w.mem, nrows, p.size, w.fields, w.meta)
 	return nil
 }

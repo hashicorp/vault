@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Key Management Service API
@@ -29,6 +30,22 @@ func NewKmsCryptoClientWithConfigurationProvider(configProvider common.Configura
 		return
 	}
 
+	return newKmsCryptoClientFromBaseClient(baseClient, configProvider, endpoint)
+}
+
+// NewKmsCryptoClientWithOboToken Creates a new default KmsCrypto client with the given configuration provider.
+// The obotoken will be added to default headers and signed; the configuration provider will be used for the signer
+//
+func NewKmsCryptoClientWithOboToken(configProvider common.ConfigurationProvider, oboToken string, endpoint string) (client KmsCryptoClient, err error) {
+	baseClient, err := common.NewClientWithOboToken(configProvider, oboToken)
+	if err != nil {
+		return
+	}
+
+	return newKmsCryptoClientFromBaseClient(baseClient, configProvider, endpoint)
+}
+
+func newKmsCryptoClientFromBaseClient(baseClient common.BaseClient, configProvider common.ConfigurationProvider, endpoint string) (client KmsCryptoClient, err error) {
 	client = KmsCryptoClient{BaseClient: baseClient}
 	client.BasePath = ""
 	client.Host = endpoint
@@ -51,7 +68,7 @@ func (client *KmsCryptoClient) ConfigurationProvider() *common.ConfigurationProv
 	return client.config
 }
 
-// Decrypt Decrypts data using the given DecryptDataDetails resource.
+// Decrypt Decrypts data using the given DecryptDataDetails (https://docs.cloud.oracle.com/api/#/en/key/release/datatypes/DecryptDataDetails) resource.
 func (client KmsCryptoClient) Decrypt(ctx context.Context, request DecryptRequest) (response DecryptResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
@@ -61,7 +78,12 @@ func (client KmsCryptoClient) Decrypt(ctx context.Context, request DecryptReques
 	ociResponse, err = common.Retry(ctx, request, client.decrypt, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DecryptResponse{RawResponse: ociResponse.HTTPResponse()}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DecryptResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DecryptResponse{}
+			}
 		}
 		return
 	}
@@ -93,9 +115,8 @@ func (client KmsCryptoClient) decrypt(ctx context.Context, request common.OCIReq
 	return response, err
 }
 
-// Encrypt Encrypts data using the given EncryptDataDetails resource.
-// Plaintext included in the example request is a base64-encoded value
-// of a UTF-8 string.
+// Encrypt Encrypts data using the given EncryptDataDetails (https://docs.cloud.oracle.com/api/#/en/key/release/datatypes/EncryptDataDetails) resource.
+// Plaintext included in the example request is a base64-encoded value of a UTF-8 string.
 func (client KmsCryptoClient) Encrypt(ctx context.Context, request EncryptRequest) (response EncryptResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
@@ -105,7 +126,12 @@ func (client KmsCryptoClient) Encrypt(ctx context.Context, request EncryptReques
 	ociResponse, err = common.Retry(ctx, request, client.encrypt, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = EncryptResponse{RawResponse: ociResponse.HTTPResponse()}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = EncryptResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = EncryptResponse{}
+			}
 		}
 		return
 	}
@@ -147,7 +173,12 @@ func (client KmsCryptoClient) GenerateDataEncryptionKey(ctx context.Context, req
 	ociResponse, err = common.Retry(ctx, request, client.generateDataEncryptionKey, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GenerateDataEncryptionKeyResponse{RawResponse: ociResponse.HTTPResponse()}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GenerateDataEncryptionKeyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GenerateDataEncryptionKeyResponse{}
+			}
 		}
 		return
 	}

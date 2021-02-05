@@ -1,25 +1,29 @@
 package packngo
 
-import "fmt"
+import (
+	"path"
+)
 
-// API documentation https://www.packet.net/developers/api/organizations/
+// API documentation https://metal.equinix.com/developers/api/organizations/
 const organizationBasePath = "/organizations"
 
 // OrganizationService interface defines available organization methods
 type OrganizationService interface {
-	List() ([]Organization, *Response, error)
-	Get(string) (*Organization, *Response, error)
+	List(*ListOptions) ([]Organization, *Response, error)
+	Get(string, *GetOptions) (*Organization, *Response, error)
 	Create(*OrganizationCreateRequest) (*Organization, *Response, error)
 	Update(string, *OrganizationUpdateRequest) (*Organization, *Response, error)
 	Delete(string) (*Response, error)
 	ListPaymentMethods(string) ([]PaymentMethod, *Response, error)
+	ListEvents(string, *ListOptions) ([]Event, *Response, error)
 }
 
 type organizationsRoot struct {
 	Organizations []Organization `json:"organizations"`
+	Meta          meta           `json:"meta"`
 }
 
-// Organization represents a Packet organization
+// Organization represents an Equinix Metal organization
 type Organization struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name,omitempty"`
@@ -45,7 +49,7 @@ func (o Organization) String() string {
 	return Stringify(o)
 }
 
-// OrganizationCreateRequest type used to create a Packet organization
+// OrganizationCreateRequest type used to create an Equinix Metal organization
 type OrganizationCreateRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -58,7 +62,7 @@ func (o OrganizationCreateRequest) String() string {
 	return Stringify(o)
 }
 
-// OrganizationUpdateRequest type used to update a Packet organization
+// OrganizationUpdateRequest type used to update an Equinix Metal organization
 type OrganizationUpdateRequest struct {
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
@@ -77,23 +81,33 @@ type OrganizationServiceOp struct {
 }
 
 // List returns the user's organizations
-func (s *OrganizationServiceOp) List() ([]Organization, *Response, error) {
-	root := new(organizationsRoot)
+func (s *OrganizationServiceOp) List(opts *ListOptions) (orgs []Organization, resp *Response, err error) {
+	subset := new(organizationsRoot)
 
-	resp, err := s.client.DoRequest("GET", organizationBasePath, nil, root)
-	if err != nil {
-		return nil, resp, err
+	apiPathQuery := opts.WithQuery(organizationBasePath)
+
+	for {
+		resp, err = s.client.DoRequest("GET", apiPathQuery, nil, subset)
+		if err != nil {
+			return nil, resp, err
+		}
+
+		orgs = append(orgs, subset.Organizations...)
+
+		if apiPathQuery = nextPage(subset.Meta, opts); apiPathQuery != "" {
+			continue
+		}
+		return
 	}
-
-	return root.Organizations, resp, err
 }
 
 // Get returns a organization by id
-func (s *OrganizationServiceOp) Get(organizationID string) (*Organization, *Response, error) {
-	path := fmt.Sprintf("%s/%s", organizationBasePath, organizationID)
+func (s *OrganizationServiceOp) Get(organizationID string, opts *GetOptions) (*Organization, *Response, error) {
+	endpointPath := path.Join(organizationBasePath, organizationID)
+	apiPathQuery := opts.WithQuery(endpointPath)
 	organization := new(Organization)
 
-	resp, err := s.client.DoRequest("GET", path, nil, organization)
+	resp, err := s.client.DoRequest("GET", apiPathQuery, nil, organization)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -115,10 +129,10 @@ func (s *OrganizationServiceOp) Create(createRequest *OrganizationCreateRequest)
 
 // Update updates an organization
 func (s *OrganizationServiceOp) Update(id string, updateRequest *OrganizationUpdateRequest) (*Organization, *Response, error) {
-	path := fmt.Sprintf("%s/%s", organizationBasePath, id)
+	apiPath := path.Join(organizationBasePath, id)
 	organization := new(Organization)
 
-	resp, err := s.client.DoRequest("PATCH", path, updateRequest, organization)
+	resp, err := s.client.DoRequest("PATCH", apiPath, updateRequest, organization)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -128,20 +142,27 @@ func (s *OrganizationServiceOp) Update(id string, updateRequest *OrganizationUpd
 
 // Delete deletes an organizationID
 func (s *OrganizationServiceOp) Delete(organizationID string) (*Response, error) {
-	path := fmt.Sprintf("%s/%s", organizationBasePath, organizationID)
+	apiPath := path.Join(organizationBasePath, organizationID)
 
-	return s.client.DoRequest("DELETE", path, nil, nil)
+	return s.client.DoRequest("DELETE", apiPath, nil, nil)
 }
 
 // ListPaymentMethods returns PaymentMethods for an organization
 func (s *OrganizationServiceOp) ListPaymentMethods(organizationID string) ([]PaymentMethod, *Response, error) {
-	url := fmt.Sprintf("%s/%s%s", organizationBasePath, organizationID, paymentMethodBasePath)
+	apiPath := path.Join(organizationBasePath, organizationID, paymentMethodBasePath)
 	root := new(paymentMethodsRoot)
 
-	resp, err := s.client.DoRequest("GET", url, nil, root)
+	resp, err := s.client.DoRequest("GET", apiPath, nil, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
 	return root.PaymentMethods, resp, err
+}
+
+// ListEvents returns list of organization events
+func (s *OrganizationServiceOp) ListEvents(organizationID string, listOpt *ListOptions) ([]Event, *Response, error) {
+	apiPath := path.Join(organizationBasePath, organizationID, eventBasePath)
+
+	return listEvents(s.client, apiPath, listOpt)
 }

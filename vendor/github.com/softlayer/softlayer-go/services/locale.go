@@ -142,7 +142,7 @@ func (r Locale_Country) GetCountries() (resp []datatypes.Locale_Country, err err
 	return
 }
 
-// no documentation yet
+// This method will return a collection of [[SoftLayer_Container_Collection_Locale_CountryCode]] objects. If the country has states, a [[SoftLayer_Container_Collection_Locale_StateCode]] collection will be provided with the country.
 func (r Locale_Country) GetCountriesAndStates(usFirstFlag *bool) (resp []datatypes.Container_Collection_Locale_CountryCode, err error) {
 	params := []interface{}{
 		usFirstFlag,
@@ -157,13 +157,31 @@ func (r Locale_Country) GetObject() (resp datatypes.Locale_Country, err error) {
 	return
 }
 
+// This method will return an array of country codes that require postal code
+func (r Locale_Country) GetPostalCodeRequiredCountryCodes() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Locale_Country", "getPostalCodeRequiredCountryCodes", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve States that belong to this country.
 func (r Locale_Country) GetStates() (resp []datatypes.Locale_StateProvince, err error) {
 	err = r.Session.DoRequest("SoftLayer_Locale_Country", "getStates", nil, &r.Options, &resp)
 	return
 }
 
-// no documentation yet
+// This method will return an array of ISO 3166 Alpha-2 country codes that use a Value-Added Tax (VAT) ID. Note the difference between [[SoftLayer_Locale_Country/getVatRequiredCountryCodes]] - this method will provide <strong>all</strong> country codes that use VAT ID, including those which are required.
+func (r Locale_Country) GetVatCountries() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Locale_Country", "getVatCountries", nil, &r.Options, &resp)
+	return
+}
+
+// This method will return an array of ISO 3166 Alpha-2 country codes that use a Value-Added Tax (VAT) ID. Note the difference between [[SoftLayer_Locale_Country/getVatCountries]] - this method will provide country codes where a VAT ID is required for onboarding to IBM Cloud.
+func (r Locale_Country) GetVatRequiredCountryCodes() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Locale_Country", "getVatRequiredCountryCodes", nil, &r.Options, &resp)
+	return
+}
+
+// Returns true if the country code is in the European Union (EU), false otherwise.
 func (r Locale_Country) IsEuropeanUnionCountry(iso2CountryCode *string) (resp bool, err error) {
 	params := []interface{}{
 		iso2CountryCode,

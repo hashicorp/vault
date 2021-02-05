@@ -1,12 +1,16 @@
 package gocb
 
 import (
+	"fmt"
 	gocbcore "github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/gocbcore/v9/memd"
+	"time"
 )
 
 const (
-	goCbVersionStr = "v2.1.4"
+	goCbVersionStr = "v2.2.0"
+
+	durabilityTimeoutFloor = 1500 * time.Millisecond
 )
 
 // QueryIndexType provides information on the type of indexer used for an index.
@@ -131,8 +135,11 @@ const (
 type DurabilityLevel uint8
 
 const (
+	// DurabilityLevelNone specifies that no durability level should be applied.
+	DurabilityLevelNone DurabilityLevel = iota
+
 	// DurabilityLevelMajority specifies that a mutation must be replicated (held in memory) to a majority of nodes.
-	DurabilityLevelMajority DurabilityLevel = iota + 1
+	DurabilityLevelMajority
 
 	// DurabilityLevelMajorityAndPersistOnMaster specifies that a mutation must be replicated (held in memory) to a
 	// majority of nodes and also persisted (written to disk) on the active node.
@@ -142,6 +149,36 @@ const (
 	// of nodes.
 	DurabilityLevelPersistToMajority
 )
+
+func (dl DurabilityLevel) toManagementAPI() (string, error) {
+	switch dl {
+	case DurabilityLevelNone:
+		return "none", nil
+	case DurabilityLevelMajority:
+		return "majority", nil
+	case DurabilityLevelMajorityAndPersistOnMaster:
+		return "majorityAndPersistActive", nil
+	case DurabilityLevelPersistToMajority:
+		return "persistToMajority", nil
+	default:
+		return "", invalidArgumentsError{
+			message: fmt.Sprintf("unknown durability level: %d", dl),
+		}
+	}
+}
+
+func durabilityLevelFromManagementAPI(level string) DurabilityLevel {
+	switch level {
+	case "majority":
+		return DurabilityLevelMajority
+	case "majorityAndPersistActive":
+		return DurabilityLevelMajorityAndPersistOnMaster
+	case "persistToMajority":
+		return DurabilityLevelPersistToMajority
+	default:
+		return DurabilityLevelNone
+	}
+}
 
 // MutationMacro can be supplied to MutateIn operations to perform ExpandMacros operations.
 type MutationMacro string
@@ -200,4 +237,21 @@ const (
 
 	// PingStateError indicates that the ping operation failed.
 	PingStateError
+)
+
+// SaslMechanism represents a type of auth that can be performed.
+type SaslMechanism string
+
+const (
+	// PlainSaslMechanism represents that PLAIN auth should be performed.
+	PlainSaslMechanism SaslMechanism = SaslMechanism(gocbcore.PlainAuthMechanism)
+
+	// ScramSha1SaslMechanism represents that SCRAM SHA1 auth should be performed.
+	ScramSha1SaslMechanism SaslMechanism = SaslMechanism(gocbcore.ScramSha1AuthMechanism)
+
+	// ScramSha256SaslMechanism represents that SCRAM SHA256 auth should be performed.
+	ScramSha256SaslMechanism SaslMechanism = SaslMechanism(gocbcore.ScramSha256AuthMechanism)
+
+	// ScramSha512SaslMechanism represents that SCRAM SHA512 auth should be performed.
+	ScramSha512SaslMechanism SaslMechanism = SaslMechanism(gocbcore.ScramSha512AuthMechanism)
 )

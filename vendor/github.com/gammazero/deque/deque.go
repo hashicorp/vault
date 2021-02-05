@@ -6,10 +6,11 @@ const minCapacity = 16
 
 // Deque represents a single instance of the deque data structure.
 type Deque struct {
-	buf   []interface{}
-	head  int
-	tail  int
-	count int
+	buf    []interface{}
+	head   int
+	tail   int
+	count  int
+	minCap int
 }
 
 // Len returns the number of elements currently stored in the queue.
@@ -116,6 +117,17 @@ func (q *Deque) At(i int) interface{} {
 	return q.buf[(q.head+i)&(len(q.buf)-1)]
 }
 
+// Set puts the element at index i in the queue. Set shares the same purpose
+// than At() but perform the opposite operation. The index i is the same
+// index defined by At(). If the index is invalid, the call panics.
+func (q *Deque) Set(i int, elem interface{}) {
+	if i < 0 || i >= q.count {
+		panic("deque: Set() called with index out of range")
+	}
+	// bitwise modulus
+	q.buf[(q.head+i)&(len(q.buf)-1)] = elem
+}
+
 // Clear removes all elements from the queue, but retains the current capacity.
 // This is useful when repeatedly reusing the queue at high frequency to avoid
 // GC during reuse.  The queue will not be resized smaller as long as items are
@@ -178,6 +190,21 @@ func (q *Deque) Rotate(n int) {
 	}
 }
 
+// SetMinCapacity sets a minimum capacity of 2^minCapacityExp.  If the value of
+// the minimum capacity is less than or equal to the minimum allowed, then
+// capacity is set to the minimum allowed.  This may be called at anytime to
+// set a new minimum capacity.
+//
+// Setting a larger minimum capacity may be used to prevent resizing when the
+// number of stored items changes frequently across a wide range.
+func (q *Deque) SetMinCapacity(minCapacityExp uint) {
+	if 1<<minCapacityExp > minCapacity {
+		q.minCap = 1 << minCapacityExp
+	} else {
+		q.minCap = minCapacity
+	}
+}
+
 // prev returns the previous buffer position wrapping around buffer.
 func (q *Deque) prev(i int) int {
 	return (i - 1) & (len(q.buf) - 1) // bitwise modulus
@@ -191,7 +218,10 @@ func (q *Deque) next(i int) int {
 // growIfFull resizes up if the buffer is full.
 func (q *Deque) growIfFull() {
 	if len(q.buf) == 0 {
-		q.buf = make([]interface{}, minCapacity)
+		if q.minCap == 0 {
+			q.minCap = minCapacity
+		}
+		q.buf = make([]interface{}, q.minCap)
 		return
 	}
 	if q.count == len(q.buf) {
@@ -201,7 +231,7 @@ func (q *Deque) growIfFull() {
 
 // shrinkIfExcess resize down if the buffer 1/4 full.
 func (q *Deque) shrinkIfExcess() {
-	if len(q.buf) > minCapacity && (q.count<<2) == len(q.buf) {
+	if len(q.buf) > q.minCap && (q.count<<2) == len(q.buf) {
 		q.resize()
 	}
 }

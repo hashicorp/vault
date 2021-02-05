@@ -28,20 +28,24 @@ type LoadBalancersService interface {
 // LoadBalancer represents a DigitalOcean load balancer configuration.
 // Tags can only be provided upon the creation of a Load Balancer.
 type LoadBalancer struct {
-	ID                  string           `json:"id,omitempty"`
-	Name                string           `json:"name,omitempty"`
-	IP                  string           `json:"ip,omitempty"`
-	Algorithm           string           `json:"algorithm,omitempty"`
-	Status              string           `json:"status,omitempty"`
-	Created             string           `json:"created_at,omitempty"`
-	ForwardingRules     []ForwardingRule `json:"forwarding_rules,omitempty"`
-	HealthCheck         *HealthCheck     `json:"health_check,omitempty"`
-	StickySessions      *StickySessions  `json:"sticky_sessions,omitempty"`
-	Region              *Region          `json:"region,omitempty"`
-	DropletIDs          []int            `json:"droplet_ids,omitempty"`
-	Tag                 string           `json:"tag,omitempty"`
-	Tags                []string         `json:"tags,omitempty"`
-	RedirectHttpToHttps bool             `json:"redirect_http_to_https,omitempty"`
+	ID                     string           `json:"id,omitempty"`
+	Name                   string           `json:"name,omitempty"`
+	IP                     string           `json:"ip,omitempty"`
+	SizeSlug               string           `json:"size,omitempty"`
+	Algorithm              string           `json:"algorithm,omitempty"`
+	Status                 string           `json:"status,omitempty"`
+	Created                string           `json:"created_at,omitempty"`
+	ForwardingRules        []ForwardingRule `json:"forwarding_rules,omitempty"`
+	HealthCheck            *HealthCheck     `json:"health_check,omitempty"`
+	StickySessions         *StickySessions  `json:"sticky_sessions,omitempty"`
+	Region                 *Region          `json:"region,omitempty"`
+	DropletIDs             []int            `json:"droplet_ids,omitempty"`
+	Tag                    string           `json:"tag,omitempty"`
+	Tags                   []string         `json:"tags,omitempty"`
+	RedirectHttpToHttps    bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol    bool             `json:"enable_proxy_protocol,omitempty"`
+	EnableBackendKeepalive bool             `json:"enable_backend_keepalive,omitempty"`
+	VPCUUID                string           `json:"vpc_uuid,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancer.
@@ -49,6 +53,7 @@ func (l LoadBalancer) String() string {
 	return Stringify(l)
 }
 
+// URN returns the load balancer ID in a valid DO API URN form.
 func (l LoadBalancer) URN() string {
 	return ToURN("LoadBalancer", l.ID)
 }
@@ -57,13 +62,17 @@ func (l LoadBalancer) URN() string {
 // Modifying the returned LoadBalancerRequest will not modify the original LoadBalancer.
 func (l LoadBalancer) AsRequest() *LoadBalancerRequest {
 	r := LoadBalancerRequest{
-		Name:                l.Name,
-		Algorithm:           l.Algorithm,
-		ForwardingRules:     append([]ForwardingRule(nil), l.ForwardingRules...),
-		DropletIDs:          append([]int(nil), l.DropletIDs...),
-		Tag:                 l.Tag,
-		RedirectHttpToHttps: l.RedirectHttpToHttps,
-		HealthCheck:         l.HealthCheck,
+		Name:                   l.Name,
+		Algorithm:              l.Algorithm,
+		SizeSlug:               l.SizeSlug,
+		ForwardingRules:        append([]ForwardingRule(nil), l.ForwardingRules...),
+		DropletIDs:             append([]int(nil), l.DropletIDs...),
+		Tag:                    l.Tag,
+		RedirectHttpToHttps:    l.RedirectHttpToHttps,
+		EnableProxyProtocol:    l.EnableProxyProtocol,
+		EnableBackendKeepalive: l.EnableBackendKeepalive,
+		HealthCheck:            l.HealthCheck,
+		VPCUUID:                l.VPCUUID,
 	}
 
 	if l.HealthCheck != nil {
@@ -125,16 +134,20 @@ func (s StickySessions) String() string {
 
 // LoadBalancerRequest represents the configuration to be applied to an existing or a new load balancer.
 type LoadBalancerRequest struct {
-	Name                string           `json:"name,omitempty"`
-	Algorithm           string           `json:"algorithm,omitempty"`
-	Region              string           `json:"region,omitempty"`
-	ForwardingRules     []ForwardingRule `json:"forwarding_rules,omitempty"`
-	HealthCheck         *HealthCheck     `json:"health_check,omitempty"`
-	StickySessions      *StickySessions  `json:"sticky_sessions,omitempty"`
-	DropletIDs          []int            `json:"droplet_ids,omitempty"`
-	Tag                 string           `json:"tag,omitempty"`
-	Tags                []string         `json:"tags,omitempty"`
-	RedirectHttpToHttps bool             `json:"redirect_http_to_https,omitempty"`
+	Name                   string           `json:"name,omitempty"`
+	Algorithm              string           `json:"algorithm,omitempty"`
+	Region                 string           `json:"region,omitempty"`
+	SizeSlug               string           `json:"size,omitempty"`
+	ForwardingRules        []ForwardingRule `json:"forwarding_rules,omitempty"`
+	HealthCheck            *HealthCheck     `json:"health_check,omitempty"`
+	StickySessions         *StickySessions  `json:"sticky_sessions,omitempty"`
+	DropletIDs             []int            `json:"droplet_ids,omitempty"`
+	Tag                    string           `json:"tag,omitempty"`
+	Tags                   []string         `json:"tags,omitempty"`
+	RedirectHttpToHttps    bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol    bool             `json:"enable_proxy_protocol,omitempty"`
+	EnableBackendKeepalive bool             `json:"enable_backend_keepalive,omitempty"`
+	VPCUUID                string           `json:"vpc_uuid,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancerRequest.
@@ -161,6 +174,7 @@ func (l dropletIDsRequest) String() string {
 type loadBalancersRoot struct {
 	LoadBalancers []LoadBalancer `json:"load_balancers"`
 	Links         *Links         `json:"links"`
+	Meta          *Meta          `json:"meta"`
 }
 
 type loadBalancerRoot struct {
@@ -211,6 +225,9 @@ func (l *LoadBalancersServiceOp) List(ctx context.Context, opt *ListOptions) ([]
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.LoadBalancers, resp, err

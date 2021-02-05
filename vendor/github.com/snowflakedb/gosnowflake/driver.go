@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Snowflake Computing Inc. All right reserved.
+// Copyright (c) 2017-2021 Snowflake Computing Inc. All right reserved.
 
 package gosnowflake
 
@@ -7,33 +7,47 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"net/http"
+	"sync/atomic"
 )
 
 // SnowflakeDriver is a context of Go Driver
-type SnowflakeDriver struct{}
+type SnowflakeDriver struct {
+}
 
 // Open creates a new connection.
 func (d SnowflakeDriver) Open(dsn string) (driver.Conn, error) {
-	glog.V(2).Info("Open")
+	logger.Info("Open")
+	ctx := context.TODO()
+	cfg, err := ParseDSN(dsn)
+	if err != nil {
+		return nil, err
+	}
+	return d.OpenWithConfig(ctx, *cfg)
+}
+
+// OpenWithConfig creates a new connection with the given Config.
+func (d SnowflakeDriver) OpenWithConfig(ctx context.Context, config Config) (driver.Conn, error) {
+	logger.Info("OpenWithConfig")
 	var err error
 	sc := &snowflakeConn{
 		SequenceCounter: 0,
+		ctx:             ctx,
+		cfg:             &config,
 	}
-	ctx := context.TODO()
-	sc.cfg, err = ParseDSN(dsn)
-	if err != nil {
-		sc.cleanup()
-		return nil, err
-	}
-	st := SnowflakeTransport
-	if sc.cfg.InsecureMode {
-		// no revocation check with OCSP. Think twice when you want to enable this option.
-		st = snowflakeInsecureTransport
+	var st http.RoundTripper = SnowflakeTransport
+	if sc.cfg.Transporter == nil {
+		if sc.cfg.InsecureMode {
+			// no revocation check with OCSP. Think twice when you want to enable this option.
+			st = snowflakeInsecureTransport
+		} else {
+			// set OCSP fail open mode
+			ocspResponseCacheLock.Lock()
+			atomic.StoreUint32((*uint32)(&ocspFailOpen), uint32(sc.cfg.OCSPFailOpen))
+			ocspResponseCacheLock.Unlock()
+		}
 	} else {
-		// set OCSP fail open mode
-		ocspResponseCacheLock.Lock()
-		ocspFailOpen = sc.cfg.OCSPFailOpen
-		ocspResponseCacheLock.Unlock()
+		// use the custom transport
+		st = sc.cfg.Transporter
 	}
 	// authenticate
 	sc.rest = &snowflakeRestful{
@@ -63,11 +77,11 @@ func (d SnowflakeDriver) Open(dsn string) (driver.Conn, error) {
 	var samlResponse []byte
 	var proofKey []byte
 
-	glog.V(2).Infof("Authenticating via %v", sc.cfg.Authenticator.String())
+	logger.Infof("Authenticating via %v", sc.cfg.Authenticator.String())
 	switch sc.cfg.Authenticator {
 	case AuthTypeExternalBrowser:
 		samlResponse, proofKey, err = authenticateByExternalBrowser(
-			ctx,
+			sc.ctx,
 			sc.rest,
 			sc.cfg.Authenticator.String(),
 			sc.cfg.Application,
@@ -80,7 +94,7 @@ func (d SnowflakeDriver) Open(dsn string) (driver.Conn, error) {
 		}
 	case AuthTypeOkta:
 		samlResponse, err = authenticateBySAML(
-			ctx,
+			sc.ctx,
 			sc.rest,
 			sc.cfg.OktaURL,
 			sc.cfg.Application,
@@ -93,7 +107,7 @@ func (d SnowflakeDriver) Open(dsn string) (driver.Conn, error) {
 		}
 	}
 	authData, err = authenticate(
-		ctx,
+		sc.ctx,
 		sc,
 		samlResponse,
 		proofKey)
@@ -103,10 +117,14 @@ func (d SnowflakeDriver) Open(dsn string) (driver.Conn, error) {
 	}
 
 	sc.populateSessionParameters(authData.Parameters)
+	sc.ctx = context.WithValue(sc.ctx, SFSessionIDKey, authData.SessionID)
 	sc.startHeartBeat()
 	return sc, nil
 }
 
+var logger = CreateDefaultLogger()
+
 func init() {
 	sql.Register("snowflake", &SnowflakeDriver{})
+	logger.SetLogLevel("error")
 }

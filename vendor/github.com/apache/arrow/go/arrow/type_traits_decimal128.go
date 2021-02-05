@@ -17,11 +17,11 @@
 package arrow
 
 import (
-	"encoding/binary"
 	"reflect"
 	"unsafe"
 
 	"github.com/apache/arrow/go/arrow/decimal128"
+	"github.com/apache/arrow/go/arrow/endian"
 )
 
 // Decimal128 traits
@@ -39,8 +39,8 @@ func (decimal128Traits) BytesRequired(n int) int { return Decimal128SizeBytes * 
 
 // PutValue
 func (decimal128Traits) PutValue(b []byte, v decimal128.Num) {
-	binary.LittleEndian.PutUint64(b[:8], uint64(v.LowBits()))
-	binary.LittleEndian.PutUint64(b[8:], uint64(v.HighBits()))
+	endian.Native.PutUint64(b[:8], uint64(v.LowBits()))
+	endian.Native.PutUint64(b[8:], uint64(v.HighBits()))
 }
 
 // CastFromBytes reinterprets the slice b to a slice of type uint16.

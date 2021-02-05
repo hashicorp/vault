@@ -33,6 +33,7 @@ import (
 	vkit "cloud.google.com/go/spanner/apiv1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
+	octrace "go.opencensus.io/trace"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -227,6 +228,11 @@ func (s *session) String() string {
 func (s *session) ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
+	// Start parent span that doesn't record.
+	_, span := octrace.StartSpan(ctx, "cloud.google.com/go/spanner.ping", octrace.WithSampler(octrace.NeverSample()))
+	defer span.End()
+
 	// s.getID is safe even when s is invalid.
 	_, err := s.client.ExecuteSql(contextWithOutgoingMetadata(ctx, s.md), &sppb.ExecuteSqlRequest{
 		Session: s.getID(),
@@ -338,7 +344,7 @@ func (s *session) destroy(isExpire bool) bool {
 func (s *session) delete(ctx context.Context) {
 	// Ignore the error because even if we fail to explicitly destroy the
 	// session, it will be eventually garbage collected by Cloud Spanner.
-	err := s.client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: s.getID()})
+	err := s.client.DeleteSession(contextWithOutgoingMetadata(ctx, s.md), &sppb.DeleteSessionRequest{Name: s.getID()})
 	if err != nil {
 		logf(s.logger, "Failed to delete session %v. Error: %v", s.getID(), err)
 	}
@@ -402,6 +408,12 @@ type SessionPoolConfig struct {
 	// Defaults to 10.
 	MaxBurst uint64
 
+	// incStep is the number of sessions to create in one batch when at least
+	// one more session is needed.
+	//
+	// Defaults to 25.
+	incStep uint64
+
 	// WriteSessions is the fraction of sessions we try to keep prepared for
 	// write.
 	//
@@ -443,6 +455,7 @@ var DefaultSessionPoolConfig = SessionPoolConfig{
 	MinOpened:           100,
 	MaxOpened:           numChannels * 100,
 	MaxBurst:            10,
+	incStep:             25,
 	WriteSessions:       0.2,
 	HealthCheckWorkers:  10,
 	HealthCheckInterval: healthCheckIntervalMins * time.Minute,
@@ -512,12 +525,21 @@ type sessionPool struct {
 	// mayGetSession is for broadcasting that session retrival/creation may
 	// proceed.
 	mayGetSession chan struct{}
+	// sessionCreationError is the last error that occurred during session
+	// creation and is propagated to any waiters waiting for a session.
+	sessionCreationError error
 	// numOpened is the total number of open sessions from the session pool.
 	numOpened uint64
 	// createReqs is the number of ongoing session creation requests.
 	createReqs uint64
 	// prepareReqs is the number of ongoing session preparation request.
 	prepareReqs uint64
+	// numReadWaiters is the number of processes waiting for a read session to
+	// become available.
+	numReadWaiters uint64
+	// numWriteWaiters is the number of processes waiting for a write session
+	// to become available.
+	numWriteWaiters uint64
 	// disableBackgroundPrepareSessions indicates that the BeginTransaction
 	// call for a read/write transaction failed with a permanent error, such as
 	// PermissionDenied or `Database not found`. Further background calls to
@@ -607,7 +629,7 @@ func newSessionPool(sc *sessionClient, config SessionPoolConfig) (*sessionPool, 
 	// sessions are created using BatchCreateSessions.
 	if config.MinOpened > 0 {
 		numSessions := minUint64(config.MinOpened, math.MaxInt32)
-		if err := pool.initPool(int32(numSessions)); err != nil {
+		if err := pool.initPool(numSessions); err != nil {
 			return nil, err
 		}
 	}
@@ -629,15 +651,20 @@ func (p *sessionPool) recordStat(ctx context.Context, m *stats.Int64Measure, n i
 	recordStat(ctx, m, n)
 }
 
-func (p *sessionPool) initPool(numSessions int32) error {
+func (p *sessionPool) initPool(numSessions uint64) error {
 	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.growPoolLocked(numSessions, true)
+}
+
+func (p *sessionPool) growPoolLocked(numSessions uint64, distributeOverChannels bool) error {
 	// Take budget before the actual session creation.
+	numSessions = minUint64(numSessions, math.MaxInt32)
 	p.numOpened += uint64(numSessions)
 	p.recordStat(context.Background(), OpenSessionCount, int64(p.numOpened))
 	p.createReqs += uint64(numSessions)
-	p.mu.Unlock()
-	// Asynchronously create the initial sessions for the pool.
-	return p.sc.batchCreateSessions(numSessions, p)
+	// Asynchronously create a batch of sessions for the pool.
+	return p.sc.batchCreateSessions(int32(numSessions), distributeOverChannels, p)
 }
 
 // sessionReady is executed by the SessionClient when a session has been
@@ -646,6 +673,8 @@ func (p *sessionPool) initPool(numSessions int32) error {
 func (p *sessionPool) sessionReady(s *session) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	// Clear any session creation error.
+	p.sessionCreationError = nil
 	// Set this pool as the home pool of the session and register it with the
 	// health checker.
 	s.pool = p
@@ -681,6 +710,7 @@ func (p *sessionPool) sessionCreationFailed(err error, numSessions int32) {
 	p.numOpened -= uint64(numSessions)
 	p.recordStat(context.Background(), OpenSessionCount, int64(p.numOpened))
 	// Notify other waiters blocking on session creation.
+	p.sessionCreationError = err
 	close(p.mayGetSession)
 	p.mayGetSession = make(chan struct{})
 }
@@ -742,25 +772,31 @@ func (p *sessionPool) newSessionHandle(s *session) (sh *sessionHandle) {
 
 // errGetSessionTimeout returns error for context timeout during
 // sessionPool.take().
-func (p *sessionPool) errGetSessionTimeout() error {
-	if p.TrackSessionHandles {
-		return p.errGetSessionTimeoutWithTrackedSessionHandles()
+func (p *sessionPool) errGetSessionTimeout(ctx context.Context) error {
+	var code codes.Code
+	if ctx.Err() == context.DeadlineExceeded {
+		code = codes.DeadlineExceeded
+	} else {
+		code = codes.Canceled
 	}
-	return p.errGetBasicSessionTimeout()
+	if p.TrackSessionHandles {
+		return p.errGetSessionTimeoutWithTrackedSessionHandles(code)
+	}
+	return p.errGetBasicSessionTimeout(code)
 }
 
 // errGetBasicSessionTimeout returns error for context timout during
 // sessionPool.take() without any tracked sessionHandles.
-func (p *sessionPool) errGetBasicSessionTimeout() error {
-	return spannerErrorf(codes.Canceled, "timeout / context canceled during getting session.\n"+
+func (p *sessionPool) errGetBasicSessionTimeout(code codes.Code) error {
+	return spannerErrorf(code, "timeout / context canceled during getting session.\n"+
 		"Enable SessionPoolConfig.TrackSessionHandles if you suspect a session leak to get more information about the checked out sessions.")
 }
 
 // errGetSessionTimeoutWithTrackedSessionHandles returns error for context
 // timout during sessionPool.take() including a stacktrace of each checked out
 // session handle.
-func (p *sessionPool) errGetSessionTimeoutWithTrackedSessionHandles() error {
-	err := spannerErrorf(codes.Canceled, "timeout / context canceled during getting session.")
+func (p *sessionPool) errGetSessionTimeoutWithTrackedSessionHandles(code codes.Code) error {
+	err := spannerErrorf(code, "timeout / context canceled during getting session.")
 	err.(*Error).additionalInformation = p.getTrackedSessionHandleStacksLocked()
 	return err
 }
@@ -825,7 +861,6 @@ func (p *sessionPool) createSession(ctx context.Context) (*session, error) {
 
 func (p *sessionPool) isHealthy(s *session) bool {
 	if s.getNextCheck().Add(2 * p.hc.getInterval()).Before(time.Now()) {
-		// TODO: figure out if we need to schedule a new healthcheck worker here.
 		if err := s.ping(); isSessionNotFoundError(err) {
 			// The session is already bad, continue to fetch/create a new one.
 			s.destroy(false)
@@ -842,10 +877,7 @@ func (p *sessionPool) isHealthy(s *session) bool {
 func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
 	trace.TracePrintf(ctx, nil, "Acquiring a read-only session")
 	for {
-		var (
-			s   *session
-			err error
-		)
+		var s *session
 
 		p.mu.Lock()
 		if !p.valid {
@@ -882,39 +914,39 @@ func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
 			return p.newSessionHandle(s), nil
 		}
 
-		// Idle list is empty, block if session pool has reached max session
-		// creation concurrency or max number of open sessions.
-		if (p.MaxOpened > 0 && p.numOpened >= p.MaxOpened) || (p.MaxBurst > 0 && p.createReqs >= p.MaxBurst) {
-			mayGetSession := p.mayGetSession
-			p.mu.Unlock()
-			trace.TracePrintf(ctx, nil, "Waiting for read-only session to become available")
-			select {
-			case <-ctx.Done():
-				trace.TracePrintf(ctx, nil, "Context done waiting for session")
-				p.recordStat(ctx, GetSessionTimeoutsCount, 1)
-				return nil, p.errGetSessionTimeout()
-			case <-mayGetSession:
+		// No session available. Start the creation of a new batch of sessions
+		// if that is allowed, and then wait for a session to come available.
+		if p.numReadWaiters+p.numWriteWaiters >= p.createReqs {
+			numSessions := minUint64(p.MaxOpened-p.numOpened, p.incStep)
+			if err := p.growPoolLocked(numSessions, false); err != nil {
+				p.mu.Unlock()
+				return nil, err
 			}
-			continue
 		}
 
-		// Take budget before the actual session creation.
-		p.numOpened++
-		// Creating a new session that will be returned directly to the client
-		// means that the max number of sessions in use also increases.
-		numCheckedOut := p.currSessionsCheckedOutLocked()
-		p.recordStat(ctx, OpenSessionCount, int64(p.numOpened))
-		p.createReqs++
+		p.numReadWaiters++
+		mayGetSession := p.mayGetSession
 		p.mu.Unlock()
-		p.mw.updateMaxSessionsCheckedOutDuringWindow(numCheckedOut)
-		if s, err = p.createSession(ctx); err != nil {
-			trace.TracePrintf(ctx, nil, "Error creating session: %v", err)
-			return nil, toSpannerError(err)
+		trace.TracePrintf(ctx, nil, "Waiting for read-only session to become available")
+		select {
+		case <-ctx.Done():
+			trace.TracePrintf(ctx, nil, "Context done waiting for session")
+			p.recordStat(ctx, GetSessionTimeoutsCount, 1)
+			p.mu.Lock()
+			p.numReadWaiters--
+			p.mu.Unlock()
+			return nil, p.errGetSessionTimeout(ctx)
+		case <-mayGetSession:
+			p.mu.Lock()
+			p.numReadWaiters--
+			if p.sessionCreationError != nil {
+				trace.TracePrintf(ctx, nil, "Error creating session: %v", p.sessionCreationError)
+				err := p.sessionCreationError
+				p.mu.Unlock()
+				return nil, err
+			}
+			p.mu.Unlock()
 		}
-		trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
-			"Created session")
-		p.incNumInUse(ctx)
-		return p.newSessionHandle(s), nil
 	}
 }
 
@@ -959,37 +991,39 @@ func (p *sessionPool) takeWriteSession(ctx context.Context) (*sessionHandle, err
 				continue
 			}
 		} else {
-			// Idle list is empty, block if session pool has reached max session
-			// creation concurrency or max number of open sessions.
-			if (p.MaxOpened > 0 && p.numOpened >= p.MaxOpened) || (p.MaxBurst > 0 && p.createReqs >= p.MaxBurst) {
-				mayGetSession := p.mayGetSession
-				p.mu.Unlock()
-				trace.TracePrintf(ctx, nil, "Waiting for read-write session to become available")
-				select {
-				case <-ctx.Done():
-					trace.TracePrintf(ctx, nil, "Context done waiting for session")
-					p.recordStat(ctx, GetSessionTimeoutsCount, 1)
-					return nil, p.errGetSessionTimeout()
-				case <-mayGetSession:
+			// No session available. Start the creation of a new batch of sessions
+			// if that is allowed, and then wait for a session to come available.
+			if p.numReadWaiters+p.numWriteWaiters >= p.createReqs {
+				numSessions := minUint64(p.MaxOpened-p.numOpened, p.incStep)
+				if err := p.growPoolLocked(numSessions, false); err != nil {
+					p.mu.Unlock()
+					return nil, err
 				}
-				continue
 			}
 
-			// Take budget before the actual session creation.
-			p.numOpened++
-			// Creating a new session that will be returned directly to the client
-			// means that the max number of sessions in use also increases.
-			numCheckedOut := p.currSessionsCheckedOutLocked()
-			p.recordStat(ctx, OpenSessionCount, int64(p.numOpened))
-			p.createReqs++
+			p.numWriteWaiters++
+			mayGetSession := p.mayGetSession
 			p.mu.Unlock()
-			p.mw.updateMaxSessionsCheckedOutDuringWindow(numCheckedOut)
-			if s, err = p.createSession(ctx); err != nil {
-				trace.TracePrintf(ctx, nil, "Error creating session: %v", err)
-				return nil, toSpannerError(err)
+			trace.TracePrintf(ctx, nil, "Waiting for read-write session to become available")
+			select {
+			case <-ctx.Done():
+				trace.TracePrintf(ctx, nil, "Context done waiting for session")
+				p.recordStat(ctx, GetSessionTimeoutsCount, 1)
+				p.mu.Lock()
+				p.numWriteWaiters--
+				p.mu.Unlock()
+				return nil, p.errGetSessionTimeout(ctx)
+			case <-mayGetSession:
+				p.mu.Lock()
+				p.numWriteWaiters--
+				if p.sessionCreationError != nil {
+					err := p.sessionCreationError
+					p.mu.Unlock()
+					return nil, err
+				}
+				p.mu.Unlock()
 			}
-			trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
-				"Created session")
+			continue
 		}
 		if !s.isWritePrepared() {
 			p.incNumBeingPrepared(ctx)
@@ -999,13 +1033,13 @@ func (p *sessionPool) takeWriteSession(ctx context.Context) (*sessionHandle, err
 					s.destroy(false)
 					trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 						"Session not found for write")
-					return nil, toSpannerError(err)
+					return nil, ToSpannerError(err)
 				}
 
 				s.recycle()
 				trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 					"Error preparing session for write")
-				return nil, toSpannerError(err)
+				return nil, ToSpannerError(err)
 			}
 		}
 		p.incNumInUse(ctx)
@@ -1467,13 +1501,12 @@ func (hc *healthChecker) worker(i int) {
 		if ws != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			err := ws.prepareForWrite(ctx)
-			cancel()
 			if err != nil {
 				// Skip handling prepare error, session can be prepared in next
 				// cycle.
 				// Don't log about permission errors, which may be expected
 				// (e.g. using read-only auth).
-				serr := toSpannerError(err).(*Error)
+				serr := ToSpannerError(err).(*Error)
 				if serr.Code != codes.PermissionDenied {
 					logf(hc.pool.sc.logger, "Failed to prepare session, error: %v", serr)
 				}
@@ -1482,6 +1515,7 @@ func (hc *healthChecker) worker(i int) {
 			hc.pool.mu.Lock()
 			hc.pool.decNumBeingPreparedLocked(ctx)
 			hc.pool.mu.Unlock()
+			cancel()
 			hc.markDone(ws)
 		}
 		rs := getNextForPing()
@@ -1548,7 +1582,9 @@ func (hc *healthChecker) maintainer() {
 		// The number of sessions in the pool should be in the range
 		// [Config.MinOpened, Config.MaxIdle+maxSessionsInUseDuringWindow]
 		if currSessionsOpened < minOpened {
-			hc.growPool(ctx, minOpened)
+			if err := hc.growPoolInBatch(ctx, minOpened); err != nil {
+				logf(hc.pool.sc.logger, "failed to grow pool: %v", err)
+			}
 		} else if maxIdle+maxSessionsInUseDuringWindow < currSessionsOpened {
 			hc.shrinkPool(ctx, maxIdle+maxSessionsInUseDuringWindow)
 		}
@@ -1570,61 +1606,11 @@ func (hc *healthChecker) maintainer() {
 	}
 }
 
-// growPool grows the number of sessions in the pool to the specified number of
-// sessions. It timeouts on sampleInterval.
-func (hc *healthChecker) growPool(ctx context.Context, growToNumSessions uint64) {
-	// Calculate the max number of sessions to create as a safeguard against
-	// other processes that could be deleting sessions concurrently.
+func (hc *healthChecker) growPoolInBatch(ctx context.Context, growToNumSessions uint64) error {
 	hc.pool.mu.Lock()
-	maxSessionsToCreate := int(growToNumSessions - hc.pool.numOpened)
-	hc.pool.mu.Unlock()
-	var created int
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-
-		p := hc.pool
-		p.mu.Lock()
-		// Take budget before the actual session creation.
-		if growToNumSessions <= p.numOpened || created >= maxSessionsToCreate {
-			p.mu.Unlock()
-			break
-		}
-		p.numOpened++
-		p.recordStat(ctx, OpenSessionCount, int64(p.numOpened))
-		p.createReqs++
-		shouldPrepareWrite := p.shouldPrepareWriteLocked()
-		p.mu.Unlock()
-		var (
-			s   *session
-			err error
-		)
-		createContext, cancel := context.WithTimeout(context.Background(), time.Minute)
-		if s, err = p.createSession(createContext); err != nil {
-			cancel()
-			logf(p.sc.logger, "Failed to create session, error: %v", toSpannerError(err))
-			continue
-		}
-		cancel()
-		created++
-		if shouldPrepareWrite {
-			prepareContext, cancel := context.WithTimeout(context.Background(), time.Minute)
-			if err = s.prepareForWrite(prepareContext); err != nil {
-				cancel()
-				p.recycle(s)
-				// Don't log about permission errors, which may be expected
-				// (e.g. using read-only auth).
-				serr := toSpannerError(err).(*Error)
-				if serr.Code != codes.PermissionDenied {
-					logf(p.sc.logger, "Failed to prepare session, error: %v", serr)
-				}
-				continue
-			}
-			cancel()
-		}
-		p.recycle(s)
-	}
+	defer hc.pool.mu.Unlock()
+	numSessions := growToNumSessions - hc.pool.numOpened
+	return hc.pool.growPoolLocked(numSessions, false)
 }
 
 // shrinkPool scales down the session pool. The method will stop deleting

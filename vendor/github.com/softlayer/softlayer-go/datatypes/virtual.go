@@ -81,6 +81,12 @@ type Virtual_DedicatedHost struct {
 	// The container that represents PCI device allocations on the dedicated host.
 	PciDeviceAllocationStatus *Container_Virtual_DedicatedHost_Pci_Device_AllocationStatus `json:"pciDeviceAllocationStatus,omitempty" xmlrpc:"pciDeviceAllocationStatus,omitempty"`
 
+	// A count of a collection of SoftLayer_Virtual_Host_PciDevice objects on the host.
+	PciDeviceCount *uint `json:"pciDeviceCount,omitempty" xmlrpc:"pciDeviceCount,omitempty"`
+
+	// A collection of SoftLayer_Virtual_Host_PciDevice objects on the host.
+	PciDevices []Virtual_Host_PciDevice `json:"pciDevices,omitempty" xmlrpc:"pciDevices,omitempty"`
+
 	// A count of
 	TagReferenceCount *uint `json:"tagReferenceCount,omitempty" xmlrpc:"tagReferenceCount,omitempty"`
 
@@ -112,6 +118,12 @@ type Virtual_Disk_Image struct {
 	// A disk image's unique md5 checksum.
 	Checksum *string `json:"checksum,omitempty" xmlrpc:"checksum,omitempty"`
 
+	// A column to save the Algorithm being used to store the checksum.
+	ChecksumAlgorithm *string `json:"checksumAlgorithm,omitempty" xmlrpc:"checksumAlgorithm,omitempty"`
+
+	// Check if cloud-init is enabled.
+	CloudInitFlag *bool `json:"cloudInitFlag,omitempty" xmlrpc:"cloudInitFlag,omitempty"`
+
 	// A count of
 	CoalescedDiskImageCount *uint `json:"coalescedDiskImageCount,omitempty" xmlrpc:"coalescedDiskImageCount,omitempty"`
 
@@ -127,8 +139,20 @@ type Virtual_Disk_Image struct {
 	// A brief description of a virtual disk image.
 	Description *string `json:"description,omitempty" xmlrpc:"description,omitempty"`
 
+	// Return disk file extension
+	DiskFileExtension *string `json:"diskFileExtension,omitempty" xmlrpc:"diskFileExtension,omitempty"`
+
+	// no documentation yet
+	DiskImageStorageGroup *Configuration_Storage_Group `json:"diskImageStorageGroup,omitempty" xmlrpc:"diskImageStorageGroup,omitempty"`
+
 	// A disk image's unique ID.
 	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// Return imported disk type
+	ImportedDiskType *string `json:"importedDiskType,omitempty" xmlrpc:"importedDiskType,omitempty"`
+
+	// Return if image is encrypted
+	IsEncrypted *bool `json:"isEncrypted,omitempty" xmlrpc:"isEncrypted,omitempty"`
 
 	// no documentation yet
 	LocalDiskFlag *bool `json:"localDiskFlag,omitempty" xmlrpc:"localDiskFlag,omitempty"`
@@ -154,6 +178,15 @@ type Virtual_Disk_Image struct {
 	// The original disk image that the current disk image was cloned from.
 	SourceDiskImage *Virtual_Disk_Image `json:"sourceDiskImage,omitempty" xmlrpc:"sourceDiskImage,omitempty"`
 
+	// A count of the storage group for a virtual disk image.
+	StorageGroupCount *uint `json:"storageGroupCount,omitempty" xmlrpc:"storageGroupCount,omitempty"`
+
+	// Return storage group details for symantec disk
+	StorageGroupDetails *Container_Image_StorageGroupDetails `json:"storageGroupDetails,omitempty" xmlrpc:"storageGroupDetails,omitempty"`
+
+	// The storage group for a virtual disk image.
+	StorageGroups []Configuration_Storage_Group `json:"storageGroups,omitempty" xmlrpc:"storageGroups,omitempty"`
+
 	// The storage repository that a disk image resides in.
 	StorageRepository *Virtual_Storage_Repository `json:"storageRepository,omitempty" xmlrpc:"storageRepository,omitempty"`
 
@@ -162,6 +195,9 @@ type Virtual_Disk_Image struct {
 
 	// The type of storage repository that a disk image resides in.
 	StorageRepositoryType *Virtual_Storage_Repository_Type `json:"storageRepositoryType,omitempty" xmlrpc:"storageRepositoryType,omitempty"`
+
+	// Return supported hardware component IDs for symantec disk
+	SupportedHardware *string `json:"supportedHardware,omitempty" xmlrpc:"supportedHardware,omitempty"`
 
 	// The template that attaches a disk image to a [[SoftLayer_Virtual_Guest_Block_Device_Template_Group|archive]].
 	TemplateBlockDevice *Virtual_Guest_Block_Device_Template `json:"templateBlockDevice,omitempty" xmlrpc:"templateBlockDevice,omitempty"`
@@ -404,6 +440,12 @@ type Virtual_Guest struct {
 	// A guest's universally unique identifier.
 	GlobalIdentifier *string `json:"globalIdentifier,omitempty" xmlrpc:"globalIdentifier,omitempty"`
 
+	// The number of GPUs attached to the guest.
+	GpuCount *int `json:"gpuCount,omitempty" xmlrpc:"gpuCount,omitempty"`
+
+	// The name of the GPU type attached to the guest.
+	GpuType *string `json:"gpuType,omitempty" xmlrpc:"gpuType,omitempty"`
+
 	// no documentation yet
 	GuestBootParameter *Virtual_Guest_Boot_Parameter `json:"guestBootParameter,omitempty" xmlrpc:"guestBootParameter,omitempty"`
 
@@ -416,7 +458,7 @@ type Virtual_Guest struct {
 	// A virtual computing instance's hostname
 	Hostname *string `json:"hostname,omitempty" xmlrpc:"hostname,omitempty"`
 
-	// Whether or not a computing instance is billed hourly instead of monthly.
+	// A guest's hourly billing status.
 	HourlyBillingFlag *bool `json:"hourlyBillingFlag,omitempty" xmlrpc:"hourlyBillingFlag,omitempty"`
 
 	// Unique ID for a computing instance.
@@ -482,12 +524,6 @@ type Virtual_Guest struct {
 	// The date a virtual computing instance was last modified.
 	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
 
-	// A count of
-	MonitoringAgentCount *uint `json:"monitoringAgentCount,omitempty" xmlrpc:"monitoringAgentCount,omitempty"`
-
-	// no documentation yet
-	MonitoringAgents []Monitoring_Agent `json:"monitoringAgents,omitempty" xmlrpc:"monitoringAgents,omitempty"`
-
 	// no documentation yet
 	MonitoringRobot *Monitoring_Robot `json:"monitoringRobot,omitempty" xmlrpc:"monitoringRobot,omitempty"`
 
@@ -496,9 +532,6 @@ type Virtual_Guest struct {
 
 	// no documentation yet
 	MonitoringServiceEligibilityFlag *bool `json:"monitoringServiceEligibilityFlag,omitempty" xmlrpc:"monitoringServiceEligibilityFlag,omitempty"`
-
-	// no documentation yet
-	MonitoringServiceFlag *bool `json:"monitoringServiceFlag,omitempty" xmlrpc:"monitoringServiceFlag,omitempty"`
 
 	// The monitoring notification objects for this guest. Each object links this guest instance to a user account that will be notified if monitoring on this guest object fails
 	MonitoringUserNotification []User_Customer_Notification_Virtual_Guest `json:"monitoringUserNotification,omitempty" xmlrpc:"monitoringUserNotification,omitempty"`
@@ -563,6 +596,12 @@ type Virtual_Guest struct {
 	// When true this virtual guest must be migrated using SoftLayer_Virtual_Guest::migrate.
 	PendingMigrationFlag *bool `json:"pendingMigrationFlag,omitempty" xmlrpc:"pendingMigrationFlag,omitempty"`
 
+	// The placement group that a virtual guest belongs to.
+	PlacementGroup *Virtual_PlacementGroup `json:"placementGroup,omitempty" xmlrpc:"placementGroup,omitempty"`
+
+	// The placement group ID that the virtual guest belongs to.
+	PlacementGroupId *int `json:"placementGroupId,omitempty" xmlrpc:"placementGroupId,omitempty"`
+
 	// URI of the script to be downloaded and executed after installation is complete. This is deprecated in favor of supplementalCreateObjectOptions' postInstallScriptUri.
 	PostInstallScriptUri *string `json:"postInstallScriptUri,omitempty" xmlrpc:"postInstallScriptUri,omitempty"`
 
@@ -604,6 +643,15 @@ type Virtual_Guest struct {
 
 	// no documentation yet
 	RegionalInternetRegistry *Network_Regional_Internet_Registry `json:"regionalInternetRegistry,omitempty" xmlrpc:"regionalInternetRegistry,omitempty"`
+
+	// The reserved capacity group the guest is associated with.
+	ReservedCapacityGroup *Virtual_ReservedCapacityGroup `json:"reservedCapacityGroup,omitempty" xmlrpc:"reservedCapacityGroup,omitempty"`
+
+	// Flag to indicate whether or not a guest is part of a reserved capacity group.
+	ReservedCapacityGroupFlag *bool `json:"reservedCapacityGroupFlag,omitempty" xmlrpc:"reservedCapacityGroupFlag,omitempty"`
+
+	// The reserved capacity group instance the guest is associated with.
+	ReservedCapacityGroupInstance *Virtual_ReservedCapacityGroup_Instance `json:"reservedCapacityGroupInstance,omitempty" xmlrpc:"reservedCapacityGroupInstance,omitempty"`
 
 	// A count of collection of scale assets this guest corresponds to.
 	ScaleAssetCount *uint `json:"scaleAssetCount,omitempty" xmlrpc:"scaleAssetCount,omitempty"`
@@ -874,6 +922,9 @@ type Virtual_Guest_Block_Device_Template_Group struct {
 	// A collection of locations containing a copy of this image template group. Will only be populated for parent template group objects.
 	Datacenters []Location `json:"datacenters,omitempty" xmlrpc:"datacenters,omitempty"`
 
+	// The first clone of the image template group
+	FirstChild *Virtual_Guest_Block_Device_Template_Group `json:"firstChild,omitempty" xmlrpc:"firstChild,omitempty"`
+
 	// A flag indicating if this is a flex image.
 	FlexImageFlag *bool `json:"flexImageFlag,omitempty" xmlrpc:"flexImageFlag,omitempty"`
 
@@ -892,6 +943,9 @@ type Virtual_Guest_Block_Device_Template_Group struct {
 	// A user definable and optional name of a block device template group.
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
 
+	// A flag indicating if this is a next generation image.
+	NextGenFlag *bool `json:"nextGenFlag,omitempty" xmlrpc:"nextGenFlag,omitempty"`
+
 	// A block device template group's user defined note.
 	Note *string `json:"note,omitempty" xmlrpc:"note,omitempty"`
 
@@ -903,6 +957,15 @@ type Virtual_Guest_Block_Device_Template_Group struct {
 
 	// no documentation yet
 	PublicFlag *int `json:"publicFlag,omitempty" xmlrpc:"publicFlag,omitempty"`
+
+	// no documentation yet
+	Region *Network_Service_Resource `json:"region,omitempty" xmlrpc:"region,omitempty"`
+
+	// A count of
+	RegionCount *uint `json:"regionCount,omitempty" xmlrpc:"regionCount,omitempty"`
+
+	// no documentation yet
+	Regions []Network_Service_Resource `json:"regions,omitempty" xmlrpc:"regions,omitempty"`
 
 	// A count of the ssh keys to be implemented on the server when provisioned or reloaded from an image template group.
 	SshKeyCount *uint `json:"sshKeyCount,omitempty" xmlrpc:"sshKeyCount,omitempty"`
@@ -934,7 +997,7 @@ type Virtual_Guest_Block_Device_Template_Group struct {
 	// A block device template group's [[SoftLayer_Provisioning_Version1_Transaction|transaction]] ID.  This will only be set when there is a transaction being performed on the block device template group.
 	TransactionId *int `json:"transactionId,omitempty" xmlrpc:"transactionId,omitempty"`
 
-	// A block device template group's [[SoftLayer_User|user]] ID
+	// A block device template group's [[SoftLayer_User_Customer]] ID
 	UserRecordId *int `json:"userRecordId,omitempty" xmlrpc:"userRecordId,omitempty"`
 }
 
@@ -1281,11 +1344,37 @@ type Virtual_Host struct {
 	// A virtual host's name.
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
 
+	// A count of
+	PciDeviceCount *uint `json:"pciDeviceCount,omitempty" xmlrpc:"pciDeviceCount,omitempty"`
+
+	// no documentation yet
+	PciDevices []Virtual_Host_PciDevice `json:"pciDevices,omitempty" xmlrpc:"pciDevices,omitempty"`
+
 	// The amount of memory physically available for a virtual host.
 	PhysicalMemoryCapacity *int `json:"physicalMemoryCapacity,omitempty" xmlrpc:"physicalMemoryCapacity,omitempty"`
 
 	// Unique ID for a virtual host's record on a virtualization platform.
 	Uuid *string `json:"uuid,omitempty" xmlrpc:"uuid,omitempty"`
+}
+
+// This type represents a PCI device on a host.
+type Virtual_Host_PciDevice struct {
+	Entity
+
+	// no documentation yet
+	HardwareComponentModel *Hardware_Component_Model `json:"hardwareComponentModel,omitempty" xmlrpc:"hardwareComponentModel,omitempty"`
+
+	// no documentation yet
+	Host *Virtual_Host `json:"host,omitempty" xmlrpc:"host,omitempty"`
+
+	// ID of the PCI device.
+	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// The unique id of the PCI device's record on a virtualization platform.
+	Uuid *string `json:"uuid,omitempty" xmlrpc:"uuid,omitempty"`
+
+	// The BDF (Domain:Bus:Device.Function) id of the PCI device in XenServer.
+	XenPciId *string `json:"xenPciId,omitempty" xmlrpc:"xenPciId,omitempty"`
 }
 
 // The SoftLayer_Virtual_Network_SecurityGroup_NetworkComponentBinding data type contains general information for a single binding. A binding associates a [[SoftLayer_Virtual_Guest_Network_Component]] with a [[SoftLayer_Network_SecurityGroup]].
@@ -1306,6 +1395,143 @@ type Virtual_Network_SecurityGroup_NetworkComponentBinding struct {
 
 	// The ID of the security group.
 	SecurityGroupId *int `json:"securityGroupId,omitempty" xmlrpc:"securityGroupId,omitempty"`
+}
+
+// This data type presents the structure for a virtual guest placement group. The data type contains relational properties to the virtual guest placement group rule class.
+type Virtual_PlacementGroup struct {
+	Entity
+
+	// The account that the placement group is implemented on.
+	Account *Account `json:"account,omitempty" xmlrpc:"account,omitempty"`
+
+	// The unique ID of the account that created the placement group.
+	AccountId *int `json:"accountId,omitempty" xmlrpc:"accountId,omitempty"`
+
+	// The router the placement group is implemented on.
+	BackendRouter *Hardware_Router_Backend `json:"backendRouter,omitempty" xmlrpc:"backendRouter,omitempty"`
+
+	// The placement group's backend router's associated unique ID.
+	BackendRouterId *int `json:"backendRouterId,omitempty" xmlrpc:"backendRouterId,omitempty"`
+
+	// The placement group's date of creation.
+	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
+
+	// A count of the virtual guests that are members of the placement group.
+	GuestCount *uint `json:"guestCount,omitempty" xmlrpc:"guestCount,omitempty"`
+
+	// The virtual guests that are members of the placement group.
+	Guests []Virtual_Guest `json:"guests,omitempty" xmlrpc:"guests,omitempty"`
+
+	// The placement group's associated unique ID.
+	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// The placement group's date of most recent modification.
+	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
+
+	// The placement group's name.
+	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
+
+	// The placement rule that the placement group is implementing.
+	Rule *Virtual_PlacementGroup_Rule `json:"rule,omitempty" xmlrpc:"rule,omitempty"`
+
+	// The associated unique ID of the placement group's rule.
+	RuleId *int `json:"ruleId,omitempty" xmlrpc:"ruleId,omitempty"`
+}
+
+// This data type presents the structure of a virtual guest placement group rule.
+type Virtual_PlacementGroup_Rule struct {
+	Entity
+
+	// The placement group rule's associated unique ID.
+	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// The placement group rule's key name.
+	KeyName *string `json:"keyName,omitempty" xmlrpc:"keyName,omitempty"`
+
+	// The placement group rule's name.
+	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
+}
+
+// This data type presents the structure for a virtual reserved capacity group.
+type Virtual_ReservedCapacityGroup struct {
+	Entity
+
+	// The account that the reserved capacity group is implemented on.
+	Account *Account `json:"account,omitempty" xmlrpc:"account,omitempty"`
+
+	// The unique ID of the account that created the reserved capacity group.
+	AccountId *int `json:"accountId,omitempty" xmlrpc:"accountId,omitempty"`
+
+	// A count of the instances available for guest provisions on this reserved capacity group.
+	AvailableInstanceCount *uint `json:"availableInstanceCount,omitempty" xmlrpc:"availableInstanceCount,omitempty"`
+
+	// The instances available for guest provisions on this reserved capacity group.
+	AvailableInstances []Virtual_ReservedCapacityGroup_Instance `json:"availableInstances,omitempty" xmlrpc:"availableInstances,omitempty"`
+
+	// The router the reserved capacity group is implemented on.
+	BackendRouter *Hardware_Router_Backend `json:"backendRouter,omitempty" xmlrpc:"backendRouter,omitempty"`
+
+	// The reserved capacity group's backend router's associated unique ID.
+	BackendRouterId *int `json:"backendRouterId,omitempty" xmlrpc:"backendRouterId,omitempty"`
+
+	// The date that the reserved capacity group was created.
+	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
+
+	// The reserved capacity group's associated unique ID.
+	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// A count of the guest instances that are members of this reserved capacity group.
+	InstanceCount *uint `json:"instanceCount,omitempty" xmlrpc:"instanceCount,omitempty"`
+
+	// The guest instances that are members of this reserved capacity group.
+	Instances []Virtual_ReservedCapacityGroup_Instance `json:"instances,omitempty" xmlrpc:"instances,omitempty"`
+
+	// The number of instances that are members of this reserved capacity group.
+	InstancesCount *uint `json:"instancesCount,omitempty" xmlrpc:"instancesCount,omitempty"`
+
+	// The date that the reserved capacity group was last modified.
+	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
+
+	// The reserved capacity group's name.
+	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
+
+	// A count of the instances already occupied by a guest on this reserved capacity group.
+	OccupiedInstanceCount *uint `json:"occupiedInstanceCount,omitempty" xmlrpc:"occupiedInstanceCount,omitempty"`
+
+	// The instances already occupied by a guest on this reserved capacity group.
+	OccupiedInstances []Virtual_ReservedCapacityGroup_Instance `json:"occupiedInstances,omitempty" xmlrpc:"occupiedInstances,omitempty"`
+}
+
+// This data type presents the structure for a virtual reserved capacity group instance.
+type Virtual_ReservedCapacityGroup_Instance struct {
+	Entity
+
+	// Flag to indecate whether or not the reserved instance is available or not.
+	AvailableFlag *bool `json:"availableFlag,omitempty" xmlrpc:"availableFlag,omitempty"`
+
+	// The billing item for the reserved capacity group instance.
+	BillingItem *Billing_Item `json:"billingItem,omitempty" xmlrpc:"billingItem,omitempty"`
+
+	// The date that the reserved capacity group instance was created.
+	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
+
+	// The virtual guest associated with this reserved capacity group instance.
+	Guest *Virtual_Guest `json:"guest,omitempty" xmlrpc:"guest,omitempty"`
+
+	// The virtual guest ID associated with this reserved capacity group instance.
+	GuestId *int `json:"guestId,omitempty" xmlrpc:"guestId,omitempty"`
+
+	// The reserved capacity group instance's associated unique ID.
+	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// The date that the reserved capacity group instance was last modified.
+	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
+
+	// The reserved instances that are members of this reserved capacity group.
+	ReservedCapacityGroup *Virtual_ReservedCapacityGroup `json:"reservedCapacityGroup,omitempty" xmlrpc:"reservedCapacityGroup,omitempty"`
+
+	// The ID of the reserved capacity group this instance is associated with.
+	ReservedCapacityGroupId *int `json:"reservedCapacityGroupId,omitempty" xmlrpc:"reservedCapacityGroupId,omitempty"`
 }
 
 // The SoftLayer_Virtual_Storage_Repository represents a web based storage system that can be accessed through many types of devices, interfaces, and other resources.

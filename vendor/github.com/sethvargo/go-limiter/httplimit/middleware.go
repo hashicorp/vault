@@ -60,7 +60,7 @@ func IPKeyFunc(headers ...string) KeyFunc {
 
 // Middleware is a handler/mux that can wrap other middlware to implement HTTP
 // rate limiting. It can rate limit based on an arbitrary KeyFunc, and supports
-// anything that implements limiter.Store.
+// anything that implements limiter.StoreWithContext.
 type Middleware struct {
 	store   limiter.Store
 	keyFunc KeyFunc
@@ -90,6 +90,8 @@ func NewMiddleware(s limiter.Store, f KeyFunc) (*Middleware, error) {
 // metadata about when it's safe to retry.
 func (m *Middleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		// Call the key function - if this fails, it's an internal server error.
 		key, err := m.keyFunc(r)
 		if err != nil {
@@ -98,7 +100,12 @@ func (m *Middleware) Handle(next http.Handler) http.Handler {
 		}
 
 		// Take from the store.
-		limit, remaining, reset, ok := m.store.Take(key)
+		limit, remaining, reset, ok, err := m.store.Take(ctx, key)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
 		resetTime := time.Unix(0, int64(reset)).UTC().Format(time.RFC1123)
 
 		// Set headers (we do this regardless of whether the request is permitted).

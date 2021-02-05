@@ -6,8 +6,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace k8s.io/client-go => k8s.io/client-go v0.19.2
-
 require (
 	bazil.org/fuse v0.0.0-20200524192727-fb710f7dfd05 // indirect
 	cloud.google.com/go v0.76.0
@@ -405,11 +403,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 	honnef.co/go/tools v0.1.1 // indirect
-	k8s.io/api v0.20.2 // indirect
-	// k8s.io/api v0.20.2 // indirect
-	k8s.io/client-go v11.0.0+incompatible // indirect
-	k8s.io/klog/v2 v2.5.0 // indirect
-	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 	layeh.com/radius v0.0.0-20201203135236-838e26d0c9be
 	rsc.io/sampler v1.99.99 // indirect
 )

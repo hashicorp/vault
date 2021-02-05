@@ -77,6 +77,12 @@ type Account struct {
 	// The active address(es) that belong to an account.
 	ActiveAddresses []Account_Address `json:"activeAddresses,omitempty" xmlrpc:"activeAddresses,omitempty"`
 
+	// A count of all active agreements for an account
+	ActiveAgreementCount *uint `json:"activeAgreementCount,omitempty" xmlrpc:"activeAgreementCount,omitempty"`
+
+	// All active agreements for an account
+	ActiveAgreements []Account_Agreement `json:"activeAgreements,omitempty" xmlrpc:"activeAgreements,omitempty"`
+
 	// A count of all billing agreements for an account
 	ActiveBillingAgreementCount *uint `json:"activeBillingAgreementCount,omitempty" xmlrpc:"activeBillingAgreementCount,omitempty"`
 
@@ -92,8 +98,14 @@ type Account struct {
 	// The account's active top level colocation containers.
 	ActiveColocationContainers []Billing_Item `json:"activeColocationContainers,omitempty" xmlrpc:"activeColocationContainers,omitempty"`
 
-	// Account's currently active Flexible Credit enrollment.
+	// [Deprecated] Please use SoftLayer_Account::activeFlexibleCreditEnrollments.
 	ActiveFlexibleCreditEnrollment *FlexibleCredit_Enrollment `json:"activeFlexibleCreditEnrollment,omitempty" xmlrpc:"activeFlexibleCreditEnrollment,omitempty"`
+
+	// A count of
+	ActiveFlexibleCreditEnrollmentCount *uint `json:"activeFlexibleCreditEnrollmentCount,omitempty" xmlrpc:"activeFlexibleCreditEnrollmentCount,omitempty"`
+
+	// no documentation yet
+	ActiveFlexibleCreditEnrollments []FlexibleCredit_Enrollment `json:"activeFlexibleCreditEnrollments,omitempty" xmlrpc:"activeFlexibleCreditEnrollments,omitempty"`
 
 	// A count of
 	ActiveNotificationSubscriberCount *uint `json:"activeNotificationSubscriberCount,omitempty" xmlrpc:"activeNotificationSubscriberCount,omitempty"`
@@ -106,6 +118,12 @@ type Account struct {
 
 	// An account's non-expired quotes.
 	ActiveQuotes []Billing_Order_Quote `json:"activeQuotes,omitempty" xmlrpc:"activeQuotes,omitempty"`
+
+	// A count of active reserved capacity agreements for an account
+	ActiveReservedCapacityAgreementCount *uint `json:"activeReservedCapacityAgreementCount,omitempty" xmlrpc:"activeReservedCapacityAgreementCount,omitempty"`
+
+	// Active reserved capacity agreements for an account
+	ActiveReservedCapacityAgreements []Account_Agreement `json:"activeReservedCapacityAgreements,omitempty" xmlrpc:"activeReservedCapacityAgreements,omitempty"`
 
 	// A count of the virtual software licenses controlled by an account
 	ActiveVirtualLicenseCount *uint `json:"activeVirtualLicenseCount,omitempty" xmlrpc:"activeVirtualLicenseCount,omitempty"`
@@ -266,7 +284,7 @@ type Account struct {
 	// The Business Partner details for the account. Country Enterprise Code, Channel, Segment, Reseller Level.
 	BusinessPartner *Account_Business_Partner `json:"businessPartner,omitempty" xmlrpc:"businessPartner,omitempty"`
 
-	// Indicating whether this account can order additional Vlans.
+	// [DEPRECATED] All accounts may order VLANs.
 	CanOrderAdditionalVlansFlag *bool `json:"canOrderAdditionalVlansFlag,omitempty" xmlrpc:"canOrderAdditionalVlansFlag,omitempty"`
 
 	// A count of an account's active carts.
@@ -280,12 +298,6 @@ type Account struct {
 
 	// no documentation yet
 	CatalystEnrollments []Catalyst_Enrollment `json:"catalystEnrollments,omitempty" xmlrpc:"catalystEnrollments,omitempty"`
-
-	// A count of an account's associated CDN accounts.
-	CdnAccountCount *uint `json:"cdnAccountCount,omitempty" xmlrpc:"cdnAccountCount,omitempty"`
-
-	// An account's associated CDN accounts.
-	CdnAccounts []Network_ContentDelivery_Account `json:"cdnAccounts,omitempty" xmlrpc:"cdnAccounts,omitempty"`
 
 	// The city of the mailing address belonging to an account.
 	City *string `json:"city,omitempty" xmlrpc:"city,omitempty"`
@@ -386,6 +398,9 @@ type Account struct {
 	// A fax phone number assigned to an account.
 	FaxPhone *string `json:"faxPhone,omitempty" xmlrpc:"faxPhone,omitempty"`
 
+	// no documentation yet
+	FileBlockBetaAccessFlag *bool `json:"fileBlockBetaAccessFlag,omitempty" xmlrpc:"fileBlockBetaAccessFlag,omitempty"`
+
 	// Each customer account is listed under a single individual. This is that individual's first name.
 	FirstName *string `json:"firstName,omitempty" xmlrpc:"firstName,omitempty"`
 
@@ -416,10 +431,10 @@ type Account struct {
 	// no documentation yet
 	GlobalIpv6Records []Network_Subnet_IpAddress_Global `json:"globalIpv6Records,omitempty" xmlrpc:"globalIpv6Records,omitempty"`
 
-	// A count of the global load balancer accounts for a softlayer customer account.
+	// A count of [Deprecated] The global load balancer accounts for a softlayer customer account.
 	GlobalLoadBalancerAccountCount *uint `json:"globalLoadBalancerAccountCount,omitempty" xmlrpc:"globalLoadBalancerAccountCount,omitempty"`
 
-	// The global load balancer accounts for a softlayer customer account.
+	// [Deprecated] The global load balancer accounts for a softlayer customer account.
 	GlobalLoadBalancerAccounts []Network_LoadBalancer_Global_Account `json:"globalLoadBalancerAccounts,omitempty" xmlrpc:"globalLoadBalancerAccounts,omitempty"`
 
 	// An account's associated hardware objects.
@@ -542,7 +557,7 @@ type Account struct {
 	// Indicates whether this account requires IBMid authentication.
 	IbmIdAuthenticationRequiredFlag *bool `json:"ibmIdAuthenticationRequiredFlag,omitempty" xmlrpc:"ibmIdAuthenticationRequiredFlag,omitempty"`
 
-	// Timestamp representing the point in time when an account is required to use IBMid authentication.
+	// This key is deprecated and should not be used.
 	IbmIdMigrationExpirationTimestamp *string `json:"ibmIdMigrationExpirationTimestamp,omitempty" xmlrpc:"ibmIdMigrationExpirationTimestamp,omitempty"`
 
 	// A customer account's internal identifier. Account numbers are typically preceded by the string "SL" in the customer portal. Every SoftLayer account has at least one portal user whose username follows the "SL" + account number naming scheme.
@@ -571,6 +586,9 @@ type Account struct {
 
 	// A flag indicating if an account belongs to a reseller or not.
 	IsReseller *int `json:"isReseller,omitempty" xmlrpc:"isReseller,omitempty"`
+
+	// no documentation yet
+	IscsiIsolationDisabled *bool `json:"iscsiIsolationDisabled,omitempty" xmlrpc:"iscsiIsolationDisabled,omitempty"`
 
 	// An account's associated iSCSI storage volumes.
 	IscsiNetworkStorage []Network_Storage `json:"iscsiNetworkStorage,omitempty" xmlrpc:"iscsiNetworkStorage,omitempty"`
@@ -674,6 +692,9 @@ type Account struct {
 	// An account's media transfer service requests.
 	MediaDataTransferRequests []Account_Media_Data_Transfer_Request `json:"mediaDataTransferRequests,omitempty" xmlrpc:"mediaDataTransferRequests,omitempty"`
 
+	// Flag indicating whether this account is restricted to the IBM Cloud portal.
+	MigratedToIbmCloudPortalFlag *bool `json:"migratedToIbmCloudPortalFlag,omitempty" xmlrpc:"migratedToIbmCloudPortalFlag,omitempty"`
+
 	// The date an account was last modified.
 	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
 
@@ -695,7 +716,7 @@ type Account struct {
 	// A count of an account's associated NAS storage volumes.
 	NasNetworkStorageCount *uint `json:"nasNetworkStorageCount,omitempty" xmlrpc:"nasNetworkStorageCount,omitempty"`
 
-	// Whether or not this account can define their own networks.
+	// [Deprecated] Whether or not this account can define their own networks.
 	NetworkCreationFlag *bool `json:"networkCreationFlag,omitempty" xmlrpc:"networkCreationFlag,omitempty"`
 
 	// A count of all network gateway devices on this account.
@@ -787,6 +808,9 @@ type Account struct {
 
 	// The pre-tax total amount exempt from incubator credit for the account's next invoice. This field is now deprecated and will soon be removed. Please update all references to instead use nextInvoiceTotalAmount
 	NextInvoiceIncubatorExemptTotal *Float64 `json:"nextInvoiceIncubatorExemptTotal,omitempty" xmlrpc:"nextInvoiceIncubatorExemptTotal,omitempty"`
+
+	// The total recurring charge amount of an account's next invoice eligible for account discount measured in US Dollars ($USD), assuming no changes or charges occur between now and time of billing.
+	NextInvoiceRecurringAmountEligibleForAccountDiscount *Float64 `json:"nextInvoiceRecurringAmountEligibleForAccountDiscount,omitempty" xmlrpc:"nextInvoiceRecurringAmountEligibleForAccountDiscount,omitempty"`
 
 	// A count of the billing items that will be on an account's next invoice.
 	NextInvoiceTopLevelBillingItemCount *uint `json:"nextInvoiceTopLevelBillingItemCount,omitempty" xmlrpc:"nextInvoiceTopLevelBillingItemCount,omitempty"`
@@ -968,6 +992,12 @@ type Account struct {
 	// An account's user roles.
 	PermissionRoles []User_Permission_Role `json:"permissionRoles,omitempty" xmlrpc:"permissionRoles,omitempty"`
 
+	// A count of an account's associated virtual placement groups.
+	PlacementGroupCount *uint `json:"placementGroupCount,omitempty" xmlrpc:"placementGroupCount,omitempty"`
+
+	// An account's associated virtual placement groups.
+	PlacementGroups []Virtual_PlacementGroup `json:"placementGroups,omitempty" xmlrpc:"placementGroups,omitempty"`
+
 	// A count of
 	PortableStorageVolumeCount *uint `json:"portableStorageVolumeCount,omitempty" xmlrpc:"portableStorageVolumeCount,omitempty"`
 
@@ -983,13 +1013,13 @@ type Account struct {
 	// The postal code of the mailing address belonging to an account.
 	PostalCode *string `json:"postalCode,omitempty" xmlrpc:"postalCode,omitempty"`
 
-	// Boolean flag dictating whether or not this account supports PPTP VPN Access.
+	// (Deprecated) Boolean flag dictating whether or not this account supports PPTP VPN Access.
 	PptpVpnAllowedFlag *bool `json:"pptpVpnAllowedFlag,omitempty" xmlrpc:"pptpVpnAllowedFlag,omitempty"`
 
-	// A count of an account's associated portal users with PPTP VPN access.
+	// A count of an account's associated portal users with PPTP VPN access. (Deprecated)
 	PptpVpnUserCount *uint `json:"pptpVpnUserCount,omitempty" xmlrpc:"pptpVpnUserCount,omitempty"`
 
-	// An account's associated portal users with PPTP VPN access.
+	// An account's associated portal users with PPTP VPN access. (Deprecated)
 	PptpVpnUsers []User_Customer `json:"pptpVpnUsers,omitempty" xmlrpc:"pptpVpnUsers,omitempty"`
 
 	// The total recurring amount for an accounts previous revenue.
@@ -1109,6 +1139,18 @@ type Account struct {
 	// The Reseller level of the account.
 	ResellerLevel *int `json:"resellerLevel,omitempty" xmlrpc:"resellerLevel,omitempty"`
 
+	// A count of all reserved capacity agreements for an account
+	ReservedCapacityAgreementCount *uint `json:"reservedCapacityAgreementCount,omitempty" xmlrpc:"reservedCapacityAgreementCount,omitempty"`
+
+	// All reserved capacity agreements for an account
+	ReservedCapacityAgreements []Account_Agreement `json:"reservedCapacityAgreements,omitempty" xmlrpc:"reservedCapacityAgreements,omitempty"`
+
+	// A count of the reserved capacity groups owned by this account.
+	ReservedCapacityGroupCount *uint `json:"reservedCapacityGroupCount,omitempty" xmlrpc:"reservedCapacityGroupCount,omitempty"`
+
+	// The reserved capacity groups owned by this account.
+	ReservedCapacityGroups []Virtual_ReservedCapacityGroup `json:"reservedCapacityGroups,omitempty" xmlrpc:"reservedCapacityGroups,omitempty"`
+
 	// A count of an account's associated top-level resource groups.
 	ResourceGroupCount *uint `json:"resourceGroupCount,omitempty" xmlrpc:"resourceGroupCount,omitempty"`
 
@@ -1121,11 +1163,11 @@ type Account struct {
 	// All Routers that an accounts VLANs reside on
 	Routers []Hardware `json:"routers,omitempty" xmlrpc:"routers,omitempty"`
 
-	// An account's reverse WHOIS data. This data is used when making SWIP requests.
-	RwhoisData *Network_Subnet_Rwhois_Data `json:"rwhoisData,omitempty" xmlrpc:"rwhoisData,omitempty"`
+	// DEPRECATED
+	RwhoisData []Network_Subnet_Rwhois_Data `json:"rwhoisData,omitempty" xmlrpc:"rwhoisData,omitempty"`
 
-	// no documentation yet
-	SalesforceAccountLink *Account_Link `json:"salesforceAccountLink,omitempty" xmlrpc:"salesforceAccountLink,omitempty"`
+	// A count of dEPRECATED
+	RwhoisDataCount *uint `json:"rwhoisDataCount,omitempty" xmlrpc:"rwhoisDataCount,omitempty"`
 
 	// The SAML configuration for this account.
 	SamlAuthentication *Account_Authentication_Saml `json:"samlAuthentication,omitempty" xmlrpc:"samlAuthentication,omitempty"`
@@ -2047,11 +2089,6 @@ type Account_Link_OpenStack_ProjectDetails struct {
 }
 
 // no documentation yet
-type Account_Link_ThePlanet struct {
-	Account_Link
-}
-
-// no documentation yet
 type Account_Link_Vendor struct {
 	Entity
 
@@ -2303,9 +2340,6 @@ type Account_Note struct {
 	NoteHistoryCount *uint `json:"noteHistoryCount,omitempty" xmlrpc:"noteHistoryCount,omitempty"`
 
 	// no documentation yet
-	NoteType *Account_Note_Type `json:"noteType,omitempty" xmlrpc:"noteType,omitempty"`
-
-	// no documentation yet
 	NoteTypeId *int `json:"noteTypeId,omitempty" xmlrpc:"noteTypeId,omitempty"`
 
 	// no documentation yet
@@ -2339,35 +2373,6 @@ type Account_Note_History struct {
 
 	// no documentation yet
 	UserId *int `json:"userId,omitempty" xmlrpc:"userId,omitempty"`
-}
-
-// no documentation yet
-type Account_Note_Type struct {
-	Entity
-
-	// no documentation yet
-	BrandId *int `json:"brandId,omitempty" xmlrpc:"brandId,omitempty"`
-
-	// no documentation yet
-	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
-
-	// no documentation yet
-	Description *string `json:"description,omitempty" xmlrpc:"description,omitempty"`
-
-	// no documentation yet
-	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
-
-	// no documentation yet
-	KeyName *string `json:"keyName,omitempty" xmlrpc:"keyName,omitempty"`
-
-	// no documentation yet
-	ModifyDate *Time `json:"modifyDate,omitempty" xmlrpc:"modifyDate,omitempty"`
-
-	// no documentation yet
-	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
-
-	// no documentation yet
-	ValueExpression *string `json:"valueExpression,omitempty" xmlrpc:"valueExpression,omitempty"`
 }
 
 // no documentation yet
@@ -2519,6 +2524,17 @@ type Account_ProofOfConcept_Approver_Type struct {
 
 	// Name of a Proof of Concept account approver type.
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
+}
+
+// A [SoftLayer_Account_ProofOfConcept_Campaign_Code] provides a `code` and an optional `description`.
+type Account_ProofOfConcept_Campaign_Code struct {
+	Entity
+
+	// no documentation yet
+	Code *string `json:"code,omitempty" xmlrpc:"code,omitempty"`
+
+	// no documentation yet
+	Description *string `json:"description,omitempty" xmlrpc:"description,omitempty"`
 }
 
 // no documentation yet
@@ -2717,6 +2733,12 @@ type Account_Reports_Request struct {
 	// no documentation yet
 	RequestKey *string `json:"requestKey,omitempty" xmlrpc:"requestKey,omitempty"`
 
+	// A request's corresponding requestor contact, if one exists.
+	RequestorContact *Account_Contact `json:"requestorContact,omitempty" xmlrpc:"requestorContact,omitempty"`
+
+	// no documentation yet
+	RequestorContactId *int `json:"requestorContactId,omitempty" xmlrpc:"requestorContactId,omitempty"`
+
 	// no documentation yet
 	Status *string `json:"status,omitempty" xmlrpc:"status,omitempty"`
 
@@ -2784,6 +2806,9 @@ type Account_Shipment struct {
 	// The create user id of the shipment.
 	CreateUserId *int `json:"createUserId,omitempty" xmlrpc:"createUserId,omitempty"`
 
+	// no documentation yet
+	Currency *Billing_Currency `json:"currency,omitempty" xmlrpc:"currency,omitempty"`
+
 	// The address at which the shipment is received.
 	DestinationAddress *Account_Address `json:"destinationAddress,omitempty" xmlrpc:"destinationAddress,omitempty"`
 
@@ -2795,6 +2820,9 @@ type Account_Shipment struct {
 
 	// The unique id of the shipment.
 	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// The one master tracking data for the shipment.
+	MasterTrackingData *Account_Shipment_Tracking_Data `json:"masterTrackingData,omitempty" xmlrpc:"masterTrackingData,omitempty"`
 
 	// The employee who last modified the shipment.
 	ModifyEmployee *User_Employee `json:"modifyEmployee,omitempty" xmlrpc:"modifyEmployee,omitempty"`
@@ -2829,10 +2857,10 @@ type Account_Shipment struct {
 	// The status id of the shipment.
 	StatusId *int `json:"statusId,omitempty" xmlrpc:"statusId,omitempty"`
 
-	// The tracking data for the shipment.
+	// All tracking data for the shipment and packages.
 	TrackingData []Account_Shipment_Tracking_Data `json:"trackingData,omitempty" xmlrpc:"trackingData,omitempty"`
 
-	// A count of the tracking data for the shipment.
+	// A count of all tracking data for the shipment and packages.
 	TrackingDataCount *uint `json:"trackingDataCount,omitempty" xmlrpc:"trackingDataCount,omitempty"`
 
 	// The type of shipment (e.g. for Data Transfer Service or Colocation Service).
@@ -2840,6 +2868,12 @@ type Account_Shipment struct {
 
 	// The type id of the shipment.
 	TypeId *int `json:"typeId,omitempty" xmlrpc:"typeId,omitempty"`
+
+	// The address at which the shipment is received.
+	ViaAddress *Account_Address `json:"viaAddress,omitempty" xmlrpc:"viaAddress,omitempty"`
+
+	// The via address id of the shipment.
+	ViaAddressId *int `json:"viaAddressId,omitempty" xmlrpc:"viaAddressId,omitempty"`
 }
 
 // The SoftLayer_Account_Shipment_Item data type contains information relating to a shipment's item. Basic information such as addresses, the shipment courier, and any tracking information for as shipment is accessible with this data type.

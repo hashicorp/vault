@@ -121,9 +121,13 @@ func (fs Filters) Build() string {
 			})
 		}
 
-		cursor[leaf] = map[string]interface{}{
-			"operation": filter.Op,
-			"options":   options,
+		if _, found := cursor[leaf]; found { // already have operation
+			cursor[leaf].(map[string]interface{})["options"] = options
+		} else {
+			cursor[leaf] = map[string]interface{}{
+				"operation": filter.Op,
+				"options":   options,
+			}
 		}
 	}
 

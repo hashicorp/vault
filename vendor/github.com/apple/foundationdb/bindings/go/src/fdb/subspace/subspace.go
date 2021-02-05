@@ -35,6 +35,8 @@ package subspace
 import (
 	"bytes"
 	"errors"
+	"fmt"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 )
@@ -54,6 +56,15 @@ type Subspace interface {
 	// Subspace prepended.
 	Pack(t tuple.Tuple) fdb.Key
 
+	// PackWithVersionstamp returns the key encoding the specified tuple in
+	// the subspace so that it may be used as the key in fdb.Transaction's
+	// SetVersionstampedKey() method. The passed tuple must contain exactly
+	// one incomplete tuple.Versionstamp instance or the method will return
+	// with an error. The behavior here is the same as if one used the
+	// tuple.PackWithVersionstamp() method to appropriately pack together this
+	// subspace and the passed tuple.
+	PackWithVersionstamp(t tuple.Tuple) (fdb.Key, error)
+
 	// Unpack returns the Tuple encoded by the given key with the prefix of this
 	// Subspace removed. Unpack will return an error if the key is not in this
 	// Subspace or does not encode a well-formed Tuple.
@@ -67,13 +78,14 @@ type Subspace interface {
 	// FoundationDB keys (corresponding to the prefix of this Subspace).
 	fdb.KeyConvertible
 
-	// All Subspaces implement fdb.ExactRange and fdb.Range, and describe all
-	// keys logically in this Subspace.
+	// All Subspaces implement fdb.ExactRange and fdb.Range, and describe all 
+	// keys strictly within the subspace that encode tuples. Specifically, 
+	// this will include all keys in [prefix + '\x00', prefix + '\xff').
 	fdb.ExactRange
 }
 
 type subspace struct {
-	b []byte
+	rawPrefix []byte
 }
 
 // AllKeys returns the Subspace corresponding to all keys in a FoundationDB
@@ -96,36 +108,46 @@ func FromBytes(b []byte) Subspace {
 	return subspace{s}
 }
 
+// String implements the fmt.Stringer interface and return the subspace
+// as a human readable byte string provided by fdb.Printable.
+func (s subspace) String() string {
+	return fmt.Sprintf("Subspace(rawPrefix=%s)", fdb.Printable(s.rawPrefix))
+}
+
 func (s subspace) Sub(el ...tuple.TupleElement) Subspace {
 	return subspace{concat(s.Bytes(), tuple.Tuple(el).Pack()...)}
 }
 
 func (s subspace) Bytes() []byte {
-	return s.b
+	return s.rawPrefix
 }
 
 func (s subspace) Pack(t tuple.Tuple) fdb.Key {
-	return fdb.Key(concat(s.b, t.Pack()...))
+	return fdb.Key(concat(s.rawPrefix, t.Pack()...))
+}
+
+func (s subspace) PackWithVersionstamp(t tuple.Tuple) (fdb.Key, error) {
+	return t.PackWithVersionstamp(s.rawPrefix)
 }
 
 func (s subspace) Unpack(k fdb.KeyConvertible) (tuple.Tuple, error) {
 	key := k.FDBKey()
-	if !bytes.HasPrefix(key, s.b) {
+	if !bytes.HasPrefix(key, s.rawPrefix) {
 		return nil, errors.New("key is not in subspace")
 	}
-	return tuple.Unpack(key[len(s.b):])
+	return tuple.Unpack(key[len(s.rawPrefix):])
 }
 
 func (s subspace) Contains(k fdb.KeyConvertible) bool {
-	return bytes.HasPrefix(k.FDBKey(), s.b)
+	return bytes.HasPrefix(k.FDBKey(), s.rawPrefix)
 }
 
 func (s subspace) FDBKey() fdb.Key {
-	return fdb.Key(s.b)
+	return fdb.Key(s.rawPrefix)
 }
 
 func (s subspace) FDBRangeKeys() (fdb.KeyConvertible, fdb.KeyConvertible) {
-	return fdb.Key(concat(s.b, 0x00)), fdb.Key(concat(s.b, 0xFF))
+	return fdb.Key(concat(s.rawPrefix, 0x00)), fdb.Key(concat(s.rawPrefix, 0xFF))
 }
 
 func (s subspace) FDBRangeKeySelectors() (fdb.Selectable, fdb.Selectable) {

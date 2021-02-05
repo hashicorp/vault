@@ -54,6 +54,9 @@ type QueryOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
 
+	// FlexIndex tells the query engine to use a flex index (utilizing the search service).
+	FlexIndex bool
+
 	parentSpan requestSpanContext
 }
 
@@ -138,6 +141,10 @@ func (opts *QueryOptions) toMap() (map[string]interface{}, error) {
 		execOpts["client_context_id"] = uuid.New()
 	} else {
 		execOpts["client_context_id"] = opts.ClientContextID
+	}
+
+	if opts.FlexIndex {
+		execOpts["use_fts"] = true
 	}
 
 	return execOpts, nil

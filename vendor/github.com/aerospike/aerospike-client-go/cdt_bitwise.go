@@ -58,7 +58,7 @@ const (
 // byteSize = 4
 // resizeFlags = 0
 // bin result = [0b00000001, 0b01000010, 0b00000000, 0b00000000]
-func BitResizeOp(policy *BitPolicy, binName string, byteSize int, resizeFlags int, ctx ...*CDTContext) *Operation {
+func BitResizeOp(policy *BitPolicy, binName string, byteSize int, resizeFlags BitResizeFlags, ctx ...*CDTContext) *Operation {
 	return &Operation{
 		opType:   _BIT_MODIFY,
 		ctx:      ctx,

@@ -1,0 +1,47 @@
+run:
+  tests: false
+  
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    check-shadowing: true
+
+    enable:
+      - atomicalign
+    enable-all: false
+    disable:
+      - shadow
+    disable-all: false
+  golint:
+    min-confidence: 0.8
+  gocyclo:
+    min-complexity: 30
+  gocognit:
+    min-complexity: 30
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+
+linters:
+  enable-all: true
+  disable:
+    - vetshadow
+    - gocyclo
+    - unparam
+    - nakedret
+    - lll
+    - dupl
+    - gosec
+    - gochecknoinits
+    - gochecknoglobals
+    - errcheck
+    - staticcheck
+    - stylecheck
+    - wsl
+    - interfacer
+    - gomnd
+  fast: false

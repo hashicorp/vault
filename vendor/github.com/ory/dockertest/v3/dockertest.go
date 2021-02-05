@@ -306,6 +306,7 @@ type RunOptions struct {
 type BuildOptions struct {
 	Dockerfile string
 	ContextDir string
+	BuildArgs  []dc.BuildArg
 }
 
 // BuildAndRunWithBuildOptions builds and starts a docker container.
@@ -316,6 +317,7 @@ func (d *Pool) BuildAndRunWithBuildOptions(buildOpts *BuildOptions, runOpts *Run
 		Dockerfile:   buildOpts.Dockerfile,
 		OutputStream: ioutil.Discard,
 		ContextDir:   buildOpts.ContextDir,
+		BuildArgs:    buildOpts.BuildArgs,
 	})
 
 	if err != nil {

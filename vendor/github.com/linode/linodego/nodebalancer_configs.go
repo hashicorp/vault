@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // NodeBalancerConfig objects allow a NodeBalancer to accept traffic on a new port
@@ -211,18 +213,11 @@ func (resp *NodeBalancerConfigsPagedResponse) appendData(r *NodeBalancerConfigsP
 func (c *Client) ListNodeBalancerConfigs(ctx context.Context, nodebalancerID int, opts *ListOptions) ([]NodeBalancerConfig, error) {
 	response := NodeBalancerConfigsPagedResponse{}
 	err := c.listHelperWithID(ctx, &response, nodebalancerID, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
 	return response.Data, nil
-}
-
-// fixDates converts JSON timestamps to Go time.Time values
-func (i *NodeBalancerConfig) fixDates() *NodeBalancerConfig {
-	return i
 }
 
 // GetNodeBalancerConfig gets the template with the provided ID
@@ -232,11 +227,11 @@ func (c *Client) GetNodeBalancerConfig(ctx context.Context, nodebalancerID int, 
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d", e, configID)
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&NodeBalancerConfig{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&NodeBalancerConfig{}).Get(e))
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancerConfig).fixDates(), nil
+	return r.Result().(*NodeBalancerConfig), nil
 }
 
 // CreateNodeBalancerConfig creates a NodeBalancerConfig
@@ -253,10 +248,10 @@ func (c *Client) CreateNodeBalancerConfig(ctx context.Context, nodebalancerID in
 	if bodyData, err := json.Marshal(nodebalancerConfig); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
 		Post(e))
@@ -264,7 +259,7 @@ func (c *Client) CreateNodeBalancerConfig(ctx context.Context, nodebalancerID in
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancerConfig).fixDates(), nil
+	return r.Result().(*NodeBalancerConfig), nil
 }
 
 // UpdateNodeBalancerConfig updates the NodeBalancerConfig with the specified id
@@ -281,17 +276,17 @@ func (c *Client) UpdateNodeBalancerConfig(ctx context.Context, nodebalancerID in
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancerConfig).fixDates(), nil
+	return r.Result().(*NodeBalancerConfig), nil
 }
 
 // DeleteNodeBalancerConfig deletes the NodeBalancerConfig with the specified id
@@ -302,7 +297,7 @@ func (c *Client) DeleteNodeBalancerConfig(ctx context.Context, nodebalancerID in
 	}
 	e = fmt.Sprintf("%s/%d", e, configID)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 	return err
 }
 
@@ -320,15 +315,15 @@ func (c *Client) RebuildNodeBalancerConfig(ctx context.Context, nodeBalancerID i
 	if bodyData, err := json.Marshal(rebuildOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancerConfig).fixDates(), nil
+	return r.Result().(*NodeBalancerConfig), nil
 }

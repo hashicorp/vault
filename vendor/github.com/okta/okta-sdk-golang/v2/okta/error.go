@@ -23,7 +23,7 @@ import (
 
 type Error struct {
 	ErrorCode    string                   `json:"errorCode,omitempty"`
-	ErrorSummary string                   `json:"errorSummary,omitempty"`
+	ErrorSummary string                   `json:"errorSummary,omitempty" toml:"error_description"`
 	ErrorLink    string                   `json:"errorLink,omitempty"`
 	ErrorId      string                   `json:"errorId,omitempty"`
 	ErrorCauses  []map[string]interface{} `json:"errorCauses,omitempty"`
@@ -31,10 +31,8 @@ type Error struct {
 
 func (e *Error) Error() string {
 	formattedErr := fmt.Sprintf("The API returned an error: %s", e.ErrorSummary)
-
 	if len(e.ErrorCauses) > 0 {
-		causes := []string{}
-
+		var causes []string
 		for _, cause := range e.ErrorCauses {
 			for key, val := range cause {
 				causes = append(causes, fmt.Sprintf("%s: %v", key, val))
@@ -42,6 +40,5 @@ func (e *Error) Error() string {
 		}
 		formattedErr = fmt.Sprintf("%s. Causes: %s", formattedErr, strings.Join(causes, ", "))
 	}
-
 	return formattedErr
 }

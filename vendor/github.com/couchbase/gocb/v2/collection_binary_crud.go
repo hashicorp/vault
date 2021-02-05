@@ -19,6 +19,11 @@ type AppendOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User []byte
+	}
 }
 
 func (c *Collection) binaryAppend(id string, val []byte, opts *AppendOptions) (mutOut *MutationResult, errOut error) {
@@ -33,6 +38,7 @@ func (c *Collection) binaryAppend(id string, val []byte, opts *AppendOptions) (m
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -53,6 +59,7 @@ func (c *Collection) binaryAppend(id string, val []byte, opts *AppendOptions) (m
 		RetryStrategy:          opm.RetryStrategy(),
 		TraceContext:           opm.TraceSpan(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.AdjoinResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -85,6 +92,11 @@ type PrependOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User []byte
+	}
 }
 
 func (c *Collection) binaryPrepend(id string, val []byte, opts *PrependOptions) (mutOut *MutationResult, errOut error) {
@@ -99,6 +111,7 @@ func (c *Collection) binaryPrepend(id string, val []byte, opts *PrependOptions) 
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -119,6 +132,7 @@ func (c *Collection) binaryPrepend(id string, val []byte, opts *PrependOptions) 
 		RetryStrategy:          opm.RetryStrategy(),
 		TraceContext:           opm.TraceSpan(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.AdjoinResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -159,6 +173,11 @@ type IncrementOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User []byte
+	}
 }
 
 func (c *Collection) binaryIncrement(id string, opts *IncrementOptions) (countOut *CounterResult, errOut error) {
@@ -173,6 +192,7 @@ func (c *Collection) binaryIncrement(id string, opts *IncrementOptions) (countOu
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
 
 	realInitial := uint64(0xFFFFFFFFFFFFFFFF)
 	if opts.Initial >= 0 {
@@ -200,6 +220,7 @@ func (c *Collection) binaryIncrement(id string, opts *IncrementOptions) (countOu
 		RetryStrategy:          opm.RetryStrategy(),
 		TraceContext:           opm.TraceSpan(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.CounterResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -243,6 +264,11 @@ type DecrementOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User []byte
+	}
 }
 
 func (c *Collection) binaryDecrement(id string, opts *DecrementOptions) (countOut *CounterResult, errOut error) {
@@ -257,6 +283,7 @@ func (c *Collection) binaryDecrement(id string, opts *DecrementOptions) (countOu
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
 
 	realInitial := uint64(0xFFFFFFFFFFFFFFFF)
 	if opts.Initial >= 0 {
@@ -284,6 +311,7 @@ func (c *Collection) binaryDecrement(id string, opts *DecrementOptions) (countOu
 		RetryStrategy:          opm.RetryStrategy(),
 		TraceContext:           opm.TraceSpan(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.CounterResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)

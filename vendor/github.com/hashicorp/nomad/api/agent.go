@@ -3,7 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"strconv"
 )
 
 // Agent encapsulates an API client which talks to Nomad's
@@ -237,6 +239,32 @@ func (a *Agent) Health() (*AgentHealthResponse, error) {
 	return nil, fmt.Errorf("unable to unmarshal response with status %d: %v", resp.StatusCode, err)
 }
 
+// Host returns debugging context about the agent's host operating system
+func (a *Agent) Host(serverID, nodeID string, q *QueryOptions) (*HostDataResponse, error) {
+	if q == nil {
+		q = &QueryOptions{}
+	}
+	if q.Params == nil {
+		q.Params = make(map[string]string)
+	}
+
+	if serverID != "" {
+		q.Params["server_id"] = serverID
+	}
+
+	if nodeID != "" {
+		q.Params["node_id"] = nodeID
+	}
+
+	var resp HostDataResponse
+	_, err := a.client.query("/v1/agent/host", &resp, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
 // Monitor returns a channel which will receive streaming logs from the agent
 // Providing a non-nil stopCh can be used to close the connection and stop log streaming
 func (a *Agent) Monitor(stopCh <-chan struct{}, q *QueryOptions) (<-chan *StreamFrame, <-chan error) {
@@ -286,6 +314,85 @@ func (a *Agent) Monitor(stopCh <-chan struct{}, q *QueryOptions) (<-chan *Stream
 	}()
 
 	return frames, errCh
+}
+
+// PprofOptions contain a set of parameters for profiling a node or server.
+type PprofOptions struct {
+	// ServerID is the server ID, name, or special value "leader" to
+	// specify the server that a given profile should be run on.
+	ServerID string
+
+	// NodeID is the node ID that a given profile should be run on.
+	NodeID string
+
+	// Seconds specifies the amount of time a profile should be run for.
+	// Seconds only applies for certain runtime profiles like CPU and Trace.
+	Seconds int
+
+	// GC determines if a runtime.GC() should be called before a heap
+	// profile.
+	GC int
+
+	// Debug specifies if the output of a lookup profile should be returned
+	// in human readable format instead of binary.
+	Debug int
+}
+
+// CPUProfile returns a runtime/pprof cpu profile for a given server or node.
+// The profile will run for the amount of seconds passed in or default to 1.
+// If no serverID or nodeID are provided the current Agents server will be
+// used.
+//
+// The call blocks until the profile finishes, and returns the raw bytes of the
+// profile.
+func (a *Agent) CPUProfile(opts PprofOptions, q *QueryOptions) ([]byte, error) {
+	return a.pprofRequest("profile", opts, q)
+}
+
+// Trace returns a runtime/pprof trace for a given server or node.
+// The trace will run for the amount of seconds passed in or default to 1.
+// If no serverID or nodeID are provided the current Agents server will be
+// used.
+//
+// The call blocks until the profile finishes, and returns the raw bytes of the
+// profile.
+func (a *Agent) Trace(opts PprofOptions, q *QueryOptions) ([]byte, error) {
+	return a.pprofRequest("trace", opts, q)
+}
+
+// Lookup returns a runtime/pprof profile using pprof.Lookup to determine
+// which profile to run. Accepts a client or server ID but not both simultaneously.
+//
+// The call blocks until the profile finishes, and returns the raw bytes of the
+// profile unless debug is set.
+func (a *Agent) Lookup(profile string, opts PprofOptions, q *QueryOptions) ([]byte, error) {
+	return a.pprofRequest(profile, opts, q)
+}
+
+func (a *Agent) pprofRequest(req string, opts PprofOptions, q *QueryOptions) ([]byte, error) {
+	if q == nil {
+		q = &QueryOptions{}
+	}
+	if q.Params == nil {
+		q.Params = make(map[string]string)
+	}
+
+	q.Params["seconds"] = strconv.Itoa(opts.Seconds)
+	q.Params["debug"] = strconv.Itoa(opts.Debug)
+	q.Params["gc"] = strconv.Itoa(opts.GC)
+	q.Params["node_id"] = opts.NodeID
+	q.Params["server_id"] = opts.ServerID
+
+	body, err := a.client.rawQuery(fmt.Sprintf("/v1/agent/pprof/%s", req), q)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := ioutil.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // joinResponse is used to decode the response we get while
@@ -356,4 +463,23 @@ type AgentHealth struct {
 
 	// Message describes why the agent is unhealthy
 	Message string `json:"message"`
+}
+
+type HostData struct {
+	OS          string
+	Network     []map[string]string
+	ResolvConf  string
+	Hosts       string
+	Environment map[string]string
+	Disk        map[string]DiskUsage
+}
+
+type DiskUsage struct {
+	DiskMB int64
+	UsedMB int64
+}
+
+type HostDataResponse struct {
+	AgentID  string
+	HostData *HostData `json:",omitempty"`
 }

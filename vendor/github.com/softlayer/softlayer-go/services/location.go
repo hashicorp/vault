@@ -87,6 +87,12 @@ func (r Location) GetBackboneDependents() (resp []datatypes.Network_Backbone_Loc
 	return
 }
 
+// Retrieve A flag indicating whether or not the datacenter/location is BNPP compliant.
+func (r Location) GetBnppCompliantFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Location", "getBnppCompliantFlag", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve all datacenter locations. SoftLayer's datacenters exist in various cities and each contain one or more server rooms which house network and server infrastructure.
 func (r Location) GetDatacenters() (resp []datatypes.Location, err error) {
 	err = r.Session.DoRequest("SoftLayer_Location", "getDatacenters", nil, &r.Options, &resp)
@@ -120,6 +126,12 @@ func (r Location) GetHardwareFirewalls() (resp []datatypes.Hardware, err error) 
 // Retrieve A location's physical address.
 func (r Location) GetLocationAddress() (resp datatypes.Account_Address, err error) {
 	err = r.Session.DoRequest("SoftLayer_Location", "getLocationAddress", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A location's physical addresses.
+func (r Location) GetLocationAddresses() (resp []datatypes.Account_Address, err error) {
+	err = r.Session.DoRequest("SoftLayer_Location", "getLocationAddresses", nil, &r.Options, &resp)
 	return
 }
 
@@ -283,6 +295,12 @@ func (r Location_Datacenter) GetBackendHardwareRouters() (resp []datatypes.Hardw
 	return
 }
 
+// Retrieve A flag indicating whether or not the datacenter/location is BNPP compliant.
+func (r Location_Datacenter) GetBnppCompliantFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Location_Datacenter", "getBnppCompliantFlag", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve Subnets which are directly bound to one or more routers in a given datacenter, and currently allow routing.
 func (r Location_Datacenter) GetBoundSubnets() (resp []datatypes.Network_Subnet, err error) {
 	err = r.Session.DoRequest("SoftLayer_Location_Datacenter", "getBoundSubnets", nil, &r.Options, &resp)
@@ -340,6 +358,12 @@ func (r Location_Datacenter) GetHardwareRouters() (resp []datatypes.Hardware, er
 // Retrieve A location's physical address.
 func (r Location_Datacenter) GetLocationAddress() (resp datatypes.Account_Address, err error) {
 	err = r.Session.DoRequest("SoftLayer_Location_Datacenter", "getLocationAddress", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A location's physical addresses.
+func (r Location_Datacenter) GetLocationAddresses() (resp []datatypes.Account_Address, err error) {
+	err = r.Session.DoRequest("SoftLayer_Location_Datacenter", "getLocationAddresses", nil, &r.Options, &resp)
 	return
 }
 

@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 
 package auth
 
@@ -8,16 +9,24 @@ import (
 	"fmt"
 	"github.com/oracle/oci-go-sdk/common"
 	"net/http"
+	"strings"
 )
 
 const (
-	regionURL                            = `http://169.254.169.254/opc/v1/instance/region`
-	leafCertificateURL                   = `http://169.254.169.254/opc/v1/identity/cert.pem`
-	leafCertificateKeyURL                = `http://169.254.169.254/opc/v1/identity/key.pem`
+	metadataBaseURL             = `http://169.254.169.254/opc/v2`
+	metadataFallbackURL         = `http://169.254.169.254/opc/v1`
+	regionPath                  = `/instance/region`
+	leafCertificatePath         = `/identity/cert.pem`
+	leafCertificateKeyPath      = `/identity/key.pem`
+	intermediateCertificatePath = `/identity/intermediate.pem`
+
 	leafCertificateKeyPassphrase         = `` // No passphrase for the private key for Compute instances
-	intermediateCertificateURL           = `http://169.254.169.254/opc/v1/identity/intermediate.pem`
 	intermediateCertificateKeyURL        = ``
 	intermediateCertificateKeyPassphrase = `` // No passphrase for the private key for Compute instances
+)
+
+var (
+	regionURL, leafCertificateURL, leafCertificateKeyURL, intermediateCertificateURL string
 )
 
 // instancePrincipalKeyProvider implements KeyProvider to provide a key ID and its corresponding private key
@@ -40,6 +49,7 @@ type instancePrincipalKeyProvider struct {
 // KeyID that is not expired at the moment, the PrivateRSAKey that the client acquires at a next moment could be
 // invalid because the KeyID could be already expired.
 func newInstancePrincipalKeyProvider(modifier func(common.HTTPRequestDispatcher) (common.HTTPRequestDispatcher, error)) (provider *instancePrincipalKeyProvider, err error) {
+	updateX509CertRetrieverURLParas(metadataBaseURL)
 	clientModifier := newDispatcherModifier(modifier)
 
 	client, err := clientModifier.Modify(&http.Client{})
@@ -83,10 +93,23 @@ func newInstancePrincipalKeyProvider(modifier func(common.HTTPRequestDispatcher)
 
 func getRegionForFederationClient(dispatcher common.HTTPRequestDispatcher, url string) (r common.Region, err error) {
 	var body bytes.Buffer
-	if body, err = httpGet(dispatcher, url); err != nil {
+	var statusCode int
+	if body, statusCode, err = httpGet(dispatcher, url); err != nil {
+		if statusCode == 404 && strings.Compare(url, metadataBaseURL+regionPath) == 0 {
+			common.Logf("Falling back to http://169.254.169.254/opc/v1 to try again...\n")
+			updateX509CertRetrieverURLParas(metadataFallbackURL)
+			return getRegionForFederationClient(dispatcher, regionURL)
+		}
 		return
 	}
 	return common.StringToRegion(body.String()), nil
+}
+
+func updateX509CertRetrieverURLParas(baseURL string) {
+	regionURL = baseURL + regionPath
+	leafCertificateURL = baseURL + leafCertificatePath
+	leafCertificateKeyURL = baseURL + leafCertificateKeyPath
+	intermediateCertificateURL = baseURL + intermediateCertificatePath
 }
 
 func (p *instancePrincipalKeyProvider) RegionForFederationClient() common.Region {

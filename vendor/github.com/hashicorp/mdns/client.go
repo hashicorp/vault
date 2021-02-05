@@ -173,7 +173,7 @@ func (c *client) Close() error {
 	return nil
 }
 
-// setInterface is used to set the query interface, uses sytem
+// setInterface is used to set the query interface, uses system
 // default if not provided
 func (c *client) setInterface(iface *net.Interface) error {
 	p := ipv4.NewPacketConn(c.ipv4UnicastConn)
@@ -308,10 +308,16 @@ func (c *client) sendQuery(q *dns.Msg) error {
 		return err
 	}
 	if c.ipv4UnicastConn != nil {
-		c.ipv4UnicastConn.WriteToUDP(buf, ipv4Addr)
+		_, err = c.ipv4UnicastConn.WriteToUDP(buf, ipv4Addr)
+		if err != nil {
+			return err
+		}
 	}
 	if c.ipv6UnicastConn != nil {
-		c.ipv6UnicastConn.WriteToUDP(buf, ipv6Addr)
+		_, err = c.ipv6UnicastConn.WriteToUDP(buf, ipv6Addr)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

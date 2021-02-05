@@ -1054,7 +1054,7 @@ func (r Dns_Secondary) GetAccount() (resp datatypes.Account, err error) {
 	return
 }
 
-// Search for [[SoftLayer_Dns_Domain_Secondary]] records by domain name. getByDomainName() performs an inclusive search for secondary domain records, returning multiple records based on partial name matches. Use this method to locate secondary domain records if you don't have access to their id numbers.
+// Search for [[SoftLayer_Dns_Secondary]] records by domain name. getByDomainName() performs an inclusive search for secondary domain records, returning multiple records based on partial name matches. Use this method to locate secondary domain records if you don't have access to their id numbers.
 func (r Dns_Secondary) GetByDomainName(name *string) (resp []datatypes.Dns_Secondary, err error) {
 	params := []interface{}{
 		name,

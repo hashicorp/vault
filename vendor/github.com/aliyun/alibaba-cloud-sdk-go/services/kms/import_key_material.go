@@ -21,7 +21,6 @@ import (
 )
 
 // ImportKeyMaterial invokes the kms.ImportKeyMaterial API synchronously
-// api document: https://help.aliyun.com/api/kms/importkeymaterial.html
 func (client *Client) ImportKeyMaterial(request *ImportKeyMaterialRequest) (response *ImportKeyMaterialResponse, err error) {
 	response = CreateImportKeyMaterialResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) ImportKeyMaterial(request *ImportKeyMaterialRequest) (resp
 }
 
 // ImportKeyMaterialWithChan invokes the kms.ImportKeyMaterial API asynchronously
-// api document: https://help.aliyun.com/api/kms/importkeymaterial.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ImportKeyMaterialWithChan(request *ImportKeyMaterialRequest) (<-chan *ImportKeyMaterialResponse, <-chan error) {
 	responseChan := make(chan *ImportKeyMaterialResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) ImportKeyMaterialWithChan(request *ImportKeyMaterialReques
 }
 
 // ImportKeyMaterialWithCallback invokes the kms.ImportKeyMaterial API asynchronously
-// api document: https://help.aliyun.com/api/kms/importkeymaterial.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ImportKeyMaterialWithCallback(request *ImportKeyMaterialRequest, callback func(response *ImportKeyMaterialResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -94,6 +89,7 @@ func CreateImportKeyMaterialRequest() (request *ImportKeyMaterialRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "ImportKeyMaterial", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

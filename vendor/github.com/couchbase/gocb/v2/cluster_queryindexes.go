@@ -161,6 +161,7 @@ func (qm *QueryIndexManager) createIndex(
 	_, err := qm.doQuery(qs, &QueryOptions{
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
+		Adhoc:         true,
 		parentSpan:    tracectx,
 	})
 	if err == nil {
@@ -268,6 +269,7 @@ func (qm *QueryIndexManager) dropIndex(
 	_, err := qm.doQuery(qs, &QueryOptions{
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
+		Adhoc:         true,
 		parentSpan:    tracectx,
 	})
 	if err == nil {
@@ -376,6 +378,7 @@ func (qm *QueryIndexManager) getAllIndexes(
 		Readonly:             true,
 		Timeout:              opts.Timeout,
 		RetryStrategy:        opts.RetryStrategy,
+		Adhoc:                true,
 		parentSpan:           tracectx,
 	})
 	if err != nil {
@@ -455,6 +458,7 @@ func (qm *QueryIndexManager) BuildDeferredIndexes(bucketName string, opts *Build
 	_, err = qm.doQuery(qs, &QueryOptions{
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
+		Adhoc:         true,
 		parentSpan:    span,
 	})
 	if err != nil {

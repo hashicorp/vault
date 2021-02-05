@@ -67,6 +67,7 @@ var (
 	// ServerHandshake is running on a platform where the trustworthiness of
 	// the handshaker service is not guaranteed.
 	ErrUntrustedPlatform = errors.New("ALTS: untrusted platform. ALTS is only supported on GCP")
+	logger               = grpclog.Component("alts")
 )
 
 // AuthInfo exposes security information from the ALTS handshake to the
@@ -307,7 +308,7 @@ func compareRPCVersions(v1, v2 *altspb.RpcProtocolVersions_Version) int {
 // agreed on.
 func checkRPCVersions(local, peer *altspb.RpcProtocolVersions) (bool, *altspb.RpcProtocolVersions_Version) {
 	if local == nil || peer == nil {
-		grpclog.Error("invalid checkRPCVersions argument, either local or peer is nil.")
+		logger.Error("invalid checkRPCVersions argument, either local or peer is nil.")
 		return false, nil
 	}
 

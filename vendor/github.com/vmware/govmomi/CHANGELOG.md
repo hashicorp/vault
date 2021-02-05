@@ -1,5 +1,119 @@
 # changelog
 
+### 0.24.0 (2020-12-20)
+
+* Update generated API bindings to vSphere 7.0U1 release
+
+* Add vSAN 7.0 API bindings
+
+* Add AuthorizationManager.HasUserPrivilegeOnEntities wrapper
+
+* Add sms generated types and methods
+
+* Add ExtendDisk and InflateDisk wrappers to vlsm.ObjectManager
+
+* Add vSAN Performance Data Collection API
+
+### 0.23.0 (2020-06-11)
+
+* Finder: support DistributedVirtualSwitch traversal
+
+* Update to vSphere 7 APIs
+
+* Avoid possible nil pointer dereference in guest TransferURL
+
+* Refactor govc session persistence into session/cache package
+
+* Add SetTaskState SetTaskDescription UpdateProgress to object package
+
+* Add Content Library subscriptions support
+
+* Add Content Library item copy support
+
+* Sync vim25/xml with golang 1.13 encoding/xml
+
+* vapi: Add cluster modules client and simulator
+
+* Expose soap client default transport
+
+### 0.22.1 (2020-01-13)
+
+* Fix SAML token auth using Holder-of-Key with delegated Bearer identity against 6.7 U3b+
+
+### 0.22.0 (2020-01-10)
+
+* Add OVF properties to library.Deploy method
+
+* Add retry support for HTTP status codes
+
+* Use cs.identity service type for sts endpoint lookups
+
+* Add Content Library VM template APIs
+
+* Add SearchIndex FindAllByDnsName and FindAllByIp methods
+
+* Fix HostSystem.ManagementIPs to use SelectedVnic
+
+* Change generated ResourceReductionToToleratePercent to pointer type
+
+* Add DistributedVirtualSwitch.ReconfigureDVPort method
+
+* Add VirtualMachine.IsTemplate method
+
+* Add GetInventoryPath to NetworkReference interface
+
+* Support HoK tokens with Interactive Users
+
+* Replace mo.LoadRetrievePropertiesResponse with mo.LoadObjectContent
+
+* Add VirtualHardwareSection.StorageItem
+
+* Add ResourcePool.Owner method
+
+* Add VirtualMachine.QueryChangedDiskAreas method
+
+* Update generated code to vSphere 6.7u3
+
+* Add option to propagate MissingSet faults in property.WaitForUpdates
+
+* Add content library subscription support
+
+* Fix deadlock for keep alive handlers that attempt log in
+
+* Add CNS API bindings
+
+* Add FetchCapabilityMetadata method to Pbm client
+
+* Add v4 option to VirtualMachine.WaitForIP
+
+* Add VirtualHardwareSection.StorageItem
+
+### 0.21.0 (2019-07-24)
+
+* Add vsan package
+
+* Add vslm (FCD) global catalog support
+
+* Add content library support
+
+### 0.20.0 (2019-02-06)
+
+* Add vslm package for managing First Class Disks
+
+* Add LoginByToken to session KeepAliveHandler
+
+### 0.19.0 (2018-09-30)
+
+* New vapi/rest and and vapi/tags packages
+
+* Allowing the use of STS for exchanging tokens
+
+* Add object.VirtualMachine.UUID method
+
+* SetRootCAs on the soap.Client returns an error for invalid certificates
+
+* Add ClusterComputeResource.MoveInto method
+
 ### 0.18.0 (2018-05-24)
 
 * Add VirtualDiskManager wrapper to set UUID

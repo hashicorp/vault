@@ -76,9 +76,9 @@ func (client *Client) ListUsersForGroupWithCallback(request *ListUsersForGroupRe
 // ListUsersForGroupRequest is the request struct for api ListUsersForGroup
 type ListUsersForGroupRequest struct {
 	*requests.RpcRequest
+	GroupName string           `position:"Query" name:"GroupName"`
 	Marker    string           `position:"Query" name:"Marker"`
 	MaxItems  requests.Integer `position:"Query" name:"MaxItems"`
-	GroupName string           `position:"Query" name:"GroupName"`
 }
 
 // ListUsersForGroupResponse is the response struct for api ListUsersForGroup
@@ -95,7 +95,7 @@ func CreateListUsersForGroupRequest() (request *ListUsersForGroupRequest) {
 	request = &ListUsersForGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "ListUsersForGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "ListUsersForGroup", "Ram", "openAPI")
 	return
 }
 

@@ -15,9 +15,9 @@ In addition to the vSphere API client, this repository includes:
 
 ## Compatibility
 
-This library is built for and tested against ESXi and vCenter 6.0, 6.5 and 6.7.
+This library is built for and tested against ESXi and vCenter 6.5, 6.7 and 7.0.
 
-It may work with versions 5.5 and 5.1, but neither are officially supported.
+It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
 
 ## Documentation
 
@@ -28,7 +28,7 @@ The code in the `govmomi` package is a wrapper for the code that is generated fr
 It primarily provides convenience functions for working with the vSphere API.
 See [godoc.org][godoc] for documentation.
 
-[apiref]:http://pubs.vmware.com/vsphere-6-5/index.jsp#com.vmware.wssdk.apiref.doc/right-pane.html
+[apiref]:https://code.vmware.com/apis/968/vsphere
 [godoc]:http://godoc.org/github.com/vmware/govmomi
 
 ## Installation
@@ -59,6 +59,10 @@ Refer to the [CHANGELOG](CHANGELOG.md) for version to version changes.
 
 * [Kubernetes](https://github.com/kubernetes/kubernetes/tree/master/pkg/cloudprovider/providers/vsphere)
 
+* [Kubernetes Cloud Provider](https://github.com/kubernetes/cloud-provider-vsphere)
+
+* [Kubernetes Cluster API](https://github.com/kubernetes-sigs/cluster-api-provider-vsphere)
+
 * [Kubernetes kops](https://github.com/kubernetes/kops/tree/master/upup/pkg/fi/cloudup/vsphere)
 
 * [Terraform](https://github.com/terraform-providers/terraform-provider-vsphere)
@@ -75,12 +79,30 @@ Refer to the [CHANGELOG](CHANGELOG.md) for version to version changes.
 
 * [Libretto](https://github.com/apcera/libretto/tree/master/virtualmachine/vsphere)
 
+* [Telegraf](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/vsphere)
+
+* [Open Storage](https://github.com/libopenstorage/openstorage/tree/master/pkg/storageops/vsphere)
+
+* [Juju](https://github.com/juju/juju)
+
+* [vSphere 7.0](https://docs.vmware.com/en/VMware-vSphere/7.0/rn/vsphere-esxi-vcenter-server-7-vsphere-with-kubernetes-release-notes.html)
+
+* [OPS](https://github.com/nanovms/ops)
+
 ## Related projects
 
 * [rbvmomi](https://github.com/vmware/rbvmomi)
 
 * [pyvmomi](https://github.com/vmware/pyvmomi)
 
+* [go-vmware-nsxt](https://github.com/vmware/go-vmware-nsxt)
+
 ## License
 
-govmomi is available under the [Apache 2 license](LICENSE).
+govmomi is available under the [Apache 2 license](LICENSE.txt).
+
+## Name
+
+Pronounced "go-v-mom-ie"
+
+Follows pyvmomi and rbvmomi: language prefix + the vSphere acronym "VM Object Management Infrastructure".

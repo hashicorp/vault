@@ -33,7 +33,7 @@ import (
 // Reader expects a schema (plus any dictionaries) as the first messages
 // in the stream, followed by records.
 type Reader struct {
-	r      *MessageReader
+	r      MessageReader
 	schema *arrow.Schema
 
 	refCount int64
@@ -48,15 +48,17 @@ type Reader struct {
 	done bool
 }
 
-// NewReader returns a reader that reads records from an input stream.
-func NewReader(r io.Reader, opts ...Option) (*Reader, error) {
+// NewReaderFromMessageReader allows constructing a new reader object with the
+// provided MessageReader allowing injection of reading messages other than
+// by simple streaming bytes such as Arrow Flight which receives a protobuf message
+func NewReaderFromMessageReader(r MessageReader, opts ...Option) (*Reader, error) {
 	cfg := newConfig()
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
 	rr := &Reader{
-		r:     NewMessageReader(r),
+		r:     r,
 		types: make(dictTypeMap),
 		memo:  newMemo(),
 		mem:   cfg.alloc,
@@ -68,6 +70,11 @@ func NewReader(r io.Reader, opts ...Option) (*Reader, error) {
 	}
 
 	return rr, nil
+}
+
+// NewReader returns a reader that reads records from an input stream.
+func NewReader(r io.Reader, opts ...Option) (*Reader, error) {
+	return NewReaderFromMessageReader(NewMessageReader(r), opts...)
 }
 
 // Err returns the last error encountered during the iteration over the

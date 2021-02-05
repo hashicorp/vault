@@ -31,6 +31,56 @@ type Configuration_Storage_Filesystem_Type struct {
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
 }
 
+// This class describes the base Storage Group for a Complex Drive Configuration
+type Configuration_Storage_Group struct {
+	Entity
+
+	// A count of this class represents a storage groups ancestors
+	AncestorGroupCount *uint `json:"ancestorGroupCount,omitempty" xmlrpc:"ancestorGroupCount,omitempty"`
+
+	// This class represents a storage groups ancestors
+	AncestorGroups []Configuration_Storage_Group `json:"ancestorGroups,omitempty" xmlrpc:"ancestorGroups,omitempty"`
+
+	// This class represents a storage group disk array type
+	ArrayType *Configuration_Storage_Group_Array_Type `json:"arrayType,omitempty" xmlrpc:"arrayType,omitempty"`
+
+	// Determine if the storage group is able to be image captured. If unable to image capture the reasons will be provided.
+	CaptureEnabledFlag *Container_Hardware_CaptureEnabled `json:"captureEnabledFlag,omitempty" xmlrpc:"captureEnabledFlag,omitempty"`
+
+	// no documentation yet
+	CreateEmployee *User_Employee `json:"createEmployee,omitempty" xmlrpc:"createEmployee,omitempty"`
+
+	// A count of this class represents a storage groups descendants
+	DescendantGroupCount *uint `json:"descendantGroupCount,omitempty" xmlrpc:"descendantGroupCount,omitempty"`
+
+	// This class represents a storage groups descendants
+	DescendantGroups []Configuration_Storage_Group `json:"descendantGroups,omitempty" xmlrpc:"descendantGroups,omitempty"`
+
+	// Storage group description
+	Description *string `json:"description,omitempty" xmlrpc:"description,omitempty"`
+
+	// Storage group disk space
+	DiskSpace *Float64 `json:"diskSpace,omitempty" xmlrpc:"diskSpace,omitempty"`
+
+	// A count of the hard drives contained within this storage group.
+	HardDriveCount *uint `json:"hardDriveCount,omitempty" xmlrpc:"hardDriveCount,omitempty"`
+
+	// The hard drives contained within this storage group.
+	HardDrives []Hardware_Component `json:"hardDrives,omitempty" xmlrpc:"hardDrives,omitempty"`
+
+	// Storage group type id
+	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
+
+	// Flag to indicate if the storage group is setup for lvm
+	LvmFlag *bool `json:"lvmFlag,omitempty" xmlrpc:"lvmFlag,omitempty"`
+
+	// Storage group name
+	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
+
+	// Storage group disk size units
+	Units *string `json:"units,omitempty" xmlrpc:"units,omitempty"`
+}
+
 // Supported hardware raid modes
 type Configuration_Storage_Group_Array_Type struct {
 	Entity
@@ -149,12 +199,6 @@ type Configuration_Template struct {
 
 	// no documentation yet
 	ConfigurationSections []Configuration_Template_Section `json:"configurationSections,omitempty" xmlrpc:"configurationSections,omitempty"`
-
-	// no documentation yet
-	ConfigurationTemplateReference []Monitoring_Agent_Configuration_Template_Group_Reference `json:"configurationTemplateReference,omitempty" xmlrpc:"configurationTemplateReference,omitempty"`
-
-	// A count of
-	ConfigurationTemplateReferenceCount *uint `json:"configurationTemplateReferenceCount,omitempty" xmlrpc:"configurationTemplateReferenceCount,omitempty"`
 
 	// Created date
 	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
@@ -302,9 +346,9 @@ type Configuration_Template_Section_Attribute struct {
 
 // Configuration definition gives you details of the value that you're setting.
 //
-// Some monitoring agents requires values unique to your system. If value type is defined as "Resource Specific Values", you will have to make an additional API call to retrieve your system specific values.
+// If value type is defined as "Resource Specific Values", you will have to make an additional API call to retrieve your system specific values.
 //
-// See [[SoftLayer_Monitoring_Agent::getAvailableConfigurationValues|Monitoring Agent]] service to retrieve your system specific values.
+//
 type Configuration_Template_Section_Definition struct {
 	Entity
 
@@ -482,9 +526,6 @@ type Configuration_Template_Section_Profile struct {
 
 	// Internal identifier of a configuration profile.
 	Id *int `json:"id,omitempty" xmlrpc:"id,omitempty"`
-
-	// no documentation yet
-	MonitoringAgent *Monitoring_Agent `json:"monitoringAgent,omitempty" xmlrpc:"monitoringAgent,omitempty"`
 
 	// Name of a configuration profile
 	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`

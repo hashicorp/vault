@@ -42,6 +42,10 @@ type AgentConfig struct {
 	UseDurations           bool
 	DisableDecompression   bool
 	UseOutOfOrderResponses bool
+	DisableXErrors         bool
+
+	DisableJSONHello            bool
+	DisableSyncReplicationHello bool
 
 	UseCollections bool
 
@@ -73,6 +77,9 @@ type AgentConfig struct {
 	UseZombieLogger        bool
 	ZombieLoggerInterval   time.Duration
 	ZombieLoggerSampleSize int
+
+	// AuthMechanisms is the list of mechanisms that the SDK can use to attempt authentication.
+	AuthMechanisms []AuthMechanism
 }
 
 func (config *AgentConfig) redacted() interface{} {
@@ -206,10 +213,6 @@ func (config *AgentConfig) FromConnStr(connStr string) error {
 	}
 
 	if valStr, ok := fetchOption("network"); ok {
-		if valStr == "default" {
-			valStr = ""
-		}
-
 		config.NetworkType = valStr
 	}
 

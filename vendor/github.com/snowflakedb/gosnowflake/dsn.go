@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -70,6 +71,8 @@ type Config struct {
 	Token string // Token to use for OAuth other forms of token based auth
 
 	PrivateKey *rsa.PrivateKey // Private key used to sign JWT
+
+	Transporter http.RoundTripper // RoundTripper to intercept HTTP requests and responses
 }
 
 // ocspMode returns the OCSP mode in string INSECURE, FAIL_OPEN, FAIL_CLOSED
@@ -413,7 +416,7 @@ func fillMissingConfigParameters(cfg *Config) error {
 	return nil
 }
 
-// transformAccountToHost transforms host to accout name
+// transformAccountToHost transforms host to account name
 func transformAccountToHost(cfg *Config) (err error) {
 	if cfg.Port == 0 && !strings.HasSuffix(cfg.Host, defaultDomain) && cfg.Host != "" {
 		// account name is specified instead of host:port
@@ -479,7 +482,7 @@ func parseParams(cfg *Config, posQuestion int, dsn string) (err error) {
 
 // parseDSNParams parses the DSN "query string". Values must be url.QueryEscape'ed
 func parseDSNParams(cfg *Config, params string) (err error) {
-	glog.V(2).Infof("Query String: %v\n", params)
+	logger.Infof("Query String: %v\n", params)
 	for _, v := range strings.Split(params, "&") {
 		param := strings.SplitN(v, "=", 2)
 		if len(param) != 2 {

@@ -87,16 +87,21 @@ is performed using the [pkg/errors][7] library.
 
 ## Acceptance Tests
 
-_**NOTE:** The tests are not currently well-structured, and depend on many
-hard-coded specifics of the Joyent Public Cloud (JPC) which is being shut down
-in November 2019.  It is likely not possible to run the test suite against a
-local Triton installation at this time, though that is definitely the intended
-test suite target environment for future development._
+Acceptance Tests run directly against the Triton API (e.g. CloudAPI), so you
+will need an installation of Triton in order to run them, or
+[COAL](https://github.com/joyent/triton/blob/master/docs/developer-guide/coal-setup.md)
+(Cloud On A Laptop). The tests create real resources and thus could cost real
+money if you are using a paid Triton account! It is also possible that the
+acceptance tests will leave behind resources, so extra attention will be needed
+to clean up these test resources.
 
-Acceptance Tests run directly against the Triton API, so you will need either a
-local installation of Triton or an account with Joyent's Public Cloud offering
-in order to run them. The tests create real resources (and thus cost real
-money)!
+The acceptance tests depend upon a few things in your Triton setup:
+
+- the [Ubuntu 16.04](https://docs.joyent.com/public-cloud/instances/virtual-machines/images/linux/ubuntu-certified#1604-xenial-images) LX image to be installed
+- a generic package with Memory in the range of 128MB to 1024MB
+- a public (external) network to provision with
+- if your Triton setup is used for testing - then running
+  `sdcadm post-setup dev-sample-data` ensure these conditions are met
 
 In order to run acceptance tests, the following environment variables must be
 set:
@@ -106,11 +111,18 @@ set:
 - `TRITON_URL` - the base endpoint for the Triton API
 - `TRITON_ACCOUNT` - the account name for the Triton API
 - `TRITON_KEY_ID` - the fingerprint of the SSH key identifying the key
+- `TRITON_SKIP_TLS_VERIFY` - skips the checking of the server's TLS certificate.
+  This is insecure and should only be used for internal/testing.
 
-Additionally, you may set `TRITON_KEY_MATERIAL` to the contents of an unencrypted
-private key. If this is set, the PrivateKeySigner (see above) will be used - if
-not the SSHAgentSigner will be used. You can also set `TRITON_USER` to run the tests
-against an account other than the main Triton account.
+Additionally, you may set these optional environment variables:
+
+- `TRITON_KEY_MATERIAL` to the contents of an unencrypted private key. If this
+    is set, the PrivateKeySigner (see above) will be used - if not the
+    SSHAgentSigner will be used. You can also set `TRITON_USER` to run the tests
+    against an account other than the main Triton account.
+- `TRITON_TRACE_HTTP` - when set this will print the HTTP requests and responses
+  to stderr.
+- `TRITON_VERBOSE_TESTS` - turns on extra logging for test runs
 
 ### Example Run
 

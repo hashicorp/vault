@@ -11,8 +11,9 @@ import (
 type Conn struct {
 	stream io.ReadWriter
 
-	headerBuf       []byte
-	enabledFeatures map[HelloFeature]bool
+	headerBuf          []byte
+	enabledFeatures    map[HelloFeature]bool
+	collectionsEnabled bool
 }
 
 // NewConn creates a new connection object which can be used to perform
@@ -28,6 +29,10 @@ func NewConn(stream io.ReadWriter) *Conn {
 // EnableFeature enables a particular feature on this connection.
 func (c *Conn) EnableFeature(feature HelloFeature) {
 	c.enabledFeatures[feature] = true
+
+	if feature == FeatureCollections {
+		c.collectionsEnabled = true
+	}
 }
 
 // IsFeatureEnabled indicates whether a particular feature is enabled
@@ -44,7 +49,7 @@ func (c *Conn) IsFeatureEnabled(feature HelloFeature) bool {
 func (c *Conn) WritePacket(pkt *Packet) error {
 	encodedKey := pkt.Key
 	extras := pkt.Extras
-	if c.IsFeatureEnabled(FeatureCollections) {
+	if c.collectionsEnabled {
 		if pkt.Command == CmdObserve {
 			// While it's possible that the Observe operation is in fact supported with collections
 			// enabled, we don't currently implement that operation for simplicity, as the key is
@@ -102,6 +107,14 @@ func (c *Conn) WritePacket(pkt *Packet) error {
 	}
 	if pkt.ServerDurationFrame != nil {
 		framesLen += 3
+	}
+	if pkt.UserImpersonationFrame != nil {
+		userLen := len(pkt.UserImpersonationFrame.User)
+		if userLen < 15 {
+			framesLen += 1 + userLen
+		} else {
+			framesLen += 2 + userLen
+		}
 	}
 
 	// We automatically upgrade a packet from normal Req or Res magic into
@@ -251,6 +264,24 @@ func (c *Conn) WritePacket(pkt *Packet) error {
 		buffer[bodyPos+0] = makeFrameHeader(frameTypeResSrvDuration, 2)
 		binary.BigEndian.PutUint16(buffer[bodyPos+1:], serverDurationEnc)
 		bodyPos += 3
+	}
+
+	if pkt.UserImpersonationFrame != nil {
+		if pkt.Magic != CmdMagicReq {
+			return errors.New("cannot use user impersonation frame in non-request packets")
+		}
+
+		userCtxLen := len(pkt.UserImpersonationFrame.User)
+		if userCtxLen < 15 {
+			buffer[bodyPos+0] = makeFrameHeader(frameTypeReqUserImpersonation, uint8(userCtxLen))
+			copy(buffer[bodyPos+1:], pkt.UserImpersonationFrame.User)
+			bodyPos += 1 + userCtxLen
+		} else {
+			buffer[bodyPos+0] = makeFrameHeader(frameTypeReqUserImpersonation, 15)
+			buffer[bodyPos+1] = uint8(userCtxLen - 15)
+			copy(buffer[bodyPos+2:], pkt.UserImpersonationFrame.User)
+			bodyPos += 2 + userCtxLen
+		}
 	}
 
 	if len(pkt.UnsupportedFrames) > 0 {
@@ -420,7 +451,7 @@ func (c *Conn) ReadPacket() (*Packet, int, error) {
 
 	keyVal := bodyBuf[bodyPos : bodyPos+keyLen]
 	bodyPos += keyLen
-	if c.IsFeatureEnabled(FeatureCollections) {
+	if c.collectionsEnabled {
 		if pkt.Command == CmdObserve {
 			// While it's possible that the Observe operation is in fact supported with collections
 			// enabled, we don't currently implement that operation for simplicity, as the key is

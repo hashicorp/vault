@@ -618,3 +618,37 @@ func (q *GeoBoundingBoxQuery) Boost(boost float32) *GeoBoundingBoxQuery {
 	q.options["boost"] = boost
 	return q
 }
+
+// Coordinate is a tuple of a latitude and a longitude.
+type Coordinate struct {
+	Lon float64
+	Lat float64
+}
+
+// GeoPolygonQuery represents a search query which allows to match inside a geo polygon.
+type GeoPolygonQuery struct {
+	searchQueryBase
+}
+
+// NewGeoPolygonQuery creates a new GeoPolygonQuery.
+func NewGeoPolygonQuery(coords []Coordinate) *GeoPolygonQuery {
+	q := &GeoPolygonQuery{newSearchQueryBase()}
+	var polyPoints [][]float64
+	for _, coord := range coords {
+		polyPoints = append(polyPoints, []float64{coord.Lon, coord.Lat})
+	}
+	q.options["polygon_points"] = polyPoints
+	return q
+}
+
+// Field specifies the field for this query.
+func (q *GeoPolygonQuery) Field(field string) *GeoPolygonQuery {
+	q.options["field"] = field
+	return q
+}
+
+// Boost specifies the boost for this query.
+func (q *GeoPolygonQuery) Boost(boost float32) *GeoPolygonQuery {
+	q.options["boost"] = boost
+	return q
+}
