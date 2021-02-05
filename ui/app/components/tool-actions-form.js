@@ -67,7 +67,7 @@ export default Component.extend(DEFAULTS, {
     if (!(creation_time && creation_ttl)) {
       return null;
     }
-
+    // returns new Date with seconds added.
     return addSeconds(parseISO(creation_time), creation_ttl);
   }),
 
