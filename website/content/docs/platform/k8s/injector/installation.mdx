@@ -21,7 +21,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
 ```
 
 Then install the chart and enable the injection feature by setting the
@@ -64,6 +64,35 @@ The following is required to configure TLS manually:
 - Base64 PEM encoded Certificate Authority bundle
 
 For more information on configuring manual TLS, see the [Vault Helm cert values](/docs/platform/k8s/helm/configuration#certs).
+
+## Multiple Replicas and TLS
+
+The Vault Agent Injector can be run with multiple replicas if using [Manual
+TLS](#manual-tls), and as of v0.7.0 multiple replicas are also supported with
+[Auto TLS](#auto-tls). The number of replicas is controlled in the Vault Helm
+chart by the [injector.replicas
+value](/docs/platform/k8s/helm/configuration#replicas).
+
+With Auto TLS and multiple replicas, a leader-elector sidecar container is
+deployed with each replica. These sidecars determine which injector replica is
+the "leader" in charge of generating the CA and patching the webhook caBundle in
+Kubernetes, and also generating and distributing the certificate and key to the
+"followers". The followers read the certificate and key needed for the webhook
+service listener from a Kubernetes Secret, which is updated by the leader when a
+certificate is near expiration.
+
+The leader-elector sidecar in use is described in detail [here][k8s-blog]. For
+more information on configuring leader election, see the [Vault Helm
+leaderElector values](/docs/platform/k8s/helm/configuration#leaderelector).
+
+With Manual TLS and multiple replicas,
+[injector.leaderElector.enabled](/docs/platform/k8s/helm/configuration#enabled-2)
+should be set to `false` since leader-election is not necessary in this case.
+
+If there is only one replica set (regardless of other TLS or leaderElector
+settings), no leader-elector containers will be deployed.
+
+[k8s-blog]: <https://kubernetes.io/blog/2016/01/simple-leader-election-with-kubernetes/> "Simple leader election with Kubernetes and Docker"
 
 ## Namespace Selector
 
