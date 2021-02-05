@@ -12,6 +12,6 @@ module('Integration | Helper | date-from-now', function(hooks) {
 
   test('you can include a suffix', function(assert) {
     let result = dateFromNow([1481022124443], { addSuffix: true });
-    assert.ok(result.includes(' ago'));
+    assert.ok(result.includes('about'));
   });
 });
