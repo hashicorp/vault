@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: add 'use_existing_token' to auto-auth for loading an existing token at start
+```
