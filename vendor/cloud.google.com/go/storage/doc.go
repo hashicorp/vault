@@ -39,9 +39,7 @@ To start working with this package, create a client:
         // TODO: Handle error.
     }
 
-The client will use your default application credentials. Clients should be
-reused instead of created as needed. The methods of Client are safe for
-concurrent use by multiple goroutines.
+The client will use your default application credentials.
 
 If you only wish to access public data, you can create
 an unauthenticated client with
@@ -137,17 +135,6 @@ Listing objects in a bucket is done with the Bucket.Objects method:
         }
         names = append(names, attrs.Name)
     }
-
-Objects are listed lexicographically by name. To filter objects
-lexicographically, Query.StartOffset and/or Query.EndOffset can be used:
-
-    query := &storage.Query{
-        Prefix: "",
-        StartOffset: "bar/",  // Only list objects lexicographically >= "bar/"
-        EndOffset: "foo/",    // Only list objects lexicographically < "foo/"
-    }
-
-    // ... as before
 
 If only a subset of object attributes is needed when listing, specifying this
 subset using Query.SetAttrSelection may speed up the listing process:

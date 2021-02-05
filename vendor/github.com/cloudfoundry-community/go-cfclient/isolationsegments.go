@@ -100,13 +100,10 @@ func (c *Client) GetIsolationSegmentByGUID(guid string) (*IsolationSegment, erro
 
 func (c *Client) ListIsolationSegmentsByQuery(query url.Values) ([]IsolationSegment, error) {
 	var iss []IsolationSegment
-	requestURL := "/v3/isolation_segments"
-	if e := query.Encode(); len(e) > 0 {
-		requestURL += "?" + e
-	}
+	requestUrl := "/v3/isolation_segments?" + query.Encode()
 	for {
 		var isr ListIsolationSegmentsResponse
-		r := c.NewRequest("GET", requestURL)
+		r := c.NewRequest("GET", requestUrl)
 		resp, err := c.DoRequest(r)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting isolation segments")
@@ -132,13 +129,10 @@ func (c *Client) ListIsolationSegmentsByQuery(query url.Values) ([]IsolationSegm
 			})
 		}
 
-		requestURL = isr.Pagination.Next.Href
-		if requestURL == "" {
+		var ok bool
+		requestUrl, ok = isr.Pagination.Next.(string)
+		if !ok || requestUrl == "" {
 			break
-		}
-		requestURL, err = extractPathFromURL(requestURL)
-		if err != nil {
-			return nil, err
 		}
 	}
 	return iss, nil

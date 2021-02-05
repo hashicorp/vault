@@ -43,7 +43,6 @@ import (
 	"cloud.google.com/go/internal/version"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
-	"google.golang.org/api/option/internaloption"
 	raw "google.golang.org/api/storage/v1"
 	htransport "google.golang.org/api/transport/http"
 )
@@ -98,56 +97,45 @@ type Client struct {
 }
 
 // NewClient creates a new Google Cloud Storage client.
-// The default scope is ScopeFullControl. To use a different scope, like
-// ScopeReadOnly, use option.WithScopes.
-//
-// Clients should be reused instead of created as needed. The methods of Client
-// are safe for concurrent use by multiple goroutines.
+// The default scope is ScopeFullControl. To use a different scope, like ScopeReadOnly, use option.WithScopes.
 func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 	var host, readHost, scheme string
 
-	// In general, it is recommended to use raw.NewService instead of htransport.NewClient
-	// since raw.NewService configures the correct default endpoints when initializing the
-	// internal http client. However, in our case, "NewRangeReader" in reader.go needs to
-	// access the http client directly to make requests, so we create the client manually
-	// here so it can be re-used by both reader.go and raw.NewService. This means we need to
-	// manually configure the default endpoint options on the http client. Furthermore, we
-	// need to account for STORAGE_EMULATOR_HOST override when setting the default endpoints.
 	if host = os.Getenv("STORAGE_EMULATOR_HOST"); host == "" {
 		scheme = "https"
 		readHost = "storage.googleapis.com"
 
 		// Prepend default options to avoid overriding options passed by the user.
 		opts = append([]option.ClientOption{option.WithScopes(ScopeFullControl), option.WithUserAgent(userAgent)}, opts...)
-
-		opts = append(opts, internaloption.WithDefaultEndpoint("https://storage.googleapis.com/storage/v1/"))
-		opts = append(opts, internaloption.WithDefaultMTLSEndpoint("https://storage.mtls.googleapis.com/storage/v1/"))
 	} else {
 		scheme = "http"
 		readHost = host
 
 		opts = append([]option.ClientOption{option.WithoutAuthentication()}, opts...)
-
-		opts = append(opts, internaloption.WithDefaultEndpoint(host))
-		opts = append(opts, internaloption.WithDefaultMTLSEndpoint(host))
 	}
 
-	// htransport selects the correct endpoint among WithEndpoint (user override), WithDefaultEndpoint, and WithDefaultMTLSEndpoint.
 	hc, ep, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("dialing: %v", err)
 	}
-	// RawService should be created with the chosen endpoint to take account of user override.
-	rawService, err := raw.NewService(ctx, option.WithEndpoint(ep), option.WithHTTPClient(hc))
+	rawService, err := raw.NewService(ctx, option.WithHTTPClient(hc))
 	if err != nil {
 		return nil, fmt.Errorf("storage client: %v", err)
 	}
-	// Update readHost with the chosen endpoint.
-	u, err := url.Parse(ep)
-	if err != nil {
-		return nil, fmt.Errorf("supplied endpoint %q is not valid: %v", ep, err)
+	if ep == "" {
+		// Override the default value for BasePath from the raw client.
+		// TODO: remove when the raw client uses this endpoint as its default (~end of 2020)
+		rawService.BasePath = "https://storage.googleapis.com/storage/v1/"
+	} else {
+		// If the endpoint has been set explicitly, use this for the BasePath
+		// as well as readHost
+		rawService.BasePath = ep
+		u, err := url.Parse(ep)
+		if err != nil {
+			return nil, fmt.Errorf("supplied endpoint %v is not valid: %v", ep, err)
+		}
+		readHost = u.Host
 	}
-	readHost = u.Host
 
 	return &Client{
 		hc:       hc,
@@ -361,7 +349,7 @@ var (
 )
 
 // v2SanitizeHeaders applies the specifications for canonical extension headers at
-// https://cloud.google.com/storage/docs/access-control/signed-urls-v2#about-canonical-extension-headers
+// https://cloud.google.com/storage/docs/access-control/signed-urls#about-canonical-extension-headers.
 func v2SanitizeHeaders(hdrs []string) []string {
 	headerMap := map[string][]string{}
 	for _, hdr := range hdrs {
@@ -409,7 +397,7 @@ func v2SanitizeHeaders(hdrs []string) []string {
 }
 
 // v4SanitizeHeaders applies the specifications for canonical extension headers
-// at https://cloud.google.com/storage/docs/authentication/canonical-requests#about-headers.
+// at https://cloud.google.com/storage/docs/access-control/signed-urls#about-canonical-extension-headers.
 //
 // V4 does a couple things differently from V2:
 // - Headers get sorted by key, instead of by key:value. We do this in
@@ -595,10 +583,8 @@ func signedURLV4(bucket, name string, opts *SignedURLOptions, now time.Time) (st
 	for k, v := range opts.QueryParameters {
 		canonicalQueryString[k] = append(canonicalQueryString[k], v...)
 	}
-	// url.Values.Encode escaping is correct, except that a space must be replaced
-	// by `%20` rather than `+`.
-	escapedQuery := strings.Replace(canonicalQueryString.Encode(), "+", "%20", -1)
-	fmt.Fprintf(buf, "%s\n", escapedQuery)
+
+	fmt.Fprintf(buf, "%s\n", canonicalQueryString.Encode())
 
 	// Fill in the hostname based on the desired URL style.
 	u.Host = opts.Style.host(bucket)
@@ -829,8 +815,8 @@ func (o *ObjectHandle) Attrs(ctx context.Context) (attrs *ObjectAttrs, err error
 	return newObject(obj), nil
 }
 
-// Update updates an object with the provided attributes. See
-// ObjectAttrsToUpdate docs for details on treatment of zero values.
+// Update updates an object with the provided attributes.
+// All zero-value attributes are ignored.
 // ErrObjectNotExist will be returned if the object is not found.
 func (o *ObjectHandle) Update(ctx context.Context, uattrs ObjectAttrsToUpdate) (oa *ObjectAttrs, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Object.Update")
@@ -881,10 +867,6 @@ func (o *ObjectHandle) Update(ctx context.Context, uattrs ObjectAttrsToUpdate) (
 	if uattrs.TemporaryHold != nil {
 		attrs.TemporaryHold = optional.ToBool(uattrs.TemporaryHold)
 		forceSendFields = append(forceSendFields, "TemporaryHold")
-	}
-	if !uattrs.CustomTime.IsZero() {
-		attrs.CustomTime = uattrs.CustomTime
-		forceSendFields = append(forceSendFields, "CustomTime")
 	}
 	if uattrs.Metadata != nil {
 		attrs.Metadata = uattrs.Metadata
@@ -941,8 +923,7 @@ func (o *ObjectHandle) ObjectName() string {
 
 // ObjectAttrsToUpdate is used to update the attributes of an object.
 // Only fields set to non-nil values will be updated.
-// For all fields except CustomTime, set the field to its zero value to delete
-// it. CustomTime cannot be deleted or changed to an earlier time once set.
+// Set a field to its zero value to delete it.
 //
 // For example, to change ContentType and delete ContentEncoding and
 // Metadata, use
@@ -959,8 +940,7 @@ type ObjectAttrsToUpdate struct {
 	ContentEncoding    optional.String
 	ContentDisposition optional.String
 	CacheControl       optional.String
-	CustomTime         time.Time         // Cannot be deleted or backdated from its current value.
-	Metadata           map[string]string // Set to map[string]string{} to delete.
+	Metadata           map[string]string // set to map[string]string{} to delete
 	ACL                []ACLRule
 
 	// If not empty, applies a predefined set of access controls. ACL must be nil.
@@ -1067,10 +1047,6 @@ func (o *ObjectAttrs) toRawObject(bucket string) *raw.Object {
 	if !o.RetentionExpirationTime.IsZero() {
 		ret = o.RetentionExpirationTime.Format(time.RFC3339)
 	}
-	var ct string
-	if !o.CustomTime.IsZero() {
-		ct = o.CustomTime.Format(time.RFC3339)
-	}
 	return &raw.Object{
 		Bucket:                  bucket,
 		Name:                    o.Name,
@@ -1085,7 +1061,6 @@ func (o *ObjectAttrs) toRawObject(bucket string) *raw.Object {
 		StorageClass:            o.StorageClass,
 		Acl:                     toRawObjectACL(o.ACL),
 		Metadata:                o.Metadata,
-		CustomTime:              ct,
 	}
 }
 
@@ -1224,15 +1199,6 @@ type ObjectAttrs struct {
 	// Etag is the HTTP/1.1 Entity tag for the object.
 	// This field is read-only.
 	Etag string
-
-	// A user-specified timestamp which can be applied to an object. This is
-	// typically set in order to use the CustomTimeBefore and DaysSinceCustomTime
-	// LifecycleConditions to manage object lifecycles.
-	//
-	// CustomTime cannot be removed once set on an object. It can be updated to a
-	// later value but not to an earlier one. For more information see
-	// https://cloud.google.com/storage/docs/metadata#custom-time .
-	CustomTime time.Time
 }
 
 // convertTime converts a time in RFC3339 format to time.Time.
@@ -1286,7 +1252,6 @@ func newObject(o *raw.Object) *ObjectAttrs {
 		Deleted:                 convertTime(o.TimeDeleted),
 		Updated:                 convertTime(o.Updated),
 		Etag:                    o.Etag,
-		CustomTime:              convertTime(o.CustomTime),
 	}
 }
 
@@ -1306,31 +1271,6 @@ func decodeUint32(b64 string) (uint32, error) {
 func encodeUint32(u uint32) string {
 	b := []byte{byte(u >> 24), byte(u >> 16), byte(u >> 8), byte(u)}
 	return base64.StdEncoding.EncodeToString(b)
-}
-
-// Projection is enumerated type for Query.Projection.
-type Projection int
-
-const (
-	// ProjectionDefault returns all fields of objects.
-	ProjectionDefault Projection = iota
-
-	// ProjectionFull returns all fields of objects.
-	ProjectionFull
-
-	// ProjectionNoACL returns all fields of objects except for Owner and ACL.
-	ProjectionNoACL
-)
-
-func (p Projection) String() string {
-	switch p {
-	case ProjectionFull:
-		return "full"
-	case ProjectionNoACL:
-		return "noAcl"
-	default:
-		return ""
-	}
 }
 
 // Query represents a query to filter objects from a bucket.
@@ -1357,22 +1297,6 @@ type Query struct {
 	// the query. It's used internally and is populated for the user by
 	// calling Query.SetAttrSelection
 	fieldSelection string
-
-	// StartOffset is used to filter results to objects whose names are
-	// lexicographically equal to or after startOffset. If endOffset is also set,
-	// the objects listed will have names between startOffset (inclusive) and
-	// endOffset (exclusive).
-	StartOffset string
-
-	// EndOffset is used to filter results to objects whose names are
-	// lexicographically before endOffset. If startOffset is also set, the objects
-	// listed will have names between startOffset (inclusive) and endOffset (exclusive).
-	EndOffset string
-
-	// Projection defines the set of properties to return. It will default to ProjectionFull,
-	// which returns all properties. Passing ProjectionNoACL will omit Owner and ACL,
-	// which may improve performance when listing many objects.
-	Projection Projection
 }
 
 // attrToFieldMap maps the field names of ObjectAttrs to the underlying field
@@ -1405,7 +1329,6 @@ var attrToFieldMap = map[string]string{
 	"Deleted":                 "timeDeleted",
 	"Updated":                 "updated",
 	"Etag":                    "etag",
-	"CustomTime":              "customTime",
 }
 
 // SetAttrSelection makes the query populate only specific attributes of
@@ -1428,7 +1351,7 @@ func (q *Query) SetAttrSelection(attrs []string) error {
 
 	if len(fieldSet) > 0 {
 		var b bytes.Buffer
-		b.WriteString("prefixes,items(")
+		b.WriteString("items(")
 		first := true
 		for field := range fieldSet {
 			if !first {

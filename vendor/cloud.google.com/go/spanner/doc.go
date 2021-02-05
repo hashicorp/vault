@@ -357,8 +357,3 @@ at https://godoc.org/go.opencensus.io/trace. OpenCensus tracing requires Go 1.8
 or higher.
 */
 package spanner // import "cloud.google.com/go/spanner"
-
-// clientUserAgent identifies the version of this package.
-// It should be the same as https://pkg.go.dev/cloud.google.com/go/spanner.
-// TODO: We will want to automate the version with a bash script.
-const clientUserAgent = "spanner-go/v1.12.0"

@@ -17,10 +17,9 @@
 package arrow
 
 import (
+	"encoding/binary"
 	"reflect"
 	"unsafe"
-
-	"github.com/apache/arrow/go/arrow/endian"
 )
 
 var (
@@ -42,7 +41,7 @@ func (monthTraits) BytesRequired(n int) int { return MonthIntervalSizeBytes * n 
 
 // PutValue
 func (monthTraits) PutValue(b []byte, v MonthInterval) {
-	endian.Native.PutUint32(b, uint32(v))
+	binary.LittleEndian.PutUint32(b, uint32(v))
 }
 
 // CastFromBytes reinterprets the slice b to a slice of type MonthInterval.
@@ -90,8 +89,8 @@ func (daytimeTraits) BytesRequired(n int) int { return DayTimeIntervalSizeBytes 
 
 // PutValue
 func (daytimeTraits) PutValue(b []byte, v DayTimeInterval) {
-	endian.Native.PutUint32(b[0:4], uint32(v.Days))
-	endian.Native.PutUint32(b[4:8], uint32(v.Milliseconds))
+	binary.LittleEndian.PutUint32(b[0:4], uint32(v.Days))
+	binary.LittleEndian.PutUint32(b[4:8], uint32(v.Milliseconds))
 }
 
 // CastFromBytes reinterprets the slice b to a slice of type DayTimeInterval.

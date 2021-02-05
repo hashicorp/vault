@@ -86,12 +86,6 @@ func keyPartValue(part interface{}) (pb *proto3.Value, err error) {
 		pb, _, err = encodeValue(float64(v))
 	case int64, float64, NullInt64, NullFloat64, bool, NullBool, []byte, string, NullString, time.Time, civil.Date, NullTime, NullDate:
 		pb, _, err = encodeValue(v)
-	case Encoder:
-		part, err = v.EncodeSpanner()
-		if err != nil {
-			return nil, err
-		}
-		pb, err = keyPartValue(part)
 	default:
 		return nil, errInvdKeyPartType(v)
 	}
@@ -131,50 +125,38 @@ func (key Key) String() string {
 		if i != 0 {
 			fmt.Fprint(b, ",")
 		}
-		key.elemString(b, part)
+		switch v := part.(type) {
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, float32, float64, bool:
+			// Use %v to print numeric types and bool.
+			fmt.Fprintf(b, "%v", v)
+		case string:
+			fmt.Fprintf(b, "%q", v)
+		case []byte:
+			if v != nil {
+				fmt.Fprintf(b, "%q", v)
+			} else {
+				fmt.Fprint(b, nullString)
+			}
+		case NullInt64, NullFloat64, NullBool:
+			// The above types implement fmt.Stringer.
+			fmt.Fprintf(b, "%s", v)
+		case NullString, NullDate, NullTime:
+			// Quote the returned string if it is not null.
+			if v.(NullableValue).IsNull() {
+				fmt.Fprintf(b, "%s", nullString)
+			} else {
+				fmt.Fprintf(b, "%q", v)
+			}
+		case civil.Date:
+			fmt.Fprintf(b, "%q", v)
+		case time.Time:
+			fmt.Fprintf(b, "%q", v.Format(time.RFC3339Nano))
+		default:
+			fmt.Fprintf(b, "%v", v)
+		}
 	}
 	fmt.Fprint(b, ")")
 	return b.String()
-}
-
-func (key Key) elemString(b *bytes.Buffer, part interface{}) {
-	switch v := part.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, float32, float64, bool:
-		// Use %v to print numeric types and bool.
-		fmt.Fprintf(b, "%v", v)
-	case string:
-		fmt.Fprintf(b, "%q", v)
-	case []byte:
-		if v != nil {
-			fmt.Fprintf(b, "%q", v)
-		} else {
-			fmt.Fprint(b, nullString)
-		}
-	case NullInt64, NullFloat64, NullBool:
-		// The above types implement fmt.Stringer.
-		fmt.Fprintf(b, "%s", v)
-	case NullString, NullDate, NullTime:
-		// Quote the returned string if it is not null.
-		if v.(NullableValue).IsNull() {
-			fmt.Fprintf(b, "%s", nullString)
-		} else {
-			fmt.Fprintf(b, "%q", v)
-		}
-	case civil.Date:
-		fmt.Fprintf(b, "%q", v)
-	case time.Time:
-		fmt.Fprintf(b, "%q", v.Format(time.RFC3339Nano))
-	case Encoder:
-		var err error
-		part, err = v.EncodeSpanner()
-		if err != nil {
-			fmt.Fprintf(b, "error")
-		} else {
-			key.elemString(b, part)
-		}
-	default:
-		fmt.Fprintf(b, "%v", v)
-	}
 }
 
 // AsPrefix returns a KeyRange for all keys where k is the prefix.
@@ -401,15 +383,6 @@ func (all) keySetProto() (*sppb.KeySet, error) {
 func KeySets(keySets ...KeySet) KeySet {
 	u := make(union, len(keySets))
 	copy(u, keySets)
-	return u
-}
-
-// KeySetFromKeys returns a KeySet containing the given slice of keys.
-func KeySetFromKeys(keys ...Key) KeySet {
-	u := make(union, len(keys))
-	for i, k := range keys {
-		u[i] = k
-	}
 	return u
 }
 

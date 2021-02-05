@@ -119,8 +119,6 @@ const (
 //     []time.Time, []*time.Time, []NullTime - TIMESTAMP ARRAY
 //     Date, *Date, NullDate - DATE
 //     []Date, []*Date, []NullDate - DATE ARRAY
-//     big.Rat, *big.Rat, NullNumeric - NUMERIC
-//     []big.Rat, []*big.Rat, []NullNumeric - NUMERIC ARRAY
 //
 // To compare two Mutations for testing purposes, use reflect.DeepEqual.
 type Mutation struct {
@@ -181,7 +179,7 @@ func structToMutationParams(in interface{}) ([]string, []interface{}, error) {
 	}
 	fields, err := fieldCache.Fields(t)
 	if err != nil {
-		return nil, nil, ToSpannerError(err)
+		return nil, nil, toSpannerError(err)
 	}
 	var cols []string
 	var vals []interface{}

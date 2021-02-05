@@ -73,7 +73,7 @@ func (r *spannerRetryer) Retry(err error) (time.Duration, bool) {
 	if !shouldRetry {
 		return 0, false
 	}
-	if serverDelay, hasServerDelay := ExtractRetryDelay(err); hasServerDelay {
+	if serverDelay, hasServerDelay := extractRetryDelay(err); hasServerDelay {
 		delay = serverDelay
 	}
 	return delay, true
@@ -128,8 +128,8 @@ func runWithRetryOnAbortedOrSessionNotFound(ctx context.Context, f func(context.
 	return funcWithRetry(ctx)
 }
 
-// ExtractRetryDelay extracts retry backoff from a *spanner.Error if present.
-func ExtractRetryDelay(err error) (time.Duration, bool) {
+// extractRetryDelay extracts retry backoff from a *spanner.Error if present.
+func extractRetryDelay(err error) (time.Duration, bool) {
 	var se *Error
 	var s *status.Status
 	// Unwrap status error.

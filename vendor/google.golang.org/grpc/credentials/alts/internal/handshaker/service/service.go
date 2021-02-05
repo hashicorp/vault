@@ -27,12 +27,9 @@ import (
 )
 
 var (
-	// mu guards hsConnMap and hsDialer.
-	mu sync.Mutex
-	// hsConn represents a mapping from a hypervisor handshaker service address
-	// to a corresponding connection to a hypervisor handshaker service
-	// instance.
-	hsConnMap = make(map[string]*grpc.ClientConn)
+	// hsConn represents a connection to hypervisor handshaker service.
+	hsConn *grpc.ClientConn
+	mu     sync.Mutex
 	// hsDialer will be reassigned in tests.
 	hsDialer = grpc.Dial
 )
@@ -44,8 +41,7 @@ func Dial(hsAddress string) (*grpc.ClientConn, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	hsConn, ok := hsConnMap[hsAddress]
-	if !ok {
+	if hsConn == nil {
 		// Create a new connection to the handshaker service. Note that
 		// this connection stays open until the application is closed.
 		var err error
@@ -53,7 +49,6 @@ func Dial(hsAddress string) (*grpc.ClientConn, error) {
 		if err != nil {
 			return nil, err
 		}
-		hsConnMap[hsAddress] = hsConn
 	}
 	return hsConn, nil
 }

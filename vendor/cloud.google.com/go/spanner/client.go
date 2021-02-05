@@ -25,9 +25,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/internal/trace"
-	vkit "cloud.google.com/go/spanner/apiv1"
 	"google.golang.org/api/option"
-	"google.golang.org/api/option/internaloption"
 	gtransport "google.golang.org/api/transport/grpc"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc"
@@ -36,15 +34,11 @@ import (
 )
 
 const (
-	endpoint     = "spanner.googleapis.com:443"
-	mtlsEndpoint = "spanner.mtls.googleapis.com:443"
+	endpoint = "spanner.googleapis.com:443"
 
 	// resourcePrefixHeader is the name of the metadata header used to indicate
 	// the resource being operated on.
 	resourcePrefixHeader = "google-cloud-resource-prefix"
-
-	// numChannels is the default value for NumChannels of client.
-	numChannels = 4
 )
 
 const (
@@ -107,10 +101,6 @@ type ClientConfig struct {
 	// QueryOptions is the configuration for executing a sql query.
 	QueryOptions QueryOptions
 
-	// CallOptions is the configuration for providing custom retry settings that
-	// override the default values.
-	CallOptions *vkit.CallOptions
-
 	// logger is the logger to use for this client. If it is nil, all logging
 	// will be directed to the standard logger.
 	logger *log.Logger
@@ -118,7 +108,7 @@ type ClientConfig struct {
 
 // errDial returns error for dialing to Cloud Spanner.
 func errDial(ci int, err error) error {
-	e := ToSpannerError(err).(*Error)
+	e := toSpannerError(err).(*Error)
 	e.decorate(fmt.Sprintf("dialing fails for channel[%v]", ci))
 	return e
 }
@@ -155,7 +145,6 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 			option.WithEndpoint(emulatorAddr),
 			option.WithGRPCDialOption(grpc.WithInsecure()),
 			option.WithoutAuthentication(),
-			internaloption.SkipDialSettingsValidation(),
 		}
 		opts = append(emulatorOpts, opts...)
 	}
@@ -167,8 +156,7 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 	}
 	// gRPC options.
 	allOpts := []option.ClientOption{
-		internaloption.WithDefaultEndpoint(endpoint),
-		internaloption.WithDefaultMTLSEndpoint(mtlsEndpoint),
+		option.WithEndpoint(endpoint),
 		option.WithScopes(Scope),
 		option.WithGRPCDialOption(
 			grpc.WithDefaultCallOptions(
@@ -177,8 +165,6 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 			),
 		),
 		option.WithGRPCConnectionPool(config.NumChannels),
-		option.WithUserAgent(clientUserAgent),
-		internaloption.EnableDirectPath(true),
 	}
 	// opts will take precedence above allOpts, as the values in opts will be
 	// applied after the values in allOpts.
@@ -211,7 +197,7 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 		config.incStep = DefaultSessionPoolConfig.incStep
 	}
 	// Create a session client.
-	sc := newSessionClient(pool, database, sessionLabels, metadata.Pairs(resourcePrefixHeader, database), config.logger, config.CallOptions)
+	sc := newSessionClient(pool, database, sessionLabels, metadata.Pairs(resourcePrefixHeader, database), config.logger)
 	// Create a session pool.
 	config.SessionPoolConfig.sessionLabels = sessionLabels
 	sp, err := newSessionPool(sc, config.SessionPoolConfig)
@@ -345,7 +331,7 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 		},
 	})
 	if err != nil {
-		return nil, ToSpannerError(err)
+		return nil, toSpannerError(err)
 	}
 	tx = res.Id
 	if res.ReadTimestamp != nil {
@@ -428,36 +414,13 @@ func checkNestedTxn(ctx context.Context) error {
 func (c *Client) ReadWriteTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error) (commitTimestamp time.Time, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.ReadWriteTransaction")
 	defer func() { trace.EndSpan(ctx, err) }()
-	resp, err := c.rwTransaction(ctx, f, TransactionOptions{})
-	return resp.CommitTs, err
-}
-
-// ReadWriteTransactionWithOptions executes a read-write transaction with
-// configurable options, with retries as necessary.
-//
-// ReadWriteTransactionWithOptions is a configurable ReadWriteTransaction.
-//
-// See https://godoc.org/cloud.google.com/go/spanner#ReadWriteTransaction for
-// more details.
-func (c *Client) ReadWriteTransactionWithOptions(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error, options TransactionOptions) (resp CommitResponse, err error) {
-	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.ReadWriteTransactionWithOptions")
-	defer func() { trace.EndSpan(ctx, err) }()
-	resp, err = c.rwTransaction(ctx, f, options)
-	return resp, err
-}
-
-func (c *Client) rwTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error, options TransactionOptions) (resp CommitResponse, err error) {
 	if err := checkNestedTxn(ctx); err != nil {
-		return resp, err
+		return time.Time{}, err
 	}
 	var (
+		ts time.Time
 		sh *sessionHandle
 	)
-	defer func() {
-		if sh != nil {
-			sh.recycle()
-		}
-	}()
 	err = runWithRetryOnAbortedOrSessionNotFound(ctx, func(ctx context.Context) error {
 		var (
 			err error
@@ -484,10 +447,13 @@ func (c *Client) rwTransaction(ctx context.Context, f func(context.Context, *Rea
 		if err = t.begin(ctx); err != nil {
 			return err
 		}
-		resp, err = t.runInTransaction(ctx, f)
+		ts, err = t.runInTransaction(ctx, f)
 		return err
 	})
-	return resp, err
+	if sh != nil {
+		sh.recycle()
+	}
+	return ts, err
 }
 
 // applyOption controls the behavior of Client.Apply.
