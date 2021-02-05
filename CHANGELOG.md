@@ -1,41 +1,144 @@
 ## 1.7.0 (Unreleased)
 
+SECURITY:
+
+* IP Address Disclosure: We fixed a vulnerability where, under some error
+conditions, Vault would return an error message disclosing internal IP
+addresses. This vulnerability affects Vault and Vault Enterprise and is fixed in
+1.6.2 (CVE-2021-3024).
+* Limited Unauthenticated Remove Peer: As of Vault 1.6, the remove-peer command
+on DR secondaries did not require authentication. This issue impacts the
+stability of HA architecture, as a bad actor could remove all standby
+nodes from a DR
+secondary. This issue affects Vault Enterprise 1.6.0 and 1.6.1, and is fixed in
+1.6.2 (CVE-2021-3282).
+* Mount Path Disclosure: Vault previously returned different HTTP status codes for
+existent and non-existent mount paths. This behavior would allow unauthenticated
+brute force attacks to reveal which paths had valid mounts. This issue affects
+Vault and Vault Enterprise and is fixed in 1.6.2 (CVE-2020-25594).
+* replication (enterprise): On DR secondaries, use DR operation token to authenticate raft remove-peer. [[GH-10758](https://github.com/hashicorp/vault/pull/10758)]
+
+CHANGES:
+
+* go: Update go version to 1.15.7 [[GH-10730](https://github.com/hashicorp/vault/pull/10730)]
+
+FEATURES:
+
+* **Aerospike Storage Backend**: Add support for using Aerospike as a storage backend [[GH-10131](https://github.com/hashicorp/vault/pull/10131)]
+* kmip (enterprise): Use entropy augmentation to generate kmip certificates
+* sdk: Private key generation in the certutil package now allows custom io.Readers to be used. [[GH-10653](https://github.com/hashicorp/vault/pull/10653)]
+* ui: Adds check for feature flag on application, and updates namespace toolbar on login if present [[GH-10588](https://github.com/hashicorp/vault/pull/10588)]
+
 IMPROVEMENTS:
 
 * agent: Agent can now run as a Windows service. [[GH-10231](https://github.com/hashicorp/vault/pull/10231)]
+* agent: Better concurrent request handling on identical requests proxied through Agent. [[GH-10705](https://github.com/hashicorp/vault/pull/10705)]
 * auth/ldap: Improve consistency in error messages [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]
+* command/debug: Now collects logs (at level `trace`) as a periodic output. [[GH-10609](https://github.com/hashicorp/vault/pull/10609)]
+* core (enterprise): "vault status" command works when a namespace is set. [[GH-10725](https://github.com/hashicorp/vault/pull/10725)]
 * core (enterprise): Update Trial Enterprise license from 30 minutes to 6 hours
 * core/metrics: Added "vault operator usage" command. [[GH-10365](https://github.com/hashicorp/vault/pull/10365)]
 * core/metrics: New telemetry metrics reporting lease expirations by time interval and namespace [[GH-10375](https://github.com/hashicorp/vault/pull/10375)]
 * core: Added active since timestamp to the status output of active nodes. [[GH-10489](https://github.com/hashicorp/vault/pull/10489)]
+* core: Check audit device with a test message before adding it. [[GH-10520](https://github.com/hashicorp/vault/pull/10520)]
+* core: add metrics for active entity count [[GH-10514](https://github.com/hashicorp/vault/pull/10514)]
+* core: reduce memory used by leases [[GH-10726](https://github.com/hashicorp/vault/pull/10726)]
 * secrets/gcp: Truncate ServiceAccount display names longer than 100 characters. [[GH-10558](https://github.com/hashicorp/vault/pull/10558)]
+* storage/raft (enterprise): Listing of peers is now allowed on DR secondary
+cluster nodes, as an update operation that takes in DR operation token for
+authenticating the request.
+* ui: Upgrade Ember-cli from 3.8 to 3.22. [[GH-9972](https://github.com/hashicorp/vault/pull/9972)]
 
 BUG FIXES:
 
 * agent: Only set the namespace if the VAULT_NAMESPACE env var isn't present [[GH-10556](https://github.com/hashicorp/vault/pull/10556)]
+* agent: Set namespace for template server in agent. [[GH-10757](https://github.com/hashicorp/vault/pull/10757)]
 * api/sys/config/ui: Fixes issue where multiple UI custom header values are ignored and only the first given value is used [[GH-10490](https://github.com/hashicorp/vault/pull/10490)]
 * api: Fixes CORS API methods that were outdated and invalid [[GH-10444](https://github.com/hashicorp/vault/pull/10444)]
 * auth/jwt: Fixes `bound_claims` validation for provider-specific group and user info fetching. [[GH-10546](https://github.com/hashicorp/vault/pull/10546)]
 * core (enterprise): Limit entropy augmentation during token generation to root tokens. [[GH-10487](https://github.com/hashicorp/vault/pull/10487)]
 * core (enterprise): Vault EGP policies attached to path * were not correctly scoped to the namespace.
 * core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
+* core: Avoid disclosing IP addresses in the errors of unauthenticated requests [[GH-10579](https://github.com/hashicorp/vault/pull/10579)]
 * core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
 * core: Fix rate limit resource quota migration from 1.5.x to 1.6.x by ensuring `purgeInterval` and
 `staleAge` are set appropriately. [[GH-10536](https://github.com/hashicorp/vault/pull/10536)]
 * core: Make all APIs that report init status consistent, and make them report
 initialized=true when a Raft join is in progress. [[GH-10498](https://github.com/hashicorp/vault/pull/10498)]
+* core: Make the response to an unauthenticated request to sys/internal endpoints consistent regardless of mount existence. [[GH-10650](https://github.com/hashicorp/vault/pull/10650)]
+* core: Turn off case sensitivity for allowed entity alias check during token create operation. [[GH-10743](https://github.com/hashicorp/vault/pull/10743)]
+* http: change max_request_size to be unlimited when the config value is less than 0 [[GH-10072](https://github.com/hashicorp/vault/pull/10072)]
 * license: Fix license caching issue that prevents new licenses to get picked up by the license manager [[GH-10424](https://github.com/hashicorp/vault/pull/10424)]
+* metrics: Protect emitMetrics from panicking during post-seal [[GH-10708](https://github.com/hashicorp/vault/pull/10708)]
 * secrets/database/influxdb: Fix issue where not all errors from InfluxDB were being handled [[GH-10384](https://github.com/hashicorp/vault/pull/10384)]
 * secrets/database/mysql: Fixes issue where the DisplayName within generated usernames was the incorrect length [[GH-10433](https://github.com/hashicorp/vault/pull/10433)]
 * secrets/database: Sanitize `private_key` field when reading database plugin config [[GH-10416](https://github.com/hashicorp/vault/pull/10416)]
+* secrets/gcp: Fix issue with account and iam_policy roleset WALs not being removed after attempts when GCP project no longer exists [[GH-10759](https://github.com/hashicorp/vault/pull/10759)]
 * secrets/transit: allow for null string to be used for optional parameters in encrypt and decrypt [[GH-10386](https://github.com/hashicorp/vault/pull/10386)]
+* storage/raft (enterprise): Automated snapshots with Azure required specifying
+`azure_blob_environment`, which should have had as a default `AZUREPUBLICCLOUD`.
+* storage/raft (enterprise): Reading a non-existent auto snapshot config now returns 404.
+* storage/raft (enterprise): The parameter aws_s3_server_kms_key was misnamed and
+didn't work.  Renamed to aws_s3_kms_key, and make it work so that when provided
+the given key will be used to encrypt the snapshot using AWS KMS.
 * transform (enterprise): Fix bug tokenization handling metadata on exportable stores
+* transform (enterprise): Fix bug where tokenization store changes are persisted but don't take effect
 * transform (enterprise): Fix transform configuration not handling `stores` parameter on the legacy path
 * transform (enterprise): Make expiration timestamps human readable
 * transform (enterprise): Return false for invalid tokens on the validate endpoint rather than returning an HTTP error
-* transform (enterprise): Fix bug where tokenization store changes are persisted but don't take effect
 * ui: Fix bug in Transform secret engine when a new role is added and then removed from a transformation [[GH-10417](https://github.com/hashicorp/vault/pull/10417)]
+* ui: Fix bug that double encodes secret route when there are spaces in the path and makes you unable to view the version history. [[GH-10596](https://github.com/hashicorp/vault/pull/10596)]
+* ui: Fix expected response from feature-flags endpoint [[GH-10684](https://github.com/hashicorp/vault/pull/10684)]
 * ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
+
+## 1.6.2
+### January 29, 2021
+
+SECURITY:
+
+* IP Address Disclosure: We fixed a vulnerability where, under some error
+conditions, Vault would return an error message disclosing internal IP
+addresses. This vulnerability affects Vault and Vault Enterprise and is fixed in
+1.6.2 (CVE-2021-3024).
+* Limited Unauthenticated Remove Peer: As of Vault 1.6, the remove-peer command
+on DR secondaries did not require authentication. This issue impacts the
+stability of HA architecture, as a bad actor could remove all standby
+nodes from a DR
+secondary. This issue affects Vault Enterprise 1.6.0 and 1.6.1, and is fixed in
+1.6.2 (CVE-2021-3282).
+* Mount Path Disclosure: Vault previously returned different HTTP status codes for
+existent and non-existent mount paths. This behavior would allow unauthenticated
+brute force attacks to reveal which paths had valid mounts. This issue affects
+Vault and Vault Enterprise and is fixed in 1.6.2 (CVE-2020-25594).
+
+CHANGES:
+
+* go: Update go version to 1.15.7 [[GH-10730](https://github.com/hashicorp/vault/pull/10730)]
+
+FEATURES:
+
+* ui: Adds check for feature flag on application, and updates namespace toolbar on login if present [[GH-10588](https://github.com/hashicorp/vault/pull/10588)]
+
+IMPROVEMENTS:
+
+* core (enterprise): "vault status" command works when a namespace is set. [[GH-10725](https://github.com/hashicorp/vault/pull/10725)]
+* core: reduce memory used by leases [[GH-10726](https://github.com/hashicorp/vault/pull/10726)]
+* storage/raft (enterprise): Listing of peers is now allowed on DR secondary
+cluster nodes, as an update operation that takes in DR operation token for
+authenticating the request.
+
+BUG FIXES:
+
+* agent: Set namespace for template server in agent. [[GH-10757](https://github.com/hashicorp/vault/pull/10757)]
+* core: Make the response to an unauthenticated request to sys/internal endpoints consistent regardless of mount existence. [[GH-10650](https://github.com/hashicorp/vault/pull/10650)]
+* metrics: Protect emitMetrics from panicking during post-seal [[GH-10708](https://github.com/hashicorp/vault/pull/10708)]
+* secrets/gcp: Fix issue with account and iam_policy roleset WALs not being removed after attempts when GCP project no longer exists [[GH-10759](https://github.com/hashicorp/vault/pull/10759)]
+* storage/raft (enterprise): Automated snapshots with Azure required specifying
+`azure_blob_environment`, which should have had as a default `AZUREPUBLICCLOUD`.
+* storage/raft (enterprise): Autosnapshots config and storage weren't excluded from
+performance replication, causing conflicts and errors.
+* ui: Fix bug that double encodes secret route when there are spaces in the path and makes you unable to view the version history. [[GH-10596](https://github.com/hashicorp/vault/pull/10596)]
+* ui: Fix expected response from feature-flags endpoint [[GH-10684](https://github.com/hashicorp/vault/pull/10684)]
 
 ## 1.6.1
 ### December 16, 2020
@@ -43,7 +146,7 @@ initialized=true when a Raft join is in progress. [[GH-10498](https://github.com
 SECURITY:
 
 * LDAP Auth Method: We addressed an issue where error messages returned by the
-  LDAP auth methold allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
+  LDAP auth method allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
   Enterprise and is fixed in 1.5.6 and 1.6.1 (CVE-2020-35177).
 * Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
   users within namespaces from applying Sentinel EGP policies to paths above
@@ -152,6 +255,31 @@ BUG FIXES:
 * ui: Update language in promote dr modal flow [[GH-10155](https://github.com/hashicorp/vault/pull/10155)]
 * ui: Update language on replication primary dashboard for clarity [[GH-10205](https://github.com/hashicorp/vault/pull/10217)]
 * core: Fix bug where updating an existing path quota could introduce a conflict. [[GH-10285](https://github.com/hashicorp/vault/pull/10285)]
+
+## 1.5.7
+### January 29, 2021
+
+SECURITY:
+
+* IP Address Disclosure: We fixed a vulnerability where, under some error
+conditions, Vault would return an error message disclosing internal IP
+addresses. This vulnerability affects Vault and Vault Enterprise and is fixed in
+1.6.2 and 1.5.7 (CVE-2021-3024).
+* Mount Path Disclosure: Vault previously returned different HTTP status codes for
+existent and non-existent mount paths. This behavior would allow unauthenticated
+brute force attacks to reveal which paths had valid mounts. This issue affects
+Vault and Vault Enterprise and is fixed in 1.6.2 and 1.5.7 (CVE-2020-25594).
+
+IMPROVEMENTS:
+
+* storage/raft (enterprise): Listing of peers is now allowed on DR secondary
+cluster nodes, as an update operation that takes in DR operation token for
+authenticating the request.
+
+BUG FIXES:
+
+* core: Avoid disclosing IP addresses in the errors of unauthenticated requests [[GH-10579](https://github.com/hashicorp/vault/pull/10579)]
+* core: Make the response to an unauthenticated request to sys/internal endpoints consistent regardless of mount existence. [[GH-10650](https://github.com/hashicorp/vault/pull/10650)]
 
 ## 1.5.6
 ### December 16, 2020

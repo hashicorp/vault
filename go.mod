@@ -51,9 +51,9 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/consul-template v0.25.1
+	github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
 	github.com/hashicorp/consul/api v1.4.0
-	github.com/hashicorp/errwrap v1.0.0
+	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-discover v0.0.0-20200812215701-c4b85f6ed31f
@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hashicorp/golang-lru v0.5.3
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
@@ -95,9 +95,9 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.6-0.20210201204049-4f0f91977798
 	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201022214319-d87657199d4b
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210127185906-6b455835fa8c
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -107,7 +107,7 @@ require (
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.8.0
-	github.com/mattn/go-colorable v0.1.6
+	github.com/mattn/go-colorable v0.1.7
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/mitchellh/cli v1.1.1
@@ -129,7 +129,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/posener/complete v1.2.1
+	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.11.1
@@ -151,9 +151,9 @@ require (
 	go.mongodb.org/mongo-driver v1.4.2
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344
+	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a
+	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1

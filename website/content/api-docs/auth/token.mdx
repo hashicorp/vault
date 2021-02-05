@@ -709,6 +709,7 @@ tokens created against a role to be revoked using the
 - `allowed_entity_aliases` `(string: "", or list: [])` - String or JSON list
   of allowed entity aliases. If set, specifies the entity aliases which are
   allowed to be used during token generation. This field supports globbing.
+  Note that `allowed_entity_aliases` is not case sensitive.
 
 @include 'tokenstorefields.mdx'
 

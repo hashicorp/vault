@@ -1,6 +1,7 @@
 /* Global Component Styles */
 @import '~@hashicorp/mktg-global-styles/style.css';
 @import '~@hashicorp/mktg-global-styles/_temporary-to-remove/layout.css';
+@import '~@hashicorp/mktg-global-styles/_temporary-to-remove/tables.css';
 @import '~@hashicorp/nextjs-scripts/prism/style.css';
 
 :root {
