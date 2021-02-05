@@ -465,6 +465,17 @@ func TestLoadConfigFile_AgentAutoAuth_UseExisting_True(t *testing.T) {
 				},
 				UseExistingToken: true,
 			},
+            Sinks: []*Sink{
+                {
+                    Type:   "file",
+                    DHType: "curve25519",
+                    DHPath: "/tmp/file-foo-dhpath",
+                    AAD:    "foobar",
+                    Config: map[string]interface{}{
+                        "path": "/tmp/file-foo",
+                    },
+                },
+            },
 		},
 	}
 
