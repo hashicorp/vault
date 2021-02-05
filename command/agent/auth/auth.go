@@ -2,9 +2,13 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -48,6 +52,7 @@ type AuthHandler struct {
 	wrapTTL                      time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
+	enableUseExistingToken       bool
 }
 
 type AuthHandlerConfig struct {
@@ -56,6 +61,7 @@ type AuthHandlerConfig struct {
 	WrapTTL                      time.Duration
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
+	EnableUseExistingToken       bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -70,6 +76,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		wrapTTL:                      conf.WrapTTL,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
+		enableUseExistingToken:       conf.EnableUseExistingToken,
 	}
 
 	return ah
@@ -116,6 +123,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	var watcher *api.LifetimeWatcher
+	first := true
 
 	for {
 		select {
@@ -169,12 +177,57 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		}
 
-		secret, err := clientToUse.Logical().Write(path, data)
-		// Check errors/sanity
-		if err != nil {
-			ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
-			backoffOrQuit(ctx, backoff)
-			continue
+		var secret *api.Secret = new(api.Secret)
+		if first && ah.enableUseExistingToken {
+			var token string
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return fmt.Errorf("error determining home directory: %s", err)
+			}
+			tokenPath := fmt.Sprintf("%s/.vault-token", home)
+
+			if fileExists(tokenPath) {
+				ah.logger.Debug("attempting to read preloaded token from path", "path", tokenPath)
+				tokenRaw, err := ioutil.ReadFile(tokenPath)
+				if err != nil {
+					return fmt.Errorf("error opening token file: %s", err)
+				}
+				token = string(tokenRaw)
+			} else {
+				ah.logger.Debug("attempting to read preloaded token from env VAULT_TOKEN")
+				token = os.Getenv("VAULT_TOKEN")
+			}
+
+			if token != "" {
+				first = false
+
+				ah.logger.Debug("lookup-self with preloaded token")
+
+				clientToUse.SetToken(string(token))
+				secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
+				if err != nil {
+					ah.logger.Error("error looking up token", "error", err, "backoff", backoff.Seconds())
+					backoffOrQuit(ctx, backoff)
+					continue
+				}
+
+				duration, _ := secret.Data["ttl"].(json.Number).Int64()
+				secret.Auth = &api.SecretAuth{
+					ClientToken:   secret.Data["id"].(string),
+					LeaseDuration: int(duration),
+					Renewable:     secret.Data["renewable"].(bool),
+				}
+			}
+		}
+
+		if secret.Auth == nil {
+			secret, err = clientToUse.Logical().Write(path, data)
+			// Check errors/sanity
+			if err != nil {
+				ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
 		}
 
 		switch {
@@ -274,4 +327,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		}
 	}
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }

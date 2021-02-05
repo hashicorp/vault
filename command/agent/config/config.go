@@ -62,12 +62,13 @@ type AutoAuth struct {
 
 // Method represents the configuration for the authentication backend
 type Method struct {
-	Type       string
-	MountPath  string        `hcl:"mount_path"`
-	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
-	WrapTTL    time.Duration `hcl:"-"`
-	Namespace  string        `hcl:"namespace"`
-	Config     map[string]interface{}
+	Type             string
+	MountPath        string        `hcl:"mount_path"`
+	WrapTTLRaw       interface{}   `hcl:"wrap_ttl"`
+	WrapTTL          time.Duration `hcl:"-"`
+	Namespace        string        `hcl:"namespace"`
+	UseExistingToken bool          `hcl:"use_existing_token"`
+	Config           map[string]interface{}
 }
 
 // Sink defines a location to write the authenticated token
@@ -403,6 +404,14 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 
 	// Canonicalize namespace path if provided
 	m.Namespace = namespace.Canonicalize(m.Namespace)
+
+	if m.UseExistingToken != false {
+		var err error
+		m.UseExistingToken, err = parseutil.ParseBool(m.UseExistingToken)
+		if err != nil {
+			return err
+		}
+	}
 
 	result.AutoAuth.Method = &m
 	return nil
