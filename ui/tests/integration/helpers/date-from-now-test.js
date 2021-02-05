@@ -31,11 +31,6 @@ module('Integration | Helper | date-from-now', function(hooks) {
     assert.ok(result.includes(' ago'));
   });
 
-  test('you can include a suffix using ISO', function(assert) {
-    let result = dateFromNow(['2021-02-05T20:43:09+00:00'], { addSuffix: true });
-    assert.ok(result.includes(' ago'));
-  });
-
   test('you can include a suffix in the helper', async function(assert) {
     await render(hbs`<p data-test-date-from-now>Date: {{date-from-now 1481022124443 addSuffix=true}}</p>`);
     assert.dom('[data-test-date-from-now]').includesText(' ago');
