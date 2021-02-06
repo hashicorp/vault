@@ -346,23 +346,6 @@ func (r *LifetimeWatcher) doRenew() error {
 	}
 }
 
-// sleepDuration calculates the time to sleep given the base lease duration. The
-// base is the resulting lease duration. It will be reduced to 1/3 and
-// multiplied by a random float between 0.0 and 1.0. This extra randomness
-// prevents multiple clients from all trying to renew simultaneously.
-func (r *LifetimeWatcher) sleepDuration(base time.Duration) time.Duration {
-	sleep := float64(base)
-
-	// Renew at 1/3 the remaining lease. This will give us an opportunity to retry
-	// at least one more time should the first renewal fail.
-	sleep = sleep / 3.0
-
-	// Use a randomness so many clients do not hit Vault simultaneously.
-	sleep = sleep * (r.random.Float64() + 1) / 2.0
-
-	return time.Duration(sleep)
-}
-
 // calculateGrace calculates the grace period based on a reasonable set of
 // assumptions given the total lease time; it also adds some jitter to not have
 // clients be in sync.
