@@ -118,15 +118,17 @@
     label=labelString
   }}
 {{else if (eq attr.options.editType "ttl")}}
-{{!-- TTL Picker --}}
-  <TtlPicker2
-    @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
-    @label={{labelString}}
-    @helperTextDisabled="Vault will use the default lease duration"
-    @helperTextEnabled="Lease will expire after"
-    @description={{attr.helpText}}
-    @initialValue={{or (get model valuePath) attr.options.setDefault}}
-  />
+  {{!-- TTL Picker --}}
+  <div class="field">
+    <TtlPicker2
+      @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
+      @label={{labelString}}
+      @helperTextDisabled="Vault will use the default lease duration"
+      @helperTextEnabled="Lease will expire after"
+      @description={{attr.helpText}}
+      @initialValue={{or (get model valuePath) attr.options.setDefault}}
+    />
+  </div>
 {{else if (eq attr.options.editType "optionalText")}}
   {{!-- Togglable Text Input --}}
   <Toggle
