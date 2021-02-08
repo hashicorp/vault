@@ -2313,6 +2313,12 @@ func TestActivityLog_Deletion(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 
+	// Wait for retention worker to finish its first pass.
+	select {
+	case <-a.retentionDone:
+		break
+	}
+
 	times := []time.Time{
 		time.Date(2019, 1, 15, 1, 2, 3, 0, time.UTC), // 0
 		time.Date(2019, 3, 15, 1, 2, 3, 0, time.UTC),
