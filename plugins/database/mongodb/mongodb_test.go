@@ -114,18 +114,6 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 			}
 			dbtesting.AssertInitialize(t, db, initReq)
 
-			// password := "myreallysecurepassword"
-			// createReq := dbplugin.NewUserRequest{
-			// 	UsernameConfig: dbplugin.UsernameMetadata{
-			// 		DisplayName: "test",
-			// 		RoleName:    "test",
-			// 	},
-			// 	Statements: dbplugin.Statements{
-			// 		Commands: []string{mongoAdminRole},
-			// 	},
-			// 	Password:   password,
-			// 	Expiration: time.Now().Add(time.Minute),
-			// }
 			ctx := context.Background()
 			newUserResp, err := db.NewUser(ctx, test.newUserReq)
 			require.NoError(t, err)
