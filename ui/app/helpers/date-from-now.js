@@ -1,10 +1,10 @@
 import { helper } from '@ember/component/helper';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 export function dateFromNow([date], options = {}) {
-  // UTC dates must come in as objects. See tools-actions-form
-  console.log(date, 'DATE');
-  let newDate = typeof date === 'string' ? parseISO(date) : date;
+  // check first if string. If it is, it could be ISO format or UTC, either way create a new date object
+  // otherwise it's a number or object and just return
+  let newDate = typeof date === 'string' ? new Date(date) : date;
   return formatDistanceToNow(newDate, { ...options });
 }
 

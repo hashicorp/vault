@@ -14,8 +14,17 @@ module('Integration | Helper | date-from-now', function(hooks) {
   });
 
   test('you can include a suffix', function(assert) {
-    // Testing the function
     let result = dateFromNow([1481022124443], { addSuffix: true });
+    assert.ok(result.includes(' ago'));
+  });
+
+  test('you can pass in UTC timestamp', function(assert) {
+    let result = dateFromNow(['Fri, 11 Oct 2019 18:56:08 GMT'], { addSuffix: true });
+    assert.ok(result.includes(' ago'));
+  });
+
+  test('you can pass in ISO timestamp', function(assert) {
+    let result = dateFromNow(['2019-10-11T18:56:08.984Z'], { addSuffix: true });
     assert.ok(result.includes(' ago'));
   });
 
@@ -33,6 +42,6 @@ module('Integration | Helper | date-from-now', function(hooks) {
 
   test('you can include a suffix in the helper', async function(assert) {
     await render(hbs`<p data-test-date-from-now>Date: {{date-from-now 1481022124443 addSuffix=true}}</p>`);
-    assert.dom('[data-test-date-from-now]').includesText(' ago');
+    assert.dom('[data-test-date-from-now]').includesText(' years ago');
   });
 });
