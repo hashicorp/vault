@@ -64,7 +64,7 @@
     "d3-time-format": "^2.1.1",
     "d3-tip": "^0.9.1",
     "d3-transition": "^1.2.0",
-    "date-fns": "^1.30.0",
+    "date-fns": "^2.16.1",
     "deepmerge": "^4.0.0",
     "doctoc": "^1.4.0",
     "ember-api-actions": "^0.2.8",

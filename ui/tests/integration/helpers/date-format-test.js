@@ -10,7 +10,7 @@ module('Integration | Helper | date-format', function(hooks) {
     let today = new Date();
     this.set('today', today);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format today "YYYY"}}</p>`);
+    await render(hbs`<p data-test-date-format>Date: {{date-format today "yyyy"}}</p>`);
     assert
       .dom('[data-test-date-format]')
       .includesText(today.getFullYear(), 'it renders the date in the year format');
@@ -29,7 +29,7 @@ module('Integration | Helper | date-format', function(hooks) {
     let todayString = new Date().getFullYear().toString();
     this.set('todayString', todayString);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format todayString}}</p>`);
+    await render(hbs`<p data-test-date-format>Date: {{date-format todayString "yyyy"}}</p>`);
     assert
       .dom('[data-test-date-format]')
       .includesText(todayString, 'it renders the a date if passed in as a string');
