@@ -2358,12 +2358,15 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		return nil, errwrap.Wrapf("failed to store secret_id: {{err}}", err)
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
+			"secret_id_ttl":      int64(b.deriveSecretIDTTL(secretIDStorage.SecretIDTTL).Seconds()),
 		},
-	}, nil
+	}
+
+	return resp, nil
 }
 
 func (b *backend) roleIDLock(roleID string) *locksutil.LockEntry {
