@@ -146,6 +146,10 @@ type RaftBackend struct {
 	// leader. This is used to track some state of the peers and as well as used
 	// to see if the peers are "alive" using the heartbeat received from them.
 	followerStates *FollowerStates
+
+	// followerHeartbeatTrackerStopCh is used to terminate the goroutine that
+	// keeps track of follower heartbeats.
+	followerHeartbeatTrackerStopCh chan struct{}
 }
 
 // AutopilotConfiguration is used for querying/setting the Autopilot configuration.
@@ -394,7 +398,7 @@ func (d *Delegate) AutopilotConfig() *autopilot.Config {
 	defer d.l.RUnlock()
 
 	return &autopilot.Config{
-		CleanupDeadServers:      false,
+		CleanupDeadServers:      d.autopilotConfig.CleanupDeadServers,
 		LastContactThreshold:    d.autopilotConfig.LastContactThreshold,
 		MaxTrailingLogs:         d.autopilotConfig.MaxTrailingLogs,
 		MinQuorum:               d.autopilotConfig.MinQuorum,
@@ -484,8 +488,19 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	return ret
 }
 
+// RemoveFailedServer is called by the autopilot library when it desires a node
+// to be removed from the raft configuration. This function removes the node
+// from the raft cluster and stops tracking its information in follower states.
+// This function needs to return quickly. Hence removal is performed in a
+// goroutine.
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
-	// TODO: implement me
+	go func() {
+		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
+		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
+			d.logger.Error("failed to remove server", "server_id", server.ID, "server_address", server.Address, "server_name", server.Name, "error", future.Error())
+		}
+		d.followerStates.Delete(string(server.ID))
+	}()
 }
 
 // SetFollowerStates sets the followerStates field in the backend to track peers
@@ -513,7 +528,7 @@ func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
 
 func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 	return &AutopilotConfig{
-		CleanupDeadServers:      false,
+		CleanupDeadServers:      true,
 		LastContactThreshold:    10 * time.Second,
 		MaxTrailingLogs:         1000,
 		MinQuorum:               3,
@@ -1168,6 +1183,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		// Create the autopilot instance
 		b.logger.Info("setting up autopilot", "config", b.autopilotConfig)
 		b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(autopilot.DefaultPromoter()))
+		b.followerHeartbeatTrackerStopCh = make(chan struct{})
 	}
 
 	if b.streamLayer != nil {
@@ -1185,6 +1201,24 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	return nil
 }
 
+func (b *RaftBackend) startFollowerHeartbeatTracker() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-b.followerHeartbeatTrackerStopCh:
+			return
+		case <-ticker.C:
+			for id, state := range b.followerStates.followers {
+				// TODO: Plumb last_contact_failure_threshold setting here
+				if !state.LastHeartbeat.IsZero() && time.Now().After(state.LastHeartbeat.Add(5*time.Second)) {
+					b.followerStates.MarkFollowerAsDead(id)
+				}
+			}
+		}
+	}
+}
+
 // StartAutopilot puts autopilot subsystem to work. This should only be called
 // on the active node.
 func (b *RaftBackend) StartAutopilot(ctx context.Context) {
@@ -1192,6 +1226,8 @@ func (b *RaftBackend) StartAutopilot(ctx context.Context) {
 		return
 	}
 	b.autopilot.Start(ctx)
+
+	go b.startFollowerHeartbeatTracker()
 }
 
 // StopAutopilot stops a running autopilot instance. This should only be called
@@ -1201,6 +1237,7 @@ func (b *RaftBackend) StopAutopilot() {
 		return
 	}
 	b.autopilot.Stop()
+	close(b.followerHeartbeatTrackerStopCh)
 }
 
 // TeardownCluster shuts down the raft cluster
