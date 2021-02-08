@@ -57,13 +57,14 @@ export default RESTSerializer.extend({
     }
   },
 
-  serialize() {
-    let data = this._super(...arguments);
-    // database should be string not array
-    const db = data.database[0];
-    data.db_name = db;
-    delete data.path;
-    delete data.database;
+  serialize(snapshot, requestType) {
+    let data = this._super(snapshot, requestType);
+    if (data.database) {
+      const db = data.database[0];
+      data.db_name = db;
+      delete data.database;
+    }
+
     return data;
   },
 });

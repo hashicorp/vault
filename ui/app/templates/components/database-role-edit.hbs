@@ -15,103 +15,45 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq @mode "show")}}
-<Toolbar>
-  <ToolbarActions>
-    {{#if @model.canGenerateCredentials}}
-    <button 
-      type="button"
-      class="toolbar-link"
-      {{on 'click' (fn this.generateCreds @model.id)}}
-      data-test-database-role-generate-creds
-    >
-      Generate credentials
-    </button>
-    {{/if}}
-    {{#if @model.canDelete}}
-    <ConfirmAction
-      @buttonClasses="toolbar-link"
-      @onConfirmAction={{action 'delete'}}
-      @confirmTitle="Delete role?"
-      @confirmMessage="This role will be permanently deleted. You will need to re-create it to use it again."
-      @confirmButtonText="Delete"
-      data-test-database-role-delete
-    >
-      Delete role
-    </ConfirmAction>
-    {{/if}}
-    {{#if @model.canEditRole}}
-    <ToolbarSecretLink
-      @secret={{concat 'role/' @model.id}}
-      @mode="edit"
-      @replace=true
-      @queryParams={{query-params itemType="role"}}
-      @data-test-edit-link=true
-    >
-      Edit role
-    </ToolbarSecretLink>
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
-{{/if}}
 
-{{#if (eq @mode 'create')}}
-<form
-  {{on 'submit' this.handleCreateRole}}>
-  {{#each @model.fieldAttrs as |attr|}}
-    {{#if (not-eq attr.options.readOnly true)}}
-      {{form-field data-test-field attr=attr model=@model}}
-    {{/if}}
-  {{/each}}
-
-  <DatabaseRoleSettingForm
-    @attrs={{@model.roleSettingAttrs}}
-    @roleType={{@model.type}}
-    @model={{@model}}
-    @mode={{@mode}}
-  />
-
-  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
-    <div class="field is-grouped">
-      <div class="control">
-        {{#unless this.tooltipMessage}}
-          <button
-            data-test-secret-save
-            type="submit"
-            {{!-- disabled={{this.missingFields}} // TODO validation --}}
-            class="button is-primary"
-          >
-            Save
-          </button>
-        {{else}}
-          <ToolTip @horizontalPosition="left" as |T|>
-            <T.trigger>
-              <button
-                data-test-secret-save
-                type="submit"
-                disabled={{true}}
-                class="button is-primary"
-              >
-                Save
-              </button>
-            </T.trigger>
-            <T.content @class="tool-tip">
-              <div class="box">
-                {{this.tooltipMessage}}
-              </div>
-            </T.content>
-          </ToolTip>
-        {{/unless}}
-      </div>
-      <div class="control">
-        <SecretLink @mode="list" @class="button">
-          Cancel
-        </SecretLink>
-      </div>
-    </div>
-  </div>
-</form>
-{{else}}
+{{#if (eq @mode 'show')}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if @model.canGenerateCredentials}}
+      <button 
+        type="button"
+        class="toolbar-link"
+        {{on 'click' (fn this.generateCreds @model.id)}}
+        data-test-database-role-generate-creds
+      >
+        Generate credentials
+      </button>
+      {{/if}}
+      {{#if @model.canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action 'delete'}}
+        @confirmTitle="Delete role?"
+        @confirmMessage="This role will be permanently deleted. You will need to re-create it to use it again."
+        @confirmButtonText="Delete"
+        data-test-database-role-delete
+      >
+        Delete role
+      </ConfirmAction>
+      {{/if}}
+      {{#if @model.canEditRole}}
+      <ToolbarSecretLink
+        @secret={{concat 'role/' @model.id}}
+        @mode="edit"
+        @replace=true
+        @queryParams={{query-params itemType="role"}}
+        @data-test-edit-link=true
+      >
+        Edit role
+      </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
   {{#each @model.fieldAttrs as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
@@ -121,4 +63,66 @@
       {{/if}}
     {{/let}}
   {{/each}}
+{{else}}
+  {{!-- Edit or Create --}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <form {{on 'submit' this.handleCreateEditRole}}>
+      {{#each @model.fieldAttrs as |attr|}}
+        {{#if (eq @mode 'edit')}}
+          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+        {{else if (not-eq attr.options.readOnly true)}}
+          {{form-field data-test-field attr=attr model=@model}}
+          {{!-- TODO: If database && !updateDB show warning --}}
+        {{/if}}
+      {{/each}}
+
+      <DatabaseRoleSettingForm
+        @attrs={{@model.roleSettingAttrs}}
+        @roleType={{@model.type}}
+        @model={{@model}}
+        @mode={{@mode}}
+        @dbType={{this.databaseType}}
+      />
+
+      <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+        <div class="field is-grouped">
+          <div class="control">
+            {{#unless this.tooltipMessage}}
+              <button
+                data-test-secret-save
+                type="submit"
+                {{!-- disabled={{this.missingFields}} // TODO validation --}}
+                class="button is-primary"
+              >
+                Save
+              </button>
+            {{else}}
+              <ToolTip @horizontalPosition="left" as |T|>
+                <T.trigger>
+                  <button
+                    data-test-secret-save
+                    type="submit"
+                    disabled={{true}}
+                    class="button is-primary"
+                  >
+                    Save
+                  </button>
+                </T.trigger>
+                <T.content @class="tool-tip">
+                  <div class="box">
+                    {{this.tooltipMessage}}
+                  </div>
+                </T.content>
+              </ToolTip>
+            {{/unless}}
+          </div>
+          <div class="control">
+            <SecretLink @mode="list" @class="button">
+              Cancel
+            </SecretLink>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
 {{/if}}

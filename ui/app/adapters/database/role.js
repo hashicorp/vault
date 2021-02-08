@@ -1,4 +1,5 @@
 import { assign } from '@ember/polyfills';
+import { assert } from '@ember/debug';
 import ApplicationAdapter from '../application';
 import { allSettled } from 'rsvp';
 import { addToArray } from 'vault/helpers/add-to-array';
@@ -7,8 +8,7 @@ import { removeFromArray } from 'vault/helpers/remove-from-array';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
   pathForType() {
-    // Confirm this isn't used by setting to bad val
-    return 'jeepers';
+    assert('Generate the url dynamically based on role type', false);
   },
 
   urlFor(backend, id, type = 'dynamic') {
@@ -154,5 +154,15 @@ export default ApplicationAdapter.extend({
     });
 
     return this.ajax(this.urlFor(backend, id, roleType), 'DELETE');
+  },
+
+  async updateRecord(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const data = serializer.serialize(snapshot);
+    const roleType = snapshot.attr('type');
+    const backend = snapshot.attr('backend');
+    const id = snapshot.attr('name');
+
+    return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
   },
 });

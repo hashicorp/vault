@@ -34,17 +34,9 @@ const AVAILABLE_PLUGIN_TYPES = [
 ];
 
 export default Model.extend({
-  // URL: http://127.0.0.1:8200/v1/database/config/my-db
   backend: attr('string', {
     readOnly: true,
   }),
-  editConnectionPath: lazyCapabilities(apiPath`${'backend'}/config/${'id'}`, 'backend', 'id'),
-  canEdit: alias('editConnectionPath.canUpdate'),
-  resetConnectionPath: lazyCapabilities(apiPath`${'backend'}/reset/${'id'}`, 'backend', 'id'),
-  canReset: computed.or('resetConnectionPath.canUpdate', 'resetConnectionPath.canCreate'),
-  rotateRootPath: lazyCapabilities(apiPath`${'backend'}/rotate-root/${'id'}`, 'backend', 'id'),
-  canRotateRoot: computed.or('rotateRootPath.canUpdate', 'rotateRootPath.canCreate'),
-
   name: attr('string', {
     label: 'Connection Name',
   }),
@@ -99,7 +91,6 @@ export default Model.extend({
     editType: 'file',
   }),
   root_rotation_statements: attr('string', {
-    // label: 'Root rotation statements',
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
     editType: 'json',
     theme: 'hashi short',
@@ -145,18 +136,6 @@ export default Model.extend({
     ];
   }),
 
-  // showFields: computed('plugin_name', function() {
-  //   const f = [
-  //     'name',
-  //     'plugin_name',
-  //     'connection_url',
-  //     'write_concern',
-  //     'verify_connection',
-  //     'root_rotation_statements',
-  //     'allowed_roles',
-  //   ];
-  //   return fieldToAttrs(this, f);
-  // }),
   showAttrs: computed('plugin_name', function() {
     const f = [
       'name',
@@ -170,15 +149,6 @@ export default Model.extend({
     return expandAttributeMeta(this, f);
   }),
 
-  // pluginGroups: computed('plugin_name', function() {
-  //   let groups = [{ default: ['username', 'password', 'write_concern'] }];
-  //   // TODO: Get plugin options based on plugin
-  //   groups.push({
-  //     'TLS options': ['tls', 'tls_ca'],
-  //   });
-  //   return groups;
-  // }),
-
   pluginFieldGroups: computed('plugin_name', function() {
     let groups = [{ default: ['username', 'password', 'write_concern'] }];
     // TODO: Get plugin options based on plugin
@@ -188,19 +158,16 @@ export default Model.extend({
     return fieldToAttrs(this, groups);
   }),
 
-  // TODO: Experimental
-  formSections: computed('pluginGroups', function() {
-    const plugin_config = fieldToAttrs(this, this.pluginGroups);
-    const rotation_config = fieldToAttrs(this, [
-      {
-        default: ['root_rotation_statements'],
-      },
-    ]);
-    return [{ 'Plugin config': plugin_config }, { default: rotation_config }];
-  }),
-
   fieldAttrs: computed('mainFields', function() {
     // Main Field Attrs only
     return expandAttributeMeta(this, this.mainFields);
   }),
+
+  /* CAPABILITIES */
+  editConnectionPath: lazyCapabilities(apiPath`${'backend'}/config/${'id'}`, 'backend', 'id'),
+  canEdit: alias('editConnectionPath.canUpdate'),
+  resetConnectionPath: lazyCapabilities(apiPath`${'backend'}/reset/${'id'}`, 'backend', 'id'),
+  canReset: computed.or('resetConnectionPath.canUpdate', 'resetConnectionPath.canCreate'),
+  rotateRootPath: lazyCapabilities(apiPath`${'backend'}/rotate-root/${'id'}`, 'backend', 'id'),
+  canRotateRoot: computed.or('rotateRootPath.canUpdate', 'rotateRootPath.canCreate'),
 });

@@ -1,0 +1,56 @@
+{{#unless
+  (or
+    (eq attr.type "boolean")
+    (contains
+      attr.options.editType
+      (array
+        "boolean"
+        "optionalText"
+        "searchSelect"
+        "mountAccessor"
+        "kv"
+        "file"
+        "ttl"
+        "stringArray"
+        "json"
+      )
+    )
+  )
+}}
+  <label for="{{attr.name}}" class="is-label">
+    {{labelString}}
+    {{#if attr.options.helpText}}
+      {{#info-tooltip}}
+        <span data-test-help-text>
+          {{attr.options.helpText}}
+        </span>
+      {{/info-tooltip}}
+    {{/if}}
+  </label>
+  {{#if attr.options.subText}}
+    <p class="sub-text">{{attr.options.subText}}</p>
+  {{/if}}
+{{/unless}}
+
+{{#if attr.options.possibleValues}}
+  <div class="control is-expanded field is-readOnly">
+    <div class="select is-fullwidth">
+      <select name="{{attr.name}}" id="{{attr.name}}" disabled readonly data-test-input={{attr.name}}>
+        <option selected="true" value={{@value}}>
+          {{@value}}
+        </option>
+      </select>
+    </div>
+  </div>
+{{else}}
+  <input
+    data-test-input={{attr.name}}
+    id={{attr.name}}
+    autocomplete="off"
+    spellcheck="false"
+    value={{@value}}
+    readonly
+    class="field input is-readOnly"
+    type={{attr.type}}
+  />
+{{/if}}

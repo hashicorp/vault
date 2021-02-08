@@ -1,10 +1,6 @@
-// import Component from '@ember/component';
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-
-// import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-// import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -23,6 +19,14 @@ export default class DatabaseRoleEdit extends Component {
     }
     if (!this.args.model.canCreateStatic && this.args.model.type === 'static') {
       return `You don't have permissions to create static roles.`;
+    }
+    return null;
+  }
+
+  get databaseType() {
+    if (this.args.model?.database) {
+      // TODO: Calculate this
+      return 'mongodb-database-plugin';
     }
     return null;
   }
@@ -49,6 +53,22 @@ export default class DatabaseRoleEdit extends Component {
     roleSecret.set('id', secretId);
     let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
     roleSecret.set('path', path);
+    roleSecret.save().then(() => {
+      this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+    });
+  }
+
+  @action
+  handleCreateEditRole(evt) {
+    evt.preventDefault();
+    const mode = this.args.mode;
+    let roleSecret = this.args.model;
+    let secretId = roleSecret.name;
+    if (mode === 'create') {
+      roleSecret.set('id', secretId);
+      let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
+      roleSecret.set('path', path);
+    }
     roleSecret.save().then(() => {
       this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
     });

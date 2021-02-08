@@ -45,31 +45,49 @@ export default Model.extend({
     subText:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds.',
   }),
+  creation_statements: attr('array', {
+    editType: 'stringArray',
+  }),
+  revocation_statements: attr('array', {
+    editType: 'stringArray',
+  }),
+  rotation_statements: attr('array', {
+    editType: 'stringArray',
+  }),
+  creation_statement: attr('string', {
+    editType: 'json',
+    theme: 'hashi short',
+  }),
+  w: attr('string', {
+    editType: 'json',
+    theme: 'hashi short',
+  }),
 
-  // path is used for capabilities only
-  path: attr('string', { readOnly: true }),
-
+  /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     let fields = ['database', 'name', 'type'];
     return expandAttributeMeta(this, fields);
   },
 
   roleSettingAttrs: computed(function() {
-    // actual display for which ones is set on DatabaseRoleSettingForm
-    let allRoleSettingFields = ['ttl', 'max_ttl', 'username', 'rotation_period'];
+    // logic for which get displayed is on DatabaseRoleSettingForm
+    let allRoleSettingFields = [
+      'ttl',
+      'max_ttl',
+      'username',
+      'rotation_period',
+      'creation_statements',
+      'creation_statement', // only for MongoDB (styling difference)
+      'revocation_statements',
+      'rotation_statements',
+      'rotation_statement', // only for MongoDB (styling difference)
+    ];
     return expandAttributeMeta(this, allRoleSettingFields);
   }),
 
-  statementsAttrs: computed('type', function() {
-    if (!this.type) {
-      return null;
-    }
-    let statementFields = ['creation_statements', 'revocation_statements'];
-    if (this.type === 'static') {
-      statementFields = ['rotation_statements'];
-    }
-    return expandAttributeMeta(this, statementFields);
-  }),
+  /* CAPABILITIES */
+  // only used for secretPath
+  path: attr('string', { readOnly: true }),
 
   secretPath: lazyCapabilities(apiPath`${'backend'}/${'path'}/${'id'}`, 'backend', 'path', 'id'),
   canEditRole: alias('secretPath.canUpdate'),

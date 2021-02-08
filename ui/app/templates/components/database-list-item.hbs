@@ -1,4 +1,3 @@
-{{log @item.id tab}}
 {{#linked-block
   "vault.cluster.secrets.backend.show"
   (if keyTypeValue (concat 'role/' @item.id) @item.id)
@@ -24,7 +23,6 @@
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{!-- ARG TODO unsure if this is the correct link --}}
             {{#if @item.canEdit}}
               <li class="action">
                 <SecretLink
@@ -38,8 +36,8 @@
             {{#if @item.canEditRole}}
               <li class="action">
                 <SecretLink
-                  @mode="show"
-                  @secret={{@item.id}}
+                  @mode="edit"
+                  @secret={{concat 'role/' @item.id}}
                   @class="has-text-black has-text-weight-semibold">
                   Edit Role
                 </SecretLink>
