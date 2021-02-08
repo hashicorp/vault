@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -48,6 +49,90 @@ func TestMongoDB_Initialize(t *testing.T) {
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
+	}
+}
+
+func TestNewUser_usernameTemplate(t *testing.T) {
+	type testCase struct {
+		usernameTemplate string
+
+		newUserReq            dbplugin.NewUserRequest
+		expectedUsernameRegex string
+	}
+
+	tests := map[string]testCase{
+		"default username template": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-token-testrolenamewit-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"custom username template": {
+			usernameTemplate: "{{random 2 | uppercase}}_{{unix_time}}_{{.RoleName | uppercase}}_{{.DisplayName | uppercase}}",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^[A-Z0-9]{2}_[0-9]{10}_TESTROLENAMEWITHMANYCHARACTERS_TOKEN$",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+			defer cleanup()
+
+			db := new()
+			defer dbtesting.AssertClose(t, db)
+
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
+				},
+				VerifyConnection: true,
+			}
+			dbtesting.AssertInitialize(t, db, initReq)
+
+			// password := "myreallysecurepassword"
+			// createReq := dbplugin.NewUserRequest{
+			// 	UsernameConfig: dbplugin.UsernameMetadata{
+			// 		DisplayName: "test",
+			// 		RoleName:    "test",
+			// 	},
+			// 	Statements: dbplugin.Statements{
+			// 		Commands: []string{mongoAdminRole},
+			// 	},
+			// 	Password:   password,
+			// 	Expiration: time.Now().Add(time.Minute),
+			// }
+			ctx := context.Background()
+			newUserResp, err := db.NewUser(ctx, test.newUserReq)
+			require.NoError(t, err)
+			require.Regexp(t, test.expectedUsernameRegex, newUserResp.Username)
+
+			assertCredsExist(t, newUserResp.Username, test.newUserReq.Password, connURL)
+		})
 	}
 }
 
