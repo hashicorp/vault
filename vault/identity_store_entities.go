@@ -164,6 +164,9 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		force := d.Get("force").(bool)
 
 		// Create a MemDB transaction to merge entities
+		i.lock.Lock()
+		defer i.lock.Unlock()
+
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
@@ -172,7 +175,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false, true)
+		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, false, false, true)
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), nil
 		}
