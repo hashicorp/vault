@@ -393,7 +393,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_AgentAutoAuth_False(t *testing.T) {
+func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-false.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)
