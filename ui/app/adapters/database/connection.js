@@ -25,7 +25,6 @@ export default ApplicationAdapter.extend({
   fetchByQuery(store, query) {
     const { backend, id } = query;
     return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
-      // resp.id = id;
       resp.backend = backend;
       if (id) {
         resp.id = id;

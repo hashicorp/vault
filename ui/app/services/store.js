@@ -134,6 +134,7 @@ export default Store.extend({
       total: get(dataset, 'length') || 0,
       filteredTotal: get(data, 'length') || 0,
     };
+
     return response;
   },
 

@@ -69,7 +69,6 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   delete(evt) {
     evt.preventDefault();
-    // const adapter = this.store.adapterFor('cluster');
     const secret = this.args.model;
     const backend = secret.backend;
     secret.destroyRecord().then(() => {
