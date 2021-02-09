@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestTokenPreloadToken_UsingAutoAuth(t *testing.T) {
+func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
