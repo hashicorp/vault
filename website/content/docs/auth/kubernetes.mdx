@@ -69,13 +69,13 @@ management tool.
     $ vault auth enable kubernetes
     ```
 
-1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. For the
+1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use `kubectl cluster-info` to validate the Kubernetes host address and TCP port. For the
     list of available configuration options, please see the API documentation.
 
     ```text
     $ vault write auth/kubernetes/config \
         token_reviewer_jwt="<your reviewer service account JWT>" \
-        kubernetes_host=https://192.168.99.100:8443 \
+        kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
         kubernetes_ca_cert=@ca.crt
     ```
 
