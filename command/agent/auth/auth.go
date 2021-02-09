@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -46,22 +44,22 @@ type AuthConfig struct {
 type AuthHandler struct {
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
+	token                        string
 	logger                       hclog.Logger
 	client                       *api.Client
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
-	enableUseExistingToken       bool
 }
 
 type AuthHandlerConfig struct {
 	Logger                       hclog.Logger
 	Client                       *api.Client
 	WrapTTL                      time.Duration
+	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
-	EnableUseExistingToken       bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -70,13 +68,13 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
+		token:                        conf.Token,
 		logger:                       conf.Logger,
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
-		enableUseExistingToken:       conf.EnableUseExistingToken,
 	}
 
 	return ah
@@ -178,46 +176,26 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		var secret *api.Secret = new(api.Secret)
-		if first && ah.enableUseExistingToken {
-			var token string
-			home, err := os.UserHomeDir()
+		if first && ah.token != "" {
+			ah.logger.Debug("using preloaded token")
+
+			first = false
+			ah.logger.Debug("lookup-self with preloaded token")
+			clientToUse.SetToken(ah.token)
+
+			secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
 			if err != nil {
-				return fmt.Errorf("error determining home directory: %s", err)
-			}
-			tokenPath := fmt.Sprintf("%s/.vault-token", home)
-
-			if fileExists(tokenPath) {
-				ah.logger.Debug("attempting to read preloaded token from path", "path", tokenPath)
-				tokenRaw, err := ioutil.ReadFile(tokenPath)
-				if err != nil {
-					return fmt.Errorf("error opening token file: %s", err)
-				}
-				token = string(tokenRaw)
-			} else {
-				ah.logger.Debug("attempting to read preloaded token from env VAULT_TOKEN")
-				token = os.Getenv("VAULT_TOKEN")
+				ah.logger.Debug("could not look up token", "err", err, "backoff", backoff.Seconds())
+				ah.logger.Error("could not look up token, continuing with auto-auth", "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
 			}
 
-			if token != "" {
-				first = false
-
-				ah.logger.Debug("lookup-self with preloaded token")
-
-				clientToUse.SetToken(string(token))
-				secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
-				if err != nil {
-					ah.logger.Debug("could not look up token", "err", err, "backoff", backoff.Seconds())
-					ah.logger.Error("could not look up token, continuing with auto-auth", "backoff", backoff.Seconds())
-					backoffOrQuit(ctx, backoff)
-					continue
-				}
-
-				duration, _ := secret.Data["ttl"].(json.Number).Int64()
-				secret.Auth = &api.SecretAuth{
-					ClientToken:   secret.Data["id"].(string),
-					LeaseDuration: int(duration),
-					Renewable:     secret.Data["renewable"].(bool),
-				}
+			duration, _ := secret.Data["ttl"].(json.Number).Int64()
+			secret.Auth = &api.SecretAuth{
+				ClientToken:   secret.Data["id"].(string),
+				LeaseDuration: int(duration),
+				Renewable:     secret.Data["renewable"].(bool),
 			}
 		}
 

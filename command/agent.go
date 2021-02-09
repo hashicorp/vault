@@ -577,7 +577,6 @@ func (c *AgentCommand) Run(args []string) int {
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
-			EnableUseExistingToken:       config.AutoAuth.Method.UseExistingToken,
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
