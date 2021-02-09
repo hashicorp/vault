@@ -184,8 +184,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
 			if err != nil {
-				ah.logger.Debug("could not look up token", "err", err, "backoff", backoff.Seconds())
-				ah.logger.Error("could not look up token, continuing with auto-auth", "backoff", backoff.Seconds())
+				ah.logger.Error("could not look up token", "err", err, "backoff", backoff.Seconds())
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
