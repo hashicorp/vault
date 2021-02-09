@@ -879,6 +879,16 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	return c.RunWithObserver(&NullDiagnoseObserver{})
+}
+
+// Run through the initialization procedure, reporting any errors to a DiagnoseObserver
+func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) {
+	defer func() {
+		// This wrapper function means we get the real status.
+		observer.Exited(status)
+	}()
+
 	if c.flagRecovery {
 		return c.runRecoveryMode()
 	}
@@ -946,6 +956,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	parsedConfig, err := c.parseConfig()
 	if err != nil {
+		observer.Error("config-parse-error", err)
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -957,6 +968,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Ensure at least one config was found.
 	if config == nil {
+		observer.Error("config-absent", err)
 		c.UI.Output(wrapAtLength(
 			"No configuration files found. Please provide configurations with the " +
 				"-config flag. If you are supplying the path to a directory, please " +
@@ -967,6 +979,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
 	if err != nil {
+		observer.Error("config-logging-1", err)
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -996,6 +1009,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
+		observer.Error("config-logging-2", err)
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -1025,6 +1039,7 @@ func (c *ServerCommand) Run(args []string) int {
 		var err error
 		config.DisableMlock, err = strconv.ParseBool(envMlock)
 		if err != nil {
+			observer.Error("config-mlock", err)
 			c.UI.Output("Error parsing the environment variable VAULT_DISABLE_MLOCK")
 			return 1
 		}
@@ -1051,14 +1066,18 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName: config.ClusterName,
 	})
 	if err != nil {
+		observer.Error("config-telemetry", err)
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
+	observer.Success("config")
+
 	// Initialize the storage backend
 	backend, err := c.setupStorage(config)
 	if err != nil {
+		observer.Error("storage", err)
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -1066,14 +1085,18 @@ func (c *ServerCommand) Run(args []string) int {
 	// Prevent server startup if migration is active
 	// TODO: how to incorporate this check into Diagnose?
 	if c.storageMigrationActive(backend) {
+		observer.Error("storage-migration", nil)
 		return 1
 	}
+
+	observer.Success("storage")
 
 	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
 		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
 		if !ok {
+			observer.Error("config-service-registration", nil)
 			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
 			return 1
 		}
@@ -1092,6 +1115,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
 		if err != nil {
+			observer.Error("service-registration", err)
 			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
 		}
@@ -1144,6 +1168,7 @@ func (c *ServerCommand) Run(args []string) int {
 			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+					observer.Error("unseal-config", sealConfigError)
 					c.UI.Error(fmt.Sprintf(
 						"Error parsing Seal configuration: %s", sealConfigError))
 					return 1
@@ -1182,6 +1207,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if barrierSeal == nil {
+		observer.Error("unseal-barrier", nil)
 		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
@@ -1189,6 +1215,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// prepare a secure random reader for core
 	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
 	if err != nil {
+		observer.Error("config-random-reader", err)
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -1259,17 +1286,20 @@ func (c *ServerCommand) Run(args []string) int {
 	var ok bool
 	if config.HAStorage != nil {
 		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
+			observer.Error("config-ha-storage", nil)
 			c.UI.Error("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
 			return 1
 		}
 
 		if config.Storage.Type == storageTypeRaft {
+			observer.Error("config-ha-storage", nil)
 			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
 			return 1
 		}
 
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
+			observer.Error("config-ha-storage", nil)
 			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
 			return 1
 
@@ -1279,6 +1309,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.allLoggers = append(c.allLoggers, namedHALogger)
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
+			observer.Error("storage-ha", err)
 			c.UI.Error(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
 			return 1
@@ -1286,11 +1317,13 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
+			observer.Error("storage-ha-unsupported", err)
 			c.UI.Error("Specified HA storage does not support HA")
 			return 1
 		}
 
 		if !coreConfig.HAPhysical.HAEnabled() {
+			observer.Error("storage-ha-disabled", err)
 			c.UI.Error("Specified HA storage has HA support disabled; please consult documentation")
 			return 1
 		}
@@ -1299,6 +1332,7 @@ func (c *ServerCommand) Run(args []string) int {
 		disableClustering = config.HAStorage.DisableClustering
 
 		if config.HAStorage.Type == storageTypeRaft && disableClustering {
+			observer.Error("config-clustering", err)
 			c.UI.Error("Disable clustering cannot be set to true when Raft is the HA storage type")
 			return 1
 		}
@@ -1312,6 +1346,7 @@ func (c *ServerCommand) Run(args []string) int {
 			disableClustering = config.Storage.DisableClustering
 
 			if (config.Storage.Type == storageTypeRaft) && disableClustering {
+				observer.Error("config-clustering", err)
 				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
 				return 1
 			}
@@ -1372,6 +1407,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 		u, err := url.ParseRequestURI(addrToUse)
 		if err != nil {
+			observer.Error("config-cluster-address", err)
 			c.UI.Error(fmt.Sprintf(
 				"Error parsing synthesized cluster address %s: %v", addrToUse, err))
 			return 1
@@ -1383,12 +1419,14 @@ func (c *ServerCommand) Run(args []string) int {
 				host = u.Host
 				port = "443"
 			} else {
+				observer.Error("config-cluster-address", err)
 				c.UI.Error(fmt.Sprintf("Error parsing api address: %v", err))
 				return 1
 			}
 		}
 		nPort, err := strconv.Atoi(port)
 		if err != nil {
+			observer.Error("config-cluster-address", err)
 			c.UI.Error(fmt.Sprintf(
 				"Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err))
 			return 1
@@ -1402,6 +1440,7 @@ func (c *ServerCommand) Run(args []string) int {
 CLUSTER_SYNTHESIS_COMPLETE:
 
 	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
+		observer.Error("config-cluster-address", nil)
 		c.UI.Error(fmt.Sprintf(
 			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
 		return 1
@@ -1411,6 +1450,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
+			observer.Error("config-cluster-address", err)
 			c.UI.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err))
 			return 11
 		}
@@ -1423,6 +1463,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		var err error
 		coreConfig.EnableUI, err = strconv.ParseBool(enableUI)
 		if err != nil {
+			observer.Error("config-vault-ui", err)
 			c.UI.Output("Error parsing the environment variable VAULT_UI")
 			return 1
 		}
@@ -1431,6 +1472,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// If ServiceRegistration is configured, then the backend must support HA
 	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
 	if !c.flagDev && (coreConfig.GetServiceRegistration() != nil) && !isBackendHA {
+		observer.Error("config-registration-no-ha", err)
 		c.UI.Output("service_registration is configured, but storage does not support HA")
 		return 1
 	}
@@ -1442,6 +1484,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
 		if vault.IsFatalError(newCoreError) {
+			observer.Error("config-core", err)
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
@@ -1489,6 +1532,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	for i, lnConfig := range config.Listeners {
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
+			observer.Error("listener", err)
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
 		}
@@ -1504,6 +1548,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			if addr != "" {
 				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
 				if err != nil {
+					observer.Error("listener-cluster-address", err)
 					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
 					return 1
 				}
@@ -1511,6 +1556,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
+					observer.Error("listener-cluster-address", err)
 					c.UI.Error("Failed to parse tcp listener")
 					return 1
 				}
@@ -1558,6 +1604,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
+
+	observer.Success("listener")
 
 	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {
@@ -1622,9 +1670,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			for {
 				err := core.UnsealWithStoredKeys(context.Background())
 				if err == nil {
+					observer.Success("unseal")
 					return
 				}
 
+				observer.Error("unseal", err)
 				if vault.IsFatalError(err) {
 					c.logger.Error("error unsealing core", "error", err)
 					return
@@ -1646,6 +1696,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// TODO: Should we also support retry_join for ha_storage?
 	if config.Storage.Type == storageTypeRaft {
 		if err := core.InitiateRetryJoin(context.Background()); err != nil {
+			observer.Error("storage-raft-retry-join", err)
 			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
 			return 1
 		}
@@ -1659,6 +1710,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// If service discovery is available, run service discovery
 	if sd := coreConfig.GetServiceRegistration(); sd != nil {
 		if err := configSR.Run(c.ShutdownCh, c.WaitGroup, coreConfig.RedirectAddr); err != nil {
+			observer.Error("service-registration", err)
 			c.UI.Error(fmt.Sprintf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
 		}
@@ -1783,6 +1835,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		if ln.Config == nil {
+			observer.Error("listener", nil)
 			c.UI.Error("Found nil listener config after parsing")
 			return 1
 		}
@@ -1835,16 +1888,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	if sealConfigError != nil {
 		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
+			observer.Error("unseal-uninitialized", err)
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
 		}
 		if init {
+			observer.Error("unseal-load", sealConfigError)
 			c.UI.Error("Vault is initialized but no Seal key could be loaded")
 			return 1
 		}
 	}
 
 	if newCoreError != nil {
+		observer.Error("config-core-nonfatal", newCoreError)
 		c.UI.Warn(wrapAtLength(
 			"WARNING! A non-fatal error occurred during initialization. Please " +
 				"check the logs for more information."))
@@ -1867,6 +1923,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Write out the PID to the file now that server has successfully started
 	if err := c.storePidFile(config.PidFile); err != nil {
+		observer.Error("config-pid", err)
 		c.UI.Error(fmt.Sprintf("Error storing PID: %s", err))
 		return 1
 	}
@@ -1885,6 +1942,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for shutdown
 	shutdownTriggered := false
 	retCode := 0
+
+	observer.Success("startup")
 
 	for !shutdownTriggered {
 		select {

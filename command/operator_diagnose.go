@@ -103,6 +103,28 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	return c.RunWithParsedFlags()
 }
 
+// This class records any errors issued during execution of the
+// server command.
+
+type StartupObserver struct {
+	Errors    map[string]error
+	Successes map[string]struct{}
+}
+
+func (n *StartupObserver) Exited(status int) {
+}
+
+func (n *StartupObserver) Success(key string) {
+
+}
+
+func (n *StartupObserver) Error(key string, err error) {
+}
+
+func (n *StartupObserver) IsEnabled() bool {
+	return true
+}
+
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
@@ -134,6 +156,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
+		// TODO: show every file one by one?
 		c.UI.Output(same_line + status_failed + phase)
 		c.UI.Output("Error while reading configuration files:")
 		c.UI.Output(err.Error())
