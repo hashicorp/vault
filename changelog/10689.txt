@@ -1,0 +1,3 @@
+```changelog:bug
+quotas/rate: Fix quotas enforcing old rate limit quota paths
+```
