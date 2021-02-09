@@ -6,7 +6,6 @@ import (
 	"errors"
 	"math/rand"
 	"net/http"
-	"os"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -306,12 +305,4 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		}
 	}
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
