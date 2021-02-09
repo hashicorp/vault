@@ -163,7 +163,7 @@ type raftInformation struct {
 	challenge           *wrapping.EncryptedBlobInfo
 	leaderClient        *api.Client
 	leaderBarrierConfig *SealConfig
-	nonVoter            bool
+	readReplica         bool
 	joinInProgress      bool
 }
 

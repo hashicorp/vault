@@ -34,6 +34,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 					Type: framework.TypeString,
 				},
 				"non_voter": {
+					Type:       framework.TypeBool,
+					Deprecated: true,
+				},
+				"read_replica": {
 					Type: framework.TypeBool,
 				},
 			},
@@ -256,7 +260,13 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("no cluster_addr provided"), logical.ErrInvalidRequest
 		}
 
-		nonVoter := d.Get("non_voter").(bool)
+		// Prioritize read_replica parameter
+		readReplica := d.Get("read_replica").(bool)
+
+		// If the deprecated non_voter is used, consider that as well
+		if !readReplica && d.Get("non_voter").(bool) {
+			readReplica = true
+		}
 
 		answer, err := base64.StdEncoding.DecodeString(answerRaw)
 		if err != nil {
@@ -286,9 +296,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
-		switch nonVoter {
+		switch readReplica {
 		case true:
-			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
+			err = raftBackend.AddReadReplicaPeer(ctx, serverID, clusterAddr)
 		default:
 			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
 		}

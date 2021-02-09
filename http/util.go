@@ -27,7 +27,7 @@ var (
 
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
 
-	nonVotersAllowed = false
+	readReplicasAllowed = false
 )
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
