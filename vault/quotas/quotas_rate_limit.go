@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/httplimit"
 	"github.com/sethvargo/go-limiter/memorystore"
@@ -79,8 +81,14 @@ type RateLimitQuota struct {
 // duration may be provided, where if set, when a client reaches the rate limit,
 // subsequent requests will fail until the block duration has passed.
 func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, block time.Duration) *RateLimitQuota {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		// Fall back to generating with a hash of the name, later in initialize
+		id = ""
+	}
 	return &RateLimitQuota{
 		Name:          name,
+		ID:            id,
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
@@ -144,12 +152,13 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	}
 
 	if rlq.ID == "" {
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return err
-		}
-
-		rlq.ID = id
+		// A lease which was created with a blank ID may have been persisted
+		// to storage already (this is the case up to release 1.6.2.)
+		// So, performance standby nodes could call initialize() on their copy
+		// of the lease; for consistency we need to generate an ID that is
+		// deterministic. That ensures later invalidation removes the original
+		// lease from the memdb, instead of creating a duplicate.
+		rlq.ID = hex.EncodeToString(cryptoutil.Blake2b256Hash(rlq.Name))
 	}
 
 	// Set purgeInterval if coming from a previous version where purgeInterval was

@@ -443,9 +443,14 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	err = waitForReplicationState(ctx, c, req)
+	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
 	}
 
 	if !hasNamespaces(c) && ns.Path != "" {

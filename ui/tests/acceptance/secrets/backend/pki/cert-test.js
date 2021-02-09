@@ -1,5 +1,5 @@
 import { currentRouteName, settled } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { module, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import listPage from 'vault/tests/pages/secrets/backend/list';
@@ -51,7 +51,7 @@ elRplAzrMF4=
     return path;
   };
 
-  test('it issues a cert', async function(assert) {
+  skip('it issues a cert', async function(assert) {
     await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
@@ -63,7 +63,7 @@ elRplAzrMF4=
     assert.notOk(generatePage.commonNameValue, 'the form is cleared');
   });
 
-  test('it signs a csr', async function(assert) {
+  skip('it signs a csr', async function(assert) {
     await setup(assert, 'sign');
     await settled();
     await generatePage.sign('common', CSR);
@@ -71,7 +71,7 @@ elRplAzrMF4=
     assert.ok(generatePage.hasCert, 'displays the cert');
   });
 
-  test('it views a cert', async function(assert) {
+  skip('it views a cert', async function(assert) {
     const path = await setup(assert);
     await generatePage.issueCert('foo');
     await settled();

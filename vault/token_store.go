@@ -2334,9 +2334,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
+		// Convert entity alias to lowercase to match the fact that role.AllowedEntityAliases
+		// has also been lowercased. An entity alias will keep its case formatting, but be
+		// treated as lowercase during any value cheek anywhere.
+		entityAlias := strings.ToLower(data.EntityAlias)
+
 		// Check if there is a concrete match
-		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
-			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+		if !strutil.StrListContains(role.AllowedEntityAliases, entityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, entityAlias) {
 			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 		}
 

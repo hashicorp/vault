@@ -259,17 +259,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["init"][1]),
 		},
 		{
-			Pattern: "leader$",
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Summary: "Returns the high availability status and current leader instance of Vault.",
-				},
-			},
-
-			HelpSynopsis: "Check the high availability status and current leader of Vault",
-		},
-		{
 			Pattern: "step-down$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -409,18 +398,6 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "seal-status$",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Summary: "Check the seal status of a Vault.",
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["seal-status"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["seal-status"][1]),
-		},
-
-		{
 			Pattern: "seal$",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -452,6 +429,35 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unseal"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["unseal"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) statusPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "leader$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleLeaderStatus,
+					Summary:  "Returns the high availability status and current leader instance of Vault.",
+				},
+			},
+
+			HelpSynopsis: "Check the high availability status and current leader of Vault",
+		},
+		{
+			Pattern: "seal-status$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleSealStatus,
+					Summary:  "Check the seal status of a Vault.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["seal-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["seal-status"][1]),
 		},
 	}
 }
