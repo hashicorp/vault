@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { settled, click } from '@ember/test-helpers';
+import { currentURL, settled, click } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
@@ -15,7 +15,7 @@ const MODEL = {
 };
 
 // ARG TODO add more to test her once you fill out the flow
-module('Acceptance | Component | secret-list-header', function(hooks) {
+module('Acceptance | secrets/database/*', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -26,7 +26,19 @@ module('Acceptance | Component | secret-list-header', function(hooks) {
     this.server.shutdown();
   });
 
-  test('it shows the tab', async function(assert) {
+  test('root access', async function(assert) {
+    this.set('model', MODEL);
+    await click('[data-test-secret-backend-row="database"]');
+    assert.dom('[data-test-component="empty-state"]').exists('renders empty state');
+    assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
+    assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
+
+    await click('[data-test-secret-create="connections"]');
+    assert.equal(currentURL(), '/vault/secrets/database/create');
+    // ARG TODO finish the rest of the connection flow
+  });
+
+  test('no roles access', async function(assert) {
     this.set('model', MODEL);
     let backend = 'database';
     const NO_ROLES_POLICY = `
@@ -58,5 +70,11 @@ module('Acceptance | Component | secret-list-header', function(hooks) {
     assert
       .dom('[data-test-secret-list-tab="Roles]')
       .doesNotExist(`does not show the roles tab because it does not have permissions`);
+    assert
+      .dom('[data-test-selectable-card="Connections"]')
+      .exists({ count: 1 }, 'renders only the connection card');
+
+    await click('[data-test-action-text="Configure new"]');
+    assert.equal(currentURL(), '/vault/secrets/database/create?itemType=connection');
   });
 });

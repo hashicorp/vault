@@ -34,12 +34,10 @@ export default ApplicationAdapter.extend({
     });
   },
   query(store, type, query) {
-    // ARG TODO pass in id
     return this.fetchByQuery(store, query);
   },
 
   queryRecord(store, type, query) {
-    // ARG TODO unsure if using??
     return this.fetchByQuery(store, query);
   },
 
