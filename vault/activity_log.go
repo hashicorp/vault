@@ -137,6 +137,10 @@ type ActivityLog struct {
 	// channel closed by delete worker when done
 	deleteDone chan struct{}
 
+	// channel closed when deletion at startup is done
+	// (for unit test robustness)
+	retentionDone chan struct{}
+
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
 }
@@ -975,7 +979,12 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 		go manager.precomputedQueryWorker()
 
 		// Catch up on garbage collection
-		go manager.retentionWorker(time.Now(), manager.retentionMonths)
+		// Signal when this is done so that unit tests can proceed.
+		manager.retentionDone = make(chan struct{})
+		go func() {
+			manager.retentionWorker(time.Now(), manager.retentionMonths)
+			close(manager.retentionDone)
+		}()
 	}
 
 	// Link the token store to this core
