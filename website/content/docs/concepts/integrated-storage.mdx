@@ -241,10 +241,9 @@ section we look at other TLS-compatible options that lend themselves more to aut
 As of Vault 1.6.2, the simplest option might be to specify a leader_tls_servername
 in the retry_join stanza which matches a DNS SAN in the certificate.
 
-Note that just because you're putting a name in the certificate's DNS SAN, doesn't
-mean it actually has to be name registered in a DNS server.  Your nodes may not
-have any names found in DNS, while still using certificate(s) that contain this
-shared "servername".
+Note that names in a certificate's DNS SAN don't actually have to be registered
+in a DNS server.  Your nodes may have no names found in DNS, while still
+using certificate(s) that contain this shared "servername" in their DNS SANs.
 
 #### Autojoin but constrain CIDR, list all possible IPs in certificate
 
