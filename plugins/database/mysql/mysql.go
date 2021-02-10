@@ -27,7 +27,7 @@ const (
 	mySQLTypeName = "mysql"
 
 	DefaultUserNameTemplate       = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 10) (.RoleName | truncate 10) (random 20) (unix_time) | truncate 32 }}`
-	DefaultLegacyUserNameTemplate = `{{ printf "v-%s-%s-%s" (.RoleName | truncate 4) (random 20) (unix_time) | truncate 16 }}`
+	DefaultLegacyUserNameTemplate = `{{ printf "v-%s-%s-%s" (.RoleName | truncate 4) (random 20) | truncate 16 }}`
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)

@@ -11,6 +11,7 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -20,7 +21,27 @@ import (
 var _ dbplugin.Database = (*MySQL)(nil)
 
 func TestMySQL_Initialize(t *testing.T) {
-	rootPassword := "#secret!%25#{@}"
+	type testCase struct {
+		rootPassword string
+	}
+
+	tests := map[string]testCase{
+		"non-special characters in root password": {
+			rootPassword: "B44a30c4C04D0aAaE140",
+		},
+		"special characters in root password": {
+			rootPassword: "#secret!%25#{@}",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			testInitialize(t, test.rootPassword)
+		})
+	}
+}
+
+func testInitialize(t *testing.T, rootPassword string) {
 	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, rootPassword)
 	defer cleanup()
 
@@ -131,7 +152,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := newMySQL(DefaultUserNameTemplate)
-			defer db.Close()
+			defer dbtesting.AssertClose(t, db)
 			initResp, err := db.Initialize(context.Background(), test.initRequest)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")

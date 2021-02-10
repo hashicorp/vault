@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-
 	"github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -108,6 +107,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
+	// Set initialized to true at this point since all fields are set,
 	// and the connection can be established at a later time.
 	c.Initialized = true
 
