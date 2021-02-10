@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
+	"github.com/armon/go-metrics"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
