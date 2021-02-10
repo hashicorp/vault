@@ -13,32 +13,7 @@ import (
 	"github.com/jcmturner/gokrb5/v8/types"
 )
 
-/*
-From RFC 4121, section 4.2.6.1:
-
-   Use of the GSS_GetMIC() call yields a token (referred as the MIC
-   token in this document), separate from the user data being protected,
-   which can be used to verify the integrity of that data as received.
-   The token has the following format:
-
-         Octet no   Name        Description
-         --------------------------------------------------------------
-         0..1     TOK_ID     Identification field.  Tokens emitted by
-                             GSS_GetMIC() contain the hex value 04 04
-                             expressed in big-endian order in this
-                             field.
-         2        Flags      Attributes field, as described in section
-                             4.2.2.
-         3..7     Filler     Contains five octets of hex value FF.
-         8..15    SND_SEQ    Sequence number field in clear text,
-                             expressed in big-endian order.
-         16..last SGN_CKSUM  Checksum of the "to-be-signed" data and
-                             octet 0..15, as described in section 4.2.4.
-
-   The Filler field is included in the checksum calculation for
-   simplicity.
-
-*/
+// RFC 4121, section 4.2.6.1
 
 const (
 	// MICTokenFlagSentByAcceptor - this flag indicates the sender is the context acceptor.  When not set, it indicates the sender is the context initiator
@@ -106,9 +81,6 @@ func (mt *MICToken) SetChecksum(key types.EncryptionKey, keyUsage uint32) error 
 }
 
 // Compute and return the checksum of this token, computed using the passed key and key usage.
-// Confirms to RFC 4121 in that the checksum will be computed over { body | header }.
-// In the context of Kerberos MIC tokens, mostly keyusage GSSAPI_ACCEPTOR_SIGN (=23)
-// and GSSAPI_INITIATOR_SIGN (=25) will be used.
 // Note: This will NOT update the struct's Checksum field.
 func (mt *MICToken) checksum(key types.EncryptionKey, keyUsage uint32) ([]byte, error) {
 	if mt.Payload == nil {

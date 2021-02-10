@@ -92,7 +92,7 @@ func CreateGetAccessKeyLastUsedRequest() (request *GetAccessKeyLastUsedRequest) 
 	request = &GetAccessKeyLastUsedRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetAccessKeyLastUsed", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetAccessKeyLastUsed", "Ram", "openAPI")
 	return
 }
 

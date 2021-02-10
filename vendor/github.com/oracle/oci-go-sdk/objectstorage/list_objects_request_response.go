@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 package objectstorage
@@ -38,13 +39,17 @@ type ListObjectsRequest struct {
 	Delimiter *string `mandatory:"false" contributesTo:"query" name:"delimiter"`
 
 	// Object summary in list of objects includes the 'name' field. This parameter can also include 'size'
-	// (object size in bytes), 'md5', and 'timeCreated' (object creation date and time) fields.
+	// (object size in bytes), 'etag', 'md5', 'timeCreated' (object creation date and time) and 'timeModified'
+	// (object modification date and time).
 	// Value of this parameter should be a comma-separated, case-insensitive list of those field names.
-	// For example 'name,timeCreated,md5'.
+	// For example 'name,etag,timeCreated,md5,timeModified'
 	Fields *string `mandatory:"false" contributesTo:"query" name:"fields" omitEmpty:"true"`
 
 	// The client request ID for tracing.
 	OpcClientRequestId *string `mandatory:"false" contributesTo:"header" name:"opc-client-request-id"`
+
+	// Object names returned by a list query must be greater than this parameter.
+	StartAfter *string `mandatory:"false" contributesTo:"query" name:"startAfter"`
 
 	// Metadata about the request. This information will not be transmitted to the service, but
 	// represents information that the SDK will consume to drive retry behavior.

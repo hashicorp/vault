@@ -934,10 +934,9 @@ func (r Billing_Item) Offset(offset int) Billing_Item {
 	return r
 }
 
-// Cancel the resource or service for a billing Item. By default the billing item will be cancelled immediately and reclaim of the resource will begin shortly. Setting the "cancelImmediately" property to false will delay the cancellation until the next bill date.
+// Cancel the resource or service for a billing Item. By default the billing item will be canceled on the next bill date and reclaim of the resource will begin shortly after the cancellation. Setting the "cancelImmediately" property to true will start the cancellation immediately if the item is eligible to be canceled immediately.
 //
-//
-// * The reason parameter could be from the list below:
+// The reason parameter could be from the list below:
 // * "No longer needed"
 // * "Business closing down"
 // * "Server / Upgrade Costs"
@@ -1612,10 +1611,9 @@ func (r Billing_Item_Virtual_DedicatedHost) Offset(offset int) Billing_Item_Virt
 	return r
 }
 
-// Cancel the resource or service for a billing Item. By default the billing item will be cancelled immediately and reclaim of the resource will begin shortly. Setting the "cancelImmediately" property to false will delay the cancellation until the next bill date.
+// Cancel the resource or service for a billing Item. By default the billing item will be canceled on the next bill date and reclaim of the resource will begin shortly after the cancellation. Setting the "cancelImmediately" property to true will start the cancellation immediately if the item is eligible to be canceled immediately.
 //
-//
-// * The reason parameter could be from the list below:
+// The reason parameter could be from the list below:
 // * "No longer needed"
 // * "Business closing down"
 // * "Server / Upgrade Costs"
@@ -2407,7 +2405,7 @@ func (r Billing_Order_Cart) PlaceOrder(orderData interface{}) (resp datatypes.Co
 }
 
 // Use this method for placing server quotes and additional services quotes. The same applies for this as with verifyOrder. Send in the SoftLayer_Container_Product_Order_Hardware_Server for server quotes. In addition to verifying the quote, placeQuote() also makes an initial authorization on the SoftLayer_Account tied to this order, if a credit card is on file. If the account tied to this order is a paypal customer, an URL will also be returned to the customer. After placing the order, you must go to this URL to finish the authorization process. This tells paypal that you indeed want to place the order. After going to this URL, it will direct you back to a SoftLayer webpage that tells us you have finished the process.
-func (r Billing_Order_Cart) PlaceQuote(orderData *datatypes.Container_Product_Order) (resp datatypes.Container_Product_Order, err error) {
+func (r Billing_Order_Cart) PlaceQuote(orderData interface{}) (resp datatypes.Container_Product_Order, err error) {
 	params := []interface{}{
 		orderData,
 	}
@@ -2602,6 +2600,12 @@ func (r Billing_Order_Item) GetPreset() (resp datatypes.Product_Package_Preset, 
 	return
 }
 
+// Retrieve
+func (r Billing_Order_Item) GetPromoCode() (resp datatypes.Product_Promotion, err error) {
+	err = r.Session.DoRequest("SoftLayer_Billing_Order_Item", "getPromoCode", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve A count of power supplies contained within this SoftLayer_Billing_Order
 func (r Billing_Order_Item) GetRedundantPowerSupplyCount() (resp uint, err error) {
 	err = r.Session.DoRequest("SoftLayer_Billing_Order_Item", "getRedundantPowerSupplyCount", nil, &r.Options, &resp)
@@ -2759,7 +2763,7 @@ func (r Billing_Order_Quote) PlaceOrder(orderData interface{}) (resp datatypes.C
 }
 
 // Use this method for placing server quotes and additional services quotes. The same applies for this as with verifyOrder. Send in the SoftLayer_Container_Product_Order_Hardware_Server for server quotes. In addition to verifying the quote, placeQuote() also makes an initial authorization on the SoftLayer_Account tied to this order, if a credit card is on file. If the account tied to this order is a paypal customer, an URL will also be returned to the customer. After placing the order, you must go to this URL to finish the authorization process. This tells paypal that you indeed want to place the order. After going to this URL, it will direct you back to a SoftLayer webpage that tells us you have finished the process.
-func (r Billing_Order_Quote) PlaceQuote(orderData *datatypes.Container_Product_Order) (resp datatypes.Container_Product_Order, err error) {
+func (r Billing_Order_Quote) PlaceQuote(orderData interface{}) (resp datatypes.Container_Product_Order, err error) {
 	params := []interface{}{
 		orderData,
 	}

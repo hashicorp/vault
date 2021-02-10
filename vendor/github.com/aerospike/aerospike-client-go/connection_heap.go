@@ -193,8 +193,9 @@ func newConnectionHeap(minSize, maxSize int) *connectionHeap {
 	}
 
 	// add a heap for the remainder
-	if (perHeapSize*heapCount)-maxSize > 0 {
-		heaps = append(heaps, *newSingleConnectionHeap(maxSize - heapCount*perHeapSize))
+	remainder := maxSize - heapCount*perHeapSize
+	if remainder > 0 {
+		heaps = append(heaps, *newSingleConnectionHeap(remainder))
 	}
 
 	return &connectionHeap{

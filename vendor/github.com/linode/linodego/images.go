@@ -5,24 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // Image represents a deployable Image object for use with Linode Instances
 type Image struct {
-	CreatedStr  string `json:"created"`
-	ExpiryStr   string `json:"expiry"`
-	ID          string `json:"id"`
-	CreatedBy   string `json:"created_by"`
-	Label       string `json:"label"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-	Vendor      string `json:"vendor"`
-	Size        int    `json:"size"`
-	IsPublic    bool   `json:"is_public"`
-	Deprecated  bool   `json:"deprecated"`
-
-	Created *time.Time `json:"-"`
-	Expiry  *time.Time `json:"-"`
+	ID          string     `json:"id"`
+	CreatedBy   string     `json:"created_by"`
+	Label       string     `json:"label"`
+	Description string     `json:"description"`
+	Type        string     `json:"type"`
+	Vendor      string     `json:"vendor"`
+	Size        int        `json:"size"`
+	IsPublic    bool       `json:"is_public"`
+	Deprecated  bool       `json:"deprecated"`
+	Created     *time.Time `json:"-"`
+	Expiry      *time.Time `json:"-"`
 }
 
 // ImageCreateOptions fields are those accepted by CreateImage
@@ -38,15 +38,26 @@ type ImageUpdateOptions struct {
 	Description *string `json:"description,omitempty"`
 }
 
-func (i *Image) fixDates() *Image {
-	i.Created, _ = parseDates(i.CreatedStr)
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *Image) UnmarshalJSON(b []byte) error {
+	type Mask Image
 
-	if len(i.ExpiryStr) > 0 {
-		i.Expiry, _ = parseDates(i.ExpiryStr)
-	} else {
-		i.Expiry = nil
+	p := struct {
+		*Mask
+		Created *parseabletime.ParseableTime `json:"created"`
+		Expiry  *parseabletime.ParseableTime `json:"expiry"`
+	}{
+		Mask: (*Mask)(i),
 	}
-	return i
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Created = (*time.Time)(p.Created)
+	i.Expiry = (*time.Time)(p.Expiry)
+
+	return nil
 }
 
 // GetUpdateOptions converts an Image to ImageUpdateOptions for use in UpdateImage
@@ -78,14 +89,11 @@ func (resp *ImagesPagedResponse) appendData(r *ImagesPagedResponse) {
 func (c *Client) ListImages(ctx context.Context, opts *ListOptions) ([]Image, error) {
 	response := ImagesPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
 	return response.Data, nil
-
 }
 
 // GetImage gets the Image with the provided ID
@@ -94,18 +102,22 @@ func (c *Client) GetImage(ctx context.Context, id string) (*Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	e = fmt.Sprintf("%s/%s", e, id)
-	r, err := coupleAPIErrors(c.Images.R(ctx).Get(e))
+	r, err := errors.CoupleAPIErrors(c.Images.R(ctx).Get(e))
+
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Image).fixDates(), nil
+	return r.Result().(*Image), nil
 }
 
 // CreateImage creates a Image
 func (c *Client) CreateImage(ctx context.Context, createOpts ImageCreateOptions) (*Image, error) {
 	var body string
+
 	e, err := c.Images.Endpoint()
+
 	if err != nil {
 		return nil, err
 	}
@@ -115,26 +127,28 @@ func (c *Client) CreateImage(ctx context.Context, createOpts ImageCreateOptions)
 	if bodyData, err := json.Marshal(createOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Image).fixDates(), nil
+	return r.Result().(*Image), nil
 }
 
 // UpdateImage updates the Image with the specified id
 func (c *Client) UpdateImage(ctx context.Context, id string, updateOpts ImageUpdateOptions) (*Image, error) {
 	var body string
+
 	e, err := c.Images.Endpoint()
 	if err != nil {
 		return nil, err
 	}
+
 	e = fmt.Sprintf("%s/%s", e, id)
 
 	req := c.R(ctx).SetResult(&Image{})
@@ -142,17 +156,17 @@ func (c *Client) UpdateImage(ctx context.Context, id string, updateOpts ImageUpd
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Image).fixDates(), nil
+	return r.Result().(*Image), nil
 }
 
 // DeleteImage deletes the Image with the specified id
@@ -161,8 +175,9 @@ func (c *Client) DeleteImage(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+
 	e = fmt.Sprintf("%s/%s", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 	return err
 }

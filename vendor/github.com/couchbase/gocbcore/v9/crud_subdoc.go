@@ -6,79 +6,6 @@ import (
 	"github.com/couchbase/gocbcore/v9/memd"
 )
 
-// GetInOptions encapsulates the parameters for a GetInEx operation.
-type GetInOptions struct {
-	Key            []byte
-	Path           string
-	Flags          memd.SubdocFlag
-	CollectionName string
-	ScopeName      string
-	CollectionID   uint32
-	RetryStrategy  RetryStrategy
-	Deadline       time.Time
-
-	// Volatile: Tracer API is subject to change.
-	TraceContext RequestSpanContext
-}
-
-// ExistsInOptions encapsulates the parameters for a ExistsInEx operation.
-type ExistsInOptions struct {
-	Key            []byte
-	Path           string
-	Flags          memd.SubdocFlag
-	CollectionName string
-	ScopeName      string
-	CollectionID   uint32
-	RetryStrategy  RetryStrategy
-	Deadline       time.Time
-
-	// Volatile: Tracer API is subject to change.
-	TraceContext RequestSpanContext
-}
-
-// StoreInOptions encapsulates the parameters for a SetInEx, AddInEx, ReplaceInEx,
-// PushFrontInEx, PushBackInEx, ArrayInsertInEx or AddUniqueInEx operation.
-type StoreInOptions struct {
-	Key                    []byte
-	Path                   string
-	Value                  []byte
-	Flags                  memd.SubdocFlag
-	Cas                    Cas
-	Expiry                 uint32
-	CollectionName         string
-	ScopeName              string
-	RetryStrategy          RetryStrategy
-	DurabilityLevel        memd.DurabilityLevel
-	DurabilityLevelTimeout uint16
-	CollectionID           uint32
-	Deadline               time.Time
-
-	// Volatile: Tracer API is subject to change.
-	TraceContext RequestSpanContext
-}
-
-// CounterInOptions encapsulates the parameters for a CounterInEx operation.
-type CounterInOptions StoreInOptions
-
-// DeleteInOptions encapsulates the parameters for a DeleteInEx operation.
-type DeleteInOptions struct {
-	Key                    []byte
-	Path                   string
-	Cas                    Cas
-	Expiry                 uint32
-	Flags                  memd.SubdocFlag
-	CollectionName         string
-	ScopeName              string
-	RetryStrategy          RetryStrategy
-	DurabilityLevel        memd.DurabilityLevel
-	DurabilityLevelTimeout uint16
-	CollectionID           uint32
-	Deadline               time.Time
-
-	// Volatile: Tracer API is subject to change.
-	TraceContext RequestSpanContext
-}
-
 // LookupInOptions encapsulates the parameters for a LookupInEx operation.
 type LookupInOptions struct {
 	Key            []byte
@@ -89,6 +16,9 @@ type LookupInOptions struct {
 	CollectionID   uint32
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -108,6 +38,9 @@ type MutateInOptions struct {
 	DurabilityLevelTimeout time.Duration
 	CollectionID           uint32
 	Deadline               time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext

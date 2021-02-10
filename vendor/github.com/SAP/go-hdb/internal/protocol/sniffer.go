@@ -1,50 +1,30 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
+// TODO Sniffer
+/*
+sniffer:
+- complete for go-hdb: especially call with table parameters
+- delete caches for statement and result
+- don't ignore part read error
+  - example: read scramsha256InitialReply got silently stuck because methodname check failed
+- test with python client and handle surprises
+  - analyze for not ignoring part read errors
+*/
+
 import (
-	"log"
+	"bufio"
+	"io"
 	"net"
-
-	"github.com/SAP/go-hdb/internal/bufio"
+	"sync"
 )
-
-type dir bool
-
-const (
-	maxBinarySize = 128
-)
-
-type fragment interface {
-	read(rd *bufio.Reader) error
-	write(wr *bufio.Writer) error
-}
-
-func (d dir) String() string {
-	if d {
-		return "->"
-	}
-	return "<-"
-}
 
 // A Sniffer is a simple proxy for logging hdb protocol requests and responses.
 type Sniffer struct {
 	conn   net.Conn
-	dbAddr string
 	dbConn net.Conn
 
 	//client
@@ -54,150 +34,191 @@ type Sniffer struct {
 	dbRd *bufio.Reader
 	dbWr *bufio.Writer
 
-	mh *messageHeader
-	sh *segmentHeader
-	ph *partHeader
-
-	buf []byte
+	// reader
+	upRd   *sniffUpReader
+	downRd *sniffDownReader
 }
 
 // NewSniffer creates a new sniffer instance. The conn parameter is the net.Conn connection, where the Sniffer
 // is listening for hdb protocol calls. The dbAddr is the hdb host port address in "host:port" format.
-func NewSniffer(conn net.Conn, dbAddr string) (*Sniffer, error) {
+func NewSniffer(conn net.Conn, dbConn net.Conn) *Sniffer {
+
+	//TODO - review setting values here
+	trace = true
+	debug = true
+
 	s := &Sniffer{
 		conn:   conn,
-		dbAddr: dbAddr,
-		clRd:   bufio.NewReader(conn),
-		clWr:   bufio.NewWriter(conn),
-		mh:     &messageHeader{},
-		sh:     &segmentHeader{},
-		ph:     &partHeader{},
-		buf:    make([]byte, 0),
+		dbConn: dbConn,
+		// buffered write to client
+		clWr: bufio.NewWriter(conn),
+		// buffered write to db
+		dbWr: bufio.NewWriter(dbConn),
 	}
 
-	dbConn, err := net.Dial("tcp", s.dbAddr)
-	if err != nil {
-		return nil, err
-	}
+	//read from client connection and write to db buffer
+	s.clRd = bufio.NewReader(io.TeeReader(conn, s.dbWr))
+	//read from db and write to client connection buffer
+	s.dbRd = bufio.NewReader(io.TeeReader(dbConn, s.clWr))
 
-	s.dbRd = bufio.NewReader(dbConn)
-	s.dbWr = bufio.NewWriter(dbConn)
-	s.dbConn = dbConn
-	return s, nil
+	s.upRd = newSniffUpReader(s.clRd)
+	s.downRd = newSniffDownReader(s.dbRd)
+
+	return s
 }
 
-func (s *Sniffer) getBuffer(size int) []byte {
-	if cap(s.buf) < size {
-		s.buf = make([]byte, size)
-	}
-	return s.buf[:size]
-}
-
-// Go starts the protocol request and response logging.
-func (s *Sniffer) Go() {
+// Do starts the protocol request and response logging.
+func (s *Sniffer) Do() error {
 	defer s.dbConn.Close()
 	defer s.conn.Close()
 
-	req := newInitRequest()
-	if err := s.streamFragment(dir(true), s.clRd, s.dbWr, req); err != nil {
-		return
+	if err := s.upRd.pr.readProlog(); err != nil {
+		return err
 	}
-
-	rep := newInitReply()
-	if err := s.streamFragment(dir(false), s.dbRd, s.clWr, rep); err != nil {
-		return
+	if err := s.dbWr.Flush(); err != nil {
+		return err
+	}
+	if err := s.downRd.pr.readProlog(); err != nil {
+		return err
+	}
+	if err := s.clWr.Flush(); err != nil {
+		return err
 	}
 
 	for {
 		//up stream
-		if err := s.stream(dir(true), s.clRd, s.dbWr); err != nil {
-			return
+		if err := s.upRd.readMsg(); err != nil {
+			return err // err == io.EOF: connection closed by client
 		}
-		//down stream
-		if err := s.stream(dir(false), s.dbRd, s.clWr); err != nil {
-			return
-		}
-	}
-}
-
-func (s *Sniffer) stream(d dir, from *bufio.Reader, to *bufio.Writer) error {
-
-	if err := s.streamFragment(d, from, to, s.mh); err != nil {
-		return err
-	}
-
-	size := int(s.mh.varPartLength)
-
-	for i := 0; i < int(s.mh.noOfSegm); i++ {
-
-		if err := s.streamFragment(d, from, to, s.sh); err != nil {
+		if err := s.dbWr.Flush(); err != nil {
 			return err
 		}
-
-		size -= int(s.sh.segmentLength)
-
-		for j := 0; j < int(s.sh.noOfParts); j++ {
-
-			if err := s.streamFragment(d, from, to, s.ph); err != nil {
-				return err
-			}
-
-			// protocol error workaraound
-			padding := (size == 0) || (j != (int(s.sh.noOfParts) - 1))
-
-			if err := s.streamPart(d, from, to, s.ph, padding); err != nil {
+		//down stream
+		if err := s.downRd.readMsg(); err != nil {
+			if _, ok := err.(*hdbErrors); !ok { //if hdbErrors continue
 				return err
 			}
 		}
-	}
-	return to.Flush()
-}
-
-func (s *Sniffer) streamPart(d dir, from *bufio.Reader, to *bufio.Writer, ph *partHeader, padding bool) error {
-
-	switch ph.partKind {
-
-	default:
-		return s.streamBinary(d, from, to, int(ph.bufferLength), padding)
+		if err := s.clWr.Flush(); err != nil {
+			return err
+		}
 	}
 }
 
-func (s *Sniffer) streamBinary(d dir, from *bufio.Reader, to *bufio.Writer, size int, padding bool) error {
-	var b []byte
-
-	//protocol error workaraound
-	if padding {
-		pad := padBytes(size)
-		b = s.getBuffer(size + pad)
-	} else {
-		b = s.getBuffer(size)
-	}
-
-	from.ReadFull(b)
-	err := from.GetError()
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-
-	if size > maxBinarySize {
-		log.Printf("%s %v", d, b[:maxBinarySize])
-	} else {
-		log.Printf("%s %v", d, b[:size])
-	}
-	to.Write(b)
-	return nil
+type sniffReader struct {
+	pr *protocolReader
 }
 
-func (s *Sniffer) streamFragment(d dir, from *bufio.Reader, to *bufio.Writer, f fragment) error {
-	if err := f.read(from); err != nil {
-		log.Print(err)
+func newSniffReader(upStream bool, rd *bufio.Reader) *sniffReader {
+	return &sniffReader{pr: newProtocolReader(upStream, rd)}
+}
+
+type sniffUpReader struct{ *sniffReader }
+
+func newSniffUpReader(rd *bufio.Reader) *sniffUpReader {
+	return &sniffUpReader{sniffReader: newSniffReader(true, rd)}
+}
+
+type resMetaCache struct {
+	mu    sync.RWMutex
+	cache map[uint64]*resultMetadata
+}
+
+func newResMetaCache() *resMetaCache {
+	return &resMetaCache{cache: make(map[uint64]*resultMetadata)}
+}
+
+func (c *resMetaCache) put(stmtID uint64, resMeta *resultMetadata) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cache[stmtID] = resMeta
+}
+
+type prmMetaCache struct {
+	mu    sync.RWMutex
+	cache map[uint64]*parameterMetadata
+}
+
+func newPrmMetaCache() *prmMetaCache {
+	return &prmMetaCache{cache: make(map[uint64]*parameterMetadata)}
+}
+
+func (c *prmMetaCache) put(stmtID uint64, prmMeta *parameterMetadata) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cache[stmtID] = prmMeta
+}
+
+func (c *prmMetaCache) get(stmtID uint64) *parameterMetadata {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.cache[stmtID]
+}
+
+var _resMetaCache = newResMetaCache()
+var _prmMetaCache = newPrmMetaCache()
+
+func (r *sniffUpReader) readMsg() error {
+	var stmtID uint64
+
+	return r.pr.iterateParts(func(ph *partHeader) {
+		switch ph.partKind {
+		case pkStatementID:
+			r.pr.read((*statementID)(&stmtID))
+		// case pkResultMetadata:
+		// 	r.pr.read(resMeta)
+		case pkParameters:
+			prmMeta := _prmMetaCache.get(stmtID)
+			prms := &inputParameters{inputFields: prmMeta.parameterFields} // TODO only input parameters
+			r.pr.read(prms)
+		}
+	})
+}
+
+type sniffDownReader struct {
+	*sniffReader
+	resMeta *resultMetadata
+	prmMeta *parameterMetadata
+}
+
+func newSniffDownReader(rd *bufio.Reader) *sniffDownReader {
+	return &sniffDownReader{
+		sniffReader: newSniffReader(false, rd),
+		resMeta:     &resultMetadata{},
+		prmMeta:     &parameterMetadata{},
+	}
+}
+
+func (r *sniffDownReader) readMsg() error {
+	var stmtID uint64
+	//resMeta := &resultMetadata{}
+	//prmMeta := &parameterMetadata{}
+
+	if err := r.pr.iterateParts(func(ph *partHeader) {
+		switch ph.partKind {
+		case pkStatementID:
+			r.pr.read((*statementID)(&stmtID))
+		case pkResultMetadata:
+			r.pr.read(r.resMeta)
+		case pkParameterMetadata:
+			r.pr.read(r.prmMeta)
+		case pkOutputParameters:
+			outFields := []*ParameterField{}
+			for _, f := range r.prmMeta.parameterFields {
+				if f.Out() {
+					outFields = append(outFields, f)
+				}
+			}
+			outPrms := &outputParameters{outputFields: outFields}
+			r.pr.read(outPrms)
+		case pkResultset:
+			resSet := &resultset{resultFields: r.resMeta.resultFields}
+			r.pr.read(resSet)
+		}
+	}); err != nil {
 		return err
 	}
-	log.Printf("%s %s", d, f)
-	if err := f.write(to); err != nil {
-		log.Print(err)
-		return err
-	}
+	_resMetaCache.put(stmtID, r.resMeta)
+	_prmMetaCache.put(stmtID, r.prmMeta)
 	return nil
 }

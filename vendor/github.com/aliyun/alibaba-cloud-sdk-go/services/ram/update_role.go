@@ -76,15 +76,16 @@ func (client *Client) UpdateRoleWithCallback(request *UpdateRoleRequest, callbac
 // UpdateRoleRequest is the request struct for api UpdateRole
 type UpdateRoleRequest struct {
 	*requests.RpcRequest
-	NewAssumeRolePolicyDocument string `position:"Query" name:"NewAssumeRolePolicyDocument"`
-	RoleName                    string `position:"Query" name:"RoleName"`
+	NewAssumeRolePolicyDocument string           `position:"Query" name:"NewAssumeRolePolicyDocument"`
+	RoleName                    string           `position:"Query" name:"RoleName"`
+	NewMaxSessionDuration       requests.Integer `position:"Query" name:"NewMaxSessionDuration"`
 }
 
 // UpdateRoleResponse is the response struct for api UpdateRole
 type UpdateRoleResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
-	Role      Role   `json:"Role" xml:"Role"`
+	RequestId string           `json:"RequestId" xml:"RequestId"`
+	Role      RoleInUpdateRole `json:"Role" xml:"Role"`
 }
 
 // CreateUpdateRoleRequest creates a request to invoke UpdateRole API
@@ -92,7 +93,7 @@ func CreateUpdateRoleRequest() (request *UpdateRoleRequest) {
 	request = &UpdateRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateRole", "Ram", "openAPI")
 	return
 }
 

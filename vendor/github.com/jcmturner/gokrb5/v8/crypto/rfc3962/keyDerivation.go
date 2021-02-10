@@ -35,11 +35,9 @@ func StringToKeyIter(secret, salt string, iterations int64, e etype.EType) ([]by
 
 // S2KparamsToItertions converts the string representation of iterations to an integer
 func S2KparamsToItertions(s2kparams string) (int64, error) {
-	//process s2kparams string
-	//The parameter string is four octets indicating an unsigned
-	//number in big-endian order.  This is the number of iterations to be
-	//performed.  If the value is 00 00 00 00, the number of iterations to
-	//be performed is 4,294,967,296 (2**32).
+	//The s2kparams string should be hex string representing 4 bytes
+	//The 4 bytes represent a number in big endian order
+	//If the value is zero then the number of iterations should be 4,294,967,296 (2^32)
 	var i uint32
 	if len(s2kparams) != 8 {
 		return int64(s2kParamsZero), errors.New("invalid s2kparams length")
@@ -49,10 +47,5 @@ func S2KparamsToItertions(s2kparams string) (int64, error) {
 		return int64(s2kParamsZero), errors.New("invalid s2kparams, cannot decode string to bytes")
 	}
 	i = binary.BigEndian.Uint32(b)
-	//buf := bytes.NewBuffer(b)
-	//err = binary.Read(buf, binary.BigEndian, &i)
-	if err != nil {
-		return int64(s2kParamsZero), errors.New("invalid s2kparams, cannot convert to big endian int32")
-	}
 	return int64(i), nil
 }

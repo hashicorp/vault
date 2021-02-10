@@ -296,8 +296,3 @@ type Provisioning_Version1_Transaction_Status struct {
 	// no documentation yet
 	NonCompletedTransactions []Provisioning_Version1_Transaction `json:"nonCompletedTransactions,omitempty" xmlrpc:"nonCompletedTransactions,omitempty"`
 }
-
-// no documentation yet
-type Provisioning_Version1_Transaction_SubnetMigration struct {
-	Provisioning_Version1_Transaction
-}

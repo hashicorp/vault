@@ -4,6 +4,14 @@ package protocol
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[scStatementSequenceInfo-1]
+	_ = x[scServerExecutionTime-2]
+}
+
 const _statementContextType_name = "scStatementSequenceInfoscServerExecutionTime"
 
 var _statementContextType_index = [...]uint8{0, 23, 44}

@@ -43,17 +43,6 @@ type Agent struct {
 	zombieLogger *zombieLoggerComponent
 }
 
-// !!!!UNSURE WHY THESE EXIST!!!!
-// ServerConnectTimeout gets the timeout for each server connection, including all authentication steps.
-// func (agent *Agent) ServerConnectTimeout() time.Duration {
-// 	return agent.kvConnectTimeout
-// }
-//
-// // SetServerConnectTimeout sets the timeout for each server connection.
-// func (agent *Agent) SetServerConnectTimeout(timeout time.Duration) {
-// 	agent.kvConnectTimeout = timeout
-// }
-
 // HTTPClient returns a pre-configured HTTP Client for communicating with
 // Couchbase Server.  You must still specify authentication information
 // for any dispatched requests.
@@ -124,6 +113,9 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 	disableDecompression := config.DisableDecompression
 	useCompression := config.UseCompression
 	useCollections := config.UseCollections
+	useJSONHello := !config.DisableJSONHello
+	useXErrorHello := !config.DisableXErrors
+	useSyncReplicationHello := !config.DisableSyncReplicationHello
 	compressionMinSize := 32
 	compressionMinRatio := 0.83
 	useDurations := config.UseDurations
@@ -178,14 +170,25 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 	if c.defaultRetryStrategy == nil {
 		c.defaultRetryStrategy = newFailFastRetryStrategy()
 	}
-	authMechanisms := []AuthMechanism{
-		ScramSha512AuthMechanism,
-		ScramSha256AuthMechanism,
-		ScramSha1AuthMechanism}
 
-	// PLAIN authentication is only supported over TLS
-	if config.UseTLS {
-		authMechanisms = append(authMechanisms, PlainAuthMechanism)
+	authMechanisms := config.AuthMechanisms
+	if len(authMechanisms) == 0 {
+		if config.UseTLS {
+			authMechanisms = []AuthMechanism{PlainAuthMechanism}
+		} else {
+			// No user specified auth mechanisms so set our defaults.
+			authMechanisms = []AuthMechanism{
+				ScramSha512AuthMechanism,
+				ScramSha256AuthMechanism,
+				ScramSha1AuthMechanism}
+		}
+	} else if !config.UseTLS {
+		// The user has specified their own mechanisms and not using TLS so we check if they've set PLAIN.
+		for _, mech := range authMechanisms {
+			if mech == PlainAuthMechanism {
+				logWarnf("PLAIN sends credentials in plaintext, this will cause credential leakage on the network")
+			}
+		}
 	}
 
 	authHandler := buildAuthHandler(auth)
@@ -234,11 +237,14 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 		},
 		bootstrapProps{
 			HelloProps: helloProps{
-				CollectionsEnabled:    useCollections,
-				MutationTokensEnabled: useMutationTokens,
-				CompressionEnabled:    useCompression,
-				DurationsEnabled:      useDurations,
-				OutOfOrderEnabled:     useOutOfOrder,
+				CollectionsEnabled:     useCollections,
+				MutationTokensEnabled:  useMutationTokens,
+				CompressionEnabled:     useCompression,
+				DurationsEnabled:       useDurations,
+				OutOfOrderEnabled:      useOutOfOrder,
+				JSONFeatureEnabled:     useJSONHello,
+				XErrorFeatureEnabled:   useXErrorHello,
+				SyncReplicationEnabled: useSyncReplicationHello,
 			},
 			Bucket:         c.bucketName,
 			UserAgent:      userAgent,
@@ -250,6 +256,7 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 		c.zombieLogger,
 		c.tracer,
 		initFn,
+		c,
 	)
 	c.kvMux = newKVMux(
 		kvMuxProps{
@@ -287,6 +294,7 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 		// The http poller can't run without a bucket. We don't trigger an error for this case
 		// because AgentGroup users who use memcached buckets on non-default ports will end up here.
 		logDebugf("No bucket name specified and only http addresses specified, not running config poller")
+		c.diagnostics = newDiagnosticsComponent(c.kvMux, c.httpMux, c.http, c.bucketName, c.defaultRetryStrategy, nil)
 	} else {
 		c.pollerController = newPollerController(
 			newCCCPConfigController(
@@ -309,6 +317,7 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 			),
 			c.cfgManager,
 		)
+		c.diagnostics = newDiagnosticsComponent(c.kvMux, c.httpMux, c.http, c.bucketName, c.defaultRetryStrategy, c.pollerController)
 	}
 
 	c.observe = newObserveComponent(c.collections, c.defaultRetryStrategy, c.tracer, c.kvMux)
@@ -318,7 +327,6 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 	c.analytics = newAnalyticsQueryComponent(c.http, c.tracer)
 	c.search = newSearchQueryComponent(c.http, c.tracer)
 	c.views = newViewQueryComponent(c.http, c.tracer)
-	c.diagnostics = newDiagnosticsComponent(c.kvMux, c.httpMux, c.http, c.bucketName, c.defaultRetryStrategy, c.pollerController)
 
 	// Kick everything off.
 	cfg := &routeConfig{
@@ -352,6 +360,7 @@ func createTLSConfig(auth AuthProvider, caProvider func() *x509.CertPool) *dynTL
 
 				return cert, nil
 			},
+			MinVersion: tls.VersionTLS12,
 		},
 		Provider: caProvider,
 	}
@@ -569,4 +578,11 @@ func (agent *Agent) ConfigSnapshot() (*ConfigSnapshot, error) {
 // Uncommitted: This API may change in the future.
 func (agent *Agent) BucketName() string {
 	return agent.bucketName
+}
+
+func (agent *Agent) onBootstrapFail(err error) {
+	// If this error is a legitimate fallback reason then we should immediately start the http poller.
+	if agent.pollerController != nil && isPollingFallbackError(err) {
+		agent.pollerController.ForceHTTPPoller()
+	}
 }

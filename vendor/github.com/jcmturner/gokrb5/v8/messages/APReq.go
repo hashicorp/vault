@@ -17,19 +17,6 @@ import (
 	"github.com/jcmturner/gokrb5/v8/types"
 )
 
-/*AP-REQ          ::= [APPLICATION 14] SEQUENCE {
-pvno            [0] INTEGER (5),
-msg-type        [1] INTEGER (14),
-ap-options      [2] APOptions,
-ticket          [3] Ticket,
-authenticator   [4] EncryptedData -- Authenticator
-}
-
-APOptions       ::= KerberosFlags
--- reserved(0),
--- use-session-key(1),
--- mutual-required(2)*/
-
 type marshalAPReq struct {
 	PVNO      int            `asn1:"explicit,tag:0"`
 	MsgType   int            `asn1:"explicit,tag:1"`
@@ -157,22 +144,11 @@ func (a *APReq) Verify(kt *keytab.Keytab, d time.Duration, cAddr types.HostAddre
 	// Decrypt ticket's encrypted part with service key
 	//TODO decrypt with service's session key from its TGT is use-to-user. Need to figure out how to get TGT.
 	//if types.IsFlagSet(&a.APOptions, flags.APOptionUseSessionKey) {
-	//	//If the USE-SESSION-KEY flag is set in the ap-options field, it indicates to
-	//	//the server that user-to-user authentication is in use, and that the ticket
-	//	//is encrypted in the session key from the server's TGT rather than in the server's secret key.
 	//	err := a.Ticket.Decrypt(tgt.DecryptedEncPart.Key)
 	//	if err != nil {
 	//		return false, krberror.Errorf(err, krberror.DecryptingError, "error decrypting encpart of ticket provided using session key")
 	//	}
 	//} else {
-	//	// Because it is possible for the server to be registered in multiple
-	//	// realms, with different keys in each, the srealm field in the
-	//	// unencrypted portion of the ticket in the KRB_AP_REQ is used to
-	//	// specify which secret key the server should use to decrypt that
-	//	// ticket.The KRB_AP_ERR_NOKEY error code is returned if the server
-	//	// doesn't have the proper key to decipher the ticket.
-	//	// The ticket is decrypted using the version of the server's key
-	//	// specified by the ticket.
 	//	err := a.Ticket.DecryptEncPart(*kt, &a.Ticket.SName)
 	//	if err != nil {
 	//		return false, krberror.Errorf(err, krberror.DecryptingError, "error decrypting encpart of service ticket provided")
@@ -195,9 +171,8 @@ func (a *APReq) Verify(kt *keytab.Keytab, d time.Duration, cAddr types.HostAddre
 
 	// Check client's address is listed in the client addresses in the ticket
 	if len(a.Ticket.DecryptedEncPart.CAddr) > 0 {
-		//The addresses in the ticket (if any) are then searched for an address matching the operating-system reported
-		//address of the client.  If no match is found or the server insists on ticket addresses but none are present in
-		//the ticket, the KRB_AP_ERR_BADADDR error is returned.
+		//If client addresses are present check if any of them match the source IP that sent the APReq
+		//If there is no match return KRB_AP_ERR_BADADDR error.
 		if !types.HostAddressesContains(a.Ticket.DecryptedEncPart.CAddr, cAddr) {
 			return false, NewKRBError(a.Ticket.SName, a.Ticket.Realm, errorcode.KRB_AP_ERR_BADADDR, "client address not within the list contained in the service ticket")
 		}

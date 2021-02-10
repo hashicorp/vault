@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // NodeBalancer represents a NodeBalancer object
 type NodeBalancer struct {
-	CreatedStr string `json:"created"`
-	UpdatedStr string `json:"updated"`
 	// This NodeBalancer's unique ID.
 	ID int `json:"id"`
 	// This NodeBalancer's label. These must be unique on your Account.
@@ -61,6 +62,28 @@ type NodeBalancerUpdateOptions struct {
 	Tags               *[]string `json:"tags,omitempty"`
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *NodeBalancer) UnmarshalJSON(b []byte) error {
+	type Mask NodeBalancer
+
+	p := struct {
+		*Mask
+		Created *parseabletime.ParseableTime `json:"created"`
+		Updated *parseabletime.ParseableTime `json:"updated"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Created = (*time.Time)(p.Created)
+	i.Updated = (*time.Time)(p.Updated)
+
+	return nil
+}
+
 // GetCreateOptions converts a NodeBalancer to NodeBalancerCreateOptions for use in CreateNodeBalancer
 func (i NodeBalancer) GetCreateOptions() NodeBalancerCreateOptions {
 	return NodeBalancerCreateOptions{
@@ -108,13 +131,6 @@ func (c *Client) ListNodeBalancers(ctx context.Context, opts *ListOptions) ([]No
 	return response.Data, nil
 }
 
-// fixDates converts JSON timestamps to Go time.Time values
-func (i *NodeBalancer) fixDates() *NodeBalancer {
-	i.Created, _ = parseDates(i.CreatedStr)
-	i.Updated, _ = parseDates(i.UpdatedStr)
-	return i
-}
-
 // GetNodeBalancer gets the NodeBalancer with the provided ID
 func (c *Client) GetNodeBalancer(ctx context.Context, id int) (*NodeBalancer, error) {
 	e, err := c.NodeBalancers.Endpoint()
@@ -122,13 +138,13 @@ func (c *Client) GetNodeBalancer(ctx context.Context, id int) (*NodeBalancer, er
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).
+	r, err := errors.CoupleAPIErrors(c.R(ctx).
 		SetResult(&NodeBalancer{}).
 		Get(e))
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancer).fixDates(), nil
+	return r.Result().(*NodeBalancer), nil
 }
 
 // CreateNodeBalancer creates a NodeBalancer
@@ -144,10 +160,10 @@ func (c *Client) CreateNodeBalancer(ctx context.Context, nodebalancer NodeBalanc
 	if bodyData, err := json.Marshal(nodebalancer); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
 		Post(e))
@@ -155,7 +171,7 @@ func (c *Client) CreateNodeBalancer(ctx context.Context, nodebalancer NodeBalanc
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancer).fixDates(), nil
+	return r.Result().(*NodeBalancer), nil
 }
 
 // UpdateNodeBalancer updates the NodeBalancer with the specified id
@@ -172,17 +188,17 @@ func (c *Client) UpdateNodeBalancer(ctx context.Context, id int, updateOpts Node
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*NodeBalancer).fixDates(), nil
+	return r.Result().(*NodeBalancer), nil
 }
 
 // DeleteNodeBalancer deletes the NodeBalancer with the specified id
@@ -193,7 +209,7 @@ func (c *Client) DeleteNodeBalancer(ctx context.Context, id int) error {
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 
 	return err
 }

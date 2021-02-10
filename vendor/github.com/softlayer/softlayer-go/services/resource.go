@@ -291,6 +291,12 @@ func (r Resource_Metadata) Offset(offset int) Resource_Metadata {
 	return r
 }
 
+// The getAccountId retrieves the ID for the account on which the resource is located.
+func (r Resource_Metadata) GetAccountId() (resp int, err error) {
+	err = r.Session.DoRequest("SoftLayer_Resource_Metadata", "getAccountId", nil, &r.Options, &resp)
+	return
+}
+
 // The getBackendMacAddresses method retrieves a list of backend MAC addresses for the resource
 func (r Resource_Metadata) GetBackendMacAddresses() (resp []string, err error) {
 	err = r.Session.DoRequest("SoftLayer_Resource_Metadata", "getBackendMacAddresses", nil, &r.Options, &resp)

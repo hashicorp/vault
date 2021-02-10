@@ -76,16 +76,17 @@ func (client *Client) CreateRoleWithCallback(request *CreateRoleRequest, callbac
 // CreateRoleRequest is the request struct for api CreateRole
 type CreateRoleRequest struct {
 	*requests.RpcRequest
-	RoleName                 string `position:"Query" name:"RoleName"`
-	Description              string `position:"Query" name:"Description"`
-	AssumeRolePolicyDocument string `position:"Query" name:"AssumeRolePolicyDocument"`
+	MaxSessionDuration       requests.Integer `position:"Query" name:"MaxSessionDuration"`
+	RoleName                 string           `position:"Query" name:"RoleName"`
+	Description              string           `position:"Query" name:"Description"`
+	AssumeRolePolicyDocument string           `position:"Query" name:"AssumeRolePolicyDocument"`
 }
 
 // CreateRoleResponse is the response struct for api CreateRole
 type CreateRoleResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
-	Role      Role   `json:"Role" xml:"Role"`
+	RequestId string           `json:"RequestId" xml:"RequestId"`
+	Role      RoleInCreateRole `json:"Role" xml:"Role"`
 }
 
 // CreateCreateRoleRequest creates a request to invoke CreateRole API
@@ -93,7 +94,7 @@ func CreateCreateRoleRequest() (request *CreateRoleRequest) {
 	request = &CreateRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateRole", "Ram", "openAPI")
 	return
 }
 

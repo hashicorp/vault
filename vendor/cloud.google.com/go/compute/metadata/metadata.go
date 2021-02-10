@@ -140,7 +140,7 @@ func testOnGCE() bool {
 	}()
 
 	go func() {
-		addrs, err := net.LookupHost("metadata.google.internal")
+		addrs, err := net.DefaultResolver.LookupHost(ctx, "metadata.google.internal")
 		if err != nil || len(addrs) == 0 {
 			resc <- false
 			return

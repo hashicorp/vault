@@ -66,6 +66,13 @@ func (oc *observeComponent) Observe(opts ObserveOptions, cb ObserveCallback) (Pe
 		}, nil)
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	vbID, err := oc.bucketUtils.KeyToVbucket(opts.Key)
 	if err != nil {
 		return nil, err
@@ -83,15 +90,16 @@ func (oc *observeComponent) Observe(opts ObserveOptions, cb ObserveCallback) (Pe
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:        memd.CmdMagicReq,
-			Command:      memd.CmdObserve,
-			Datatype:     0,
-			Cas:          0,
-			Extras:       nil,
-			Key:          nil,
-			Value:        valueBuf,
-			Vbucket:      vbID,
-			CollectionID: opts.CollectionID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdObserve,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 nil,
+			Key:                    nil,
+			Value:                  valueBuf,
+			Vbucket:                vbID,
+			CollectionID:           opts.CollectionID,
+			UserImpersonationFrame: userFrame,
 		},
 		ReplicaIdx:       opts.ReplicaIdx,
 		Callback:         handler,
@@ -204,6 +212,13 @@ func (oc *observeComponent) ObserveVb(opts ObserveVbOptions, cb ObserveVbCallbac
 		}
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	valueBuf := make([]byte, 8)
 	binary.BigEndian.PutUint64(valueBuf[0:], uint64(opts.VbUUID))
 
@@ -213,14 +228,15 @@ func (oc *observeComponent) ObserveVb(opts ObserveVbOptions, cb ObserveVbCallbac
 
 	req := &memdQRequest{
 		Packet: memd.Packet{
-			Magic:    memd.CmdMagicReq,
-			Command:  memd.CmdObserveSeqNo,
-			Datatype: 0,
-			Cas:      0,
-			Extras:   nil,
-			Key:      nil,
-			Value:    valueBuf,
-			Vbucket:  opts.VbID,
+			Magic:                  memd.CmdMagicReq,
+			Command:                memd.CmdObserveSeqNo,
+			Datatype:               0,
+			Cas:                    0,
+			Extras:                 nil,
+			Key:                    nil,
+			Value:                  valueBuf,
+			Vbucket:                opts.VbID,
+			UserImpersonationFrame: userFrame,
 		},
 		ReplicaIdx:       opts.ReplicaIdx,
 		Callback:         handler,

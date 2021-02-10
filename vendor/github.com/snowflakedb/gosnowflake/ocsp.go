@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -47,7 +48,7 @@ var cacheFileName = ""
 var cacheUpdated = true
 
 // OCSPFailOpenMode is OCSP fail open mode. OCSPFailOpenTrue by default and may set to ocspModeFailClosed for fail closed mode
-type OCSPFailOpenMode uint8
+type OCSPFailOpenMode uint32
 
 const (
 	ocspFailOpenNotSet OCSPFailOpenMode = iota
@@ -160,7 +161,7 @@ func getOIDFromHashAlgorithm(target crypto.Hash) asn1.ObjectIdentifier {
 			return oid
 		}
 	}
-	glog.V(0).Infof("no valid OID is found for the hash algorithm. %#v", target)
+	logger.Errorf("no valid OID is found for the hash algorithm. %#v", target)
 	return nil
 }
 
@@ -170,7 +171,7 @@ func getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto.Hash {
 			return hash
 		}
 	}
-	glog.V(0).Infof("no valid hash algorithm is found for the oid. Falling back to SHA1: %#v", target)
+	logger.Errorf("no valid hash algorithm is found for the oid. Falling back to SHA1: %#v", target)
 	return crypto.SHA1
 }
 
@@ -363,28 +364,28 @@ func checkOCSPCacheServer(
 	headers := make(map[string]string)
 	res, err := newRetryHTTP(ctx, client, req, ocspServerHost, headers, totalTimeout).execute()
 	if err != nil {
-		glog.V(2).Infof("failed to get OCSP cache from OCSP Cache Server. %v\n", err)
+		logger.Errorf("failed to get OCSP cache from OCSP Cache Server. %v\n", err)
 		return nil, &ocspStatus{
 			code: ocspFailedSubmit,
 			err:  err,
 		}
 	}
 	defer res.Body.Close()
-	glog.V(2).Infof("StatusCode from OCSP Cache Server: %v\n", res.StatusCode)
+	logger.Debugf("StatusCode from OCSP Cache Server: %v\n", res.StatusCode)
 	if res.StatusCode != http.StatusOK {
 		return nil, &ocspStatus{
 			code: ocspFailedResponse,
 			err:  fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status),
 		}
 	}
-	glog.V(2).Info("reading contents")
+	logger.Debugf("reading contents")
 
 	dec := json.NewDecoder(res.Body)
 	for {
 		if err := dec.Decode(&respd); err == io.EOF {
 			break
 		} else if err != nil {
-			glog.V(2).Infof("failed to decode OCSP cache. %v\n", err)
+			logger.Errorf("failed to decode OCSP cache. %v\n", err)
 			return nil, &ocspStatus{
 				code: ocspFailedExtractResponse,
 				err:  err,
@@ -411,7 +412,7 @@ func retryOCSP(
 	ocspResBytes []byte,
 	ocspS *ocspStatus) {
 	multiplier := 1
-	if ocspFailOpen == OCSPFailOpenFalse {
+	if atomic.LoadUint32((*uint32)(&ocspFailOpen)) == (uint32)(OCSPFailOpenFalse) {
 		multiplier = 3 // up to 3 times for Fail Close mode
 	}
 	res, err := newRetryHTTP(
@@ -424,14 +425,14 @@ func retryOCSP(
 		}
 	}
 	defer res.Body.Close()
-	glog.V(2).Infof("StatusCode from OCSP Server: %v\n", res.StatusCode)
+	logger.Debugf("StatusCode from OCSP Server: %v\n", res.StatusCode)
 	if res.StatusCode != http.StatusOK {
 		return ocspRes, ocspResBytes, &ocspStatus{
 			code: ocspFailedResponse,
 			err:  fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status),
 		}
 	}
-	glog.V(2).Info("reading contents")
+	logger.Debug("reading contents")
 	ocspResBytes, err = ioutil.ReadAll(res.Body)
 	if err != nil {
 		return ocspRes, ocspResBytes, &ocspStatus{
@@ -439,7 +440,7 @@ func retryOCSP(
 			err:  err,
 		}
 	}
-	glog.V(2).Info("parsing OCSP response")
+	logger.Debug("parsing OCSP response")
 	ocspRes, err = ocsp.ParseResponse(ocspResBytes, issuer)
 	if err != nil {
 		return ocspRes, ocspResBytes, &ocspStatus{
@@ -455,7 +456,7 @@ func retryOCSP(
 
 // getRevocationStatus checks the certificate revocation status for subject using issuer certificate.
 func getRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate) *ocspStatus {
-	glog.V(2).Infof("Subject: %v, Issuer: %v\n", subject.Subject, issuer.Subject)
+	logger.Infof("Subject: %v, Issuer: %v\n", subject.Subject, issuer.Subject)
 
 	status, ocspReq, encodedCertID := validateWithCache(subject, issuer)
 	if isValidOCSPStatus(status.code) {
@@ -464,8 +465,8 @@ func getRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate)
 	if ocspReq == nil || encodedCertID == nil {
 		return status
 	}
-	glog.V(2).Infof("cache missed\n")
-	glog.V(2).Infof("OCSP Server: %v\n", subject.OCSPServer)
+	logger.Infof("cache missed\n")
+	logger.Infof("OCSP Server: %v\n", subject.OCSPServer)
 	if len(subject.OCSPServer) == 0 || isTestNoOCSPURL() {
 		return &ocspStatus{
 			code: ocspNoServer,
@@ -569,7 +570,7 @@ func verifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certifi
 
 func canEarlyExitForOCSP(results []*ocspStatus, chainSize int) *ocspStatus {
 	msg := ""
-	if ocspFailOpen == OCSPFailOpenFalse {
+	if atomic.LoadUint32((*uint32)(&ocspFailOpen)) == (uint32)(OCSPFailOpenFalse) {
 		// Fail closed. any error is returned to stop connection
 		for _, r := range results {
 			if r.err != nil {
@@ -595,7 +596,7 @@ func canEarlyExitForOCSP(results []*ocspStatus, chainSize int) *ocspStatus {
 		}
 	}
 	if len(msg) > 0 {
-		glog.V(1).Infof(
+		logger.Warnf(
 			"WARNING!!! Using fail-open to connect. Driver is connecting to an "+
 				"HTTPS endpoint without OCSP based Certificate Revocation checking "+
 				"as it could not obtain a valid OCSP Response to use from the CA OCSP "+
@@ -620,7 +621,7 @@ func validateWithCacheForAllCertificates(verifiedChains []*x509.Certificate) boo
 func validateWithCache(subject, issuer *x509.Certificate) (*ocspStatus, []byte, *certIDKey) {
 	ocspReq, err := ocsp.CreateRequest(subject, issuer, &ocsp.RequestOptions{})
 	if err != nil {
-		glog.V(2).Infof("failed to create OCSP request from the certificates.\n")
+		logger.Errorf("failed to create OCSP request from the certificates.\n")
 		return &ocspStatus{
 			code: ocspFailedComposeRequest,
 			err:  errors.New("failed to create a OCSP request"),
@@ -628,7 +629,7 @@ func validateWithCache(subject, issuer *x509.Certificate) (*ocspStatus, []byte, 
 	}
 	encodedCertID, ocspS := extractCertIDKeyFromRequest(ocspReq)
 	if ocspS.code != ocspSuccess {
-		glog.V(2).Infof("failed to extract CertID from OCSP Request.\n")
+		logger.Errorf("failed to extract CertID from OCSP Request.\n")
 		return &ocspStatus{
 			code: ocspFailedComposeRequest,
 			err:  errors.New("failed to extract cert ID Key"),
@@ -640,7 +641,7 @@ func validateWithCache(subject, issuer *x509.Certificate) (*ocspStatus, []byte, 
 
 func downloadOCSPCacheServer() {
 	if strings.EqualFold(os.Getenv(cacheServerEnabledEnv), "false") {
-		glog.V(2).Infof("skipping downloading OCSP Cache.")
+		logger.Infof("skipping downloading OCSP Cache.")
 		return
 	}
 	ocspCacheServerURL := os.Getenv(cacheServerURLEnv)
@@ -651,7 +652,7 @@ func downloadOCSPCacheServer() {
 	if err != nil {
 		return
 	}
-	glog.V(2).Infof("downloading OCSP Cache from server %v", ocspCacheServerURL)
+	logger.Infof("downloading OCSP Cache from server %v", ocspCacheServerURL)
 	timeoutStr := os.Getenv(ocspTestResponseCacheServerTimeoutEnv)
 	timeout := defaultOCSPCacheServerTimeout
 	if timeoutStr != "" {
@@ -718,10 +719,10 @@ func initOCSPCache() {
 	ocspResponseCache = make(map[certIDKey][]interface{})
 	ocspResponseCacheLock = &sync.RWMutex{}
 
-	glog.V(2).Infof("reading OCSP Response cache file. %v\n", cacheFileName)
+	logger.Infof("reading OCSP Response cache file. %v\n", cacheFileName)
 	f, err := os.Open(cacheFileName)
 	if err != nil {
-		glog.Infof("failed to open. Ignored. %v\n", err)
+		logger.Errorf("failed to open. Ignored. %v\n", err)
 		return
 	}
 	defer f.Close()
@@ -734,7 +735,7 @@ func initOCSPCache() {
 		if err := dec.Decode(&buf); err == io.EOF {
 			break
 		} else if err != nil {
-			glog.V(2).Infof("failed to read. Ignored. %v\n", err)
+			logger.Errorf("failed to read. Ignored. %v\n", err)
 			return
 		}
 	}
@@ -795,7 +796,7 @@ func extractOCSPCacheResponseValue(cacheValue []interface{}, subject, issuer *x5
 		// check the revocation status here
 		r, err = ocsp.ParseResponse(b, issuer)
 		if err != nil {
-			glog.V(2).Infof("the second cache element is not a valid OCSP Response. Ignored. subject: %v\n", subjectName)
+			logger.Warnf("the second cache element is not a valid OCSP Response. Ignored. subject: %v\n", subjectName)
 			return &ocspStatus{
 				code: ocspFailedParseResponse,
 				err:  fmt.Errorf("failed to parse OCSP Respose. subject: %v, err: %v", subjectName, err),
@@ -814,28 +815,28 @@ func extractOCSPCacheResponseValue(cacheValue []interface{}, subject, issuer *x5
 // writeOCSPCacheFile writes a OCSP Response cache file. This is called if all revocation status is success.
 // lock file is used to mitigate race condition with other process.
 func writeOCSPCacheFile() {
-	glog.V(2).Infof("writing OCSP Response cache file. %v\n", cacheFileName)
+	logger.Infof("writing OCSP Response cache file. %v\n", cacheFileName)
 	cacheLockFileName := cacheFileName + ".lck"
 	err := os.Mkdir(cacheLockFileName, 0600)
 	switch {
 	case os.IsExist(err):
 		statinfo, err := os.Stat(cacheLockFileName)
 		if err != nil {
-			glog.V(2).Infof("failed to write OCSP response cache file. file: %v, err: %v. ignored.\n", cacheFileName, err)
+			logger.Errorf("failed to write OCSP response cache file. file: %v, err: %v. ignored.\n", cacheFileName, err)
 			return
 		}
 		if time.Since(statinfo.ModTime()) < 15*time.Minute {
-			glog.V(2).Infof("other process locks the cache file. %v. ignored.\n", cacheFileName)
+			logger.Warnf("other process locks the cache file. %v. ignored.\n", cacheFileName)
 			return
 		}
 		err = os.Remove(cacheLockFileName)
 		if err != nil {
-			glog.V(2).Infof("failed to delete lock file. file: %v, err: %v. ignored.\n", cacheLockFileName, err)
+			logger.Errorf("failed to delete lock file. file: %v, err: %v. ignored.\n", cacheLockFileName, err)
 			return
 		}
 		err = os.Mkdir(cacheLockFileName, 0600)
 		if err != nil {
-			glog.V(2).Infof("failed to delete lock file. file: %v, err: %v. ignored.\n", cacheLockFileName, err)
+			logger.Errorf("failed to delete lock file. file: %v, err: %v. ignored.\n", cacheLockFileName, err)
 			return
 		}
 	}
@@ -849,12 +850,12 @@ func writeOCSPCacheFile() {
 
 	j, err := json.Marshal(buf)
 	if err != nil {
-		glog.V(2).Info("failed to convert OCSP Response cache to JSON. ignored.")
+		logger.Errorf("failed to convert OCSP Response cache to JSON. ignored.")
 		return
 	}
 	err = ioutil.WriteFile(cacheFileName, j, 0644)
 	if err != nil {
-		glog.V(2).Infof("failed to write OCSP Response cache. err: %v. ignored.\n", err)
+		logger.Errorf("failed to write OCSP Response cache. err: %v. ignored.\n", err)
 	}
 }
 
@@ -894,13 +895,13 @@ func createOCSPCacheDir() {
 		case "darwin":
 			home := os.Getenv("HOME")
 			if home == "" {
-				glog.V(2).Info("HOME is blank.")
+				logger.Info("HOME is blank.")
 			}
 			cacheDir = filepath.Join(home, "Library", "Caches", "Snowflake")
 		default:
 			home := os.Getenv("HOME")
 			if home == "" {
-				glog.V(2).Info("HOME is blank")
+				logger.Info("HOME is blank")
 			}
 			cacheDir = filepath.Join(home, ".cache", "snowflake")
 		}
@@ -909,11 +910,11 @@ func createOCSPCacheDir() {
 	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
 		err := os.MkdirAll(cacheDir, os.ModePerm)
 		if err != nil {
-			glog.V(2).Infof("failed to create cache directory. %v, err: %v. ignored\n", cacheDir, err)
+			logger.Errorf("failed to create cache directory. %v, err: %v. ignored\n", cacheDir, err)
 		}
 	}
 	cacheFileName = filepath.Join(cacheDir, cacheFileBaseName)
-	glog.V(2).Infof("reset OCSP cache file. %v", cacheFileName)
+	logger.Infof("reset OCSP cache file. %v", cacheFileName)
 }
 
 // deleteOCSPCacheFile deletes the OCSP response cache file

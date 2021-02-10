@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"path"
@@ -24,18 +25,55 @@ type PackagesClient struct {
 	client *client.Client
 }
 
+type PackageDisk struct {
+	Size       interface{}
+	SizeInMiB  int64
+	Remaining  bool
+	OSDiskSize bool
+}
+
+func (d *PackageDisk) UnmarshalJSON(data []byte) error {
+	var decoded map[string]json.RawMessage
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		log.Fatal(err)
+		return err
+	}
+	if decoded["size"] != nil {
+		if err := json.Unmarshal(decoded["size"], &d.Size); err != nil {
+			log.Fatal(err)
+			return err
+		}
+	}
+	switch d.Size.(type) {
+	case string:
+		d.Remaining = true
+		d.OSDiskSize = false
+	case nil:
+		d.Remaining = false
+		d.OSDiskSize = true
+	default:
+		d.Remaining = false
+		d.OSDiskSize = false
+		d.SizeInMiB = int64(d.Size.(float64))
+	}
+	return nil
+}
+
 type Package struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Memory      int64  `json:"memory"`
-	Disk        int64  `json:"disk"`
-	Swap        int64  `json:"swap"`
-	LWPs        int64  `json:"lwps"`
-	VCPUs       int64  `json:"vcpus"`
-	Version     string `json:"version"`
-	Group       string `json:"group"`
-	Description string `json:"description"`
-	Default     bool   `json:"default"`
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Memory       int64         `json:"memory"`
+	Disk         int64         `json:"disk"`
+	Swap         int64         `json:"swap"`
+	LWPs         int64         `json:"lwps"`
+	VCPUs        int64         `json:"vcpus"`
+	Version      string        `json:"version"`
+	Group        string        `json:"group"`
+	Description  string        `json:"description"`
+	Default      bool          `json:"default"`
+	Brand        string        `json:"brand"`
+	FlexibleDisk bool          `json:"flexible_disk,omitempty"`
+	Disks        []PackageDisk `json:"disks,omitempty"`
 }
 
 type ListPackagesInput struct {
@@ -47,6 +85,7 @@ type ListPackagesInput struct {
 	VCPUs   int64  `json:"vcpus"`
 	Version string `json:"version"`
 	Group   string `json:"group"`
+	Brand   string `json:"brand"`
 }
 
 func (c *PackagesClient) List(ctx context.Context, input *ListPackagesInput) ([]*Package, error) {
@@ -76,6 +115,9 @@ func (c *PackagesClient) List(ctx context.Context, input *ListPackagesInput) ([]
 	}
 	if input.Group != "" {
 		query.Set("group", input.Group)
+	}
+	if input.Brand != "" {
+		query.Set("brand", input.Brand)
 	}
 
 	reqInputs := client.RequestInput{

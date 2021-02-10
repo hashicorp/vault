@@ -170,12 +170,6 @@ func (r Configuration_Template) GetConfigurationSections() (resp []datatypes.Con
 }
 
 // Retrieve
-func (r Configuration_Template) GetConfigurationTemplateReference() (resp []datatypes.Monitoring_Agent_Configuration_Template_Group_Reference, err error) {
-	err = r.Session.DoRequest("SoftLayer_Configuration_Template", "getConfigurationTemplateReference", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve
 func (r Configuration_Template) GetDefaultValues() (resp []datatypes.Configuration_Template_Section_Definition_Value, err error) {
 	err = r.Session.DoRequest("SoftLayer_Configuration_Template", "getDefaultValues", nil, &r.Options, &resp)
 	return
@@ -336,9 +330,9 @@ func (r Configuration_Template_Section) HasSubSections() (resp bool, err error) 
 
 // Configuration definition gives you details of the value that you're setting.
 //
-// Some monitoring agents requires values unique to your system. If value type is defined as "Resource Specific Values", you will have to make an additional API call to retrieve your system specific values.
+// If value type is defined as "Resource Specific Values", you will have to make an additional API call to retrieve your system specific values.
 //
-// See [[SoftLayer_Monitoring_Agent::getAvailableConfigurationValues|Monitoring Agent]] service to retrieve your system specific values.
+//
 type Configuration_Template_Section_Definition struct {
 	Session *session.Session
 	Options sl.Options
@@ -631,12 +625,6 @@ func (r Configuration_Template_Section_Profile) Offset(offset int) Configuration
 // Retrieve
 func (r Configuration_Template_Section_Profile) GetConfigurationSection() (resp datatypes.Configuration_Template_Section, err error) {
 	err = r.Session.DoRequest("SoftLayer_Configuration_Template_Section_Profile", "getConfigurationSection", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve
-func (r Configuration_Template_Section_Profile) GetMonitoringAgent() (resp datatypes.Monitoring_Agent, err error) {
-	err = r.Session.DoRequest("SoftLayer_Configuration_Template_Section_Profile", "getMonitoringAgent", nil, &r.Options, &resp)
 	return
 }
 

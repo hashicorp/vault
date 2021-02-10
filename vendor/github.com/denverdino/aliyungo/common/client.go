@@ -3,10 +3,14 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +29,7 @@ type UnderlineString string
 type Client struct {
 	AccessKeyId     string //Access Key Id
 	AccessKeySecret string //Access Key Secret
+	securityToken   string
 	debug           bool
 	httpClient      *http.Client
 	endpoint        string
@@ -32,42 +37,235 @@ type Client struct {
 	serviceCode     string
 	regionID        Region
 	businessInfo    string
-	userAgent 	string
+	userAgent       string
 }
 
-// NewClient creates a new instance of ECS client
+// Initialize properties of a client instance
 func (client *Client) Init(endpoint, version, accessKeyId, accessKeySecret string) {
 	client.AccessKeyId = accessKeyId
-	client.AccessKeySecret = accessKeySecret + "&"
+	ak := accessKeySecret
+	if !strings.HasSuffix(ak, "&") {
+		ak += "&"
+	}
+	client.AccessKeySecret = ak
 	client.debug = false
-	client.httpClient = &http.Client{}
+	handshakeTimeout, err := strconv.Atoi(os.Getenv("TLSHandshakeTimeout"))
+	if err != nil {
+		handshakeTimeout = 0
+	}
+	if handshakeTimeout == 0 {
+		client.httpClient = &http.Client{}
+	} else {
+		t := &http.Transport{
+			TLSHandshakeTimeout: time.Duration(handshakeTimeout) * time.Second}
+		client.httpClient = &http.Client{Transport: t}
+	}
 	client.endpoint = endpoint
 	client.version = version
 }
 
+// Initialize properties of a client instance including regionID
 func (client *Client) NewInit(endpoint, version, accessKeyId, accessKeySecret, serviceCode string, regionID Region) {
 	client.Init(endpoint, version, accessKeyId, accessKeySecret)
 	client.serviceCode = serviceCode
 	client.regionID = regionID
-	client.setEndpointByLocation(regionID, serviceCode, accessKeyId, accessKeySecret)
+}
+
+// Initialize properties of a client instance including regionID
+//only for hz regional Domain
+func (client *Client) NewInit4RegionalDomain(endpoint, version, accessKeyId, accessKeySecret, serviceCode string, regionID Region) {
+	client.Init(endpoint, version, accessKeyId, accessKeySecret)
+	client.serviceCode = serviceCode
+	client.regionID = regionID
+
+	client.setEndpoint4RegionalDomain(client.regionID, client.serviceCode, client.AccessKeyId, client.AccessKeySecret, client.securityToken)
+}
+
+// Intialize client object when all properties are ready
+func (client *Client) InitClient() *Client {
+	client.debug = false
+	handshakeTimeout, err := strconv.Atoi(os.Getenv("TLSHandshakeTimeout"))
+	if err != nil {
+		handshakeTimeout = 0
+	}
+	if handshakeTimeout == 0 {
+		client.httpClient = &http.Client{}
+	} else {
+		t := &http.Transport{
+			TLSHandshakeTimeout: time.Duration(handshakeTimeout) * time.Second}
+		client.httpClient = &http.Client{Transport: t}
+	}
+	return client
+}
+
+// Intialize client object when all properties are ready
+//only for regional domain hz
+func (client *Client) InitClient4RegionalDomain() *Client {
+	client.debug = false
+	handshakeTimeout, err := strconv.Atoi(os.Getenv("TLSHandshakeTimeout"))
+	if err != nil {
+		handshakeTimeout = 0
+	}
+	if handshakeTimeout == 0 {
+		client.httpClient = &http.Client{}
+	} else {
+		t := &http.Transport{
+			TLSHandshakeTimeout: time.Duration(handshakeTimeout) * time.Second}
+		client.httpClient = &http.Client{Transport: t}
+	}
+	//set endpoint
+	client.setEndpoint4RegionalDomain(client.regionID, client.serviceCode, client.AccessKeyId, client.AccessKeySecret, client.securityToken)
+	return client
+}
+
+func (client *Client) NewInitForAssumeRole(endpoint, version, accessKeyId, accessKeySecret, serviceCode string, regionID Region, securityToken string) {
+	client.NewInit(endpoint, version, accessKeyId, accessKeySecret, serviceCode, regionID)
+	client.securityToken = securityToken
+}
+
+//getLocationEndpoint
+func (client *Client) getEndpointByLocation() string {
+	locationClient := NewLocationClient(client.AccessKeyId, client.AccessKeySecret, client.securityToken)
+	locationClient.SetDebug(true)
+	return locationClient.DescribeOpenAPIEndpoint(client.regionID, client.serviceCode)
 }
 
 //NewClient using location service
-func (client *Client) setEndpointByLocation(region Region, serviceCode, accessKeyId, accessKeySecret string) {
-	locationClient := NewLocationClient(accessKeyId, accessKeySecret)
+func (client *Client) setEndpointByLocation(region Region, serviceCode, accessKeyId, accessKeySecret, securityToken string) {
+	locationClient := NewLocationClient(accessKeyId, accessKeySecret, securityToken)
+	locationClient.SetDebug(true)
 	ep := locationClient.DescribeOpenAPIEndpoint(region, serviceCode)
-	if ep == "" {
-		ep = loadEndpointFromFile(region, serviceCode)
-	}
 
 	if ep != "" {
 		client.endpoint = ep
 	}
 }
 
+// Get openapi endpoint accessed by ecs instance.
+// For some UnitRegions, the endpoint pattern is https://[product].[regionid].aliyuncs.com
+// For some CentralRegions, the endpoint pattern is  https://[product].vpc-proxy.aliyuncs.com
+// The other region, the endpoint pattern is https://[product]-vpc.[regionid].aliyuncs.com
+func (client *Client) setEndpoint4RegionalDomain(region Region, serviceCode, accessKeyId, accessKeySecret, securityToken string) {
+	if endpoint, ok := CentralDomainServices[serviceCode]; ok {
+		client.endpoint = fmt.Sprintf("https://%s", endpoint)
+		return
+	}
+	for _, service := range RegionalDomainServices {
+		if service == serviceCode {
+			if ep, ok := UnitRegions[region]; ok {
+				client.endpoint = fmt.Sprintf("https://%s.%s.aliyuncs.com", serviceCode, ep)
+				return
+			}
+
+			client.endpoint = fmt.Sprintf("https://%s%s.%s.aliyuncs.com", serviceCode, "-vpc", region)
+			return
+		}
+	}
+	locationClient := NewLocationClient(accessKeyId, accessKeySecret, securityToken)
+	locationClient.SetDebug(true)
+	ep := locationClient.DescribeOpenAPIEndpoint(region, serviceCode)
+
+	if ep != "" {
+		client.endpoint = ep
+	}
+}
+
+// Ensure all necessary properties are valid
+func (client *Client) ensureProperties() error {
+	var msg string
+
+	if client.endpoint == "" {
+		msg = fmt.Sprintf("endpoint cannot be empty!")
+	} else if client.version == "" {
+		msg = fmt.Sprintf("version cannot be empty!")
+	} else if client.AccessKeyId == "" {
+		msg = fmt.Sprintf("AccessKeyId cannot be empty!")
+	} else if client.AccessKeySecret == "" {
+		msg = fmt.Sprintf("AccessKeySecret cannot be empty!")
+	}
+
+	if msg != "" {
+		return errors.New(msg)
+	}
+
+	return nil
+}
+
+// ----------------------------------------------------
+// WithXXX methods
+// ----------------------------------------------------
+
+// WithEndpoint sets custom endpoint
+func (client *Client) WithEndpoint(endpoint string) *Client {
+	client.SetEndpoint(endpoint)
+	return client
+}
+
+// WithVersion sets custom version
+func (client *Client) WithVersion(version string) *Client {
+	client.SetVersion(version)
+	return client
+}
+
+// WithRegionID sets Region ID
+func (client *Client) WithRegionID(regionID Region) *Client {
+	client.SetRegionID(regionID)
+	return client
+}
+
+//WithServiceCode sets serviceCode
+func (client *Client) WithServiceCode(serviceCode string) *Client {
+	client.SetServiceCode(serviceCode)
+	return client
+}
+
+// WithAccessKeyId sets new AccessKeyId
+func (client *Client) WithAccessKeyId(id string) *Client {
+	client.SetAccessKeyId(id)
+	return client
+}
+
+// WithAccessKeySecret sets new AccessKeySecret
+func (client *Client) WithAccessKeySecret(secret string) *Client {
+	client.SetAccessKeySecret(secret)
+	return client
+}
+
+// WithSecurityToken sets securityToken
+func (client *Client) WithSecurityToken(securityToken string) *Client {
+	client.SetSecurityToken(securityToken)
+	return client
+}
+
+// WithDebug sets debug mode to log the request/response message
+func (client *Client) WithDebug(debug bool) *Client {
+	client.SetDebug(debug)
+	return client
+}
+
+// WithBusinessInfo sets business info to log the request/response message
+func (client *Client) WithBusinessInfo(businessInfo string) *Client {
+	client.SetBusinessInfo(businessInfo)
+	return client
+}
+
+// WithUserAgent sets user agent to the request/response message
+func (client *Client) WithUserAgent(userAgent string) *Client {
+	client.SetUserAgent(userAgent)
+	return client
+}
+
+// ----------------------------------------------------
+// SetXXX methods
+// ----------------------------------------------------
+
 // SetEndpoint sets custom endpoint
 func (client *Client) SetEndpoint(endpoint string) {
 	client.endpoint = endpoint
+}
+
+func (client *Client) GetEndpoint() string {
+	return client.endpoint
 }
 
 // SetEndpoint sets custom version
@@ -75,6 +273,7 @@ func (client *Client) SetVersion(version string) {
 	client.version = version
 }
 
+// SetEndpoint sets Region ID
 func (client *Client) SetRegionID(regionID Region) {
 	client.regionID = regionID
 }
@@ -113,11 +312,53 @@ func (client *Client) SetUserAgent(userAgent string) {
 	client.userAgent = userAgent
 }
 
+//set SecurityToken
+func (client *Client) SetSecurityToken(securityToken string) {
+	client.securityToken = securityToken
+}
+
+// SetTransport sets transport to the http client
+func (client *Client) SetTransport(transport http.RoundTripper) {
+	if client.httpClient == nil {
+		client.httpClient = &http.Client{}
+	}
+	client.httpClient.Transport = transport
+}
+
+func (client *Client) initEndpoint() error {
+	// if set any value to "CUSTOMIZED_ENDPOINT" could skip location service.
+	// example: export CUSTOMIZED_ENDPOINT=true
+	if os.Getenv("CUSTOMIZED_ENDPOINT") != "" {
+		return nil
+	}
+
+	if client.endpoint != "" {
+		return nil
+	}
+
+	if client.serviceCode != "" && client.regionID != "" {
+		endpoint := client.getEndpointByLocation()
+		if endpoint == "" {
+			return GetCustomError("InvalidEndpoint", "endpoint is empty,pls check")
+		}
+		client.endpoint = endpoint
+	}
+	return nil
+}
+
 // Invoke sends the raw HTTP request for ECS services
 func (client *Client) Invoke(action string, args interface{}, response interface{}) error {
+	if err := client.ensureProperties(); err != nil {
+		return err
+	}
+
+	//init endpoint
+	//if err := client.initEndpoint(); err != nil {
+	//	return err
+	//}
 
 	request := Request{}
-	request.init(client.version, action, client.AccessKeyId)
+	request.init(client.version, action, client.AccessKeyId, client.securityToken, client.regionID)
 
 	query := util.ConvertToQueryValues(request)
 	util.SetQueryValues(args, &query)
@@ -137,7 +378,7 @@ func (client *Client) Invoke(action string, args interface{}, response interface
 	// TODO move to util and add build val flag
 	httpReq.Header.Set("X-SDK-Client", `AliyunGO/`+Version+client.businessInfo)
 
-	httpReq.Header.Set("User-Agent", httpReq.UserAgent()+ " " +client.userAgent)
+	httpReq.Header.Set("User-Agent", httpReq.UserAgent()+" "+client.userAgent)
 
 	t0 := time.Now()
 	httpResp, err := client.httpClient.Do(httpReq)
@@ -161,12 +402,19 @@ func (client *Client) Invoke(action string, args interface{}, response interface
 	if client.debug {
 		var prettyJSON bytes.Buffer
 		err = json.Indent(&prettyJSON, body, "", "    ")
-		log.Println(string(prettyJSON.Bytes()))
+		if err != nil {
+			log.Printf("Failed in json.Indent: %v\n", err)
+		} else {
+			log.Printf("JSON body: %s\n", prettyJSON.String())
+		}
 	}
 
 	if statusCode >= 400 && statusCode <= 599 {
 		errorResponse := ErrorResponse{}
 		err = json.Unmarshal(body, &errorResponse)
+		if err != nil {
+			log.Printf("Failed in json.Unmarshal: %v\n", err)
+		}
 		ecsError := &Error{
 			ErrorResponse: errorResponse,
 			StatusCode:    statusCode,
@@ -185,9 +433,17 @@ func (client *Client) Invoke(action string, args interface{}, response interface
 
 // Invoke sends the raw HTTP request for ECS services
 func (client *Client) InvokeByFlattenMethod(action string, args interface{}, response interface{}) error {
+	if err := client.ensureProperties(); err != nil {
+		return err
+	}
+
+	//init endpoint
+	if err := client.initEndpoint(); err != nil {
+		return err
+	}
 
 	request := Request{}
-	request.init(client.version, action, client.AccessKeyId)
+	request.init(client.version, action, client.AccessKeyId, client.securityToken, client.regionID)
 
 	query := util.ConvertToQueryValues(request)
 
@@ -208,7 +464,7 @@ func (client *Client) InvokeByFlattenMethod(action string, args interface{}, res
 	// TODO move to util and add build val flag
 	httpReq.Header.Set("X-SDK-Client", `AliyunGO/`+Version+client.businessInfo)
 
-	httpReq.Header.Set("User-Agent", httpReq.UserAgent()+ " " +client.userAgent)
+	httpReq.Header.Set("User-Agent", httpReq.UserAgent()+" "+client.userAgent)
 
 	t0 := time.Now()
 	httpResp, err := client.httpClient.Do(httpReq)
@@ -232,12 +488,18 @@ func (client *Client) InvokeByFlattenMethod(action string, args interface{}, res
 	if client.debug {
 		var prettyJSON bytes.Buffer
 		err = json.Indent(&prettyJSON, body, "", "    ")
-		log.Println(string(prettyJSON.Bytes()))
+		if err != nil {
+			log.Printf("Failed in json.Indent: %v\n", err)
+		}
+		log.Println(prettyJSON.String())
 	}
 
 	if statusCode >= 400 && statusCode <= 599 {
 		errorResponse := ErrorResponse{}
 		err = json.Unmarshal(body, &errorResponse)
+		if err != nil {
+			log.Printf("Failed in json.Unmarshal: %v\n", err)
+		}
 		ecsError := &Error{
 			ErrorResponse: errorResponse,
 			StatusCode:    statusCode,
@@ -258,10 +520,17 @@ func (client *Client) InvokeByFlattenMethod(action string, args interface{}, res
 //改进了一下上面那个方法，可以使用各种Http方法
 //2017.1.30 增加了一个path参数，用来拓展访问的地址
 func (client *Client) InvokeByAnyMethod(method, action, path string, args interface{}, response interface{}) error {
+	if err := client.ensureProperties(); err != nil {
+		return err
+	}
+
+	//init endpoint
+	//if err := client.initEndpoint(); err != nil {
+	//	return err
+	//}
 
 	request := Request{}
-	request.init(client.version, action, client.AccessKeyId)
-
+	request.init(client.version, action, client.AccessKeyId, client.securityToken, client.regionID)
 	data := util.ConvertToQueryValues(request)
 	util.SetQueryValues(args, &data)
 
@@ -290,8 +559,7 @@ func (client *Client) InvokeByAnyMethod(method, action, path string, args interf
 
 	// TODO move to util and add build val flag
 	httpReq.Header.Set("X-SDK-Client", `AliyunGO/`+Version+client.businessInfo)
-
-	httpReq.Header.Set("User-Agent", httpReq.Header.Get("User-Agent")+ " " +client.userAgent)
+	httpReq.Header.Set("User-Agent", httpReq.Header.Get("User-Agent")+" "+client.userAgent)
 
 	t0 := time.Now()
 	httpResp, err := client.httpClient.Do(httpReq)
@@ -315,7 +583,7 @@ func (client *Client) InvokeByAnyMethod(method, action, path string, args interf
 	if client.debug {
 		var prettyJSON bytes.Buffer
 		err = json.Indent(&prettyJSON, body, "", "    ")
-		log.Println(string(prettyJSON.Bytes()))
+		log.Println(prettyJSON.String())
 	}
 
 	if statusCode >= 400 && statusCode <= 599 {
@@ -354,4 +622,14 @@ func GetClientErrorFromString(str string) error {
 
 func GetClientError(err error) error {
 	return GetClientErrorFromString(err.Error())
+}
+
+func GetCustomError(code, message string) error {
+	return &Error{
+		ErrorResponse: ErrorResponse{
+			Code:    code,
+			Message: message,
+		},
+		StatusCode: 400,
+	}
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package types
 
 import (
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -63,6 +64,11 @@ func (r *ManagedObjectReference) FromString(o string) bool {
 	return true
 }
 
+// Encode ManagedObjectReference for use with URL and File paths
+func (r ManagedObjectReference) Encode() string {
+	return strings.Join([]string{r.Type, url.QueryEscape(r.Value)}, "-")
+}
+
 func (c *PerfCounterInfo) Name() string {
 	return c.GroupInfo.GetElementDescription().Key + "." + c.NameInfo.GetElementDescription().Key + "." + string(c.RollupType)
 }
@@ -71,7 +77,7 @@ func defaultResourceAllocationInfo() ResourceAllocationInfo {
 	return ResourceAllocationInfo{
 		Reservation:           NewInt64(0),
 		ExpandableReservation: NewBool(true),
-		Limit: NewInt64(-1),
+		Limit:                 NewInt64(-1),
 		Shares: &SharesInfo{
 			Level: SharesLevelNormal,
 		},

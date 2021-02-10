@@ -46,6 +46,7 @@ type certificateRoot struct {
 type certificatesRoot struct {
 	Certificates []Certificate `json:"certificates"`
 	Links        *Links        `json:"links"`
+	Meta         *Meta         `json:"meta"`
 }
 
 // CertificatesServiceOp handles communication with certificates methods of the DigitalOcean API.
@@ -92,6 +93,9 @@ func (c *CertificatesServiceOp) List(ctx context.Context, opt *ListOptions) ([]C
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Certificates, resp, nil

@@ -19,7 +19,7 @@ type CreateKeyPairResponse struct {
 // CreateKeyPair creates keypair
 //
 // You can read doc at https://help.aliyun.com/document_detail/51771.html?spm=5176.doc51775.6.910.cedjfr
-func (client *Client) CreateKeyPair(args *CreateKeyPairArgs) (resp *CreateKeyPairResponse,err error) {
+func (client *Client) CreateKeyPair(args *CreateKeyPairArgs) (resp *CreateKeyPairResponse, err error) {
 	response := CreateKeyPairResponse{}
 	err = client.Invoke("CreateKeyPair", args, &response)
 	if err != nil {
@@ -43,7 +43,7 @@ type ImportKeyPairResponse struct {
 // ImportKeyPair import keypair
 //
 // You can read doc at https://help.aliyun.com/document_detail/51774.html?spm=5176.doc51771.6.911.BicQq2
-func (client *Client) ImportKeyPair(args *ImportKeyPairArgs) (resp *ImportKeyPairResponse,err error) {
+func (client *Client) ImportKeyPair(args *ImportKeyPairArgs) (resp *ImportKeyPairResponse, err error) {
 	response := ImportKeyPairResponse{}
 	err = client.Invoke("ImportKeyPair", args, &response)
 	if err != nil {
@@ -69,14 +69,14 @@ type DescribeKeyPairsResponse struct {
 	common.PaginationResult
 	RegionId common.Region
 	KeyPairs struct {
-			 KeyPair []KeyPairItemType
+		KeyPair []KeyPairItemType
 	}
 }
 
 // DescribeKeyPairs describe keypairs
 //
 // You can read doc at https://help.aliyun.com/document_detail/51773.html?spm=5176.doc51774.6.912.lyE0iX
-func (client *Client) DescribeKeyPairs(args *DescribeKeyPairsArgs) (KeyPairs   []KeyPairItemType, pagination *common.PaginationResult, err error) {
+func (client *Client) DescribeKeyPairs(args *DescribeKeyPairsArgs) (KeyPairs []KeyPairItemType, pagination *common.PaginationResult, err error) {
 	response, err := client.DescribeKeyPairsWithRaw(args)
 	if err != nil {
 		return nil, nil, err
@@ -149,5 +149,3 @@ func (client *Client) DeleteKeyPairs(args *DeleteKeyPairsArgs) (err error) {
 	}
 	return nil
 }
-
-

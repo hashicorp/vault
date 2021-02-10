@@ -21,7 +21,6 @@ import (
 )
 
 // GetParametersForImport invokes the kms.GetParametersForImport API synchronously
-// api document: https://help.aliyun.com/api/kms/getparametersforimport.html
 func (client *Client) GetParametersForImport(request *GetParametersForImportRequest) (response *GetParametersForImportResponse, err error) {
 	response = CreateGetParametersForImportResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) GetParametersForImport(request *GetParametersForImportRequ
 }
 
 // GetParametersForImportWithChan invokes the kms.GetParametersForImport API asynchronously
-// api document: https://help.aliyun.com/api/kms/getparametersforimport.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) GetParametersForImportWithChan(request *GetParametersForImportRequest) (<-chan *GetParametersForImportResponse, <-chan error) {
 	responseChan := make(chan *GetParametersForImportResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) GetParametersForImportWithChan(request *GetParametersForIm
 }
 
 // GetParametersForImportWithCallback invokes the kms.GetParametersForImport API asynchronously
-// api document: https://help.aliyun.com/api/kms/getparametersforimport.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) GetParametersForImportWithCallback(request *GetParametersForImportRequest, callback func(response *GetParametersForImportResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -97,6 +92,7 @@ func CreateGetParametersForImportRequest() (request *GetParametersForImportReque
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "GetParametersForImport", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

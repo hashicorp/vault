@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Key Management Service API
@@ -18,7 +19,9 @@ type VaultSummary struct {
 	// The OCID of the compartment that contains a particular vault.
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
-	// The service endpoint to perform cryptographic operations against. Cryptographic operations include 'Encrypt,' 'Decrypt,' and 'GenerateDataEncryptionKey' operations.
+	// The service endpoint to perform cryptographic operations against. Cryptographic operations include
+	// Encrypt (https://docs.cloud.oracle.com/api/#/en/key/release/EncryptedData/Encrypt), Decrypt (https://docs.cloud.oracle.com/api/#/en/key/release/DecryptedData/Decrypt),
+	// and GenerateDataEncryptionKey (https://docs.cloud.oracle.com/api/#/en/key/release/GeneratedKey/GenerateDataEncryptionKey) operations.
 	CryptoEndpoint *string `mandatory:"true" json:"cryptoEndpoint"`
 
 	// A user-friendly name for a vault. It does not have to be unique, and it is changeable.
@@ -28,27 +31,29 @@ type VaultSummary struct {
 	// The OCID of a vault.
 	Id *string `mandatory:"true" json:"id"`
 
-	// A vault's current state.
+	// A vault's current lifecycle state.
 	// Example: `ACTIVE`
 	LifecycleState VaultSummaryLifecycleStateEnum `mandatory:"true" json:"lifecycleState"`
 
-	// The service endpoint to perform management operations against. Management operations include 'Create,' 'Update,' 'List,' 'Get,' and 'Delete' operations.
+	// The service endpoint to perform management operations against. Management operations include "Create," "Update," "List," "Get," and "Delete" operations.
 	ManagementEndpoint *string `mandatory:"true" json:"managementEndpoint"`
 
 	// The date and time a vault was created, expressed in RFC 3339 (https://tools.ietf.org/html/rfc3339) timestamp format.
 	// Example: `2018-04-03T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 
-	// The type of vault. Each type of vault stores keys with different degrees of isolation and has different options and pricing.
+	// The type of vault. Each type of vault stores keys with different
+	// degrees of isolation and has different options and pricing.
 	VaultType VaultSummaryVaultTypeEnum `mandatory:"true" json:"vaultType"`
 
-	// Usage of predefined tag keys. These predefined keys are scoped to namespaces.
-	// Example: `{"foo-namespace": {"bar-key": "foo-value"}}`
+	// Defined tags for this resource. Each key is predefined and scoped to a namespace.
+	// For more information, see Resource Tags (https://docs.cloud.oracle.com/Content/General/Concepts/resourcetags.htm).
+	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// Simple key-value pair that is applied without any predefined name, type, or scope.
-	// Exists for cross-compatibility only.
-	// Example: `{"bar-key": "value"}`
+	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
+	// For more information, see Resource Tags (https://docs.cloud.oracle.com/Content/General/Concepts/resourcetags.htm).
+	// Example: `{"Department": "Finance"}`
 	FreeformTags map[string]string `mandatory:"false" json:"freeformTags"`
 }
 
@@ -69,6 +74,8 @@ const (
 	VaultSummaryLifecycleStateSchedulingDeletion VaultSummaryLifecycleStateEnum = "SCHEDULING_DELETION"
 	VaultSummaryLifecycleStateCancellingDeletion VaultSummaryLifecycleStateEnum = "CANCELLING_DELETION"
 	VaultSummaryLifecycleStateUpdating           VaultSummaryLifecycleStateEnum = "UPDATING"
+	VaultSummaryLifecycleStateBackupInProgress   VaultSummaryLifecycleStateEnum = "BACKUP_IN_PROGRESS"
+	VaultSummaryLifecycleStateRestoring          VaultSummaryLifecycleStateEnum = "RESTORING"
 )
 
 var mappingVaultSummaryLifecycleState = map[string]VaultSummaryLifecycleStateEnum{
@@ -80,6 +87,8 @@ var mappingVaultSummaryLifecycleState = map[string]VaultSummaryLifecycleStateEnu
 	"SCHEDULING_DELETION": VaultSummaryLifecycleStateSchedulingDeletion,
 	"CANCELLING_DELETION": VaultSummaryLifecycleStateCancellingDeletion,
 	"UPDATING":            VaultSummaryLifecycleStateUpdating,
+	"BACKUP_IN_PROGRESS":  VaultSummaryLifecycleStateBackupInProgress,
+	"RESTORING":           VaultSummaryLifecycleStateRestoring,
 }
 
 // GetVaultSummaryLifecycleStateEnumValues Enumerates the set of values for VaultSummaryLifecycleStateEnum
@@ -97,10 +106,12 @@ type VaultSummaryVaultTypeEnum string
 // Set of constants representing the allowable values for VaultSummaryVaultTypeEnum
 const (
 	VaultSummaryVaultTypeVirtualPrivate VaultSummaryVaultTypeEnum = "VIRTUAL_PRIVATE"
+	VaultSummaryVaultTypeDefault        VaultSummaryVaultTypeEnum = "DEFAULT"
 )
 
 var mappingVaultSummaryVaultType = map[string]VaultSummaryVaultTypeEnum{
 	"VIRTUAL_PRIVATE": VaultSummaryVaultTypeVirtualPrivate,
+	"DEFAULT":         VaultSummaryVaultTypeDefault,
 }
 
 // GetVaultSummaryVaultTypeEnumValues Enumerates the set of values for VaultSummaryVaultTypeEnum

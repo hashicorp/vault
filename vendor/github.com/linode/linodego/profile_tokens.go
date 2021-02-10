@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // Token represents a Token object
@@ -13,6 +16,7 @@ type Token struct {
 	ID int `json:"id"`
 
 	// The scopes this token was created with. These define what parts of the Account the token can be used to access. Many command-line tools, such as the Linode CLI, require tokens with access to *. Tokens with more restrictive scopes are generally more secure.
+	// Valid values are "*" or a comma separated list of scopes https://developers.linode.com/api/v4/#o-auth
 	Scopes string `json:"scopes"`
 
 	// This token's label. This is for display purposes only, but can be used to more easily track what you're using each token for. (1-100 Characters)
@@ -22,12 +26,10 @@ type Token struct {
 	Token string `json:"token"`
 
 	// The date and time this token was created.
-	Created    *time.Time `json:"-"`
-	CreatedStr string     `json:"created"`
+	Created *time.Time `json:"-"`
 
 	// When this token will expire. Personal Access Tokens cannot be renewed, so after this time the token will be completely unusable and a new token will need to be generated. Tokens may be created with "null" as their expiry and will never expire unless revoked.
-	Expiry    *time.Time `json:"-"`
-	ExpiryStr string     `json:"expiry"`
+	Expiry *time.Time `json:"-"`
 }
 
 // TokenCreateOptions fields are those accepted by CreateToken
@@ -46,6 +48,28 @@ type TokenCreateOptions struct {
 type TokenUpdateOptions struct {
 	// This token's label. This is for display purposes only, but can be used to more easily track what you're using each token for. (1-100 Characters)
 	Label string `json:"label"`
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *Token) UnmarshalJSON(b []byte) error {
+	type Mask Token
+
+	p := struct {
+		*Mask
+		Created *parseabletime.ParseableTime `json:"created"`
+		Expiry  *parseabletime.ParseableTime `json:"expiry"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Created = (*time.Time)(p.Created)
+	i.Expiry = (*time.Time)(p.Expiry)
+
+	return nil
 }
 
 // GetCreateOptions converts a Token to TokenCreateOptions for use in CreateToken
@@ -86,20 +110,11 @@ func (resp *TokensPagedResponse) appendData(r *TokensPagedResponse) {
 func (c *Client) ListTokens(ctx context.Context, opts *ListOptions) ([]Token, error) {
 	response := TokensPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
 	return response.Data, nil
-}
-
-// fixDates converts JSON timestamps to Go time.Time values
-func (i *Token) fixDates() *Token {
-	i.Created, _ = parseDates(i.CreatedStr)
-	i.Expiry, _ = parseDates(i.ExpiryStr)
-	return i
 }
 
 // GetToken gets the token with the provided ID
@@ -109,11 +124,11 @@ func (c *Client) GetToken(ctx context.Context, id int) (*Token, error) {
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&Token{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&Token{}).Get(e))
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Token).fixDates(), nil
+	return r.Result().(*Token), nil
 }
 
 // CreateToken creates a Token
@@ -142,17 +157,17 @@ func (c *Client) CreateToken(ctx context.Context, createOpts TokenCreateOptions)
 	if bodyData, err := json.Marshal(createOptsFixed); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Token).fixDates(), nil
+	return r.Result().(*Token), nil
 }
 
 // UpdateToken updates the Token with the specified id
@@ -169,17 +184,17 @@ func (c *Client) UpdateToken(ctx context.Context, id int, updateOpts TokenUpdate
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Token).fixDates(), nil
+	return r.Result().(*Token), nil
 }
 
 // DeleteToken deletes the Token with the specified id
@@ -190,6 +205,6 @@ func (c *Client) DeleteToken(ctx context.Context, id int) error {
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 	return err
 }

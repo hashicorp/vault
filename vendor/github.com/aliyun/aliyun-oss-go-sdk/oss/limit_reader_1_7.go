@@ -15,13 +15,13 @@ const (
 	perTokenBandwidthSize int = 1024
 )
 
-// OssLimiter: wrapper rate.Limiter
+// OssLimiter wrapper rate.Limiter
 type OssLimiter struct {
 	limiter *rate.Limiter
 }
 
-// GetOssLimiter:create OssLimiter
-// uploadSpeed:KB/s
+// GetOssLimiter create OssLimiter
+// uploadSpeed KB/s
 func GetOssLimiter(uploadSpeed int) (ossLimiter *OssLimiter, err error) {
 	limiter := rate.NewLimiter(rate.Limit(uploadSpeed), uploadSpeed)
 
@@ -33,7 +33,7 @@ func GetOssLimiter(uploadSpeed int) (ossLimiter *OssLimiter, err error) {
 	}, nil
 }
 
-// LimitSpeedReader: for limit bandwidth upload
+// LimitSpeedReader for limit bandwidth upload
 type LimitSpeedReader struct {
 	io.ReadCloser
 	reader     io.Reader
@@ -73,10 +73,9 @@ func (r *LimitSpeedReader) Read(p []byte) (n int, err error) {
 			err = fmt.Errorf("LimitSpeedReader.Read() failure,ReserveN error,start:%d,end:%d,burst:%d,perTokenBandwidthSize:%d",
 				start, end, burst, perTokenBandwidthSize)
 			return
-		} else {
-			timeDelay := re.Delay()
-			time.Sleep(timeDelay)
 		}
+		timeDelay := re.Delay()
+		time.Sleep(timeDelay)
 	}
 	return
 }

@@ -15,6 +15,9 @@ type GetOptions struct {
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -28,6 +31,9 @@ type GetAndTouchOptions struct {
 	CollectionID   uint32
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -43,6 +49,9 @@ type GetAndLockOptions struct {
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -55,6 +64,9 @@ type GetAnyReplicaOptions struct {
 	CollectionID   uint32
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -70,6 +82,9 @@ type GetOneReplicaOptions struct {
 	ReplicaIdx     int
 	Deadline       time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -84,6 +99,9 @@ type TouchOptions struct {
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -97,6 +115,9 @@ type UnlockOptions struct {
 	CollectionID   uint32
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -113,6 +134,9 @@ type DeleteOptions struct {
 	DurabilityLevelTimeout time.Duration
 	CollectionID           uint32
 	Deadline               time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -133,6 +157,9 @@ type AddOptions struct {
 	CollectionID           uint32
 	Deadline               time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -152,6 +179,9 @@ type storeOptions struct {
 	CollectionID           uint32
 	Deadline               time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -170,6 +200,9 @@ type SetOptions struct {
 	DurabilityLevelTimeout time.Duration
 	CollectionID           uint32
 	Deadline               time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -191,6 +224,9 @@ type ReplaceOptions struct {
 	CollectionID           uint32
 	Deadline               time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -207,6 +243,9 @@ type AdjoinOptions struct {
 	DurabilityLevelTimeout time.Duration
 	CollectionID           uint32
 	Deadline               time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -227,6 +266,9 @@ type CounterOptions struct {
 	CollectionID           uint32
 	Deadline               time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -240,6 +282,9 @@ type GetRandomOptions struct {
 	ScopeName      string
 	CollectionID   uint32
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -252,6 +297,9 @@ type GetMetaOptions struct {
 	CollectionID   uint32
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
@@ -274,6 +322,9 @@ type SetMetaOptions struct {
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -294,6 +345,9 @@ type DeleteMetaOptions struct {
 	CollectionID   uint32
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext

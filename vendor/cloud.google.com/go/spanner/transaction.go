@@ -881,7 +881,7 @@ func (t *ReadWriteTransaction) BatchUpdate(ctx context.Context, stmts []Statemen
 		}
 		counts = append(counts, count)
 	}
-	if resp.Status.Code != 0 {
+	if resp.Status != nil && resp.Status.Code != 0 {
 		return counts, spannerErrorf(codes.Code(uint32(resp.Status.Code)), resp.Status.Message)
 	}
 	return counts, nil
@@ -1024,7 +1024,7 @@ func (t *ReadWriteTransaction) runInTransaction(ctx context.Context, f func(cont
 		errDuringCommit = err != nil
 	}
 	if err != nil {
-		if isAbortErr(err) {
+		if isAbortedErr(err) {
 			// Retry the transaction using the same session on ABORT error.
 			// Cloud Spanner will create the new transaction with the previous
 			// one's wound-wait priority.
@@ -1098,7 +1098,7 @@ func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Muta
 			},
 			Mutations: mPb,
 		})
-		if err != nil && !isAbortErr(err) {
+		if err != nil && !isAbortedErr(err) {
 			if isSessionNotFoundError(err) {
 				// Discard the bad session.
 				sh.destroy()
@@ -1116,7 +1116,7 @@ func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Muta
 
 // isAbortedErr returns true if the error indicates that an gRPC call is
 // aborted on the server side.
-func isAbortErr(err error) bool {
+func isAbortedErr(err error) bool {
 	if err == nil {
 		return false
 	}

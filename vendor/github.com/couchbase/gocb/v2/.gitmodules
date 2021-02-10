@@ -1,3 +1,0 @@
-[submodule "testdata/sdk-testcases"]
-	path = testdata/sdk-testcases
-	url = https://github.com/couchbaselabs/sdk-testcases

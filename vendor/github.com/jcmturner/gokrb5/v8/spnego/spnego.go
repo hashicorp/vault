@@ -92,7 +92,7 @@ func (s *SPNEGO) AcceptSecContext(ct gssapi.ContextToken) (bool, context.Context
 // Log will write to the service's logger if it is configured.
 func (s *SPNEGO) Log(format string, v ...interface{}) {
 	if s.serviceSettings.Logger() != nil {
-		s.serviceSettings.Logger().Printf(format, v...)
+		s.serviceSettings.Logger().Output(2, fmt.Sprintf(format, v...))
 	}
 }
 

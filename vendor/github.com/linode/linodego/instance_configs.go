@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // InstanceConfig represents all of the settings that control the boot and run configuration of a Linode Instance
 type InstanceConfig struct {
-	CreatedStr string `json:"created"`
-	UpdatedStr string `json:"updated"`
-
 	ID          int                      `json:"id"`
 	Label       string                   `json:"label"`
 	Comments    string                   `json:"comments"`
@@ -90,6 +90,28 @@ type InstanceConfigUpdateOptions struct {
 	VirtMode   string `json:"virt_mode,omitempty"`
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *InstanceConfig) UnmarshalJSON(b []byte) error {
+	type Mask InstanceConfig
+
+	p := struct {
+		*Mask
+		Created *parseabletime.ParseableTime `json:"created"`
+		Updated *parseabletime.ParseableTime `json:"updated"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Created = (*time.Time)(p.Created)
+	i.Updated = (*time.Time)(p.Updated)
+
+	return nil
+}
+
 // GetCreateOptions converts a InstanceConfig to InstanceConfigCreateOptions for use in CreateInstanceConfig
 func (i InstanceConfig) GetCreateOptions() InstanceConfigCreateOptions {
 	initrd := 0
@@ -144,20 +166,11 @@ func (resp *InstanceConfigsPagedResponse) appendData(r *InstanceConfigsPagedResp
 func (c *Client) ListInstanceConfigs(ctx context.Context, linodeID int, opts *ListOptions) ([]InstanceConfig, error) {
 	response := InstanceConfigsPagedResponse{}
 	err := c.listHelperWithID(ctx, &response, linodeID, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
 	return response.Data, nil
-}
-
-// fixDates converts JSON timestamps to Go time.Time values
-func (i *InstanceConfig) fixDates() *InstanceConfig {
-	i.Created, _ = parseDates(i.CreatedStr)
-	i.Updated, _ = parseDates(i.UpdatedStr)
-	return i
 }
 
 // GetInstanceConfig gets the template with the provided ID
@@ -167,17 +180,19 @@ func (c *Client) GetInstanceConfig(ctx context.Context, linodeID int, configID i
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d", e, configID)
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&InstanceConfig{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&InstanceConfig{}).Get(e))
+
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*InstanceConfig).fixDates(), nil
+	return r.Result().(*InstanceConfig), nil
 }
 
 // CreateInstanceConfig creates a new InstanceConfig for the given Instance
 func (c *Client) CreateInstanceConfig(ctx context.Context, linodeID int, createOpts InstanceConfigCreateOptions) (*InstanceConfig, error) {
 	var body string
 	e, err := c.InstanceConfigs.endpointWithID(linodeID)
+
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +205,7 @@ func (c *Client) CreateInstanceConfig(ctx context.Context, linodeID int, createO
 		return nil, err
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
@@ -198,13 +213,14 @@ func (c *Client) CreateInstanceConfig(ctx context.Context, linodeID int, createO
 		return nil, err
 	}
 
-	return r.Result().(*InstanceConfig).fixDates(), nil
+	return r.Result().(*InstanceConfig), nil
 }
 
 // UpdateInstanceConfig update an InstanceConfig for the given Instance
 func (c *Client) UpdateInstanceConfig(ctx context.Context, linodeID int, configID int, updateOpts InstanceConfigUpdateOptions) (*InstanceConfig, error) {
 	var body string
 	e, err := c.InstanceConfigs.endpointWithID(linodeID)
+
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +233,7 @@ func (c *Client) UpdateInstanceConfig(ctx context.Context, linodeID int, configI
 		return nil, err
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
@@ -225,7 +241,7 @@ func (c *Client) UpdateInstanceConfig(ctx context.Context, linodeID int, configI
 		return nil, err
 	}
 
-	return r.Result().(*InstanceConfig).fixDates(), nil
+	return r.Result().(*InstanceConfig), nil
 }
 
 // RenameInstanceConfig renames an InstanceConfig
@@ -241,6 +257,6 @@ func (c *Client) DeleteInstanceConfig(ctx context.Context, linodeID int, configI
 	}
 	e = fmt.Sprintf("%s/%d", e, configID)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 	return err
 }

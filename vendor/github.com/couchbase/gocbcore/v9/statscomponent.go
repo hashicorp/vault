@@ -69,6 +69,13 @@ func (sc *statsComponent) Stats(opts StatsOptions, cb StatsCallback) (PendingOp,
 		}
 	}
 
+	var userFrame *memd.UserImpersonationFrame
+	if len(opts.User) > 0 {
+		userFrame = &memd.UserImpersonationFrame{
+			User: opts.User,
+		}
+	}
+
 	if opts.RetryStrategy == nil {
 		opts.RetryStrategy = sc.defaultRetryStrategy
 	}
@@ -104,9 +111,9 @@ func (sc *statsComponent) Stats(opts StatsOptions, cb StatsCallback) (PendingOp,
 				return
 			}
 
-			// Check if the key length is zero.  This indicates that we have reached
+			// Check if the key and value length is zero.  This indicates that we have reached
 			// the ending of the stats listing by this server.
-			if len(resp.Key) == 0 {
+			if len(resp.Key) == 0 && len(resp.Value) == 0 {
 				// As this is a persistent request, we must manually cancel it to remove
 				// it from the pending ops list.  To ensure we do not race multiple cancels,
 				// we only handle it as completed the one time cancellation succeeds.
@@ -117,18 +124,28 @@ func (sc *statsComponent) Stats(opts StatsOptions, cb StatsCallback) (PendingOp,
 				return
 			}
 
-			// Add the stat for this server to the list of stats.
-			curStats.Stats[string(resp.Key)] = string(resp.Value)
+			curStats.StatsKeys = append(curStats.StatsKeys, resp.Key)
+			curStats.StatsChunks = append(curStats.StatsChunks, resp.Value)
+			if len(resp.Key) == 0 {
+				// We do this for the sake of consistency.
+				curStats.Stats[""] += string(resp.Value)
+			} else {
+				// Add the stat for this server to the list of stats.
+				curStats.Stats[string(resp.Key)] += string(resp.Value)
+			}
+			// If we don't reassign this then we lose any values added to StatsKeys and StatsChunks.
+			stats[serverAddress] = curStats
 		}
 
 		req := &memdQRequest{
 			Packet: memd.Packet{
-				Magic:    memd.CmdMagicReq,
-				Command:  memd.CmdStat,
-				Datatype: 0,
-				Cas:      0,
-				Key:      []byte(opts.Key),
-				Value:    nil,
+				Magic:                  memd.CmdMagicReq,
+				Command:                memd.CmdStat,
+				Datatype:               0,
+				Cas:                    0,
+				Key:                    []byte(opts.Key),
+				Value:                  nil,
+				UserImpersonationFrame: userFrame,
 			},
 			Persistent:       true,
 			Callback:         handler,
@@ -176,7 +193,12 @@ func (sc *statsComponent) Stats(opts StatsOptions, cb StatsCallback) (PendingOp,
 // SingleServerStats represents the stats returned from a single server.
 type SingleServerStats struct {
 	Stats map[string]string
-	Error error
+	// StatsKeys and StatsChunks provide access to the raw keys and values returned on a per packet basis.
+	// This is useful for stats keys such as connections which, unlike most stats keys, return us a complex object
+	// per packet. Keys and chunks maintain the same ordering for indexes.
+	StatsKeys   [][]byte
+	StatsChunks [][]byte
+	Error       error
 }
 
 // StatsTarget is used for providing a specific target to the Stats operation.
@@ -196,6 +218,9 @@ type StatsOptions struct {
 	Target        StatsTarget
 	RetryStrategy RetryStrategy
 	Deadline      time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext

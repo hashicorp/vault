@@ -31,7 +31,7 @@ type largeChunkDecoder struct {
 }
 
 func decodeLargeChunk(r io.Reader, rowCount int, cellCount int) ([][]*string, error) {
-	glog.V(2).Info("custom JSON Decoder")
+	logger.Info("custom JSON Decoder")
 	lcd := largeChunkDecoder{
 		r, rowCount, cellCount,
 		0, 0,

@@ -46,6 +46,7 @@ type KeyUpdateRequest struct {
 type keysRoot struct {
 	SSHKeys []Key  `json:"ssh_keys"`
 	Links   *Links `json:"links"`
+	Meta    *Meta  `json:"meta"`
 }
 
 type keyRoot struct {
@@ -82,6 +83,9 @@ func (s *KeysServiceOp) List(ctx context.Context, opt *ListOptions) ([]Key, *Res
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.SSHKeys, resp, err

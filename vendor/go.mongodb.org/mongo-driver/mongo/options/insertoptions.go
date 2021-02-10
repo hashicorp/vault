@@ -73,7 +73,7 @@ func (imo *InsertManyOptions) SetOrdered(b bool) *InsertManyOptions {
 	return imo
 }
 
-// MergeInsertManyOptions combines the givent InsertManyOptions instances into a single InsertManyOptions in a last one
+// MergeInsertManyOptions combines the given InsertManyOptions instances into a single InsertManyOptions in a last one
 // wins fashion.
 func MergeInsertManyOptions(opts ...*InsertManyOptions) *InsertManyOptions {
 	imOpts := InsertMany()

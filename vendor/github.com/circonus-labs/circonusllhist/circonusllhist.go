@@ -562,32 +562,46 @@ func (h *Histogram) insertBin(hb *bin, count int64) uint64 {
 	}
 	found, idx := h.internalFind(hb)
 	if !found {
-		if h.used == h.allocd {
-			new_bvs := make([]bin, h.allocd+defaultHistSize)
-			if idx > 0 {
-				copy(new_bvs[0:], h.bvs[0:idx])
-			}
-			if idx < h.used {
-				copy(new_bvs[idx+1:], h.bvs[idx:])
-			}
-			h.allocd = h.allocd + defaultHistSize
-			h.bvs = new_bvs
-		} else {
-			copy(h.bvs[idx+1:], h.bvs[idx:h.used])
-		}
-		h.bvs[idx].val = hb.val
-		h.bvs[idx].exp = hb.exp
-		h.bvs[idx].count = uint64(count)
-		h.used++
-		for i := idx; i < h.used; i++ {
-			f2 := h.bvs[i].newFastL2()
-			if h.lookup[f2.l1] == nil {
-				h.lookup[f2.l1] = make([]uint16, 256)
-			}
-			h.lookup[f2.l1][f2.l2] = uint16(i) + 1
-		}
-		return h.bvs[idx].count
+		count := h.insertNewBinAt(idx, hb, count)
+		// update the fast lookup table data after the index
+		h.updateFast(idx)
+		return count
 	}
+	return h.updateOldBinAt(idx, hb, count)
+}
+
+func (h *Histogram) insertNewBinAt(idx uint16, hb *bin, count int64) uint64 {
+	if h.used == h.allocd {
+		new_bvs := make([]bin, h.allocd+defaultHistSize)
+		if idx > 0 {
+			copy(new_bvs[0:], h.bvs[0:idx])
+		}
+		if idx < h.used {
+			copy(new_bvs[idx+1:], h.bvs[idx:])
+		}
+		h.allocd = h.allocd + defaultHistSize
+		h.bvs = new_bvs
+	} else {
+		copy(h.bvs[idx+1:], h.bvs[idx:h.used])
+	}
+	h.bvs[idx].val = hb.val
+	h.bvs[idx].exp = hb.exp
+	h.bvs[idx].count = uint64(count)
+	h.used++
+	return h.bvs[idx].count
+}
+
+func (h *Histogram) updateFast(start uint16) {
+	for i := start; i < h.used; i++ {
+		f2 := h.bvs[i].newFastL2()
+		if h.lookup[f2.l1] == nil {
+			h.lookup[f2.l1] = make([]uint16, 256)
+		}
+		h.lookup[f2.l1][f2.l2] = uint16(i) + 1
+	}
+}
+
+func (h *Histogram) updateOldBinAt(idx uint16, hb *bin, count int64) uint64 {
 	var newval uint64
 	if count >= 0 {
 		newval = h.bvs[idx].count + uint64(count)
@@ -914,4 +928,46 @@ func (h *Histogram) MarshalJSON() ([]byte, error) {
 		return buf.Bytes(), err
 	}
 	return json.Marshal(buf.String())
+}
+
+// Merge merges all bins from another histogram.
+func (h *Histogram) Merge(o *Histogram) {
+	if o == nil {
+		return
+	}
+
+	if o.useLocks {
+		o.mutex.Lock()
+		defer o.mutex.Unlock()
+	}
+	if h.useLocks {
+		h.mutex.Lock()
+		defer h.mutex.Unlock()
+	}
+
+	var i, j uint16
+	for ; i < h.used && j < o.used; i++ {
+		diff := h.bvs[i].compare(&o.bvs[j])
+		// o.bvs[j] > h.bvs[i], do nothing.
+		if diff > 0 {
+			continue
+		}
+
+		b := &o.bvs[j]
+		j++
+		switch {
+		case diff == 0:
+			h.updateOldBinAt(i, b, int64(b.count))
+		case diff < 0:
+			h.insertNewBinAt(i, b, int64(b.count))
+		}
+	}
+
+	// append the rest bins
+	for ; j < o.used; j++ {
+		h.insertNewBinAt(h.used, &o.bvs[j], int64(o.bvs[j].count))
+	}
+
+	// rebuild all the fast lookup table
+	h.updateFast(0)
 }

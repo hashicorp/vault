@@ -17,16 +17,15 @@ limitations under the License.
 package object
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
-
-	"context"
-	"net/http"
-	"net/url"
 
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/session"
@@ -69,6 +68,11 @@ func NewDatastore(c *vim25.Client, ref types.ManagedObjectReference) *Datastore 
 }
 
 func (d Datastore) Path(path string) string {
+	var p DatastorePath
+	if p.FromString(path) {
+		return p.String() // already in "[datastore] path" format
+	}
+
 	return (&DatastorePath{
 		Datastore: d.Name(),
 		Path:      path,

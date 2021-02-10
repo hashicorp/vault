@@ -94,6 +94,9 @@ type PingOptions struct {
 	MgmtDeadline time.Time
 	ServiceTypes []ServiceType
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	ignoreMissingServices bool
 }
 

@@ -15,7 +15,7 @@ const (
 
 // StorageService is an interface for interfacing with the storage
 // endpoints of the Digital Ocean API.
-// See: https://developers.digitalocean.com/documentation/v2#storage
+// See: https://developers.digitalocean.com/documentation/v2/#block-storage
 type StorageService interface {
 	ListVolumes(context.Context, *ListVolumeParams) ([]Volume, *Response, error)
 	GetVolume(context.Context, string) (*Volume, *Response, error)
@@ -53,12 +53,14 @@ type Volume struct {
 	CreatedAt       time.Time `json:"created_at"`
 	FilesystemType  string    `json:"filesystem_type"`
 	FilesystemLabel string    `json:"filesystem_label"`
+	Tags            []string  `json:"tags"`
 }
 
 func (f Volume) String() string {
 	return Stringify(f)
 }
 
+// URN returns the volume ID as a valid DO API URN
 func (f Volume) URN() string {
 	return ToURN("Volume", f.ID)
 }
@@ -66,6 +68,7 @@ func (f Volume) URN() string {
 type storageVolumesRoot struct {
 	Volumes []Volume `json:"volumes"`
 	Links   *Links   `json:"links"`
+	Meta    *Meta    `json:"meta"`
 }
 
 type storageVolumeRoot struct {
@@ -76,13 +79,14 @@ type storageVolumeRoot struct {
 // VolumeCreateRequest represents a request to create a block store
 // volume.
 type VolumeCreateRequest struct {
-	Region          string `json:"region"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	SizeGigaBytes   int64  `json:"size_gigabytes"`
-	SnapshotID      string `json:"snapshot_id"`
-	FilesystemType  string `json:"filesystem_type"`
-	FilesystemLabel string `json:"filesystem_label"`
+	Region          string   `json:"region"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+	SizeGigaBytes   int64    `json:"size_gigabytes"`
+	SnapshotID      string   `json:"snapshot_id"`
+	FilesystemType  string   `json:"filesystem_type"`
+	FilesystemLabel string   `json:"filesystem_label"`
+	Tags            []string `json:"tags"`
 }
 
 // ListVolumes lists all storage volumes.
@@ -119,6 +123,9 @@ func (svc *StorageServiceOp) ListVolumes(ctx context.Context, params *ListVolume
 
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Volumes, resp, nil
@@ -173,9 +180,10 @@ func (svc *StorageServiceOp) DeleteVolume(ctx context.Context, id string) (*Resp
 // SnapshotCreateRequest represents a request to create a block store
 // volume.
 type SnapshotCreateRequest struct {
-	VolumeID    string `json:"volume_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	VolumeID    string   `json:"volume_id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Tags        []string `json:"tags"`
 }
 
 // ListSnapshots lists all snapshots related to a storage volume.
@@ -199,6 +207,9 @@ func (svc *StorageServiceOp) ListSnapshots(ctx context.Context, volumeID string,
 
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Snapshots, resp, nil

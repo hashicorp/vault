@@ -81,8 +81,8 @@ type GetPasswordPolicyRequest struct {
 // GetPasswordPolicyResponse is the response struct for api GetPasswordPolicy
 type GetPasswordPolicyResponse struct {
 	*responses.BaseResponse
-	RequestId      string         `json:"RequestId" xml:"RequestId"`
-	PasswordPolicy PasswordPolicy `json:"PasswordPolicy" xml:"PasswordPolicy"`
+	RequestId      string                            `json:"RequestId" xml:"RequestId"`
+	PasswordPolicy PasswordPolicyInGetPasswordPolicy `json:"PasswordPolicy" xml:"PasswordPolicy"`
 }
 
 // CreateGetPasswordPolicyRequest creates a request to invoke GetPasswordPolicy API
@@ -90,7 +90,7 @@ func CreateGetPasswordPolicyRequest() (request *GetPasswordPolicyRequest) {
 	request = &GetPasswordPolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetPasswordPolicy", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetPasswordPolicy", "Ram", "openAPI")
 	return
 }
 

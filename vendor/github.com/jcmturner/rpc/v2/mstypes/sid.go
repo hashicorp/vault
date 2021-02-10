@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"strings"
 )
 
 // RPCSID implements https://msdn.microsoft.com/en-us/library/cc230364.aspx
@@ -16,17 +18,19 @@ type RPCSID struct {
 
 // String returns the string representation of the RPC_SID.
 func (s *RPCSID) String() string {
-	var str string
+	var strb strings.Builder
+	strb.WriteString("S-1-")
+
 	b := append(make([]byte, 2, 2), s.IdentifierAuthority[:]...)
 	// For a strange reason this is read big endian: https://msdn.microsoft.com/en-us/library/dd302645.aspx
 	i := binary.BigEndian.Uint64(b)
-	if i >= 4294967296 {
-		str = fmt.Sprintf("S-1-0x%s", hex.EncodeToString(s.IdentifierAuthority[:]))
+	if i > math.MaxUint32 {
+		fmt.Fprintf(&strb, "0x%s", hex.EncodeToString(s.IdentifierAuthority[:]))
 	} else {
-		str = fmt.Sprintf("S-1-%d", i)
+		fmt.Fprintf(&strb, "%d", i)
 	}
 	for _, sub := range s.SubAuthority {
-		str = fmt.Sprintf("%s-%d", str, sub)
+		fmt.Fprintf(&strb, "-%d", sub)
 	}
-	return str
+	return strb.String()
 }

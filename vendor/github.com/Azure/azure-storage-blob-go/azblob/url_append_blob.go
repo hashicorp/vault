@@ -56,14 +56,14 @@ func (ab AppendBlobURL) GetAccountInfo(ctx context.Context) (*BlobGetAccountInfo
 
 // Create creates a 0-length append blob. Call AppendBlock to append data to an append blob.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/put-blob.
-func (ab AppendBlobURL) Create(ctx context.Context, h BlobHTTPHeaders, metadata Metadata, ac BlobAccessConditions, blobTagsMap BlobTagsMap) (*AppendBlobCreateResponse, error) {
+func (ab AppendBlobURL) Create(ctx context.Context, h BlobHTTPHeaders, metadata Metadata, ac BlobAccessConditions, blobTagsMap BlobTagsMap, cpk ClientProvidedKeyOptions) (*AppendBlobCreateResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch := ac.ModifiedAccessConditions.pointers()
 	blobTagsString := SerializeBlobTagsHeader(blobTagsMap)
 	return ab.abClient.Create(ctx, 0, nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, h.ContentMD5,
 		&h.CacheControl, metadata, ac.LeaseAccessConditions.pointers(), &h.ContentDisposition,
-		nil, nil, EncryptionAlgorithmNone, // CPK-V
-		nil, // CPK-N
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK-V
+		cpk.EncryptionScope, // CPK-N
 		ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch,
 		nil, // Blob ifTags
 		nil,
@@ -75,7 +75,7 @@ func (ab AppendBlobURL) Create(ctx context.Context, h BlobHTTPHeaders, metadata 
 // This method panics if the stream is not at position 0.
 // Note that the http client closes the body stream after the request is sent to the service.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/append-block.
-func (ab AppendBlobURL) AppendBlock(ctx context.Context, body io.ReadSeeker, ac AppendBlobAccessConditions, transactionalMD5 []byte) (*AppendBlobAppendBlockResponse, error) {
+func (ab AppendBlobURL) AppendBlock(ctx context.Context, body io.ReadSeeker, ac AppendBlobAccessConditions, transactionalMD5 []byte, cpk ClientProvidedKeyOptions) (*AppendBlobAppendBlockResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := ac.ModifiedAccessConditions.pointers()
 	ifAppendPositionEqual, ifMaxSizeLessThanOrEqual := ac.AppendPositionAccessConditions.pointers()
 	count, err := validateSeekableStreamAt0AndGetCount(body)
@@ -87,8 +87,8 @@ func (ab AppendBlobURL) AppendBlock(ctx context.Context, body io.ReadSeeker, ac 
 		nil, // CRC
 		ac.LeaseAccessConditions.pointers(),
 		ifMaxSizeLessThanOrEqual, ifAppendPositionEqual,
-		nil, nil, EncryptionAlgorithmNone, // CPK
-		nil, // CPK-N
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK
+		cpk.EncryptionScope, // CPK-N
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,
 		nil, // Blob ifTags
 		nil)
@@ -96,14 +96,14 @@ func (ab AppendBlobURL) AppendBlock(ctx context.Context, body io.ReadSeeker, ac 
 
 // AppendBlockFromURL copies a new block of data from source URL to the end of the existing append blob.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/append-block-from-url.
-func (ab AppendBlobURL) AppendBlockFromURL(ctx context.Context, sourceURL url.URL, offset int64, count int64, destinationAccessConditions AppendBlobAccessConditions, sourceAccessConditions ModifiedAccessConditions, transactionalMD5 []byte) (*AppendBlobAppendBlockFromURLResponse, error) {
+func (ab AppendBlobURL) AppendBlockFromURL(ctx context.Context, sourceURL url.URL, offset int64, count int64, destinationAccessConditions AppendBlobAccessConditions, sourceAccessConditions ModifiedAccessConditions, transactionalMD5 []byte, cpk ClientProvidedKeyOptions) (*AppendBlobAppendBlockFromURLResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := destinationAccessConditions.ModifiedAccessConditions.pointers()
 	sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatchETag, sourceIfNoneMatchETag := sourceAccessConditions.pointers()
 	ifAppendPositionEqual, ifMaxSizeLessThanOrEqual := destinationAccessConditions.AppendPositionAccessConditions.pointers()
 	return ab.abClient.AppendBlockFromURL(ctx, sourceURL.String(), 0, httpRange{offset: offset, count: count}.pointers(),
 		transactionalMD5, nil, nil, nil,
-		nil, nil, EncryptionAlgorithmNone, // CPK
-		nil, // CPK-N
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK
+		cpk.EncryptionScope, // CPK-N
 		destinationAccessConditions.LeaseAccessConditions.pointers(),
 		ifMaxSizeLessThanOrEqual, ifAppendPositionEqual,
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,

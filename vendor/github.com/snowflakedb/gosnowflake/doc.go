@@ -125,6 +125,8 @@ A complete connection string looks similar to the following:
 Session-level parameters can also be set by using the SQL command "ALTER SESSION"
 (https://docs.snowflake.com/en/sql-reference/sql/alter-session.html).
 
+Alternatively, use OpenWithConfig() function to create a database handle with the specified Config.
+
 Proxy
 
 The Go Snowflake Driver honors the environment variables HTTP_PROXY, HTTPS_PROXY and NO_PROXY for the forward proxy setting.
@@ -144,56 +146,20 @@ If more than one value is specified, values should be separated by commas, for e
 
 Logging
 
-By default, the driver's builtin logger is NOP; no output is generated. This is
-intentional for those applications that use the same set of logger parameters
-not to conflict with glog, which is incorporated in the driver logging
-framework.
+By default, the driver's builtin logger is exposing logrus's FieldLogger and default at INFO level.
+Users can use SetLogger in driver.go to set a customized logger for gosnowflake package.
 
-In order to enable debug logging for the driver, add a build tag sfdebug to the
-go tool command lines, for example:
+In order to enable debug logging for the driver, user could use SetLogLevel("debug") in SFLogger interface
+as shown in demo code at cmd/logger.go. To redirect the logs SFlogger.SetOutput method could do the work.
 
-	go build -tags=sfdebug
 
-In your application, you will need to import the "flag" module, and include code
-to enable the logging. For example:
+Query request ID
 
-        if !flag.Parsed() {
-                // enable glog for Go Snowflake Driver
-                flag.Parse()
-        }
+Specific query request ID can be set in the context and will be passed through
+in place of the default randomized request ID. For example:
 
-For tests, run the test command with the tag along with glog parameters. For
-example, the following command will generate all activity logs in the standard
-error.
-
-	go test -tags=sfdebug -v . -vmodule=*=2 -stderrthreshold=INFO
-
-Likewise, if you build your application with the tag, you may specify the same
-set of glog parameters.
-
-	your_go_program -vmodule=*=2 -stderrthreshold=INFO
-
-Using the -stderrthreshold option will result in logging being shown in the STDERR
-of the executing shell. If you wish to have the logging in a file, then you may use
-the -log_dir option, and give it a path to a directory where log files will be made.
-
-	your_go_program -vmodule=*=2 -log_dir=/path/to/logs
-
-The -stderrthreshold option and the -log_dir option may also be used at the same time,
-and the log data will be put in both places.
-
-	your_go_program -vmodule=*=2 -stderrthreshold=INFO -log_dir=/path/to/logs
-
-To get the logs for a specific module, use the -vmodule option. For example, to
-retrieve the driver.go and connection.go module logs:
-
-	your_go_program -vmodule=driver=2,connection=2 -stderrthreshold=INFO
-
-Note: If your request retrieves no logs, call db.Close() or glog.flush() to flush the glog buffer.
-
-Note: The logger may be changed in the future for better logging. Currently if
-the applications use the same parameters as glog, you cannot collect both
-application and driver logs at the same time.
+	ctxWithID := WithRequestID(ctx, "app-request-id-...")
+	rows, err := db.QueryContext(ctxWithID, query)
 
 Canceling Query by CtrlC
 

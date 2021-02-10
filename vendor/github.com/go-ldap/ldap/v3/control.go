@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/go-asn1-ber/asn1-ber"
+	ber "github.com/go-asn1-ber/asn1-ber"
 )
 
 const (
@@ -404,33 +404,26 @@ func DecodeControl(packet *ber.Packet) (Control, error) {
 			if child.Tag == 0 {
 				//Warning
 				warningPacket := child.Children[0]
-				packet, err := ber.DecodePacketErr(warningPacket.Data.Bytes())
+				val, err := ber.ParseInt64(warningPacket.Data.Bytes())
 				if err != nil {
 					return nil, fmt.Errorf("failed to decode data bytes: %s", err)
 				}
-				val, ok := packet.Value.(int64)
-				if ok {
-					if warningPacket.Tag == 0 {
-						//timeBeforeExpiration
-						c.Expire = val
-						warningPacket.Value = c.Expire
-					} else if warningPacket.Tag == 1 {
-						//graceAuthNsRemaining
-						c.Grace = val
-						warningPacket.Value = c.Grace
-					}
+				if warningPacket.Tag == 0 {
+					//timeBeforeExpiration
+					c.Expire = val
+					warningPacket.Value = c.Expire
+				} else if warningPacket.Tag == 1 {
+					//graceAuthNsRemaining
+					c.Grace = val
+					warningPacket.Value = c.Grace
 				}
 			} else if child.Tag == 1 {
 				// Error
-				packet, err := ber.DecodePacketErr(child.Data.Bytes())
-				if err != nil {
-					return nil, fmt.Errorf("failed to decode data bytes: %s", err)
+				bs := child.Data.Bytes()
+				if len(bs) != 1 || bs[0] > 8 {
+					return nil, fmt.Errorf("failed to decode data bytes: %s", "invalid PasswordPolicyResponse enum value")
 				}
-				val, ok := packet.Value.(int8)
-				if !ok {
-					// what to do?
-					val = -1
-				}
+				val := int8(bs[0])
 				c.Error = val
 				child.Value = c.Error
 				c.ErrorString = BeheraPasswordPolicyErrorMap[c.Error]

@@ -4,6 +4,37 @@ package protocol
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[mtNil-0]
+	_ = x[mtExecuteDirect-2]
+	_ = x[mtPrepare-3]
+	_ = x[mtAbapStream-4]
+	_ = x[mtXAStart-5]
+	_ = x[mtXAJoin-6]
+	_ = x[mtExecute-13]
+	_ = x[mtWriteLob-16]
+	_ = x[mtReadLob-17]
+	_ = x[mtFindLob-18]
+	_ = x[mtAuthenticate-65]
+	_ = x[mtConnect-66]
+	_ = x[mtCommit-67]
+	_ = x[mtRollback-68]
+	_ = x[mtCloseResultset-69]
+	_ = x[mtDropStatementID-70]
+	_ = x[mtFetchNext-71]
+	_ = x[mtFetchAbsolute-72]
+	_ = x[mtFetchRelative-73]
+	_ = x[mtFetchFirst-74]
+	_ = x[mtFetchLast-75]
+	_ = x[mtDisconnect-77]
+	_ = x[mtExecuteITab-78]
+	_ = x[mtFetchNextITab-79]
+	_ = x[mtInsertNextITab-80]
+}
+
 const (
 	_messageType_name_0 = "mtNil"
 	_messageType_name_1 = "mtExecuteDirectmtPreparemtAbapStreammtXAStartmtXAJoin"

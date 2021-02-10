@@ -1,6 +1,8 @@
 package ecs
 
 import (
+	"time"
+
 	"github.com/denverdino/aliyungo/common"
 )
 
@@ -19,6 +21,8 @@ const (
 	Idl      = InterfaceStatus("Idl")
 	Active   = InterfaceStatus("Active")
 	Inactive = InterfaceStatus("Inactive")
+	// 'Idle' means the router interface is not connected. 'Idl' may be a incorrect status.
+	Idle = InterfaceStatus("Idle")
 
 	InitiatingSide = Role("InitiatingSide")
 	AcceptingSide  = Role("AcceptingSide")
@@ -77,7 +81,7 @@ type Filter struct {
 type DescribeRouterInterfacesArgs struct {
 	RegionId common.Region
 	common.Pagination
-	Filter   []Filter
+	Filter []Filter
 }
 
 type RouterInterfaceItemType struct {
@@ -224,4 +228,30 @@ func (client *Client) DeleteRouterInterface(args *OperateRouterInterfaceArgs) (r
 		return response, err
 	}
 	return response, nil
+}
+
+// WaitForRouterInterface waits for router interface to given status
+func (client *Client) WaitForRouterInterfaceAsyn(regionId common.Region, interfaceId string, status InterfaceStatus, timeout int) error {
+	if timeout <= 0 {
+		timeout = InstanceDefaultTimeout
+	}
+	for {
+		interfaces, err := client.DescribeRouterInterfaces(&DescribeRouterInterfacesArgs{
+			RegionId: regionId,
+			Filter:   []Filter{{Key: "RouterInterfaceId", Value: []string{interfaceId}}},
+		})
+		if err != nil {
+			return err
+		} else if interfaces != nil && InterfaceStatus(interfaces.RouterInterfaceSet.RouterInterfaceType[0].Status) == status {
+			//TODO
+			break
+		}
+		timeout = timeout - DefaultWaitForInterval
+		if timeout <= 0 {
+			return common.GetClientErrorFromString("Timeout")
+		}
+		time.Sleep(DefaultWaitForInterval * time.Second)
+
+	}
+	return nil
 }

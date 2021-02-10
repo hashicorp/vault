@@ -418,6 +418,9 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 			return err
 		}
 		err = pk.edk.check()
+		if err == nil {
+			pk.PublicKey = ed25519.PublicKey(pk.edk.p.bytes[1:])
+		}
 	case PubKeyAlgoECDSA:
 		pk.ec = new(ecdsaKey)
 		if err = pk.ec.parse(r); err != nil {

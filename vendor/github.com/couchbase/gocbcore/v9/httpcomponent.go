@@ -352,6 +352,7 @@ func (hc *httpComponent) DoInternalHTTPRequest(req *httpRequest, skipConfigCheck
 	}
 }
 
+/* #nosec G404 */
 func (hc *httpComponent) getMgmtEp() (string, error) {
 	mgmtEps := hc.muxer.MgmtEps()
 	if len(mgmtEps) == 0 {
@@ -360,6 +361,7 @@ func (hc *httpComponent) getMgmtEp() (string, error) {
 	return mgmtEps[rand.Intn(len(mgmtEps))], nil
 }
 
+/* #nosec G404 */
 func (hc *httpComponent) getCapiEp() (string, error) {
 	capiEps := hc.muxer.CapiEps()
 	if len(capiEps) == 0 {
@@ -368,6 +370,7 @@ func (hc *httpComponent) getCapiEp() (string, error) {
 	return capiEps[rand.Intn(len(capiEps))], nil
 }
 
+/* #nosec G404 */
 func (hc *httpComponent) getN1qlEp() (string, error) {
 	n1qlEps := hc.muxer.N1qlEps()
 	if len(n1qlEps) == 0 {
@@ -376,6 +379,7 @@ func (hc *httpComponent) getN1qlEp() (string, error) {
 	return n1qlEps[rand.Intn(len(n1qlEps))], nil
 }
 
+/* #nosec G404 */
 func (hc *httpComponent) getFtsEp() (string, error) {
 	ftsEps := hc.muxer.FtsEps()
 	if len(ftsEps) == 0 {
@@ -384,6 +388,7 @@ func (hc *httpComponent) getFtsEp() (string, error) {
 	return ftsEps[rand.Intn(len(ftsEps))], nil
 }
 
+/* #nosec G404 */
 func (hc *httpComponent) getCbasEp() (string, error) {
 	cbasEps := hc.muxer.CbasEps()
 	if len(cbasEps) == 0 {

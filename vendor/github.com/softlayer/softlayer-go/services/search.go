@@ -69,11 +69,11 @@ func (r Search) Offset(offset int) Search {
 	return r
 }
 
-// This method allows for searching for SoftLayer resources by simple terms and operators.  Fields that are used for searching will be available at sldn.softlayer.com. It returns a collection or array of <b>[[SoftLayer_Container_Search_Result (type)|SoftLayer_Container_Search_Result]]</b> objects that have search metadata for each result and the resulting resource found.
+// This method allows for searching for SoftLayer resources by simple terms and operators.  Fields that are used for searching will be available at sldn.softlayer.com. It returns a collection or array of [[SoftLayer_Container_Search_Result]] objects that have search metadata for each result and the resulting resource found.
 //
-// The advancedSearch() method recognizes the special <b><code>_objectType:</code></b> quantifier in search strings.  See the documentation for the <b>[[SoftLayer_Search/search|search()]]</b> method on how to restrict searches using object types.
+// The advancedSearch() method recognizes the special <code>_objectType:</code></b> quantifier in search strings.  See the documentation for the [[SoftLayer_Search/search]] method on how to restrict searches using object types.
 //
-// The advancedSearch() method recognizes <b>[[SoftLayer_Container_Search_ObjectType_Property (type)|object properties]]</b>, which can also be used to limit searches.  Example:
+// The advancedSearch() method recognizes [[SoftLayer_Container_Search_ObjectType_Property]], which can also be used to limit searches.  Example:
 //
 // <code>_objectType:Type_1 propertyA:</code><i><code>value</code></i>
 //
@@ -81,7 +81,17 @@ func (r Search) Offset(offset int) Search {
 //
 // <code>_objectType:Type_1 propertyA:</code><i><code>value</code></i> <code>propertyB:</code><i><code>value</code></i>
 //
-// A collection of available object types and their properties can be retrieved by calling the <b>[[SoftLayer_Search/getObjectTypes|getObjectTypes()]]</b> method.
+// A collection of available object types and their properties can be retrieved by calling the [[SoftLayer_Search/getObjectTypes]] method.
+//
+//
+// #### Exact Match on Text Fields
+// To enforce an exact match on text fields, encapsulate the term in double quotes. For example, given a set of device host names:
+//
+// <ul> <li>baremetal-a</li> <li>baremetal-b</li> <li>a-virtual-guest</li> <li>b-virtual-guest</li> <li>edge-router</li> </ul>
+//
+// An exact search (double-quote) for "baremetal-a" will return only the exact match of <u>baremetal-a</u>.
+//
+// A fuzzy search (no double-quote) for baremetal-a will return <u>baremetal</u>-<u>a</u>, <u>baremetal</u>-b, <u>a</u>-virtu<u>a</u>l-guest, b-virtu<u>a</u>l-guest but will omit edge-router.
 func (r Search) AdvancedSearch(searchString *string) (resp []datatypes.Container_Search_Result, err error) {
 	params := []interface{}{
 		searchString,
@@ -90,15 +100,17 @@ func (r Search) AdvancedSearch(searchString *string) (resp []datatypes.Container
 	return
 }
 
-// This method returns a collection of <b>[[SoftLayer_Container_Search_ObjectType (type)|SoftLayer_Container_Search_ObjectType]]</b> containers that specify which indexed object types and properties are exposed for the current user.  These object types can be used to discover searchable data and to create or validate object index search strings.
+// This method returns a collection of [[SoftLayer_Container_Search_ObjectType]] containers that specify which indexed object types and properties are exposed for the current user.  These object types can be used to discover searchable data and to create or validate object index search strings.
 //
-// <p> Refer to the <b>[[SoftLayer_Search/search|search()]]</b> and <b>[[SoftLayer_Search/advancedSearch|advancedSearch()]]</b> methods for information on using object types and properties in search strings.
+//
+//
+// Refer to the [[SoftLayer_Search/search]] and [[SoftLayer_Search/advancedSearch]] methods for information on using object types and properties in search strings.
 func (r Search) GetObjectTypes() (resp []datatypes.Container_Search_ObjectType, err error) {
 	err = r.Session.DoRequest("SoftLayer_Search", "getObjectTypes", nil, &r.Options, &resp)
 	return
 }
 
-// This method allows for searching for SoftLayer resources by simple phrase. It returns a collection or array of <b>[[SoftLayer_Container_Search_Result (type)|SoftLayer_Container_Search_Result]]</b> objects that have search metadata for each result and the resulting resource found.
+// This method allows for searching for SoftLayer resources by simple phrase. It returns a collection or array of [[SoftLayer_Container_Search_Result]] objects that have search metadata for each result and the resulting resource found.
 //
 // This method recognizes the special <b><code>_objectType:</code></b> quantifier in search strings.  This quantifier can be used to restrict a search to specific object types.  Example usage:
 //
@@ -112,7 +124,17 @@ func (r Search) GetObjectTypes() (resp []datatypes.Container_Search_ObjectType, 
 //
 // <code>_objectType:-Type_4,Type_5 </code><i><code>(other search terms...)</code></i>
 //
-// A collection of available object types can be retrieved by calling the <b>[[SoftLayer_Search/getObjectTypes|getObjectTypes()]]</b> method.
+// A collection of available object types can be retrieved by calling the [[SoftLayer_Search/getObjectTypes]] method.
+//
+//
+// #### Exact Match on Text Fields
+// To enforce an exact match on text fields, encapsulate the term in double quotes. For example, given a set of device host names:
+//
+// <ul> <li>baremetal-a</li> <li>baremetal-b</li> <li>a-virtual-guest</li> <li>b-virtual-guest</li> <li>edge-router</li> </ul>
+//
+// An exact search (double-quote) for "baremetal-a" will return only the exact match of <u>baremetal-a</u>.
+//
+// A fuzzy search (no double-quote) for baremetal-a will return <u>baremetal</u>-<u>a</u>, <u>baremetal</u>-b, <u>a</u>-virtu<u>a</u>l-guest, b-virtu<u>a</u>l-guest but will omit edge-router.
 func (r Search) Search(searchString *string) (resp []datatypes.Container_Search_Result, err error) {
 	params := []interface{}{
 		searchString,

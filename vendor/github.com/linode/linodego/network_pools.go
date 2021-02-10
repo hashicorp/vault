@@ -3,6 +3,8 @@ package linodego
 import (
 	"context"
 	"fmt"
+
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // IPv6PoolsPagedResponse represents a paginated IPv6Pool API response
@@ -42,7 +44,7 @@ func (c *Client) GetIPv6Pool(ctx context.Context, id string) (*IPv6Range, error)
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%s", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&IPv6Range{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&IPv6Range{}).Get(e))
 	if err != nil {
 		return nil, err
 	}

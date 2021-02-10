@@ -71,6 +71,11 @@ func (client ExpressRouteServiceProvidersClient) List(ctx context.Context) (resu
 	result.ersplr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.ExpressRouteServiceProvidersClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.ersplr.hasNextLink() && result.ersplr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return

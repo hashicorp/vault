@@ -1,7 +1,7 @@
 package gocbcore
 
 const (
-	goCbCoreVersionStr = "v9.0.4"
+	goCbCoreVersionStr = "v9.1.1"
 )
 
 type bucketType int
@@ -50,20 +50,20 @@ const (
 	DcpAgentPriorityHigh = DcpAgentPriority(2)
 )
 
-type durabilityLevelStatus uint32
+type BucketCapability uint32
 
 const (
-	durabilityLevelStatusUnknown     = durabilityLevelStatus(0x00)
-	durabilityLevelStatusSupported   = durabilityLevelStatus(0x01)
-	durabilityLevelStatusUnsupported = durabilityLevelStatus(0x02)
+	BucketCapabilityDurableWrites        BucketCapability = 0x00
+	BucketCapabilityCreateAsDeleted      BucketCapability = 0x01
+	BucketCapabilityReplaceBodyWithXattr BucketCapability = 0x02
 )
 
-type createAsDeletedStatus uint32
+type BucketCapabilityStatus uint32
 
 const (
-	createAsDeletedStatusUnknown     = createAsDeletedStatus(0x00)
-	createAsDeletedStatusSupported   = createAsDeletedStatus(0x01)
-	createAsDeletedStatusUnsupported = createAsDeletedStatus(0x02)
+	BucketCapabilityStatusUnknown     BucketCapabilityStatus = 0x00
+	BucketCapabilityStatusSupported   BucketCapabilityStatus = 0x01
+	BucketCapabilityStatusUnsupported BucketCapabilityStatus = 0x02
 )
 
 // ClusterCapability represents a capability that the cluster supports

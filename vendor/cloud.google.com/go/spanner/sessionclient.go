@@ -145,15 +145,23 @@ func (sc *sessionClient) createSession(ctx context.Context) (*session, error) {
 // include the number of sessions that could not be created as a result of the
 // error. The sum of returned sessions and errored sessions will be equal to
 // the number of requested sessions.
-func (sc *sessionClient) batchCreateSessions(createSessionCount int32, consumer sessionConsumer) error {
-	// The sessions that we create should be evenly distributed over all the
-	// channels (gapic clients) that are used by the client. Each gapic client
-	// will do a request for a fraction of the total.
-	sessionCountPerChannel := createSessionCount / int32(sc.connPool.Num())
-	// The remainder of the calculation will be added to the number of sessions
-	// that will be created for the first channel, to ensure that we create the
-	// exact number of requested sessions.
-	remainder := createSessionCount % int32(sc.connPool.Num())
+// If distributeOverChannels is true, the sessions will be equally distributed
+// over all the channels that are in use by the client.
+func (sc *sessionClient) batchCreateSessions(createSessionCount int32, distributeOverChannels bool, consumer sessionConsumer) error {
+	var sessionCountPerChannel int32
+	var remainder int32
+	if distributeOverChannels {
+		// The sessions that we create should be evenly distributed over all the
+		// channels (gapic clients) that are used by the client. Each gapic client
+		// will do a request for a fraction of the total.
+		sessionCountPerChannel = createSessionCount / int32(sc.connPool.Num())
+		// The remainder of the calculation will be added to the number of sessions
+		// that will be created for the first channel, to ensure that we create the
+		// exact number of requested sessions.
+		remainder = createSessionCount % int32(sc.connPool.Num())
+	} else {
+		sessionCountPerChannel = createSessionCount
+	}
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	if sc.closed {
@@ -164,7 +172,8 @@ func (sc *sessionClient) batchCreateSessions(createSessionCount int32, consumer 
 	// is used by the session. A session should therefore always use the same
 	// channel, and the sessions should be as evenly distributed as possible
 	// over the channels.
-	for i := 0; i < sc.connPool.Num(); i++ {
+	var numBeingCreated int32
+	for i := 0; i < sc.connPool.Num() && numBeingCreated < createSessionCount; i++ {
 		client, err := sc.nextClient()
 		if err != nil {
 			return err
@@ -184,6 +193,7 @@ func (sc *sessionClient) batchCreateSessions(createSessionCount int32, consumer 
 		}
 		if createCountForChannel > 0 {
 			go sc.executeBatchCreateSessions(client, createCountForChannel, sc.sessionLabels, sc.md, consumer)
+			numBeingCreated += createCountForChannel
 		}
 	}
 	return nil

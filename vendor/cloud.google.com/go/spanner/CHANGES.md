@@ -1,5 +1,54 @@
 # Changes
 
+## v1.7.0
+* Retry:
+  - Only retry certain types of internal errors. (#2460)
+* Tracing/metrics:
+  - Never sample `ping()` trace spans (#2520)
+  - Add oc tests for session pool metrics. (#2416)
+* Encoding:
+  - Allow encoding struct with custom types to mutation (#2529)
+* spannertest:
+  - Fix evaluation on IN (#2479)
+  - Support MIN/MAX aggregation functions (#2411)
+* Misc:
+  - Fix TestClient_WithGRPCConnectionPoolAndNumChannels_Misconfigured test (#2539)
+  - Cleanup backoff files and rename a variable (#2526)
+  - Fix TestIntegration_DML test to return err from tx (#2509)
+  - Unskip tests for emulator 0.8.0. (#2494)
+  - Fix TestIntegration_StartBackupOperation test. (#2418)
+  - Fix flakiness in TestIntegration_BatchDML_Error
+  - Unskip TestIntegration_BatchDML and TestIntegration_BatchDML_TwoStatements
+    for emulator by checking the existence of status.
+  - Fix TestStressSessionPool test by taking lock while getting sessions from
+    hc.
+
+## v1.6.0
+* Sessions:
+  - Increase the number of sessions in batches instead of one by one when
+    additional sessions are needed. The step size is set to 25, which means
+    that whenever the session pool needs at least one more session, it will
+    create a batch of 25 sessions.
+* Emulator:
+  - Run integration tests against the emulator in Kokoro Presubmit.
+* RPC retrying:
+  - Retry CreateDatabase on retryable codes.
+* spannertest:
+  - Change internal representation of DATE/TIMESTAMP values.
+* spansql:
+  - Cleanly parse adjacent comment marker/terminator.
+  - Support FROM aliases in SELECT statements.
+* Misc:
+  - Fix comparing errors in tests.
+  - Fix flaky session pool test.
+  - Increase timeout in TestIntegration_ReadOnlyTransaction.
+  - Fix incorrect instance IDs when deleting instances in tests.
+  - Clean up test instances.
+  - Clearify docs on Aborted transaction.
+  - Fix timeout+staleness bound for test
+  - Remove the support for resource-based routing.
+  - Fix TestTransaction_SessionNotFound test.
+
 ## v1.5.1
 
 * Fix incorrect decreasing metrics, numReads and numWrites.

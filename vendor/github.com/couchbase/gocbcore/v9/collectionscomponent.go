@@ -140,6 +140,78 @@ func (cidMgr *collectionsComponent) GetCollectionManifest(opts GetCollectionMani
 	return cidMgr.dispatcher.DispatchDirect(req)
 }
 
+func (cidMgr *collectionsComponent) GetAllCollectionManifests(opts GetAllCollectionManifestsOptions, cb GetAllCollectionManifestsCallback) (PendingOp, error) {
+	tracer := cidMgr.tracer.CreateOpTrace("GetAllCollectionManifests", opts.TraceContext)
+
+	if opts.RetryStrategy == nil {
+		opts.RetryStrategy = cidMgr.defaultRetryStrategy
+	}
+
+	iter, err := cidMgr.dispatcher.PipelineSnapshot()
+	if err != nil {
+		return nil, err
+	}
+
+	manifests := make(map[string]SingleServerManifestResult)
+	manifestsLock := sync.Mutex{}
+
+	op := &multiPendingOp{
+		isIdempotent: true,
+	}
+
+	opCompleteLocked := func() {
+		completed := op.IncrementCompletedOps()
+		if iter.NumPipelines()-int(completed) == 0 {
+			tracer.Finish()
+			cb(&GetAllCollectionManifestsResult{Manifests: manifests}, nil)
+		}
+	}
+
+	iter.Iterate(0, func(pipeline *memdPipeline) bool {
+		handler := func(resp *memdQResponse, req *memdQRequest, err error) {
+			manifestsLock.Lock()
+			defer manifestsLock.Unlock()
+
+			res := SingleServerManifestResult{
+				Error: err,
+			}
+
+			if resp != nil {
+				res.Manifest = resp.Value
+			}
+
+			manifests[pipeline.address] = res
+			opCompleteLocked()
+		}
+
+		req := &memdQRequest{
+			Packet: memd.Packet{
+				Magic:   memd.CmdMagicReq,
+				Command: memd.CmdCollectionsGetManifest,
+			},
+			Callback:         handler,
+			RetryStrategy:    opts.RetryStrategy,
+			RootTraceContext: opts.TraceContext,
+		}
+
+		curOp, err := cidMgr.dispatcher.DispatchDirectToAddress(req, pipeline)
+		if err == nil {
+			op.ops = append(op.ops, curOp)
+			return false
+		}
+
+		manifestsLock.Lock()
+		defer manifestsLock.Unlock()
+
+		manifests[pipeline.address] = SingleServerManifestResult{Error: err}
+		opCompleteLocked()
+
+		return false
+	})
+
+	return op, nil
+}
+
 // GetCollectionID does not trigger retries on unknown collection. This is because the request sets the scope and collection
 // name in the key rather than in the corresponding fields.
 func (cidMgr *collectionsComponent) GetCollectionID(scopeName string, collectionName string, opts GetCollectionIDOptions,
@@ -147,12 +219,6 @@ func (cidMgr *collectionsComponent) GetCollectionID(scopeName string, collection
 	tracer := cidMgr.tracer.CreateOpTrace("GetCollectionID", opts.TraceContext)
 
 	handler := func(resp *memdQResponse, req *memdQRequest, err error) {
-		cidCache, ok := cidMgr.get(scopeName, collectionName)
-		if !ok {
-			cidCache = cidMgr.newCollectionIDCache(scopeName, collectionName)
-			cidMgr.add(cidCache, scopeName, collectionName)
-		}
-
 		if err != nil {
 			tracer.Finish()
 			cb(nil, err)
@@ -162,9 +228,7 @@ func (cidMgr *collectionsComponent) GetCollectionID(scopeName string, collection
 		manifestID := binary.BigEndian.Uint64(resp.Extras[0:])
 		collectionID := binary.BigEndian.Uint32(resp.Extras[8:])
 
-		cidCache.lock.Lock()
-		cidCache.setID(collectionID)
-		cidCache.lock.Unlock()
+		cidMgr.upsert(scopeName, collectionName, collectionID)
 
 		res := GetCollectionIDResult{
 			ManifestID:   manifestID,
@@ -209,26 +273,41 @@ func (cidMgr *collectionsComponent) GetCollectionID(scopeName string, collection
 	return cidMgr.dispatcher.DispatchDirect(req)
 }
 
-func (cidMgr *collectionsComponent) add(id *collectionIDCache, scopeName, collectionName string) {
-	key := cidMgr.createKey(scopeName, collectionName)
-	cidMgr.mapLock.Lock()
-	cidMgr.idMap[key] = id
-	cidMgr.mapLock.Unlock()
-}
-
-func (cidMgr *collectionsComponent) get(scopeName, collectionName string) (*collectionIDCache, bool) {
+func (cidMgr *collectionsComponent) upsert(scopeName, collectionName string, value uint32) *collectionIDCache {
 	cidMgr.mapLock.Lock()
 	id, ok := cidMgr.idMap[cidMgr.createKey(scopeName, collectionName)]
-	cidMgr.mapLock.Unlock()
 	if !ok {
-		return nil, false
+		id = cidMgr.newCollectionIDCache(scopeName, collectionName)
+		key := cidMgr.createKey(scopeName, collectionName)
+		cidMgr.idMap[key] = id
 	}
+	id.lock.Lock()
+	id.setID(value)
+	id.lock.Unlock()
+	cidMgr.mapLock.Unlock()
 
-	return id, true
+	return id
+}
+
+func (cidMgr *collectionsComponent) getAndMaybeInsert(scopeName, collectionName string, value uint32) *collectionIDCache {
+	cidMgr.mapLock.Lock()
+	id, ok := cidMgr.idMap[cidMgr.createKey(scopeName, collectionName)]
+	if !ok {
+		id = cidMgr.newCollectionIDCache(scopeName, collectionName)
+		id.lock.Lock()
+		id.setID(value)
+		id.lock.Unlock()
+
+		key := cidMgr.createKey(scopeName, collectionName)
+		cidMgr.idMap[key] = id
+	}
+	cidMgr.mapLock.Unlock()
+
+	return id
 }
 
 func (cidMgr *collectionsComponent) remove(scopeName, collectionName string) {
-	logDebugf("Removing cache entry for", scopeName, collectionName)
+	logDebugf("Removing cache entry for %s.%s", scopeName, collectionName)
 	cidMgr.mapLock.Lock()
 	delete(cidMgr.idMap, cidMgr.createKey(scopeName, collectionName))
 	cidMgr.mapLock.Unlock()
@@ -364,7 +443,7 @@ func (cid *collectionIDCache) dispatch(req *memdQRequest) error {
 		cid.lock.Unlock()
 		return nil
 	case pendingCid:
-		logDebugf("Collection %s.%s pending, queueing request", req.ScopeName, req.CollectionName)
+		logDebugf("Collection %s.%s pending, queueing request OP=0x%x", req.ScopeName, req.CollectionName, req.Command)
 		cid.lock.Unlock()
 		return cid.queueRequest(req)
 	default:
@@ -409,12 +488,7 @@ func (cidMgr *collectionsComponent) Dispatch(req *memdQRequest) (PendingOp, erro
 		return nil, errCollectionsUnsupported
 	}
 
-	cidCache, ok := cidMgr.get(req.ScopeName, req.CollectionName)
-	if !ok {
-		cidCache = cidMgr.newCollectionIDCache(req.ScopeName, req.CollectionName)
-		cidCache.setID(unknownCid)
-		cidMgr.add(cidCache, req.ScopeName, req.CollectionName)
-	}
+	cidCache := cidMgr.getAndMaybeInsert(req.ScopeName, req.CollectionName, unknownCid)
 	err := cidCache.dispatch(req)
 	if err != nil {
 		return nil, err
@@ -424,12 +498,7 @@ func (cidMgr *collectionsComponent) Dispatch(req *memdQRequest) (PendingOp, erro
 }
 
 func (cidMgr *collectionsComponent) requeue(req *memdQRequest) {
-	cidCache, ok := cidMgr.get(req.ScopeName, req.CollectionName)
-	if !ok {
-		cidCache = cidMgr.newCollectionIDCache(req.ScopeName, req.CollectionName)
-		cidCache.setID(unknownCid)
-		cidMgr.add(cidCache, req.ScopeName, req.CollectionName)
-	}
+	cidCache := cidMgr.getAndMaybeInsert(req.ScopeName, req.CollectionName, unknownCid)
 	cidCache.lock.Lock()
 	if cidCache.id != unknownCid && cidCache.id != pendingCid {
 		cidCache.setID(unknownCid)

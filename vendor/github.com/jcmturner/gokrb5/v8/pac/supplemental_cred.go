@@ -70,9 +70,6 @@ func isFlagSet(f uint32, i uint32) bool {
 }
 
 // SECPKGSupplementalCred implements https://msdn.microsoft.com/en-us/library/cc237956.aspx
-// The SECPKG_SUPPLEMENTAL_CRED structure defines the name of the security package that requires
-// supplemental credentials and the credential buffer for that package.
-// The SECPKG_SUPPLEMENTAL_CRED structure is marshaled by RPC.
 type SECPKGSupplementalCred struct {
 	PackageName    mstypes.RPCUnicodeString
 	CredentialSize uint32

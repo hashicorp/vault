@@ -127,7 +127,7 @@ func NewListBuilder(mem memory.Allocator, etype arrow.DataType) *ListBuilder {
 	return &ListBuilder{
 		builder: builder{refCount: 1, mem: mem},
 		etype:   etype,
-		values:  newBuilder(mem, etype),
+		values:  NewBuilder(mem, etype),
 		offsets: NewInt32Builder(mem),
 	}
 }

@@ -81,6 +81,7 @@ func (client GroupsClient) AddMember(ctx context.Context, groupObjectID string, 
 	result, err = client.AddMemberResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "AddMember", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -163,6 +164,7 @@ func (client GroupsClient) AddOwner(ctx context.Context, objectID string, parame
 	result, err = client.AddOwnerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "AddOwner", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -246,6 +248,7 @@ func (client GroupsClient) Create(ctx context.Context, parameters GroupCreatePar
 	result, err = client.CreateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "Create", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -320,6 +323,7 @@ func (client GroupsClient) Delete(ctx context.Context, objectID string) (result 
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "Delete", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -392,6 +396,7 @@ func (client GroupsClient) Get(ctx context.Context, objectID string) (result ADG
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -471,6 +476,11 @@ func (client GroupsClient) GetGroupMembers(ctx context.Context, objectID string)
 	result.dolr, err = client.GetGroupMembersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "GetGroupMembers", resp, "Failure responding to request")
+		return
+	}
+	if result.dolr.hasNextLink() && result.dolr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -560,6 +570,7 @@ func (client GroupsClient) GetGroupMembersNext(ctx context.Context, nextLink str
 	result, err = client.GetGroupMembersNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "GetGroupMembersNext", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -640,6 +651,7 @@ func (client GroupsClient) GetMemberGroups(ctx context.Context, objectID string,
 	result, err = client.GetMemberGroupsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "GetMemberGroups", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -723,6 +735,7 @@ func (client GroupsClient) IsMemberOf(ctx context.Context, parameters CheckGroup
 	result, err = client.IsMemberOfResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "IsMemberOf", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -803,6 +816,11 @@ func (client GroupsClient) List(ctx context.Context, filter string) (result Grou
 	result.glr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.glr.hasNextLink() && result.glr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -894,6 +912,7 @@ func (client GroupsClient) ListNext(ctx context.Context, nextLink string) (resul
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "ListNext", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -968,6 +987,11 @@ func (client GroupsClient) ListOwners(ctx context.Context, objectID string) (res
 	result.dolr, err = client.ListOwnersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "ListOwners", resp, "Failure responding to request")
+		return
+	}
+	if result.dolr.hasNextLink() && result.dolr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -1079,6 +1103,7 @@ func (client GroupsClient) RemoveMember(ctx context.Context, groupObjectID strin
 	result, err = client.RemoveMemberResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "RemoveMember", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -1153,6 +1178,7 @@ func (client GroupsClient) RemoveOwner(ctx context.Context, objectID string, own
 	result, err = client.RemoveOwnerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.GroupsClient", "RemoveOwner", resp, "Failure responding to request")
+		return
 	}
 
 	return

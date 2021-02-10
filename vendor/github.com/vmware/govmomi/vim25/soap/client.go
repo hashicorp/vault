@@ -35,6 +35,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -70,12 +71,25 @@ type Client struct {
 
 	Namespace string // Vim namespace
 	Version   string // Vim version
+	Types     types.Func
 	UserAgent string
 
-	cookie string
+	cookie          string
+	insecureCookies bool
 }
 
 var schemeMatch = regexp.MustCompile(`^\w+://`)
+
+type errInvalidCACertificate struct {
+	File string
+}
+
+func (e errInvalidCACertificate) Error() string {
+	return fmt.Sprintf(
+		"invalid certificate '%s', cannot be used as a trusted CA certificate",
+		e.File,
+	)
+}
 
 // ParseURL is wrapper around url.Parse, where Scheme defaults to "https" and Path defaults to "/sdk"
 func ParseURL(s string) (*url.URL, error) {
@@ -111,6 +125,8 @@ func NewClient(u *url.URL, insecure bool) *Client {
 		u: u,
 		k: insecure,
 		d: newDebug(),
+
+		Types: types.TypeFunc(),
 	}
 
 	// Initialize http.RoundTripper on client, so we can customize it below
@@ -141,7 +157,15 @@ func NewClient(u *url.URL, insecure bool) *Client {
 	c.u = c.URL()
 	c.u.User = nil
 
+	if c.u.Scheme == "http" {
+		c.insecureCookies = os.Getenv("GOVMOMI_INSECURE_COOKIES") == "true"
+	}
+
 	return &c
+}
+
+func (c *Client) DefaultTransport() *http.Transport {
+	return c.t
 }
 
 // NewServiceClient creates a NewClient with the given URL.Path and namespace.
@@ -158,6 +182,7 @@ func (c *Client) NewServiceClient(path string, namespace string) *Client {
 
 	client := NewClient(u, c.k)
 	client.Namespace = "urn:" + namespace
+	client.DefaultTransport().TLSClientConfig = c.DefaultTransport().TLSClientConfig
 	if cert := c.Certificate(); cert != nil {
 		client.SetCertificate(*cert)
 	}
@@ -183,6 +208,19 @@ func (c *Client) NewServiceClient(path string, namespace string) *Client {
 	// Copy any query params (e.g. GOVMOMI_TUNNEL_PROXY_PORT used in testing)
 	client.u.RawQuery = vc.RawQuery
 
+	client.UserAgent = c.UserAgent
+
+	vimTypes := c.Types
+	client.Types = func(name string) (reflect.Type, bool) {
+		kind, ok := vimTypes(name)
+		if ok {
+			return kind, ok
+		}
+		// vim25/xml typeToString() does not have an option to include namespace prefix.
+		// Workaround this by re-trying the lookup with the namespace prefix.
+		return vimTypes(namespace + ":" + name)
+	}
+
 	return client
 }
 
@@ -195,12 +233,16 @@ func (c *Client) SetRootCAs(file string) error {
 	pool := x509.NewCertPool()
 
 	for _, name := range filepath.SplitList(file) {
-		pem, err := ioutil.ReadFile(name)
+		pem, err := ioutil.ReadFile(filepath.Clean(name))
 		if err != nil {
 			return err
 		}
 
-		pool.AppendCertsFromPEM(pem)
+		if ok := pool.AppendCertsFromPEM(pem); !ok {
+			return errInvalidCACertificate{
+				File: name,
+			}
+		}
 	}
 
 	c.t.TLSClientConfig.RootCAs = pool
@@ -261,7 +303,7 @@ func (c *Client) LoadThumbprints(file string) error {
 }
 
 func (c *Client) loadThumbprints(name string) error {
-	f, err := os.Open(name)
+	f, err := os.Open(filepath.Clean(name))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -330,7 +372,7 @@ func (c *Client) dialTLS(network string, addr string) (net.Conn, error) {
 	if thumbprint != peer {
 		_ = conn.Close()
 
-		return nil, fmt.Errorf("Host %q thumbprint does not match %q", addr, thumbprint)
+		return nil, fmt.Errorf("host %q thumbprint does not match %q", addr, thumbprint)
 	}
 
 	return conn, nil
@@ -408,6 +450,7 @@ type marshaledClient struct {
 	Cookies  []*http.Cookie
 	URL      *url.URL
 	Insecure bool
+	Version  string
 }
 
 func (c *Client) MarshalJSON() ([]byte, error) {
@@ -415,6 +458,7 @@ func (c *Client) MarshalJSON() ([]byte, error) {
 		Cookies:  c.Jar.Cookies(c.u),
 		URL:      c.u,
 		Insecure: c.k,
+		Version:  c.Version,
 	}
 
 	return json.Marshal(m)
@@ -429,17 +473,72 @@ func (c *Client) UnmarshalJSON(b []byte) error {
 	}
 
 	*c = *NewClient(m.URL, m.Insecure)
+	c.Version = m.Version
 	c.Jar.SetCookies(m.URL, m.Cookies)
 
 	return nil
 }
 
-func (c *Client) do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	if nil == ctx || nil == ctx.Done() { // ctx.Done() is for ctx
-		return c.Client.Do(req)
+type kindContext struct{}
+
+func (c *Client) setInsecureCookies(res *http.Response) {
+	cookies := res.Cookies()
+	if len(cookies) != 0 {
+		for _, cookie := range cookies {
+			cookie.Secure = false
+		}
+		c.Jar.SetCookies(c.u, cookies)
+	}
+}
+
+func (c *Client) Do(ctx context.Context, req *http.Request, f func(*http.Response) error) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	// Create debugging context for this round trip
+	d := c.d.newRoundTrip()
+	if d.enabled() {
+		defer d.done()
 	}
 
-	return c.Client.Do(req.WithContext(ctx))
+	if c.UserAgent != "" {
+		req.Header.Set(`User-Agent`, c.UserAgent)
+	}
+
+	ext := ""
+	if d.enabled() {
+		ext = d.debugRequest(req)
+	}
+
+	tstart := time.Now()
+	res, err := c.Client.Do(req.WithContext(ctx))
+	tstop := time.Now()
+
+	if d.enabled() {
+		var name string
+		if kind, ok := ctx.Value(kindContext{}).(HasFault); ok {
+			name = fmt.Sprintf("%T", kind)
+		} else {
+			name = fmt.Sprintf("%s %s", req.Method, req.URL)
+		}
+		d.logf("%6dms (%s)", tstop.Sub(tstart)/time.Millisecond, name)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	if d.enabled() {
+		d.debugResponse(res, ext)
+	}
+
+	if c.insecureCookies {
+		c.setInsecureCookies(res)
+	}
+
+	return f(res)
 }
 
 // Signer can be implemented by soap.Header.Security to sign requests.
@@ -454,6 +553,32 @@ type headerContext struct{}
 // WithHeader can be used to modify the outgoing request soap.Header fields.
 func (c *Client) WithHeader(ctx context.Context, header Header) context.Context {
 	return context.WithValue(ctx, headerContext{}, header)
+}
+
+type statusError struct {
+	res *http.Response
+}
+
+// Temporary returns true for HTTP response codes that can be retried
+// See vim25.TemporaryNetworkError
+func (e *statusError) Temporary() bool {
+	switch e.res.StatusCode {
+	case http.StatusBadGateway:
+		return true
+	}
+	return false
+}
+
+func (e *statusError) Error() string {
+	return e.res.Status
+}
+
+func newStatusError(res *http.Response) error {
+	return &url.Error{
+		Op:  res.Request.Method,
+		URL: res.Request.URL.Path,
+		Err: &statusError{res},
+	}
 }
 
 func (c *Client) RoundTrip(ctx context.Context, reqBody, resBody HasFault) error {
@@ -478,12 +603,6 @@ func (c *Client) RoundTrip(ctx context.Context, reqBody, resBody HasFault) error
 		reqEnv.Header = &h // XML marshal header only if a field is set
 	}
 
-	// Create debugging context for this round trip
-	d := c.d.newRoundTrip()
-	if d.enabled() {
-		defer d.done()
-	}
-
 	if signer, ok := h.Security.(Signer); ok {
 		b, err = signer.Sign(reqEnv)
 		if err != nil {
@@ -502,8 +621,6 @@ func (c *Client) RoundTrip(ctx context.Context, reqBody, resBody HasFault) error
 		panic(err)
 	}
 
-	req = req.WithContext(ctx)
-
 	req.Header.Set(`Content-Type`, `text/xml; charset="utf-8"`)
 
 	action := h.Action
@@ -512,54 +629,29 @@ func (c *Client) RoundTrip(ctx context.Context, reqBody, resBody HasFault) error
 	}
 	req.Header.Set(`SOAPAction`, action)
 
-	if c.UserAgent != "" {
-		req.Header.Set(`User-Agent`, c.UserAgent)
-	}
+	return c.Do(context.WithValue(ctx, kindContext{}, resBody), req, func(res *http.Response) error {
+		switch res.StatusCode {
+		case http.StatusOK:
+			// OK
+		case http.StatusInternalServerError:
+			// Error, but typically includes a body explaining the error
+		default:
+			return newStatusError(res)
+		}
 
-	if d.enabled() {
-		d.debugRequest(req)
-	}
+		dec := xml.NewDecoder(res.Body)
+		dec.TypeFunc = c.Types
+		err = dec.Decode(&resEnv)
+		if err != nil {
+			return err
+		}
 
-	tstart := time.Now()
-	res, err := c.do(ctx, req)
-	tstop := time.Now()
+		if f := resBody.Fault(); f != nil {
+			return WrapSoapFault(f)
+		}
 
-	if d.enabled() {
-		d.logf("%6dms (%T)", tstop.Sub(tstart)/time.Millisecond, resBody)
-	}
-
-	if err != nil {
 		return err
-	}
-
-	if d.enabled() {
-		d.debugResponse(res)
-	}
-
-	// Close response regardless of what happens next
-	defer res.Body.Close()
-
-	switch res.StatusCode {
-	case http.StatusOK:
-		// OK
-	case http.StatusInternalServerError:
-		// Error, but typically includes a body explaining the error
-	default:
-		return errors.New(res.Status)
-	}
-
-	dec := xml.NewDecoder(res.Body)
-	dec.TypeFunc = types.TypeFunc()
-	err = dec.Decode(&resEnv)
-	if err != nil {
-		return err
-	}
-
-	if f := resBody.Fault(); f != nil {
-		return WrapSoapFault(f)
-	}
-
-	return err
+	})
 }
 
 func (c *Client) CloseIdleConnections() {
@@ -635,6 +727,8 @@ func (c *Client) Upload(ctx context.Context, f io.Reader, u *url.URL, param *Upl
 		return err
 	}
 
+	defer res.Body.Close()
+
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusCreated:
@@ -657,7 +751,7 @@ func (c *Client) UploadFile(ctx context.Context, file string, u *url.URL, param 
 		return err
 	}
 
-	f, err := os.Open(file)
+	f, err := os.Open(filepath.Clean(file))
 	if err != nil {
 		return err
 	}
@@ -710,7 +804,7 @@ func (c *Client) Download(ctx context.Context, u *url.URL, param *Download) (io.
 	switch res.StatusCode {
 	case http.StatusOK:
 	default:
-		err = errors.New(res.Status)
+		err = fmt.Errorf("download(%s): %s", u, res.Status)
 	}
 
 	if err != nil {

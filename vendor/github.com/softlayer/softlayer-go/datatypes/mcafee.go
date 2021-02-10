@@ -317,3 +317,30 @@ type McAfee_Epolicy_Orchestrator_Version45_Product_Properties struct {
 	// The virus definition file version.
 	DatVersion *string `json:"datVersion,omitempty" xmlrpc:"datVersion,omitempty"`
 }
+
+// The McAfee_Epolicy_Orchestrator_Version51_Agent_Details data type represents a virus scan agent and contains details about its version.
+type McAfee_Epolicy_Orchestrator_Version51_Agent_Details struct {
+	Entity
+
+	// Version number of the anti-virus scan agent.
+	AgentVersion *string `json:"agentVersion,omitempty" xmlrpc:"agentVersion,omitempty"`
+
+	// The date of the last time the anti-virus agent checked in.
+	LastUpdate *Time `json:"lastUpdate,omitempty" xmlrpc:"lastUpdate,omitempty"`
+}
+
+// The McAfee_Epolicy_Orchestrator_Version51_Policy_Object data type represents a virus scan agent and contains details about its version.
+type McAfee_Epolicy_Orchestrator_Version51_Policy_Object struct {
+	Entity
+
+	// no documentation yet
+	Name *string `json:"name,omitempty" xmlrpc:"name,omitempty"`
+}
+
+// The McAfee_Epolicy_Orchestrator_Version51_Product_Properties data type represents the version of the virus data file
+type McAfee_Epolicy_Orchestrator_Version51_Product_Properties struct {
+	Entity
+
+	// no documentation yet
+	DatVersion *string `json:"datVersion,omitempty" xmlrpc:"datVersion,omitempty"`
+}

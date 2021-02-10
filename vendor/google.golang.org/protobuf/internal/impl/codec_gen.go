@@ -45,7 +45,7 @@ func consumeBool(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, _ 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Bool() = protowire.DecodeBool(v)
 	out.n = n
@@ -121,7 +121,7 @@ func consumeBoolPtr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo,
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.BoolPtr()
 	if *vp == nil {
@@ -165,7 +165,7 @@ func consumeBoolSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -180,7 +180,7 @@ func consumeBoolSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, protowire.DecodeBool(v))
 			b = b[n:]
@@ -204,7 +204,7 @@ func consumeBoolSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, protowire.DecodeBool(v))
 	out.n = n
@@ -285,7 +285,7 @@ func consumeBoolValue(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp p
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfBool(protowire.DecodeBool(v)), out, nil
@@ -325,7 +325,7 @@ func consumeBoolSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numbe
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -340,7 +340,7 @@ func consumeBoolSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numbe
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfBool(protowire.DecodeBool(v)))
 			b = b[n:]
@@ -363,7 +363,7 @@ func consumeBoolSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numbe
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfBool(protowire.DecodeBool(v)))
 	out.n = n
@@ -449,7 +449,7 @@ func consumeEnumValue(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp p
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfEnum(protoreflect.EnumNumber(v)), out, nil
@@ -489,7 +489,7 @@ func consumeEnumSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numbe
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -504,7 +504,7 @@ func consumeEnumSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numbe
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfEnum(protoreflect.EnumNumber(v)))
 			b = b[n:]
@@ -527,7 +527,7 @@ func consumeEnumSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numbe
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfEnum(protoreflect.EnumNumber(v)))
 	out.n = n
@@ -615,7 +615,7 @@ func consumeInt32(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, _
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Int32() = int32(v)
 	out.n = n
@@ -691,7 +691,7 @@ func consumeInt32Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Int32Ptr()
 	if *vp == nil {
@@ -735,7 +735,7 @@ func consumeInt32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -750,7 +750,7 @@ func consumeInt32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, int32(v))
 			b = b[n:]
@@ -774,7 +774,7 @@ func consumeInt32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, int32(v))
 	out.n = n
@@ -855,7 +855,7 @@ func consumeInt32Value(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfInt32(int32(v)), out, nil
@@ -895,7 +895,7 @@ func consumeInt32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -910,7 +910,7 @@ func consumeInt32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfInt32(int32(v)))
 			b = b[n:]
@@ -933,7 +933,7 @@ func consumeInt32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfInt32(int32(v)))
 	out.n = n
@@ -1021,7 +1021,7 @@ func consumeSint32(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Int32() = int32(protowire.DecodeZigZag(v & math.MaxUint32))
 	out.n = n
@@ -1097,7 +1097,7 @@ func consumeSint32Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Int32Ptr()
 	if *vp == nil {
@@ -1141,7 +1141,7 @@ func consumeSint32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -1156,7 +1156,7 @@ func consumeSint32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, int32(protowire.DecodeZigZag(v&math.MaxUint32)))
 			b = b[n:]
@@ -1180,7 +1180,7 @@ func consumeSint32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, int32(protowire.DecodeZigZag(v&math.MaxUint32)))
 	out.n = n
@@ -1261,7 +1261,7 @@ func consumeSint32Value(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfInt32(int32(protowire.DecodeZigZag(v & math.MaxUint32))), out, nil
@@ -1301,7 +1301,7 @@ func consumeSint32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -1316,7 +1316,7 @@ func consumeSint32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfInt32(int32(protowire.DecodeZigZag(v & math.MaxUint32))))
 			b = b[n:]
@@ -1339,7 +1339,7 @@ func consumeSint32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfInt32(int32(protowire.DecodeZigZag(v & math.MaxUint32))))
 	out.n = n
@@ -1427,7 +1427,7 @@ func consumeUint32(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Uint32() = uint32(v)
 	out.n = n
@@ -1503,7 +1503,7 @@ func consumeUint32Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Uint32Ptr()
 	if *vp == nil {
@@ -1547,7 +1547,7 @@ func consumeUint32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -1562,7 +1562,7 @@ func consumeUint32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, uint32(v))
 			b = b[n:]
@@ -1586,7 +1586,7 @@ func consumeUint32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, uint32(v))
 	out.n = n
@@ -1667,7 +1667,7 @@ func consumeUint32Value(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfUint32(uint32(v)), out, nil
@@ -1707,7 +1707,7 @@ func consumeUint32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -1722,7 +1722,7 @@ func consumeUint32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfUint32(uint32(v)))
 			b = b[n:]
@@ -1745,7 +1745,7 @@ func consumeUint32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfUint32(uint32(v)))
 	out.n = n
@@ -1833,7 +1833,7 @@ func consumeInt64(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, _
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Int64() = int64(v)
 	out.n = n
@@ -1909,7 +1909,7 @@ func consumeInt64Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Int64Ptr()
 	if *vp == nil {
@@ -1953,7 +1953,7 @@ func consumeInt64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -1968,7 +1968,7 @@ func consumeInt64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, int64(v))
 			b = b[n:]
@@ -1992,7 +1992,7 @@ func consumeInt64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, int64(v))
 	out.n = n
@@ -2073,7 +2073,7 @@ func consumeInt64Value(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfInt64(int64(v)), out, nil
@@ -2113,7 +2113,7 @@ func consumeInt64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -2128,7 +2128,7 @@ func consumeInt64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfInt64(int64(v)))
 			b = b[n:]
@@ -2151,7 +2151,7 @@ func consumeInt64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfInt64(int64(v)))
 	out.n = n
@@ -2239,7 +2239,7 @@ func consumeSint64(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Int64() = protowire.DecodeZigZag(v)
 	out.n = n
@@ -2315,7 +2315,7 @@ func consumeSint64Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Int64Ptr()
 	if *vp == nil {
@@ -2359,7 +2359,7 @@ func consumeSint64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -2374,7 +2374,7 @@ func consumeSint64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, protowire.DecodeZigZag(v))
 			b = b[n:]
@@ -2398,7 +2398,7 @@ func consumeSint64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, protowire.DecodeZigZag(v))
 	out.n = n
@@ -2479,7 +2479,7 @@ func consumeSint64Value(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfInt64(protowire.DecodeZigZag(v)), out, nil
@@ -2519,7 +2519,7 @@ func consumeSint64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -2534,7 +2534,7 @@ func consumeSint64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfInt64(protowire.DecodeZigZag(v)))
 			b = b[n:]
@@ -2557,7 +2557,7 @@ func consumeSint64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfInt64(protowire.DecodeZigZag(v)))
 	out.n = n
@@ -2645,7 +2645,7 @@ func consumeUint64(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, 
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Uint64() = v
 	out.n = n
@@ -2721,7 +2721,7 @@ func consumeUint64Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Uint64Ptr()
 	if *vp == nil {
@@ -2765,7 +2765,7 @@ func consumeUint64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -2780,7 +2780,7 @@ func consumeUint64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, v)
 			b = b[n:]
@@ -2804,7 +2804,7 @@ func consumeUint64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, v)
 	out.n = n
@@ -2885,7 +2885,7 @@ func consumeUint64Value(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfUint64(v), out, nil
@@ -2925,7 +2925,7 @@ func consumeUint64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			var v uint64
@@ -2940,7 +2940,7 @@ func consumeUint64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 				v, n = protowire.ConsumeVarint(b)
 			}
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfUint64(v))
 			b = b[n:]
@@ -2963,7 +2963,7 @@ func consumeUint64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 		v, n = protowire.ConsumeVarint(b)
 	}
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfUint64(v))
 	out.n = n
@@ -3041,7 +3041,7 @@ func consumeSfixed32(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Int32() = int32(v)
 	out.n = n
@@ -3106,7 +3106,7 @@ func consumeSfixed32Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Int32Ptr()
 	if *vp == nil {
@@ -3148,12 +3148,12 @@ func consumeSfixed32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFiel
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed32(b)
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, int32(v))
 			b = b[n:]
@@ -3167,7 +3167,7 @@ func consumeSfixed32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFiel
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, int32(v))
 	out.n = n
@@ -3232,7 +3232,7 @@ func consumeSfixed32Value(b []byte, _ protoreflect.Value, _ protowire.Number, wt
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfInt32(int32(v)), out, nil
@@ -3269,12 +3269,12 @@ func consumeSfixed32SliceValue(b []byte, listv protoreflect.Value, _ protowire.N
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed32(b)
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfInt32(int32(v)))
 			b = b[n:]
@@ -3287,7 +3287,7 @@ func consumeSfixed32SliceValue(b []byte, listv protoreflect.Value, _ protowire.N
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfInt32(int32(v)))
 	out.n = n
@@ -3357,7 +3357,7 @@ func consumeFixed32(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo,
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Uint32() = v
 	out.n = n
@@ -3422,7 +3422,7 @@ func consumeFixed32Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Uint32Ptr()
 	if *vp == nil {
@@ -3464,12 +3464,12 @@ func consumeFixed32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderField
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed32(b)
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, v)
 			b = b[n:]
@@ -3483,7 +3483,7 @@ func consumeFixed32Slice(b []byte, p pointer, wtyp protowire.Type, f *coderField
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, v)
 	out.n = n
@@ -3548,7 +3548,7 @@ func consumeFixed32Value(b []byte, _ protoreflect.Value, _ protowire.Number, wty
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfUint32(uint32(v)), out, nil
@@ -3585,12 +3585,12 @@ func consumeFixed32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Nu
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed32(b)
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfUint32(uint32(v)))
 			b = b[n:]
@@ -3603,7 +3603,7 @@ func consumeFixed32SliceValue(b []byte, listv protoreflect.Value, _ protowire.Nu
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfUint32(uint32(v)))
 	out.n = n
@@ -3673,7 +3673,7 @@ func consumeFloat(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, _
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Float32() = math.Float32frombits(v)
 	out.n = n
@@ -3738,7 +3738,7 @@ func consumeFloatPtr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Float32Ptr()
 	if *vp == nil {
@@ -3780,12 +3780,12 @@ func consumeFloatSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed32(b)
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, math.Float32frombits(v))
 			b = b[n:]
@@ -3799,7 +3799,7 @@ func consumeFloatSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, math.Float32frombits(v))
 	out.n = n
@@ -3864,7 +3864,7 @@ func consumeFloatValue(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp 
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfFloat32(math.Float32frombits(uint32(v))), out, nil
@@ -3901,12 +3901,12 @@ func consumeFloatSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed32(b)
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfFloat32(math.Float32frombits(uint32(v))))
 			b = b[n:]
@@ -3919,7 +3919,7 @@ func consumeFloatSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 	}
 	v, n := protowire.ConsumeFixed32(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfFloat32(math.Float32frombits(uint32(v))))
 	out.n = n
@@ -3989,7 +3989,7 @@ func consumeSfixed64(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Int64() = int64(v)
 	out.n = n
@@ -4054,7 +4054,7 @@ func consumeSfixed64Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Int64Ptr()
 	if *vp == nil {
@@ -4096,12 +4096,12 @@ func consumeSfixed64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFiel
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed64(b)
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, int64(v))
 			b = b[n:]
@@ -4115,7 +4115,7 @@ func consumeSfixed64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderFiel
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, int64(v))
 	out.n = n
@@ -4180,7 +4180,7 @@ func consumeSfixed64Value(b []byte, _ protoreflect.Value, _ protowire.Number, wt
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfInt64(int64(v)), out, nil
@@ -4217,12 +4217,12 @@ func consumeSfixed64SliceValue(b []byte, listv protoreflect.Value, _ protowire.N
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed64(b)
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfInt64(int64(v)))
 			b = b[n:]
@@ -4235,7 +4235,7 @@ func consumeSfixed64SliceValue(b []byte, listv protoreflect.Value, _ protowire.N
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfInt64(int64(v)))
 	out.n = n
@@ -4305,7 +4305,7 @@ func consumeFixed64(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo,
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Uint64() = v
 	out.n = n
@@ -4370,7 +4370,7 @@ func consumeFixed64Ptr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Uint64Ptr()
 	if *vp == nil {
@@ -4412,12 +4412,12 @@ func consumeFixed64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderField
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed64(b)
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, v)
 			b = b[n:]
@@ -4431,7 +4431,7 @@ func consumeFixed64Slice(b []byte, p pointer, wtyp protowire.Type, f *coderField
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, v)
 	out.n = n
@@ -4496,7 +4496,7 @@ func consumeFixed64Value(b []byte, _ protoreflect.Value, _ protowire.Number, wty
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfUint64(v), out, nil
@@ -4533,12 +4533,12 @@ func consumeFixed64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Nu
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed64(b)
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfUint64(v))
 			b = b[n:]
@@ -4551,7 +4551,7 @@ func consumeFixed64SliceValue(b []byte, listv protoreflect.Value, _ protowire.Nu
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfUint64(v))
 	out.n = n
@@ -4621,7 +4621,7 @@ func consumeDouble(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, 
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Float64() = math.Float64frombits(v)
 	out.n = n
@@ -4686,7 +4686,7 @@ func consumeDoublePtr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.Float64Ptr()
 	if *vp == nil {
@@ -4728,12 +4728,12 @@ func consumeDoubleSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 		s := *sp
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, protowire.ParseError(n)
+			return out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed64(b)
 			if n < 0 {
-				return out, protowire.ParseError(n)
+				return out, errDecode
 			}
 			s = append(s, math.Float64frombits(v))
 			b = b[n:]
@@ -4747,7 +4747,7 @@ func consumeDoubleSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, math.Float64frombits(v))
 	out.n = n
@@ -4812,7 +4812,7 @@ func consumeDoubleValue(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfFloat64(math.Float64frombits(v)), out, nil
@@ -4849,12 +4849,12 @@ func consumeDoubleSliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return protoreflect.Value{}, out, protowire.ParseError(n)
+			return protoreflect.Value{}, out, errDecode
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeFixed64(b)
 			if n < 0 {
-				return protoreflect.Value{}, out, protowire.ParseError(n)
+				return protoreflect.Value{}, out, errDecode
 			}
 			list.Append(protoreflect.ValueOfFloat64(math.Float64frombits(v)))
 			b = b[n:]
@@ -4867,7 +4867,7 @@ func consumeDoubleSliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	}
 	v, n := protowire.ConsumeFixed64(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfFloat64(math.Float64frombits(v)))
 	out.n = n
@@ -4937,7 +4937,7 @@ func consumeString(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, 
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.String() = v
 	out.n = n
@@ -4969,7 +4969,7 @@ func consumeStringValidateUTF8(b []byte, p pointer, wtyp protowire.Type, f *code
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	if !utf8.ValidString(v) {
 		return out, errInvalidUTF8{}
@@ -5060,7 +5060,7 @@ func consumeStringPtr(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	vp := p.StringPtr()
 	if *vp == nil {
@@ -5097,7 +5097,7 @@ func consumeStringPtrValidateUTF8(b []byte, p pointer, wtyp protowire.Type, f *c
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	if !utf8.ValidString(v) {
 		return out, errInvalidUTF8{}
@@ -5145,7 +5145,7 @@ func consumeStringSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, v)
 	out.n = n
@@ -5180,7 +5180,7 @@ func consumeStringSliceValidateUTF8(b []byte, p pointer, wtyp protowire.Type, f 
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	if !utf8.ValidString(v) {
 		return out, errInvalidUTF8{}
@@ -5216,7 +5216,7 @@ func consumeStringValue(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfString(string(v)), out, nil
@@ -5246,7 +5246,7 @@ func consumeStringValueValidateUTF8(b []byte, _ protoreflect.Value, _ protowire.
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	if !utf8.ValidString(v) {
 		return protoreflect.Value{}, out, errInvalidUTF8{}
@@ -5291,7 +5291,7 @@ func consumeStringSliceValue(b []byte, listv protoreflect.Value, _ protowire.Num
 	}
 	v, n := protowire.ConsumeString(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfString(string(v)))
 	out.n = n
@@ -5326,7 +5326,7 @@ func consumeBytes(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, _
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Bytes() = append(emptyBuf[:], v...)
 	out.n = n
@@ -5358,7 +5358,7 @@ func consumeBytesValidateUTF8(b []byte, p pointer, wtyp protowire.Type, f *coder
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	if !utf8.Valid(v) {
 		return out, errInvalidUTF8{}
@@ -5405,7 +5405,7 @@ func consumeBytesNoZero(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*p.Bytes() = append(([]byte)(nil), v...)
 	out.n = n
@@ -5441,7 +5441,7 @@ func consumeBytesNoZeroValidateUTF8(b []byte, p pointer, wtyp protowire.Type, f 
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	if !utf8.Valid(v) {
 		return out, errInvalidUTF8{}
@@ -5485,7 +5485,7 @@ func consumeBytesSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldIn
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	*sp = append(*sp, append(emptyBuf[:], v...))
 	out.n = n
@@ -5520,7 +5520,7 @@ func consumeBytesSliceValidateUTF8(b []byte, p pointer, wtyp protowire.Type, f *
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, protowire.ParseError(n)
+		return out, errDecode
 	}
 	if !utf8.Valid(v) {
 		return out, errInvalidUTF8{}
@@ -5556,7 +5556,7 @@ func consumeBytesValue(b []byte, _ protoreflect.Value, _ protowire.Number, wtyp 
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	out.n = n
 	return protoreflect.ValueOfBytes(append(emptyBuf[:], v...)), out, nil
@@ -5598,7 +5598,7 @@ func consumeBytesSliceValue(b []byte, listv protoreflect.Value, _ protowire.Numb
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return protoreflect.Value{}, out, protowire.ParseError(n)
+		return protoreflect.Value{}, out, errDecode
 	}
 	list.Append(protoreflect.ValueOfBytes(append(emptyBuf[:], v...)))
 	out.n = n

@@ -21,7 +21,6 @@ import (
 )
 
 // CreateAlias invokes the kms.CreateAlias API synchronously
-// api document: https://help.aliyun.com/api/kms/createalias.html
 func (client *Client) CreateAlias(request *CreateAliasRequest) (response *CreateAliasResponse, err error) {
 	response = CreateCreateAliasResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) CreateAlias(request *CreateAliasRequest) (response *Create
 }
 
 // CreateAliasWithChan invokes the kms.CreateAlias API asynchronously
-// api document: https://help.aliyun.com/api/kms/createalias.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) CreateAliasWithChan(request *CreateAliasRequest) (<-chan *CreateAliasResponse, <-chan error) {
 	responseChan := make(chan *CreateAliasResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) CreateAliasWithChan(request *CreateAliasRequest) (<-chan *
 }
 
 // CreateAliasWithCallback invokes the kms.CreateAlias API asynchronously
-// api document: https://help.aliyun.com/api/kms/createalias.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) CreateAliasWithCallback(request *CreateAliasRequest, callback func(response *CreateAliasResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -92,6 +87,7 @@ func CreateCreateAliasRequest() (request *CreateAliasRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "CreateAlias", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

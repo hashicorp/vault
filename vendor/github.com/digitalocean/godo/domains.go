@@ -18,6 +18,9 @@ type DomainsService interface {
 	Delete(context.Context, string) (*Response, error)
 
 	Records(context.Context, string, *ListOptions) ([]DomainRecord, *Response, error)
+	RecordsByType(context.Context, string, string, *ListOptions) ([]DomainRecord, *Response, error)
+	RecordsByName(context.Context, string, string, *ListOptions) ([]DomainRecord, *Response, error)
+	RecordsByTypeAndName(context.Context, string, string, string, *ListOptions) ([]DomainRecord, *Response, error)
 	Record(context.Context, string, int) (*DomainRecord, *Response, error)
 	DeleteRecord(context.Context, string, int) (*Response, error)
 	EditRecord(context.Context, string, int, *DomainRecordEditRequest) (*DomainRecord, *Response, error)
@@ -47,6 +50,7 @@ type domainRoot struct {
 type domainsRoot struct {
 	Domains []Domain `json:"domains"`
 	Links   *Links   `json:"links"`
+	Meta    *Meta    `json:"meta"`
 }
 
 // DomainCreateRequest respresents a request to create a domain.
@@ -73,7 +77,7 @@ type DomainRecord struct {
 	Name     string `json:"name,omitempty"`
 	Data     string `json:"data,omitempty"`
 	Priority int    `json:"priority"`
-	Port     int    `json:"port,omitempty"`
+	Port     int    `json:"port"`
 	TTL      int    `json:"ttl,omitempty"`
 	Weight   int    `json:"weight"`
 	Flags    int    `json:"flags"`
@@ -86,7 +90,7 @@ type DomainRecordEditRequest struct {
 	Name     string `json:"name,omitempty"`
 	Data     string `json:"data,omitempty"`
 	Priority int    `json:"priority"`
-	Port     int    `json:"port,omitempty"`
+	Port     int    `json:"port"`
 	TTL      int    `json:"ttl,omitempty"`
 	Weight   int    `json:"weight"`
 	Flags    int    `json:"flags"`
@@ -97,6 +101,7 @@ func (d Domain) String() string {
 	return Stringify(d)
 }
 
+// URN returns the domain name in a valid DO API URN form.
 func (d Domain) URN() string {
 	return ToURN("Domain", d.Name)
 }
@@ -121,6 +126,9 @@ func (s DomainsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Domain,
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Domains, resp, err
@@ -197,7 +205,7 @@ func (d DomainRecordEditRequest) String() string {
 	return Stringify(d)
 }
 
-// Records returns a slice of DomainRecords for a domain
+// Records returns a slice of DomainRecord for a domain.
 func (s *DomainsServiceOp) Records(ctx context.Context, domain string, opt *ListOptions) ([]DomainRecord, *Response, error) {
 	if len(domain) < 1 {
 		return nil, nil, NewArgError("domain", "cannot be an empty string")
@@ -209,21 +217,68 @@ func (s *DomainsServiceOp) Records(ctx context.Context, domain string, opt *List
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	return s.records(ctx, path)
+}
+
+// RecordsByType returns a slice of DomainRecord for a domain matched by record type.
+func (s *DomainsServiceOp) RecordsByType(ctx context.Context, domain, ofType string, opt *ListOptions) ([]DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be an empty string")
+	}
+
+	if len(ofType) < 1 {
+		return nil, nil, NewArgError("type", "cannot be an empty string")
+	}
+
+	path := fmt.Sprintf("%s/%s/records?type=%s", domainsBasePath, domain, ofType)
+	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	root := new(domainRecordsRoot)
-	resp, err := s.client.Do(ctx, req, root)
-	if err != nil {
-		return nil, resp, err
-	}
-	if l := root.Links; l != nil {
-		resp.Links = l
+	return s.records(ctx, path)
+}
+
+// RecordsByName returns a slice of DomainRecord for a domain matched by record name.
+func (s *DomainsServiceOp) RecordsByName(ctx context.Context, domain, name string, opt *ListOptions) ([]DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be an empty string")
 	}
 
-	return root.DomainRecords, resp, err
+	if len(name) < 1 {
+		return nil, nil, NewArgError("name", "cannot be an empty string")
+	}
+
+	path := fmt.Sprintf("%s/%s/records?name=%s", domainsBasePath, domain, name)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s.records(ctx, path)
+}
+
+// RecordsByTypeAndName returns a slice of DomainRecord for a domain matched by record type and name.
+func (s *DomainsServiceOp) RecordsByTypeAndName(ctx context.Context, domain, ofType, name string, opt *ListOptions) ([]DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be an empty string")
+	}
+
+	if len(ofType) < 1 {
+		return nil, nil, NewArgError("type", "cannot be an empty string")
+	}
+
+	if len(name) < 1 {
+		return nil, nil, NewArgError("name", "cannot be an empty string")
+	}
+
+	path := fmt.Sprintf("%s/%s/records?type=%s&name=%s", domainsBasePath, domain, ofType, name)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s.records(ctx, path)
 }
 
 // Record returns the record id from a domain
@@ -334,4 +389,23 @@ func (s *DomainsServiceOp) CreateRecord(ctx context.Context,
 	}
 
 	return d.DomainRecord, resp, err
+}
+
+// Performs a domain records request given a path.
+func (s *DomainsServiceOp) records(ctx context.Context, path string) ([]DomainRecord, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(domainRecordsRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.DomainRecords, resp, err
 }

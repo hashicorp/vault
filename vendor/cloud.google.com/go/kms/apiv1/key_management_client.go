@@ -34,6 +34,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var newKeyManagementClientHook clientHook
+
 // KeyManagementCallOptions contains the retry settings for each method of KeyManagementClient.
 type KeyManagementCallOptions struct {
 	ListKeyRings                  []gax.CallOption
@@ -386,7 +388,17 @@ type KeyManagementClient struct {
 // If you are using manual gRPC libraries, see
 // Using gRPC with Cloud KMS (at https://cloud.google.com/kms/docs/grpc).
 func NewKeyManagementClient(ctx context.Context, opts ...option.ClientOption) (*KeyManagementClient, error) {
-	connPool, err := gtransport.DialPool(ctx, append(defaultKeyManagementClientOptions(), opts...)...)
+	clientOpts := defaultKeyManagementClientOptions()
+
+	if newKeyManagementClientHook != nil {
+		hookOpts, err := newKeyManagementClientHook(ctx, clientHookParams{})
+		if err != nil {
+			return nil, err
+		}
+		clientOpts = append(clientOpts, hookOpts...)
+	}
+
+	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
 	if err != nil {
 		return nil, err
 	}

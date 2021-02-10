@@ -18,8 +18,6 @@ package vim25
 
 import (
 	"context"
-	"net"
-	"net/url"
 	"time"
 
 	"github.com/vmware/govmomi/vim25/soap"
@@ -32,22 +30,18 @@ type RetryFunc func(err error) (retry bool, delay time.Duration)
 // network error (for example: a connect timeout).
 func TemporaryNetworkError(n int) RetryFunc {
 	return func(err error) (retry bool, delay time.Duration) {
-		var nerr net.Error
 		var ok bool
 
-		// Never retry if this is not a network error.
-		switch rerr := err.(type) {
-		case *url.Error:
-			if nerr, ok = rerr.Err.(net.Error); !ok {
-				return false, 0
-			}
-		case net.Error:
-			nerr = rerr
-		default:
+		t, ok := err.(interface {
+			// Temporary is implemented by url.Error and net.Error
+			Temporary() bool
+		})
+		if !ok {
+			// Never retry if this is not a Temporary error.
 			return false, 0
 		}
 
-		if !nerr.Temporary() {
+		if !t.Temporary() {
 			return false, 0
 		}
 

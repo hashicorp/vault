@@ -15,7 +15,7 @@ import (
 // expected.
 var ErrNoAttribute = errors.New("radius: attribute not found")
 
-// Attribute is a wire encoded RADIUS attribute.
+// Attribute is a wire encoded RADIUS attribute value.
 type Attribute []byte
 
 // Integer returns the given attribute as an integer. An error is returned if
@@ -31,7 +31,7 @@ func Integer(a Attribute) (uint32, error) {
 func NewInteger(i uint32) Attribute {
 	v := make([]byte, 4)
 	binary.BigEndian.PutUint32(v, i)
-	return Attribute(v)
+	return v
 }
 
 // String returns the given attribute as a string.
@@ -51,7 +51,7 @@ func NewString(s string) (Attribute, error) {
 // Bytes returns the given Attribute as a byte slice.
 func Bytes(a Attribute) []byte {
 	b := make([]byte, len(a))
-	copy(b, []byte(a))
+	copy(b, a)
 	return b
 }
 
@@ -62,7 +62,7 @@ func NewBytes(b []byte) (Attribute, error) {
 		return nil, errors.New("value too long")
 	}
 	a := make(Attribute, len(b))
-	copy(a, Attribute(b))
+	copy(a, b)
 	return a, nil
 }
 
@@ -73,7 +73,7 @@ func IPAddr(a Attribute) (net.IP, error) {
 		return nil, errors.New("invalid length")
 	}
 	b := make([]byte, net.IPv4len)
-	copy(b, []byte(a))
+	copy(b, a)
 	return b, nil
 }
 
@@ -85,7 +85,7 @@ func NewIPAddr(a net.IP) (Attribute, error) {
 		return nil, errors.New("invalid IPv4 address")
 	}
 	b := make(Attribute, len(a))
-	copy(b, Attribute(a))
+	copy(b, a)
 	return b, nil
 }
 
@@ -96,7 +96,7 @@ func IPv6Addr(a Attribute) (net.IP, error) {
 		return nil, errors.New("invalid length")
 	}
 	b := make([]byte, net.IPv6len)
-	copy(b, []byte(a))
+	copy(b, a)
 	return b, nil
 }
 
@@ -108,7 +108,7 @@ func NewIPv6Addr(a net.IP) (Attribute, error) {
 		return nil, errors.New("invalid IPv6 address")
 	}
 	b := make(Attribute, len(a))
-	copy(b, Attribute(a))
+	copy(b, a)
 	return b, nil
 }
 
@@ -228,7 +228,7 @@ func Date(a Attribute) (time.Time, error) {
 	if len(a) != 4 {
 		return time.Time{}, errors.New("invalid length")
 	}
-	sec := binary.BigEndian.Uint32([]byte(a))
+	sec := binary.BigEndian.Uint32(a)
 	return time.Unix(int64(sec), 0), nil
 }
 
@@ -281,7 +281,23 @@ func Integer64(a Attribute) (uint64, error) {
 func NewInteger64(i uint64) Attribute {
 	v := make([]byte, 8)
 	binary.BigEndian.PutUint64(v, i)
-	return Attribute(v)
+	return v
+}
+
+// Short returns the given attribute as an integer. An error is returned if
+// the attribute is not 2 bytes long.
+func Short(a Attribute) (uint16, error) {
+	if len(a) != 2 {
+		return 0, errors.New("invalid length")
+	}
+	return binary.BigEndian.Uint16(a), nil
+}
+
+// NewShort creates a new Attribute from the given integer value.
+func NewShort(i uint16) Attribute {
+	v := make([]byte, 2)
+	binary.BigEndian.PutUint16(v, i)
+	return v
 }
 
 // TLV returns a components of a Type-Length-Value (TLV) attribute.
@@ -362,6 +378,7 @@ func NewTunnelPassword(password, salt, secret, requestAuthenticator []byte) (Att
 
 // TunnelPassword decrypts an RFC 2868 encrypted Tunnel-Password.
 // The Attribute must not be prefixed with a tag.
+// The requestAuthenticator must be from the Access-Request packet.
 func TunnelPassword(a Attribute, secret, requestAuthenticator []byte) (password, salt []byte, err error) {
 	if len(a) > 252 || len(a) < 18 || (len(a)-2)%16 != 0 {
 		err = errors.New("invalid length")
@@ -380,7 +397,10 @@ func TunnelPassword(a Attribute, secret, requestAuthenticator []byte) (password,
 		return
 	}
 
-	chunks := (len(a) - 2) / 16
+	salt = append([]byte(nil), a[:2]...)
+	a = a[2:]
+
+	chunks := len(a) / 16
 	plaintext := make([]byte, chunks*16)
 
 	hash := md5.New()
@@ -392,14 +412,14 @@ func TunnelPassword(a Attribute, secret, requestAuthenticator []byte) (password,
 		hash.Write(secret)
 		if chunk == 0 {
 			hash.Write(requestAuthenticator)
-			hash.Write(a[:2]) // salt
+			hash.Write(salt)
 		} else {
-			hash.Write(a[2+(chunk-1)*16 : 2+chunk*16])
+			hash.Write(a[(chunk-1)*16 : chunk*16])
 		}
 		hash.Sum(b[:0])
 
 		for i := 0; i < 16; i++ {
-			plaintext[chunk*16+i] = a[2+chunk*16+i] ^ b[i]
+			plaintext[chunk*16+i] = a[chunk*16+i] ^ b[i]
 		}
 	}
 
@@ -409,7 +429,6 @@ func TunnelPassword(a Attribute, secret, requestAuthenticator []byte) (password,
 		return
 	}
 	password = plaintext[1 : 1+passwordLength]
-	salt = append([]byte(nil), a[:2]...)
 	return
 }
 

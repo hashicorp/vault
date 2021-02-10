@@ -19,12 +19,17 @@ package property
 import (
 	"context"
 
+	"github.com/vmware/govmomi/vim25/methods"
+	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
 // WaitFilter provides helpers to construct a types.CreateFilter for use with property.Wait
 type WaitFilter struct {
 	types.CreateFilter
+	Options          *types.WaitOptions
+	PropagateMissing bool
+	Truncated        bool
 }
 
 // Add a new ObjectSpec and PropertySpec to the WaitFilter
@@ -75,9 +80,12 @@ func Wait(ctx context.Context, c *Collector, obj types.ManagedObjectReference, p
 // creates a new property collector and calls CreateFilter. A new property
 // collector is required because filters can only be added, not removed.
 //
+// If the Context is canceled, a call to CancelWaitForUpdates() is made and its error value is returned.
 // The newly created collector is destroyed before this function returns (both
 // in case of success or error).
 //
+// By default, ObjectUpdate.MissingSet faults are not propagated to the returned error,
+// set WaitFilter.PropagateMissing=true to enable MissingSet fault propagation.
 func WaitForUpdates(ctx context.Context, c *Collector, filter *WaitFilter, f func([]types.ObjectUpdate) bool) error {
 	p, err := c.Create(ctx)
 	if err != nil {
@@ -85,28 +93,56 @@ func WaitForUpdates(ctx context.Context, c *Collector, filter *WaitFilter, f fun
 	}
 
 	// Attempt to destroy the collector using the background context, as the
-	// specified context may have timed out or have been cancelled.
-	defer p.Destroy(context.Background())
+	// specified context may have timed out or have been canceled.
+	defer func() {
+		_ = p.Destroy(context.Background())
+	}()
 
 	err = p.CreateFilter(ctx, filter.CreateFilter)
 	if err != nil {
 		return err
 	}
 
-	for version := ""; ; {
-		res, err := p.WaitForUpdates(ctx, version)
+	req := types.WaitForUpdatesEx{
+		This:    p.Reference(),
+		Options: filter.Options,
+	}
+
+	for {
+		res, err := methods.WaitForUpdatesEx(ctx, p.roundTripper, &req)
 		if err != nil {
+			if ctx.Err() == context.Canceled {
+				werr := p.CancelWaitForUpdates(context.Background())
+				return werr
+			}
 			return err
 		}
 
-		// Retry if the result came back empty
-		if res == nil {
+		set := res.Returnval
+		if set == nil {
+			if req.Options != nil && req.Options.MaxWaitSeconds != nil {
+				return nil // WaitOptions.MaxWaitSeconds exceeded
+			}
+			// Retry if the result came back empty
 			continue
 		}
 
-		version = res.Version
+		req.Version = set.Version
+		filter.Truncated = false
+		if set.Truncated != nil {
+			filter.Truncated = *set.Truncated
+		}
 
-		for _, fs := range res.FilterSet {
+		for _, fs := range set.FilterSet {
+			if filter.PropagateMissing {
+				for i := range fs.ObjectSet {
+					for _, p := range fs.ObjectSet[i].MissingSet {
+						// Same behavior as mo.ObjectContentToType()
+						return soap.WrapVimFault(p.Fault.Fault)
+					}
+				}
+			}
+
 			if f(fs.ObjectSet) {
 				return nil
 			}

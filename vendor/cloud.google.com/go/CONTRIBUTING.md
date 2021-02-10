@@ -14,94 +14,34 @@
 1. Sign one of the
 [contributor license agreements](#contributor-license-agreements) below.
 
-1. Run `go get golang.org/x/review/git-codereview && go install golang.org/x/review/git-codereview`
-to install the code reviewing tool.
+1. Clone the repo:
+    `git clone https://github.com/googleapis/google-cloud-go`
 
-    1. Ensure it's working by running `git codereview` (check your `PATH` if
-    not).
+1. Change into the checked out source:
+    `cd google-cloud-go`
 
-    1. If you would like, you may want to set up aliases for `git-codereview`,
-    such that `git codereview change` becomes `git change`. See the
-    [godoc](https://pkg.go.dev/golang.org/x/review/git-codereview) for details.
+1. Fork the repo.
+   
+1. Set your fork as a remote:
+    `git remote add fork git@github.com:GITHUB_USERNAME/google-cloud-go.git`
 
-        * Should you run into issues with the `git-codereview` tool, please note
-        that all error messages will assume that you have set up these aliases.
+1. Make changes (see [Formatting](#formatting) and [Style](#style)), commit to
+   your fork.
 
-1. Change to a directory of your choosing and clone the repo.
+   Commit messages should follow the
+   [Go project style](https://github.com/golang/go/wiki/CommitMessage). For example:
+   ```
+   functions: add gophers codelab
+   ```
 
-    ```
-    cd ~/code
-    git clone https://code.googlesource.com/gocloud
-    ```
+1. Send a pull request with your changes.
 
-    * If you have already checked out the source, make sure that the remote
-    `git` `origin` is https://code.googlesource.com/gocloud:
+1. A maintainer will review the pull request and make comments.
 
-        ```
-        git remote -v
-        # ...
-        git remote set-url origin https://code.googlesource.com/gocloud
-        ```
+   Prefer adding additional commits over amending and force-pushing since it can
+   be difficult to follow code reviews when the commit history changes.
 
-    * The project uses [Go Modules](https://blog.golang.org/using-go-modules)
-    for dependency management See
-    [`gopls`](https://github.com/golang/go/wiki/gopls) for making your editor
-    work with modules.
-
-1. Change to the project directory:
-
-    ```
-    cd ~/code/gocloud
-    ```
-
-1. Make sure your `git` auth is configured correctly by visiting
-https://code.googlesource.com, clicking "Generate Password" at the top-right,
-and following the directions. Otherwise, `git codereview mail` in the next step
-will fail.
-
-1. Now you are ready to make changes. Don't create a new branch or make commits in the traditional
-way. Use the following`git codereview` commands to create a commit and create a Gerrit CL:
-
-    ```
-    git codereview change <branch-name> # Use this instead of git checkout -b <branch-name>
-    # Make changes.
-    git add ...
-    git codereview change # Use this instead of git commit
-    git codereview mail # If this fails, the error message will contain instructions to fix it.
-    ```
-
-    * This will create a new `git` branch for you to develop on. Once your
-    change is merged, you can delete this branch.
-
-1. As you make changes for code review, ammend the commit and re-mail the
-change:
-
-    ```
-    # Make more changes.
-    git add ...
-    git codereview change
-    git codereview mail
-    ```
-
-    * **Warning**: do not change the `Change-Id` at the bottom of the commit
-    message - it's how Gerrit knows which change this is (or if it's new).
-
-    * When you fixes issues from code review, respond to each code review
-    message then click **Reply** at the top of the page.
-
-    * Each new mailed amendment will create a new patch set for
-    your change in Gerrit. Patch sets can be compared and reviewed.
-
-    * **Note**: if your change includes a breaking change, our breaking change
-    detector will cause CI/CD to fail. If your breaking change is acceptable
-    in some way, add a `BREAKING_CHANGE_ACCEPTABLE=<reason>` line to the commit
-    message to cause the detector not to be run and to make it clear why that is
-    acceptable.
-
-1. Finally, add reviewers to your CL when it's ready for review. Reviewers will
-not be added automatically. If you're not sure who to add for your code review,
-add tbp@, cbro@, and codyoss@.
-
+   Commits will be squashed when they're merged.
 
 ## Integration Tests
 

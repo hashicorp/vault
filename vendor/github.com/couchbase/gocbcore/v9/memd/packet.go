@@ -48,6 +48,12 @@ type UnsupportedFrame struct {
 	Data []byte
 }
 
+// UserImpersonationFrame is used to indicate a user to impersonate.
+// Internal: This should never be used and is not supported.
+type UserImpersonationFrame struct {
+	User []byte
+}
+
 // Packet represents a single request or response packet being exchanged
 // between two clients.
 type Packet struct {
@@ -69,5 +75,6 @@ type Packet struct {
 	StreamIDFrame          *StreamIDFrame
 	OpenTracingFrame       *OpenTracingFrame
 	ServerDurationFrame    *ServerDurationFrame
+	UserImpersonationFrame *UserImpersonationFrame
 	UnsupportedFrames      []UnsupportedFrame
 }

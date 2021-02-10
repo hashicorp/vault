@@ -9,7 +9,32 @@ static const LPSTR SSPI_PACKAGE_NAME = "kerberos";
 int sspi_init(
 )
 {
-	sspi_secur32_dll = LoadLibrary("secur32.dll");
+	// Load the secur32.dll library using its exact path. Passing the exact DLL path rather than allowing LoadLibrary to
+	// search in different locations removes the possibility of DLL preloading attacks. We use GetSystemDirectoryA and
+	// LoadLibraryA rather than the GetSystemDirectory/LoadLibrary aliases to ensure the ANSI versions are used so we
+	// don't have to account for variations in char sizes if UNICODE is enabled.
+
+	// Passing a 0 size will return the required buffer length to hold the path, including the null terminator.
+	int requiredLen = GetSystemDirectoryA(NULL, 0);
+	if (!requiredLen) {
+		return GetLastError();
+	}
+
+	// Allocate a buffer to hold the system directory + "\secur32.dll" (length 12, not including null terminator).
+	int actualLen = requiredLen + 12;
+	char *directoryBuffer = (char *) calloc(1, actualLen);
+	int directoryLen = GetSystemDirectoryA(directoryBuffer, actualLen);
+	if (!directoryLen) {
+		free(directoryBuffer);
+		return GetLastError();
+	}
+
+	// Append the DLL name to the buffer.
+	char *dllName = "\\secur32.dll";
+	strcpy_s(&(directoryBuffer[directoryLen]), actualLen - directoryLen, dllName);
+
+	sspi_secur32_dll = LoadLibraryA(directoryBuffer);
+	free(directoryBuffer);
 	if (!sspi_secur32_dll) {
 		return GetLastError();
 	}

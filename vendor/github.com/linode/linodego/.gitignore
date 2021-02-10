@@ -13,6 +13,10 @@
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
+
+# Common IDE paths
+.vscode/
+
 vendor/**/
 .env
 coverage.txt

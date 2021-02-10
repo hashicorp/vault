@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 
 // Package auth provides supporting functions and structs for authentication
 package auth
@@ -290,7 +291,14 @@ func (c *x509FederationClient) getSecurityToken() (securityToken, error) {
 
 	var httpResponse *http.Response
 	defer common.CloseBodyIfValid(httpResponse)
-	if httpResponse, err = c.authClient.Call(context.Background(), &httpRequest); err != nil {
+
+	for retry := 0; retry < 5; retry++ {
+		if httpResponse, err = c.authClient.Call(context.Background(), &httpRequest); err == nil {
+			break
+		}
+		time.Sleep(250 * time.Microsecond)
+	}
+	if err != nil {
 		return nil, fmt.Errorf("failed to call: %s", err.Error())
 	}
 

@@ -125,7 +125,7 @@ type Connection struct {
 	Expires    time.Time // time the token expires, may be Zero if unknown
 	client     *http.Client
 	Auth       Authenticator `json:"-" xml:"-"` // the current authenticator
-	authLock   sync.Mutex    // lock when R/W StorageUrl, AuthToken, Auth
+	authLock   *sync.Mutex   // lock when R/W StorageUrl, AuthToken, Auth
 	// swiftInfo is filled after QueryInfo is called
 	swiftInfo SwiftInfo
 }
@@ -458,6 +458,9 @@ func (c *Connection) setDefaults() {
 // If you don't call it before calling one of the connection methods
 // then it will be called for you on the first access.
 func (c *Connection) Authenticate() (err error) {
+	if c.authLock == nil {
+		c.authLock = &sync.Mutex{}
+	}
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 	return c.authenticate()
@@ -580,6 +583,9 @@ func (c *Connection) UnAuthenticate() {
 //
 // Doesn't actually check the credentials against the server.
 func (c *Connection) Authenticated() bool {
+	if c.authLock == nil {
+		c.authLock = &sync.Mutex{}
+	}
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 	return c.authenticated()
@@ -958,7 +964,7 @@ func (c *Connection) ContainersAll(opts *ContainersOpts) ([]Container, error) {
 	return containers, nil
 }
 
-// ContainerNamesAll is like ContainerNamess but it returns all the Containers
+// ContainerNamesAll is like ContainerNames but it returns all the Containers
 //
 // It calls ContainerNames multiple times using the Marker parameter
 //
@@ -984,13 +990,14 @@ func (c *Connection) ContainerNamesAll(opts *ContainersOpts) ([]string, error) {
 
 // ObjectOpts is options for Objects() and ObjectNames()
 type ObjectsOpts struct {
-	Limit     int     // For an integer value n, limits the number of results to at most n values.
-	Marker    string  // Given a string value x, return object names greater in value than the  specified marker.
-	EndMarker string  // Given a string value x, return object names less in value than the specified marker
-	Prefix    string  // For a string value x, causes the results to be limited to object names beginning with the substring x.
-	Path      string  // For a string value x, return the object names nested in the pseudo path
-	Delimiter rune    // For a character c, return all the object names nested in the container
-	Headers   Headers // Any additional HTTP headers - can be nil
+	Limit      int     // For an integer value n, limits the number of results to at most n values.
+	Marker     string  // Given a string value x, return object names greater in value than the  specified marker.
+	EndMarker  string  // Given a string value x, return object names less in value than the specified marker
+	Prefix     string  // For a string value x, causes the results to be limited to object names beginning with the substring x.
+	Path       string  // For a string value x, return the object names nested in the pseudo path
+	Delimiter  rune    // For a character c, return all the object names nested in the container
+	Headers    Headers // Any additional HTTP headers - can be nil
+	KeepMarker bool    // Do not reset Marker when using ObjectsAll or ObjectNamesAll
 }
 
 // parse reads values out of ObjectsOpts
@@ -1106,6 +1113,7 @@ func (c *Connection) Objects(container string, opts *ObjectsOpts) ([]Object, err
 
 // objectsAllOpts makes a copy of opts if set or makes a new one and
 // overrides Limit and Marker
+// Marker is not overriden if KeepMarker is set
 func objectsAllOpts(opts *ObjectsOpts, Limit int) *ObjectsOpts {
 	var newOpts ObjectsOpts
 	if opts != nil {
@@ -1114,7 +1122,9 @@ func objectsAllOpts(opts *ObjectsOpts, Limit int) *ObjectsOpts {
 	if newOpts.Limit == 0 {
 		newOpts.Limit = Limit
 	}
-	newOpts.Marker = ""
+	if !newOpts.KeepMarker {
+		newOpts.Marker = ""
+	}
 	return &newOpts
 }
 
@@ -1183,7 +1193,8 @@ func (c *Connection) ObjectsAll(container string, opts *ObjectsOpts) ([]Object, 
 
 // ObjectNamesAll is like ObjectNames but it returns all the Objects
 //
-// It calls ObjectNames multiple times using the Marker parameter
+// It calls ObjectNames multiple times using the Marker parameter. Marker is
+// reset unless KeepMarker is set
 //
 // It has a default Limit parameter but you may pass in your own
 func (c *Connection) ObjectNamesAll(container string, opts *ObjectsOpts) ([]string, error) {
@@ -1361,6 +1372,13 @@ func (file *ObjectCreateFile) Write(p []byte) (n int, err error) {
 	return
 }
 
+// CloseWithError closes the object, aborting the upload.
+func (file *ObjectCreateFile) CloseWithError(err error) error {
+	_ = file.pipeWriter.CloseWithError(err)
+	<-file.done
+	return nil
+}
+
 // Close the object and checks the md5sum if it was required.
 //
 // Also returns any other errors from the server (eg container not
@@ -1477,6 +1495,22 @@ func (c *Connection) ObjectCreate(container string, objectName string, checkHash
 		pipeReader.Close()
 		close(file.done)
 	}()
+	return
+}
+
+func (c *Connection) ObjectSymlinkCreate(container string, symlink string, targetAccount string, targetContainer string, targetObject string, targetEtag string) (headers Headers, err error) {
+
+	EMPTY_MD5 := "d41d8cd98f00b204e9800998ecf8427e"
+	symHeaders := Headers{}
+	contents := bytes.NewBufferString("")
+	if targetAccount != "" {
+		symHeaders["X-Symlink-Target-Account"] = targetAccount
+	}
+	if targetEtag != "" {
+		symHeaders["X-Symlink-Target-Etag"] = targetEtag
+	}
+	symHeaders["X-Symlink-Target"] = fmt.Sprintf("%s/%s", targetContainer, targetObject)
+	_, err = c.ObjectPut(container, symlink, contents, true, EMPTY_MD5, "application/symlink", symHeaders)
 	return
 }
 
@@ -1875,22 +1909,26 @@ type BulkDeleteResult struct {
 	Headers        Headers          // Response HTTP headers.
 }
 
-func (c *Connection) doBulkDelete(objects []string) (result BulkDeleteResult, err error) {
+func (c *Connection) doBulkDelete(objects []string, h Headers) (result BulkDeleteResult, err error) {
 	var buffer bytes.Buffer
 	for _, s := range objects {
 		u := url.URL{Path: s}
 		buffer.WriteString(u.String() + "\n")
 	}
+	extraHeaders := Headers{
+		"Accept":         "application/json",
+		"Content-Type":   "text/plain",
+		"Content-Length": strconv.Itoa(buffer.Len()),
+	}
+	for key, value := range h {
+		extraHeaders[key] = value
+	}
 	resp, headers, err := c.storage(RequestOpts{
 		Operation:  "DELETE",
 		Parameters: url.Values{"bulk-delete": []string{"1"}},
-		Headers: Headers{
-			"Accept":         "application/json",
-			"Content-Type":   "text/plain",
-			"Content-Length": strconv.Itoa(buffer.Len()),
-		},
-		ErrorMap: ContainerErrorMap,
-		Body:     &buffer,
+		Headers:    extraHeaders,
+		ErrorMap:   ContainerErrorMap,
+		Body:       &buffer,
 	})
 	if err != nil {
 		return
@@ -1930,6 +1968,18 @@ func (c *Connection) doBulkDelete(objects []string) (result BulkDeleteResult, er
 // * http://docs.openstack.org/trunk/openstack-object-storage/admin/content/object-storage-bulk-delete.html
 // * http://docs.rackspace.com/files/api/v1/cf-devguide/content/Bulk_Delete-d1e2338.html
 func (c *Connection) BulkDelete(container string, objectNames []string) (result BulkDeleteResult, err error) {
+	return c.BulkDeleteHeaders(container, objectNames, nil)
+}
+
+// BulkDeleteHeaders deletes multiple objectNames from container in one operation.
+//
+// Some servers may not accept bulk-delete requests since bulk-delete is
+// an optional feature of swift - these will return the Forbidden error.
+//
+// See also:
+// * http://docs.openstack.org/trunk/openstack-object-storage/admin/content/object-storage-bulk-delete.html
+// * http://docs.rackspace.com/files/api/v1/cf-devguide/content/Bulk_Delete-d1e2338.html
+func (c *Connection) BulkDeleteHeaders(container string, objectNames []string, h Headers) (result BulkDeleteResult, err error) {
 	if len(objectNames) == 0 {
 		result.Errors = make(map[string]error)
 		return
@@ -1938,7 +1988,7 @@ func (c *Connection) BulkDelete(container string, objectNames []string) (result 
 	for i, name := range objectNames {
 		fullPaths[i] = fmt.Sprintf("/%s/%s", container, name)
 	}
-	return c.doBulkDelete(fullPaths)
+	return c.doBulkDelete(fullPaths, h)
 }
 
 // BulkUploadResult stores results of BulkUpload().

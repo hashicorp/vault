@@ -1,8 +1,11 @@
 // Copyright (c) 2012 The gocql Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//This file will be the future home for more policies
+
 package gocql
+
+//This file will be the future home for more policies
+
 
 import (
 	"context"
@@ -304,7 +307,10 @@ type HostSelectionPolicy interface {
 	KeyspaceChanged(KeyspaceUpdateEvent)
 	Init(*Session)
 	IsLocal(host *HostInfo) bool
-	//Pick returns an iteration function over selected hosts
+	// Pick returns an iteration function over selected hosts.
+	// Multiple attempts of a single query execution won't call the returned NextHost function concurrently,
+	// so it's safe to have internal state without additional synchronization as long as every call to Pick returns
+	// a different instance of NextHost.
 	Pick(ExecutableQuery) NextHost
 }
 

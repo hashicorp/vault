@@ -28,7 +28,7 @@ const (
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/organizations/
 type OrganizationsService interface {
-	List(context.Context, *ListOptions) (*Organizations, *Response, error)
+	List(context.Context, *OrganizationsListOptions) (*Organizations, *Response, error)
 	Get(context.Context, string) (*Organization, *Response, error)
 	Projects(context.Context, string, *ListOptions) (*Projects, *Response, error)
 	Users(context.Context, string, *ListOptions) (*AtlasUsersResponse, *Response, error)
@@ -39,6 +39,13 @@ type OrganizationsService interface {
 type OrganizationsServiceOp service
 
 var _ OrganizationsService = &OrganizationsServiceOp{}
+
+// OrganizationsListOptions filtering options for organizations
+type OrganizationsListOptions struct {
+	Name               string `url:"name,omitempty"`
+	IncludeDeletedOrgs *bool  `url:"includeDeletedOrgs,omitempty"`
+	ListOptions
+}
 
 // Organization represents the structure of an organization.
 type Organization struct {
@@ -58,7 +65,7 @@ type Organizations struct {
 // List gets all organizations.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/organization-get-all/
-func (s *OrganizationsServiceOp) List(ctx context.Context, opts *ListOptions) (*Organizations, *Response, error) {
+func (s *OrganizationsServiceOp) List(ctx context.Context, opts *OrganizationsListOptions) (*Organizations, *Response, error) {
 	path, err := setListOptions(orgsBasePath, opts)
 	if err != nil {
 		return nil, nil, err

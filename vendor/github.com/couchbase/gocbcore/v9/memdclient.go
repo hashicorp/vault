@@ -50,9 +50,12 @@ type memdClient struct {
 	tracer                *tracerComponent
 	zombieLogger          *zombieLoggerComponent
 
+	dcpQueueSize         int
 	compressionMinSize   int
 	compressionMinRatio  float64
 	disableDecompression bool
+
+	cancelBootstrapSig <-chan struct{}
 }
 
 type dcpBuffer struct {
@@ -64,6 +67,7 @@ type dcpBuffer struct {
 type memdClientProps struct {
 	ClientID string
 
+	DCPQueueSize         int
 	CompressionMinSize   int
 	CompressionMinRatio  float64
 	DisableDecompression bool
@@ -79,6 +83,7 @@ func newMemdClient(props memdClientProps, conn memdConn, breakerCfg CircuitBreak
 		zombieLogger:   zombieLogger,
 		conn:           conn,
 
+		dcpQueueSize:         props.DCPQueueSize,
 		compressionMinRatio:  props.CompressionMinRatio,
 		compressionMinSize:   props.CompressionMinSize,
 		disableDecompression: props.DisableDecompression,
@@ -307,7 +312,7 @@ func (client *memdClient) resolveRequest(resp *memdQResponse) {
 }
 
 func (client *memdClient) run() {
-	dcpBufferQ := make(chan *dcpBuffer)
+	dcpBufferQ := make(chan *dcpBuffer, client.dcpQueueSize)
 	dcpKillSwitch := make(chan bool)
 	dcpKillNotify := make(chan bool)
 	go func() {
@@ -535,7 +540,14 @@ func (client *memdClient) helloFeatures(props helloProps) []memd.HelloFeature {
 	features = append(features, memd.FeatureSelectBucket)
 
 	// If the user wants to use KV Error maps, lets enable them
-	features = append(features, memd.FeatureXerror)
+	if props.XErrorFeatureEnabled {
+		features = append(features, memd.FeatureXerror)
+	}
+
+	// Indicate that we understand JSON
+	if props.JSONFeatureEnabled {
+		features = append(features, memd.FeatureJSON)
+	}
 
 	// If the user wants to use mutation tokens, lets enable them
 	if props.MutationTokensEnabled {
@@ -560,21 +572,26 @@ func (client *memdClient) helloFeatures(props helloProps) []memd.HelloFeature {
 	}
 
 	// These flags are informational so don't actually enable anything
-	// but the enhanced durability flag tells us if the server supports
-	// the feature
 	features = append(features, memd.FeatureAltRequests)
-	features = append(features, memd.FeatureSyncReplication)
 	features = append(features, memd.FeatureCreateAsDeleted)
+	features = append(features, memd.FeatureReplaceBodyWithXattr)
+
+	if props.SyncReplicationEnabled {
+		features = append(features, memd.FeatureSyncReplication)
+	}
 
 	return features
 }
 
 type helloProps struct {
-	MutationTokensEnabled bool
-	CollectionsEnabled    bool
-	CompressionEnabled    bool
-	DurationsEnabled      bool
-	OutOfOrderEnabled     bool
+	MutationTokensEnabled  bool
+	CollectionsEnabled     bool
+	CompressionEnabled     bool
+	DurationsEnabled       bool
+	OutOfOrderEnabled      bool
+	JSONFeatureEnabled     bool
+	XErrorFeatureEnabled   bool
+	SyncReplicationEnabled bool
 }
 
 type bootstrapProps struct {
@@ -588,13 +605,14 @@ type bootstrapProps struct {
 
 type memdInitFunc func(*memdClient, time.Time) error
 
-func (client *memdClient) Bootstrap(settings bootstrapProps, deadline time.Time, cb memdInitFunc) error {
+func (client *memdClient) Bootstrap(cancelSig <-chan struct{}, settings bootstrapProps, deadline time.Time, cb memdInitFunc) error {
 	logDebugf("Fetching cluster client data")
 
 	bucket := settings.Bucket
 	features := client.helloFeatures(settings.HelloProps)
 	clientInfoStr := clientInfoString(client.connID, settings.UserAgent)
 	authMechanisms := settings.AuthMechanisms
+	client.cancelBootstrapSig = cancelSig
 
 	helloCh, err := client.ExecHello(clientInfoStr, features, deadline)
 	if err != nil {
@@ -612,7 +630,7 @@ func (client *memdClient) Bootstrap(settings bootstrapProps, deadline time.Time,
 	firstAuthMethod := settings.AuthHandler(client, deadline, authMechanisms[0])
 	// If the auth method is nil then we don't actually need to do any auth so no need to Get the mechanisms.
 	if firstAuthMethod != nil {
-		listMechsCh = make(chan SaslListMechsCompleted)
+		listMechsCh = make(chan SaslListMechsCompleted, 1)
 		err = client.SaslListMechs(deadline, func(mechs []AuthMechanism, err error) {
 			if err != nil {
 				logDebugf("Failed to fetch list auth mechs (%v)", err)
@@ -679,9 +697,22 @@ func (client *memdClient) Bootstrap(settings bootstrapProps, deadline time.Time,
 		authResp := <-completedAuthCh
 		if authResp.Err != nil {
 			logDebugf("Failed to perform auth against server (%v)", authResp.Err)
-			// If there's an auth failure or there was only 1 mechanism to use then fail.
-			if len(authMechanisms) == 1 || errors.Is(authResp.Err, ErrAuthenticationFailure) {
-				return authResp.Err
+			if errors.Is(authResp.Err, ErrAuthenticationFailure) {
+				// If there's only one auth mechanism then we can just fail.
+				if len(authMechanisms) == 1 {
+					return authResp.Err
+				}
+				// If the server supports the mechanism we've tried then this auth error can't be due to an unsupported
+				// mechanism.
+				for _, mech := range serverAuthMechanisms {
+					if mech == authMechanisms[0] {
+						return authResp.Err
+					}
+				}
+
+				// If we've got here then the auth mechanism we tried is unsupported so let's keep trying with the next
+				// supported mechanism.
+				logDebugf("Unsupported authentication mechanism, will attempt to find next supported mechanism")
 			}
 
 			for {
@@ -693,6 +724,7 @@ func (client *memdClient) Bootstrap(settings bootstrapProps, deadline time.Time,
 					return authResp.Err
 				}
 
+				logDebugf("Retrying authentication with found supported mechanism: %s", mech)
 				nextAuthFunc := settings.AuthHandler(client, deadline, mech)
 				if nextAuthFunc == nil {
 					// This can't really happen but just in case it somehow does.
@@ -828,6 +860,11 @@ func (client *memdClient) ExecSelectBucket(b []byte, deadline time.Time) (chan B
 			},
 			Callback: func(resp *memdQResponse, _ *memdQRequest, err error) {
 				if err != nil {
+					if errors.Is(err, ErrDocumentNotFound) {
+						// Bucket not found means that the user has priviledges to access the bucket but that the bucket
+						// is in some way not existing right now (e.g. in warmup).
+						err = errBucketNotFound
+					}
 					completedCh <- BytesAndError{
 						Err: err,
 					}
@@ -934,7 +971,7 @@ func (client *memdClient) ExecHello(clientID string, features []memd.HelloFeatur
 		featureBytes = appendFeatureCode(featureBytes, feature)
 	}
 
-	completedCh := make(chan ExecHelloResponse)
+	completedCh := make(chan ExecHelloResponse, 1)
 	err := client.doBootstrapRequest(
 		&memdQRequest{
 			Packet: memd.Packet{
@@ -973,6 +1010,14 @@ func (client *memdClient) ExecHello(clientID string, features []memd.HelloFeatur
 }
 
 func (client *memdClient) doBootstrapRequest(req *memdQRequest, deadline time.Time) error {
+	origCb := req.Callback
+	doneCh := make(chan struct{})
+	handler := func(resp *memdQResponse, req *memdQRequest, err error) {
+		close(doneCh)
+		origCb(resp, req, err)
+	}
+
+	req.Callback = handler
 	start := time.Now()
 	req.SetTimer(time.AfterFunc(deadline.Sub(start), func() {
 		connInfo := req.ConnectionInfo()
@@ -989,6 +1034,18 @@ func (client *memdClient) doBootstrapRequest(req *memdQRequest, deadline time.Ti
 			LastConnectionID:   connInfo.lastConnectionID,
 		})
 	}))
+
+	go func() {
+		select {
+		case <-doneCh:
+			return
+		case <-client.cancelBootstrapSig:
+			logDebugf("Bootstrap cancellation request received")
+			req.Cancel()
+			<-doneCh
+			return
+		}
+	}()
 
 	err := client.SendRequest(req)
 	if err != nil {

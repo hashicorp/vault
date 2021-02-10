@@ -19,6 +19,7 @@ func maybeEnhanceCoreErr(err error) error {
 		return &KeyValueError{
 			InnerError:         kvErr.InnerError,
 			StatusCode:         kvErr.StatusCode,
+			DocumentID:         kvErr.DocumentKey,
 			BucketName:         kvErr.BucketName,
 			ScopeName:          kvErr.ScopeName,
 			CollectionName:     kvErr.CollectionName,

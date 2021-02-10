@@ -5,7 +5,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 TEST?=$$(go list ./... |grep -Ev 'vendor|examples|testutils')
@@ -35,7 +35,7 @@ test: ## Run unit tests
 .PHONY: testacc
 testacc: ## Run acceptance tests
 	@echo "==> Running acceptance tests"
-	TRITON_TEST=1 go test $(TEST) -v $(TESTARGS) -run -timeout 120m
+	TRITON_TEST=1 go test $(TEST) -v -run TestAcc -timeout 60m
 
 .PHONY: check
 check:

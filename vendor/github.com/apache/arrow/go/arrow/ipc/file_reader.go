@@ -152,9 +152,9 @@ func (f *FileReader) readSchema() error {
 		if err != nil {
 			return err
 		}
-		defer msg.Release()
 
 		id, dict, err := readDictionary(msg.meta, f.fields, f.r)
+		msg.Release()
 		if err != nil {
 			return xerrors.Errorf("arrow/ipc: could not read dictionary %d from file: %w", i, err)
 		}

@@ -17,6 +17,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -100,6 +101,9 @@ type Session struct {
 	// UserId is the user id for token-based authentication
 	UserId int
 
+	//IAMToken is the IAM token secret that included IMS account for token-based authentication
+	IAMToken string
+
 	// AuthToken is the token secret for token-based authentication
 	AuthToken string
 
@@ -114,6 +118,9 @@ type Session struct {
 
 	// HTTPClient This allows a custom user configured HTTP Client.
 	HTTPClient *http.Client
+
+	// Context allows a custom context.Context for outbound HTTP requests
+	Context context.Context
 
 	// Custom Headers to be used on each request (Currently only for rest)
 	Headers map[string]string

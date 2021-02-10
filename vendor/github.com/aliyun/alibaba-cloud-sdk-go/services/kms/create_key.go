@@ -21,7 +21,6 @@ import (
 )
 
 // CreateKey invokes the kms.CreateKey API synchronously
-// api document: https://help.aliyun.com/api/kms/createkey.html
 func (client *Client) CreateKey(request *CreateKeyRequest) (response *CreateKeyResponse, err error) {
 	response = CreateCreateKeyResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) CreateKey(request *CreateKeyRequest) (response *CreateKeyR
 }
 
 // CreateKeyWithChan invokes the kms.CreateKey API asynchronously
-// api document: https://help.aliyun.com/api/kms/createkey.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) CreateKeyWithChan(request *CreateKeyRequest) (<-chan *CreateKeyResponse, <-chan error) {
 	responseChan := make(chan *CreateKeyResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) CreateKeyWithChan(request *CreateKeyRequest) (<-chan *Crea
 }
 
 // CreateKeyWithCallback invokes the kms.CreateKey API asynchronously
-// api document: https://help.aliyun.com/api/kms/createkey.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) CreateKeyWithCallback(request *CreateKeyRequest, callback func(response *CreateKeyResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -76,9 +71,13 @@ func (client *Client) CreateKeyWithCallback(request *CreateKeyRequest, callback 
 // CreateKeyRequest is the request struct for api CreateKey
 type CreateKeyRequest struct {
 	*requests.RpcRequest
-	KeyUsage    string `position:"Query" name:"KeyUsage"`
-	Origin      string `position:"Query" name:"Origin"`
-	Description string `position:"Query" name:"Description"`
+	ProtectionLevel         string           `position:"Query" name:"ProtectionLevel"`
+	KeyUsage                string           `position:"Query" name:"KeyUsage"`
+	Origin                  string           `position:"Query" name:"Origin"`
+	Description             string           `position:"Query" name:"Description"`
+	KeySpec                 string           `position:"Query" name:"KeySpec"`
+	RotationInterval        string           `position:"Query" name:"RotationInterval"`
+	EnableAutomaticRotation requests.Boolean `position:"Query" name:"EnableAutomaticRotation"`
 }
 
 // CreateKeyResponse is the response struct for api CreateKey
@@ -94,6 +93,7 @@ func CreateCreateKeyRequest() (request *CreateKeyRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "CreateKey", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

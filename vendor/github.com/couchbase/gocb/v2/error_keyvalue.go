@@ -7,6 +7,7 @@ import "github.com/couchbase/gocbcore/v9/memd"
 type KeyValueError struct {
 	InnerError         error           `json:"-"`
 	StatusCode         memd.StatusCode `json:"status_code,omitempty"`
+	DocumentID         string          `json:"document_id,omitempty"`
 	BucketName         string          `json:"bucket,omitempty"`
 	ScopeName          string          `json:"scope,omitempty"`
 	CollectionName     string          `json:"collection,omitempty"`

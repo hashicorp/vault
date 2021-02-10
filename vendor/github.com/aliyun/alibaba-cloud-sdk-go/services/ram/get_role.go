@@ -82,8 +82,8 @@ type GetRoleRequest struct {
 // GetRoleResponse is the response struct for api GetRole
 type GetRoleResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
-	Role      Role   `json:"Role" xml:"Role"`
+	RequestId string        `json:"RequestId" xml:"RequestId"`
+	Role      RoleInGetRole `json:"Role" xml:"Role"`
 }
 
 // CreateGetRoleRequest creates a request to invoke GetRole API
@@ -91,7 +91,7 @@ func CreateGetRoleRequest() (request *GetRoleRequest) {
 	request = &GetRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetRole", "Ram", "openAPI")
 	return
 }
 

@@ -17,7 +17,6 @@ import (
 	"unicode/utf8"
 
 	"google.golang.org/protobuf/compiler/protogen"
-	"google.golang.org/protobuf/internal/encoding/messageset"
 	"google.golang.org/protobuf/internal/encoding/tag"
 	"google.golang.org/protobuf/internal/genid"
 	"google.golang.org/protobuf/internal/version"
@@ -116,17 +115,14 @@ func GenerateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 // genStandaloneComments prints all leading comments for a FileDescriptorProto
 // location identified by the field number n.
 func genStandaloneComments(g *protogen.GeneratedFile, f *fileInfo, n int32) {
-	for _, loc := range f.Proto.GetSourceCodeInfo().GetLocation() {
-		if len(loc.Path) == 1 && loc.Path[0] == n {
-			for _, s := range loc.GetLeadingDetachedComments() {
-				g.P(protogen.Comments(s))
-				g.P()
-			}
-			if s := loc.GetLeadingComments(); s != "" {
-				g.P(protogen.Comments(s))
-				g.P()
-			}
-		}
+	loc := f.Desc.SourceLocations().ByPath(protoreflect.SourcePath{n})
+	for _, s := range loc.LeadingDetachedComments {
+		g.P(protogen.Comments(s))
+		g.P()
+	}
+	if s := loc.LeadingComments; s != "" {
+		g.P(protogen.Comments(s))
+		g.P()
 	}
 }
 
@@ -735,12 +731,6 @@ func genExtensions(g *protogen.GeneratedFile, f *fileInfo) {
 
 	g.P("var ", extensionTypesVarName(f), " = []", protoimplPackage.Ident("ExtensionInfo"), "{")
 	for _, x := range f.allExtensions {
-		// For MessageSet extensions, the name used is the parent message.
-		name := x.Desc.FullName()
-		if messageset.IsMessageSetExtension(x.Desc) {
-			name = name.Parent()
-		}
-
 		g.P("{")
 		g.P("ExtendedType: (*", x.Extendee.GoIdent, ")(nil),")
 		goType, pointer := fieldGoType(g, f, x.Extension)
@@ -749,7 +739,7 @@ func genExtensions(g *protogen.GeneratedFile, f *fileInfo) {
 		}
 		g.P("ExtensionType: (", goType, ")(nil),")
 		g.P("Field: ", x.Desc.Number(), ",")
-		g.P("Name: ", strconv.Quote(string(name)), ",")
+		g.P("Name: ", strconv.Quote(string(x.Desc.FullName())), ",")
 		g.P("Tag: ", strconv.Quote(fieldProtobufTagValue(x.Extension)), ",")
 		g.P("Filename: ", strconv.Quote(f.Desc.Path()), ",")
 		g.P("},")

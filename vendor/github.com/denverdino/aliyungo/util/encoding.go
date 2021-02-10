@@ -47,7 +47,7 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 	// add to support url.Values
 	mapValues, ok := i.(url.Values)
 	if ok {
-		for k, _ := range mapValues {
+		for k := range mapValues {
 			values.Set(k, mapValues.Get(k))
 		}
 		return
@@ -62,28 +62,32 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 
 		fieldName := elemType.Field(i).Name
 		anonymous := elemType.Field(i).Anonymous
+		tag := elemType.Field(i).Tag.Get("query")
+		argName := elemType.Field(i).Tag.Get("ArgName")
 		field := elem.Field(i)
 		// TODO Use Tag for validation
 		// tag := typ.Field(i).Tag.Get("tagname")
 		kind := field.Kind()
+		isPtr := false
 		if (kind == reflect.Ptr || kind == reflect.Array || kind == reflect.Slice || kind == reflect.Map || kind == reflect.Chan) && field.IsNil() {
 			continue
 		}
 		if kind == reflect.Ptr {
 			field = field.Elem()
 			kind = field.Kind()
+			isPtr = true
 		}
 		var value string
 		//switch field.Interface().(type) {
 		switch kind {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			i := field.Int()
-			if i != 0 {
+			if i != 0 || isPtr {
 				value = strconv.FormatInt(i, 10)
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			i := field.Uint()
-			if i != 0 {
+			if i != 0 || isPtr {
 				value = strconv.FormatUint(i, 10)
 			}
 		case reflect.Float32:
@@ -114,15 +118,26 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 			case reflect.String:
 				l := field.Len()
 				if l > 0 {
-					strArray := make([]string, l)
-					for i := 0; i < l; i++ {
-						strArray[i] = field.Index(i).String()
-					}
-					bytes, err := json.Marshal(strArray)
-					if err == nil {
-						value = string(bytes)
+					if tag == "list" {
+						name := argName
+						if argName == "" {
+							name = fieldName
+						}
+						for i := 0; i < l; i++ {
+							valueName := fmt.Sprintf("%s.%d", name, (i + 1))
+							values.Set(valueName, field.Index(i).String())
+						}
 					} else {
-						log.Printf("Failed to convert JSON: %v", err)
+						strArray := make([]string, l)
+						for i := 0; i < l; i++ {
+							strArray[i] = field.Index(i).String()
+						}
+						bytes, err := json.Marshal(strArray)
+						if err == nil {
+							value = string(bytes)
+						} else {
+							log.Printf("Failed to convert JSON: %v", err)
+						}
 					}
 				}
 			default:
@@ -160,8 +175,8 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 			}
 		}
 		if value != "" {
-			name := elemType.Field(i).Tag.Get("ArgName")
-			if name == "" {
+			name := argName
+			if argName == "" {
 				name = fieldName
 			}
 			if prefix != "" {
@@ -176,7 +191,7 @@ func setQueryValuesByFlattenMethod(i interface{}, values *url.Values, prefix str
 	// add to support url.Values
 	mapValues, ok := i.(url.Values)
 	if ok {
-		for k, _ := range mapValues {
+		for k := range mapValues {
 			values.Set(k, mapValues.Get(k))
 		}
 		return
@@ -197,12 +212,14 @@ func setQueryValuesByFlattenMethod(i interface{}, values *url.Values, prefix str
 		// tag := typ.Field(i).Tag.Get("tagname")
 		kind := field.Kind()
 
+		isPtr := false
 		if (kind == reflect.Ptr || kind == reflect.Array || kind == reflect.Slice || kind == reflect.Map || kind == reflect.Chan) && field.IsNil() {
 			continue
 		}
 		if kind == reflect.Ptr {
 			field = field.Elem()
 			kind = field.Kind()
+			isPtr = true
 		}
 
 		var value string
@@ -210,12 +227,12 @@ func setQueryValuesByFlattenMethod(i interface{}, values *url.Values, prefix str
 		switch kind {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			i := field.Int()
-			if i != 0 {
+			if i != 0 || isPtr {
 				value = strconv.FormatInt(i, 10)
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			i := field.Uint()
-			if i != 0 {
+			if i != 0 || isPtr {
 				value = strconv.FormatUint(i, 10)
 			}
 		case reflect.Float32:

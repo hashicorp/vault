@@ -2,14 +2,14 @@ package linodego
 
 import (
 	"context"
+	"encoding/json"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
 )
 
 // Notification represents a notification on an Account
 type Notification struct {
-	UntilStr string `json:"until"`
-	WhenStr  string `json:"when"`
-
 	Label    string               `json:"label"`
 	Body     *string              `json:"body"`
 	Message  string               `json:"message"`
@@ -68,6 +68,7 @@ func (NotificationsPagedResponse) endpoint(c *Client) string {
 	if err != nil {
 		panic(err)
 	}
+
 	return endpoint
 }
 
@@ -84,18 +85,32 @@ func (resp *NotificationsPagedResponse) appendData(r *NotificationsPagedResponse
 func (c *Client) ListNotifications(ctx context.Context, opts *ListOptions) ([]Notification, error) {
 	response := NotificationsPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return response.Data, nil
 }
 
-// fixDates converts JSON timestamps to Go time.Time values
-func (v *Notification) fixDates() *Notification {
-	v.Until, _ = parseDates(v.UntilStr)
-	v.When, _ = parseDates(v.WhenStr)
-	return v
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *Notification) UnmarshalJSON(b []byte) error {
+	type Mask Notification
+
+	p := struct {
+		*Mask
+		Until *parseabletime.ParseableTime `json:"until"`
+		When  *parseabletime.ParseableTime `json:"when"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Until = (*time.Time)(p.Until)
+	i.When = (*time.Time)(p.When)
+
+	return nil
 }

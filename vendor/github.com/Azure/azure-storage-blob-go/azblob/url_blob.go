@@ -98,13 +98,13 @@ func SerializeBlobTags(blobTagsMap BlobTagsMap) BlobTags {
 	return BlobTags{BlobTagSet: blobTagSet}
 }
 
-// DownloadBlob reads a range of bytes from a blob. The response also includes the blob's properties and metadata.
+// Download reads a range of bytes from a blob. The response also includes the blob's properties and metadata.
 // Passing azblob.CountToEnd (0) for count will download the blob from the offset to the end.
 // Note: Snapshot/VersionId are optional parameters which are part of request URL query params.
 // 	These parameters can be explicitly set by calling WithSnapshot(snapshot string)/WithVersionID(versionID string)
 // 	Therefore it not required to pass these here.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-blob.
-func (b BlobURL) Download(ctx context.Context, offset int64, count int64, ac BlobAccessConditions, rangeGetContentMD5 bool) (*DownloadResponse, error) {
+func (b BlobURL) Download(ctx context.Context, offset int64, count int64, ac BlobAccessConditions, rangeGetContentMD5 bool, cpk ClientProvidedKeyOptions) (*DownloadResponse, error) {
 	var xRangeGetContentMD5 *bool
 	if rangeGetContentMD5 {
 		xRangeGetContentMD5 = &rangeGetContentMD5
@@ -113,7 +113,7 @@ func (b BlobURL) Download(ctx context.Context, offset int64, count int64, ac Blo
 	dr, err := b.blobClient.Download(ctx, nil, nil, nil,
 		httpRange{offset: offset, count: count}.pointers(),
 		ac.LeaseAccessConditions.pointers(), xRangeGetContentMD5, nil,
-		nil, nil, EncryptionAlgorithmNone, // CPK
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,
 		nil, // Blob ifTags
 		nil)
@@ -128,7 +128,7 @@ func (b BlobURL) Download(ctx context.Context, offset int64, count int64, ac Blo
 	}, err
 }
 
-// DeleteBlob marks the specified blob or snapshot for deletion. The blob is later deleted during garbage collection.
+// Delete marks the specified blob or snapshot for deletion. The blob is later deleted during garbage collection.
 // Note 1: that deleting a blob also deletes all its snapshots.
 // Note 2: Snapshot/VersionId are optional parameters which are part of request URL query params.
 // 	These parameters can be explicitly set by calling WithSnapshot(snapshot string)/WithVersionID(versionID string)
@@ -142,7 +142,7 @@ func (b BlobURL) Delete(ctx context.Context, deleteOptions DeleteSnapshotsOption
 		nil)
 }
 
-// The Set Tags operation enables users to set tags on a blob or specific blob version, but not snapshot.
+// SetTags operation enables users to set tags on a blob or specific blob version, but not snapshot.
 // Each call to this operation replaces all existing tags attached to the blob.
 // To remove all tags from the blob, call this operation with no tags set.
 // https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-tags
@@ -151,7 +151,7 @@ func (b BlobURL) SetTags(ctx context.Context, timeout *int32, versionID *string,
 	return b.blobClient.SetTags(ctx, timeout, versionID, transactionalContentMD5, transactionalContentCrc64, requestID, ifTags, &tags)
 }
 
-// The Get Tags operation enables users to get tags on a blob or specific blob version, or snapshot.
+// GetTags operation enables users to get tags on a blob or specific blob version, or snapshot.
 // https://docs.microsoft.com/en-us/rest/api/storageservices/get-blob-tags
 func (b BlobURL) GetTags(ctx context.Context, timeout *int32, requestID *string, snapshot *string, versionID *string, ifTags *string) (*BlobTags, error) {
 	return b.blobClient.GetTags(ctx, timeout, requestID, snapshot, versionID, ifTags)
@@ -176,23 +176,23 @@ func (b BlobURL) SetTier(ctx context.Context, tier AccessTierType, lac LeaseAcce
 		nil, RehydratePriorityNone, nil, lac.pointers())
 }
 
-// GetBlobProperties returns the blob's properties.
+// GetProperties returns the blob's properties.
 // Note: Snapshot/VersionId are optional parameters which are part of request URL query params.
 // These parameters can be explicitly set by calling WithSnapshot(snapshot string)/WithVersionID(versionID string)
 // Therefore it not required to pass these here.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-blob-properties.
-func (b BlobURL) GetProperties(ctx context.Context, ac BlobAccessConditions) (*BlobGetPropertiesResponse, error) {
+func (b BlobURL) GetProperties(ctx context.Context, ac BlobAccessConditions, cpk ClientProvidedKeyOptions) (*BlobGetPropertiesResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := ac.ModifiedAccessConditions.pointers()
 	return b.blobClient.GetProperties(ctx, nil,
 		nil, // Blob versioning
 		nil, ac.LeaseAccessConditions.pointers(),
-		nil, nil, EncryptionAlgorithmNone, // CPK
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,
 		nil, // Blob ifTags
 		nil)
 }
 
-// SetBlobHTTPHeaders changes a blob's HTTP headers.
+// SetHTTPHeaders changes a blob's HTTP headers.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-blob-properties.
 func (b BlobURL) SetHTTPHeaders(ctx context.Context, h BlobHTTPHeaders, ac BlobAccessConditions) (*BlobSetHTTPHeadersResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := ac.ModifiedAccessConditions.pointers()
@@ -203,13 +203,13 @@ func (b BlobURL) SetHTTPHeaders(ctx context.Context, h BlobHTTPHeaders, ac BlobA
 		&h.ContentDisposition, nil)
 }
 
-// SetBlobMetadata changes a blob's metadata.
+// SetMetadata changes a blob's metadata.
 // https://docs.microsoft.com/rest/api/storageservices/set-blob-metadata.
-func (b BlobURL) SetMetadata(ctx context.Context, metadata Metadata, ac BlobAccessConditions) (*BlobSetMetadataResponse, error) {
+func (b BlobURL) SetMetadata(ctx context.Context, metadata Metadata, ac BlobAccessConditions, cpk ClientProvidedKeyOptions) (*BlobSetMetadataResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := ac.ModifiedAccessConditions.pointers()
 	return b.blobClient.SetMetadata(ctx, nil, metadata, ac.LeaseAccessConditions.pointers(),
-		nil, nil, EncryptionAlgorithmNone, // CPK-V
-		nil, // CPK-N
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK-V
+		cpk.EncryptionScope, // CPK-N
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,
 		nil, // Blob ifTags
 		nil)
@@ -217,14 +217,14 @@ func (b BlobURL) SetMetadata(ctx context.Context, metadata Metadata, ac BlobAcce
 
 // CreateSnapshot creates a read-only snapshot of a blob.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/snapshot-blob.
-func (b BlobURL) CreateSnapshot(ctx context.Context, metadata Metadata, ac BlobAccessConditions) (*BlobCreateSnapshotResponse, error) {
+func (b BlobURL) CreateSnapshot(ctx context.Context, metadata Metadata, ac BlobAccessConditions, cpk ClientProvidedKeyOptions) (*BlobCreateSnapshotResponse, error) {
 	// CreateSnapshot does NOT panic if the user tries to create a snapshot using a URL that already has a snapshot query parameter
 	// because checking this would be a performance hit for a VERY unusual path and I don't think the common case should suffer this
 	// performance hit.
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := ac.ModifiedAccessConditions.pointers()
 	return b.blobClient.CreateSnapshot(ctx, nil, metadata,
-		nil, nil, EncryptionAlgorithmNone, // CPK-V
-		nil, // CPK-N
+		cpk.EncryptionKey, cpk.EncryptionKeySha256, cpk.EncryptionAlgorithm, // CPK-V
+		cpk.EncryptionScope, // CPK-N
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,
 		nil, // Blob ifTags
 		ac.LeaseAccessConditions.pointers(), nil)

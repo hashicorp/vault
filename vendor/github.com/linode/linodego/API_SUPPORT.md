@@ -1,5 +1,19 @@
 # API Support
 
+This document tracks LinodeGo support for the features of the [Linode API](https://developers.linode.com/changelog/api/).
+
+Endpoints are implemented as needed, by need or user-request.  As new features are added (as reported in the [Linode API Changelog](https://developers.linode.com/changelog/api/)) this document should be updated to reflect any missing endpoints.  New or deprecated fields should also be indicated below the affected HTTP method, for example:
+
+```markdown
+- `/fake/endpoint`
+  - [x] `GET`
+        * 4.0.29 field X is not implemented <http://...>
+  - [ ] `POST`
+        * 4.0.30 added support to create Fake things <http://...>
+```
+
+See `template.go` and `template_test.go` for tips on adding new endpoints.
+
 ## Linodes
 
 - `/linode/instances`
@@ -68,11 +82,11 @@
 ### IPs
 
 - `/linode/instances/$id/ips`
-  - [ ] `GET`
-  - [ ] `POST`
+  - [X] `GET`
+  - [X] `POST`
 - `/linode/instances/$id/ips/$ip_address`
-  - [ ] `GET`
-  - [ ] `PUT`
+  - [X] `GET`
+  - [X] `PUT`
   - [ ] `DELETE`
 - `/linode/instances/$id/ips/sharing`
   - [ ] `POST`
@@ -97,9 +111,9 @@
 ### Stats
 
 - `/linode/instances/$id/stats`
-  - [ ] `GET`
+  - [X] `GET`
 - `/linode/instances/$id/stats/$year/$month`
-  - [ ] `GET`
+  - [X] `GET`
 
 ### Types
 
@@ -127,6 +141,27 @@
   - [X] `PUT`
   - [X] `DELETE`
 
+## LKE
+
+- `/lke/clusters`
+  - [X] `POST`
+  - [X] `GET`
+  - [X] `PUT`
+  - [X] `DELETE`
+- `/lke/clusters/$id/pools`
+  - [X] `POST`
+  - [X] `GET`
+  - [X] `PUT`
+  - [X] `DELETE`
+- `/lke/clusters/$id/api-endpoint`
+  - [X] `GET`
+- `/lke/clusters/$id/kubeconfig`
+  - [X] `GET`
+- `/lke/clusters/$id/versions`
+  - [X] `GET`
+- `/lke/clusters/$id/versions/$id`
+  - [X] `GET`
+
 ## Longview
 
 - `/longview/clients`
@@ -153,6 +188,8 @@
   - [X] `GET`
   - [X] `PUT`
   - [X] `DELETE`
+- `/nodebalancers/$id/stats`
+  - [X] `GET`
 
 ### NodeBalancer Configs
 
@@ -181,7 +218,7 @@
   - [ ] `POST`
 - `/networking/ips/$address`
   - [X] `GET`
-  - [ ] `PUT`
+  - [X] `PUT`
   - [ ] `DELETE`
 
 ### IPv6
@@ -191,9 +228,9 @@
 - `/networking/ips/$address`
   - [X] `GET`
   - [ ] `PUT`
-- /networking/ipv6/ranges
+- `/networking/ipv6/ranges`
   - [X] `GET`
-- /networking/ipv6/pools
+- `/networking/ipv6/pools`
   - [X] `GET`
 
 ## Regions
@@ -255,25 +292,50 @@
 ### OAuth Clients
 
 - `/account/oauth-clients`
-  - [ ] `GET`
-  - [ ] `POST`
+  - [X] `GET`
+  - [X] `POST`
 - `/account/oauth-clients/$id`
-  - [ ] `GET`
-  - [ ] `PUT`
-  - [ ] `DELETE`
+  - [X] `GET`
+  - [X] `PUT`
+  - [X] `DELETE`
 - `/account/oauth-clients/$id/reset_secret`
   - [ ] `POST`
 - `/account/oauth-clients/$id/thumbnail`
   - [ ] `GET`
   - [ ] `PUT`
 
+### Object Storage Keys
+
+- `/object-storage/keys`
+  - [X] `GET`
+  - [X] `POST`
+- `/object-storage/keys/$id`
+  - [X] `GET`
+  - [X] `PUT`
+  - [X] `DELETE`
+
+### Object Storage Clusters
+- `/object-storage/clusters`
+  - [X] `GET`
+- `/object-storage/clusters/$id`
+  - [X] `GET`
+
+### Object Storage Buckets
+
+- `/object-storage/buckets`
+  - [X] `GET`
+  - [X] `POST`
+- `/object-storage/buckets/$id/$id`
+  - [X] `GET`
+  - [X] `DELETE`
+
 ### Payments
 
 - `/account/payments`
-  - [ ] `GET`
-  - [ ] `POST`
+  - [X] `GET`
+  - [X] `POST`
 - `/account/payments/$id`
-  - [ ] `GET`
+  - [X] `GET`
 - `/account/payments/paypal`
   - [ ] `GET`
 - `/account/payments/paypal/execute`
@@ -282,8 +344,8 @@
 ### Settings
 
 - `/account/settings`
-  - [ ] `GET`
-  - [ ] `PUT`
+  - [X] `GET`
+  - [X] `PUT`
 
 ### Users
 
@@ -330,7 +392,7 @@
   - [x] `GET`
   - [x] `PUT`
   - [x] `DELETE`
-  
+
 ### Two-Factor
 
 - `/profile/tfa-disable`

@@ -4,7 +4,6 @@ package net
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -153,7 +152,7 @@ func FilterCounters() ([]FilterStat, error) {
 }
 
 func FilterCountersWithContext(ctx context.Context) ([]FilterStat, error) {
-	return nil, errors.New("NetFilterCounters not implemented for openbsd")
+	return nil, common.ErrNotImplementedError
 }
 
 func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
@@ -173,7 +172,7 @@ func ProtoCounters(protocols []string) ([]ProtoCountersStat, error) {
 }
 
 func ProtoCountersWithContext(ctx context.Context, protocols []string) ([]ProtoCountersStat, error) {
-	return nil, errors.New("NetProtoCounters not implemented for openbsd")
+	return nil, common.ErrNotImplementedError
 }
 
 func parseNetstatLine(line string) (ConnectionStat, error) {

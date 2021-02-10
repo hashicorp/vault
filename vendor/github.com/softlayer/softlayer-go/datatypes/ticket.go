@@ -86,6 +86,12 @@ type Ticket struct {
 	// Whether a ticket has a one-time charge associated with it. Standard tickets are free while administrative tickets typically cost $3 USD.
 	BillableFlag *bool `json:"billableFlag,omitempty" xmlrpc:"billableFlag,omitempty"`
 
+	// A ticket's associated BNPP compliant record
+	BnppSupportedFlag *bool `json:"bnppSupportedFlag,omitempty" xmlrpc:"bnppSupportedFlag,omitempty"`
+
+	// no documentation yet
+	BnppSupportedLocationId *int `json:"bnppSupportedLocationId,omitempty" xmlrpc:"bnppSupportedLocationId,omitempty"`
+
 	// A service cancellation request.
 	CancellationRequest *Billing_Item_Cancellation_Request `json:"cancellationRequest,omitempty" xmlrpc:"cancellationRequest,omitempty"`
 
@@ -115,6 +121,9 @@ type Ticket struct {
 
 	// The first update made to a ticket. This is typically the contents of a ticket when it's created.
 	FirstUpdate *Ticket_Update `json:"firstUpdate,omitempty" xmlrpc:"firstUpdate,omitempty"`
+
+	// A ticket's associated FSBOA compliant record
+	FsboaSupportedFlag *bool `json:"fsboaSupportedFlag,omitempty" xmlrpc:"fsboaSupportedFlag,omitempty"`
 
 	// The SoftLayer department that a ticket is assigned to.
 	Group *Ticket_Group `json:"group,omitempty" xmlrpc:"group,omitempty"`
@@ -148,9 +157,6 @@ type Ticket struct {
 
 	// The last update made to a ticket.
 	LastUpdate *Ticket_Update `json:"lastUpdate,omitempty" xmlrpc:"lastUpdate,omitempty"`
-
-	// A timestamp of the last time the Ticket was viewed by the active user.
-	LastViewedDate *Time `json:"lastViewedDate,omitempty" xmlrpc:"lastViewedDate,omitempty"`
 
 	// A ticket's associated location within the SoftLayer location hierarchy.
 	Location *Location `json:"location,omitempty" xmlrpc:"location,omitempty"`
@@ -241,6 +247,9 @@ type Ticket struct {
 
 	// A count of a ticket's updates.
 	UpdateCount *uint `json:"updateCount,omitempty" xmlrpc:"updateCount,omitempty"`
+
+	// Whether employees' updates of this ticket could be rated by customer
+	UpdateRatingFlag *bool `json:"updateRatingFlag,omitempty" xmlrpc:"updateRatingFlag,omitempty"`
 
 	// A ticket's updates.
 	Updates []Ticket_Update `json:"updates,omitempty" xmlrpc:"updates,omitempty"`
@@ -369,6 +378,11 @@ type Ticket_Attachment_File struct {
 	UploaderType *string `json:"uploaderType,omitempty" xmlrpc:"uploaderType,omitempty"`
 }
 
+// no documentation yet
+type Ticket_Attachment_File_ServiceNow struct {
+	Ticket_Attachment_File
+}
+
 // SoftLayer tickets have the ability to be associated with specific pieces of hardware in a customer's inventory. Attaching hardware to a ticket can greatly increase response time from SoftLayer for issues that are related to one or more specific servers on a customer's account. The SoftLayer_Ticket_Attachment_Hardware data type models the relationship between a piece of hardware and a ticket. Only one attachment record may exist per hardware item per ticket.
 type Ticket_Attachment_Hardware struct {
 	Ticket_Attachment
@@ -494,6 +508,9 @@ type Ticket_EuCompliance struct {
 
 	// no documentation yet
 	Datacenter *Location `json:"datacenter,omitempty" xmlrpc:"datacenter,omitempty"`
+
+	// no documentation yet
+	SecurityLevel *Security_Level `json:"securityLevel,omitempty" xmlrpc:"securityLevel,omitempty"`
 
 	// no documentation yet
 	Ticket *Ticket `json:"ticket,omitempty" xmlrpc:"ticket,omitempty"`
@@ -658,6 +675,9 @@ type Ticket_Update struct {
 	// no documentation yet
 	ChangeOwnerActivity *string `json:"changeOwnerActivity,omitempty" xmlrpc:"changeOwnerActivity,omitempty"`
 
+	// The chat between the Customer and Agent
+	Chat *Ticket_Chat_Liveperson `json:"chat,omitempty" xmlrpc:"chat,omitempty"`
+
 	// The data a ticket update was created.
 	CreateDate *Time `json:"createDate,omitempty" xmlrpc:"createDate,omitempty"`
 
@@ -700,9 +720,6 @@ type Ticket_Update_Agent struct {
 // A SoftLayer_Ticket_Update_Chat is a chat between a customer and a customer service representative relating to a ticket.
 type Ticket_Update_Chat struct {
 	Ticket_Update
-
-	// The chat between the Customer and Agent
-	Chat *Ticket_Chat_Liveperson `json:"chat,omitempty" xmlrpc:"chat,omitempty"`
 }
 
 // A SoftLayer_Ticket_Update_Customer is a single update made by a customer to a ticket.

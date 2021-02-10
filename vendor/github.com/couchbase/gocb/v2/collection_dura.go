@@ -13,6 +13,7 @@ func (c *Collection) observeOnceSeqNo(
 	replicaIdx int,
 	cancelCh chan struct{},
 	timeout time.Duration,
+	user []byte,
 ) (didReplicate, didPersist bool, errOut error) {
 	opm := c.newKvOpManager("observeOnceSeqNo", tracectx)
 	defer opm.Finish()
@@ -20,6 +21,7 @@ func (c *Collection) observeOnceSeqNo(
 	opm.SetDocumentID(docID)
 	opm.SetCancelCh(cancelCh)
 	opm.SetTimeout(timeout)
+	opm.SetImpersonate(user)
 
 	agent, err := c.getKvProvider()
 	if err != nil {
@@ -31,6 +33,7 @@ func (c *Collection) observeOnceSeqNo(
 		ReplicaIdx:   replicaIdx,
 		TraceContext: opm.TraceSpan(),
 		Deadline:     opm.Deadline(),
+		User:         opm.Impersonate(),
 	}, func(res *gocbcore.ObserveVbResult, err error) {
 		if err != nil || res == nil {
 			errOut = opm.EnhanceErr(err)
@@ -57,6 +60,7 @@ func (c *Collection) observeOne(
 	replicaCh, persistCh chan struct{},
 	cancelCh chan struct{},
 	timeout time.Duration,
+	user []byte,
 ) {
 	sentReplicated := false
 	sentPersisted := false
@@ -73,7 +77,7 @@ ObserveLoop:
 			// not cancelled yet
 		}
 
-		didReplicate, didPersist, err := c.observeOnceSeqNo(tracectx, docID, mt, replicaIdx, cancelCh, timeout)
+		didReplicate, didPersist, err := c.observeOnceSeqNo(tracectx, docID, mt, replicaIdx, cancelCh, timeout, user)
 		if err != nil {
 			logDebugf("ObserveOnce failed unexpected: %s", err)
 			return
@@ -113,6 +117,7 @@ func (c *Collection) waitForDurability(
 	persistTo uint,
 	deadline time.Time,
 	cancelCh chan struct{},
+	user []byte,
 ) error {
 	opm := c.newKvOpManager("waitForDurability", tracectx)
 	defer opm.Finish()
@@ -144,7 +149,8 @@ func (c *Collection) waitForDurability(
 	persistCh := make(chan struct{}, numServers)
 
 	for replicaIdx := 0; replicaIdx < numServers; replicaIdx++ {
-		go c.observeOne(opm.TraceSpan(), docID, mt, replicaIdx, replicaCh, persistCh, subOpCancelCh, time.Until(deadline))
+		go c.observeOne(opm.TraceSpan(), docID, mt, replicaIdx, replicaCh, persistCh, subOpCancelCh,
+			time.Until(deadline), user)
 	}
 
 	numReplicated := uint(0)

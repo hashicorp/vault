@@ -43,6 +43,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
+	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 )
@@ -66,12 +68,58 @@ type TupleElement interface{}
 // packing T (modulo type normalization to []byte, uint64, and int64).
 type Tuple []TupleElement
 
+// String implements the fmt.Stringer interface and returns human-readable
+// string representation of this tuple. For most elements, we use the
+// object's default string representation.
+func (tuple Tuple) String() string {
+	sb := strings.Builder{}
+	printTuple(tuple, &sb)
+	return sb.String()
+}
+
+func printTuple(tuple Tuple, sb *strings.Builder) {
+	sb.WriteString("(")
+
+	for i, t := range tuple {
+		switch t := t.(type) {
+		case Tuple:
+			printTuple(t, sb)
+		case nil:
+			sb.WriteString("<nil>")
+		case string:
+			sb.WriteString(strconv.Quote(t))
+		case UUID:
+			sb.WriteString("UUID(")
+			sb.WriteString(t.String())
+			sb.WriteString(")")
+		case []byte:
+			sb.WriteString("b\"")
+			sb.WriteString(fdb.Printable(t))
+			sb.WriteString("\"")
+		default:
+			// For user-defined and standard types, we use standard Go
+			// printer, which itself uses Stringer interface.
+			fmt.Fprintf(sb, "%v", t)
+		}
+
+		if (i < len(tuple) - 1) {
+			sb.WriteString(", ")
+		}
+	}
+
+	sb.WriteString(")")
+}
+
 // UUID wraps a basic byte array as a UUID. We do not provide any special
 // methods for accessing or generating the UUID, but as Go does not provide
 // a built-in UUID type, this simple wrapper allows for other libraries
 // to write the output of their UUID type as a 16-byte array into
 // an instance of this type.
 type UUID [16]byte
+
+func (uuid UUID) String() string {
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
+}
 
 // Versionstamp is struct for a FoundationDB verionstamp. Versionstamps are
 // 12 bytes long composed of a 10 byte transaction version and a 2 byte user
@@ -80,6 +128,11 @@ type UUID [16]byte
 type Versionstamp struct {
 	TransactionVersion [10]byte
 	UserVersion        uint16
+}
+
+// Returns a human-readable string for this Versionstamp.
+func (vs Versionstamp) String() string {
+	return fmt.Sprintf("Versionstamp(%s, %d)", fdb.Printable(vs.TransactionVersion[:]), vs.UserVersion)
 }
 
 var incompleteTransactionVersion = [10]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}

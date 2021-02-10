@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/internal/encoding/defval"
+	"google.golang.org/protobuf/internal/strs"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -138,7 +139,14 @@ func ToFieldDescriptorProto(field protoreflect.FieldDescriptor) *descriptorpb.Fi
 		p.TypeName = fullNameOf(field.Message())
 	}
 	if field.HasJSONName() {
-		p.JsonName = proto.String(field.JSONName())
+		// A bug in older versions of protoc would always populate the
+		// "json_name" option for extensions when it is meaningless.
+		// When it did so, it would always use the camel-cased field name.
+		if field.IsExtension() {
+			p.JsonName = proto.String(strs.JSONCamelCase(string(field.Name())))
+		} else {
+			p.JsonName = proto.String(field.JSONName())
+		}
 	}
 	if field.Syntax() == protoreflect.Proto3 && field.HasOptionalKeyword() {
 		p.Proto3Optional = proto.Bool(true)

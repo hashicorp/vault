@@ -46,12 +46,12 @@ func (p *Pointer) Set(s, v interface{}) (interface{}, error) {
 
 	f, ok := funcMap[val.Kind()]
 	if !ok {
-		return nil, fmt.Errorf("set %s: invalid value kind: %s", p, val.Kind())
+		return nil, fmt.Errorf("set %s: %w: %s", p, ErrInvalidKind, val.Kind())
 	}
 
 	result, err := f(originalS, val, reflect.ValueOf(v))
 	if err != nil {
-		return nil, fmt.Errorf("set %s: %s", p, err)
+		return nil, fmt.Errorf("set %s: %w", p, err)
 	}
 
 	return result, nil
@@ -99,7 +99,7 @@ func (p *Pointer) setSlice(root interface{}, s, value reflect.Value) (interface{
 	// Verify we're within bounds
 	if idx < 0 || idx >= s.Len() {
 		return root, fmt.Errorf(
-			"index %d is out of range (length = %d)", idx, s.Len())
+			"index %d is %w (length = %d)", idx, ErrOutOfRange, s.Len())
 	}
 
 	// Set the key

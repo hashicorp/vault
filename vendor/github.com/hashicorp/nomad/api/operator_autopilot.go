@@ -22,6 +22,10 @@ type AutopilotConfiguration struct {
 	// be behind before being considered unhealthy.
 	MaxTrailingLogs uint64
 
+	// MinQuorum sets the minimum number of servers allowed in a cluster before
+	// autopilot can prune dead servers.
+	MinQuorum uint
+
 	// ServerStabilizationTime is the minimum amount of time a server must be
 	// in a stable, healthy state before it can be added to the cluster. Only
 	// applicable with Raft protocol version 3 or higher.

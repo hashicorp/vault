@@ -92,39 +92,28 @@ func GetIntegrityHash(b, key []byte, usage uint32, etype etype.EType) ([]byte, e
 
 // VerifyChecksum compares the checksum of the msg bytes is the same as the checksum provided.
 func VerifyChecksum(key, chksum, msg []byte, usage uint32, etype etype.EType) bool {
-	//The ciphertext output is the concatenation of the output of the basic
-	//encryption function E and a (possibly truncated) HMAC using the
-	//specified hash function H, both applied to the plaintext with a
-	//random confounder prefix and sufficient padding to bring it to a
-	//multiple of the message block size.  When the HMAC is computed, the
-	//key is used in the protocol key form.
+	//The encrypted message is a concatenation of the encrypted output and the hash HMAC.
 	expectedMAC, _ := GetChecksumHash(msg, key, usage, etype)
 	return hmac.Equal(chksum, expectedMAC)
 }
 
 // GetUsageKc returns the checksum key usage value for the usage number un.
 //
-// RFC 3961: The "well-known constant" used for the DK function is the key usage number, expressed as four octets in big-endian order, followed by one octet indicated below.
-//
-// Kc = DK(base-key, usage | 0x99);
+// See RFC 3961 5.3 key-derivation function definition.
 func GetUsageKc(un uint32) []byte {
 	return getUsage(un, 0x99)
 }
 
 // GetUsageKe returns the encryption key usage value for the usage number un
 //
-// RFC 3961: The "well-known constant" used for the DK function is the key usage number, expressed as four octets in big-endian order, followed by one octet indicated below.
-//
-// Ke = DK(base-key, usage | 0xAA);
+// See RFC 3961 5.3 key-derivation function definition.
 func GetUsageKe(un uint32) []byte {
 	return getUsage(un, 0xAA)
 }
 
 // GetUsageKi returns the integrity key usage value for the usage number un
 //
-// RFC 3961: The "well-known constant" used for the DK function is the key usage number, expressed as four octets in big-endian order, followed by one octet indicated below.
-//
-// Ki = DK(base-key, usage | 0x55);
+// See RFC 3961 5.3 key-derivation function definition.
 func GetUsageKi(un uint32) []byte {
 	return getUsage(un, 0x55)
 }

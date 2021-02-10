@@ -6,6 +6,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"reflect"
+	"time"
 )
 
 // ErrNotStringer is returned when there's an error with hash:"string"
@@ -31,6 +32,21 @@ type HashOptions struct {
 	// ZeroNil is flag determining if nil pointer should be treated equal
 	// to a zero value of pointed type. By default this is false.
 	ZeroNil bool
+
+	// IgnoreZeroValue is determining if zero value fields should be
+	// ignored for hash calculation.
+	IgnoreZeroValue bool
+
+	// SlicesAsSets assumes that a `set` tag is always present for slices.
+	// Default is false (in which case the tag is used instead)
+	SlicesAsSets bool
+
+	// UseStringer will attempt to use fmt.Stringer aways. If the struct
+	// doesn't implement fmt.Stringer, it'll fall back to trying usual tricks.
+	// If this is true, and the "string" tag is also set, the tag takes
+	// precedense (meaning that if the type doesn't implement fmt.Stringer, we
+	// panic)
+	UseStringer bool
 }
 
 // Hash returns the hash value of an arbitrary value.
@@ -82,17 +98,23 @@ func Hash(v interface{}, opts *HashOptions) (uint64, error) {
 
 	// Create our walker and walk the structure
 	w := &walker{
-		h:       opts.Hasher,
-		tag:     opts.TagName,
-		zeronil: opts.ZeroNil,
+		h:               opts.Hasher,
+		tag:             opts.TagName,
+		zeronil:         opts.ZeroNil,
+		ignorezerovalue: opts.IgnoreZeroValue,
+		sets:            opts.SlicesAsSets,
+		stringer:        opts.UseStringer,
 	}
 	return w.visit(reflect.ValueOf(v), nil)
 }
 
 type walker struct {
-	h       hash.Hash64
-	tag     string
-	zeronil bool
+	h               hash.Hash64
+	tag             string
+	zeronil         bool
+	ignorezerovalue bool
+	sets            bool
+	stringer        bool
 }
 
 type visitOpts struct {
@@ -103,6 +125,8 @@ type visitOpts struct {
 	Struct      interface{}
 	StructField string
 }
+
+var timeType = reflect.TypeOf(time.Time{})
 
 func (w *walker) visit(v reflect.Value, opts *visitOpts) (uint64, error) {
 	t := reflect.TypeOf(0)
@@ -156,6 +180,18 @@ func (w *walker) visit(v reflect.Value, opts *visitOpts) (uint64, error) {
 		// A direct hash calculation
 		w.h.Reset()
 		err := binary.Write(w.h, binary.LittleEndian, v.Interface())
+		return w.h.Sum64(), err
+	}
+
+	switch v.Type() {
+	case timeType:
+		w.h.Reset()
+		b, err := v.Interface().(time.Time).MarshalBinary()
+		if err != nil {
+			return 0, err
+		}
+
+		err = binary.Write(w.h, binary.LittleEndian, b)
 		return w.h.Sum64(), err
 	}
 
@@ -220,6 +256,24 @@ func (w *walker) visit(v reflect.Value, opts *visitOpts) (uint64, error) {
 			include = impl
 		}
 
+		if impl, ok := parent.(Hashable); ok {
+			return impl.Hash()
+		}
+
+		// If we can address this value, check if the pointer value
+		// implements our interfaces and use that if so.
+		if v.CanAddr() {
+			vptr := v.Addr()
+			parentptr := vptr.Interface()
+			if impl, ok := parentptr.(Includable); ok {
+				include = impl
+			}
+
+			if impl, ok := parentptr.(Hashable); ok {
+				return impl.Hash()
+			}
+		}
+
 		t := v.Type()
 		h, err := w.visit(reflect.ValueOf(t.Name()), nil)
 		if err != nil {
@@ -229,6 +283,7 @@ func (w *walker) visit(v reflect.Value, opts *visitOpts) (uint64, error) {
 		l := v.NumField()
 		for i := 0; i < l; i++ {
 			if innerV := v.Field(i); v.CanSet() || t.Field(i).Name != "_" {
+
 				var f visitFlag
 				fieldType := t.Field(i)
 				if fieldType.PkgPath != "" {
@@ -242,11 +297,20 @@ func (w *walker) visit(v reflect.Value, opts *visitOpts) (uint64, error) {
 					continue
 				}
 
+				if w.ignorezerovalue {
+					zeroVal := reflect.Zero(reflect.TypeOf(innerV.Interface())).Interface()
+					if innerV.Interface() == zeroVal {
+						continue
+					}
+				}
+
 				// if string is set, use the string value
-				if tag == "string" {
+				if tag == "string" || w.stringer {
 					if impl, ok := innerV.Interface().(fmt.Stringer); ok {
 						innerV = reflect.ValueOf(impl.String())
-					} else {
+					} else if tag == "string" {
+						// We only show this error if the tag explicitly
+						// requests a stringer.
 						return 0, &ErrNotStringer{
 							Field: v.Type().Field(i).Name,
 						}
@@ -306,7 +370,7 @@ func (w *walker) visit(v reflect.Value, opts *visitOpts) (uint64, error) {
 				return 0, err
 			}
 
-			if set {
+			if set || w.sets {
 				h = hashUpdateUnordered(h, current)
 			} else {
 				h = hashUpdateOrdered(w.h, h, current)

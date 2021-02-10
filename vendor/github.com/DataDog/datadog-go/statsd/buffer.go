@@ -1,10 +1,20 @@
 package statsd
 
+import (
+	"strconv"
+)
+
 type bufferFullError string
 
 func (e bufferFullError) Error() string { return string(e) }
 
 const errBufferFull = bufferFullError("statsd buffer is full")
+
+type partialWriteError string
+
+func (e partialWriteError) Error() string { return string(e) }
+
+const errPartialWrite = partialWriteError("value partially written")
 
 const metricOverhead = 512
 
@@ -53,6 +63,56 @@ func (b *statsdBuffer) writeHistogram(namespace string, globalTags []string, nam
 	b.writeSeparator()
 	b.buffer = appendHistogram(b.buffer, namespace, globalTags, name, value, tags, rate)
 	return b.validateNewElement(originalBuffer)
+}
+
+// writeAggregated serialized as many values as possible in the current buffer and return the position in values where it stopped.
+func (b *statsdBuffer) writeAggregated(metricSymbol []byte, namespace string, globalTags []string, name string, values []float64, tags string, tagSize int) (int, error) {
+	if b.elementCount >= b.maxElements {
+		return 0, errBufferFull
+	}
+
+	originalBuffer := b.buffer
+	b.buffer = appendHeader(b.buffer, namespace, name)
+
+	// buffer already full
+	if len(b.buffer)+tagSize > b.maxSize {
+		b.buffer = originalBuffer
+		return 0, errBufferFull
+	}
+
+	// We add as many value as possible
+	var position int
+	for idx, v := range values {
+		previousBuffer := b.buffer
+		if idx != 0 {
+			b.buffer = append(b.buffer, ':')
+		}
+		b.buffer = strconv.AppendFloat(b.buffer, v, 'f', -1, 64)
+
+		// Should we stop serializing and switch to another buffer
+		if len(b.buffer)+tagSize > b.maxSize {
+			b.buffer = previousBuffer
+			break
+		}
+		position = idx + 1
+	}
+
+	// we could not add a single value
+	if position == 0 {
+		b.buffer = originalBuffer
+		return 0, errBufferFull
+	}
+
+	b.buffer = append(b.buffer, '|')
+	b.buffer = append(b.buffer, metricSymbol...)
+	b.buffer = appendTagsAggregated(b.buffer, globalTags, tags)
+	b.elementCount++
+
+	if position != len(values) {
+		return position, errPartialWrite
+	}
+	return position, nil
+
 }
 
 func (b *statsdBuffer) writeDistribution(namespace string, globalTags []string, name string, value float64, tags []string, rate float64) error {
@@ -116,7 +176,7 @@ func (b *statsdBuffer) validateNewElement(originalBuffer []byte) error {
 
 func (b *statsdBuffer) writeSeparator() {
 	if b.elementCount != 0 {
-		b.buffer = appendSeparator(b.buffer)
+		b.buffer = append(b.buffer, '\n')
 	}
 }
 

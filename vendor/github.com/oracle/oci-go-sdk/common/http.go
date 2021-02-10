@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 
 package common
 
@@ -448,8 +449,17 @@ func addToHeader(request *http.Request, value reflect.Value, field reflect.Struc
 		return
 	}
 
-	request.Header.Add(headerName, headerValue)
+	if isUniqueHeaderRequired(headerName) {
+		request.Header.Set(headerName, headerValue)
+	} else {
+		request.Header.Add(headerName, headerValue)
+	}
 	return
+}
+
+// Check if the header is required to be unique
+func isUniqueHeaderRequired(headerName string) bool {
+	return strings.EqualFold(headerName, requestHeaderContentType)
 }
 
 // Header collection is a map of string to string that gets rendered as individual headers with a given prefix

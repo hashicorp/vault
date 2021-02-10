@@ -15,9 +15,9 @@ const (
 
 // Constraint is used to serialize a job placement constraint.
 type Constraint struct {
-	LTarget string
-	RTarget string
-	Operand string
+	LTarget string `hcl:"attribute,optional"`
+	RTarget string `hcl:"value,optional"`
+	Operand string `hcl:"operator,optional"`
 }
 
 // NewConstraint generates a new job placement constraint.

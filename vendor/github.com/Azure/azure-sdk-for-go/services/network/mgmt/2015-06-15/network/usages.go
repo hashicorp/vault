@@ -79,6 +79,11 @@ func (client UsagesClient) List(ctx context.Context, location string) (result Us
 	result.ulr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.UsagesClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.ulr.hasNextLink() && result.ulr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return

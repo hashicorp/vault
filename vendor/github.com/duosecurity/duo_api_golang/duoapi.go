@@ -18,6 +18,8 @@ import (
 )
 
 const (
+	version           = "0.1.0"
+	defaultUserAgent  = "duo_api_golang/" + version
 	initialBackoffMS  = 1000
 	maxBackoffMS      = 32000
 	backoffFactor     = 2
@@ -90,9 +92,10 @@ func (svc timeSleepService) Sleep(duration time.Duration) {
 }
 
 type apiOptions struct {
-	timeout  time.Duration
-	insecure bool
-	proxy    func(*http.Request) (*url.URL, error)
+	timeout   time.Duration
+	insecure  bool
+	proxy     func(*http.Request) (*url.URL, error)
+	transport func(*http.Transport)
 }
 
 // Optional parameter for NewDuoApi, used to configure timeouts on API calls.
@@ -118,12 +121,20 @@ func SetProxy(proxy func(*http.Request) (*url.URL, error)) func(*apiOptions) {
 	}
 }
 
+// SetTransport enables additional control over the HTTP transport used to connect to the Duo API.
+func SetTransport(transport func(*http.Transport)) func(*apiOptions) {
+	return func(opts *apiOptions) {
+		opts.transport = transport
+	}
+}
+
 // Build an return a DuoApi struct.
 // ikey is your Duo integration key
 // skey is your Duo integration secret key
 // host is your Duo host
 // userAgent allows you to specify the user agent string used when making
-//           the web request to Duo.
+//           the web request to Duo.  Information about the client will be
+//           appended to the userAgent.
 // options are optional parameters.  Use SetTimeout() to specify a timeout value
 //         for Rest API calls.  Use SetProxy() to specify proxy settings for Duo API calls.
 //
@@ -149,6 +160,15 @@ func NewDuoApi(ikey string,
 			InsecureSkipVerify: opts.insecure,
 		},
 	}
+	if opts.transport != nil {
+		opts.transport(tr)
+	}
+
+	if userAgent != "" {
+		userAgent += " "
+	}
+	userAgent += defaultUserAgent
+
 	return &DuoApi{
 		ikey:      ikey,
 		skey:      skey,
@@ -214,8 +234,10 @@ func (duoapi *DuoApi) Call(method string,
 		Path:     uri,
 		RawQuery: params.Encode(),
 	}
+	headers := make(map[string]string)
+	headers["User-Agent"] = duoapi.userAgent
 
-	return duoapi.makeRetryableHttpCall(method, url, nil, nil, options...)
+	return duoapi.makeRetryableHttpCall(method, url, headers, nil, options...)
 }
 
 // Make a signed Duo Rest API call.  See Duo's online documentation
@@ -247,6 +269,7 @@ func (duoapi *DuoApi) SignedCall(method string,
 	}
 
 	headers := make(map[string]string)
+	headers["User-Agent"] = duoapi.userAgent
 	headers["Authorization"] = auth_sig
 	headers["Date"] = now
 	var requestBody io.ReadCloser = nil

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // IPAddressesPagedResponse represents a paginated IPAddress API response
@@ -55,7 +57,7 @@ func (c *Client) GetIPAddress(ctx context.Context, id string) (*InstanceIP, erro
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%s", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&InstanceIP{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&InstanceIP{}).Get(e))
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +78,10 @@ func (c *Client) UpdateIPAddress(ctx context.Context, id string, updateOpts IPAd
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 

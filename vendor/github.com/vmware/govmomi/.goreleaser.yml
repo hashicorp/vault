@@ -1,23 +1,52 @@
 ---
-project_name: govc
+project_name: govmomi
 builds:
-- goos:
-  - linux
-  - darwin
-  - windows
-  - freebsd
+- id: govc
+  goos:
+    - linux
+    - darwin
+    - windows
+    - freebsd
   goarch:
-  - amd64
-  - 386
+    - amd64
+    - 386
+    - arm64
   env:
-  - CGO_ENABLED=0
+    - CGO_ENABLED=0
   main: ./govc/main.go
   binary: govc
   flags: -compiler gc
   ldflags: -X github.com/vmware/govmomi/govc/flags.GitVersion={{.Version}}
-archive:
-  name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
-  format: tar.gz
+- id: vcsim
+  goos:
+    - linux
+    - darwin
+    - windows
+    - freebsd
+  goarch:
+    - amd64
+    - 386
+    - arm64
+  env:
+    - CGO_ENABLED=0
+  main: ./vcsim/main.go
+  binary: vcsim
+  flags: -compiler gc
+  ldflags: -X github.com/vmware/govmomi/vcsim/flags.GitVersion={{.Version}}
+archives:
+- id: govcbuild
+  builds: ['govc']
+  name_template: 'govc_{{ .Os }}_{{ .Arch }}'
+  format: gz
+  format_overrides:
+    - goos: windows
+      format: zip
+  files:
+  - none*
+- id: vcsimbuild
+  builds: ['vcsim']
+  name_template: 'vcsim_{{ .Os }}_{{ .Arch }}'
+  format: gz
   format_overrides:
     - goos: windows
       format: zip
@@ -33,25 +62,57 @@ changelog:
       - '^test:'
       - Merge pull request
       - Merge branch
-brew:
-  github:
-    owner: govmomi
-    name: homebrew-tap
-  commit_author:
-    name: Alfred the Narwhal
-    email: cna-alfred@vmware.com
-  folder: Formula
-  homepage: "https://github.com/vmware/govmomi/blob/master/govc/README.md"
-  description: "govc is a vSphere CLI built on top of govmomi."
-  test: |
-    system "#{bin}/govc version"
+brews:
+  - name: govc
+    ids:
+      - govc
+    github:
+      owner: govmomi
+      name: homebrew-tap
+    commit_author:
+      name: Alfred the Narwhal
+      email: cna-alfred@vmware.com
+    folder: Formula
+    homepage: "https://github.com/vmware/govmomi/blob/master/govc/README.md"
+    description: "govc is a vSphere CLI built on top of govmomi."
+    test: |
+      system "#{bin}/govc version"
+    install: |
+      bin.install "govc"
+  - name: vcsim
+    ids:
+      - vcsim
+    github:
+      owner: govmomi
+      name: homebrew-tap
+    commit_author:
+      name: Alfred the Narwhal
+      email: cna-alfred@vmware.com
+    folder: Formula
+    homepage: "https://github.com/vmware/govmomi/blob/master/vcsim/README.md"
+    description: "vcsim is a vSphere API simulator built on top of govmomi."
+    test: |
+      system "#{bin}/vcsim -h"
+    install: |
+      bin.install "vcsim"
 dockers:
-  - image: vmware/govc
-    goos: linux
-    goarch: amd64
-    binary: govc
-    tag_templates:
-    - "{{ .Tag }}"
-    - "v{{ .Major }}"
-    - "v{{ .Major }}.{{ .Minor }}"
-    - latest
+- image_templates: 
+  - "vmware/govc:{{ .Tag }}"
+  - "vmware/govc:v{{ .Major }}"
+  - "vmware/govc:v{{ .Major }}.{{ .Minor }}"
+  - "vmware/govc:latest"
+  goos: linux
+  goarch: amd64
+  dockerfile: Dockerfile.govc
+  binaries: 
+  - govc
+- image_templates: 
+  - "vmware/vcsim:{{ .Tag }}"
+  - "vmware/vcsim:v{{ .Major }}"
+  - "vmware/vcsim:v{{ .Major }}.{{ .Minor }}"
+  - "vmware/vcsim:latest"
+  goos: linux
+  goarch: amd64
+  dockerfile: Dockerfile.vcsim
+  binaries: 
+  - vcsim

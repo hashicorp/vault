@@ -25,11 +25,12 @@ const (
 type frameType uint8
 
 const (
-	frameTypeReqBarrier        = frameType(0)
-	frameTypeReqSyncDurability = frameType(1)
-	frameTypeReqStreamID       = frameType(2)
-	frameTypeReqOpenTracing    = frameType(3)
-	frameTypeResSrvDuration    = frameType(0)
+	frameTypeReqBarrier           = frameType(0)
+	frameTypeReqSyncDurability    = frameType(1)
+	frameTypeReqStreamID          = frameType(2)
+	frameTypeReqOpenTracing       = frameType(3)
+	frameTypeReqUserImpersonation = frameType(4)
+	frameTypeResSrvDuration       = frameType(0)
 )
 
 // HelloFeature represents a feature code included in a memcached
@@ -95,6 +96,9 @@ const (
 
 	// FeatureCreateAsDeleted indicates support for the create as deleted feature.
 	FeatureCreateAsDeleted = HelloFeature(0x17)
+
+	// FeatureReplaceBodyWithXattr indicates support for the replace body with xattr feature.
+	FeatureReplaceBodyWithXattr = HelloFeature(0x19)
 )
 
 // StreamEndStatus represents the reason for a DCP stream ending
@@ -276,6 +280,10 @@ const (
 
 	// SubDocOpDeleteDoc represents a full document delete, for use with extended attribute ops.
 	SubDocOpDeleteDoc = SubDocOpType(CmdDelete)
+
+	// SubDocOpReplaceBodyWithXattr represents a replace body with xattr op.
+	// Uncommitted: This API may change in the future.
+	SubDocOpReplaceBodyWithXattr = SubDocOpType(CmdSubDocReplaceBodyWithXattr)
 )
 
 // DcpOpenFlag specifies flags for DCP connections configured when the stream is opened.

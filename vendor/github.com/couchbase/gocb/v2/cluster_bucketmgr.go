@@ -48,11 +48,9 @@ const (
 	EvictionPolicyTypeValueOnly EvictionPolicyType = "valueOnly"
 
 	// EvictionPolicyTypeNotRecentlyUsed specifies to use not recently used (nru) eviction for an ephemeral bucket.
-	// UNCOMMITTED: This API may change in the future.
 	EvictionPolicyTypeNotRecentlyUsed EvictionPolicyType = "nruEviction"
 
 	// EvictionPolicyTypeNRU specifies to use no eviction for an ephemeral bucket.
-	// UNCOMMITTED: This API may change in the future.
 	EvictionPolicyTypeNoEviction EvictionPolicyType = "noEviction"
 )
 
@@ -86,6 +84,7 @@ type jsonBucketSettings struct {
 	EvictionPolicy         string `json:"evictionPolicy"`
 	MaxTTL                 uint32 `json:"maxTTL"`
 	CompressionMode        string `json:"compressionMode"`
+	MinimumDurabilityLevel string `json:"durabilityMinLevel"`
 }
 
 // BucketSettings holds information about the settings for a bucket.
@@ -97,8 +96,11 @@ type BucketSettings struct {
 	NumReplicas          uint32     // NOTE: If not set this will set 0 replicas.
 	BucketType           BucketType // Defaults to CouchbaseBucketType.
 	EvictionPolicy       EvictionPolicyType
-	MaxTTL               time.Duration
-	CompressionMode      CompressionMode
+	// Deprecated: Use MaxExpiry instead.
+	MaxTTL                 time.Duration
+	MaxExpiry              time.Duration
+	CompressionMode        CompressionMode
+	MinimumDurabilityLevel DurabilityLevel
 }
 
 func (bs *BucketSettings) fromData(data jsonBucketSettings) error {
@@ -109,7 +111,9 @@ func (bs *BucketSettings) fromData(data jsonBucketSettings) error {
 	bs.NumReplicas = data.ReplicaNumber
 	bs.EvictionPolicy = EvictionPolicyType(data.EvictionPolicy)
 	bs.MaxTTL = time.Duration(data.MaxTTL) * time.Second
+	bs.MaxExpiry = time.Duration(data.MaxTTL) * time.Second
 	bs.CompressionMode = CompressionMode(data.CompressionMode)
+	bs.MinimumDurabilityLevel = durabilityLevelFromManagementAPI(data.MinimumDurabilityLevel)
 
 	switch data.BucketType {
 	case "membase":
@@ -532,8 +536,8 @@ func (bm *BucketManager) settingsToPostData(settings *BucketSettings) (url.Value
 		return nil, makeInvalidArgumentsError("Memory quota invalid, must be greater than 100MB")
 	}
 
-	if settings.MaxTTL > 0 && settings.BucketType == MemcachedBucketType {
-		return nil, makeInvalidArgumentsError("maxTTL is not supported for memcached buckets")
+	if (settings.MaxTTL > 0 || settings.MaxExpiry > 0) && settings.BucketType == MemcachedBucketType {
+		return nil, makeInvalidArgumentsError("maxExpiry is not supported for memcached buckets")
 	}
 
 	posts.Add("name", settings.Name)
@@ -592,8 +596,20 @@ func (bm *BucketManager) settingsToPostData(settings *BucketSettings) (url.Value
 		posts.Add("maxTTL", fmt.Sprintf("%d", settings.MaxTTL/time.Second))
 	}
 
+	if settings.MaxExpiry > 0 {
+		posts.Add("maxTTL", fmt.Sprintf("%d", settings.MaxExpiry/time.Second))
+	}
+
 	if settings.CompressionMode != "" {
 		posts.Add("compressionMode", string(settings.CompressionMode))
+	}
+
+	if settings.MinimumDurabilityLevel != DurabilityLevelNone {
+		level, err := settings.MinimumDurabilityLevel.toManagementAPI()
+		if err != nil {
+			return nil, err
+		}
+		posts.Add("durabilityMinLevel", level)
 	}
 
 	return posts, nil

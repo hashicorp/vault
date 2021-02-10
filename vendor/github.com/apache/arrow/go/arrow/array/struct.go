@@ -144,7 +144,7 @@ func NewStructBuilder(mem memory.Allocator, dtype *arrow.StructType) *StructBuil
 		fields:  make([]Builder, len(dtype.Fields())),
 	}
 	for i, f := range dtype.Fields() {
-		b.fields[i] = newBuilder(b.mem, f.Type)
+		b.fields[i] = NewBuilder(b.mem, f.Type)
 	}
 	return b
 }

@@ -70,6 +70,12 @@ type OrphanReporterConfig struct {
 type SecurityConfig struct {
 	TLSRootCAs    *x509.CertPool
 	TLSSkipVerify bool
+
+	// AllowedSaslMechanisms is the list of mechanisms that the SDK can use to attempt authentication.
+	// Note that if you add PLAIN to the list, this will cause credential leakage on the network
+	// since PLAIN sends the credentials in cleartext. It is disabled by default to prevent downgrade attacks. We
+	// recommend using a TLS connection if using PLAIN.
+	AllowedSaslMechanisms []SaslMechanism
 }
 
 // InternalConfig specifies options for controlling various internal
@@ -184,7 +190,7 @@ func clusterFromOptions(opts ClusterOptions) *Cluster {
 	if opts.Tracer != nil {
 		initialTracer = opts.Tracer
 	} else {
-		initialTracer = newThresholdLoggingTracer(nil)
+		initialTracer = NewThresholdLoggingTracer(nil)
 	}
 	tracerAddRef(initialTracer)
 
@@ -422,7 +428,7 @@ func (c *Cluster) getSearchProvider() (searchProvider, error) {
 }
 
 func (c *Cluster) getHTTPProvider() (httpProvider, error) {
-	provider, err := c.connectionManager.getHTTPProvider()
+	provider, err := c.connectionManager.getHTTPProvider("")
 	if err != nil {
 		return nil, err
 	}

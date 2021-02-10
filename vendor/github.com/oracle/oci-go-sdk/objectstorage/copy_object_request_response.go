@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 package objectstorage
@@ -23,6 +24,36 @@ type CopyObjectRequest struct {
 
 	// The client request ID for tracing.
 	OpcClientRequestId *string `mandatory:"false" contributesTo:"header" name:"opc-client-request-id"`
+
+	// The optional header that specifies "AES256" as the encryption algorithm. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSseCustomerAlgorithm *string `mandatory:"false" contributesTo:"header" name:"opc-sse-customer-algorithm"`
+
+	// The optional header that specifies the base64-encoded 256-bit encryption key to use to encrypt or
+	// decrypt the data. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSseCustomerKey *string `mandatory:"false" contributesTo:"header" name:"opc-sse-customer-key"`
+
+	// The optional header that specifies the base64-encoded SHA256 hash of the encryption key. This
+	// value is used to check the integrity of the encryption key. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSseCustomerKeySha256 *string `mandatory:"false" contributesTo:"header" name:"opc-sse-customer-key-sha256"`
+
+	// The optional header that specifies "AES256" as the encryption algorithm to use to decrypt the source
+	// object. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSourceSseCustomerAlgorithm *string `mandatory:"false" contributesTo:"header" name:"opc-source-sse-customer-algorithm"`
+
+	// The optional header that specifies the base64-encoded 256-bit encryption key to use to decrypt
+	// the source object. For more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSourceSseCustomerKey *string `mandatory:"false" contributesTo:"header" name:"opc-source-sse-customer-key"`
+
+	// The optional header that specifies the base64-encoded SHA256 hash of the encryption key used to
+	// decrypt the source object. This value is used to check the integrity of the encryption key. For
+	// more information, see
+	// Using Your Own Keys for Server-Side Encryption (https://docs.cloud.oracle.com/Content/Object/Tasks/usingyourencryptionkeys.htm).
+	OpcSourceSseCustomerKeySha256 *string `mandatory:"false" contributesTo:"header" name:"opc-source-sse-customer-key-sha256"`
 
 	// Metadata about the request. This information will not be transmitted to the service, but
 	// represents information that the SDK will consume to drive retry behavior.

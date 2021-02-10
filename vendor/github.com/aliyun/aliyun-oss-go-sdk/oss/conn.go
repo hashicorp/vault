@@ -27,7 +27,25 @@ type Conn struct {
 	client *http.Client
 }
 
-var signKeyList = []string{"acl", "uploads", "location", "cors", "logging", "website", "referer", "lifecycle", "delete", "append", "tagging", "objectMeta", "uploadId", "partNumber", "security-token", "position", "img", "style", "styleName", "replication", "replicationProgress", "replicationLocation", "cname", "bucketInfo", "comp", "qos", "live", "status", "vod", "startTime", "endTime", "symlink", "x-oss-process", "response-content-type", "response-content-language", "response-expires", "response-cache-control", "response-content-disposition", "response-content-encoding", "udf", "udfName", "udfImage", "udfId", "udfImageDesc", "udfApplication", "comp", "udfApplicationLog", "restore", "callback", "callback-var"}
+var signKeyList = []string{"acl", "uploads", "location", "cors",
+	"logging", "website", "referer", "lifecycle",
+	"delete", "append", "tagging", "objectMeta",
+	"uploadId", "partNumber", "security-token",
+	"position", "img", "style", "styleName",
+	"replication", "replicationProgress",
+	"replicationLocation", "cname", "bucketInfo",
+	"comp", "qos", "live", "status", "vod",
+	"startTime", "endTime", "symlink",
+	"x-oss-process", "response-content-type", "x-oss-traffic-limit",
+	"response-content-language", "response-expires",
+	"response-cache-control", "response-content-disposition",
+	"response-content-encoding", "udf", "udfName", "udfImage",
+	"udfId", "udfImageDesc", "udfApplication", "comp",
+	"udfApplicationLog", "restore", "callback", "callback-var", "qosInfo",
+	"policy", "stat", "encryption", "versions", "versioning", "versionId", "requestPayment",
+	"x-oss-request-payer", "sequential",
+	"inventory", "inventoryId", "continuation-token", "asyncFetch",
+	"worm", "wormId", "wormExtend"}
 
 // init initializes Conn
 func (conn *Conn) init(config *Config, urlMaker *urlMaker, client *http.Client) error {
@@ -41,9 +59,19 @@ func (conn *Conn) init(config *Config, urlMaker *urlMaker, client *http.Client) 
 			if err != nil {
 				return err
 			}
+			if config.IsAuthProxy {
+				if config.ProxyPassword != "" {
+					proxyURL.User = url.UserPassword(config.ProxyUser, config.ProxyPassword)
+				} else {
+					proxyURL.User = url.User(config.ProxyUser)
+				}
+			}
 			transport.Proxy = http.ProxyURL(proxyURL)
 		}
 		client = &http.Client{Transport: transport}
+		if !config.RedirectEnabled {
+			disableHTTPRedirect(client)
+		}
 	}
 
 	conn.config = config
@@ -59,7 +87,7 @@ func (conn Conn) Do(method, bucketName, objectName string, params map[string]int
 	urlParams := conn.getURLParams(params)
 	subResource := conn.getSubResource(params)
 	uri := conn.url.getURL(bucketName, objectName, urlParams)
-	resource := conn.url.getResource(bucketName, objectName, subResource)
+	resource := conn.getResource(bucketName, objectName, subResource)
 	return conn.doRequest(method, uri, resource, headers, data, initCRC, listener)
 }
 
@@ -98,7 +126,7 @@ func (conn Conn) DoURL(method HTTPMethod, signedURL string, headers map[string]s
 		req.Header.Set("Proxy-Authorization", basic)
 	}
 
-	req.Header.Set(HTTPHeaderHost, conn.config.Endpoint)
+	req.Header.Set(HTTPHeaderHost, req.Host)
 	req.Header.Set(HTTPHeaderUserAgent, conn.config.UserAgent)
 
 	if headers != nil {
@@ -108,28 +136,29 @@ func (conn Conn) DoURL(method HTTPMethod, signedURL string, headers map[string]s
 	}
 
 	// Transfer started
-	event := newProgressEvent(TransferStartedEvent, 0, req.ContentLength)
+	event := newProgressEvent(TransferStartedEvent, 0, req.ContentLength, 0)
 	publishProgress(listener, event)
 
 	if conn.config.LogLevel >= Debug {
-		conn.LoggerHttpReq(req)
+		conn.LoggerHTTPReq(req)
 	}
 
 	resp, err := conn.client.Do(req)
 	if err != nil {
 		// Transfer failed
-		event = newProgressEvent(TransferFailedEvent, tracker.completedBytes, req.ContentLength)
+		event = newProgressEvent(TransferFailedEvent, tracker.completedBytes, req.ContentLength, 0)
 		publishProgress(listener, event)
+		conn.config.WriteLog(Debug, "[Resp:%p]http error:%s\n", req, err.Error())
 		return nil, err
 	}
 
 	if conn.config.LogLevel >= Debug {
 		//print out http resp
-		conn.LoggerHttpResp(req, resp)
+		conn.LoggerHTTPResp(req, resp)
 	}
 
 	// Transfer completed
-	event = newProgressEvent(TransferCompletedEvent, tracker.completedBytes, req.ContentLength)
+	event = newProgressEvent(TransferCompletedEvent, tracker.completedBytes, req.ContentLength, 0)
 	publishProgress(listener, event)
 
 	return conn.handleResponse(resp, crc)
@@ -151,7 +180,7 @@ func (conn Conn) getURLParams(params map[string]interface{}) string {
 		}
 		buf.WriteString(url.QueryEscape(k))
 		if params[k] != nil {
-			buf.WriteString("=" + url.QueryEscape(params[k].(string)))
+			buf.WriteString("=" + strings.Replace(url.QueryEscape(params[k].(string)), "+", "%20", -1))
 		}
 	}
 
@@ -161,9 +190,19 @@ func (conn Conn) getURLParams(params map[string]interface{}) string {
 func (conn Conn) getSubResource(params map[string]interface{}) string {
 	// Sort
 	keys := make([]string, 0, len(params))
+	signParams := make(map[string]string)
 	for k := range params {
-		if conn.isParamSign(k) {
+		if conn.config.AuthVersion == AuthV2 {
+			encodedKey := url.QueryEscape(k)
+			keys = append(keys, encodedKey)
+			if params[k] != nil && params[k] != "" {
+				signParams[encodedKey] = strings.Replace(url.QueryEscape(params[k].(string)), "+", "%20", -1)
+			}
+		} else if conn.isParamSign(k) {
 			keys = append(keys, k)
+			if params[k] != nil {
+				signParams[k] = params[k].(string)
+			}
 		}
 	}
 	sort.Strings(keys)
@@ -175,11 +214,10 @@ func (conn Conn) getSubResource(params map[string]interface{}) string {
 			buf.WriteByte('&')
 		}
 		buf.WriteString(k)
-		if params[k] != nil {
-			buf.WriteString("=" + params[k].(string))
+		if _, ok := signParams[k]; ok {
+			buf.WriteString("=" + signParams[k])
 		}
 	}
-
 	return buf.String()
 }
 
@@ -190,6 +228,23 @@ func (conn Conn) isParamSign(paramKey string) bool {
 		}
 	}
 	return false
+}
+
+// getResource gets canonicalized resource
+func (conn Conn) getResource(bucketName, objectName, subResource string) string {
+	if subResource != "" {
+		subResource = "?" + subResource
+	}
+	if bucketName == "" {
+		if conn.config.AuthVersion == AuthV2 {
+			return url.QueryEscape("/") + subResource
+		}
+		return fmt.Sprintf("/%s%s", bucketName, subResource)
+	}
+	if conn.config.AuthVersion == AuthV2 {
+		return url.QueryEscape("/"+bucketName+"/") + strings.Replace(url.QueryEscape(objectName), "+", "%20", -1) + subResource
+	}
+	return fmt.Sprintf("/%s/%s%s", bucketName, objectName, subResource)
 }
 
 func (conn Conn) doRequest(method string, uri *url.URL, canonicalizedResource string, headers map[string]string,
@@ -222,10 +277,12 @@ func (conn Conn) doRequest(method string, uri *url.URL, canonicalizedResource st
 
 	date := time.Now().UTC().Format(http.TimeFormat)
 	req.Header.Set(HTTPHeaderDate, date)
-	req.Header.Set(HTTPHeaderHost, conn.config.Endpoint)
+	req.Header.Set(HTTPHeaderHost, req.Host)
 	req.Header.Set(HTTPHeaderUserAgent, conn.config.UserAgent)
-	if conn.config.SecurityToken != "" {
-		req.Header.Set(HTTPHeaderOssSecurityToken, conn.config.SecurityToken)
+
+	akIf := conn.config.GetCredentials()
+	if akIf.GetSecurityToken() != "" {
+		req.Header.Set(HTTPHeaderOssSecurityToken, akIf.GetSecurityToken())
 	}
 
 	if headers != nil {
@@ -237,40 +294,40 @@ func (conn Conn) doRequest(method string, uri *url.URL, canonicalizedResource st
 	conn.signHeader(req, canonicalizedResource)
 
 	// Transfer started
-	event := newProgressEvent(TransferStartedEvent, 0, req.ContentLength)
+	event := newProgressEvent(TransferStartedEvent, 0, req.ContentLength, 0)
 	publishProgress(listener, event)
 
 	if conn.config.LogLevel >= Debug {
-		conn.LoggerHttpReq(req)
+		conn.LoggerHTTPReq(req)
 	}
 
 	resp, err := conn.client.Do(req)
 
 	if err != nil {
 		// Transfer failed
-		event = newProgressEvent(TransferFailedEvent, tracker.completedBytes, req.ContentLength)
+		event = newProgressEvent(TransferFailedEvent, tracker.completedBytes, req.ContentLength, 0)
 		publishProgress(listener, event)
+		conn.config.WriteLog(Debug, "[Resp:%p]http error:%s\n", req, err.Error())
 		return nil, err
 	}
 
 	if conn.config.LogLevel >= Debug {
 		//print out http resp
-		conn.LoggerHttpResp(req, resp)
+		conn.LoggerHTTPResp(req, resp)
 	}
 
 	// Transfer completed
-	event = newProgressEvent(TransferCompletedEvent, tracker.completedBytes, req.ContentLength)
+	event = newProgressEvent(TransferCompletedEvent, tracker.completedBytes, req.ContentLength, 0)
 	publishProgress(listener, event)
 
 	return conn.handleResponse(resp, crc)
 }
 
 func (conn Conn) signURL(method HTTPMethod, bucketName, objectName string, expiration int64, params map[string]interface{}, headers map[string]string) string {
-	if conn.config.SecurityToken != "" {
-		params[HTTPParamSecurityToken] = conn.config.SecurityToken
+	akIf := conn.config.GetCredentials()
+	if akIf.GetSecurityToken() != "" {
+		params[HTTPParamSecurityToken] = akIf.GetSecurityToken()
 	}
-	subResource := conn.getSubResource(params)
-	canonicalizedResource := conn.url.getResource(bucketName, objectName, subResource)
 
 	m := strings.ToUpper(string(method))
 	req := &http.Request{
@@ -285,7 +342,6 @@ func (conn Conn) signURL(method HTTPMethod, bucketName, objectName string, expir
 	}
 
 	req.Header.Set(HTTPHeaderDate, strconv.FormatInt(expiration, 10))
-	req.Header.Set(HTTPHeaderHost, conn.config.Endpoint)
 	req.Header.Set(HTTPHeaderUserAgent, conn.config.UserAgent)
 
 	if headers != nil {
@@ -294,12 +350,27 @@ func (conn Conn) signURL(method HTTPMethod, bucketName, objectName string, expir
 		}
 	}
 
-	signedStr := conn.getSignedStr(req, canonicalizedResource)
+	if conn.config.AuthVersion == AuthV2 {
+		params[HTTPParamSignatureVersion] = "OSS2"
+		params[HTTPParamExpiresV2] = strconv.FormatInt(expiration, 10)
+		params[HTTPParamAccessKeyIDV2] = conn.config.AccessKeyID
+		additionalList, _ := conn.getAdditionalHeaderKeys(req)
+		if len(additionalList) > 0 {
+			params[HTTPParamAdditionalHeadersV2] = strings.Join(additionalList, ";")
+		}
+	}
 
-	params[HTTPParamExpires] = strconv.FormatInt(expiration, 10)
-	params[HTTPParamAccessKeyID] = conn.config.AccessKeyID
-	params[HTTPParamSignature] = signedStr
+	subResource := conn.getSubResource(params)
+	canonicalizedResource := conn.getResource(bucketName, objectName, subResource)
+	signedStr := conn.getSignedStr(req, canonicalizedResource, akIf.GetAccessKeySecret())
 
+	if conn.config.AuthVersion == AuthV1 {
+		params[HTTPParamExpires] = strconv.FormatInt(expiration, 10)
+		params[HTTPParamAccessKeyID] = akIf.GetAccessKeyID()
+		params[HTTPParamSignature] = signedStr
+	} else if conn.config.AuthVersion == AuthV2 {
+		params[HTTPParamSignatureV2] = signedStr
+	}
 	urlParams := conn.getURLParams(params)
 	return conn.url.getSignURL(bucketName, objectName, urlParams)
 }
@@ -312,12 +383,13 @@ func (conn Conn) signRtmpURL(bucketName, channelName, playlistName string, expir
 	expireStr := strconv.FormatInt(expiration, 10)
 	params[HTTPParamExpires] = expireStr
 
-	if conn.config.AccessKeyID != "" {
-		params[HTTPParamAccessKeyID] = conn.config.AccessKeyID
-		if conn.config.SecurityToken != "" {
-			params[HTTPParamSecurityToken] = conn.config.SecurityToken
+	akIf := conn.config.GetCredentials()
+	if akIf.GetAccessKeyID() != "" {
+		params[HTTPParamAccessKeyID] = akIf.GetAccessKeyID()
+		if akIf.GetSecurityToken() != "" {
+			params[HTTPParamSecurityToken] = akIf.GetSecurityToken()
 		}
-		signedStr := conn.getRtmpSignedStr(bucketName, channelName, playlistName, expiration, params)
+		signedStr := conn.getRtmpSignedStr(bucketName, channelName, playlistName, expiration, akIf.GetAccessKeySecret(), params)
 		params[HTTPParamSignature] = signedStr
 	}
 
@@ -331,19 +403,9 @@ func (conn Conn) handleBody(req *http.Request, body io.Reader, initCRC uint64,
 	var file *os.File
 	var crc hash.Hash64
 	reader := body
-
-	// Length
-	switch v := body.(type) {
-	case *bytes.Buffer:
-		req.ContentLength = int64(v.Len())
-	case *bytes.Reader:
-		req.ContentLength = int64(v.Len())
-	case *strings.Reader:
-		req.ContentLength = int64(v.Len())
-	case *os.File:
-		req.ContentLength = tryGetFileSize(v)
-	case *io.LimitedReader:
-		req.ContentLength = int64(v.N)
+	readerLen, err := GetReaderLen(reader)
+	if err == nil {
+		req.ContentLength = readerLen
 	}
 	req.Header.Set(HTTPHeaderContentLength, strconv.FormatInt(req.ContentLength, 10))
 
@@ -356,7 +418,7 @@ func (conn Conn) handleBody(req *http.Request, body io.Reader, initCRC uint64,
 
 	// CRC
 	if reader != nil && conn.config.IsEnableCRC {
-		crc = NewCRC(crcTable(), initCRC)
+		crc = NewCRC(CrcTable(), initCRC)
 		reader = TeeReader(reader, crc, req.ContentLength, listener, tracker)
 	}
 
@@ -457,7 +519,8 @@ func (conn Conn) handleResponse(resp *http.Response, crc hash.Hash64) (*Response
 	}, nil
 }
 
-func (conn Conn) LoggerHttpReq(req *http.Request) {
+// LoggerHTTPReq Print the header information of the http request
+func (conn Conn) LoggerHTTPReq(req *http.Request) {
 	var logBuffer bytes.Buffer
 	logBuffer.WriteString(fmt.Sprintf("[Req:%p]Method:%s\t", req, req.Method))
 	logBuffer.WriteString(fmt.Sprintf("Host:%s\t", req.URL.Host))
@@ -478,7 +541,8 @@ func (conn Conn) LoggerHttpReq(req *http.Request) {
 	conn.config.WriteLog(Debug, "%s\n", logBuffer.String())
 }
 
-func (conn Conn) LoggerHttpResp(req *http.Request, resp *http.Response) {
+// LoggerHTTPResp Print Response to http request
+func (conn Conn) LoggerHTTPResp(req *http.Request, resp *http.Response) {
 	var logBuffer bytes.Buffer
 	logBuffer.WriteString(fmt.Sprintf("[Resp:%p]StatusCode:%d\t", req, resp.StatusCode))
 	logBuffer.WriteString(fmt.Sprintf("Header info:"))
@@ -626,7 +690,7 @@ type urlMaker struct {
 }
 
 // Init parses endpoint
-func (um *urlMaker) Init(endpoint string, isCname bool, isProxy bool) {
+func (um *urlMaker) Init(endpoint string, isCname bool, isProxy bool) error {
 	if strings.HasPrefix(endpoint, "http://") {
 		um.Scheme = "http"
 		um.NetLoc = endpoint[len("http://"):]
@@ -638,6 +702,14 @@ func (um *urlMaker) Init(endpoint string, isCname bool, isProxy bool) {
 		um.NetLoc = endpoint
 	}
 
+	//use url.Parse() to get real host
+	strUrl := um.Scheme + "://" + um.NetLoc
+	url, err := url.Parse(strUrl)
+	if err != nil {
+		return err
+	}
+
+	um.NetLoc = url.Host
 	host, _, err := net.SplitHostPort(um.NetLoc)
 	if err != nil {
 		host = um.NetLoc
@@ -655,6 +727,8 @@ func (um *urlMaker) Init(endpoint string, isCname bool, isProxy bool) {
 		um.Type = urlTypeAliyun
 	}
 	um.IsProxy = isProxy
+
+	return nil
 }
 
 // getURL gets URL
@@ -716,15 +790,4 @@ func (um urlMaker) buildURL(bucket, object string) (string, string) {
 	}
 
 	return host, path
-}
-
-// getResource gets canonicalized resource
-func (um urlMaker) getResource(bucketName, objectName, subResource string) string {
-	if subResource != "" {
-		subResource = "?" + subResource
-	}
-	if bucketName == "" {
-		return fmt.Sprintf("/%s%s", bucketName, subResource)
-	}
-	return fmt.Sprintf("/%s/%s%s", bucketName, objectName, subResource)
 }

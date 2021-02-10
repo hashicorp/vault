@@ -1,3 +1,17 @@
+// Copyright 2021 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mongodbatlas
 
 import (
@@ -10,7 +24,13 @@ const whitelistAPIKeysPath = "orgs/%s/apiKeys/%s/whitelist"
 
 // WhitelistAPIKeysService is an interface for interfacing with the Whitelist API Keys
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/apiKeys/#organization-api-key-endpoints
+//
+// Deprecated: AccessListAPIKeysService replaces WhitelistAPIKeysService.
+// Atlas now refers to programmatic API key whitelists as access lists.
+// Atlas has deprecated the whitelist method and will disable it in June 2021.
+// Please update any dependent work to use WhitelistAPIKeysService
 type WhitelistAPIKeysService interface {
 	List(context.Context, string, string, *ListOptions) (*WhitelistAPIKeys, *Response, error)
 	Get(context.Context, string, string, string) (*WhitelistAPIKey, *Response, error)

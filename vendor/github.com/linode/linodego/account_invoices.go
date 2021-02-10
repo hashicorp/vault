@@ -2,14 +2,16 @@ package linodego
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // Invoice structs reflect an invoice for billable activity on the account.
 type Invoice struct {
-	DateStr string `json:"date"`
-
 	ID    int        `json:"id"`
 	Label string     `json:"label"`
 	Total float32    `json:"total"`
@@ -18,9 +20,6 @@ type Invoice struct {
 
 // InvoiceItem structs reflect an single billable activity associate with an Invoice
 type InvoiceItem struct {
-	FromStr string `json:"from"`
-	ToStr   string `json:"to"`
-
 	Label     string     `json:"label"`
 	Type      string     `json:"type"`
 	UnitPrice int        `json:"unitprice"`
@@ -42,6 +41,7 @@ func (InvoicesPagedResponse) endpoint(c *Client) string {
 	if err != nil {
 		panic(err)
 	}
+
 	return endpoint
 }
 
@@ -54,26 +54,54 @@ func (resp *InvoicesPagedResponse) appendData(r *InvoicesPagedResponse) {
 func (c *Client) ListInvoices(ctx context.Context, opts *ListOptions) ([]Invoice, error) {
 	response := InvoicesPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return response.Data, nil
 }
 
-// fixDates converts JSON timestamps to Go time.Time values
-func (v *Invoice) fixDates() *Invoice {
-	v.Date, _ = parseDates(v.DateStr)
-	return v
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *Invoice) UnmarshalJSON(b []byte) error {
+	type Mask Invoice
+
+	p := struct {
+		*Mask
+		Date *parseabletime.ParseableTime `json:"date"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Date = (*time.Time)(p.Date)
+
+	return nil
 }
 
-// fixDates converts JSON timestamps to Go time.Time values
-func (v *InvoiceItem) fixDates() *InvoiceItem {
-	v.From, _ = parseDates(v.FromStr)
-	v.To, _ = parseDates(v.ToStr)
-	return v
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *InvoiceItem) UnmarshalJSON(b []byte) error {
+	type Mask InvoiceItem
+
+	p := struct {
+		*Mask
+		From *parseabletime.ParseableTime `json:"from"`
+		To   *parseabletime.ParseableTime `json:"to"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.From = (*time.Time)(p.From)
+	i.To = (*time.Time)(p.To)
+
+	return nil
 }
 
 // GetInvoice gets the a single Invoice matching the provided ID
@@ -84,11 +112,13 @@ func (c *Client) GetInvoice(ctx context.Context, id int) (*Invoice, error) {
 	}
 
 	e = fmt.Sprintf("%s/%d", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).SetResult(&Invoice{}).Get(e))
+	r, err := errors.CoupleAPIErrors(c.R(ctx).SetResult(&Invoice{}).Get(e))
+
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Invoice).fixDates(), nil
+
+	return r.Result().(*Invoice), nil
 }
 
 // InvoiceItemsPagedResponse represents a paginated Invoice Item API response
@@ -103,6 +133,7 @@ func (InvoiceItemsPagedResponse) endpointWithID(c *Client, id int) string {
 	if err != nil {
 		panic(err)
 	}
+
 	return endpoint
 }
 
@@ -115,11 +146,10 @@ func (resp *InvoiceItemsPagedResponse) appendData(r *InvoiceItemsPagedResponse) 
 func (c *Client) ListInvoiceItems(ctx context.Context, id int, opts *ListOptions) ([]InvoiceItem, error) {
 	response := InvoiceItemsPagedResponse{}
 	err := c.listHelperWithID(ctx, &response, id, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return response.Data, nil
 }

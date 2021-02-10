@@ -1,3 +1,17 @@
+// Copyright 2021 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mongodbatlas
 
 import (
@@ -14,7 +28,7 @@ const (
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/online-archive/
 type OnlineArchiveService interface {
-	List(context.Context, string, string) ([]*OnlineArchive, *Response, error)
+	List(context.Context, string, string, *ListOptions) (*OnlineArchives, *Response, error)
 	Get(context.Context, string, string, string) (*OnlineArchive, *Response, error)
 	Create(context.Context, string, string, *OnlineArchive) (*OnlineArchive, *Response, error)
 	Update(context.Context, string, string, string, *OnlineArchive) (*OnlineArchive, *Response, error)
@@ -29,7 +43,7 @@ var _ OnlineArchiveService = &OnlineArchiveServiceOp{}
 // List gets all online archives.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/online-archive-get-all-for-cluster/#api-online-archive-get-all-for-clstr
-func (s *OnlineArchiveServiceOp) List(ctx context.Context, projectID, clusterName string) ([]*OnlineArchive, *Response, error) {
+func (s *OnlineArchiveServiceOp) List(ctx context.Context, projectID, clusterName string, listOptions *ListOptions) (*OnlineArchives, *Response, error) {
 	if projectID == "" {
 		return nil, nil, NewArgError("projectID", "must be set")
 	}
@@ -38,13 +52,18 @@ func (s *OnlineArchiveServiceOp) List(ctx context.Context, projectID, clusterNam
 	}
 
 	path := fmt.Sprintf(onlineArchiveBasePath, projectID, clusterName)
+	// Add query params from listOptions
+	path, err := setListOptions(path, listOptions)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var root []*OnlineArchive
+	var root *OnlineArchives
 	resp, err := s.Client.Do(ctx, req, &root)
 	return root, resp, err
 }
@@ -155,6 +174,13 @@ func (s *OnlineArchiveServiceOp) Delete(ctx context.Context, projectID, clusterN
 	return resp, err
 }
 
+// OnlineArchives is a collection of OnlineArchive
+type OnlineArchives struct {
+	Links      []*Link          `json:"links,omitempty"`
+	Results    []*OnlineArchive `json:"results,omitempty"`
+	TotalCount int              `json:"totalCount,omitempty"`
+}
+
 // OnlineArchive represents the structure of an online archive.
 type OnlineArchive struct {
 	ID              string                 `json:"_id,omitempty"`
@@ -171,7 +197,9 @@ type OnlineArchive struct {
 // OnlineArchiveCriteria criteria to use for archiving data.
 type OnlineArchiveCriteria struct {
 	DateField       string  `json:"dateField,omitempty"`
+	DateFormat      string  `json:"dateFormat,omitempty"`
 	ExpireAfterDays float64 `json:"expireAfterDays"`
+	Type            string  `json:"type,omitempty"`
 }
 
 // PartitionFields fields to use to partition data

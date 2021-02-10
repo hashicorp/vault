@@ -77,8 +77,8 @@ func (client *Client) AttachPolicyToGroupWithCallback(request *AttachPolicyToGro
 type AttachPolicyToGroupRequest struct {
 	*requests.RpcRequest
 	PolicyType string `position:"Query" name:"PolicyType"`
-	PolicyName string `position:"Query" name:"PolicyName"`
 	GroupName  string `position:"Query" name:"GroupName"`
+	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // AttachPolicyToGroupResponse is the response struct for api AttachPolicyToGroup
@@ -92,7 +92,7 @@ func CreateAttachPolicyToGroupRequest() (request *AttachPolicyToGroupRequest) {
 	request = &AttachPolicyToGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "AttachPolicyToGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "AttachPolicyToGroup", "Ram", "openAPI")
 	return
 }
 

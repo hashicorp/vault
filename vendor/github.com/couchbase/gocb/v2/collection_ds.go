@@ -166,7 +166,7 @@ func (cl *CouchbaseMap) Iterator() (map[string]interface{}, error) {
 // At retrieves the item for the given id from the map.
 func (cl *CouchbaseMap) At(id string, valuePtr interface{}) error {
 	ops := make([]LookupInSpec, 1)
-	ops[0] = GetSpec(fmt.Sprintf("[%s]", id), nil)
+	ops[0] = GetSpec(id, nil)
 	result, err := cl.collection.LookupIn(cl.id, ops, nil)
 	if err != nil {
 		return err
@@ -202,7 +202,7 @@ func (cl *CouchbaseMap) Remove(id string) error {
 // Exists verifies whether or a id exists in the map.
 func (cl *CouchbaseMap) Exists(id string) (bool, error) {
 	ops := make([]LookupInSpec, 1)
-	ops[0] = ExistsSpec(fmt.Sprintf("[%s]", id), nil)
+	ops[0] = ExistsSpec(id, nil)
 	result, err := cl.collection.LookupIn(cl.id, ops, nil)
 	if err != nil {
 		return false, err

@@ -7,7 +7,7 @@ import (
 
 	"github.com/couchbase/gocbcore/v9/memd"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v9"
 )
 
 // LookupInOptions are the set of options available to LookupIn.
@@ -18,6 +18,7 @@ type LookupInOptions struct {
 	// Internal: This should never be used and is not supported.
 	Internal struct {
 		AccessDeleted bool
+		User          []byte
 	}
 }
 
@@ -33,6 +34,7 @@ func (c *Collection) LookupIn(id string, ops []LookupInSpec, opts *LookupInOptio
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -101,6 +103,7 @@ func (c *Collection) internalLookupIn(
 		TraceContext:   opm.TraceSpan(),
 		Deadline:       opm.Deadline(),
 		Flags:          flags,
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.LookupInResult, err error) {
 		if err != nil && res == nil {
 			errOut = opm.EnhanceErr(err)
@@ -157,6 +160,7 @@ type MutateInOptions struct {
 	// Internal: This should never be used and is not supported.
 	Internal struct {
 		AccessDeleted bool
+		User          []byte
 	}
 }
 
@@ -172,6 +176,7 @@ func (c *Collection) MutateIn(id string, ops []MutateInSpec, opts *MutateInOptio
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -197,6 +202,20 @@ func jsonMarshalMultiArray(in interface{}) ([]byte, error) {
 
 func jsonMarshalMutateSpec(op MutateInSpec) ([]byte, memd.SubdocFlag, error) {
 	if op.value == nil {
+		// If the mutation is to write, then this is a json `null` value
+		switch op.op {
+		case memd.SubDocOpDictAdd,
+			memd.SubDocOpDictSet,
+			memd.SubDocOpReplace,
+			memd.SubDocOpArrayPushLast,
+			memd.SubDocOpArrayPushFirst,
+			memd.SubDocOpArrayInsert,
+			memd.SubDocOpArrayAddUnique,
+			memd.SubDocOpSetDoc,
+			memd.SubDocOpAddDoc:
+			return []byte("null"), memd.SubdocFlagNone, nil
+		}
+
 		return nil, memd.SubdocFlagNone, nil
 	}
 
@@ -292,6 +311,7 @@ func (c *Collection) internalMutateIn(
 		RetryStrategy:          opm.RetryStrategy(),
 		TraceContext:           opm.TraceSpan(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.MutateInResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)

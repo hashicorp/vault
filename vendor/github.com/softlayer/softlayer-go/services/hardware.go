@@ -87,21 +87,12 @@ func (r Hardware) AllowAccessToNetworkStorageList(networkStorageTemplateObjects 
 	return
 }
 
-// Captures a Flex Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
+// Captures an Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
 func (r Hardware) CaptureImage(captureTemplate *datatypes.Container_Disk_Image_Capture_Template) (resp datatypes.Virtual_Guest_Block_Device_Template_Group, err error) {
 	params := []interface{}{
 		captureTemplate,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware", "captureImage", params, &r.Options, &resp)
-	return
-}
-
-// Returns monitoring alarm detailed history
-func (r Hardware) CloseAlarm(alarmId *string) (resp bool, err error) {
-	params := []interface{}{
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware", "closeAlarm", params, &r.Options, &resp)
 	return
 }
 
@@ -395,6 +386,15 @@ func (r Hardware) DeleteSoftwareComponentPasswords(softwareComponentPasswords []
 	return
 }
 
+// Delete an existing tag.  If there are any references on the tag, an exception will be thrown.
+func (r Hardware) DeleteTag(tagName *string) (resp bool, err error) {
+	params := []interface{}{
+		tagName,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware", "deleteTag", params, &r.Options, &resp)
+	return
+}
+
 // Edit the properties of a software component password such as the username, password, and notes.
 func (r Hardware) EditSoftwareComponentPasswords(softwareComponentPasswords []datatypes.Software_Component_Password) (resp bool, err error) {
 	params := []interface{}{
@@ -414,7 +414,7 @@ func (r Hardware) ExecuteRemoteScript(uri *string) (err error) {
 	return
 }
 
-// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware - alternate means of locating the hardware must be used (see '''Associated Methods'''). If no hardware is found, no errors are generated and no data is returned.
+// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware. If no hardware is found, no errors are generated and no data is returned.
 func (r Hardware) FindByIpAddress(ipAddress *string) (resp datatypes.Hardware, err error) {
 	params := []interface{}{
 		ipAddress,
@@ -454,17 +454,6 @@ func (r Hardware) GetActiveComponents() (resp []datatypes.Hardware_Component, er
 // Retrieve A piece of hardware's active network monitoring incidents.
 func (r Hardware) GetActiveNetworkMonitorIncident() (resp []datatypes.Network_Monitor_Version1_Incident, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getActiveNetworkMonitorIncident", nil, &r.Options, &resp)
-	return
-}
-
-// The '''getAlarmHistory''' method retrieves a detailed history for the monitoring alarm. When calling this method, a start and end date for the history to be retrieved must be entered.
-func (r Hardware) GetAlarmHistory(startDate *datatypes.Time, endDate *datatypes.Time, alarmId *string) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware", "getAlarmHistory", params, &r.Options, &resp)
 	return
 }
 
@@ -642,13 +631,13 @@ func (r Hardware) GetCurrentBillableBandwidthUsage() (resp datatypes.Float64, er
 	return
 }
 
-// Get the billing detail for this instance for the current billing period. This does not include bandwidth usage.
+// Get the billing detail for this hardware for the current billing period. This does not include bandwidth usage.
 func (r Hardware) GetCurrentBillingDetail() (resp []datatypes.Billing_Item, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getCurrentBillingDetail", nil, &r.Options, &resp)
 	return
 }
 
-// The '''getCurrentBillingTotal''' method retrieves the total bill amount in US Dollars ($) for the current billing period. In addition to the total bill amount, the billing detail also includes all bandwidth used up to the point the method is called on the piece of hardware.
+// Get the total bill amount in US Dollars ($) for this hardware in the current billing period. This includes all bandwidth used up to the point the method is called on the hardware.
 func (r Hardware) GetCurrentBillingTotal() (resp datatypes.Float64, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getCurrentBillingTotal", nil, &r.Options, &resp)
 	return
@@ -928,33 +917,13 @@ func (r Hardware) GetMetricTrackingObject() (resp datatypes.Metric_Tracking_Obje
 	return
 }
 
-// Returns open monitoring alarms for a given time period
-func (r Hardware) GetMonitoringActiveAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware", "getMonitoringActiveAlarms", params, &r.Options, &resp)
+// Retrieve
+func (r Hardware) GetModules() (resp []datatypes.Hardware_Component, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware", "getModules", nil, &r.Options, &resp)
 	return
 }
 
-// Retrieve Information regarding the monitoring agents associated with a piece of hardware.
-func (r Hardware) GetMonitoringAgents() (resp []datatypes.Monitoring_Agent, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware", "getMonitoringAgents", nil, &r.Options, &resp)
-	return
-}
-
-// Returns closed monitoring alarms for a given time period
-func (r Hardware) GetMonitoringClosedAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware", "getMonitoringClosedAlarms", params, &r.Options, &resp)
-	return
-}
-
-// Retrieve Information regarding the hardware's monitoring robot.
+// Retrieve
 func (r Hardware) GetMonitoringRobot() (resp datatypes.Monitoring_Robot, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getMonitoringRobot", nil, &r.Options, &resp)
 	return
@@ -966,15 +935,9 @@ func (r Hardware) GetMonitoringServiceComponent() (resp datatypes.Network_Monito
 	return
 }
 
-// Retrieve The monitoring service flag eligibility status for a piece of hardware.
+// Retrieve
 func (r Hardware) GetMonitoringServiceEligibilityFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getMonitoringServiceEligibilityFlag", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve The service flag status for a piece of hardware.
-func (r Hardware) GetMonitoringServiceFlag() (resp bool, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware", "getMonitoringServiceFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -1071,6 +1034,18 @@ func (r Hardware) GetNextBillingCycleBandwidthAllocation() (resp datatypes.Float
 // Retrieve
 func (r Hardware) GetNotesHistory() (resp []datatypes.Hardware_Note, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getNotesHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The amount of non-volatile memory a piece of hardware has, measured in gigabytes.
+func (r Hardware) GetNvRamCapacity() (resp uint, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware", "getNvRamCapacity", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
+func (r Hardware) GetNvRamComponentModels() (resp []datatypes.Hardware_Component_Model, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware", "getNvRamComponentModels", nil, &r.Options, &resp)
 	return
 }
 
@@ -1335,6 +1310,12 @@ func (r Hardware) GetSshKeys() (resp []datatypes.Security_Ssh_Key, err error) {
 }
 
 // Retrieve
+func (r Hardware) GetStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware", "getStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A piece of hardware's private storage network components. [Deprecated]
 func (r Hardware) GetStorageNetworkComponents() (resp []datatypes.Network_Component, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware", "getStorageNetworkComponents", nil, &r.Options, &resp)
 	return
@@ -1532,6 +1513,15 @@ func (r Hardware) RemoveAccessToNetworkStorageList(networkStorageTemplateObjects
 }
 
 // no documentation yet
+func (r Hardware) RemoveTags(tags *string) (resp bool, err error) {
+	params := []interface{}{
+		tags,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware", "removeTags", params, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
 func (r Hardware) SetTags(tags *string) (resp bool, err error) {
 	params := []interface{}{
 		tags,
@@ -1668,6 +1658,70 @@ func (r Hardware_Blade) GetHardwareParent() (resp datatypes.Hardware, err error)
 // no documentation yet
 func (r Hardware_Blade) GetObject() (resp datatypes.Hardware_Blade, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Blade", "getObject", nil, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+type Hardware_Component_Locator struct {
+	Session *session.Session
+	Options sl.Options
+}
+
+// GetHardwareComponentLocatorService returns an instance of the Hardware_Component_Locator SoftLayer service
+func GetHardwareComponentLocatorService(sess *session.Session) Hardware_Component_Locator {
+	return Hardware_Component_Locator{Session: sess}
+}
+
+func (r Hardware_Component_Locator) Id(id int) Hardware_Component_Locator {
+	r.Options.Id = &id
+	return r
+}
+
+func (r Hardware_Component_Locator) Mask(mask string) Hardware_Component_Locator {
+	if !strings.HasPrefix(mask, "mask[") && (strings.Contains(mask, "[") || strings.Contains(mask, ",")) {
+		mask = fmt.Sprintf("mask[%s]", mask)
+	}
+
+	r.Options.Mask = mask
+	return r
+}
+
+func (r Hardware_Component_Locator) Filter(filter string) Hardware_Component_Locator {
+	r.Options.Filter = filter
+	return r
+}
+
+func (r Hardware_Component_Locator) Limit(limit int) Hardware_Component_Locator {
+	r.Options.Limit = &limit
+	return r
+}
+
+func (r Hardware_Component_Locator) Offset(offset int) Hardware_Component_Locator {
+	r.Options.Offset = &offset
+	return r
+}
+
+// no documentation yet
+func (r Hardware_Component_Locator) GetGenericComponentModelAvailability(genericComponentModelIds []int) (resp []datatypes.Hardware_Component_Locator_Result, err error) {
+	params := []interface{}{
+		genericComponentModelIds,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Component_Locator", "getGenericComponentModelAvailability", params, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+func (r Hardware_Component_Locator) GetPackageItemsAvailability(packageId *int) (resp []datatypes.Hardware_Component_Locator_Result, err error) {
+	params := []interface{}{
+		packageId,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Component_Locator", "getPackageItemsAvailability", params, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
+func (r Hardware_Component_Locator) GetServerPackageAvailability() (resp []datatypes.Hardware_Component_Locator_Result, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Component_Locator", "getServerPackageAvailability", nil, &r.Options, &resp)
 	return
 }
 
@@ -2008,21 +2062,12 @@ func (r Hardware_Router) AllowAccessToNetworkStorageList(networkStorageTemplateO
 	return
 }
 
-// Captures a Flex Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
+// Captures an Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
 func (r Hardware_Router) CaptureImage(captureTemplate *datatypes.Container_Disk_Image_Capture_Template) (resp datatypes.Virtual_Guest_Block_Device_Template_Group, err error) {
 	params := []interface{}{
 		captureTemplate,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "captureImage", params, &r.Options, &resp)
-	return
-}
-
-// Returns monitoring alarm detailed history
-func (r Hardware_Router) CloseAlarm(alarmId *string) (resp bool, err error) {
-	params := []interface{}{
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "closeAlarm", params, &r.Options, &resp)
 	return
 }
 
@@ -2316,6 +2361,15 @@ func (r Hardware_Router) DeleteSoftwareComponentPasswords(softwareComponentPassw
 	return
 }
 
+// Delete an existing tag.  If there are any references on the tag, an exception will be thrown.
+func (r Hardware_Router) DeleteTag(tagName *string) (resp bool, err error) {
+	params := []interface{}{
+		tagName,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "deleteTag", params, &r.Options, &resp)
+	return
+}
+
 // Edit the properties of a software component password such as the username, password, and notes.
 func (r Hardware_Router) EditSoftwareComponentPasswords(softwareComponentPasswords []datatypes.Software_Component_Password) (resp bool, err error) {
 	params := []interface{}{
@@ -2335,7 +2389,7 @@ func (r Hardware_Router) ExecuteRemoteScript(uri *string) (err error) {
 	return
 }
 
-// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware - alternate means of locating the hardware must be used (see '''Associated Methods'''). If no hardware is found, no errors are generated and no data is returned.
+// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware. If no hardware is found, no errors are generated and no data is returned.
 func (r Hardware_Router) FindByIpAddress(ipAddress *string) (resp datatypes.Hardware, err error) {
 	params := []interface{}{
 		ipAddress,
@@ -2375,17 +2429,6 @@ func (r Hardware_Router) GetActiveComponents() (resp []datatypes.Hardware_Compon
 // Retrieve A piece of hardware's active network monitoring incidents.
 func (r Hardware_Router) GetActiveNetworkMonitorIncident() (resp []datatypes.Network_Monitor_Version1_Incident, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getActiveNetworkMonitorIncident", nil, &r.Options, &resp)
-	return
-}
-
-// The '''getAlarmHistory''' method retrieves a detailed history for the monitoring alarm. When calling this method, a start and end date for the history to be retrieved must be entered.
-func (r Hardware_Router) GetAlarmHistory(startDate *datatypes.Time, endDate *datatypes.Time, alarmId *string) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getAlarmHistory", params, &r.Options, &resp)
 	return
 }
 
@@ -2569,13 +2612,13 @@ func (r Hardware_Router) GetCurrentBillableBandwidthUsage() (resp datatypes.Floa
 	return
 }
 
-// Get the billing detail for this instance for the current billing period. This does not include bandwidth usage.
+// Get the billing detail for this hardware for the current billing period. This does not include bandwidth usage.
 func (r Hardware_Router) GetCurrentBillingDetail() (resp []datatypes.Billing_Item, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getCurrentBillingDetail", nil, &r.Options, &resp)
 	return
 }
 
-// The '''getCurrentBillingTotal''' method retrieves the total bill amount in US Dollars ($) for the current billing period. In addition to the total bill amount, the billing detail also includes all bandwidth used up to the point the method is called on the piece of hardware.
+// Get the total bill amount in US Dollars ($) for this hardware in the current billing period. This includes all bandwidth used up to the point the method is called on the hardware.
 func (r Hardware_Router) GetCurrentBillingTotal() (resp datatypes.Float64, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getCurrentBillingTotal", nil, &r.Options, &resp)
 	return
@@ -2861,33 +2904,13 @@ func (r Hardware_Router) GetMetricTrackingObject() (resp datatypes.Metric_Tracki
 	return
 }
 
-// Returns open monitoring alarms for a given time period
-func (r Hardware_Router) GetMonitoringActiveAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getMonitoringActiveAlarms", params, &r.Options, &resp)
+// Retrieve
+func (r Hardware_Router) GetModules() (resp []datatypes.Hardware_Component, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getModules", nil, &r.Options, &resp)
 	return
 }
 
-// Retrieve Information regarding the monitoring agents associated with a piece of hardware.
-func (r Hardware_Router) GetMonitoringAgents() (resp []datatypes.Monitoring_Agent, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getMonitoringAgents", nil, &r.Options, &resp)
-	return
-}
-
-// Returns closed monitoring alarms for a given time period
-func (r Hardware_Router) GetMonitoringClosedAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getMonitoringClosedAlarms", params, &r.Options, &resp)
-	return
-}
-
-// Retrieve Information regarding the hardware's monitoring robot.
+// Retrieve
 func (r Hardware_Router) GetMonitoringRobot() (resp datatypes.Monitoring_Robot, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getMonitoringRobot", nil, &r.Options, &resp)
 	return
@@ -2899,15 +2922,9 @@ func (r Hardware_Router) GetMonitoringServiceComponent() (resp datatypes.Network
 	return
 }
 
-// Retrieve The monitoring service flag eligibility status for a piece of hardware.
+// Retrieve
 func (r Hardware_Router) GetMonitoringServiceEligibilityFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getMonitoringServiceEligibilityFlag", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve The service flag status for a piece of hardware.
-func (r Hardware_Router) GetMonitoringServiceFlag() (resp bool, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getMonitoringServiceFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -3004,6 +3021,18 @@ func (r Hardware_Router) GetNextBillingCycleBandwidthAllocation() (resp datatype
 // Retrieve
 func (r Hardware_Router) GetNotesHistory() (resp []datatypes.Hardware_Note, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getNotesHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The amount of non-volatile memory a piece of hardware has, measured in gigabytes.
+func (r Hardware_Router) GetNvRamCapacity() (resp uint, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getNvRamCapacity", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
+func (r Hardware_Router) GetNvRamComponentModels() (resp []datatypes.Hardware_Component_Model, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getNvRamComponentModels", nil, &r.Options, &resp)
 	return
 }
 
@@ -3274,6 +3303,12 @@ func (r Hardware_Router) GetSshKeys() (resp []datatypes.Security_Ssh_Key, err er
 }
 
 // Retrieve
+func (r Hardware_Router) GetStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A piece of hardware's private storage network components. [Deprecated]
 func (r Hardware_Router) GetStorageNetworkComponents() (resp []datatypes.Network_Component, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "getStorageNetworkComponents", nil, &r.Options, &resp)
 	return
@@ -3471,6 +3506,15 @@ func (r Hardware_Router) RemoveAccessToNetworkStorageList(networkStorageTemplate
 }
 
 // no documentation yet
+func (r Hardware_Router) RemoveTags(tags *string) (resp bool, err error) {
+	params := []interface{}{
+		tags,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Router", "removeTags", params, &r.Options, &resp)
+	return
+}
+
+// no documentation yet
 func (r Hardware_Router) SetTags(tags *string) (resp bool, err error) {
 	params := []interface{}{
 		tags,
@@ -3528,13 +3572,21 @@ func (r Hardware_SecurityModule) Offset(offset int) Hardware_SecurityModule {
 	return r
 }
 
-// Activates the private network port
+// Activate a server's private network interface to the maximum available speed. This operation is an alias for [[SoftLayer_Hardware_Server/setPrivateNetworkInterfaceSpeed]] with a $newSpeed of -1 and a $redundancy of "redundant" or unspecified (which results in the best available redundancy state).
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to activate the interface; thus changes are pending. A response of false indicates the interface was already active, and thus no changes are pending.
 func (r Hardware_SecurityModule) ActivatePrivatePort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "activatePrivatePort", nil, &r.Options, &resp)
 	return
 }
 
-// Activates the public network port
+// Activate a server's public network interface to the maximum available speed. This operation is an alias for [[SoftLayer_Hardware_Server/setPublicNetworkInterfaceSpeed]] with a $newSpeed of -1 and a $redundancy of "redundant" or unspecified (which results in the best available redundancy state).
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to activate the interface; thus changes are pending. A response of false indicates the interface was already active, and thus no changes are pending.
 func (r Hardware_SecurityModule) ActivatePublicPort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "activatePublicPort", nil, &r.Options, &resp)
 	return
@@ -3567,7 +3619,7 @@ func (r Hardware_SecurityModule) BootToRescueLayer(noOsBootEnvironment *string) 
 	return
 }
 
-// Captures a Flex Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
+// Captures an Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
 func (r Hardware_SecurityModule) CaptureImage(captureTemplate *datatypes.Container_Disk_Image_Capture_Template) (resp datatypes.Virtual_Guest_Block_Device_Template_Group, err error) {
 	params := []interface{}{
 		captureTemplate,
@@ -3576,12 +3628,16 @@ func (r Hardware_SecurityModule) CaptureImage(captureTemplate *datatypes.Contain
 	return
 }
 
-// Returns monitoring alarm detailed history
-func (r Hardware_SecurityModule) CloseAlarm(alarmId *string) (resp bool, err error) {
+// You can launch firmware reflash by selecting from your server list. It will bring your server offline for approximately 60 minutes while the flashes are in progress.
+//
+// In the event of a hardware failure during this our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule) CreateFirmwareReflashTransaction(ipmi *int, raidController *int, bios *int) (resp bool, err error) {
 	params := []interface{}{
-		alarmId,
+		ipmi,
+		raidController,
+		bios,
 	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "closeAlarm", params, &r.Options, &resp)
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "createFirmwareReflashTransaction", params, &r.Options, &resp)
 	return
 }
 
@@ -3596,6 +3652,17 @@ func (r Hardware_SecurityModule) CreateFirmwareUpdateTransaction(ipmi *int, raid
 		harddrive,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "createFirmwareUpdateTransaction", params, &r.Options, &resp)
+	return
+}
+
+// You can launch hyper-threading update by selecting from your server list. It will bring your server offline for approximately 60 minutes while the update is in progress.
+//
+// In the event of a hardware failure during this our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule) CreateHyperThreadingUpdateTransaction(disableHyperthreading *int) (resp bool, err error) {
+	params := []interface{}{
+		disableHyperthreading,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "createHyperThreadingUpdateTransaction", params, &r.Options, &resp)
 	return
 }
 
@@ -3899,6 +3966,15 @@ func (r Hardware_SecurityModule) DeleteSoftwareComponentPasswords(softwareCompon
 	return
 }
 
+// Delete an existing tag.  If there are any references on the tag, an exception will be thrown.
+func (r Hardware_SecurityModule) DeleteTag(tagName *string) (resp bool, err error) {
+	params := []interface{}{
+		tagName,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "deleteTag", params, &r.Options, &resp)
+	return
+}
+
 // Edit a server's properties
 func (r Hardware_SecurityModule) EditObject(templateObject *datatypes.Hardware_Server) (resp bool, err error) {
 	params := []interface{}{
@@ -3927,7 +4003,7 @@ func (r Hardware_SecurityModule) ExecuteRemoteScript(uri *string) (err error) {
 	return
 }
 
-// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware - alternate means of locating the hardware must be used (see '''Associated Methods'''). If no hardware is found, no errors are generated and no data is returned.
+// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware. If no hardware is found, no errors are generated and no data is returned.
 func (r Hardware_SecurityModule) FindByIpAddress(ipAddress *string) (resp datatypes.Hardware, err error) {
 	params := []interface{}{
 		ipAddress,
@@ -3991,17 +4067,6 @@ func (r Hardware_SecurityModule) GetActiveTransaction() (resp datatypes.Provisio
 // Retrieve Any active transaction(s) that are currently running for the server (example: os reload).
 func (r Hardware_SecurityModule) GetActiveTransactions() (resp []datatypes.Provisioning_Version1_Transaction, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getActiveTransactions", nil, &r.Options, &resp)
-	return
-}
-
-// The '''getAlarmHistory''' method retrieves a detailed history for the monitoring alarm. When calling this method, a start and end date for the history to be retrieved must be entered.
-func (r Hardware_SecurityModule) GetAlarmHistory(startDate *datatypes.Time, endDate *datatypes.Time, alarmId *string) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getAlarmHistory", params, &r.Options, &resp)
 	return
 }
 
@@ -4220,9 +4285,21 @@ func (r Hardware_SecurityModule) GetBlockCancelBecauseDisconnectedFlag() (resp b
 	return
 }
 
+// Retrieve the valid boot modes for this server
+func (r Hardware_SecurityModule) GetBootModeOptions() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getBootModeOptions", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve Status indicating whether or not a piece of hardware has business continuance insurance.
 func (r Hardware_SecurityModule) GetBusinessContinuanceInsuranceFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getBusinessContinuanceInsuranceFlag", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Determine if the server is able to be image captured. If unable to image capture a reason will be provided.
+func (r Hardware_SecurityModule) GetCaptureEnabledFlag() (resp datatypes.Container_Hardware_CaptureEnabled, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getCaptureEnabledFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -4296,13 +4373,13 @@ func (r Hardware_SecurityModule) GetCurrentBillableBandwidthUsage() (resp dataty
 	return
 }
 
-// Get the billing detail for this instance for the current billing period. This does not include bandwidth usage.
+// Get the billing detail for this hardware for the current billing period. This does not include bandwidth usage.
 func (r Hardware_SecurityModule) GetCurrentBillingDetail() (resp []datatypes.Billing_Item, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getCurrentBillingDetail", nil, &r.Options, &resp)
 	return
 }
 
-// The '''getCurrentBillingTotal''' method retrieves the total bill amount in US Dollars ($) for the current billing period. In addition to the total bill amount, the billing detail also includes all bandwidth used up to the point the method is called on the piece of hardware.
+// Get the total bill amount in US Dollars ($) for this hardware in the current billing period. This includes all bandwidth used up to the point the method is called on the hardware.
 func (r Hardware_SecurityModule) GetCurrentBillingTotal() (resp datatypes.Float64, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getCurrentBillingTotal", nil, &r.Options, &resp)
 	return
@@ -4604,6 +4681,18 @@ func (r Hardware_SecurityModule) GetIsCloudReadyNodeCertified() (resp bool, err 
 	return
 }
 
+// Retrieve Determine if remote management has been disabled due to port speed.
+func (r Hardware_SecurityModule) GetIsIpmiDisabled() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getIsIpmiDisabled", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Determine if hardware object is a Virtual Private Cloud node.
+func (r Hardware_SecurityModule) GetIsVirtualPrivateCloudNode() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getIsVirtualPrivateCloudNode", nil, &r.Options, &resp)
+	return
+}
+
 // Return a collection of SoftLayer_Item_Price objects from a collection of SoftLayer_Software_Description
 func (r Hardware_SecurityModule) GetItemPricesFromSoftwareDescriptions(softwareDescriptions []datatypes.Software_Description, includeTranslationsFlag *bool, returnAllPricesFlag *bool) (resp []datatypes.Product_Item, err error) {
 	params := []interface{}{
@@ -4651,6 +4740,12 @@ func (r Hardware_SecurityModule) GetLockboxNetworkStorage() (resp datatypes.Netw
 	return
 }
 
+// Retrieve Returns a list of logical volumes on the physical machine.
+func (r Hardware_SecurityModule) GetLogicalVolumeStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getLogicalVolumeStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve A flag indicating that the hardware is a managed resource.
 func (r Hardware_SecurityModule) GetManagedResourceFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getManagedResourceFlag", nil, &r.Options, &resp)
@@ -4687,33 +4782,13 @@ func (r Hardware_SecurityModule) GetMetricTrackingObjectId() (resp int, err erro
 	return
 }
 
-// Returns open monitoring alarms for a given time period
-func (r Hardware_SecurityModule) GetMonitoringActiveAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getMonitoringActiveAlarms", params, &r.Options, &resp)
+// Retrieve
+func (r Hardware_SecurityModule) GetModules() (resp []datatypes.Hardware_Component, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getModules", nil, &r.Options, &resp)
 	return
 }
 
-// Retrieve Information regarding the monitoring agents associated with a piece of hardware.
-func (r Hardware_SecurityModule) GetMonitoringAgents() (resp []datatypes.Monitoring_Agent, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getMonitoringAgents", nil, &r.Options, &resp)
-	return
-}
-
-// Returns closed monitoring alarms for a given time period
-func (r Hardware_SecurityModule) GetMonitoringClosedAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getMonitoringClosedAlarms", params, &r.Options, &resp)
-	return
-}
-
-// Retrieve Information regarding the hardware's monitoring robot.
+// Retrieve
 func (r Hardware_SecurityModule) GetMonitoringRobot() (resp datatypes.Monitoring_Robot, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getMonitoringRobot", nil, &r.Options, &resp)
 	return
@@ -4725,15 +4800,9 @@ func (r Hardware_SecurityModule) GetMonitoringServiceComponent() (resp datatypes
 	return
 }
 
-// Retrieve The monitoring service flag eligibility status for a piece of hardware.
+// Retrieve
 func (r Hardware_SecurityModule) GetMonitoringServiceEligibilityFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getMonitoringServiceEligibilityFlag", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve The service flag status for a piece of hardware.
-func (r Hardware_SecurityModule) GetMonitoringServiceFlag() (resp bool, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getMonitoringServiceFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -4842,6 +4911,18 @@ func (r Hardware_SecurityModule) GetNextBillingCycleBandwidthAllocation() (resp 
 // Retrieve
 func (r Hardware_SecurityModule) GetNotesHistory() (resp []datatypes.Hardware_Note, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getNotesHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The amount of non-volatile memory a piece of hardware has, measured in gigabytes.
+func (r Hardware_SecurityModule) GetNvRamCapacity() (resp uint, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getNvRamCapacity", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
+func (r Hardware_SecurityModule) GetNvRamComponentModels() (resp []datatypes.Hardware_Component_Model, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getNvRamComponentModels", nil, &r.Options, &resp)
 	return
 }
 
@@ -5009,6 +5090,8 @@ func (r Hardware_SecurityModule) GetPrivateVlan() (resp datatypes.Network_Vlan, 
 	return
 }
 
+//
+// *** DEPRECATED ***
 // Retrieve a backend network VLAN by searching for an IP address
 func (r Hardware_SecurityModule) GetPrivateVlanByIpAddress(ipAddress *string) (resp datatypes.Network_Vlan, err error) {
 	params := []interface{}{
@@ -5298,6 +5381,12 @@ func (r Hardware_SecurityModule) GetStatisticsRemoteManagement() (resp datatypes
 }
 
 // Retrieve
+func (r Hardware_SecurityModule) GetStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A piece of hardware's private storage network components. [Deprecated]
 func (r Hardware_SecurityModule) GetStorageNetworkComponents() (resp []datatypes.Network_Component, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getStorageNetworkComponents", nil, &r.Options, &resp)
 	return
@@ -5319,6 +5408,12 @@ func (r Hardware_SecurityModule) GetTopLevelLocation() (resp datatypes.Location,
 // This method will query transaction history for a piece of hardware.
 func (r Hardware_SecurityModule) GetTransactionHistory() (resp []datatypes.Provisioning_Version1_Transaction_History, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getTransactionHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Whether to use UEFI boot instead of BIOS.
+func (r Hardware_SecurityModule) GetUefiBootFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "getUefiBootFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -5475,6 +5570,20 @@ func (r Hardware_SecurityModule) IsWindowsServer() (resp bool, err error) {
 	return
 }
 
+// You can launch firmware reflashes by selecting from your server list. It will bring your server offline for approximately 60 minutes while the reflashes are in progress.
+//
+// In the event of a hardware failure during this test our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online. They will be contact you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule) MassFirmwareReflash(hardwareIds []int, ipmi *bool, raidController *bool, bios *bool) (resp []datatypes.Container_Hardware_Server_Request, err error) {
+	params := []interface{}{
+		hardwareIds,
+		ipmi,
+		raidController,
+		bios,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "massFirmwareReflash", params, &r.Options, &resp)
+	return
+}
+
 // You can launch firmware updates by selecting from your server list. It will bring your server offline for approximately 20 minutes while the updates are in progress.
 //
 // In the event of a hardware failure during this test our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
@@ -5487,6 +5596,18 @@ func (r Hardware_SecurityModule) MassFirmwareUpdate(hardwareIds []int, ipmi *boo
 		harddrive,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "massFirmwareUpdate", params, &r.Options, &resp)
+	return
+}
+
+// You can launch hyper-threading update by selecting from your server list. It will bring your server offline for approximately 60 minutes while the updates are in progress.
+//
+// In the event of a hardware failure during this update our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online. They will be in contact with you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule) MassHyperThreadingUpdate(hardwareIds []int, disableHyperthreading *bool) (resp []datatypes.Container_Hardware_Server_Request, err error) {
+	params := []interface{}{
+		hardwareIds,
+		disableHyperthreading,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "massHyperThreadingUpdate", params, &r.Options, &resp)
 	return
 }
 
@@ -5619,6 +5740,15 @@ func (r Hardware_SecurityModule) RemoveAccessToNetworkStorageList(networkStorage
 	return
 }
 
+// no documentation yet
+func (r Hardware_SecurityModule) RemoveTags(tags *string) (resp bool, err error) {
+	params := []interface{}{
+		tags,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "removeTags", params, &r.Options, &resp)
+	return
+}
+
 // You can launch a new Passmark hardware test by selecting from your server list. It will bring your server offline for approximately 20 minutes while the testing is in progress, and will publish a certificate with the results to your hardware details page.
 //
 // While the hard drives are tested for the initial deployment, the Passmark Certificate utility will not test the hard drives on your live server. This is to ensure that no data is overwritten. If you would like to test the server's hard drives, you can have the full Passmark suite installed to your server free of charge through a new Support ticket.
@@ -5640,23 +5770,45 @@ func (r Hardware_SecurityModule) SetOperatingSystemPassword(newPassword *string)
 	return
 }
 
-// Sets the private network interface speed to the new speed. Speed values can only be 0 (Disconnect), 10, 100, 1000, and 10000. The new speed must be equal to or less than the max speed of the interface.
+// Set the private network interface speed and redundancy configuration.
 //
-// It will take less than a minute to update the switch port speed. The server uplink will not be operational again until the server interface speed is updated.
-func (r Hardware_SecurityModule) SetPrivateNetworkInterfaceSpeed(newSpeed *int) (resp bool, err error) {
+// Possible $newSpeed values are -1 (maximum available), 0 (disconnect), 10, 100, 1000, and 10000; not all values are available to every server. The maximum speed is limited by the speed requested during provisioning. All intermediate speeds are limited by the capability of the pod the server is deployed in. No guarantee is made that a speed other than what was requested during provisioning will be available.
+//
+// If specified, possible $redundancy values are either "redundant" or "degraded". Not specifying a redundancy mode will use the best possible redundancy available to the server. However, specifying a redundacy mode that is not available to the server will result in an error. "redundant" indicates all available interfaces should be active. "degraded" indicates only the primary interface should be active. Irrespective of the number of interfaces available to a server, it is only possible to have either a single interface or all interfaces active.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to achieve the desired interface configuration; thus changes are pending. A response of false indicates the current interface configuration matches the desired configuration, and thus no changes are pending.
+//
+// <h4>Backwards Compatibility Until February 27th, 2019</h4>
+//
+// In order to provide a period of transition to the new API, some backwards compatible behaviors will be active during this period. <ul> <li> A "doubled" (eg. 200) speed value will be translated to a redundancy value of "redundant". If a redundancy value is specified, it is assumed no translation is needed and will result in an error due to doubled speeds no longer being valid.</li> <li> A non-doubled (eg. 100) speed value <i>without</i> a redundancy value will be translated to a redundancy value of "degraded".</li> </ul> After the compatibility period, a doubled speed value will result in an error, and a non-doubled speed value without a redundancy value specified will result in the best available redundancy state. An exception is made for the new relative speed value -1. When using -1 without a redundancy value, the best possible redundancy will be used. Please transition away from using doubled speed values in favor of specifying redundancy (when applicable) or using relative speed values 0 and -1.
+func (r Hardware_SecurityModule) SetPrivateNetworkInterfaceSpeed(newSpeed *int, redundancy *string) (resp bool, err error) {
 	params := []interface{}{
 		newSpeed,
+		redundancy,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "setPrivateNetworkInterfaceSpeed", params, &r.Options, &resp)
 	return
 }
 
-// Sets the public network interface speed to the new speed. Speed values can only be 0 (Disconnect), 10, 100, 1000, and 10000. The new speed must be equal to or less than the max speed of the interface.
+// Set the public network interface speed and redundancy configuration.
 //
-// It will take less than a minute to update the switch port speed. The server uplink will not be operational again until the server interface speed is updated.
-func (r Hardware_SecurityModule) SetPublicNetworkInterfaceSpeed(newSpeed *int) (resp bool, err error) {
+// Possible $newSpeed values are -1 (maximum available), 0 (disconnect), 10, 100, 1000, and 10000; not all values are available to every server. The maximum speed is limited by the speed requested during provisioning. All intermediate speeds are limited by the capability of the pod the server is deployed in. No guarantee is made that a speed other than what was requested during provisioning will be available.
+//
+// If specified, possible $redundancy values are either "redundant" or "degraded". Not specifying a redundancy mode will use the best possible redundancy available to the server. However, specifying a redundacy mode that is not available to the server will result in an error. "redundant" indicates all available interfaces should be active. "degraded" indicates only the primary interface should be active. Irrespective of the number of interfaces available to a server, it is only possible to have either a single interface or all interfaces active.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to achieve the desired interface configuration; thus changes are pending. A response of false indicates the current interface configuration matches the desired configuration, and thus no changes are pending.
+//
+// <h4>Backwards Compatibility Until February 27th, 2019</h4>
+//
+// In order to provide a period of transition to the new API, some backwards compatible behaviors will be active during this period. <ul> <li> A "doubled" (eg. 200) speed value will be translated to a redundancy value of "redundant". If a redundancy value is specified, it is assumed no translation is needed and will result in an error due to doubled speeds no longer being valid.</li> <li> A non-doubled (eg. 100) speed value <i>without</i> a redundancy value will be translated to a redundancy value of "degraded".</li> </ul> After the compatibility period, a doubled speed value will result in an error, and a non-doubled speed value without a redundancy value specified will result in the best available redundancy state. An exception is made for the new relative speed value -1. When using -1 without a redundancy value, the best possible redundancy will be used. Please transition away from using doubled speed values in favor of specifying redundancy (when applicable) or using relative speed values 0 and -1.
+func (r Hardware_SecurityModule) SetPublicNetworkInterfaceSpeed(newSpeed *int, redundancy *string) (resp bool, err error) {
 	params := []interface{}{
 		newSpeed,
+		redundancy,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "setPublicNetworkInterfaceSpeed", params, &r.Options, &resp)
 	return
@@ -5680,13 +5832,21 @@ func (r Hardware_SecurityModule) SetUserMetadata(metadata []string) (resp []data
 	return
 }
 
-// Shuts down the public network port
+// Disconnect a server's private network interface. This operation is an alias for calling [[SoftLayer_Hardware_Server/setPrivateNetworkInterfaceSpeed]] with a $newSpeed of 0 and unspecified $redundancy.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to disconnect the interface; thus changes are pending. A response of false indicates the interface was already disconnected, and thus no changes are pending.
 func (r Hardware_SecurityModule) ShutdownPrivatePort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "shutdownPrivatePort", nil, &r.Options, &resp)
 	return
 }
 
-// Shuts down the public network port
+// Disconnect a server's public network interface. This operation is an alias for [[SoftLayer_Hardware_Server/setPublicNetworkInterfaceSpeed]] with a $newSpeed of 0 and unspecified $redundancy.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to disconnect the interface; thus changes are pending. A response of false indicates the interface was already disconnected, and thus no changes are pending.
 func (r Hardware_SecurityModule) ShutdownPublicPort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "shutdownPublicPort", nil, &r.Options, &resp)
 	return
@@ -5699,6 +5859,21 @@ func (r Hardware_SecurityModule) SparePool(action *string, newOrder *bool) (resp
 		newOrder,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "sparePool", params, &r.Options, &resp)
+	return
+}
+
+// Test the RAID Alert service by sending the service a request to store a test email for this server. The server must have an account ID and MAC address.  A RAID controller must also be installed.
+func (r Hardware_SecurityModule) TestRaidAlertService() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "testRaidAlertService", nil, &r.Options, &resp)
+	return
+}
+
+// Attempt to toggle the IPMI interface.  If there is an active transaction on the server, it will throw an exception. This method creates a transaction to toggle the interface.  It is not instant.
+func (r Hardware_SecurityModule) ToggleManagementInterface(enabled *bool) (resp bool, err error) {
+	params := []interface{}{
+		enabled,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule", "toggleManagementInterface", params, &r.Options, &resp)
 	return
 }
 
@@ -5761,13 +5936,21 @@ func (r Hardware_SecurityModule750) Offset(offset int) Hardware_SecurityModule75
 	return r
 }
 
-// Activates the private network port
+// Activate a server's private network interface to the maximum available speed. This operation is an alias for [[SoftLayer_Hardware_Server/setPrivateNetworkInterfaceSpeed]] with a $newSpeed of -1 and a $redundancy of "redundant" or unspecified (which results in the best available redundancy state).
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to activate the interface; thus changes are pending. A response of false indicates the interface was already active, and thus no changes are pending.
 func (r Hardware_SecurityModule750) ActivatePrivatePort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "activatePrivatePort", nil, &r.Options, &resp)
 	return
 }
 
-// Activates the public network port
+// Activate a server's public network interface to the maximum available speed. This operation is an alias for [[SoftLayer_Hardware_Server/setPublicNetworkInterfaceSpeed]] with a $newSpeed of -1 and a $redundancy of "redundant" or unspecified (which results in the best available redundancy state).
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to activate the interface; thus changes are pending. A response of false indicates the interface was already active, and thus no changes are pending.
 func (r Hardware_SecurityModule750) ActivatePublicPort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "activatePublicPort", nil, &r.Options, &resp)
 	return
@@ -5800,7 +5983,7 @@ func (r Hardware_SecurityModule750) BootToRescueLayer(noOsBootEnvironment *strin
 	return
 }
 
-// Captures a Flex Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
+// Captures an Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
 func (r Hardware_SecurityModule750) CaptureImage(captureTemplate *datatypes.Container_Disk_Image_Capture_Template) (resp datatypes.Virtual_Guest_Block_Device_Template_Group, err error) {
 	params := []interface{}{
 		captureTemplate,
@@ -5809,12 +5992,16 @@ func (r Hardware_SecurityModule750) CaptureImage(captureTemplate *datatypes.Cont
 	return
 }
 
-// Returns monitoring alarm detailed history
-func (r Hardware_SecurityModule750) CloseAlarm(alarmId *string) (resp bool, err error) {
+// You can launch firmware reflash by selecting from your server list. It will bring your server offline for approximately 60 minutes while the flashes are in progress.
+//
+// In the event of a hardware failure during this our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule750) CreateFirmwareReflashTransaction(ipmi *int, raidController *int, bios *int) (resp bool, err error) {
 	params := []interface{}{
-		alarmId,
+		ipmi,
+		raidController,
+		bios,
 	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "closeAlarm", params, &r.Options, &resp)
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "createFirmwareReflashTransaction", params, &r.Options, &resp)
 	return
 }
 
@@ -5829,6 +6016,17 @@ func (r Hardware_SecurityModule750) CreateFirmwareUpdateTransaction(ipmi *int, r
 		harddrive,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "createFirmwareUpdateTransaction", params, &r.Options, &resp)
+	return
+}
+
+// You can launch hyper-threading update by selecting from your server list. It will bring your server offline for approximately 60 minutes while the update is in progress.
+//
+// In the event of a hardware failure during this our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule750) CreateHyperThreadingUpdateTransaction(disableHyperthreading *int) (resp bool, err error) {
+	params := []interface{}{
+		disableHyperthreading,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "createHyperThreadingUpdateTransaction", params, &r.Options, &resp)
 	return
 }
 
@@ -6132,6 +6330,15 @@ func (r Hardware_SecurityModule750) DeleteSoftwareComponentPasswords(softwareCom
 	return
 }
 
+// Delete an existing tag.  If there are any references on the tag, an exception will be thrown.
+func (r Hardware_SecurityModule750) DeleteTag(tagName *string) (resp bool, err error) {
+	params := []interface{}{
+		tagName,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "deleteTag", params, &r.Options, &resp)
+	return
+}
+
 // Edit a server's properties
 func (r Hardware_SecurityModule750) EditObject(templateObject *datatypes.Hardware_Server) (resp bool, err error) {
 	params := []interface{}{
@@ -6160,7 +6367,7 @@ func (r Hardware_SecurityModule750) ExecuteRemoteScript(uri *string) (err error)
 	return
 }
 
-// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware - alternate means of locating the hardware must be used (see '''Associated Methods'''). If no hardware is found, no errors are generated and no data is returned.
+// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware. If no hardware is found, no errors are generated and no data is returned.
 func (r Hardware_SecurityModule750) FindByIpAddress(ipAddress *string) (resp datatypes.Hardware, err error) {
 	params := []interface{}{
 		ipAddress,
@@ -6224,17 +6431,6 @@ func (r Hardware_SecurityModule750) GetActiveTransaction() (resp datatypes.Provi
 // Retrieve Any active transaction(s) that are currently running for the server (example: os reload).
 func (r Hardware_SecurityModule750) GetActiveTransactions() (resp []datatypes.Provisioning_Version1_Transaction, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getActiveTransactions", nil, &r.Options, &resp)
-	return
-}
-
-// The '''getAlarmHistory''' method retrieves a detailed history for the monitoring alarm. When calling this method, a start and end date for the history to be retrieved must be entered.
-func (r Hardware_SecurityModule750) GetAlarmHistory(startDate *datatypes.Time, endDate *datatypes.Time, alarmId *string) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getAlarmHistory", params, &r.Options, &resp)
 	return
 }
 
@@ -6453,9 +6649,21 @@ func (r Hardware_SecurityModule750) GetBlockCancelBecauseDisconnectedFlag() (res
 	return
 }
 
+// Retrieve the valid boot modes for this server
+func (r Hardware_SecurityModule750) GetBootModeOptions() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getBootModeOptions", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve Status indicating whether or not a piece of hardware has business continuance insurance.
 func (r Hardware_SecurityModule750) GetBusinessContinuanceInsuranceFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getBusinessContinuanceInsuranceFlag", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Determine if the server is able to be image captured. If unable to image capture a reason will be provided.
+func (r Hardware_SecurityModule750) GetCaptureEnabledFlag() (resp datatypes.Container_Hardware_CaptureEnabled, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getCaptureEnabledFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -6529,13 +6737,13 @@ func (r Hardware_SecurityModule750) GetCurrentBillableBandwidthUsage() (resp dat
 	return
 }
 
-// Get the billing detail for this instance for the current billing period. This does not include bandwidth usage.
+// Get the billing detail for this hardware for the current billing period. This does not include bandwidth usage.
 func (r Hardware_SecurityModule750) GetCurrentBillingDetail() (resp []datatypes.Billing_Item, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getCurrentBillingDetail", nil, &r.Options, &resp)
 	return
 }
 
-// The '''getCurrentBillingTotal''' method retrieves the total bill amount in US Dollars ($) for the current billing period. In addition to the total bill amount, the billing detail also includes all bandwidth used up to the point the method is called on the piece of hardware.
+// Get the total bill amount in US Dollars ($) for this hardware in the current billing period. This includes all bandwidth used up to the point the method is called on the hardware.
 func (r Hardware_SecurityModule750) GetCurrentBillingTotal() (resp datatypes.Float64, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getCurrentBillingTotal", nil, &r.Options, &resp)
 	return
@@ -6837,6 +7045,18 @@ func (r Hardware_SecurityModule750) GetIsCloudReadyNodeCertified() (resp bool, e
 	return
 }
 
+// Retrieve Determine if remote management has been disabled due to port speed.
+func (r Hardware_SecurityModule750) GetIsIpmiDisabled() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getIsIpmiDisabled", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Determine if hardware object is a Virtual Private Cloud node.
+func (r Hardware_SecurityModule750) GetIsVirtualPrivateCloudNode() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getIsVirtualPrivateCloudNode", nil, &r.Options, &resp)
+	return
+}
+
 // Return a collection of SoftLayer_Item_Price objects from a collection of SoftLayer_Software_Description
 func (r Hardware_SecurityModule750) GetItemPricesFromSoftwareDescriptions(softwareDescriptions []datatypes.Software_Description, includeTranslationsFlag *bool, returnAllPricesFlag *bool) (resp []datatypes.Product_Item, err error) {
 	params := []interface{}{
@@ -6884,6 +7104,12 @@ func (r Hardware_SecurityModule750) GetLockboxNetworkStorage() (resp datatypes.N
 	return
 }
 
+// Retrieve Returns a list of logical volumes on the physical machine.
+func (r Hardware_SecurityModule750) GetLogicalVolumeStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getLogicalVolumeStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve A flag indicating that the hardware is a managed resource.
 func (r Hardware_SecurityModule750) GetManagedResourceFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getManagedResourceFlag", nil, &r.Options, &resp)
@@ -6920,33 +7146,13 @@ func (r Hardware_SecurityModule750) GetMetricTrackingObjectId() (resp int, err e
 	return
 }
 
-// Returns open monitoring alarms for a given time period
-func (r Hardware_SecurityModule750) GetMonitoringActiveAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getMonitoringActiveAlarms", params, &r.Options, &resp)
+// Retrieve
+func (r Hardware_SecurityModule750) GetModules() (resp []datatypes.Hardware_Component, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getModules", nil, &r.Options, &resp)
 	return
 }
 
-// Retrieve Information regarding the monitoring agents associated with a piece of hardware.
-func (r Hardware_SecurityModule750) GetMonitoringAgents() (resp []datatypes.Monitoring_Agent, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getMonitoringAgents", nil, &r.Options, &resp)
-	return
-}
-
-// Returns closed monitoring alarms for a given time period
-func (r Hardware_SecurityModule750) GetMonitoringClosedAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getMonitoringClosedAlarms", params, &r.Options, &resp)
-	return
-}
-
-// Retrieve Information regarding the hardware's monitoring robot.
+// Retrieve
 func (r Hardware_SecurityModule750) GetMonitoringRobot() (resp datatypes.Monitoring_Robot, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getMonitoringRobot", nil, &r.Options, &resp)
 	return
@@ -6958,15 +7164,9 @@ func (r Hardware_SecurityModule750) GetMonitoringServiceComponent() (resp dataty
 	return
 }
 
-// Retrieve The monitoring service flag eligibility status for a piece of hardware.
+// Retrieve
 func (r Hardware_SecurityModule750) GetMonitoringServiceEligibilityFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getMonitoringServiceEligibilityFlag", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve The service flag status for a piece of hardware.
-func (r Hardware_SecurityModule750) GetMonitoringServiceFlag() (resp bool, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getMonitoringServiceFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -7075,6 +7275,18 @@ func (r Hardware_SecurityModule750) GetNextBillingCycleBandwidthAllocation() (re
 // Retrieve
 func (r Hardware_SecurityModule750) GetNotesHistory() (resp []datatypes.Hardware_Note, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getNotesHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The amount of non-volatile memory a piece of hardware has, measured in gigabytes.
+func (r Hardware_SecurityModule750) GetNvRamCapacity() (resp uint, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getNvRamCapacity", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
+func (r Hardware_SecurityModule750) GetNvRamComponentModels() (resp []datatypes.Hardware_Component_Model, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getNvRamComponentModels", nil, &r.Options, &resp)
 	return
 }
 
@@ -7242,6 +7454,8 @@ func (r Hardware_SecurityModule750) GetPrivateVlan() (resp datatypes.Network_Vla
 	return
 }
 
+//
+// *** DEPRECATED ***
 // Retrieve a backend network VLAN by searching for an IP address
 func (r Hardware_SecurityModule750) GetPrivateVlanByIpAddress(ipAddress *string) (resp datatypes.Network_Vlan, err error) {
 	params := []interface{}{
@@ -7531,6 +7745,12 @@ func (r Hardware_SecurityModule750) GetStatisticsRemoteManagement() (resp dataty
 }
 
 // Retrieve
+func (r Hardware_SecurityModule750) GetStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A piece of hardware's private storage network components. [Deprecated]
 func (r Hardware_SecurityModule750) GetStorageNetworkComponents() (resp []datatypes.Network_Component, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getStorageNetworkComponents", nil, &r.Options, &resp)
 	return
@@ -7552,6 +7772,12 @@ func (r Hardware_SecurityModule750) GetTopLevelLocation() (resp datatypes.Locati
 // This method will query transaction history for a piece of hardware.
 func (r Hardware_SecurityModule750) GetTransactionHistory() (resp []datatypes.Provisioning_Version1_Transaction_History, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getTransactionHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Whether to use UEFI boot instead of BIOS.
+func (r Hardware_SecurityModule750) GetUefiBootFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "getUefiBootFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -7708,6 +7934,20 @@ func (r Hardware_SecurityModule750) IsWindowsServer() (resp bool, err error) {
 	return
 }
 
+// You can launch firmware reflashes by selecting from your server list. It will bring your server offline for approximately 60 minutes while the reflashes are in progress.
+//
+// In the event of a hardware failure during this test our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online. They will be contact you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule750) MassFirmwareReflash(hardwareIds []int, ipmi *bool, raidController *bool, bios *bool) (resp []datatypes.Container_Hardware_Server_Request, err error) {
+	params := []interface{}{
+		hardwareIds,
+		ipmi,
+		raidController,
+		bios,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "massFirmwareReflash", params, &r.Options, &resp)
+	return
+}
+
 // You can launch firmware updates by selecting from your server list. It will bring your server offline for approximately 20 minutes while the updates are in progress.
 //
 // In the event of a hardware failure during this test our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
@@ -7720,6 +7960,18 @@ func (r Hardware_SecurityModule750) MassFirmwareUpdate(hardwareIds []int, ipmi *
 		harddrive,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "massFirmwareUpdate", params, &r.Options, &resp)
+	return
+}
+
+// You can launch hyper-threading update by selecting from your server list. It will bring your server offline for approximately 60 minutes while the updates are in progress.
+//
+// In the event of a hardware failure during this update our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online. They will be in contact with you to ensure that impact on your server is minimal.
+func (r Hardware_SecurityModule750) MassHyperThreadingUpdate(hardwareIds []int, disableHyperthreading *bool) (resp []datatypes.Container_Hardware_Server_Request, err error) {
+	params := []interface{}{
+		hardwareIds,
+		disableHyperthreading,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "massHyperThreadingUpdate", params, &r.Options, &resp)
 	return
 }
 
@@ -7852,6 +8104,15 @@ func (r Hardware_SecurityModule750) RemoveAccessToNetworkStorageList(networkStor
 	return
 }
 
+// no documentation yet
+func (r Hardware_SecurityModule750) RemoveTags(tags *string) (resp bool, err error) {
+	params := []interface{}{
+		tags,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "removeTags", params, &r.Options, &resp)
+	return
+}
+
 // You can launch a new Passmark hardware test by selecting from your server list. It will bring your server offline for approximately 20 minutes while the testing is in progress, and will publish a certificate with the results to your hardware details page.
 //
 // While the hard drives are tested for the initial deployment, the Passmark Certificate utility will not test the hard drives on your live server. This is to ensure that no data is overwritten. If you would like to test the server's hard drives, you can have the full Passmark suite installed to your server free of charge through a new Support ticket.
@@ -7873,23 +8134,45 @@ func (r Hardware_SecurityModule750) SetOperatingSystemPassword(newPassword *stri
 	return
 }
 
-// Sets the private network interface speed to the new speed. Speed values can only be 0 (Disconnect), 10, 100, 1000, and 10000. The new speed must be equal to or less than the max speed of the interface.
+// Set the private network interface speed and redundancy configuration.
 //
-// It will take less than a minute to update the switch port speed. The server uplink will not be operational again until the server interface speed is updated.
-func (r Hardware_SecurityModule750) SetPrivateNetworkInterfaceSpeed(newSpeed *int) (resp bool, err error) {
+// Possible $newSpeed values are -1 (maximum available), 0 (disconnect), 10, 100, 1000, and 10000; not all values are available to every server. The maximum speed is limited by the speed requested during provisioning. All intermediate speeds are limited by the capability of the pod the server is deployed in. No guarantee is made that a speed other than what was requested during provisioning will be available.
+//
+// If specified, possible $redundancy values are either "redundant" or "degraded". Not specifying a redundancy mode will use the best possible redundancy available to the server. However, specifying a redundacy mode that is not available to the server will result in an error. "redundant" indicates all available interfaces should be active. "degraded" indicates only the primary interface should be active. Irrespective of the number of interfaces available to a server, it is only possible to have either a single interface or all interfaces active.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to achieve the desired interface configuration; thus changes are pending. A response of false indicates the current interface configuration matches the desired configuration, and thus no changes are pending.
+//
+// <h4>Backwards Compatibility Until February 27th, 2019</h4>
+//
+// In order to provide a period of transition to the new API, some backwards compatible behaviors will be active during this period. <ul> <li> A "doubled" (eg. 200) speed value will be translated to a redundancy value of "redundant". If a redundancy value is specified, it is assumed no translation is needed and will result in an error due to doubled speeds no longer being valid.</li> <li> A non-doubled (eg. 100) speed value <i>without</i> a redundancy value will be translated to a redundancy value of "degraded".</li> </ul> After the compatibility period, a doubled speed value will result in an error, and a non-doubled speed value without a redundancy value specified will result in the best available redundancy state. An exception is made for the new relative speed value -1. When using -1 without a redundancy value, the best possible redundancy will be used. Please transition away from using doubled speed values in favor of specifying redundancy (when applicable) or using relative speed values 0 and -1.
+func (r Hardware_SecurityModule750) SetPrivateNetworkInterfaceSpeed(newSpeed *int, redundancy *string) (resp bool, err error) {
 	params := []interface{}{
 		newSpeed,
+		redundancy,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "setPrivateNetworkInterfaceSpeed", params, &r.Options, &resp)
 	return
 }
 
-// Sets the public network interface speed to the new speed. Speed values can only be 0 (Disconnect), 10, 100, 1000, and 10000. The new speed must be equal to or less than the max speed of the interface.
+// Set the public network interface speed and redundancy configuration.
 //
-// It will take less than a minute to update the switch port speed. The server uplink will not be operational again until the server interface speed is updated.
-func (r Hardware_SecurityModule750) SetPublicNetworkInterfaceSpeed(newSpeed *int) (resp bool, err error) {
+// Possible $newSpeed values are -1 (maximum available), 0 (disconnect), 10, 100, 1000, and 10000; not all values are available to every server. The maximum speed is limited by the speed requested during provisioning. All intermediate speeds are limited by the capability of the pod the server is deployed in. No guarantee is made that a speed other than what was requested during provisioning will be available.
+//
+// If specified, possible $redundancy values are either "redundant" or "degraded". Not specifying a redundancy mode will use the best possible redundancy available to the server. However, specifying a redundacy mode that is not available to the server will result in an error. "redundant" indicates all available interfaces should be active. "degraded" indicates only the primary interface should be active. Irrespective of the number of interfaces available to a server, it is only possible to have either a single interface or all interfaces active.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to achieve the desired interface configuration; thus changes are pending. A response of false indicates the current interface configuration matches the desired configuration, and thus no changes are pending.
+//
+// <h4>Backwards Compatibility Until February 27th, 2019</h4>
+//
+// In order to provide a period of transition to the new API, some backwards compatible behaviors will be active during this period. <ul> <li> A "doubled" (eg. 200) speed value will be translated to a redundancy value of "redundant". If a redundancy value is specified, it is assumed no translation is needed and will result in an error due to doubled speeds no longer being valid.</li> <li> A non-doubled (eg. 100) speed value <i>without</i> a redundancy value will be translated to a redundancy value of "degraded".</li> </ul> After the compatibility period, a doubled speed value will result in an error, and a non-doubled speed value without a redundancy value specified will result in the best available redundancy state. An exception is made for the new relative speed value -1. When using -1 without a redundancy value, the best possible redundancy will be used. Please transition away from using doubled speed values in favor of specifying redundancy (when applicable) or using relative speed values 0 and -1.
+func (r Hardware_SecurityModule750) SetPublicNetworkInterfaceSpeed(newSpeed *int, redundancy *string) (resp bool, err error) {
 	params := []interface{}{
 		newSpeed,
+		redundancy,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "setPublicNetworkInterfaceSpeed", params, &r.Options, &resp)
 	return
@@ -7913,13 +8196,21 @@ func (r Hardware_SecurityModule750) SetUserMetadata(metadata []string) (resp []d
 	return
 }
 
-// Shuts down the public network port
+// Disconnect a server's private network interface. This operation is an alias for calling [[SoftLayer_Hardware_Server/setPrivateNetworkInterfaceSpeed]] with a $newSpeed of 0 and unspecified $redundancy.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to disconnect the interface; thus changes are pending. A response of false indicates the interface was already disconnected, and thus no changes are pending.
 func (r Hardware_SecurityModule750) ShutdownPrivatePort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "shutdownPrivatePort", nil, &r.Options, &resp)
 	return
 }
 
-// Shuts down the public network port
+// Disconnect a server's public network interface. This operation is an alias for [[SoftLayer_Hardware_Server/setPublicNetworkInterfaceSpeed]] with a $newSpeed of 0 and unspecified $redundancy.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to disconnect the interface; thus changes are pending. A response of false indicates the interface was already disconnected, and thus no changes are pending.
 func (r Hardware_SecurityModule750) ShutdownPublicPort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "shutdownPublicPort", nil, &r.Options, &resp)
 	return
@@ -7932,6 +8223,21 @@ func (r Hardware_SecurityModule750) SparePool(action *string, newOrder *bool) (r
 		newOrder,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "sparePool", params, &r.Options, &resp)
+	return
+}
+
+// Test the RAID Alert service by sending the service a request to store a test email for this server. The server must have an account ID and MAC address.  A RAID controller must also be installed.
+func (r Hardware_SecurityModule750) TestRaidAlertService() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "testRaidAlertService", nil, &r.Options, &resp)
+	return
+}
+
+// Attempt to toggle the IPMI interface.  If there is an active transaction on the server, it will throw an exception. This method creates a transaction to toggle the interface.  It is not instant.
+func (r Hardware_SecurityModule750) ToggleManagementInterface(enabled *bool) (resp bool, err error) {
+	params := []interface{}{
+		enabled,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_SecurityModule750", "toggleManagementInterface", params, &r.Options, &resp)
 	return
 }
 
@@ -7994,13 +8300,21 @@ func (r Hardware_Server) Offset(offset int) Hardware_Server {
 	return r
 }
 
-// Activates the private network port
+// Activate a server's private network interface to the maximum available speed. This operation is an alias for [[SoftLayer_Hardware_Server/setPrivateNetworkInterfaceSpeed]] with a $newSpeed of -1 and a $redundancy of "redundant" or unspecified (which results in the best available redundancy state).
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to activate the interface; thus changes are pending. A response of false indicates the interface was already active, and thus no changes are pending.
 func (r Hardware_Server) ActivatePrivatePort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "activatePrivatePort", nil, &r.Options, &resp)
 	return
 }
 
-// Activates the public network port
+// Activate a server's public network interface to the maximum available speed. This operation is an alias for [[SoftLayer_Hardware_Server/setPublicNetworkInterfaceSpeed]] with a $newSpeed of -1 and a $redundancy of "redundant" or unspecified (which results in the best available redundancy state).
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to activate the interface; thus changes are pending. A response of false indicates the interface was already active, and thus no changes are pending.
 func (r Hardware_Server) ActivatePublicPort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "activatePublicPort", nil, &r.Options, &resp)
 	return
@@ -8033,7 +8347,7 @@ func (r Hardware_Server) BootToRescueLayer(noOsBootEnvironment *string) (resp bo
 	return
 }
 
-// Captures a Flex Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
+// Captures an Image of the hard disk on the physical machine, based on the capture template parameter. Returns the image template group containing the disk image.
 func (r Hardware_Server) CaptureImage(captureTemplate *datatypes.Container_Disk_Image_Capture_Template) (resp datatypes.Virtual_Guest_Block_Device_Template_Group, err error) {
 	params := []interface{}{
 		captureTemplate,
@@ -8042,12 +8356,16 @@ func (r Hardware_Server) CaptureImage(captureTemplate *datatypes.Container_Disk_
 	return
 }
 
-// Returns monitoring alarm detailed history
-func (r Hardware_Server) CloseAlarm(alarmId *string) (resp bool, err error) {
+// You can launch firmware reflash by selecting from your server list. It will bring your server offline for approximately 60 minutes while the flashes are in progress.
+//
+// In the event of a hardware failure during this our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
+func (r Hardware_Server) CreateFirmwareReflashTransaction(ipmi *int, raidController *int, bios *int) (resp bool, err error) {
 	params := []interface{}{
-		alarmId,
+		ipmi,
+		raidController,
+		bios,
 	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "closeAlarm", params, &r.Options, &resp)
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "createFirmwareReflashTransaction", params, &r.Options, &resp)
 	return
 }
 
@@ -8062,6 +8380,17 @@ func (r Hardware_Server) CreateFirmwareUpdateTransaction(ipmi *int, raidControll
 		harddrive,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "createFirmwareUpdateTransaction", params, &r.Options, &resp)
+	return
+}
+
+// You can launch hyper-threading update by selecting from your server list. It will bring your server offline for approximately 60 minutes while the update is in progress.
+//
+// In the event of a hardware failure during this our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
+func (r Hardware_Server) CreateHyperThreadingUpdateTransaction(disableHyperthreading *int) (resp bool, err error) {
+	params := []interface{}{
+		disableHyperthreading,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "createHyperThreadingUpdateTransaction", params, &r.Options, &resp)
 	return
 }
 
@@ -8365,6 +8694,15 @@ func (r Hardware_Server) DeleteSoftwareComponentPasswords(softwareComponentPassw
 	return
 }
 
+// Delete an existing tag.  If there are any references on the tag, an exception will be thrown.
+func (r Hardware_Server) DeleteTag(tagName *string) (resp bool, err error) {
+	params := []interface{}{
+		tagName,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "deleteTag", params, &r.Options, &resp)
+	return
+}
+
 // Edit a server's properties
 func (r Hardware_Server) EditObject(templateObject *datatypes.Hardware_Server) (resp bool, err error) {
 	params := []interface{}{
@@ -8393,7 +8731,7 @@ func (r Hardware_Server) ExecuteRemoteScript(uri *string) (err error) {
 	return
 }
 
-// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware - alternate means of locating the hardware must be used (see '''Associated Methods'''). If no hardware is found, no errors are generated and no data is returned.
+// The '''findByIpAddress''' method finds hardware using its primary public or private IP address. IP addresses that have a secondary subnet tied to the hardware will not return the hardware. If no hardware is found, no errors are generated and no data is returned.
 func (r Hardware_Server) FindByIpAddress(ipAddress *string) (resp datatypes.Hardware, err error) {
 	params := []interface{}{
 		ipAddress,
@@ -8457,17 +8795,6 @@ func (r Hardware_Server) GetActiveTransaction() (resp datatypes.Provisioning_Ver
 // Retrieve Any active transaction(s) that are currently running for the server (example: os reload).
 func (r Hardware_Server) GetActiveTransactions() (resp []datatypes.Provisioning_Version1_Transaction, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getActiveTransactions", nil, &r.Options, &resp)
-	return
-}
-
-// The '''getAlarmHistory''' method retrieves a detailed history for the monitoring alarm. When calling this method, a start and end date for the history to be retrieved must be entered.
-func (r Hardware_Server) GetAlarmHistory(startDate *datatypes.Time, endDate *datatypes.Time, alarmId *string) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-		alarmId,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getAlarmHistory", params, &r.Options, &resp)
 	return
 }
 
@@ -8686,9 +9013,21 @@ func (r Hardware_Server) GetBlockCancelBecauseDisconnectedFlag() (resp bool, err
 	return
 }
 
+// Retrieve the valid boot modes for this server
+func (r Hardware_Server) GetBootModeOptions() (resp []string, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getBootModeOptions", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve Status indicating whether or not a piece of hardware has business continuance insurance.
 func (r Hardware_Server) GetBusinessContinuanceInsuranceFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getBusinessContinuanceInsuranceFlag", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Determine if the server is able to be image captured. If unable to image capture a reason will be provided.
+func (r Hardware_Server) GetCaptureEnabledFlag() (resp datatypes.Container_Hardware_CaptureEnabled, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getCaptureEnabledFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -8762,13 +9101,13 @@ func (r Hardware_Server) GetCurrentBillableBandwidthUsage() (resp datatypes.Floa
 	return
 }
 
-// Get the billing detail for this instance for the current billing period. This does not include bandwidth usage.
+// Get the billing detail for this hardware for the current billing period. This does not include bandwidth usage.
 func (r Hardware_Server) GetCurrentBillingDetail() (resp []datatypes.Billing_Item, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getCurrentBillingDetail", nil, &r.Options, &resp)
 	return
 }
 
-// The '''getCurrentBillingTotal''' method retrieves the total bill amount in US Dollars ($) for the current billing period. In addition to the total bill amount, the billing detail also includes all bandwidth used up to the point the method is called on the piece of hardware.
+// Get the total bill amount in US Dollars ($) for this hardware in the current billing period. This includes all bandwidth used up to the point the method is called on the hardware.
 func (r Hardware_Server) GetCurrentBillingTotal() (resp datatypes.Float64, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getCurrentBillingTotal", nil, &r.Options, &resp)
 	return
@@ -9070,6 +9409,18 @@ func (r Hardware_Server) GetIsCloudReadyNodeCertified() (resp bool, err error) {
 	return
 }
 
+// Retrieve Determine if remote management has been disabled due to port speed.
+func (r Hardware_Server) GetIsIpmiDisabled() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getIsIpmiDisabled", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Determine if hardware object is a Virtual Private Cloud node.
+func (r Hardware_Server) GetIsVirtualPrivateCloudNode() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getIsVirtualPrivateCloudNode", nil, &r.Options, &resp)
+	return
+}
+
 // Return a collection of SoftLayer_Item_Price objects from a collection of SoftLayer_Software_Description
 func (r Hardware_Server) GetItemPricesFromSoftwareDescriptions(softwareDescriptions []datatypes.Software_Description, includeTranslationsFlag *bool, returnAllPricesFlag *bool) (resp []datatypes.Product_Item, err error) {
 	params := []interface{}{
@@ -9117,6 +9468,12 @@ func (r Hardware_Server) GetLockboxNetworkStorage() (resp datatypes.Network_Stor
 	return
 }
 
+// Retrieve Returns a list of logical volumes on the physical machine.
+func (r Hardware_Server) GetLogicalVolumeStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getLogicalVolumeStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
 // Retrieve A flag indicating that the hardware is a managed resource.
 func (r Hardware_Server) GetManagedResourceFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getManagedResourceFlag", nil, &r.Options, &resp)
@@ -9153,33 +9510,13 @@ func (r Hardware_Server) GetMetricTrackingObjectId() (resp int, err error) {
 	return
 }
 
-// Returns open monitoring alarms for a given time period
-func (r Hardware_Server) GetMonitoringActiveAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getMonitoringActiveAlarms", params, &r.Options, &resp)
+// Retrieve
+func (r Hardware_Server) GetModules() (resp []datatypes.Hardware_Component, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getModules", nil, &r.Options, &resp)
 	return
 }
 
-// Retrieve Information regarding the monitoring agents associated with a piece of hardware.
-func (r Hardware_Server) GetMonitoringAgents() (resp []datatypes.Monitoring_Agent, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getMonitoringAgents", nil, &r.Options, &resp)
-	return
-}
-
-// Returns closed monitoring alarms for a given time period
-func (r Hardware_Server) GetMonitoringClosedAlarms(startDate *datatypes.Time, endDate *datatypes.Time) (resp []datatypes.Container_Monitoring_Alarm_History, err error) {
-	params := []interface{}{
-		startDate,
-		endDate,
-	}
-	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getMonitoringClosedAlarms", params, &r.Options, &resp)
-	return
-}
-
-// Retrieve Information regarding the hardware's monitoring robot.
+// Retrieve
 func (r Hardware_Server) GetMonitoringRobot() (resp datatypes.Monitoring_Robot, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getMonitoringRobot", nil, &r.Options, &resp)
 	return
@@ -9191,15 +9528,9 @@ func (r Hardware_Server) GetMonitoringServiceComponent() (resp datatypes.Network
 	return
 }
 
-// Retrieve The monitoring service flag eligibility status for a piece of hardware.
+// Retrieve
 func (r Hardware_Server) GetMonitoringServiceEligibilityFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getMonitoringServiceEligibilityFlag", nil, &r.Options, &resp)
-	return
-}
-
-// Retrieve The service flag status for a piece of hardware.
-func (r Hardware_Server) GetMonitoringServiceFlag() (resp bool, err error) {
-	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getMonitoringServiceFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -9308,6 +9639,18 @@ func (r Hardware_Server) GetNextBillingCycleBandwidthAllocation() (resp datatype
 // Retrieve
 func (r Hardware_Server) GetNotesHistory() (resp []datatypes.Hardware_Note, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getNotesHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve The amount of non-volatile memory a piece of hardware has, measured in gigabytes.
+func (r Hardware_Server) GetNvRamCapacity() (resp uint, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getNvRamCapacity", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
+func (r Hardware_Server) GetNvRamComponentModels() (resp []datatypes.Hardware_Component_Model, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getNvRamComponentModels", nil, &r.Options, &resp)
 	return
 }
 
@@ -9475,6 +9818,8 @@ func (r Hardware_Server) GetPrivateVlan() (resp datatypes.Network_Vlan, err erro
 	return
 }
 
+//
+// *** DEPRECATED ***
 // Retrieve a backend network VLAN by searching for an IP address
 func (r Hardware_Server) GetPrivateVlanByIpAddress(ipAddress *string) (resp datatypes.Network_Vlan, err error) {
 	params := []interface{}{
@@ -9764,6 +10109,12 @@ func (r Hardware_Server) GetStatisticsRemoteManagement() (resp datatypes.Hardwar
 }
 
 // Retrieve
+func (r Hardware_Server) GetStorageGroups() (resp []datatypes.Configuration_Storage_Group, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getStorageGroups", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve A piece of hardware's private storage network components. [Deprecated]
 func (r Hardware_Server) GetStorageNetworkComponents() (resp []datatypes.Network_Component, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getStorageNetworkComponents", nil, &r.Options, &resp)
 	return
@@ -9785,6 +10136,12 @@ func (r Hardware_Server) GetTopLevelLocation() (resp datatypes.Location, err err
 // This method will query transaction history for a piece of hardware.
 func (r Hardware_Server) GetTransactionHistory() (resp []datatypes.Provisioning_Version1_Transaction_History, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getTransactionHistory", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve Whether to use UEFI boot instead of BIOS.
+func (r Hardware_Server) GetUefiBootFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "getUefiBootFlag", nil, &r.Options, &resp)
 	return
 }
 
@@ -9941,6 +10298,20 @@ func (r Hardware_Server) IsWindowsServer() (resp bool, err error) {
 	return
 }
 
+// You can launch firmware reflashes by selecting from your server list. It will bring your server offline for approximately 60 minutes while the reflashes are in progress.
+//
+// In the event of a hardware failure during this test our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online. They will be contact you to ensure that impact on your server is minimal.
+func (r Hardware_Server) MassFirmwareReflash(hardwareIds []int, ipmi *bool, raidController *bool, bios *bool) (resp []datatypes.Container_Hardware_Server_Request, err error) {
+	params := []interface{}{
+		hardwareIds,
+		ipmi,
+		raidController,
+		bios,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "massFirmwareReflash", params, &r.Options, &resp)
+	return
+}
+
 // You can launch firmware updates by selecting from your server list. It will bring your server offline for approximately 20 minutes while the updates are in progress.
 //
 // In the event of a hardware failure during this test our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online, and will be contacting you to ensure that impact on your server is minimal.
@@ -9953,6 +10324,18 @@ func (r Hardware_Server) MassFirmwareUpdate(hardwareIds []int, ipmi *bool, raidC
 		harddrive,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "massFirmwareUpdate", params, &r.Options, &resp)
+	return
+}
+
+// You can launch hyper-threading update by selecting from your server list. It will bring your server offline for approximately 60 minutes while the updates are in progress.
+//
+// In the event of a hardware failure during this update our datacenter engineers will be notified of the problem automatically. They will then replace any failed components to bring your server back online. They will be in contact with you to ensure that impact on your server is minimal.
+func (r Hardware_Server) MassHyperThreadingUpdate(hardwareIds []int, disableHyperthreading *bool) (resp []datatypes.Container_Hardware_Server_Request, err error) {
+	params := []interface{}{
+		hardwareIds,
+		disableHyperthreading,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "massHyperThreadingUpdate", params, &r.Options, &resp)
 	return
 }
 
@@ -10085,6 +10468,15 @@ func (r Hardware_Server) RemoveAccessToNetworkStorageList(networkStorageTemplate
 	return
 }
 
+// no documentation yet
+func (r Hardware_Server) RemoveTags(tags *string) (resp bool, err error) {
+	params := []interface{}{
+		tags,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "removeTags", params, &r.Options, &resp)
+	return
+}
+
 // You can launch a new Passmark hardware test by selecting from your server list. It will bring your server offline for approximately 20 minutes while the testing is in progress, and will publish a certificate with the results to your hardware details page.
 //
 // While the hard drives are tested for the initial deployment, the Passmark Certificate utility will not test the hard drives on your live server. This is to ensure that no data is overwritten. If you would like to test the server's hard drives, you can have the full Passmark suite installed to your server free of charge through a new Support ticket.
@@ -10106,23 +10498,45 @@ func (r Hardware_Server) SetOperatingSystemPassword(newPassword *string) (resp b
 	return
 }
 
-// Sets the private network interface speed to the new speed. Speed values can only be 0 (Disconnect), 10, 100, 1000, and 10000. The new speed must be equal to or less than the max speed of the interface.
+// Set the private network interface speed and redundancy configuration.
 //
-// It will take less than a minute to update the switch port speed. The server uplink will not be operational again until the server interface speed is updated.
-func (r Hardware_Server) SetPrivateNetworkInterfaceSpeed(newSpeed *int) (resp bool, err error) {
+// Possible $newSpeed values are -1 (maximum available), 0 (disconnect), 10, 100, 1000, and 10000; not all values are available to every server. The maximum speed is limited by the speed requested during provisioning. All intermediate speeds are limited by the capability of the pod the server is deployed in. No guarantee is made that a speed other than what was requested during provisioning will be available.
+//
+// If specified, possible $redundancy values are either "redundant" or "degraded". Not specifying a redundancy mode will use the best possible redundancy available to the server. However, specifying a redundacy mode that is not available to the server will result in an error. "redundant" indicates all available interfaces should be active. "degraded" indicates only the primary interface should be active. Irrespective of the number of interfaces available to a server, it is only possible to have either a single interface or all interfaces active.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to achieve the desired interface configuration; thus changes are pending. A response of false indicates the current interface configuration matches the desired configuration, and thus no changes are pending.
+//
+// <h4>Backwards Compatibility Until February 27th, 2019</h4>
+//
+// In order to provide a period of transition to the new API, some backwards compatible behaviors will be active during this period. <ul> <li> A "doubled" (eg. 200) speed value will be translated to a redundancy value of "redundant". If a redundancy value is specified, it is assumed no translation is needed and will result in an error due to doubled speeds no longer being valid.</li> <li> A non-doubled (eg. 100) speed value <i>without</i> a redundancy value will be translated to a redundancy value of "degraded".</li> </ul> After the compatibility period, a doubled speed value will result in an error, and a non-doubled speed value without a redundancy value specified will result in the best available redundancy state. An exception is made for the new relative speed value -1. When using -1 without a redundancy value, the best possible redundancy will be used. Please transition away from using doubled speed values in favor of specifying redundancy (when applicable) or using relative speed values 0 and -1.
+func (r Hardware_Server) SetPrivateNetworkInterfaceSpeed(newSpeed *int, redundancy *string) (resp bool, err error) {
 	params := []interface{}{
 		newSpeed,
+		redundancy,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "setPrivateNetworkInterfaceSpeed", params, &r.Options, &resp)
 	return
 }
 
-// Sets the public network interface speed to the new speed. Speed values can only be 0 (Disconnect), 10, 100, 1000, and 10000. The new speed must be equal to or less than the max speed of the interface.
+// Set the public network interface speed and redundancy configuration.
 //
-// It will take less than a minute to update the switch port speed. The server uplink will not be operational again until the server interface speed is updated.
-func (r Hardware_Server) SetPublicNetworkInterfaceSpeed(newSpeed *int) (resp bool, err error) {
+// Possible $newSpeed values are -1 (maximum available), 0 (disconnect), 10, 100, 1000, and 10000; not all values are available to every server. The maximum speed is limited by the speed requested during provisioning. All intermediate speeds are limited by the capability of the pod the server is deployed in. No guarantee is made that a speed other than what was requested during provisioning will be available.
+//
+// If specified, possible $redundancy values are either "redundant" or "degraded". Not specifying a redundancy mode will use the best possible redundancy available to the server. However, specifying a redundacy mode that is not available to the server will result in an error. "redundant" indicates all available interfaces should be active. "degraded" indicates only the primary interface should be active. Irrespective of the number of interfaces available to a server, it is only possible to have either a single interface or all interfaces active.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to achieve the desired interface configuration; thus changes are pending. A response of false indicates the current interface configuration matches the desired configuration, and thus no changes are pending.
+//
+// <h4>Backwards Compatibility Until February 27th, 2019</h4>
+//
+// In order to provide a period of transition to the new API, some backwards compatible behaviors will be active during this period. <ul> <li> A "doubled" (eg. 200) speed value will be translated to a redundancy value of "redundant". If a redundancy value is specified, it is assumed no translation is needed and will result in an error due to doubled speeds no longer being valid.</li> <li> A non-doubled (eg. 100) speed value <i>without</i> a redundancy value will be translated to a redundancy value of "degraded".</li> </ul> After the compatibility period, a doubled speed value will result in an error, and a non-doubled speed value without a redundancy value specified will result in the best available redundancy state. An exception is made for the new relative speed value -1. When using -1 without a redundancy value, the best possible redundancy will be used. Please transition away from using doubled speed values in favor of specifying redundancy (when applicable) or using relative speed values 0 and -1.
+func (r Hardware_Server) SetPublicNetworkInterfaceSpeed(newSpeed *int, redundancy *string) (resp bool, err error) {
 	params := []interface{}{
 		newSpeed,
+		redundancy,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "setPublicNetworkInterfaceSpeed", params, &r.Options, &resp)
 	return
@@ -10146,13 +10560,21 @@ func (r Hardware_Server) SetUserMetadata(metadata []string) (resp []datatypes.Ha
 	return
 }
 
-// Shuts down the public network port
+// Disconnect a server's private network interface. This operation is an alias for calling [[SoftLayer_Hardware_Server/setPrivateNetworkInterfaceSpeed]] with a $newSpeed of 0 and unspecified $redundancy.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to disconnect the interface; thus changes are pending. A response of false indicates the interface was already disconnected, and thus no changes are pending.
 func (r Hardware_Server) ShutdownPrivatePort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "shutdownPrivatePort", nil, &r.Options, &resp)
 	return
 }
 
-// Shuts down the public network port
+// Disconnect a server's public network interface. This operation is an alias for [[SoftLayer_Hardware_Server/setPublicNetworkInterfaceSpeed]] with a $newSpeed of 0 and unspecified $redundancy.
+//
+// Receipt of a response does not indicate completion of the configuration change. Any subsequent attempts to request the interface change speed or state, while changes are pending, will result in a busy error.
+//
+// A response of true indicates a change was required to disconnect the interface; thus changes are pending. A response of false indicates the interface was already disconnected, and thus no changes are pending.
 func (r Hardware_Server) ShutdownPublicPort() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "shutdownPublicPort", nil, &r.Options, &resp)
 	return
@@ -10165,6 +10587,21 @@ func (r Hardware_Server) SparePool(action *string, newOrder *bool) (resp bool, e
 		newOrder,
 	}
 	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "sparePool", params, &r.Options, &resp)
+	return
+}
+
+// Test the RAID Alert service by sending the service a request to store a test email for this server. The server must have an account ID and MAC address.  A RAID controller must also be installed.
+func (r Hardware_Server) TestRaidAlertService() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "testRaidAlertService", nil, &r.Options, &resp)
+	return
+}
+
+// Attempt to toggle the IPMI interface.  If there is an active transaction on the server, it will throw an exception. This method creates a transaction to toggle the interface.  It is not instant.
+func (r Hardware_Server) ToggleManagementInterface(enabled *bool) (resp bool, err error) {
+	params := []interface{}{
+		enabled,
+	}
+	err = r.Session.DoRequest("SoftLayer_Hardware_Server", "toggleManagementInterface", params, &r.Options, &resp)
 	return
 }
 

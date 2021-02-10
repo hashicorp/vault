@@ -1,9 +1,12 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Object Storage Service API
 //
 // Common set of Object Storage and Archive Storage APIs for managing buckets, objects, and related resources.
+// For more information, see Overview of Object Storage (https://docs.cloud.oracle.com/Content/Object/Concepts/objectstorageoverview.htm) and
+// Overview of Archive Storage (https://docs.cloud.oracle.com/Content/Archive/Concepts/archivestorageoverview.htm).
 //
 
 package objectstorage
@@ -36,6 +39,9 @@ type CopyObjectDetails struct {
 	// The entity tag (ETag) to match against that of the source object. Used to confirm that the source object
 	// with a given name is the version of that object storing a specified ETag.
 	SourceObjectIfMatchETag *string `mandatory:"false" json:"sourceObjectIfMatchETag"`
+
+	// VersionId of the object to copy. If not provided then current version is copied by default.
+	SourceVersionId *string `mandatory:"false" json:"sourceVersionId"`
 
 	// The entity tag (ETag) to match against that of the destination object (an object intended to be overwritten).
 	// Used to confirm that the destination object stored under a given name is the version of that object

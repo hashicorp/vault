@@ -58,27 +58,110 @@ func serializeError(err error) string {
 
 // KeyValueError wraps key-value errors that occur within the SDK.
 type KeyValueError struct {
-	InnerError         error           `json:"-"`
-	StatusCode         memd.StatusCode `json:"status_code,omitempty"`
-	BucketName         string          `json:"bucket,omitempty"`
-	ScopeName          string          `json:"scope,omitempty"`
-	CollectionName     string          `json:"collection,omitempty"`
-	CollectionID       uint32          `json:"collection_id,omitempty"`
-	ErrorName          string          `json:"error_name,omitempty"`
-	ErrorDescription   string          `json:"error_description,omitempty"`
-	Opaque             uint32          `json:"opaque,omitempty"`
-	Context            string          `json:"context,omitempty"`
-	Ref                string          `json:"ref,omitempty"`
-	RetryReasons       []RetryReason   `json:"retry_reasons,omitempty"`
-	RetryAttempts      uint32          `json:"retry_attempts,omitempty"`
-	LastDispatchedTo   string          `json:"last_dispatched_to,omitempty"`
-	LastDispatchedFrom string          `json:"last_dispatched_from,omitempty"`
-	LastConnectionID   string          `json:"last_connection_id,omitempty"`
+	InnerError         error
+	StatusCode         memd.StatusCode
+	DocumentKey        string
+	BucketName         string
+	ScopeName          string
+	CollectionName     string
+	CollectionID       uint32
+	ErrorName          string
+	ErrorDescription   string
+	Opaque             uint32
+	Context            string
+	Ref                string
+	RetryReasons       []RetryReason
+	RetryAttempts      uint32
+	LastDispatchedTo   string
+	LastDispatchedFrom string
+	LastConnectionID   string
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (e KeyValueError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError         string          `json:"msg,omitempty"`
+		StatusCode         memd.StatusCode `json:"status_code,omitempty"`
+		DocumentKey        string          `json:"document_key,omitempty"`
+		BucketName         string          `json:"bucket,omitempty"`
+		ScopeName          string          `json:"scope,omitempty"`
+		CollectionName     string          `json:"collection,omitempty"`
+		CollectionID       uint32          `json:"collection_id,omitempty"`
+		ErrorName          string          `json:"error_name,omitempty"`
+		ErrorDescription   string          `json:"error_description,omitempty"`
+		Opaque             uint32          `json:"opaque,omitempty"`
+		Context            string          `json:"context,omitempty"`
+		Ref                string          `json:"ref,omitempty"`
+		RetryReasons       []RetryReason   `json:"retry_reasons,omitempty"`
+		RetryAttempts      uint32          `json:"retry_attempts,omitempty"`
+		LastDispatchedTo   string          `json:"last_dispatched_to,omitempty"`
+		LastDispatchedFrom string          `json:"last_dispatched_from,omitempty"`
+		LastConnectionID   string          `json:"last_connection_id,omitempty"`
+	}{
+		InnerError:         e.InnerError.Error(),
+		StatusCode:         e.StatusCode,
+		DocumentKey:        e.DocumentKey,
+		BucketName:         e.BucketName,
+		ScopeName:          e.ScopeName,
+		CollectionName:     e.CollectionName,
+		CollectionID:       e.CollectionID,
+		ErrorName:          e.ErrorName,
+		ErrorDescription:   e.ErrorDescription,
+		Opaque:             e.Opaque,
+		Context:            e.Context,
+		Ref:                e.Ref,
+		RetryReasons:       e.RetryReasons,
+		RetryAttempts:      e.RetryAttempts,
+		LastDispatchedTo:   e.LastDispatchedTo,
+		LastDispatchedFrom: e.LastDispatchedFrom,
+		LastConnectionID:   e.LastConnectionID,
+	})
 }
 
 // Error returns the string representation of this error.
 func (e KeyValueError) Error() string {
-	return e.InnerError.Error() + " | " + serializeError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError         error           `json:"-"`
+		StatusCode         memd.StatusCode `json:"status_code,omitempty"`
+		DocumentKey        string          `json:"document_key,omitempty"`
+		BucketName         string          `json:"bucket,omitempty"`
+		ScopeName          string          `json:"scope,omitempty"`
+		CollectionName     string          `json:"collection,omitempty"`
+		CollectionID       uint32          `json:"collection_id,omitempty"`
+		ErrorName          string          `json:"error_name,omitempty"`
+		ErrorDescription   string          `json:"error_description,omitempty"`
+		Opaque             uint32          `json:"opaque,omitempty"`
+		Context            string          `json:"context,omitempty"`
+		Ref                string          `json:"ref,omitempty"`
+		RetryReasons       []RetryReason   `json:"retry_reasons,omitempty"`
+		RetryAttempts      uint32          `json:"retry_attempts,omitempty"`
+		LastDispatchedTo   string          `json:"last_dispatched_to,omitempty"`
+		LastDispatchedFrom string          `json:"last_dispatched_from,omitempty"`
+		LastConnectionID   string          `json:"last_connection_id,omitempty"`
+	}{
+		InnerError:         e.InnerError,
+		StatusCode:         e.StatusCode,
+		DocumentKey:        e.DocumentKey,
+		BucketName:         e.BucketName,
+		ScopeName:          e.ScopeName,
+		CollectionName:     e.CollectionName,
+		CollectionID:       e.CollectionID,
+		ErrorName:          e.ErrorName,
+		ErrorDescription:   e.ErrorDescription,
+		Opaque:             e.Opaque,
+		Context:            e.Context,
+		Ref:                e.Ref,
+		RetryReasons:       e.RetryReasons,
+		RetryAttempts:      e.RetryAttempts,
+		LastDispatchedTo:   e.LastDispatchedTo,
+		LastDispatchedFrom: e.LastDispatchedFrom,
+		LastConnectionID:   e.LastConnectionID,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying reason for the error
@@ -94,18 +177,60 @@ type ViewQueryErrorDesc struct {
 
 // ViewError represents an error returned from a view query.
 type ViewError struct {
-	InnerError         error                `json:"-"`
-	DesignDocumentName string               `json:"design_document_name,omitempty"`
-	ViewName           string               `json:"view_name,omitempty"`
-	Errors             []ViewQueryErrorDesc `json:"errors,omitempty"`
-	Endpoint           string               `json:"endpoint,omitempty"`
-	RetryReasons       []RetryReason        `json:"retry_reasons,omitempty"`
-	RetryAttempts      uint32               `json:"retry_attempts,omitempty"`
+	InnerError         error
+	DesignDocumentName string
+	ViewName           string
+	Errors             []ViewQueryErrorDesc
+	Endpoint           string
+	RetryReasons       []RetryReason
+	RetryAttempts      uint32
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (e ViewError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError         string               `json:"msg,omitempty"`
+		DesignDocumentName string               `json:"design_document_name,omitempty"`
+		ViewName           string               `json:"view_name,omitempty"`
+		Errors             []ViewQueryErrorDesc `json:"errors,omitempty"`
+		Endpoint           string               `json:"endpoint,omitempty"`
+		RetryReasons       []RetryReason        `json:"retry_reasons,omitempty"`
+		RetryAttempts      uint32               `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:         e.InnerError.Error(),
+		DesignDocumentName: e.DesignDocumentName,
+		ViewName:           e.ViewName,
+		Errors:             e.Errors,
+		Endpoint:           e.Endpoint,
+		RetryReasons:       e.RetryReasons,
+		RetryAttempts:      e.RetryAttempts,
+	})
 }
 
 // Error returns the string representation of this error.
 func (e ViewError) Error() string {
-	return e.InnerError.Error() + " | " + serializeError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError         error                `json:"-"`
+		DesignDocumentName string               `json:"design_document_name,omitempty"`
+		ViewName           string               `json:"view_name,omitempty"`
+		Errors             []ViewQueryErrorDesc `json:"errors,omitempty"`
+		Endpoint           string               `json:"endpoint,omitempty"`
+		RetryReasons       []RetryReason        `json:"retry_reasons,omitempty"`
+		RetryAttempts      uint32               `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:         e.InnerError,
+		DesignDocumentName: e.DesignDocumentName,
+		ViewName:           e.ViewName,
+		Errors:             e.Errors,
+		Endpoint:           e.Endpoint,
+		RetryReasons:       e.RetryReasons,
+		RetryAttempts:      e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying reason for the error
@@ -121,18 +246,60 @@ type N1QLErrorDesc struct {
 
 // N1QLError represents an error returned from a n1ql query.
 type N1QLError struct {
-	InnerError      error           `json:"-"`
-	Statement       string          `json:"statement,omitempty"`
-	ClientContextID string          `json:"client_context_id,omitempty"`
-	Errors          []N1QLErrorDesc `json:"errors,omitempty"`
-	Endpoint        string          `json:"endpoint,omitempty"`
-	RetryReasons    []RetryReason   `json:"retry_reasons,omitempty"`
-	RetryAttempts   uint32          `json:"retry_attempts,omitempty"`
+	InnerError      error
+	Statement       string
+	ClientContextID string
+	Errors          []N1QLErrorDesc
+	Endpoint        string
+	RetryReasons    []RetryReason
+	RetryAttempts   uint32
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (e N1QLError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError      string          `json:"msg,omitempty"`
+		Statement       string          `json:"statement,omitempty"`
+		ClientContextID string          `json:"client_context_id,omitempty"`
+		Errors          []N1QLErrorDesc `json:"errors,omitempty"`
+		Endpoint        string          `json:"endpoint,omitempty"`
+		RetryReasons    []RetryReason   `json:"retry_reasons,omitempty"`
+		RetryAttempts   uint32          `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:      e.InnerError.Error(),
+		Statement:       e.Statement,
+		ClientContextID: e.ClientContextID,
+		Errors:          e.Errors,
+		Endpoint:        e.Endpoint,
+		RetryReasons:    e.RetryReasons,
+		RetryAttempts:   e.RetryAttempts,
+	})
 }
 
 // Error returns the string representation of this error.
 func (e N1QLError) Error() string {
-	return e.InnerError.Error() + " | " + serializeError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError      error           `json:"-"`
+		Statement       string          `json:"statement,omitempty"`
+		ClientContextID string          `json:"client_context_id,omitempty"`
+		Errors          []N1QLErrorDesc `json:"errors,omitempty"`
+		Endpoint        string          `json:"endpoint,omitempty"`
+		RetryReasons    []RetryReason   `json:"retry_reasons,omitempty"`
+		RetryAttempts   uint32          `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:      e.InnerError,
+		Statement:       e.Statement,
+		ClientContextID: e.ClientContextID,
+		Errors:          e.Errors,
+		Endpoint:        e.Endpoint,
+		RetryReasons:    e.RetryReasons,
+		RetryAttempts:   e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying reason for the error
@@ -148,18 +315,60 @@ type AnalyticsErrorDesc struct {
 
 // AnalyticsError represents an error returned from an analytics query.
 type AnalyticsError struct {
-	InnerError      error                `json:"-"`
-	Statement       string               `json:"statement,omitempty"`
-	ClientContextID string               `json:"client_context_id,omitempty"`
-	Errors          []AnalyticsErrorDesc `json:"errors,omitempty"`
-	Endpoint        string               `json:"endpoint,omitempty"`
-	RetryReasons    []RetryReason        `json:"retry_reasons,omitempty"`
-	RetryAttempts   uint32               `json:"retry_attempts,omitempty"`
+	InnerError      error
+	Statement       string
+	ClientContextID string
+	Errors          []AnalyticsErrorDesc
+	Endpoint        string
+	RetryReasons    []RetryReason
+	RetryAttempts   uint32
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (e AnalyticsError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError      string               `json:"msg,omitempty"`
+		Statement       string               `json:"statement,omitempty"`
+		ClientContextID string               `json:"client_context_id,omitempty"`
+		Errors          []AnalyticsErrorDesc `json:"errors,omitempty"`
+		Endpoint        string               `json:"endpoint,omitempty"`
+		RetryReasons    []RetryReason        `json:"retry_reasons,omitempty"`
+		RetryAttempts   uint32               `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:      e.InnerError.Error(),
+		Statement:       e.Statement,
+		ClientContextID: e.ClientContextID,
+		Errors:          e.Errors,
+		Endpoint:        e.Endpoint,
+		RetryReasons:    e.RetryReasons,
+		RetryAttempts:   e.RetryAttempts,
+	})
 }
 
 // Error returns the string representation of this error.
 func (e AnalyticsError) Error() string {
-	return e.InnerError.Error() + " | " + serializeError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError      error                `json:"-"`
+		Statement       string               `json:"statement,omitempty"`
+		ClientContextID string               `json:"client_context_id,omitempty"`
+		Errors          []AnalyticsErrorDesc `json:"errors,omitempty"`
+		Endpoint        string               `json:"endpoint,omitempty"`
+		RetryReasons    []RetryReason        `json:"retry_reasons,omitempty"`
+		RetryAttempts   uint32               `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:      e.InnerError,
+		Statement:       e.Statement,
+		ClientContextID: e.ClientContextID,
+		Errors:          e.Errors,
+		Endpoint:        e.Endpoint,
+		RetryReasons:    e.RetryReasons,
+		RetryAttempts:   e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying reason for the error
@@ -169,19 +378,65 @@ func (e AnalyticsError) Unwrap() error {
 
 // SearchError represents an error returned from a search query.
 type SearchError struct {
-	InnerError       error         `json:"-"`
-	IndexName        string        `json:"index_name,omitempty"`
-	Query            interface{}   `json:"query,omitempty"`
-	ErrorText        string        `json:"error_text"`
-	HTTPResponseCode int           `json:"status_code,omitempty"`
-	Endpoint         string        `json:"endpoint,omitempty"`
-	RetryReasons     []RetryReason `json:"retry_reasons,omitempty"`
-	RetryAttempts    uint32        `json:"retry_attempts,omitempty"`
+	InnerError       error
+	IndexName        string
+	Query            interface{}
+	ErrorText        string
+	HTTPResponseCode int
+	Endpoint         string
+	RetryReasons     []RetryReason
+	RetryAttempts    uint32
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (e SearchError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError       string        `json:"msg,omitempty"`
+		IndexName        string        `json:"index_name,omitempty"`
+		Query            interface{}   `json:"query,omitempty"`
+		ErrorText        string        `json:"error_text"`
+		HTTPResponseCode int           `json:"status_code,omitempty"`
+		Endpoint         string        `json:"endpoint,omitempty"`
+		RetryReasons     []RetryReason `json:"retry_reasons,omitempty"`
+		RetryAttempts    uint32        `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:       e.InnerError.Error(),
+		IndexName:        e.IndexName,
+		Query:            e.Query,
+		ErrorText:        e.ErrorText,
+		HTTPResponseCode: e.HTTPResponseCode,
+		Endpoint:         e.Endpoint,
+		RetryReasons:     e.RetryReasons,
+		RetryAttempts:    e.RetryAttempts,
+	})
 }
 
 // Error returns the string representation of this error.
 func (e SearchError) Error() string {
-	return e.InnerError.Error() + " | " + serializeError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError       error         `json:"-"`
+		IndexName        string        `json:"index_name,omitempty"`
+		Query            interface{}   `json:"query,omitempty"`
+		ErrorText        string        `json:"error_text"`
+		HTTPResponseCode int           `json:"status_code,omitempty"`
+		Endpoint         string        `json:"endpoint,omitempty"`
+		RetryReasons     []RetryReason `json:"retry_reasons,omitempty"`
+		RetryAttempts    uint32        `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:       e.InnerError,
+		IndexName:        e.IndexName,
+		Query:            e.Query,
+		ErrorText:        e.ErrorText,
+		HTTPResponseCode: e.HTTPResponseCode,
+		Endpoint:         e.Endpoint,
+		RetryReasons:     e.RetryReasons,
+		RetryAttempts:    e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying reason for the error
@@ -191,16 +446,50 @@ func (e SearchError) Unwrap() error {
 
 // HTTPError represents an error returned from an HTTP request.
 type HTTPError struct {
-	InnerError    error         `json:"-"`
-	UniqueID      string        `json:"unique_id,omitempty"`
-	Endpoint      string        `json:"endpoint,omitempty"`
-	RetryReasons  []RetryReason `json:"retry_reasons,omitempty"`
-	RetryAttempts uint32        `json:"retry_attempts,omitempty"`
+	InnerError    error
+	UniqueID      string
+	Endpoint      string
+	RetryReasons  []RetryReason
+	RetryAttempts uint32
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (e HTTPError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError    string        `json:"msg,omitempty"`
+		UniqueID      string        `json:"unique_id,omitempty"`
+		Endpoint      string        `json:"endpoint,omitempty"`
+		RetryReasons  []RetryReason `json:"retry_reasons,omitempty"`
+		RetryAttempts uint32        `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:    e.InnerError.Error(),
+		UniqueID:      e.UniqueID,
+		Endpoint:      e.Endpoint,
+		RetryReasons:  e.RetryReasons,
+		RetryAttempts: e.RetryAttempts,
+	})
 }
 
 // Error returns the string representation of this error.
 func (e HTTPError) Error() string {
-	return e.InnerError.Error() + " | " + serializeError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError    error         `json:"-"`
+		UniqueID      string        `json:"unique_id,omitempty"`
+		Endpoint      string        `json:"endpoint,omitempty"`
+		RetryReasons  []RetryReason `json:"retry_reasons,omitempty"`
+		RetryAttempts uint32        `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:    e.InnerError,
+		UniqueID:      e.UniqueID,
+		Endpoint:      e.Endpoint,
+		RetryReasons:  e.RetryReasons,
+		RetryAttempts: e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying reason for the error
@@ -222,7 +511,7 @@ type TimeoutError struct {
 }
 
 type timeoutError struct {
-	InnerError         error         `json:"-"`
+	InnerError         error         `json:"-,omitempty"`
 	OperationID        string        `json:"s,omitempty"`
 	Opaque             string        `json:"i,omitempty"`
 	TimeObserved       uint64        `json:"t,omitempty"`

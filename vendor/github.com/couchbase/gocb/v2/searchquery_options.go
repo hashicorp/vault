@@ -54,6 +54,8 @@ type SearchOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
 
+	DisableScoring bool
+
 	parentSpan requestSpanContext
 }
 
@@ -126,6 +128,10 @@ func (opts *SearchOptions) toMap() (map[string]interface{}, error) {
 	}
 	if ctl != nil {
 		data["ctl"] = ctl
+	}
+
+	if opts.DisableScoring {
+		data["score"] = "none"
 	}
 
 	if opts.Raw != nil {

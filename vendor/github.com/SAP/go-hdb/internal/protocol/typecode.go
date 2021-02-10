@@ -1,132 +1,149 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
 import (
+	"fmt"
 	"strings"
 )
 
-//go:generate stringer -type=TypeCode
+//go:generate stringer -type=typeCode
 
-// TypeCode identify the type of a field transferred to or from the database.
-type TypeCode byte
+// typeCode identify the type of a field transferred to or from the database.
+type typeCode byte
 
 // null value indicator is high bit
 
 const (
-	tcNull      TypeCode = 0
-	tcTinyint   TypeCode = 1
-	tcSmallint  TypeCode = 2
-	tcInteger   TypeCode = 3
-	tcBigint    TypeCode = 4
-	tcDecimal   TypeCode = 5
-	tcReal      TypeCode = 6
-	tcDouble    TypeCode = 7
-	tcChar      TypeCode = 8
-	tcVarchar   TypeCode = 9
-	tcNchar     TypeCode = 10
-	tcNvarchar  TypeCode = 11
-	tcBinary    TypeCode = 12
-	tcVarbinary TypeCode = 13
-	// deprecated with 3 (doku) - but table 'date' field uses it
-	tcDate TypeCode = 14
-	// deprecated with 3 (doku) - but table 'time' field uses it
-	tcTime TypeCode = 15
-	// deprecated with 3 (doku) - but table 'timestamp' field uses it
-	tcTimestamp TypeCode = 16
-	//tcTimetz            TypeCode = 17 // reserved: do not use
-	//tcTimeltz           TypeCode = 18 // reserved: do not use
-	//tcTimestamptz       TypeCode = 19 // reserved: do not use
-	//tcTimestampltz      TypeCode = 20 // reserved: do not use
-	//tcInvervalym        TypeCode = 21 // reserved: do not use
-	//tcInvervalds        TypeCode = 22 // reserved: do not use
-	//tcRowid             TypeCode = 23 // reserved: do not use
-	//tcUrowid            TypeCode = 24 // reserved: do not use
-	tcClob     TypeCode = 25
-	tcNclob    TypeCode = 26
-	tcBlob     TypeCode = 27
-	tcBoolean  TypeCode = 28
-	tcString   TypeCode = 29
-	tcNstring  TypeCode = 30
-	tcBlocator TypeCode = 31
-	tcNlocator TypeCode = 32
-	tcBstring  TypeCode = 33
-	//tcDecimaldigitarray TypeCode = 34 // reserved: do not use
-	tcVarchar2   TypeCode = 35
-	tcVarchar3   TypeCode = 36
-	tcNvarchar3  TypeCode = 37
-	tcVarbinary3 TypeCode = 38
-	//tcVargroup          TypeCode = 39 // reserved: do not use
-	//tcTinyintnotnull    TypeCode = 40 // reserved: do not use
-	//tcSmallintnotnull   TypeCode = 41 // reserved: do not use
-	//tcIntnotnull        TypeCode = 42 // reserved: do not use
-	//tcBigintnotnull     TypeCode = 43 // reserved: do not use
-	//tcArgument          TypeCode = 44 // reserved: do not use
-	//tcTable             TypeCode = 45 // reserved: do not use
-	//tcCursor            TypeCode = 46 // reserved: do not use
-	tcSmalldecimal TypeCode = 47
-	//tcAbapitab          TypeCode = 48 // not supported by GO hdb driver
-	//tcAbapstruct        TypeCode = 49 // not supported by GO hdb driver
-	tcArray     TypeCode = 50
-	tcText      TypeCode = 51
-	tcShorttext TypeCode = 52
-	//tcFixedString       TypeCode = 53 // reserved: do not use
-	//tcFixedpointdecimal TypeCode = 54 // reserved: do not use
-	tcAlphanum TypeCode = 55
-	//tcTlocator    TypeCode = 56 // reserved: do not use
-	tcLongdate   TypeCode = 61
-	tcSeconddate TypeCode = 62
-	tcDaydate    TypeCode = 63
-	tcSecondtime TypeCode = 64
-	//tcCte      TypeCode = 65 // reserved: do not use
-	//tcCstimesda      TypeCode = 66 // reserved: do not use
-	//tcBlobdisk    TypeCode = 71 // reserved: do not use
-	//tcClobdisk    TypeCode = 72 // reserved: do not use
-	//tcNclobdisk   TypeCode = 73 // reserved: do not use
-	//tcGeometry    TypeCode = 74 // reserved: do not use
-	//tcPoint       TypeCode = 75 // reserved: do not use
-	//tcFixed16     TypeCode = 76 // reserved: do not use
-	//tcBlobhybrid  TypeCode = 77 // reserved: do not use
-	//tcClobhybrid  TypeCode = 78 // reserved: do not use
-	//tcNclobhybrid TypeCode = 79 // reserved: do not use
-	//tcPointz      TypeCode = 80 // reserved: do not use
+	tcNullL             typeCode = 0x00
+	tcTinyint           typeCode = 0x01
+	tcSmallint          typeCode = 0x02
+	tcInteger           typeCode = 0x03
+	tcBigint            typeCode = 0x04
+	tcDecimal           typeCode = 0x05
+	tcReal              typeCode = 0x06
+	tcDouble            typeCode = 0x07
+	tcChar              typeCode = 0x08
+	tcVarchar           typeCode = 0x09 // changed from tcVarchar1 to tcVarchar (ref hdbclient)
+	tcNchar             typeCode = 0x0A
+	tcNvarchar          typeCode = 0x0B
+	tcBinary            typeCode = 0x0C
+	tcVarbinary         typeCode = 0x0D
+	tcDate              typeCode = 0x0E
+	tcTime              typeCode = 0x0F
+	tcTimestamp         typeCode = 0x10
+	tcTimetz            typeCode = 0x11
+	tcTimeltz           typeCode = 0x12
+	tcTimestampTz       typeCode = 0x13
+	tcTimestampLtz      typeCode = 0x14
+	tcIntervalYm        typeCode = 0x15
+	tcIntervalDs        typeCode = 0x16
+	tcRowid             typeCode = 0x17
+	tcUrowid            typeCode = 0x18
+	tcClob              typeCode = 0x19
+	tcNclob             typeCode = 0x1A
+	tcBlob              typeCode = 0x1B
+	tcBoolean           typeCode = 0x1C
+	tcString            typeCode = 0x1D
+	tcNstring           typeCode = 0x1E
+	tcLocator           typeCode = 0x1F
+	tcNlocator          typeCode = 0x20
+	tcBstring           typeCode = 0x21
+	tcDecimalDigitArray typeCode = 0x22
+	tcVarchar2          typeCode = 0x23
+	tcTable             typeCode = 0x2D
+	tcSmalldecimal      typeCode = 0x2f // inserted (not existent in hdbclient)
+	tcAbapstream        typeCode = 0x30
+	tcAbapstruct        typeCode = 0x31
+	tcAarray            typeCode = 0x32
+	tcText              typeCode = 0x33
+	tcShorttext         typeCode = 0x34
+	tcBintext           typeCode = 0x35
+	tcAlphanum          typeCode = 0x37
+	tcLongdate          typeCode = 0x3D
+	tcSeconddate        typeCode = 0x3E
+	tcDaydate           typeCode = 0x3F
+	tcSecondtime        typeCode = 0x40
+	tcClocator          typeCode = 0x46
+	tcBlobDiskReserved  typeCode = 0x47
+	tcClobDiskReserved  typeCode = 0x48
+	tcNclobDiskReserved typeCode = 0x49
+	tcStGeometry        typeCode = 0x4A
+	tcStPoint           typeCode = 0x4B
+	tcFixed16           typeCode = 0x4C
+	tcAbapItab          typeCode = 0x4D
+	tcRecordRowStore    typeCode = 0x4E
+	tcRecordColumnStore typeCode = 0x4F
+	tcFixed8            typeCode = 0x51
+	tcFixed12           typeCode = 0x52
+	tcCiphertext        typeCode = 0x5A
+
+	// additional internal typecodes
+	tcTableRef  typeCode = 0x7e // 126
+	tcTableRows typeCode = 0x7f // 127
 )
 
-func (k TypeCode) isLob() bool {
-	return k == tcClob || k == tcNclob || k == tcBlob
+func (tc typeCode) isLob() bool {
+	return tc == tcClob || tc == tcNclob || tc == tcBlob || tc == tcText || tc == tcBintext || tc == tcLocator || tc == tcNlocator
 }
 
-func (k TypeCode) isCharBased() bool {
-	return k == tcNvarchar || k == tcNstring || k == tcNclob
+func (tc typeCode) isCharBased() bool {
+	return tc == tcNvarchar || tc == tcNstring || tc == tcNclob || tc == tcText || tc == tcBintext
 }
 
-func (k TypeCode) isVariableLength() bool {
-	return k == tcChar || k == tcNchar || k == tcVarchar || k == tcNvarchar || k == tcBinary || k == tcVarbinary || k == tcShorttext || k == tcAlphanum
+func (tc typeCode) isVariableLength() bool {
+	return tc == tcChar || tc == tcNchar || tc == tcVarchar || tc == tcNvarchar || tc == tcBinary || tc == tcVarbinary || tc == tcShorttext || tc == tcAlphanum
 }
 
-func (k TypeCode) isDecimalType() bool {
-	return k == tcSmalldecimal || k == tcDecimal
+func (tc typeCode) isIntegerType() bool {
+	return tc == tcTinyint || tc == tcSmallint || tc == tcInteger || tc == tcBigint
 }
 
-// DataType converts a type code into one of the supported data types by the driver.
-func (k TypeCode) DataType() DataType {
-	switch k {
+func (tc typeCode) isDecimalType() bool {
+	return tc == tcSmalldecimal || tc == tcDecimal || tc == tcFixed8 || tc == tcFixed12 || tc == tcFixed16
+}
+
+//
+func (tc typeCode) supportNullValue() bool {
+	/*
+		(*1)
+		HDB bug: secondtime null value cannot be set by setting high bit
+		- trying so, gives:
+		  SQL HdbError 1033 - error while parsing protocol: no such data type: type_code=192, index=2
+
+		Traffic analysis of python client (https://pypi.org/project/hdbcli) resulted in:
+		- set null value constant directly instead of using high bit
+
+		(*2)
+		boolean: use false =:= 0; null =:= 1; true =:= 2
+
+	*/
+	return !(tc == tcBoolean || tc == tcSecondtime)
+}
+
+// see hdbclient
+func (tc typeCode) encTc() typeCode {
+	switch tc {
 	default:
-		return DtUnknown
+		return tc
+	case tcText, tcBintext, tcLocator:
+		return tcNclob
+	}
+}
+
+/*
+tcBintext:
+- protocol returns tcLocator for tcBintext
+- see dataTypeMap and encTc
+*/
+
+func (tc typeCode) dataType() DataType {
+	// performance: use switch instead of map
+	switch tc {
+	case tcBoolean:
+		return DtBoolean
 	case tcTinyint:
 		return DtTinyint
 	case tcSmallint:
@@ -139,21 +156,85 @@ func (k TypeCode) DataType() DataType {
 		return DtReal
 	case tcDouble:
 		return DtDouble
-	case tcDate, tcTime, tcTimestamp, tcLongdate, tcSeconddate, tcDaydate, tcSecondtime:
+	case tcDate:
 		return DtTime
-	case tcDecimal:
+	case tcTime, tcTimestamp, tcLongdate, tcSeconddate, tcDaydate, tcSecondtime:
+		return DtTime
+	case tcDecimal, tcFixed8, tcFixed12, tcFixed16:
 		return DtDecimal
-	case tcChar, tcVarchar, tcString, tcNchar, tcNvarchar, tcNstring:
+	case tcChar, tcVarchar, tcString, tcAlphanum, tcNchar, tcNvarchar, tcNstring, tcShorttext, tcTableRef:
 		return DtString
 	case tcBinary, tcVarbinary:
 		return DtBytes
-	case tcBlob, tcClob, tcNclob:
+	case tcBlob, tcClob, tcNclob, tcText, tcBintext:
 		return DtLob
+	case tcTableRows:
+		return DtRows
+	default:
+		panic(fmt.Sprintf("Missing DataType for typeCode %s", tc))
 	}
 }
 
-// TypeName returns the database type name.
+// typeName returns the database type name.
 // see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeDatabaseTypeName
-func (k TypeCode) TypeName() string {
-	return strings.ToUpper(k.String()[2:])
+func (tc typeCode) typeName() string {
+	return strings.ToUpper(tc.String()[2:])
+}
+
+func (tc typeCode) fieldType(length, fraction int) fieldType {
+	// performance: use switch instead of map
+	switch tc {
+	case tcBoolean:
+		return booleanType
+	case tcTinyint:
+		return tinyintType
+	case tcSmallint:
+		return smallintType
+	case tcInteger:
+		return integerType
+	case tcBigint:
+		return bigintType
+	case tcReal:
+		return realType
+	case tcDouble:
+		return doubleType
+	case tcDate:
+		return dateType
+	case tcTime:
+		return timeType
+	case tcTimestamp:
+		return timestampType
+	case tcLongdate:
+		return longdateType
+	case tcSeconddate:
+		return seconddateType
+	case tcDaydate:
+		return daydateType
+	case tcSecondtime:
+		return secondtimeType
+	case tcDecimal:
+		return decimalType
+	case tcChar, tcVarchar, tcString:
+		return varType
+	case tcAlphanum:
+		return alphaType
+	case tcNchar, tcNvarchar, tcNstring, tcShorttext:
+		return cesu8Type
+	case tcBinary, tcVarbinary:
+		return varType
+	case tcBlob, tcClob, tcLocator:
+		return lobVarType
+	case tcNclob, tcText, tcNlocator:
+		return lobCESU8Type
+	case tcBintext: // ?? lobCESU8Type
+		return lobVarType
+	case tcFixed8:
+		return _fixed8Type{prec: length, scale: fraction} // used for decimals(x,y) 2^63 - 1 (int64)
+	case tcFixed12:
+		return _fixed12Type{prec: length, scale: fraction} // used for decimals(x,y) 2^96 - 1 (int96)
+	case tcFixed16:
+		return _fixed16Type{prec: length, scale: fraction} // used for decimals(x,y) 2^63 - 1 (int128)
+	default:
+		panic(fmt.Sprintf("Missing FieldType for typeCode %s", tc))
+	}
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Snowflake Computing Inc. All right reserved.
+// Copyright (c) 2017-2021 Snowflake Computing Inc. All right reserved.
 
 package gosnowflake
 
@@ -69,6 +69,10 @@ type execResponseData struct {
 	ResultIDs         string        `json:"resultIds,omitempty"`
 	ResultTypes       string        `json:"resultTypes,omitempty"`
 	QueryResultFormat string        `json:"queryResultFormat,omitempty"`
+
+	// async response placeholders
+	AsyncResult *snowflakeResult `json:"asyncResult,omitempty"`
+	AsyncRows   *snowflakeRows   `json:"asyncRows,omitempty"`
 }
 
 type execResponse struct {

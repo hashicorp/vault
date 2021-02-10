@@ -20,11 +20,6 @@
 
 package datatypes
 
-// Generic utility class used for gathering graphing parameters and actually creating graphs.
-type Utility_Bandwidth_Graph struct {
-	Entity
-}
-
 // no documentation yet
 type Utility_Network struct {
 	Entity

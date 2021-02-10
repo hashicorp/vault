@@ -65,13 +65,30 @@ func (cs Constraints) Check(v *Version) bool {
 func (cs Constraints) Validate(v *Version) (bool, []error) {
 	// loop over the ORs and check the inner ANDs
 	var e []error
+
+	// Capture the prerelease message only once. When it happens the first time
+	// this var is marked
+	var prerelesase bool
 	for _, o := range cs.constraints {
 		joy := true
 		for _, c := range o {
-			if !c.check(v) {
-				em := fmt.Errorf(c.msg, v, c.orig)
-				e = append(e, em)
+			// Before running the check handle the case there the version is
+			// a prerelease and the check is not searching for prereleases.
+			if c.con.pre == "" && v.pre != "" {
+				if !prerelesase {
+					em := fmt.Errorf("%s is a prerelease version and the constraint is only looking for release versions", v)
+					e = append(e, em)
+					prerelesase = true
+				}
 				joy = false
+
+			} else {
+
+				if !c.check(v) {
+					em := fmt.Errorf(c.msg, v, c.orig)
+					e = append(e, em)
+					joy = false
+				}
 			}
 		}
 
@@ -233,12 +250,6 @@ func constraintNotEqual(v *Version, c *constraint) bool {
 
 func constraintGreaterThan(v *Version, c *constraint) bool {
 
-	// An edge case the constraint is 0.0.0 and the version is 0.0.0-someprerelease
-	// exists. This that case.
-	if !isNonZero(c.con) && isNonZero(v) {
-		return true
-	}
-
 	// If there is a pre-release on the version but the constraint isn't looking
 	// for them assume that pre-releases are not compatible. See issue 21 for
 	// more details.
@@ -271,11 +282,6 @@ func constraintLessThan(v *Version, c *constraint) bool {
 }
 
 func constraintGreaterThanEqual(v *Version, c *constraint) bool {
-	// An edge case the constraint is 0.0.0 and the version is 0.0.0-someprerelease
-	// exists. This that case.
-	if !isNonZero(c.con) && isNonZero(v) {
-		return true
-	}
 
 	// If there is a pre-release on the version but the constraint isn't looking
 	// for them assume that pre-releases are not compatible. See issue 21 for
@@ -414,13 +420,4 @@ func rewriteRange(i string) string {
 	}
 
 	return o
-}
-
-// Detect if a version is not zero (0.0.0)
-func isNonZero(v *Version) bool {
-	if v.Major() != 0 || v.Minor() != 0 || v.Patch() != 0 || v.Prerelease() != "" {
-		return true
-	}
-
-	return false
 }

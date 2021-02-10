@@ -110,11 +110,8 @@ func (e Aes128CtsHmacSha256128) DeriveRandom(protocolKey, usage []byte) ([]byte,
 }
 
 // VerifyIntegrity checks the integrity of the ciphertext message.
-// The HMAC is calculated over the cipher state concatenated with the
-// AES output, instead of being calculated over the confounder and
-// plaintext.  This allows the message receiver to verify the
-// integrity of the message before decrypting the message.
-// Therefore the pt value to this interface method is not use. Pass any []byte.
+// As the hash is calculated over the iv concatenated with the AES cipher output not the plaintext the pt value to this
+// interface method is not use. Pass any []byte.
 func (e Aes128CtsHmacSha256128) VerifyIntegrity(protocolKey, ct, pt []byte, usage uint32) bool {
 	// We don't need ib just there for the interface
 	return rfc8009.VerifyIntegrity(protocolKey, ct, usage, e)

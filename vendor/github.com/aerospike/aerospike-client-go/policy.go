@@ -36,7 +36,12 @@ type BasePolicy struct {
 	// expression exists and evaluates to false, the transaction is ignored.
 	//
 	// Default: nil
+	// NOTE: This feature is deprecated on Aerospike servers and will be removed in the future.
+	// It has been replaced by FilterExpressions.
 	PredExp []PredExp
+
+	// FilterExpression is the optional Filter Expression. Supported on Server v5.2+
+	FilterExpression *FilterExpression
 
 	// Priority of request relative to other transactions.
 	// Currently, only used for scans.

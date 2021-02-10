@@ -61,7 +61,7 @@ func (bucket Bucket) PutLiveChannelStatus(channelName, status string) error {
 	}
 	defer resp.Body.Close()
 
-	return checkRespCode(resp.StatusCode, []int{http.StatusOK})
+	return CheckRespCode(resp.StatusCode, []int{http.StatusOK})
 }
 
 // PostVodPlaylist  create an playlist based on the specified playlist name, startTime and endTime
@@ -86,7 +86,7 @@ func (bucket Bucket) PostVodPlaylist(channelName, playlistName string, startTime
 	}
 	defer resp.Body.Close()
 
-	return checkRespCode(resp.StatusCode, []int{http.StatusOK})
+	return CheckRespCode(resp.StatusCode, []int{http.StatusOK})
 }
 
 // GetVodPlaylist  get the playlist based on the specified channelName, startTime and endTime
@@ -196,7 +196,7 @@ func (bucket Bucket) GetLiveChannelHistory(channelName string) (LiveChannelHisto
 func (bucket Bucket) ListLiveChannel(options ...Option) (ListLiveChannelResult, error) {
 	var out ListLiveChannelResult
 
-	params, err := getRawParams(options)
+	params, err := GetRawParams(options)
 	if err != nil {
 		return out, err
 	}
@@ -234,7 +234,7 @@ func (bucket Bucket) DeleteLiveChannel(channelName string) error {
 	}
 	defer resp.Body.Close()
 
-	return checkRespCode(resp.StatusCode, []int{http.StatusNoContent})
+	return CheckRespCode(resp.StatusCode, []int{http.StatusNoContent})
 }
 
 //

@@ -26,6 +26,8 @@ type SnapshotType struct {
 	SourceDiskSize int
 	SourceDiskType string //enum for System | Data
 	ProductCode    string
+	Status         string
+	Usage          string
 	CreationTime   util.ISO6801Time
 }
 
@@ -124,7 +126,7 @@ func (client *Client) WaitForSnapShotReady(regionId common.Region, snapshotId st
 		if err != nil {
 			return err
 		}
-		if snapshots == nil || len(snapshots) == 0 {
+		if len(snapshots) == 0 {
 			return common.GetClientErrorFromString("Not found")
 		}
 		if snapshots[0].Progress == "100%" {

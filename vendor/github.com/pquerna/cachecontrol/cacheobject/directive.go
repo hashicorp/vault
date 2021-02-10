@@ -32,7 +32,7 @@ var (
 	ErrQuoteMismatch         = errors.New("Missing closing quote")
 	ErrMaxAgeDeltaSeconds    = errors.New("Failed to parse delta-seconds in `max-age`")
 	ErrSMaxAgeDeltaSeconds   = errors.New("Failed to parse delta-seconds in `s-maxage`")
-	ErrMaxStaleDeltaSeconds  = errors.New("Failed to parse delta-seconds in `min-fresh`")
+	ErrMaxStaleDeltaSeconds  = errors.New("Failed to parse delta-seconds in `max-stale`")
 	ErrMinFreshDeltaSeconds  = errors.New("Failed to parse delta-seconds in `min-fresh`")
 	ErrNoCacheNoArgs         = errors.New("Unexpected argument to `no-cache`")
 	ErrNoStoreNoArgs         = errors.New("Unexpected argument to `no-store`")
@@ -164,7 +164,7 @@ type cacheDirective interface {
 	addPair(s string, v string) error
 }
 
-// LOW LEVEL API: Repersentation of possible request directives in a `Cache-Control` header: http://tools.ietf.org/html/rfc7234#section-5.2.1
+// LOW LEVEL API: Representation of possible request directives in a `Cache-Control` header: http://tools.ietf.org/html/rfc7234#section-5.2.1
 //
 // Note: Many fields will be `nil` in practice.
 //
@@ -189,6 +189,7 @@ type RequestCacheDirectives struct {
 	// assigned to max-stale, then the client is willing to accept a stale
 	// response of any age.
 	MaxStale DeltaSeconds
+	MaxStaleSet bool
 
 	// min-fresh(delta seconds): http://tools.ietf.org/html/rfc7234#section-5.2.1.3
 	//
@@ -240,10 +241,10 @@ func (cd *RequestCacheDirectives) addToken(token string) error {
 	switch token {
 	case "max-age":
 		err = ErrMaxAgeDeltaSeconds
-	case "max-stale":
-		err = ErrMaxStaleDeltaSeconds
 	case "min-fresh":
 		err = ErrMinFreshDeltaSeconds
+	case "max-stale":
+		cd.MaxStaleSet = true
 	case "no-cache":
 		cd.NoCache = true
 	case "no-store":

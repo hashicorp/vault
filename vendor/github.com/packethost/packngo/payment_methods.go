@@ -1,6 +1,6 @@
 package packngo
 
-// API documentation https://www.packet.net/developers/api/paymentmethods/
+// API documentation https://metal.equinix.com/developers/api/paymentmethods/
 const paymentMethodBasePath = "/payment-methods"
 
 // ProjectService interface defines available project methods
@@ -16,7 +16,7 @@ type paymentMethodsRoot struct {
 	PaymentMethods []PaymentMethod `json:"payment_methods"`
 }
 
-// PaymentMethod represents a Packet payment method of an organization
+// PaymentMethod represents an Equinix Metal payment method of an organization
 type PaymentMethod struct {
 	ID             string         `json:"id"`
 	Name           string         `json:"name,omitempty"`
@@ -39,10 +39,10 @@ func (pm PaymentMethod) String() string {
 	return Stringify(pm)
 }
 
-// PaymentMethodCreateRequest type used to create a Packet payment method of an organization
+// PaymentMethodCreateRequest type used to create an Equinix Metal payment method of an organization
 type PaymentMethodCreateRequest struct {
 	Name           string `json:"name"`
-	Nonce          string `json:"name"`
+	Nonce          string `json:"nonce"`
 	CardholderName string `json:"cardholder_name,omitempty"`
 	ExpMonth       string `json:"expiration_month,omitempty"`
 	ExpYear        string `json:"expiration_year,omitempty"`
@@ -53,7 +53,7 @@ func (pm PaymentMethodCreateRequest) String() string {
 	return Stringify(pm)
 }
 
-// PaymentMethodUpdateRequest type used to update a Packet payment method of an organization
+// PaymentMethodUpdateRequest type used to update an Equinix Metal payment method of an organization
 type PaymentMethodUpdateRequest struct {
 	Name           *string `json:"name,omitempty"`
 	CardholderName *string `json:"cardholder_name,omitempty"`
@@ -68,5 +68,4 @@ func (pm PaymentMethodUpdateRequest) String() string {
 
 // PaymentMethodServiceOp implements PaymentMethodService
 type PaymentMethodServiceOp struct {
-	client *Client
 }

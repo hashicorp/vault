@@ -1,9 +1,12 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Object Storage Service API
 //
 // Common set of Object Storage and Archive Storage APIs for managing buckets, objects, and related resources.
+// For more information, see Overview of Object Storage (https://docs.cloud.oracle.com/Content/Object/Concepts/objectstorageoverview.htm) and
+// Overview of Archive Storage (https://docs.cloud.oracle.com/Content/Archive/Concepts/archivestorageoverview.htm).
 //
 
 package objectstorage
@@ -17,7 +20,7 @@ import (
 // Getting Started with Policies (https://docs.cloud.oracle.com/Content/Identity/Concepts/policygetstarted.htm).
 type CreateBucketDetails struct {
 
-	// The name of the bucket. Valid characters are uppercase or lowercase letters, numbers, and dashes.
+	// The name of the bucket. Valid characters are uppercase or lowercase letters, numbers, hyphens, underscores, and periods.
 	// Bucket names must be unique within an Object Storage namespace. Avoid entering confidential information.
 	// example: Example: my-new-bucket1
 	Name *string `mandatory:"true" json:"name"`
@@ -41,8 +44,9 @@ type CreateBucketDetails struct {
 	// property is immutable after bucket is created.
 	StorageTier CreateBucketDetailsStorageTierEnum `mandatory:"false" json:"storageTier,omitempty"`
 
-	// A property that determines whether events will be generated for operations on objects in this bucket.
-	// This is false by default.
+	// Whether or not events are emitted for object state changes in this bucket. By default, `objectEventsEnabled` is
+	// set to `false`. Set `objectEventsEnabled` to `true` to emit events for object state changes. For more information
+	// about events, see Overview of Events (https://docs.cloud.oracle.com/Content/Events/Concepts/eventsoverview.htm).
 	ObjectEventsEnabled *bool `mandatory:"false" json:"objectEventsEnabled"`
 
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
@@ -55,8 +59,12 @@ type CreateBucketDetails struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// The OCID of a KMS key id used to call KMS to generate the data key or decrypt the encrypted data key.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of a master encryption key used to call the Key
+	// Management service to generate a data encryption key or to encrypt or decrypt a data encryption key.
 	KmsKeyId *string `mandatory:"false" json:"kmsKeyId"`
+
+	// Set the versioning status on the bucket. By default, a bucket is created with versioning `Disabled`. Use this option to enable versioning during bucket creation. Objects in a version enabled bucket are protected from overwrites and deletions. Previous versions of the same object will be available in the bucket.
+	Versioning CreateBucketDetailsVersioningEnum `mandatory:"false" json:"versioning,omitempty"`
 }
 
 func (m CreateBucketDetails) String() string {
@@ -106,6 +114,29 @@ var mappingCreateBucketDetailsStorageTier = map[string]CreateBucketDetailsStorag
 func GetCreateBucketDetailsStorageTierEnumValues() []CreateBucketDetailsStorageTierEnum {
 	values := make([]CreateBucketDetailsStorageTierEnum, 0)
 	for _, v := range mappingCreateBucketDetailsStorageTier {
+		values = append(values, v)
+	}
+	return values
+}
+
+// CreateBucketDetailsVersioningEnum Enum with underlying type: string
+type CreateBucketDetailsVersioningEnum string
+
+// Set of constants representing the allowable values for CreateBucketDetailsVersioningEnum
+const (
+	CreateBucketDetailsVersioningEnabled  CreateBucketDetailsVersioningEnum = "Enabled"
+	CreateBucketDetailsVersioningDisabled CreateBucketDetailsVersioningEnum = "Disabled"
+)
+
+var mappingCreateBucketDetailsVersioning = map[string]CreateBucketDetailsVersioningEnum{
+	"Enabled":  CreateBucketDetailsVersioningEnabled,
+	"Disabled": CreateBucketDetailsVersioningDisabled,
+}
+
+// GetCreateBucketDetailsVersioningEnumValues Enumerates the set of values for CreateBucketDetailsVersioningEnum
+func GetCreateBucketDetailsVersioningEnumValues() []CreateBucketDetailsVersioningEnum {
+	values := make([]CreateBucketDetailsVersioningEnum, 0)
+	for _, v := range mappingCreateBucketDetailsVersioning {
 		values = append(values, v)
 	}
 	return values

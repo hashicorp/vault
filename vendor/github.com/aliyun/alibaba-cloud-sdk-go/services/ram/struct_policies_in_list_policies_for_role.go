@@ -17,5 +17,5 @@ package ram
 
 // PoliciesInListPoliciesForRole is a nested struct in ram response
 type PoliciesInListPoliciesForRole struct {
-	Policy []Policy `json:"Policy" xml:"Policy"`
+	Policy []PolicyInListPoliciesForRole `json:"Policy" xml:"Policy"`
 }

@@ -34,6 +34,7 @@ var _ ActionsService = &ActionsServiceOp{}
 type actionsRoot struct {
 	Actions []Action `json:"actions"`
 	Links   *Links   `json:"links"`
+	Meta    *Meta    `json:"meta"`
 }
 
 type actionRoot struct {
@@ -73,6 +74,9 @@ func (s *ActionsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Action
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Actions, resp, err

@@ -31,7 +31,7 @@ import (
 
 // The SoftLayer_Brand data type contains brand information relating to the single SoftLayer customer account.
 //
-// SoftLayer customers are unable to change their brand information in the portal or the API.
+// IBM Cloud Infrastructure customers are unable to change their brand information in the portal or the API.
 type Brand struct {
 	Session *session.Session
 	Options sl.Options
@@ -71,7 +71,7 @@ func (r Brand) Offset(offset int) Brand {
 	return r
 }
 
-// Create a new customer account record.
+// Create a new customer account record. By default, the newly created account will be associated to a platform (PaaS) account. To skip the automatic creation and linking to a new platform account, set the <em>bluemixLinkedFlag</em> to <strong>false</strong> on the account template.
 func (r Brand) CreateCustomerAccount(account *datatypes.Account, bypassDuplicateAccountCheck *bool) (resp datatypes.Account, err error) {
 	params := []interface{}{
 		account,
@@ -81,12 +81,117 @@ func (r Brand) CreateCustomerAccount(account *datatypes.Account, bypassDuplicate
 	return
 }
 
-// Create a new brand record.
+//
+// createObject() allows the creation of a new brand. This will also create an `account`
+// to serve as the owner of the brand.
+//
+//
+// In order to create a brand, a template object must be sent in with several required values.
+//
+//
+// ### Input [[SoftLayer_Brand]]
+//
+//
+//
+// - `name`
+//     + Name of brand
+//     + Required
+//     + Type: string
+// - `keyName`
+//     + Reference key name
+//     + Required
+//     + Type: string
+// - `longName`
+//     + More descriptive name of brand
+//     + Required
+//     + Type: string
+// - `account.firstName`
+//     + First Name of account contact
+//     + Required
+//     + Type: string
+// - `account.lastName`
+//     + Last Name of account contact
+//     + Required
+//     + Type: string
+// - `account.address1`
+//     + Street Address of company
+//     + Required
+//     + Type: string
+// - `account.address2`
+//     + Street Address of company
+//     + Optional
+//     + Type: string
+// - `account.city`
+//     + City of company
+//     + Required
+//     + Type: string
+// - `account.state`
+//     + State of company (if applicable)
+//     + Conditionally Required
+//     + Type: string
+// - `account.postalCode`
+//     + Postal Code of company
+//     + Required
+//     + Type: string
+// - `account.country`
+//     + Country of company
+//     + Required
+//     + Type: string
+// - `account.officePhone`
+//     + Office Phone number of Company
+//     + Required
+//     + Type: string
+// - `account.alternatePhone`
+//     + Alternate Phone number of Company
+//     + Optional
+//     + Type: string
+// - `account.companyName`
+//     + Name of company
+//     + Required
+//     + Type: string
+// - `account.email`
+//     + Email address of account contact
+//     + Required
+//     + Type: string
+//
+//
+// REST Example:
+// ```
+// curl -X POST -d '{
+//     "parameters":[{
+//         "name": "Brand Corp",
+//         "keyName": "BRAND_CORP",
+//         "longName": "Brand Corporation",
+//         "account": {
+//             "firstName": "Gloria",
+//             "lastName": "Brand",
+//             "address1": "123 Drive",
+//             "city": "Boston",
+//             "state": "MA",
+//             "postalCode": "02107",
+//             "country": "US",
+//             "companyName": "Brand Corp",
+//             "officePhone": "857-111-1111",
+//             "email": "noreply@example.com"
+//         }
+//     }]
+// }' https://api.softlayer.com/rest/v3.1/SoftLayer_Brand/createObject.json
+// ```
 func (r Brand) CreateObject(templateObject *datatypes.Brand) (resp datatypes.Brand, err error) {
 	params := []interface{}{
 		templateObject,
 	}
 	err = r.Session.DoRequest("SoftLayer_Brand", "createObject", params, &r.Options, &resp)
+	return
+}
+
+// Disable an account associated with this Brand.  Anything that would disqualify the account from being disabled will cause an exception to be raised.
+func (r Brand) DisableAccount(accountId *int) (err error) {
+	var resp datatypes.Void
+	params := []interface{}{
+		accountId,
+	}
+	err = r.Session.DoRequest("SoftLayer_Brand", "disableAccount", params, &r.Options, &resp)
 	return
 }
 
@@ -178,6 +283,12 @@ func (r Brand) GetHardware() (resp []datatypes.Hardware, err error) {
 }
 
 // Retrieve
+func (r Brand) GetHasAgentAdvancedSupportFlag() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Brand", "getHasAgentAdvancedSupportFlag", nil, &r.Options, &resp)
+	return
+}
+
+// Retrieve
 func (r Brand) GetHasAgentSupportFlag() (resp bool, err error) {
 	err = r.Session.DoRequest("SoftLayer_Brand", "getHasAgentSupportFlag", nil, &r.Options, &resp)
 	return
@@ -225,7 +336,7 @@ func (r Brand) GetTickets() (resp []datatypes.Ticket, err error) {
 	return
 }
 
-// no documentation yet
+// (DEPRECATED) Use [[SoftLayer_User_Customer::getImpersonationToken]] method.
 func (r Brand) GetToken(userId *int) (resp string, err error) {
 	params := []interface{}{
 		userId,
@@ -243,6 +354,48 @@ func (r Brand) GetUsers() (resp []datatypes.User_Customer, err error) {
 // Retrieve An account's associated virtual guest objects.
 func (r Brand) GetVirtualGuests() (resp []datatypes.Virtual_Guest, err error) {
 	err = r.Session.DoRequest("SoftLayer_Brand", "getVirtualGuests", nil, &r.Options, &resp)
+	return
+}
+
+// Check if the brand is IBM SLIC top level brand or sub brand.
+func (r Brand) IsIbmSlicBrand() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Brand", "isIbmSlicBrand", nil, &r.Options, &resp)
+	return
+}
+
+// Check if the alternate billing system of brand is Bluemix.
+func (r Brand) IsPlatformServicesBrand() (resp bool, err error) {
+	err = r.Session.DoRequest("SoftLayer_Brand", "isPlatformServicesBrand", nil, &r.Options, &resp)
+	return
+}
+
+// Reactivate an account associated with this Brand.  Anything that would disqualify the account from being reactivated will cause an exception to be raised.
+func (r Brand) ReactivateAccount(accountId *int) (err error) {
+	var resp datatypes.Void
+	params := []interface{}{
+		accountId,
+	}
+	err = r.Session.DoRequest("SoftLayer_Brand", "reactivateAccount", params, &r.Options, &resp)
+	return
+}
+
+// Verify that an account may be disabled by a Brand Agent.  Anything that would disqualify the account from being disabled will cause an exception to be raised.
+func (r Brand) VerifyCanDisableAccount(accountId *int) (err error) {
+	var resp datatypes.Void
+	params := []interface{}{
+		accountId,
+	}
+	err = r.Session.DoRequest("SoftLayer_Brand", "verifyCanDisableAccount", params, &r.Options, &resp)
+	return
+}
+
+// Verify that an account may be reactivated by a Brand Agent.  Anything that would disqualify the account from being reactivated will cause an exception to be raised.
+func (r Brand) VerifyCanReactivateAccount(accountId *int) (err error) {
+	var resp datatypes.Void
+	params := []interface{}{
+		accountId,
+	}
+	err = r.Session.DoRequest("SoftLayer_Brand", "verifyCanReactivateAccount", params, &r.Options, &resp)
 	return
 }
 

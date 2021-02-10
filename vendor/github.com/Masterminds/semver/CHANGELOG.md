@@ -1,3 +1,26 @@
+# 1.5.0 (2019-09-11)
+
+## Added
+
+- #103: Add basic fuzzing for `NewVersion()` (thanks @jesse-c)
+
+## Changed
+
+- #82: Clarify wildcard meaning in range constraints and update tests for it (thanks @greysteil)
+- #83: Clarify caret operator range for pre-1.0.0 dependencies (thanks @greysteil)
+- #72: Adding docs comment pointing to vert for a cli
+- #71: Update the docs on pre-release comparator handling
+- #89: Test with new go versions (thanks @thedevsaddam)
+- #87: Added $ to ValidPrerelease for better validation (thanks @jeremycarroll)
+
+## Fixed
+
+- #78: Fix unchecked error in example code (thanks @ravron)
+- #70: Fix the handling of pre-releases and the 0.0.0 release edge case
+- #97: Fixed copyright file for proper display on GitHub
+- #107: Fix handling prerelease when sorting alphanum and num 
+- #109: Fixed where Validate sometimes returns wrong message on error
+
 # 1.4.2 (2018-04-10)
 
 ## Changed

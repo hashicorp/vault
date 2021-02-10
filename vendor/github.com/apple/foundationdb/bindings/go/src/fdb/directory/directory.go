@@ -41,6 +41,7 @@ package directory
 
 import (
 	"errors"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 )
@@ -52,6 +53,18 @@ const (
 	_MAJORVERSION int32 = 1
 	_MINORVERSION int32 = 0
 	_MICROVERSION int32 = 0
+)
+
+var (
+	// ErrDirAlreadyExists is returned when trying to create a directory while it already exists.
+	ErrDirAlreadyExists = errors.New("the directory already exists")
+
+	// ErrDirNotExists is returned when opening or listing a directory that does not exist.
+	ErrDirNotExists = errors.New("the directory does not exist")
+
+	// ErrParentDirDoesNotExist is returned when opening a directory and one or more
+	// parent directories in the path do not exist.
+	ErrParentDirDoesNotExist = errors.New("the parent directory does not exist")
 )
 
 // Directory represents a subspace of keys in a FoundationDB database,
@@ -69,8 +82,9 @@ type Directory interface {
 	CreateOrOpen(t fdb.Transactor, path []string, layer []byte) (DirectorySubspace, error)
 
 	// Open opens the directory specified by path (relative to this Directory),
-	// and returns the directory and its contents as a DirectorySubspace (or an
-	// error if the directory does not exist).
+	// and returns the directory and its contents as a DirectorySubspace (or ErrDirNotExists
+	// error if the directory does not exist, or ErrParentDirDoesNotExist if one of the parent
+	// directories in the path does not exist).
 	//
 	// If the byte slice layer is specified, it is compared against the layer
 	// specified when the directory was created, and an error is returned if
@@ -79,7 +93,7 @@ type Directory interface {
 
 	// Create creates a directory specified by path (relative to this
 	// Directory), and returns the directory and its contents as a
-	// DirectorySubspace (or an error if the directory already exists).
+	// DirectorySubspace (or ErrDirAlreadyExists if the directory already exists).
 	//
 	// If the byte slice layer is specified, it is recorded as the layer and
 	// will be checked when opening the directory in the future.

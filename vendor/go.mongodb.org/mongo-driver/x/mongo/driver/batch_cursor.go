@@ -241,7 +241,7 @@ func (bc *BatchCursor) getMore(ctx context.Context) {
 
 	// Required for legacy operations which don't support limit.
 	numToReturn := bc.batchSize
-	if bc.limit != 0 && bc.numReturned+bc.batchSize > bc.limit {
+	if bc.limit != 0 && bc.numReturned+bc.batchSize >= bc.limit {
 		numToReturn = bc.limit - bc.numReturned
 		if numToReturn <= 0 {
 			err := bc.Close(ctx)

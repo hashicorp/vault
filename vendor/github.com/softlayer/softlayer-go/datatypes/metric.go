@@ -94,17 +94,6 @@ type Metric_Tracking_Object_Data struct {
 	Type *string `json:"type,omitempty" xmlrpc:"type,omitempty"`
 }
 
-// SoftLayer_Metric_Tracking_Object_Data_Network_ContentDelivery_Account models usage data polled from the CDN system.
-type Metric_Tracking_Object_Data_Network_ContentDelivery_Account struct {
-	Metric_Tracking_Object_Data
-
-	// The name of a file. This value is only populated in file-based bandwidth reports.
-	FileName *string `json:"fileName,omitempty" xmlrpc:"fileName,omitempty"`
-
-	// The internal identifier of a CDN POP (Points of Presence).
-	PopId *int `json:"popId,omitempty" xmlrpc:"popId,omitempty"`
-}
-
 // SoftLayer_Metric_Tracking_Object_HardwareServer models tracking objects specific to physical hardware and the data that are recorded by those servers.
 type Metric_Tracking_Object_HardwareServer struct {
 	Metric_Tracking_Object_Abstract
@@ -130,7 +119,7 @@ type Metric_Tracking_Object_HardwareServer struct {
 	// The total private bandwidth for this item's resource for the current billing cycle.
 	BillingCyclePrivateUsageTotal *uint `json:"billingCyclePrivateUsageTotal,omitempty" xmlrpc:"billingCyclePrivateUsageTotal,omitempty"`
 
-	// The raw bandwidth usage data for the current billing cycle. One object is returned for each network this server is attached to.
+	// The raw public bandwidth usage data for the current billing cycle. One object is returned for each network this server is attached to.
 	BillingCyclePublicBandwidthUsage *Network_Bandwidth_Usage `json:"billingCyclePublicBandwidthUsage,omitempty" xmlrpc:"billingCyclePublicBandwidthUsage,omitempty"`
 
 	// The total public inbound bandwidth for this item's resource for the current billing cycle.

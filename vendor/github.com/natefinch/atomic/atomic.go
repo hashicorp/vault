@@ -18,6 +18,10 @@ func WriteFile(filename string, r io.Reader) (err error) {
 	// write to a temp file first, then we'll atomically replace the target file
 	// with the temp file.
 	dir, file := filepath.Split(filename)
+	if dir == "" {
+		dir = "."
+	}
+
 	f, err := ioutil.TempFile(dir, file)
 	if err != nil {
 		return fmt.Errorf("cannot create temp file: %v", err)

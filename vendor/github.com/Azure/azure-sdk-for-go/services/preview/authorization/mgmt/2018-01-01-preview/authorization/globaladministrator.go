@@ -70,6 +70,7 @@ func (client GlobalAdministratorClient) ElevateAccess(ctx context.Context) (resu
 	result, err = client.ElevateAccessResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.GlobalAdministratorClient", "ElevateAccess", resp, "Failure responding to request")
+		return
 	}
 
 	return

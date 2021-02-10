@@ -5,17 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/linode/linodego/internal/parseabletime"
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // Stackscript represents a Linode StackScript
 type Stackscript struct {
-	CreatedStr string `json:"created"`
-	UpdatedStr string `json:"updated"`
-
 	ID                int               `json:"id"`
 	Username          string            `json:"username"`
 	Label             string            `json:"label"`
 	Description       string            `json:"description"`
+	Ordinal           int               `json:"ordinal"`
+	LogoURL           string            `json:"logo_url"`
 	Images            []string          `json:"images"`
 	DeploymentsTotal  int               `json:"deployments_total"`
 	DeploymentsActive int               `json:"deployments_active"`
@@ -61,6 +63,28 @@ type StackscriptCreateOptions struct {
 
 // StackscriptUpdateOptions fields are those accepted by UpdateStackscript
 type StackscriptUpdateOptions StackscriptCreateOptions
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (i *Stackscript) UnmarshalJSON(b []byte) error {
+	type Mask Stackscript
+
+	p := struct {
+		*Mask
+		Created *parseabletime.ParseableTime `json:"created"`
+		Updated *parseabletime.ParseableTime `json:"updated"`
+	}{
+		Mask: (*Mask)(i),
+	}
+
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	i.Created = (*time.Time)(p.Created)
+	i.Updated = (*time.Time)(p.Updated)
+
+	return nil
+}
 
 // GetCreateOptions converts a Stackscript to StackscriptCreateOptions for use in CreateStackscript
 func (i Stackscript) GetCreateOptions() StackscriptCreateOptions {
@@ -110,20 +134,11 @@ func (resp *StackscriptsPagedResponse) appendData(r *StackscriptsPagedResponse) 
 func (c *Client) ListStackscripts(ctx context.Context, opts *ListOptions) ([]Stackscript, error) {
 	response := StackscriptsPagedResponse{}
 	err := c.listHelper(ctx, &response, opts)
-	for i := range response.Data {
-		response.Data[i].fixDates()
-	}
+
 	if err != nil {
 		return nil, err
 	}
 	return response.Data, nil
-}
-
-// fixDates converts JSON timestamps to Go time.Time values
-func (i *Stackscript) fixDates() *Stackscript {
-	i.Created, _ = parseDates(i.CreatedStr)
-	i.Updated, _ = parseDates(i.UpdatedStr)
-	return i
 }
 
 // GetStackscript gets the Stackscript with the provided ID
@@ -133,13 +148,13 @@ func (c *Client) GetStackscript(ctx context.Context, id int) (*Stackscript, erro
 		return nil, err
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
-	r, err := coupleAPIErrors(c.R(ctx).
+	r, err := errors.CoupleAPIErrors(c.R(ctx).
 		SetResult(&Stackscript{}).
 		Get(e))
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Stackscript).fixDates(), nil
+	return r.Result().(*Stackscript), nil
 }
 
 // CreateStackscript creates a StackScript
@@ -155,17 +170,17 @@ func (c *Client) CreateStackscript(ctx context.Context, createOpts StackscriptCr
 	if bodyData, err := json.Marshal(createOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Post(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Stackscript).fixDates(), nil
+	return r.Result().(*Stackscript), nil
 }
 
 // UpdateStackscript updates the StackScript with the specified id
@@ -182,17 +197,17 @@ func (c *Client) UpdateStackscript(ctx context.Context, id int, updateOpts Stack
 	if bodyData, err := json.Marshal(updateOpts); err == nil {
 		body = string(bodyData)
 	} else {
-		return nil, NewError(err)
+		return nil, errors.New(err)
 	}
 
-	r, err := coupleAPIErrors(req.
+	r, err := errors.CoupleAPIErrors(req.
 		SetBody(body).
 		Put(e))
 
 	if err != nil {
 		return nil, err
 	}
-	return r.Result().(*Stackscript).fixDates(), nil
+	return r.Result().(*Stackscript), nil
 }
 
 // DeleteStackscript deletes the StackScript with the specified id
@@ -203,6 +218,6 @@ func (c *Client) DeleteStackscript(ctx context.Context, id int) error {
 	}
 	e = fmt.Sprintf("%s/%d", e, id)
 
-	_, err = coupleAPIErrors(c.R(ctx).Delete(e))
+	_, err = errors.CoupleAPIErrors(c.R(ctx).Delete(e))
 	return err
 }

@@ -3,6 +3,7 @@ package radius
 import (
 	"context"
 	"errors"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -45,6 +46,11 @@ type PacketServer struct {
 	// This should only be set to true for debugging purposes.
 	InsecureSkipVerify bool
 
+	// ErrorLog specifies an optional logger for errors
+	// around packet accepting, processing, and validation.
+	// If nil, logging is done via the log package's standard logger.
+	ErrorLog *log.Logger
+
 	shutdownRequested int32
 
 	mu          sync.Mutex
@@ -73,7 +79,13 @@ func (s *PacketServer) activeDone() {
 	}
 }
 
-// TODO: logger on PacketServer
+func (s *PacketServer) logf(format string, args ...interface{}) {
+	if s.ErrorLog != nil {
+		s.ErrorLog.Printf(format, args...)
+	} else {
+		log.Printf(format, args...)
+	}
+}
 
 // Serve accepts incoming connections on conn.
 func (s *PacketServer) Serve(conn net.PacketConn) error {
@@ -126,6 +138,7 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 			if ne, ok := err.(net.Error); ok && !ne.Temporary() {
 				return err
 			}
+			s.logf("radius: could not read packet: %v", err)
 			continue
 		}
 
@@ -135,18 +148,22 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 
 			secret, err := s.SecretSource.RADIUSSecret(s.ctx, remoteAddr)
 			if err != nil {
+				s.logf("radius: error fetching from secret source: %v", err)
 				return
 			}
 			if len(secret) == 0 {
+				s.logf("radius: empty secret returned from secret source")
 				return
 			}
 
 			if !s.InsecureSkipVerify && !IsAuthenticRequest(buff, secret) {
+				s.logf("radius: packet validation failed; bad secret")
 				return
 			}
 
 			packet, err := Parse(buff, secret)
 			if err != nil {
+				s.logf("radius: unable to parse packet: %v", err)
 				return
 			}
 
@@ -154,6 +171,7 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 				IP:         remoteAddr.String(),
 				Identifier: packet.Identifier,
 			}
+
 			requestsLock.Lock()
 			if _, ok := requests[key]; ok {
 				requestsLock.Unlock()

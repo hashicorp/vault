@@ -2,6 +2,7 @@ package gocql
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -34,14 +35,15 @@ func (q *queryExecutor) attemptQuery(ctx context.Context, qry ExecutableQuery, c
 	return iter
 }
 
-func (q *queryExecutor) speculate(ctx context.Context, qry ExecutableQuery, sp SpeculativeExecutionPolicy, results chan *Iter) *Iter {
+func (q *queryExecutor) speculate(ctx context.Context, qry ExecutableQuery, sp SpeculativeExecutionPolicy,
+	hostIter NextHost, results chan *Iter) *Iter {
 	ticker := time.NewTicker(sp.Delay())
 	defer ticker.Stop()
 
 	for i := 0; i < sp.Attempts(); i++ {
 		select {
 		case <-ticker.C:
-			go q.run(ctx, qry, results)
+			go q.run(ctx, qry, hostIter, results)
 		case <-ctx.Done():
 			return &Iter{err: ctx.Err()}
 		case iter := <-results:
@@ -53,11 +55,23 @@ func (q *queryExecutor) speculate(ctx context.Context, qry ExecutableQuery, sp S
 }
 
 func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
+	hostIter := q.policy.Pick(qry)
+
 	// check if the query is not marked as idempotent, if
 	// it is, we force the policy to NonSpeculative
 	sp := qry.speculativeExecutionPolicy()
 	if !qry.IsIdempotent() || sp.Attempts() == 0 {
-		return q.do(qry.Context(), qry), nil
+		return q.do(qry.Context(), qry, hostIter), nil
+	}
+
+	// When speculative execution is enabled, we could be accessing the host iterator from multiple goroutines below.
+	// To ensure we don't call it concurrently, we wrap the returned NextHost function here to synchronize access to it.
+	var mu sync.Mutex
+	origHostIter := hostIter
+	hostIter = func() SelectedHost {
+		mu.Lock()
+		defer mu.Unlock()
+		return origHostIter()
 	}
 
 	ctx, cancel := context.WithCancel(qry.Context())
@@ -66,12 +80,12 @@ func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
 	results := make(chan *Iter, 1)
 
 	// Launch the main execution
-	go q.run(ctx, qry, results)
+	go q.run(ctx, qry, hostIter, results)
 
 	// The speculative executions are launched _in addition_ to the main
 	// execution, on a timer. So Speculation{2} would make 3 executions running
 	// in total.
-	if iter := q.speculate(ctx, qry, sp, results); iter != nil {
+	if iter := q.speculate(ctx, qry, sp, hostIter, results); iter != nil {
 		return iter, nil
 	}
 
@@ -83,8 +97,7 @@ func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
 	}
 }
 
-func (q *queryExecutor) do(ctx context.Context, qry ExecutableQuery) *Iter {
-	hostIter := q.policy.Pick(qry)
+func (q *queryExecutor) do(ctx context.Context, qry ExecutableQuery, hostIter NextHost) *Iter {
 	selectedHost := hostIter()
 	rt := qry.retryPolicy()
 
@@ -153,9 +166,9 @@ func (q *queryExecutor) do(ctx context.Context, qry ExecutableQuery) *Iter {
 	return &Iter{err: ErrNoConnections}
 }
 
-func (q *queryExecutor) run(ctx context.Context, qry ExecutableQuery, results chan<- *Iter) {
+func (q *queryExecutor) run(ctx context.Context, qry ExecutableQuery, hostIter NextHost, results chan<- *Iter) {
 	select {
-	case results <- q.do(ctx, qry):
+	case results <- q.do(ctx, qry, hostIter):
 	case <-ctx.Done():
 	}
 }

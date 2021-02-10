@@ -16,6 +16,9 @@ type ObserveOptions struct {
 	RetryStrategy  RetryStrategy
 	Deadline       time.Time
 
+	// Internal: This should never be used and is not supported.
+	User []byte
+
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext
 }
@@ -27,6 +30,9 @@ type ObserveVbOptions struct {
 	ReplicaIdx    int
 	RetryStrategy RetryStrategy
 	Deadline      time.Time
+
+	// Internal: This should never be used and is not supported.
+	User []byte
 
 	// Volatile: Tracer API is subject to change.
 	TraceContext RequestSpanContext

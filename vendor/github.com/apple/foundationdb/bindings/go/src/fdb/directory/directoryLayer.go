@@ -99,7 +99,7 @@ func (dl directoryLayer) createOrOpen(rtr fdb.ReadTransaction, tr *fdb.Transacti
 		}
 
 		if !allowOpen {
-			return nil, errors.New("the directory already exists")
+			return nil, ErrDirAlreadyExists
 		}
 
 		if layer != nil {
@@ -112,7 +112,7 @@ func (dl directoryLayer) createOrOpen(rtr fdb.ReadTransaction, tr *fdb.Transacti
 	}
 
 	if !allowCreate {
-		return nil, errors.New("the directory does not exist")
+		return nil, ErrDirNotExists
 	}
 
 	if e := dl.checkVersion(rtr, tr); e != nil {
@@ -161,7 +161,7 @@ func (dl directoryLayer) createOrOpen(rtr fdb.ReadTransaction, tr *fdb.Transacti
 	}
 
 	if parentNode == nil {
-		return nil, errors.New("the parent directory does not exist")
+		return nil, ErrParentDirDoesNotExist
 	}
 
 	node := dl.nodeWithPrefix(prefix)
@@ -254,7 +254,7 @@ func (dl directoryLayer) List(rt fdb.ReadTransactor, path []string) ([]string, e
 
 		node := dl.find(rtr, path).prefetchMetadata(rtr)
 		if !node.exists() {
-			return nil, errors.New("the directory does not exist")
+			return nil, ErrDirNotExists
 		}
 
 		if node.isInPartition(nil, true) {

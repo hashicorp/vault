@@ -28,10 +28,18 @@ type Client struct {
 }
 
 func (c *Client) Send(request tchttp.Request, response tchttp.Response) (err error) {
+	if request.GetScheme() == "" {
+		request.SetScheme(c.httpProfile.Scheme)
+	}
+
+	if request.GetRootDomain() == "" {
+		request.SetRootDomain(c.httpProfile.RootDomain)
+	}
+
 	if request.GetDomain() == "" {
 		domain := c.httpProfile.Endpoint
 		if domain == "" {
-			domain = tchttp.GetServiceDomain(request.GetService())
+			domain = request.GetServiceDomain(request.GetService())
 		}
 		request.SetDomain(domain)
 	}
@@ -187,7 +195,7 @@ func (c *Client) sendWithSignatureV3(request tchttp.Request, response tchttp.Res
 	//log.Println("authorization", authorization)
 
 	headers["Authorization"] = authorization
-	url := "https://" + request.GetDomain() + request.GetPath()
+	url := request.GetScheme() + "://" + request.GetDomain() + request.GetPath()
 	if canonicalQueryString != "" {
 		url = url + "?" + canonicalQueryString
 	}

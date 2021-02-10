@@ -1,9 +1,12 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Object Storage Service API
 //
 // Common set of Object Storage and Archive Storage APIs for managing buckets, objects, and related resources.
+// For more information, see Overview of Object Storage (https://docs.cloud.oracle.com/Content/Object/Concepts/objectstorageoverview.htm) and
+// Overview of Archive Storage (https://docs.cloud.oracle.com/Content/Archive/Concepts/archivestorageoverview.htm).
 //
 
 package objectstorage
@@ -33,10 +36,10 @@ type Bucket struct {
 	// Arbitrary string keys and values for user-defined metadata.
 	Metadata map[string]string `mandatory:"true" json:"metadata"`
 
-	// The OCID of the user who created the bucket.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the user who created the bucket.
 	CreatedBy *string `mandatory:"true" json:"createdBy"`
 
-	// The date and time the bucket was created, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.29.
+	// The date and time the bucket was created, as described in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-14.29).
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 
 	// The entity tag (ETag) for the bucket.
@@ -55,8 +58,9 @@ type Bucket struct {
 	// The 'storageTier' property is immutable after bucket is created.
 	StorageTier BucketStorageTierEnum `mandatory:"false" json:"storageTier,omitempty"`
 
-	// A property that determines whether events will be generated for operations on objects in this bucket.
-	// This is false by default.
+	// Whether or not events are emitted for object state changes in this bucket. By default, `objectEventsEnabled` is
+	// set to `false`. Set `objectEventsEnabled` to `true` to emit events for object state changes. For more information
+	// about events, see Overview of Events (https://docs.cloud.oracle.com/Content/Events/Concepts/eventsoverview.htm).
 	ObjectEventsEnabled *bool `mandatory:"false" json:"objectEventsEnabled"`
 
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
@@ -69,7 +73,8 @@ type Bucket struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// The OCID of a KMS key id used to call KMS to generate data key or decrypt the encrypted data key.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of a master encryption key used to call the Key Management
+	// service to generate a data encryption key or to encrypt or decrypt a data encryption key.
 	KmsKeyId *string `mandatory:"false" json:"kmsKeyId"`
 
 	// The entity tag (ETag) for the live object lifecycle policy on the bucket.
@@ -82,6 +87,21 @@ type Bucket struct {
 	// The approximate total size in bytes of all objects in the bucket. Size statistics are reported periodically. You will
 	// see a lag between what is displayed and the actual size of the bucket.
 	ApproximateSize *int64 `mandatory:"false" json:"approximateSize"`
+
+	// Whether or not this bucket is a replication source. By default, `replicationEnabled` is set to `false`. This will
+	// be set to 'true' when you create a replication policy for the bucket.
+	ReplicationEnabled *bool `mandatory:"false" json:"replicationEnabled"`
+
+	// Whether or not this bucket is read only. By default, `isReadOnly` is set to `false`. This will
+	// be set to 'true' when this bucket is configured as a destination in a replication policy.
+	IsReadOnly *bool `mandatory:"false" json:"isReadOnly"`
+
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the bucket.
+	Id *string `mandatory:"false" json:"id"`
+
+	// The versioning status on the bucket. A bucket is created with versioning `Disabled` by default.
+	// For versioning `Enabled`, objects are protected from overwrites and deletes, by maintaining their version history. When versioning is `Suspended`, the previous versions will still remain but new versions will no longer be created when overwitten or deleted.
+	Versioning BucketVersioningEnum `mandatory:"false" json:"versioning,omitempty"`
 }
 
 func (m Bucket) String() string {
@@ -131,6 +151,31 @@ var mappingBucketStorageTier = map[string]BucketStorageTierEnum{
 func GetBucketStorageTierEnumValues() []BucketStorageTierEnum {
 	values := make([]BucketStorageTierEnum, 0)
 	for _, v := range mappingBucketStorageTier {
+		values = append(values, v)
+	}
+	return values
+}
+
+// BucketVersioningEnum Enum with underlying type: string
+type BucketVersioningEnum string
+
+// Set of constants representing the allowable values for BucketVersioningEnum
+const (
+	BucketVersioningEnabled   BucketVersioningEnum = "Enabled"
+	BucketVersioningSuspended BucketVersioningEnum = "Suspended"
+	BucketVersioningDisabled  BucketVersioningEnum = "Disabled"
+)
+
+var mappingBucketVersioning = map[string]BucketVersioningEnum{
+	"Enabled":   BucketVersioningEnabled,
+	"Suspended": BucketVersioningSuspended,
+	"Disabled":  BucketVersioningDisabled,
+}
+
+// GetBucketVersioningEnumValues Enumerates the set of values for BucketVersioningEnum
+func GetBucketVersioningEnumValues() []BucketVersioningEnum {
+	values := make([]BucketVersioningEnum, 0)
+	for _, v := range mappingBucketVersioning {
 		values = append(values, v)
 	}
 	return values

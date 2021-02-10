@@ -1,15 +1,23 @@
 package packngo
 
-const userBasePath = "/users"
-const userPath = "/user"
+import "path"
+
+const usersBasePath = "/users"
+const userBasePath = "/user"
 
 // UserService interface defines available user methods
 type UserService interface {
-	Get(string) (*User, *Response, error)
+	List(*ListOptions) ([]User, *Response, error)
+	Get(string, *GetOptions) (*User, *Response, error)
 	Current() (*User, *Response, error)
 }
 
-// User represents a Packet user
+type usersRoot struct {
+	Users []User `json:"users"`
+	Meta  meta   `json:"meta"`
+}
+
+// User represents an Equinix Metal user
 type User struct {
 	ID                    string  `json:"id"`
 	FirstName             string  `json:"first_name,omitempty"`
@@ -28,6 +36,7 @@ type User struct {
 	Emails                []Email `json:"emails,omitempty"`
 	PhoneNumber           string  `json:"phone_number,omitempty"`
 	URL                   string  `json:"href,omitempty"`
+	VPN                   bool    `json:"vpn"`
 }
 
 func (u User) String() string {
@@ -40,7 +49,28 @@ type UserServiceOp struct {
 }
 
 // Get method gets a user by userID
-func (s *UserServiceOp) Get(userID string) (*User, *Response, error) {
+func (s *UserServiceOp) List(opts *ListOptions) (users []User, resp *Response, err error) {
+	apiPathQuery := opts.WithQuery(usersBasePath)
+
+	for {
+		subset := new(usersRoot)
+
+		resp, err = s.client.DoRequest("GET", apiPathQuery, nil, subset)
+		if err != nil {
+			return nil, resp, err
+		}
+
+		users = append(users, subset.Users...)
+
+		if apiPathQuery = nextPage(subset.Meta, opts); apiPathQuery != "" {
+			continue
+		}
+		return
+	}
+}
+
+// Returns the user object for the currently logged-in user.
+func (s *UserServiceOp) Current() (*User, *Response, error) {
 	user := new(User)
 
 	resp, err := s.client.DoRequest("GET", userBasePath, nil, user)
@@ -51,11 +81,12 @@ func (s *UserServiceOp) Get(userID string) (*User, *Response, error) {
 	return user, resp, err
 }
 
-// Returns the user object for the currently logged-in user.
-func (s *UserServiceOp) Current() (*User, *Response, error) {
+func (s *UserServiceOp) Get(userID string, opts *GetOptions) (*User, *Response, error) {
+	endpointPath := path.Join(usersBasePath, userID)
+	apiPathQuery := opts.WithQuery(endpointPath)
 	user := new(User)
 
-	resp, err := s.client.DoRequest("GET", userPath, nil, user)
+	resp, err := s.client.DoRequest("GET", apiPathQuery, nil, user)
 	if err != nil {
 		return nil, resp, err
 	}

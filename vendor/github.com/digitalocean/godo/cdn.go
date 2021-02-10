@@ -47,6 +47,7 @@ type cdnRoot struct {
 type cdnsRoot struct {
 	Endpoints []CDN  `json:"endpoints"`
 	Links     *Links `json:"links"`
+	Meta      *Meta  `json:"meta"`
 }
 
 // CDNCreateRequest represents a request to create a CDN.
@@ -92,6 +93,9 @@ func (c CDNServiceOp) List(ctx context.Context, opt *ListOptions) ([]CDN, *Respo
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Endpoints, resp, err

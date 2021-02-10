@@ -98,9 +98,9 @@ func (col *Column) NewSlice(i, j int64) *Column {
 
 // Chunked manages a collection of primitives arrays as one logical large array.
 type Chunked struct {
+	refCount int64 // refCount must be first in the struct for 64 bit alignment and sync/atomic (https://github.com/golang/go/issues/37262)
+	
 	chunks []Interface
-
-	refCount int64
 
 	length int
 	nulls  int

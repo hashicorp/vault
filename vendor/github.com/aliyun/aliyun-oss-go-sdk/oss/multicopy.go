@@ -31,8 +31,14 @@ func (bucket Bucket) CopyFile(srcBucketName, srcObjectKey, destObjectKey string,
 	cpConf := getCpConfig(options)
 	routines := getRoutines(options)
 
+	var strVersionId string
+	versionId, _ := FindOption(options, "versionId", nil)
+	if versionId != nil {
+		strVersionId = versionId.(string)
+	}
+
 	if cpConf != nil && cpConf.IsEnable {
-		cpFilePath := getCopyCpFilePath(cpConf, srcBucketName, srcObjectKey, destBucketName, destObjectKey)
+		cpFilePath := getCopyCpFilePath(cpConf, srcBucketName, srcObjectKey, destBucketName, destObjectKey, strVersionId)
 		if cpFilePath != "" {
 			return bucket.copyFileWithCp(srcBucketName, srcObjectKey, destBucketName, destObjectKey, partSize, options, cpFilePath, routines)
 		}
@@ -42,11 +48,11 @@ func (bucket Bucket) CopyFile(srcBucketName, srcObjectKey, destObjectKey string,
 		partSize, options, routines)
 }
 
-func getCopyCpFilePath(cpConf *cpConfig, srcBucket, srcObject, destBucket, destObject string) string {
+func getCopyCpFilePath(cpConf *cpConfig, srcBucket, srcObject, destBucket, destObject, versionId string) string {
 	if cpConf.FilePath == "" && cpConf.DirPath != "" {
 		dest := fmt.Sprintf("oss://%v/%v", destBucket, destObject)
 		src := fmt.Sprintf("oss://%v/%v", srcBucket, srcObject)
-		cpFileName := getCpFileName(src, dest)
+		cpFileName := getCpFileName(src, dest, versionId)
 		cpConf.FilePath = cpConf.DirPath + string(os.PathSeparator) + cpFileName
 	}
 	return cpConf.FilePath
@@ -140,15 +146,15 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 	partSize int64, options []Option, routines int) error {
 	descBucket, err := bucket.Client.Bucket(destBucketName)
 	srcBucket, err := bucket.Client.Bucket(srcBucketName)
-	listener := getProgressListener(options)
+	listener := GetProgressListener(options)
 
-	payerOptions := []Option{}
-	payer := getPayer(options)
-	if payer != "" {
-		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
-	}
+	// choice valid options
+	headerOptions := ChoiceHeadObjectOption(options)
+	partOptions := ChoiceTransferPartOption(options)
+	completeOptions := ChoiceCompletePartOption(options)
+	abortOptions := ChoiceAbortPartOption(options)
 
-	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, payerOptions...)
+	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, headerOptions...)
 	if err != nil {
 		return err
 	}
@@ -173,11 +179,11 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 
 	var completedBytes int64
 	totalBytes := getSrcObjectBytes(parts)
-	event := newProgressEvent(TransferStartedEvent, 0, totalBytes)
+	event := newProgressEvent(TransferStartedEvent, 0, totalBytes, 0)
 	publishProgress(listener, event)
 
 	// Start to copy workers
-	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, payerOptions, copyPartHooker}
+	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, partOptions, copyPartHooker}
 	for w := 1; w <= routines; w++ {
 		go copyWorker(w, arg, jobs, results, failed, die)
 	}
@@ -193,13 +199,14 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 		case part := <-results:
 			completed++
 			ups[part.PartNumber-1] = part
-			completedBytes += (parts[part.PartNumber-1].End - parts[part.PartNumber-1].Start + 1)
-			event = newProgressEvent(TransferDataEvent, completedBytes, totalBytes)
+			copyBytes := (parts[part.PartNumber-1].End - parts[part.PartNumber-1].Start + 1)
+			completedBytes += copyBytes
+			event = newProgressEvent(TransferDataEvent, completedBytes, totalBytes, copyBytes)
 			publishProgress(listener, event)
 		case err := <-failed:
 			close(die)
-			descBucket.AbortMultipartUpload(imur, payerOptions...)
-			event = newProgressEvent(TransferFailedEvent, completedBytes, totalBytes)
+			descBucket.AbortMultipartUpload(imur, abortOptions...)
+			event = newProgressEvent(TransferFailedEvent, completedBytes, totalBytes, 0)
 			publishProgress(listener, event)
 			return err
 		}
@@ -209,13 +216,13 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 		}
 	}
 
-	event = newProgressEvent(TransferCompletedEvent, completedBytes, totalBytes)
+	event = newProgressEvent(TransferCompletedEvent, completedBytes, totalBytes, 0)
 	publishProgress(listener, event)
 
 	// Complete the multipart upload
-	_, err = descBucket.CompleteMultipartUpload(imur, ups, payerOptions...)
+	_, err = descBucket.CompleteMultipartUpload(imur, ups, completeOptions...)
 	if err != nil {
-		bucket.AbortMultipartUpload(imur, payerOptions...)
+		bucket.AbortMultipartUpload(imur, abortOptions...)
 		return err
 	}
 	return nil
@@ -252,7 +259,7 @@ func (cp copyCheckpoint) isValid(meta http.Header) (bool, error) {
 		return false, nil
 	}
 
-	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
+	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 64)
 	if err != nil {
 		return false, err
 	}
@@ -340,7 +347,7 @@ func (cp *copyCheckpoint) prepare(meta http.Header, srcBucket *Bucket, srcObject
 	cp.DestBucketName = destBucket.BucketName
 	cp.DestObjectKey = destObjectKey
 
-	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
+	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 64)
 	if err != nil {
 		return err
 	}
@@ -383,13 +390,7 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 	partSize int64, options []Option, cpFilePath string, routines int) error {
 	descBucket, err := bucket.Client.Bucket(destBucketName)
 	srcBucket, err := bucket.Client.Bucket(srcBucketName)
-	listener := getProgressListener(options)
-
-	payerOptions := []Option{}
-	payer := getPayer(options)
-	if payer != "" {
-		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
-	}
+	listener := GetProgressListener(options)
 
 	// Load CP data
 	ccp := copyCheckpoint{}
@@ -398,8 +399,12 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 		os.Remove(cpFilePath)
 	}
 
-	// Make sure the object is not updated.
-	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, payerOptions...)
+	// choice valid options
+	headerOptions := ChoiceHeadObjectOption(options)
+	partOptions := ChoiceTransferPartOption(options)
+	completeOptions := ChoiceCompletePartOption(options)
+
+	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, headerOptions...)
 	if err != nil {
 		return err
 	}
@@ -426,11 +431,11 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 	die := make(chan bool)
 
 	completedBytes := ccp.getCompletedBytes()
-	event := newProgressEvent(TransferStartedEvent, completedBytes, ccp.ObjStat.Size)
+	event := newProgressEvent(TransferStartedEvent, completedBytes, ccp.ObjStat.Size, 0)
 	publishProgress(listener, event)
 
 	// Start the worker coroutines
-	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, payerOptions, copyPartHooker}
+	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, partOptions, copyPartHooker}
 	for w := 1; w <= routines; w++ {
 		go copyWorker(w, arg, jobs, results, failed, die)
 	}
@@ -446,12 +451,13 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 			completed++
 			ccp.update(part)
 			ccp.dump(cpFilePath)
-			completedBytes += (parts[part.PartNumber-1].End - parts[part.PartNumber-1].Start + 1)
-			event = newProgressEvent(TransferDataEvent, completedBytes, ccp.ObjStat.Size)
+			copyBytes := (parts[part.PartNumber-1].End - parts[part.PartNumber-1].Start + 1)
+			completedBytes += copyBytes
+			event = newProgressEvent(TransferDataEvent, completedBytes, ccp.ObjStat.Size, copyBytes)
 			publishProgress(listener, event)
 		case err := <-failed:
 			close(die)
-			event = newProgressEvent(TransferFailedEvent, completedBytes, ccp.ObjStat.Size)
+			event = newProgressEvent(TransferFailedEvent, completedBytes, ccp.ObjStat.Size, 0)
 			publishProgress(listener, event)
 			return err
 		}
@@ -461,8 +467,8 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 		}
 	}
 
-	event = newProgressEvent(TransferCompletedEvent, completedBytes, ccp.ObjStat.Size)
+	event = newProgressEvent(TransferCompletedEvent, completedBytes, ccp.ObjStat.Size, 0)
 	publishProgress(listener, event)
 
-	return ccp.complete(descBucket, ccp.CopyParts, cpFilePath, payerOptions)
+	return ccp.complete(descBucket, ccp.CopyParts, cpFilePath, completeOptions)
 }

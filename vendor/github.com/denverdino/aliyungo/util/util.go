@@ -4,6 +4,8 @@ import (
 	"bytes"
 	srand "crypto/rand"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -58,6 +60,34 @@ func Encode(v url.Values) string {
 			if v != "" {
 				buf.WriteString("=")
 				buf.WriteString(url.QueryEscape(v))
+			}
+		}
+	}
+	return buf.String()
+}
+
+// Like Encode, but key and value are not escaped
+func EncodeWithoutEscape(v url.Values) string {
+	if v == nil {
+		return ""
+	}
+	var buf bytes.Buffer
+	keys := make([]string, 0, len(v))
+	for k := range v {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		vs := v[k]
+		prefix := k
+		for _, v := range vs {
+			if buf.Len() > 0 {
+				buf.WriteByte('&')
+			}
+			buf.WriteString(prefix)
+			if v != "" {
+				buf.WriteString("=")
+				buf.WriteString(v)
 			}
 		}
 	}
@@ -144,4 +174,12 @@ func GenerateRandomECSPassword() string {
 
 	return string(s)
 
+}
+
+func PrettyJson(object interface{}) string {
+	b, err := json.MarshalIndent(object, "", "    ")
+	if err != nil {
+		fmt.Printf("ERROR: PrettyJson, %v\n %s\n", err, b)
+	}
+	return string(b)
 }

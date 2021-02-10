@@ -30,8 +30,10 @@ type jsonOrigin struct {
 }
 
 type jsonRole struct {
-	RoleName   string `json:"role"`
-	BucketName string `json:"bucket_name"`
+	RoleName       string `json:"role"`
+	BucketName     string `json:"bucket_name"`
+	ScopeName      string `json:"scope_name"`
+	CollectionName string `json:"collection_name"`
 }
 
 type jsonRoleDescription struct {
@@ -68,11 +70,26 @@ type jsonGroup struct {
 type Role struct {
 	Name   string `json:"role"`
 	Bucket string `json:"bucket_name"`
+
+	// UNCOMMITTED: This API may change in the future.
+	Scope string `json:"scope_name"`
+
+	// UNCOMMITTED: This API may change in the future.
+	Collection string `json:"collection_name"`
 }
 
 func (ro *Role) fromData(data jsonRole) error {
 	ro.Name = data.RoleName
 	ro.Bucket = data.BucketName
+	ro.Scope = data.ScopeName
+	ro.Collection = data.CollectionName
+
+	if ro.Scope == "*" {
+		ro.Scope = ""
+	}
+	if ro.Collection == "*" {
+		ro.Collection = ""
+	}
 
 	return nil
 }
@@ -407,12 +424,48 @@ func (um *UserManager) UpsertUser(user User, opts *UpsertUserOptions) error {
 		opts.DomainName = string(LocalDomain)
 	}
 
+	parseWildcard := func(str string) string {
+		if str == "*" {
+			return ""
+		}
+
+		return str
+	}
+
+	isNullOrWildcard := func(str string) bool {
+		if str == "*" || str == "" {
+			return true
+		}
+
+		return false
+	}
+
 	var reqRoleStrs []string
 	for _, roleData := range user.Roles {
 		if roleData.Bucket == "" {
 			reqRoleStrs = append(reqRoleStrs, roleData.Name)
 		} else {
-			reqRoleStrs = append(reqRoleStrs, fmt.Sprintf("%s[%s]", roleData.Name, roleData.Bucket))
+			scope := parseWildcard(roleData.Scope)
+			collection := parseWildcard(roleData.Collection)
+
+			if scope != "" && isNullOrWildcard(roleData.Bucket) {
+				return makeInvalidArgumentsError("when a scope is specified, the bucket cannot be null or wildcard")
+			}
+			if collection != "" && isNullOrWildcard(scope) {
+				return makeInvalidArgumentsError("when a collection is specified, the scope cannot be null or wildcard")
+			}
+
+			roleStr := fmt.Sprintf("%s[%s", roleData.Name, roleData.Bucket)
+			if scope != "" {
+				roleStr += ":" + roleData.Scope
+			}
+			if collection != "" {
+				roleStr += ":" + roleData.Collection
+			}
+			roleStr += "]"
+
+			reqRoleStrs = append(reqRoleStrs, roleStr)
+
 		}
 	}
 

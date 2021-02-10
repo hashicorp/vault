@@ -457,7 +457,7 @@ var (
 )
 
 func (d *resumableStreamDecoder) next() bool {
-	retryer := gax.OnCodes([]codes.Code{codes.Unavailable, codes.Internal}, d.backoff)
+	retryer := onCodes(d.backoff, codes.Unavailable, codes.Internal)
 	for {
 		switch d.state {
 		case unConnected:

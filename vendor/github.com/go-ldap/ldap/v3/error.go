@@ -184,6 +184,8 @@ type Error struct {
 	ResultCode uint16
 	// MatchedDN is the matchedDN returned if any
 	MatchedDN string
+	// Packet is the returned packet if any
+	Packet *ber.Packet
 }
 
 func (e *Error) Error() string {
@@ -201,19 +203,23 @@ func GetLDAPError(packet *ber.Packet) error {
 	if len(packet.Children) >= 2 {
 		response := packet.Children[1]
 		if response == nil {
-			return &Error{ResultCode: ErrorUnexpectedResponse, Err: fmt.Errorf("Empty response in packet")}
+			return &Error{ResultCode: ErrorUnexpectedResponse, Err: fmt.Errorf("Empty response in packet"), Packet: packet}
 		}
 		if response.ClassType == ber.ClassApplication && response.TagType == ber.TypeConstructed && len(response.Children) >= 3 {
 			resultCode := uint16(response.Children[0].Value.(int64))
 			if resultCode == 0 { // No error
 				return nil
 			}
-			return &Error{ResultCode: resultCode, MatchedDN: response.Children[1].Value.(string),
-				Err: fmt.Errorf("%s", response.Children[2].Value.(string))}
+			return &Error{
+				ResultCode: resultCode,
+				MatchedDN:  response.Children[1].Value.(string),
+				Err:        fmt.Errorf("%s", response.Children[2].Value.(string)),
+				Packet:     packet,
+			}
 		}
 	}
 
-	return &Error{ResultCode: ErrorNetwork, Err: fmt.Errorf("Invalid packet format")}
+	return &Error{ResultCode: ErrorNetwork, Err: fmt.Errorf("Invalid packet format"), Packet: packet}
 }
 
 // NewError creates an LDAP error with the given code and underlying error
@@ -221,8 +227,8 @@ func NewError(resultCode uint16, err error) error {
 	return &Error{ResultCode: resultCode, Err: err}
 }
 
-// IsErrorWithCode returns true if the given error is an LDAP error with the given result code
-func IsErrorWithCode(err error, desiredResultCode uint16) bool {
+// IsErrorAnyOf returns true if the given error is an LDAP error with any one of the given result codes
+func IsErrorAnyOf(err error, codes ...uint16) bool {
 	if err == nil {
 		return false
 	}
@@ -232,5 +238,16 @@ func IsErrorWithCode(err error, desiredResultCode uint16) bool {
 		return false
 	}
 
-	return serverError.ResultCode == desiredResultCode
+	for _, code := range codes {
+		if serverError.ResultCode == code {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsErrorWithCode returns true if the given error is an LDAP error with the given result code
+func IsErrorWithCode(err error, desiredResultCode uint16) bool {
+	return IsErrorAnyOf(err, desiredResultCode)
 }

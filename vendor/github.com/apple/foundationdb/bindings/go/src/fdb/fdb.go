@@ -22,11 +22,9 @@
 
 package fdb
 
-/*
- #define FDB_API_VERSION 610
- #include <foundationdb/fdb_c.h>
- #include <stdlib.h>
-*/
+// #define FDB_API_VERSION 700
+// #include <foundationdb/fdb_c.h>
+// #include <stdlib.h>
 import "C"
 
 import (
@@ -110,7 +108,7 @@ func (opt NetworkOptions) setOpt(code int, param []byte) error {
 // library, an error will be returned. APIVersion must be called prior to any
 // other functions in the fdb package.
 //
-// Currently, this package supports API versions 200 through 610.
+// Currently, this package supports API versions 200 through 700.
 //
 // Warning: When using the multi-version client API, setting an API version that
 // is not supported by a particular client library will prevent that client from
@@ -118,7 +116,7 @@ func (opt NetworkOptions) setOpt(code int, param []byte) error {
 // the API version of your application after upgrading your client until the
 // cluster has also been upgraded.
 func APIVersion(version int) error {
-	headerVersion := 610
+	headerVersion := 700
 
 	networkMutex.Lock()
 	defer networkMutex.Unlock()
@@ -130,7 +128,7 @@ func APIVersion(version int) error {
 		return errAPIVersionAlreadySet
 	}
 
-	if version < 200 || version > 610 {
+	if version < 200 || version > 700 {
 		return errAPIVersionNotSupported
 	}
 
@@ -139,7 +137,10 @@ func APIVersion(version int) error {
 			if e == 2203 {
 				maxSupportedVersion := C.fdb_get_max_api_version()
 				if headerVersion > int(maxSupportedVersion) {
-					return fmt.Errorf("This version of the FoundationDB Go binding is not supported by the installed FoundationDB C library. The binding requires a library that supports API version %d, but the installed library supports a maximum version of %d.", headerVersion, maxSupportedVersion)
+					return fmt.Errorf("This version of the FoundationDB Go binding is "+
+						"not supported by the installed FoundationDB C library. "+
+						"The binding requires a library that supports API version %d, "+
+						"but the installed library supports a maximum version of %d.", headerVersion, maxSupportedVersion)
 				}
 				return fmt.Errorf("API version %d is not supported by the installed FoundationDB C library.", version)
 			}
@@ -235,8 +236,12 @@ func StartNetwork() error {
 const DefaultClusterFile string = ""
 
 // OpenDefault returns a database handle to the FoundationDB cluster identified
-// by the DefaultClusterFile on the current machine. The FoundationDB client
-// networking engine will be initialized first, if necessary.
+// by the DefaultClusterFile on the current machine.
+//
+// A single client can use this function multiple times to connect to different
+// clusters simultaneously, with each invocation requiring its own cluster file.
+// To connect to multiple clusters running at different, incompatible versions,
+// the multi-version client API must be used.
 func OpenDefault() (Database, error) {
 	return OpenDatabase(DefaultClusterFile)
 }
@@ -253,6 +258,11 @@ func MustOpenDefault() Database {
 
 // Open returns a database handle to the FoundationDB cluster identified
 // by the provided cluster file and database name.
+//
+// A single client can use this function multiple times to connect to different
+// clusters simultaneously, with each invocation requiring its own cluster file.
+// To connect to multiple clusters running at different, incompatible versions,
+// the multi-version client API must be used.
 func OpenDatabase(clusterFile string) (Database, error) {
 	networkMutex.Lock()
 	defer networkMutex.Unlock()
@@ -282,6 +292,8 @@ func OpenDatabase(clusterFile string) (Database, error) {
 	return db, nil
 }
 
+// MustOpenDatabase is like OpenDatabase but panics if the default database cannot
+// be opened.
 func MustOpenDatabase(clusterFile string) Database {
 	db, err := OpenDatabase(clusterFile)
 	if err != nil {
@@ -290,7 +302,7 @@ func MustOpenDatabase(clusterFile string) Database {
 	return db
 }
 
-// Deprecated: Use OpenDatabase instead
+// Deprecated: Use OpenDatabase instead.
 // The database name must be []byte("DB").
 func Open(clusterFile string, dbName []byte) (Database, error) {
 	if bytes.Compare(dbName, []byte("DB")) != 0 {
@@ -299,7 +311,7 @@ func Open(clusterFile string, dbName []byte) (Database, error) {
 	return OpenDatabase(clusterFile)
 }
 
-// Deprecated: Use MustOpenDatabase instead
+// Deprecated: Use MustOpenDatabase instead.
 // MustOpen is like Open but panics if the database cannot be opened.
 func MustOpen(clusterFile string, dbName []byte) Database {
 	db, err := Open(clusterFile, dbName)

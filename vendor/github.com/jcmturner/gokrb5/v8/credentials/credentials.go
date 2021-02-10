@@ -4,6 +4,7 @@ package credentials
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -42,15 +43,15 @@ type marshalCredentials struct {
 	Username        string
 	DisplayName     string
 	Realm           string
-	CName           types.PrincipalName
-	Keytab          *keytab.Keytab
-	Password        string
-	Attributes      map[string]interface{}
+	CName           types.PrincipalName `json:"-"`
+	Keytab          bool
+	Password        bool
+	Attributes      map[string]interface{} `json:"-"`
 	ValidUntil      time.Time
 	Authenticated   bool
 	Human           bool
 	AuthTime        time.Time
-	GroupMembership map[string]bool
+	GroupMembership map[string]bool `json:"-"`
 	SessionID       string
 }
 
@@ -339,8 +340,8 @@ func (c *Credentials) Marshal() ([]byte, error) {
 		DisplayName:     c.displayName,
 		Realm:           c.realm,
 		CName:           c.cname,
-		Keytab:          c.keytab,
-		Password:        c.password,
+		Keytab:          c.HasKeytab(),
+		Password:        c.HasPassword(),
 		Attributes:      c.attributes,
 		ValidUntil:      c.validUntil,
 		Authenticated:   c.authenticated,
@@ -371,8 +372,6 @@ func (c *Credentials) Unmarshal(b []byte) error {
 	c.displayName = mc.DisplayName
 	c.realm = mc.Realm
 	c.cname = mc.CName
-	c.keytab = mc.Keytab
-	c.password = mc.Password
 	c.attributes = mc.Attributes
 	c.validUntil = mc.ValidUntil
 	c.authenticated = mc.Authenticated
@@ -381,4 +380,26 @@ func (c *Credentials) Unmarshal(b []byte) error {
 	c.groupMembership = mc.GroupMembership
 	c.sessionID = mc.SessionID
 	return nil
+}
+
+// JSON return details of the Credentials in a JSON format.
+func (c *Credentials) JSON() (string, error) {
+	mc := marshalCredentials{
+		Username:      c.username,
+		DisplayName:   c.displayName,
+		Realm:         c.realm,
+		CName:         c.cname,
+		Keytab:        c.HasKeytab(),
+		Password:      c.HasPassword(),
+		ValidUntil:    c.validUntil,
+		Authenticated: c.authenticated,
+		Human:         c.human,
+		AuthTime:      c.authTime,
+		SessionID:     c.sessionID,
+	}
+	b, err := json.MarshalIndent(mc, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

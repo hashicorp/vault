@@ -6,10 +6,19 @@ import (
 )
 
 type NicType string
+type Direction string
+type SecurityGroupType string
 
 const (
 	NicTypeInternet = NicType("internet")
 	NicTypeIntranet = NicType("intranet")
+
+	DirectionIngress = Direction("ingress")
+	DirectionEgress  = Direction("egress")
+	DirectionAll     = Direction("all")
+
+	SecurityGroupTypeNormal     = SecurityGroupType("normal")
+	SecurityGroupTypeEnterprise = SecurityGroupType("enterprise")
 )
 
 type IpProtocol string
@@ -29,11 +38,18 @@ const (
 	PermissionPolicyDrop   = PermissionPolicy("drop")
 )
 
+type GroupInnerAccessPolicy string
+
+const (
+	GroupInnerAccept = GroupInnerAccessPolicy("Accept")
+	GroupInnerDrop   = GroupInnerAccessPolicy("Drop")
+)
+
 type DescribeSecurityGroupAttributeArgs struct {
 	SecurityGroupId string
 	RegionId        common.Region
-	NicType         NicType //enum for internet (default) |intranet
-	Direction       string  // enum ingress egress
+	NicType         NicType   //enum for internet (default) |intranet
+	Direction       Direction // enum ingress egress
 }
 
 //
@@ -64,7 +80,8 @@ type DescribeSecurityGroupAttributeResponse struct {
 	Permissions       struct {
 		Permission []PermissionType
 	}
-	VpcId string
+	VpcId             string
+	InnerAccessPolicy GroupInnerAccessPolicy
 }
 
 //
@@ -79,8 +96,9 @@ func (client *Client) DescribeSecurityGroupAttribute(args *DescribeSecurityGroup
 }
 
 type DescribeSecurityGroupsArgs struct {
-	RegionId common.Region
-	VpcId    string
+	RegionId         common.Region
+	VpcId            string
+	SecurityGroupIds []string
 	common.Pagination
 }
 
@@ -91,6 +109,8 @@ type SecurityGroupItemType struct {
 	SecurityGroupName string
 	Description       string
 	VpcId             string
+	SecurityGroupType SecurityGroupType // normal|enterprise
+	ServiceManaged    bool
 	CreationTime      util.ISO6801Time
 }
 
@@ -194,6 +214,21 @@ type ModifySecurityGroupAttributeResponse struct {
 func (client *Client) ModifySecurityGroupAttribute(args *ModifySecurityGroupAttributeArgs) error {
 	response := ModifySecurityGroupAttributeResponse{}
 	err := client.Invoke("ModifySecurityGroupAttribute", args, &response)
+	return err
+}
+
+type ModifySecurityGroupPolicyArgs struct {
+	RegionId          common.Region
+	SecurityGroupId   string
+	InnerAccessPolicy GroupInnerAccessPolicy
+}
+
+// ModifySecurityGroupPolicy modifies inner access policy of security group
+//
+// You can read doc at https://www.alibabacloud.com/help/doc-detail/57315.htm
+func (client *Client) ModifySecurityGroupPolicy(args *ModifySecurityGroupPolicyArgs) error {
+	response := common.Response{}
+	err := client.Invoke("ModifySecurityGroupPolicy", args, &response)
 	return err
 }
 

@@ -2,8 +2,11 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/jcmturner/gokrb5/v8/config"
@@ -238,4 +241,89 @@ func (cl *Client) Destroy() {
 	cl.cache.clear()
 	cl.Credentials = creds
 	cl.Log("client destroyed")
+}
+
+// Diagnostics runs a set of checks that the client is properly configured and writes details to the io.Writer provided.
+func (cl *Client) Diagnostics(w io.Writer) error {
+	cl.Print(w)
+	var errs []string
+	if cl.Credentials.HasKeytab() {
+		var loginRealmEncTypes []int32
+		for _, e := range cl.Credentials.Keytab().Entries {
+			if e.Principal.Realm == cl.Credentials.Realm() {
+				loginRealmEncTypes = append(loginRealmEncTypes, e.Key.KeyType)
+			}
+		}
+		for _, et := range cl.Config.LibDefaults.DefaultTktEnctypeIDs {
+			var etInKt bool
+			for _, val := range loginRealmEncTypes {
+				if val == et {
+					etInKt = true
+					break
+				}
+			}
+			if !etInKt {
+				errs = append(errs, fmt.Sprintf("default_tkt_enctypes specifies %d but this enctype is not available in the client's keytab", et))
+			}
+		}
+		for _, et := range cl.Config.LibDefaults.PreferredPreauthTypes {
+			var etInKt bool
+			for _, val := range loginRealmEncTypes {
+				if int(val) == et {
+					etInKt = true
+					break
+				}
+			}
+			if !etInKt {
+				errs = append(errs, fmt.Sprintf("preferred_preauth_types specifies %d but this enctype is not available in the client's keytab", et))
+			}
+		}
+	}
+	udpCnt, udpKDC, err := cl.Config.GetKDCs(cl.Credentials.Realm(), false)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("error when resolving KDCs for UDP communication: %v", err))
+	}
+	if udpCnt < 1 {
+		errs = append(errs, "no KDCs resolved for communication via UDP.")
+	} else {
+		b, _ := json.MarshalIndent(&udpKDC, "", "  ")
+		fmt.Fprintf(w, "UDP KDCs: %s\n", string(b))
+	}
+	tcpCnt, tcpKDC, err := cl.Config.GetKDCs(cl.Credentials.Realm(), false)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("error when resolving KDCs for TCP communication: %v", err))
+	}
+	if tcpCnt < 1 {
+		errs = append(errs, "no KDCs resolved for communication via TCP.")
+	} else {
+		b, _ := json.MarshalIndent(&tcpKDC, "", "  ")
+		fmt.Fprintf(w, "TCP KDCs: %s\n", string(b))
+	}
+
+	if errs == nil || len(errs) < 1 {
+		return nil
+	}
+	err = fmt.Errorf(strings.Join(errs, "\n"))
+	return err
+}
+
+// Print writes the details of the client to the io.Writer provided.
+func (cl *Client) Print(w io.Writer) {
+	c, _ := cl.Credentials.JSON()
+	fmt.Fprintf(w, "Credentials:\n%s\n", c)
+
+	s, _ := cl.sessions.JSON()
+	fmt.Fprintf(w, "TGT Sessions:\n%s\n", s)
+
+	c, _ = cl.cache.JSON()
+	fmt.Fprintf(w, "Service ticket cache:\n%s\n", c)
+
+	s, _ = cl.settings.JSON()
+	fmt.Fprintf(w, "Settings:\n%s\n", s)
+
+	j, _ := cl.Config.JSON()
+	fmt.Fprintf(w, "Krb5 config:\n%s\n", j)
+
+	k, _ := cl.Credentials.Keytab().JSON()
+	fmt.Fprintf(w, "Keytab:\n%s\n", k)
 }

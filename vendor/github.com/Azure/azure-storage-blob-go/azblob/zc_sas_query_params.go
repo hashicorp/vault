@@ -40,7 +40,7 @@ func FormatTimesForSASSigning(startTime, expiryTime, snapshotTime time.Time) (st
 }
 
 // SASTimeFormat represents the format of a SAS start or expiry time. Use it when formatting/parsing a time.Time.
-const SASTimeFormat = "2006-01-02T15:04:05Z" //"2017-07-27T00:00:00Z" // ISO 8601
+const SASTimeFormat = "2006-01-02T15:04:05Z"                                                                    //"2017-07-27T00:00:00Z" // ISO 8601
 var SASTimeFormats = []string{"2006-01-02T15:04:05.0000000Z", SASTimeFormat, "2006-01-02T15:04Z", "2006-01-02"} // ISO 8601 formats, please refer to https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas for more details.
 
 // formatSASTimeWithDefaultFormat format time with ISO 8601 in "yyyy-MM-ddTHH:mm:ssZ".
@@ -108,8 +108,8 @@ type SASQueryParameters struct {
 	signedVersion      string      `param:"skv"`
 
 	// private member used for startTime and expiryTime formatting.
-	stTimeFormat       string
-	seTimeFormat       string
+	stTimeFormat string
+	seTimeFormat string
 }
 
 func (p *SASQueryParameters) SignedOid() string {

@@ -17,9 +17,14 @@
 package okta
 
 import (
+	"errors"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"syscall"
 
-	"github.com/okta/okta-sdk-golang/okta/cache"
+	"github.com/okta/okta-sdk-golang/v2/okta/cache"
 )
 
 type config struct {
@@ -36,10 +41,11 @@ type config struct {
 				Username string `yaml:"username" envconfig:"OKTA_CLIENT_PROXY_USERNAME"`
 				Password string `yaml:"password" envconfig:"OKTA_CLIENT_PROXY_PASSWORD"`
 			} `yaml:"proxy"`
-			ConnectionTimeout int32 `yaml:"connectionTimeout" envconfig:"OKTA_CLIENT_CONNECTION_TIMEOUT"`
-			RequestTimeout    int32 `yaml:"requestTimeout" envconfig:"OKTA_CLIENT_REQUEST_TIMEOUT"`
+			ConnectionTimeout int64 `yaml:"connectionTimeout" envconfig:"OKTA_CLIENT_CONNECTION_TIMEOUT"`
+			RequestTimeout    int64 `yaml:"requestTimeout" envconfig:"OKTA_CLIENT_REQUEST_TIMEOUT"`
 			RateLimit         struct {
 				MaxRetries int32 `yaml:"maxRetries" envconfig:"OKTA_CLIENT_RATE_LIMIT_MAX_RETRIES"`
+				MaxBackoff int64 `yaml:"maxBackoff" envconfig:"OKTA_CLIENT_RATE_LIMIT_MAX_BACKOFF"`
 			} `yaml:"rateLimit"`
 			OrgUrl            string   `yaml:"orgUrl" envconfig:"OKTA_CLIENT_ORGURL"`
 			Token             string   `yaml:"token" envconfig:"OKTA_CLIENT_TOKEN"`
@@ -83,7 +89,7 @@ func WithCacheTti(i int32) ConfigSetter {
 	}
 }
 
-func WithConnectionTimeout(i int32) ConfigSetter {
+func WithConnectionTimeout(i int64) ConfigSetter {
 	return func(c *config) {
 		c.Okta.Client.ConnectionTimeout = i
 	}
@@ -143,7 +149,7 @@ func WithTestingDisableHttpsCheck(httpsCheck bool) ConfigSetter {
 	}
 }
 
-func WithRequestTimeout(requestTimeout int32) ConfigSetter {
+func WithRequestTimeout(requestTimeout int64) ConfigSetter {
 	return func(c *config) {
 		c.Okta.Client.RequestTimeout = requestTimeout
 	}
@@ -152,6 +158,12 @@ func WithRequestTimeout(requestTimeout int32) ConfigSetter {
 func WithRateLimitMaxRetries(maxRetries int32) ConfigSetter {
 	return func(c *config) {
 		c.Okta.Client.RateLimit.MaxRetries = maxRetries
+	}
+}
+
+func WithRateLimitMaxBackOff(maxBackoff int64) ConfigSetter {
+	return func(c *config) {
+		c.Okta.Client.RateLimit.MaxBackoff = maxBackoff
 	}
 }
 
@@ -173,8 +185,29 @@ func WithScopes(scopes []string) ConfigSetter {
 	}
 }
 
+// WithPrivateKey sets private key key. Can be either a path to a private key or private key itself.
 func WithPrivateKey(privateKey string) ConfigSetter {
 	return func(c *config) {
-		c.Okta.Client.PrivateKey = privateKey
+		if fileExists(privateKey) {
+			content, err := ioutil.ReadFile(privateKey)
+			if err != nil {
+				log.Fatalf("failed to read from provided private key file path: %v", err)
+			}
+			c.Okta.Client.PrivateKey = string(content)
+		} else {
+			c.Okta.Client.PrivateKey = privateKey
+		}
 	}
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if err != nil {
+		if os.IsNotExist(err) || errors.Is(err, syscall.ENAMETOOLONG) {
+			return false
+		}
+		log.Println("can not get information about the file containing private key, using provided value as the key itself")
+		return false
+	}
+	return !info.IsDir()
 }

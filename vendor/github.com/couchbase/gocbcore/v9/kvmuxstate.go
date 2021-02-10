@@ -15,9 +15,8 @@ type kvMuxState struct {
 	uuid         string
 	revID        int64
 
-	durabilityLevelStatus durabilityLevelStatus
-	createAsDeletedStatus createAsDeletedStatus
-	collectionsSupported  bool
+	bucketCapabilities   map[BucketCapability]BucketCapabilityStatus
+	collectionsSupported bool
 }
 
 func newKVMuxState(cfg *routeConfig, pipelines []*memdPipeline, deadpipe *memdPipeline) *kvMuxState {
@@ -32,8 +31,11 @@ func newKVMuxState(cfg *routeConfig, pipelines []*memdPipeline, deadpipe *memdPi
 		uuid:         cfg.uuid,
 		revID:        cfg.revID,
 
-		durabilityLevelStatus: durabilityLevelStatusUnknown,
-		createAsDeletedStatus: createAsDeletedStatusUnknown,
+		bucketCapabilities: map[BucketCapability]BucketCapabilityStatus{
+			BucketCapabilityDurableWrites:        BucketCapabilityStatusUnknown,
+			BucketCapabilityCreateAsDeleted:      BucketCapabilityStatusUnknown,
+			BucketCapabilityReplaceBodyWithXattr: BucketCapabilityStatusUnknown,
+		},
 
 		collectionsSupported: cfg.ContainsBucketCapability("collections"),
 	}
@@ -41,15 +43,21 @@ func newKVMuxState(cfg *routeConfig, pipelines []*memdPipeline, deadpipe *memdPi
 	// We setup with a fake config, this means that durability support is still unknown.
 	if cfg.revID > -1 {
 		if cfg.ContainsBucketCapability("durableWrite") {
-			mux.durabilityLevelStatus = durabilityLevelStatusSupported
+			mux.bucketCapabilities[BucketCapabilityDurableWrites] = BucketCapabilityStatusSupported
 		} else {
-			mux.durabilityLevelStatus = durabilityLevelStatusUnsupported
+			mux.bucketCapabilities[BucketCapabilityDurableWrites] = BucketCapabilityStatusUnsupported
 		}
 
 		if cfg.ContainsBucketCapability("tombstonedUserXAttrs") {
-			mux.createAsDeletedStatus = createAsDeletedStatusSupported
+			mux.bucketCapabilities[BucketCapabilityCreateAsDeleted] = BucketCapabilityStatusSupported
 		} else {
-			mux.createAsDeletedStatus = createAsDeletedStatusUnsupported
+			mux.bucketCapabilities[BucketCapabilityCreateAsDeleted] = BucketCapabilityStatusUnsupported
+		}
+
+		if cfg.ContainsBucketCapability("subdoc.ReplaceBodyWithXattr") {
+			mux.bucketCapabilities[BucketCapabilityReplaceBodyWithXattr] = BucketCapabilityStatusSupported
+		} else {
+			mux.bucketCapabilities[BucketCapabilityReplaceBodyWithXattr] = BucketCapabilityStatusUnsupported
 		}
 	}
 
@@ -69,6 +77,15 @@ func (mux *kvMuxState) GetPipeline(index int) *memdPipeline {
 		return mux.deadPipe
 	}
 	return mux.pipelines[index]
+}
+
+func (mux *kvMuxState) HasBucketCapabilityStatus(cap BucketCapability, status BucketCapabilityStatus) bool {
+	st, ok := mux.bucketCapabilities[cap]
+	if !ok {
+		return status == BucketCapabilityStatusUnsupported
+	}
+
+	return st == status
 }
 
 // nolint: unused

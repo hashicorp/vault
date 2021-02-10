@@ -2652,7 +2652,8 @@ func isSupportedMutationType(v interface{}) bool {
 		GenericColumnValue:
 		return true
 	default:
-		return false
+		decodableType := getDecodableSpannerType(v)
+		return decodableType != spannerTypeUnknown && decodableType != spannerTypeInvalid
 	}
 }
 

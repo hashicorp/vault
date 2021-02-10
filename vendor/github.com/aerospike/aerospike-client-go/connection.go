@@ -100,7 +100,7 @@ func newConnection(address string, timeout time.Duration) (*Connection, error) {
 		return nil, errToTimeoutErr(nil, err)
 	}
 	newConn.conn = conn
-	newConn.limitReader = &io.LimitedReader{conn, 0}
+	newConn.limitReader = &io.LimitedReader{R: conn, N: 0}
 
 	// set timeout at the last possible moment
 	if err := newConn.SetTimeout(time.Now().Add(timeout), timeout); err != nil {
@@ -172,6 +172,7 @@ func (ctn *Connection) Write(buf []byte) (total int, err error) {
 	}
 
 	if ctn.node != nil {
+		ctn.node.incrErrorCount()
 		atomic.AddInt64(&ctn.node.stats.ConnectionsFailed, 1)
 	}
 
@@ -213,6 +214,7 @@ func (ctn *Connection) Read(buf []byte, length int) (total int, err error) {
 	}
 
 	if ctn.node != nil {
+		ctn.node.incrErrorCount()
 		atomic.AddInt64(&ctn.node.stats.ConnectionsFailed, 1)
 	}
 

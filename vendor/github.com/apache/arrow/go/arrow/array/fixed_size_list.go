@@ -125,7 +125,7 @@ func NewFixedSizeListBuilder(mem memory.Allocator, n int32, etype arrow.DataType
 		builder: builder{refCount: 1, mem: mem},
 		etype:   etype,
 		n:       n,
-		values:  newBuilder(mem, etype),
+		values:  NewBuilder(mem, etype),
 	}
 }
 

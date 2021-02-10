@@ -4,6 +4,16 @@ package protocol
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[skInvalid-0]
+	_ = x[skRequest-1]
+	_ = x[skReply-2]
+	_ = x[skError-5]
+}
+
 const (
 	_segmentKind_name_0 = "skInvalidskRequestskReply"
 	_segmentKind_name_1 = "skError"

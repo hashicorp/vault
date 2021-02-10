@@ -1,6 +1,7 @@
 package gocbcore
 
 import (
+	"context"
 	"crypto/tls"
 	"io"
 	"net"
@@ -55,12 +56,12 @@ func (s *memdConnWrap) Close() error {
 	return s.baseConn.Close()
 }
 
-func dialMemdConn(address string, tlsConfig *tls.Config, deadline time.Time) (memdConn, error) {
+func dialMemdConn(ctx context.Context, address string, tlsConfig *tls.Config, deadline time.Time) (memdConn, error) {
 	d := net.Dialer{
 		Deadline: deadline,
 	}
 
-	baseConn, err := d.Dial("tcp", address)
+	baseConn, err := d.DialContext(ctx, "tcp", address)
 	if err != nil {
 		return nil, err
 	}

@@ -223,32 +223,26 @@ func addControlDescriptions(packet *ber.Packet) error {
 				if child.Tag == 0 {
 					//Warning
 					warningPacket := child.Children[0]
-					packet, err := ber.DecodePacketErr(warningPacket.Data.Bytes())
+					val, err := ber.ParseInt64(warningPacket.Data.Bytes())
 					if err != nil {
 						return fmt.Errorf("failed to decode data bytes: %s", err)
 					}
-					val, ok := packet.Value.(int64)
-					if ok {
-						if warningPacket.Tag == 0 {
-							//timeBeforeExpiration
-							value.Description += " (TimeBeforeExpiration)"
-							warningPacket.Value = val
-						} else if warningPacket.Tag == 1 {
-							//graceAuthNsRemaining
-							value.Description += " (GraceAuthNsRemaining)"
-							warningPacket.Value = val
-						}
+					if warningPacket.Tag == 0 {
+						//timeBeforeExpiration
+						value.Description += " (TimeBeforeExpiration)"
+						warningPacket.Value = val
+					} else if warningPacket.Tag == 1 {
+						//graceAuthNsRemaining
+						value.Description += " (GraceAuthNsRemaining)"
+						warningPacket.Value = val
 					}
 				} else if child.Tag == 1 {
 					// Error
-					packet, err := ber.DecodePacketErr(child.Data.Bytes())
-					if err != nil {
-						return fmt.Errorf("failed to decode data bytes: %s", err)
+					bs := child.Data.Bytes()
+					if len(bs) != 1 || bs[0] > 8 {
+						return fmt.Errorf("failed to decode data bytes: %s", "invalid PasswordPolicyResponse enum value")
 					}
-					val, ok := packet.Value.(int8)
-					if !ok {
-						val = -1
-					}
+					val := int8(bs[0])
 					child.Description = "Error"
 					child.Value = val
 				}

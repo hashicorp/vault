@@ -3,6 +3,8 @@ package linodego
 import (
 	"context"
 	"fmt"
+
+	"github.com/linode/linodego/pkg/errors"
 )
 
 // LinodeType represents a linode type object
@@ -82,7 +84,7 @@ func (c *Client) GetType(ctx context.Context, typeID string) (*LinodeType, error
 	}
 	e = fmt.Sprintf("%s/%s", e, typeID)
 
-	r, err := coupleAPIErrors(c.Types.R(ctx).Get(e))
+	r, err := errors.CoupleAPIErrors(c.Types.R(ctx).Get(e))
 	if err != nil {
 		return nil, err
 	}

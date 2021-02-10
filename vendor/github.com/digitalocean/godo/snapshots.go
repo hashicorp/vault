@@ -37,6 +37,7 @@ type Snapshot struct {
 	MinDiskSize   int      `json:"min_disk_size,omitempty"`
 	SizeGigaBytes float64  `json:"size_gigabytes,omitempty"`
 	Created       string   `json:"created_at,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
 }
 
 type snapshotRoot struct {
@@ -46,6 +47,7 @@ type snapshotRoot struct {
 type snapshotsRoot struct {
 	Snapshots []Snapshot `json:"snapshots"`
 	Links     *Links     `json:"links,omitempty"`
+	Meta      *Meta      `json:"meta,omitempty"`
 }
 
 type listSnapshotOptions struct {

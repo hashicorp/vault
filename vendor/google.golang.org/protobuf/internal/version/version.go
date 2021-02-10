@@ -54,7 +54,7 @@ const (
 	Major      = 1
 	Minor      = 25
 	Patch      = 0
-	PreRelease = ""
+	PreRelease = "devel"
 )
 
 // String formats the version string for this module in semver format.

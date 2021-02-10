@@ -36,6 +36,9 @@ type Location struct {
 	// no documentation yet
 	BackboneDependents []Network_Backbone_Location_Dependent `json:"backboneDependents,omitempty" xmlrpc:"backboneDependents,omitempty"`
 
+	// A flag indicating whether or not the datacenter/location is BNPP compliant.
+	BnppCompliantFlag *bool `json:"bnppCompliantFlag,omitempty" xmlrpc:"bnppCompliantFlag,omitempty"`
+
 	// A flag indicating whether or not the datacenter/location is EU compliant.
 	EuCompliantFlag *bool `json:"euCompliantFlag,omitempty" xmlrpc:"euCompliantFlag,omitempty"`
 
@@ -56,6 +59,12 @@ type Location struct {
 
 	// A location's physical address.
 	LocationAddress *Account_Address `json:"locationAddress,omitempty" xmlrpc:"locationAddress,omitempty"`
+
+	// A count of a location's physical addresses.
+	LocationAddressCount *uint `json:"locationAddressCount,omitempty" xmlrpc:"locationAddressCount,omitempty"`
+
+	// A location's physical addresses.
+	LocationAddresses []Account_Address `json:"locationAddresses,omitempty" xmlrpc:"locationAddresses,omitempty"`
 
 	// A location's Dedicated Rack member
 	LocationReservationMember *Location_Reservation_Rack_Member `json:"locationReservationMember,omitempty" xmlrpc:"locationReservationMember,omitempty"`
@@ -296,6 +305,9 @@ type Location_Region_Location struct {
 
 	// The SoftLayer_Location tied to a region's location. This provides more information about the location, including specific datacenter information.
 	Location *Location `json:"location,omitempty" xmlrpc:"location,omitempty"`
+
+	// no documentation yet
+	LocationId *int `json:"locationId,omitempty" xmlrpc:"locationId,omitempty"`
 
 	// A count of a region's location also has delivery information as well as other information to be determined. For now, availability is provided and could weigh into the decision as to where to decide to have a server provisioned.'
 	LocationPackageDetailCount *uint `json:"locationPackageDetailCount,omitempty" xmlrpc:"locationPackageDetailCount,omitempty"`

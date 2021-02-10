@@ -46,7 +46,7 @@ A basic interaction with the FoundationDB API is demonstrated below:
 
     func main() {
         // Different API versions may expose different runtime behaviors.
-        fdb.MustAPIVersion(610)
+        fdb.MustAPIVersion(700)
 
         // Open the default database from the system cluster
         db := fdb.MustOpenDefault()
@@ -139,6 +139,16 @@ error. The above example may be rewritten as:
         return []string{valueOne, valueTwo}, nil
     })
 
+MustGet returns nil (which is different from empty slice []byte{}), when the
+key doesn't exist, and hence non-existence can be checked as follows:
+
+    val := tr.Get(fdb.Key("foobar")).MustGet()
+    if val == nil {
+      fmt.Println("foobar does not exist.")
+    } else {
+      fmt.Println("foobar exists.")
+    }
+
 Any panic that occurs during execution of the caller-provided function will be
 recovered by the (Database).Transact method. If the error is an FDB Error, it
 will either result in a retry of the function or be returned by Transact. If the
@@ -203,7 +213,8 @@ operands to atomic operations in this API must be provided as appropriately
 encoded byte slices. To convert a Go type to a byte slice, see the binary
 package.
 
-The current atomic operations in this API are Add, BitAnd, BitOr, BitXor, Max, Min,
-SetVersionstampedKey, SetVersionstampedValue (all methods on Transaction).
+The current atomic operations in this API are Add, BitAnd, BitOr, BitXor,
+CompareAndClear, Max, Min, SetVersionstampedKey, SetVersionstampedValue
+(all methods on Transaction).
 */
 package fdb

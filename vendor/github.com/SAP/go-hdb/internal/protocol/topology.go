@@ -1,85 +1,30 @@
-/*
-Copyright 2014 SAP SE
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2014-2020 SAP SE
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package protocol
 
 import (
 	"fmt"
 
-	"github.com/SAP/go-hdb/internal/bufio"
+	"github.com/SAP/go-hdb/internal/protocol/encoding"
 )
 
-type topologyInformation struct {
-	mlo     multiLineOptions
-	_numArg int
-}
+type topologyInformation multiLineOptions
 
-func newTopologyInformation() *topologyInformation {
-	return &topologyInformation{
-		mlo: multiLineOptions{},
-	}
-}
-
-func (o *topologyInformation) String() string {
-	mlo := make([]map[topologyOption]interface{}, len(o.mlo))
-	for i, po := range o.mlo {
+func (o topologyInformation) String() string {
+	mlo := make([]map[topologyOption]interface{}, len(o))
+	for i, po := range o {
 		typedPo := make(map[topologyOption]interface{})
 		for k, v := range po {
 			typedPo[topologyOption(k)] = v
 		}
 		mlo[i] = typedPo
 	}
-	return fmt.Sprintf("%s", mlo)
+	return fmt.Sprintf("options %s", mlo)
 }
 
-func (o *topologyInformation) kind() partKind {
-	return pkTopologyInformation
-}
-
-func (o *topologyInformation) size() int {
-	return o.mlo.size()
-}
-
-func (o *topologyInformation) numArg() int {
-	return len(o.mlo)
-}
-
-func (o *topologyInformation) setNumArg(numArg int) {
-	o._numArg = numArg
-}
-
-func (o *topologyInformation) read(rd *bufio.Reader) error {
-	o.mlo.read(rd, o._numArg)
-
-	if trace {
-		outLogger.Printf("topology options: %v", o)
-	}
-
-	return rd.GetError()
-}
-
-func (o *topologyInformation) write(wr *bufio.Writer) error {
-	for _, m := range o.mlo {
-		wr.WriteInt16(int16(len(m)))
-		o.mlo.write(wr)
-	}
-
-	if trace {
-		outLogger.Printf("topology options: %v", o)
-	}
-
-	return nil
+func (o *topologyInformation) decode(dec *encoding.Decoder, ph *partHeader) error {
+	(*multiLineOptions)(o).decode(dec, ph.numArg())
+	return dec.Error()
 }
