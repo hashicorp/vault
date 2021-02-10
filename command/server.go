@@ -1096,8 +1096,9 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 	if config.ServiceRegistration != nil {
 		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
 		if !ok {
-			observer.Error("config-service-registration", nil)
-			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
+			err = fmt.Errorf("Unknown service_registration type %s", config.ServiceRegistration.Type)
+			observer.Error("config-service-registration", err)
+			c.UI.Error(err.Error())
 			return 1
 		}
 
@@ -1286,45 +1287,49 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 	var ok bool
 	if config.HAStorage != nil {
 		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
-			observer.Error("config-ha-storage", nil)
-			c.UI.Error("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
+			err = fmt.Errorf("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
+			observer.Error("config-ha-storage", err)
+			c.UI.Error(err.Error())
 			return 1
 		}
 
 		if config.Storage.Type == storageTypeRaft {
-			observer.Error("config-ha-storage", nil)
-			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
+			err = fmt.Errorf("HA storage cannot be declared when Raft is the storage type")
+			observer.Error("config-ha-storage", err)
+			c.UI.Error(err.Error())
 			return 1
 		}
 
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
-			observer.Error("config-ha-storage", nil)
-			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
+			err = fmt.Errorf(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
+			observer.Error("config-ha-storage", err)
+			c.UI.Error(err.Error())
 			return 1
-
 		}
 
 		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
 		c.allLoggers = append(c.allLoggers, namedHALogger)
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
+			err = fmt.Errorf(
+				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err)
 			observer.Error("storage-ha", err)
-			c.UI.Error(fmt.Sprintf(
-				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
+			c.UI.Error(err.Error())
 			return 1
-
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
+			err = fmt.Errorf("Specified HA storage does not support HA")
 			observer.Error("storage-ha-unsupported", err)
-			c.UI.Error("Specified HA storage does not support HA")
+			c.UI.Error(err.Error())
 			return 1
 		}
 
 		if !coreConfig.HAPhysical.HAEnabled() {
+			err = fmt.Errorf("Specified HA storage has HA support disabled; please consult documentation")
 			observer.Error("storage-ha-disabled", err)
-			c.UI.Error("Specified HA storage has HA support disabled; please consult documentation")
+			c.UI.Error(err.Error())
 			return 1
 		}
 
@@ -1332,8 +1337,9 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 		disableClustering = config.HAStorage.DisableClustering
 
 		if config.HAStorage.Type == storageTypeRaft && disableClustering {
+			err = fmt.Errorf("Disable clustering cannot be set to true when Raft is the HA storage type")
 			observer.Error("config-clustering", err)
-			c.UI.Error("Disable clustering cannot be set to true when Raft is the HA storage type")
+			c.UI.Error(err.Error())
 			return 1
 		}
 
@@ -1346,8 +1352,9 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 			disableClustering = config.Storage.DisableClustering
 
 			if (config.Storage.Type == storageTypeRaft) && disableClustering {
+				err = fmt.Errorf("Disable clustering cannot be set to true when Raft is the storage type")
 				observer.Error("config-clustering", err)
-				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
+				c.UI.Error(err.Error())
 				return 1
 			}
 
