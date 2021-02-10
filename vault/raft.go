@@ -710,7 +710,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 	return nil
 }
 
-func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, readReplica bool) (bool, error) {
+func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
 		return false, errors.New("raft backend not in use")
@@ -881,7 +881,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				challenge:           eBlob,
 				leaderClient:        apiClient,
 				leaderBarrierConfig: &sealConfig,
-				readReplica:         readReplica,
+				nonVoter:            nonVoter,
 			}
 
 			// If we're using Shamir and using raft for both physical and HA, we
@@ -1077,7 +1077,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		"answer":       base64.StdEncoding.EncodeToString(plaintext),
 		"cluster_addr": clusterAddr,
 		"server_id":    raftBackend.NodeID(),
-		"read_replica": raftInfo.readReplica,
+		"non_voter":    raftInfo.nonVoter,
 	}); err != nil {
 		return err
 	}
