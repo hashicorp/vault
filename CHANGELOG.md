@@ -126,6 +126,7 @@ IMPROVEMENTS:
 * storage/raft (enterprise): Listing of peers is now allowed on DR secondary
 cluster nodes, as an update operation that takes in DR operation token for
 authenticating the request.
+* core: allow setting tls_servername for raft retry/auto-join [[GH-10698](https://github.com/hashicorp/vault/pull/10698)]
 
 BUG FIXES:
 

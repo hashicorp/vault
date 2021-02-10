@@ -5,7 +5,7 @@ This helper returns a url to the changelog for the specified version.
 It assumes that Changelog headers for Vault versions >= 1.4.3 are structured as:
 
 ## 1.5.0
-### Month, DD, YYYY
+### Month, DD, yyyy
 
 ## 1.4.5
 ### Month, DD, YYY

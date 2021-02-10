@@ -51,8 +51,8 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if req.NonVoter && !nonVotersAllowed {
-		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"))
+	if req.ReadReplica && !readReplicasAllowed {
+		respondError(w, http.StatusBadRequest, errors.New("read-replica nodes not allowed"))
 		return
 	}
 
@@ -83,7 +83,7 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		},
 	}
 
-	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
+	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.ReadReplica)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -109,5 +109,5 @@ type JoinRequest struct {
 	LeaderClientKey     string `json:"leader_client_key"`
 	LeaderTLSServerName string `json:"leader_tls_servername"`
 	Retry               bool   `json:"retry"`
-	NonVoter            bool   `json:"non_voter"`
+	ReadReplica         bool   `json:"read_replica"`
 }
