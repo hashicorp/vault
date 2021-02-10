@@ -133,16 +133,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// Create a fresh backoff value
 		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
 
-		ah.logger.Info("authenticating")
-
-		path, header, data, err := am.Authenticate(ctx, ah.client)
-		if err != nil {
-			ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
-			backoffOrQuit(ctx, backoff)
-			continue
-		}
-
 		var clientToUse *api.Client
+		var err error
+		var path string
+		var data map[string]interface{}
+		var header http.Header
 
 		switch am.(type) {
 		case AuthMethodWithClient:
@@ -154,24 +149,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		default:
 			clientToUse = ah.client
-		}
-
-		if ah.wrapTTL > 0 {
-			wrapClient, err := clientToUse.Clone()
-			if err != nil {
-				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff.Seconds())
-				backoffOrQuit(ctx, backoff)
-				continue
-			}
-			wrapClient.SetWrappingLookupFunc(func(string, string) string {
-				return ah.wrapTTL.String()
-			})
-			clientToUse = wrapClient
-		}
-		for key, values := range header {
-			for _, value := range values {
-				clientToUse.AddHeader(key, value)
-			}
 		}
 
 		var secret *api.Secret = new(api.Secret)
@@ -194,6 +171,33 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ClientToken:   secret.Data["id"].(string),
 				LeaseDuration: int(duration),
 				Renewable:     secret.Data["renewable"].(bool),
+			}
+		} else {
+			ah.logger.Info("authenticating")
+
+			path, header, data, err = am.Authenticate(ctx, ah.client)
+			if err != nil {
+				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+		}
+
+		if ah.wrapTTL > 0 {
+			wrapClient, err := clientToUse.Clone()
+			if err != nil {
+				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			wrapClient.SetWrappingLookupFunc(func(string, string) string {
+				return ah.wrapTTL.String()
+			})
+			clientToUse = wrapClient
+		}
+		for key, values := range header {
+			for _, value := range values {
+				clientToUse.AddHeader(key, value)
 			}
 		}
 
