@@ -149,6 +149,8 @@ func DefaultConfig() *Config {
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultPooledClient(),
 		Timeout:    time.Second * 60,
+		MaxRetries: 2,
+		Backoff:    retryablehttp.LinearJitterBackoff,
 	}
 
 	transport := config.HttpClient.Transport.(*http.Transport)
@@ -177,9 +179,6 @@ func DefaultConfig() *Config {
 		// function (to prevent redirects) passing through to it.
 		return http.ErrUseLastResponse
 	}
-
-	config.Backoff = retryablehttp.LinearJitterBackoff
-	config.MaxRetries = 2
 
 	return config
 }
