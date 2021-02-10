@@ -1,1 +1,3 @@
+```release-note:bug
 core/identity: Fix deadlock in entity merge endpoint.
+```
