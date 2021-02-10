@@ -38,7 +38,7 @@ leader node.
 
 - `leader_client_key` `(string: "")` - Client key used to communicate with
   Raft's leader node.
-
+- `leader_tls_servername` `(string: "")` - TLS servername to use when connecting with HTTPS.  Should match one of the names in the DNS SANs of the remote server certificate. 
 - `auto_join` `(string: "")` - Defines any cloud auto-join metadata. If
  supplied, Vault will attempt to automatically discover peers in addition to what
  can be provided via 'leader_api_addr'.
