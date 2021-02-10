@@ -670,6 +670,7 @@ func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
 // falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestStartTime := time.Now()
 		// If we are a performance standby we can handle the request.
 		if core.PerfStandby() {
 			ns, err := namespace.FromContext(r.Context())
@@ -710,10 +711,21 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			handler.ServeHTTP(w, r)
 			return
 		}
+		// vault.core.forwarded_request is a counter metric indicating the number of forwarded requests
+		metrics.IncrCounter([]string{"core", "forwarded_request"}, 1)
+
 		if leaderAddr == "" {
 			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"))
+
+			// vault.core.forwarded_request_error is a counter metric indicating the number of times 
+			// request forwarding failed because there was not an active leader
+			metrics.IncrCounter([]string{"core", "forwarded_request_error"}, 1)
+
 			return
 		}
+
+		// vault.core.handle_request_forwarding is a summary metric measuring the total duration of a forwarded request
+		defer metrics.MeasureSince([]string{"core", "handle_request_forwarding"}, requestStartTime)
 
 		forwardRequest(core, w, r)
 		return
