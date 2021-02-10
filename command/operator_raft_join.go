@@ -14,13 +14,16 @@ var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
 
 type OperatorRaftJoinCommand struct {
 	flagRetry            bool
-	flagNonVoter         bool
 	flagLeaderCACert     string
 	flagLeaderClientCert string
 	flagLeaderClientKey  string
 	flagAutoJoinScheme   string
 	flagAutoJoinPort     uint
+	flagReadReplica      bool
 	*BaseCommand
+
+	// Deprecated flags
+	flagNonVoter bool
 }
 
 func (c *OperatorRaftJoinCommand) Synopsis() string {
@@ -113,6 +116,13 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 		Name:    "non-voter",
 		Target:  &c.flagNonVoter,
 		Default: false,
+		Usage:   "DEPRECATED: Use -read-replica instead.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "read-replica",
+		Target:  &c.flagReadReplica,
+		Default: false,
 		Usage:   "(Enterprise-only) This flag is used to make the server not participate in the Raft quorum, and have it only receive the data replication stream. This can be used to add read scalability to a cluster in cases where a high volume of reads to servers are needed.",
 	})
 
@@ -146,6 +156,15 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 	default:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
+	}
+
+	switch {
+	case c.flagReadReplica:
+		// Prioritize -read-replica flag.
+		c.flagNonVoter = true
+	case c.flagNonVoter:
+		// If the deprecated -non-voter is used, update the -read-replica flag value.
+		c.flagReadReplica = true
 	}
 
 	leaderCACert, err := parseFlagFile(c.flagLeaderCACert)
@@ -182,7 +201,7 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		LeaderClientCert: leaderClientCert,
 		LeaderClientKey:  leaderClientKey,
 		Retry:            c.flagRetry,
-		NonVoter:         c.flagNonVoter,
+		ReadReplica:      c.flagReadReplica,
 	}
 
 	if strings.Contains(leaderInfo, "provider=") {
