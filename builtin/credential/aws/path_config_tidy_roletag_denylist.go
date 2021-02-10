@@ -2,19 +2,18 @@ package awsauth
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	roletagBlacklistConfigPath = "config/tidy/roletag-blacklist"
+	roletagDenyListConfigStorage = "config/tidy/roletag-blacklist"
 )
 
-func (b *backend) pathConfigTidyRoletagBlacklist() *framework.Path {
+func (b *backend) pathConfigTidyRoletagDenyList() *framework.Path {
 	return &framework.Path{
-		Pattern: fmt.Sprintf("%s$", roletagBlacklistConfigPath),
+		Pattern: "config/tidy/roletag-denylist$",
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
@@ -27,33 +26,33 @@ Defaults to 4320h (180 days).`,
 			"disable_periodic_tidy": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of blacklisted entries.",
+				Description: "If set to 'true', disables the periodic tidying of denylisted entries.",
 			},
 		},
 
-		ExistenceCheck: b.pathConfigTidyRoletagBlacklistExistenceCheck,
+		ExistenceCheck: b.pathConfigTidyRoletagDenyListExistenceCheck,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyRoletagBlacklistCreateUpdate,
+				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyRoletagBlacklistCreateUpdate,
+				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyRoletagBlacklistRead,
+				Callback: b.pathConfigTidyRoletagDenyListRead,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyRoletagBlacklistDelete,
+				Callback: b.pathConfigTidyRoletagDenyListDelete,
 			},
 		},
 
-		HelpSynopsis:    pathConfigTidyRoletagBlacklistHelpSyn,
-		HelpDescription: pathConfigTidyRoletagBlacklistHelpDesc,
+		HelpSynopsis:    pathConfigTidyRoletagDenyListHelpSyn,
+		HelpDescription: pathConfigTidyRoletagDenyListHelpDesc,
 	}
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigTidyRoletagDenyListExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 	if err != nil {
 		return false, err
@@ -61,15 +60,15 @@ func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(ctx context.Conte
 	return entry != nil, nil
 }
 
-func (b *backend) lockedConfigTidyRoleTags(ctx context.Context, s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+func (b *backend) lockedConfigTidyRoleTags(ctx context.Context, s logical.Storage) (*tidyDenyListRoleTagConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
 	return b.nonLockedConfigTidyRoleTags(ctx, s)
 }
 
-func (b *backend) nonLockedConfigTidyRoleTags(ctx context.Context, s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
-	entry, err := s.Get(ctx, roletagBlacklistConfigPath)
+func (b *backend) nonLockedConfigTidyRoleTags(ctx context.Context, s logical.Storage) (*tidyDenyListRoleTagConfig, error) {
+	entry, err := s.Get(ctx, roletagDenyListConfigStorage)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func (b *backend) nonLockedConfigTidyRoleTags(ctx context.Context, s logical.Sto
 		return nil, nil
 	}
 
-	var result tidyBlacklistRoleTagConfig
+	var result tidyDenyListRoleTagConfig
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -85,7 +84,7 @@ func (b *backend) nonLockedConfigTidyRoleTags(ctx context.Context, s logical.Sto
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagDenyListCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -94,7 +93,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context
 		return nil, err
 	}
 	if configEntry == nil {
-		configEntry = &tidyBlacklistRoleTagConfig{}
+		configEntry = &tidyDenyListRoleTagConfig{}
 	}
 	safetyBufferInt, ok := data.GetOk("safety_buffer")
 	if ok {
@@ -109,7 +108,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
 
-	entry, err := logical.StorageEntryJSON(roletagBlacklistConfigPath, configEntry)
+	entry, err := logical.StorageEntryJSON(roletagDenyListConfigStorage, configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +120,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagDenyListRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	clientConfig, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -138,23 +137,23 @@ func (b *backend) pathConfigTidyRoletagBlacklistRead(ctx context.Context, req *l
 	}, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagDenyListDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(ctx, roletagBlacklistConfigPath)
+	return nil, req.Storage.Delete(ctx, roletagDenyListConfigStorage)
 }
 
-type tidyBlacklistRoleTagConfig struct {
+type tidyDenyListRoleTagConfig struct {
 	SafetyBuffer        int  `json:"safety_buffer"`
 	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
-const pathConfigTidyRoletagBlacklistHelpSyn = `
-Configures the periodic tidying operation of the blacklisted role tag entries.
+const pathConfigTidyRoletagDenyListHelpSyn = `
+Configures the periodic tidying operation of the denylisted role tag entries.
 `
-const pathConfigTidyRoletagBlacklistHelpDesc = `
-By default, the expired entries in the blacklist will be attempted to be removed
+const pathConfigTidyRoletagDenyListHelpDesc = `
+By default, the expired entries in the deny list will be attempted to be removed
 periodically. This operation will look for expired items in the list and purges them.
 However, there is a safety buffer duration (defaults to 72h), purges the entries
 only if they have been persisting this duration, past its expiration time.
