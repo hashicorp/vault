@@ -883,12 +883,7 @@ func (c *ServerCommand) Run(args []string) int {
 }
 
 // Run through the initialization procedure, reporting any errors to a DiagnoseObserver
-func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) {
-	defer func() {
-		// This wrapper function means we get the real status.
-		observer.Exited(status)
-	}()
-
+func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) int {
 	if c.flagRecovery {
 		return c.runRecoveryMode()
 	}
@@ -902,6 +897,7 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 	if !c.flagDev {
 		switch {
 		case len(c.flagConfigs) == 0:
+			observer.Error("config-absent", nil)
 			c.UI.Error("Must specify at least one config path using -config")
 			return 1
 		case c.flagDevRootTokenID != "":
@@ -917,6 +913,9 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
 			return 1
 		}
+		if observer.IsEnabled() {
+			panic("Recursive run of diagnose")
+		}
 		// TODO: add a file output flag to Diagnose
 		diagnose := &OperatorDiagnoseCommand{
 			BaseCommand: c.BaseCommand,
@@ -924,7 +923,10 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 			flagSkips:   []string{},
 			flagConfigs: c.flagConfigs,
 		}
-		diagnose.RunWithParsedFlags()
+		ret := diagnose.RunWithParsedFlags()
+		if ret != 0 {
+			return ret
+		}
 	}
 
 	// Load the configuration
@@ -968,7 +970,7 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 
 	// Ensure at least one config was found.
 	if config == nil {
-		observer.Error("config-absent", err)
+		observer.Error("config-absent", nil)
 		c.UI.Output(wrapAtLength(
 			"No configuration files found. Please provide configurations with the " +
 				"-config flag. If you are supplying the path to a directory, please " +
@@ -976,6 +978,8 @@ func (c *ServerCommand) RunWithObserver(observer DiagnoseObserver) (status int) 
 				"extension."))
 		return 1
 	}
+
+	observer.ConfigCreated(config)
 
 	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
 	if err != nil {

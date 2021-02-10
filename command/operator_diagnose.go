@@ -2,15 +2,23 @@ package command
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"sync"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
+const OperatorDiagnoseTraceEnv = "VAULT_DIAGNOSE_TRACE"
+
+var traceDiagnose = false
 
 var _ cli.Command = (*OperatorDiagnoseCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
@@ -106,25 +114,42 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 
 // This class records any errors issued during execution of the
 // server command.
-
 type StartupObserver struct {
 	// Placeholder for the whole tree structure
 	// Status reports the step status, Errors contains the original error
 	Status map[string]string
 	Cause  map[string]string
+	Config *server.Config
+	lock   sync.RWMutex
 }
 
-func (n *StartupObserver) Exited(status int) {
+func (o *StartupObserver) Success(key string) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	o.Status[key] = status_ok
+
+	if traceDiagnose {
+		// TODO: use the UI output
+		fmt.Printf("key %v success\n", key)
+	}
 }
 
-func (n *StartupObserver) Success(key string) {
-	n.Status[key] = status_ok
-}
+func (o *StartupObserver) Error(key string, err error) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
 
-func (n *StartupObserver) Error(key string, err error) {
+	if traceDiagnose {
+		fmt.Printf("key %v error %v\n", key, err)
+	}
+
 	switch key {
-	case "config-absent",
-		"config-cluster-address",
+	case "config-absent":
+		// Failure but no error message provided
+		o.Status["config"] = status_failed
+		o.Cause["config"] = "No configuration files found."
+		// TODO: copy the good explanation already present!
+
+	case "config-cluster-address",
 		"config-clustering",
 		"config-core",
 		"config-ha-storage",
@@ -138,38 +163,67 @@ func (n *StartupObserver) Error(key string, err error) {
 		"config-service-registration",
 		"config-telemetry",
 		"config-vault-ui":
-		n.Status["config"] = status_failed
-		n.Cause["config"] = err.Error()
+		o.Status["config"] = status_failed
+		o.Cause["config"] = err.Error()
 	case "config-core-nonfatal":
-		n.Status["config"] = status_warn
-		n.Cause["config"] = err.Error()
+		o.Status["config"] = status_warn
+		o.Cause["config"] = err.Error()
 	case "listener",
 		"listener-cluster-address":
-		n.Status["listener"] = status_failed
-		n.Cause["listener"] = err.Error()
+		o.Status["listener"] = status_failed
+		o.Cause["listener"] = err.Error()
 	case "service-registration":
-		n.Status["listener"] = status_failed
-		n.Cause["listener"] = fmt.Sprintf("Error running service_registration: %s", err.Error())
+		o.Status["listener"] = status_failed
+		o.Cause["listener"] = fmt.Sprintf("Error running service_registration: %s", err.Error())
 	case "storage",
 		"storage-ha",
 		"storage-ha-disabled",
 		"storage-ha-unsupported",
 		"storage-migration",
 		"storage-raft-retry-join":
-		n.Status["storage"] = status_failed
-		n.Cause["storage"] = err.Error()
+		o.Status["storage"] = status_failed
+		o.Cause["storage"] = err.Error()
 	case "unseal",
 		"unseal-barrier",
 		"unseal-config",
 		"unseal-load",
 		"unseal-uninitialized":
-		n.Status["unseal"] = status_failed
-		n.Cause["unseal"] = err.Error()
+		o.Status["unseal"] = status_failed
+		o.Cause["unseal"] = err.Error()
 	}
 }
 
-func (n *StartupObserver) IsEnabled() bool {
+func (o *StartupObserver) ConfigCreated(config *server.Config) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	o.Config = config
+}
+
+func (o *StartupObserver) IsEnabled() bool {
 	return true
+}
+
+// Should we delay and give auto-unseal a chance to run?
+func (o *StartupObserver) WaitForUnseal() bool {
+	o.lock.RLock()
+	defer o.lock.RUnlock()
+	if o.Config == nil {
+		return true
+	}
+
+	_, ok := o.Status["unseal"]
+	if ok {
+		// Got a status already, we're done
+		return false
+	}
+
+	// Is there an auto-unseal configured, or only shamir?
+	for _, seal := range o.Config.Seals {
+		if !seal.Disabled && seal.Type != wrapping.Shamir {
+			return true
+		}
+	}
+	return false
 }
 
 type NullUI struct {
@@ -201,16 +255,20 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		return 1
 	}
 
+	if os.Getenv(OperatorDiagnoseTraceEnv) != "" {
+		traceDiagnose = true
+	}
+
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 
 	shutdownCh := make(chan struct{})
 	startedCh := make(chan struct{})
+	exitedCh := make(chan int)
 
 	nullUI := &VaultUI{
 		Ui:     &NullUI{},
 		format: "json",
 	}
-
 	server := &ServerCommand{
 		// Copy of the base command, but with a UI that won't output
 		BaseCommand: &BaseCommand{
@@ -234,37 +292,151 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		allLoggers: []log.Logger{},
 	}
 
+	// Ensure commands get all their default values
+	server.Run([]string{})
+
+	// Override config flags
+	server.flagConfigs = c.flagConfigs
+
+	// Supress log messages (TODO: can we do this entirely?)
+	server.flagLogLevel = "error"
+
+	observer := &StartupObserver{
+		Status: make(map[string]string),
+		Cause:  make(map[string]string),
+	}
+
 	// We'll run the command in its own goroutine.
 	// If it returns we're done.  If we get startedCh then it was successful.
 	// in that case we may want to delay until UnsealWithStoredKeys is called.
 
-	phase := "Parse configuration"
-	c.UI.Output(status_unknown + phase)
-	server.flagConfigs = c.flagConfigs
-	config, err := server.parseConfig()
-	if err != nil {
-		// TODO: show every file one by one?
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output("Error while reading configuration files:")
-		c.UI.Output(err.Error())
+	go func() {
+		ret := server.RunWithObserver(observer)
+		exitedCh <- ret
+	}()
+
+	timeout := time.After(30 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	vaultExitCode := 0
+	diagnoseExitCode := 0
+	started := false
+	monitoringServer := true
+
+	for monitoringServer {
+		select {
+		case <-timeout:
+			if started {
+				c.UI.Error("Vault shutdown timed out.")
+			} else {
+				close(shutdownCh)
+				c.UI.Error("Vault startup timed out.")
+			}
+			diagnoseExitCode = 1
+			monitoringServer = false
+		case vaultExitCode = <-exitedCh:
+			monitoringServer = false
+		case <-startedCh:
+			// Successful start, keep waiting?
+			started = true
+			if !observer.WaitForUnseal() {
+				close(shutdownCh)
+				// Wait for exit code
+			}
+		case <-ticker.C:
+			if started && !observer.WaitForUnseal() {
+				close(shutdownCh)
+				// Wait for exit code
+			}
+		}
+	}
+	ticker.Stop()
+
+	// Report status
+	// TODO: move to another function, replace by tree structure
+	// that generates templated output
+	observer.lock.RLock()
+	defer observer.lock.RUnlock()
+
+	switch observer.Status["config"] {
+	case "":
+		c.UI.Output(status_failed + "Unknown error caused configuration failure")
+		return 1
+	case status_warn:
+		c.UI.Output(status_warn + "Parsed configuration")
+		c.UI.Output(observer.Cause["config"])
+	case status_ok:
+		c.UI.Output(status_ok + "Parsed configuration")
+	case status_failed:
+		c.UI.Output(status_failed + "Configuration error")
+		c.UI.Output(observer.Cause["config"])
 		return 1
 	}
 
-	// Errors in these items could stop Vault from starting but are not yet covered:
-	// TODO: logging configuration
-	// TODO: SetupTelemetry
-	// TODO: check for storage backend
-	c.UI.Output(same_line + status_ok + phase)
-
-	phase = "Access storage"
-	c.UI.Output(status_unknown + phase)
-	_, err = server.setupStorage(config)
-	if err != nil {
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output(err.Error())
+	storage_type := observer.Config.Storage.Type
+	switch observer.Status["storage"] {
+	case "":
+		c.UI.Output(status_failed + "Unknown error caused storage initialization failure")
+		return 1
+	case status_warn:
+		c.UI.Output(status_warn + "Started " + storage_type + " storage")
+		c.UI.Output(observer.Cause["storage"])
+	case status_ok:
+		c.UI.Output(status_ok + "Started " + storage_type + " storage")
+	case status_failed:
+		c.UI.Output(status_failed + "Storage error initializing " + storage_type)
+		c.UI.Output(observer.Cause["storage"])
 		return 1
 	}
-	c.UI.Output(same_line + status_ok + phase)
 
-	return 0
+	switch observer.Status["listener"] {
+	case "":
+		// If we had an unseal failure first, go on to report that
+		if observer.Status["unseal"] == "" {
+			c.UI.Output(status_failed + "Unknown error caused listener initialization failure")
+			return 1
+		}
+	case status_warn:
+		c.UI.Output(status_warn + "Started listeners")
+		c.UI.Output(observer.Cause["listener"])
+	case status_ok:
+		c.UI.Output(status_ok + "Started listeners")
+	case status_failed:
+		c.UI.Output(status_failed + "Error initializing listeners")
+		c.UI.Output(observer.Cause["listener"])
+		return 1
+	}
+
+	seal_type := wrapping.Shamir
+	for _, seal := range observer.Config.Seals {
+		if !seal.Disabled && seal.Type != wrapping.Shamir {
+			seal_type = seal.Type
+			break
+		}
+	}
+
+	if seal_type == wrapping.Shamir {
+		c.UI.Output(status_unknown + "Shamir unseal requires user input")
+	} else {
+		switch observer.Status["unseal"] {
+		case "":
+			c.UI.Output(status_failed + "Unknown error caused unseal failure")
+			return 1
+		case status_warn:
+			c.UI.Output(status_warn + "Auto-unseal using " + seal_type + " succeeded with warnings")
+			c.UI.Output(observer.Cause["listener"])
+		case status_ok:
+			c.UI.Output(status_ok + "Auto-unseal using " + seal_type + " succeeded")
+		case status_failed:
+			c.UI.Output(status_failed + "Error during " + seal_type + " unseal")
+			c.UI.Output(observer.Cause["unseal"])
+			return 1
+		}
+	}
+
+	if vaultExitCode != 0 {
+		c.UI.Output(fmt.Sprintf("%vVault exited with status code %v due to an undiagnosed error", status_failed, vaultExitCode))
+	} else {
+		c.UI.Output("Vault Diagnose could not detect any problems during startup.")
+	}
+	return diagnoseExitCode
 }
