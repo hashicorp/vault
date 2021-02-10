@@ -277,7 +277,7 @@ func anyToSockaddr(fd int, rsa *RawSockaddrAny) (Sockaddr, error) {
 		}
 		return sa, nil
 	}
-	return anyToSockaddrGOOS(fd, rsa)
+	return nil, EAFNOSUPPORT
 }
 
 func Accept(fd int) (nfd int, sa Sockaddr, err error) {

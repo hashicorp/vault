@@ -88,6 +88,7 @@ type Stat_t struct {
 	Mtim    Timespec
 	Ctim    Timespec
 	Blksize int32
+	_       [4]byte
 	Blocks  int64
 	Fstype  [16]int8
 }
@@ -95,6 +96,7 @@ type Stat_t struct {
 type Flock_t struct {
 	Type   int16
 	Whence int16
+	_      [4]byte
 	Start  int64
 	Len    int64
 	Sysid  int32
@@ -136,12 +138,12 @@ type RawSockaddrInet4 struct {
 }
 
 type RawSockaddrInet6 struct {
-	Family   uint16
-	Port     uint16
-	Flowinfo uint32
-	Addr     [16]byte /* in6_addr */
-	Scope_id uint32
-	_        uint32
+	Family         uint16
+	Port           uint16
+	Flowinfo       uint32
+	Addr           [16]byte /* in6_addr */
+	Scope_id       uint32
+	X__sin6_src_id uint32
 }
 
 type RawSockaddrUnix struct {
@@ -194,8 +196,10 @@ type IPv6Mreq struct {
 type Msghdr struct {
 	Name         *byte
 	Namelen      uint32
+	_            [4]byte
 	Iov          *Iovec
 	Iovlen       int32
+	_            [4]byte
 	Accrights    *int8
 	Accrightslen int32
 	_            [4]byte
@@ -224,7 +228,7 @@ type IPv6MTUInfo struct {
 }
 
 type ICMPv6Filter struct {
-	Filt [8]uint32
+	X__icmp6_filt [8]uint32
 }
 
 const (
@@ -234,7 +238,6 @@ const (
 	SizeofSockaddrUnix     = 0x6e
 	SizeofSockaddrDatalink = 0xfc
 	SizeofLinger           = 0x8
-	SizeofIovec            = 0x10
 	SizeofIPMreq           = 0x8
 	SizeofIPv6Mreq         = 0x14
 	SizeofMsghdr           = 0x30
@@ -288,6 +291,7 @@ type IfMsghdr struct {
 	Addrs   int32
 	Flags   int32
 	Index   uint16
+	_       [2]byte
 	Data    IfData
 }
 
@@ -295,6 +299,7 @@ type IfData struct {
 	Type       uint8
 	Addrlen    uint8
 	Hdrlen     uint8
+	_          [1]byte
 	Mtu        uint32
 	Metric     uint32
 	Baudrate   uint32
@@ -319,6 +324,7 @@ type IfaMsghdr struct {
 	Addrs   int32
 	Flags   int32
 	Index   uint16
+	_       [2]byte
 	Metric  int32
 }
 
@@ -327,6 +333,7 @@ type RtMsghdr struct {
 	Version uint8
 	Type    uint8
 	Index   uint16
+	_       [2]byte
 	Flags   int32
 	Addrs   int32
 	Pid     int32
@@ -364,14 +371,15 @@ type BpfVersion struct {
 }
 
 type BpfStat struct {
-	Recv uint64
-	Drop uint64
-	Capt uint64
-	_    [13]uint64
+	Recv    uint64
+	Drop    uint64
+	Capt    uint64
+	Padding [13]uint64
 }
 
 type BpfProgram struct {
 	Len   uint32
+	_     [4]byte
 	Insns *BpfInsn
 }
 

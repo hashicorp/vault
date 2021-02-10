@@ -63,7 +63,7 @@ func ConnectionsPidWithContext(ctx context.Context, kind string, pid int32) ([]C
 	case "udp":
 		args = append(args, "udp")
 	case "udp4":
-		args = append(args, "4udp")
+		args = append(args, "6udp")
 	case "udp6":
 		args = append(args, "6udp")
 	case "unix":

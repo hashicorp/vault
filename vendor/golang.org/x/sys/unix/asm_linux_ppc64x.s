@@ -4,7 +4,7 @@
 
 // +build linux
 // +build ppc64 ppc64le
-// +build gc
+// +build !gccgo
 
 #include "textflag.h"
 

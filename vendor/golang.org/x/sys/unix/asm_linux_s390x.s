@@ -4,7 +4,7 @@
 
 // +build s390x
 // +build linux
-// +build gc
+// +build !gccgo
 
 #include "textflag.h"
 

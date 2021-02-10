@@ -70,6 +70,7 @@ type Stat_t struct {
 	Uid     uint32
 	Gid     uint32
 	Rdev    int32
+	_       [4]byte
 	Atim    Timespec
 	Mtim    Timespec
 	Ctim    Timespec
@@ -96,11 +97,10 @@ type Statfs_t struct {
 	Type        uint32
 	Flags       uint32
 	Fssubtype   uint32
-	Fstypename  [16]byte
-	Mntonname   [1024]byte
-	Mntfromname [1024]byte
-	Flags_ext   uint32
-	Reserved    [7]uint32
+	Fstypename  [16]int8
+	Mntonname   [1024]int8
+	Mntfromname [1024]int8
+	Reserved    [8]uint32
 }
 
 type Flock_t struct {
@@ -133,7 +133,8 @@ type Fbootstraptransfer_t struct {
 
 type Log2phys_t struct {
 	Flags uint32
-	_     [16]byte
+	_     [8]byte
+	_     [8]byte
 }
 
 type Fsid struct {
@@ -199,15 +200,6 @@ type RawSockaddrAny struct {
 	Pad  [92]int8
 }
 
-type RawSockaddrCtl struct {
-	Sc_len      uint8
-	Sc_family   uint8
-	Ss_sysaddr  uint16
-	Sc_id       uint32
-	Sc_unit     uint32
-	Sc_reserved [5]uint32
-}
-
 type _Socklen uint32
 
 type Linger struct {
@@ -233,8 +225,10 @@ type IPv6Mreq struct {
 type Msghdr struct {
 	Name       *byte
 	Namelen    uint32
+	_          [4]byte
 	Iov        *Iovec
 	Iovlen     int32
+	_          [4]byte
 	Control    *byte
 	Controllen uint32
 	Flags      int32
@@ -272,9 +266,7 @@ const (
 	SizeofSockaddrAny      = 0x6c
 	SizeofSockaddrUnix     = 0x6a
 	SizeofSockaddrDatalink = 0x14
-	SizeofSockaddrCtl      = 0x20
 	SizeofLinger           = 0x8
-	SizeofIovec            = 0x10
 	SizeofIPMreq           = 0x8
 	SizeofIPv6Mreq         = 0x14
 	SizeofMsghdr           = 0x30
@@ -321,6 +313,7 @@ type IfMsghdr struct {
 	Addrs   int32
 	Flags   int32
 	Index   uint16
+	_       [2]byte
 	Data    IfData
 }
 
@@ -363,6 +356,7 @@ type IfaMsghdr struct {
 	Addrs   int32
 	Flags   int32
 	Index   uint16
+	_       [2]byte
 	Metric  int32
 }
 
@@ -383,6 +377,7 @@ type IfmaMsghdr2 struct {
 	Addrs    int32
 	Flags    int32
 	Index    uint16
+	_        [2]byte
 	Refcount int32
 }
 
@@ -391,6 +386,7 @@ type RtMsghdr struct {
 	Version uint8
 	Type    uint8
 	Index   uint16
+	_       [2]byte
 	Flags   int32
 	Addrs   int32
 	Pid     int32
@@ -412,8 +408,7 @@ type RtMetrics struct {
 	Rtt      uint32
 	Rttvar   uint32
 	Pksent   uint32
-	State    uint32
-	Filler   [3]uint32
+	Filler   [4]uint32
 }
 
 const (
@@ -436,6 +431,7 @@ type BpfStat struct {
 
 type BpfProgram struct {
 	Len   uint32
+	_     [4]byte
 	Insns *BpfInsn
 }
 
@@ -460,6 +456,7 @@ type Termios struct {
 	Cflag  uint64
 	Lflag  uint64
 	Cc     [20]uint8
+	_      [4]byte
 	Ispeed uint64
 	Ospeed uint64
 }
@@ -513,9 +510,4 @@ type Clockinfo struct {
 	Tickadj int32
 	Stathz  int32
 	Profhz  int32
-}
-
-type CtlInfo struct {
-	Id   uint32
-	Name [96]byte
 }

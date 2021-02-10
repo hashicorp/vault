@@ -4,9 +4,11 @@
 
 package unix
 
-import "syscall"
+import (
+	"syscall"
+)
 
-func ptrace1(request int, pid int, addr uintptr, data uintptr) error {
+func ptrace(request int, pid int, addr uintptr, data uintptr) error {
 	return ENOTSUP
 }
 

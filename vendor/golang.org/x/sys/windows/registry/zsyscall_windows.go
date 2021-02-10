@@ -19,7 +19,6 @@ const (
 
 var (
 	errERROR_IO_PENDING error = syscall.Errno(errnoERROR_IO_PENDING)
-	errERROR_EINVAL     error = syscall.EINVAL
 )
 
 // errnoErr returns common boxed Errno values, to prevent
@@ -27,7 +26,7 @@ var (
 func errnoErr(e syscall.Errno) error {
 	switch e {
 	case 0:
-		return errERROR_EINVAL
+		return nil
 	case errnoERROR_IO_PENDING:
 		return errERROR_IO_PENDING
 	}
@@ -41,23 +40,15 @@ var (
 	modadvapi32 = windows.NewLazySystemDLL("advapi32.dll")
 	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 
-	procRegConnectRegistryW       = modadvapi32.NewProc("RegConnectRegistryW")
 	procRegCreateKeyExW           = modadvapi32.NewProc("RegCreateKeyExW")
 	procRegDeleteKeyW             = modadvapi32.NewProc("RegDeleteKeyW")
-	procRegDeleteValueW           = modadvapi32.NewProc("RegDeleteValueW")
-	procRegEnumValueW             = modadvapi32.NewProc("RegEnumValueW")
-	procRegLoadMUIStringW         = modadvapi32.NewProc("RegLoadMUIStringW")
 	procRegSetValueExW            = modadvapi32.NewProc("RegSetValueExW")
+	procRegEnumValueW             = modadvapi32.NewProc("RegEnumValueW")
+	procRegDeleteValueW           = modadvapi32.NewProc("RegDeleteValueW")
+	procRegLoadMUIStringW         = modadvapi32.NewProc("RegLoadMUIStringW")
+	procRegConnectRegistryW       = modadvapi32.NewProc("RegConnectRegistryW")
 	procExpandEnvironmentStringsW = modkernel32.NewProc("ExpandEnvironmentStringsW")
 )
-
-func regConnectRegistry(machinename *uint16, key syscall.Handle, result *syscall.Handle) (regerrno error) {
-	r0, _, _ := syscall.Syscall(procRegConnectRegistryW.Addr(), 3, uintptr(unsafe.Pointer(machinename)), uintptr(key), uintptr(unsafe.Pointer(result)))
-	if r0 != 0 {
-		regerrno = syscall.Errno(r0)
-	}
-	return
-}
 
 func regCreateKeyEx(key syscall.Handle, subkey *uint16, reserved uint32, class *uint16, options uint32, desired uint32, sa *syscall.SecurityAttributes, result *syscall.Handle, disposition *uint32) (regerrno error) {
 	r0, _, _ := syscall.Syscall9(procRegCreateKeyExW.Addr(), 9, uintptr(key), uintptr(unsafe.Pointer(subkey)), uintptr(reserved), uintptr(unsafe.Pointer(class)), uintptr(options), uintptr(desired), uintptr(unsafe.Pointer(sa)), uintptr(unsafe.Pointer(result)), uintptr(unsafe.Pointer(disposition)))
@@ -75,8 +66,8 @@ func regDeleteKey(key syscall.Handle, subkey *uint16) (regerrno error) {
 	return
 }
 
-func regDeleteValue(key syscall.Handle, name *uint16) (regerrno error) {
-	r0, _, _ := syscall.Syscall(procRegDeleteValueW.Addr(), 2, uintptr(key), uintptr(unsafe.Pointer(name)), 0)
+func regSetValueEx(key syscall.Handle, valueName *uint16, reserved uint32, vtype uint32, buf *byte, bufsize uint32) (regerrno error) {
+	r0, _, _ := syscall.Syscall6(procRegSetValueExW.Addr(), 6, uintptr(key), uintptr(unsafe.Pointer(valueName)), uintptr(reserved), uintptr(vtype), uintptr(unsafe.Pointer(buf)), uintptr(bufsize))
 	if r0 != 0 {
 		regerrno = syscall.Errno(r0)
 	}
@@ -91,6 +82,14 @@ func regEnumValue(key syscall.Handle, index uint32, name *uint16, nameLen *uint3
 	return
 }
 
+func regDeleteValue(key syscall.Handle, name *uint16) (regerrno error) {
+	r0, _, _ := syscall.Syscall(procRegDeleteValueW.Addr(), 2, uintptr(key), uintptr(unsafe.Pointer(name)), 0)
+	if r0 != 0 {
+		regerrno = syscall.Errno(r0)
+	}
+	return
+}
+
 func regLoadMUIString(key syscall.Handle, name *uint16, buf *uint16, buflen uint32, buflenCopied *uint32, flags uint32, dir *uint16) (regerrno error) {
 	r0, _, _ := syscall.Syscall9(procRegLoadMUIStringW.Addr(), 7, uintptr(key), uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(buf)), uintptr(buflen), uintptr(unsafe.Pointer(buflenCopied)), uintptr(flags), uintptr(unsafe.Pointer(dir)), 0, 0)
 	if r0 != 0 {
@@ -99,8 +98,8 @@ func regLoadMUIString(key syscall.Handle, name *uint16, buf *uint16, buflen uint
 	return
 }
 
-func regSetValueEx(key syscall.Handle, valueName *uint16, reserved uint32, vtype uint32, buf *byte, bufsize uint32) (regerrno error) {
-	r0, _, _ := syscall.Syscall6(procRegSetValueExW.Addr(), 6, uintptr(key), uintptr(unsafe.Pointer(valueName)), uintptr(reserved), uintptr(vtype), uintptr(unsafe.Pointer(buf)), uintptr(bufsize))
+func regConnectRegistry(machinename *uint16, key syscall.Handle, result *syscall.Handle) (regerrno error) {
+	r0, _, _ := syscall.Syscall(procRegConnectRegistryW.Addr(), 3, uintptr(unsafe.Pointer(machinename)), uintptr(key), uintptr(unsafe.Pointer(result)))
 	if r0 != 0 {
 		regerrno = syscall.Errno(r0)
 	}
@@ -111,7 +110,11 @@ func expandEnvironmentStrings(src *uint16, dst *uint16, size uint32) (n uint32, 
 	r0, _, e1 := syscall.Syscall(procExpandEnvironmentStringsW.Addr(), 3, uintptr(unsafe.Pointer(src)), uintptr(unsafe.Pointer(dst)), uintptr(size))
 	n = uint32(r0)
 	if n == 0 {
-		err = errnoErr(e1)
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
 	}
 	return
 }
