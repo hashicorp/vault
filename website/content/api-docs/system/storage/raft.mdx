@@ -39,6 +39,19 @@ leader node.
 - `leader_client_key` `(string: "")` - Client key used to communicate with
   Raft's leader node.
 
+- `auto_join` `(string: "")` - Defines any cloud auto-join metadata. If
+ supplied, Vault will attempt to automatically discover peers in addition to what
+ can be provided via 'leader_api_addr'.
+
+- `auto_join_scheme` `(string: "https")` - URI scheme to be used for `auto_join`.
+
+- `auto_join_port` `(int: 8200)` - Port to be used for `auto_join`.
+
+- `-non-voter` `(bool: false) (enterprise)` - If set, will make the server not
+ participate in the Raft quorum, and have it only receive the data replication
+ stream. This can be used to add read scalability to a cluster in cases where a
+ high volume of reads to servers are needed. The default is false.
+
 ### Sample Payload
 
 ```json
