@@ -794,38 +794,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
-	// If there is a autopilot config in storage that takes precedence
-	if opts.AutopilotConfig != nil {
-		// Use the config present in storage
-		b.logger.Info("setting autopilot configuration retrieved from storage")
-		b.autopilotConfig = opts.AutopilotConfig
-	}
-
-	// Autopilot config wasn't found in storage
-	if b.autopilotConfig == nil {
-		// Check if autopilot settings were part of config file
-		conf, err := b.autopilotConf()
-		if err != nil {
-			return err
-		}
-
-		switch {
-		case conf != nil:
-			b.logger.Info("setting autopilot configuration retrieved from config file")
-			// Use the config present in config file
-			b.autopilotConfig = conf
-		default:
-			// Autopilot config is not in both storage and config file. This is the case for
-			// existing customers who have not yet enabled autopilot. Disable autopilot.
-			b.logger.Info("autopilot configuration not found; disabling autopilot")
-			b.disableAutopilot = true
-		}
-	}
-
-	if !b.disableAutopilot {
-		// Create the autopilot instance
-		b.logger.Info("setting up autopilot", "config", b.autopilotConfig)
-		b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(autopilot.DefaultPromoter()))
+	if err := b.setupAutopilot(opts); err != nil {
+		return err
 	}
 
 	if b.streamLayer != nil {
