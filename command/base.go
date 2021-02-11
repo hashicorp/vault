@@ -2,16 +2,20 @@ package command
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -60,6 +64,37 @@ type BaseCommand struct {
 	tokenHelper token.TokenHelper
 
 	client *api.Client
+
+	logger log.Logger
+}
+
+func retryPolicy(checkRetry retryablehttp.CheckRetry, logger log.Logger) retryablehttp.CheckRetry {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+
+		log := logger.Named("retry.check")
+		if err == nil && resp.StatusCode == 307 {
+			log.Debug(fmt.Sprintf("retry for response code %d", resp.StatusCode))
+			return true, nil
+		}
+
+		retry, defErr := checkRetry(ctx, resp, err)
+		if err == nil && retry {
+			log.Debug(fmt.Sprintf("retry for response code %d", resp.StatusCode))
+		}
+
+		return retry, defErr
+	}
+}
+
+func backoffPolicy(backoff retryablehttp.Backoff, logger log.Logger) retryablehttp.Backoff {
+	return func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+
+		d := backoff(min, max, attemptNum, resp)
+		log := logger.Named("retry.backoff")
+		log.Debug(fmt.Sprintf("min duration %s, max duration %s, attempt %d, next retry: %s", min, max, attemptNum, d))
+
+		return d
+	}
 }
 
 // Client returns the HTTP API client. The client is cached on the command to
@@ -71,6 +106,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	config := api.DefaultConfig()
+	config.CheckRetry = retryPolicy(config.CheckRetry, c.logger)
+	config.Backoff = backoffPolicy(config.Backoff, c.logger)
 
 	if err := config.ReadEnvironment(); err != nil {
 		return nil, errors.Wrap(err, "failed to read environment")

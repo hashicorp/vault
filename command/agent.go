@@ -58,7 +58,6 @@ type AgentCommand struct {
 
 	logWriter io.Writer
 	logGate   *gatedwriter.Writer
-	logger    log.Logger
 
 	cleanupGuard sync.Once
 

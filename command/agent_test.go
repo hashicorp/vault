@@ -33,10 +33,10 @@ func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCo
 	ui := cli.NewMockUi()
 	return ui, &AgentCommand{
 		BaseCommand: &BaseCommand{
-			UI: ui,
+			UI:     ui,
+			logger: logger,
 		},
 		ShutdownCh: MakeShutdownCh(),
-		logger:     logger,
 	}
 }
 
