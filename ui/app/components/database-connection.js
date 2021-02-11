@@ -7,7 +7,8 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 const getErrorMessage = errors => {
-  let errorMessage = 'Something went wrong. Check the Vault logs for more information.';
+  let errorMessage =
+    'Something went wrong when creating the connection. Check the Vault logs for more information.';
   if (errors?.join(' ').indexOf('failed to verify')) {
     errorMessage =
       'There was a verification error for this connection. Check the Vault logs for more information.';
@@ -21,7 +22,15 @@ export default class DatabaseConnectionEdit extends Component {
   @service flashMessages;
 
   @tracked
-  showPasswordField = false;
+  showPasswordField = false; // used for edit mode
+
+  @tracked
+  showSaveModal = false; // used for create mode
+
+  rotateCredentials(backend, name) {
+    let adapter = this.store.adapterFor('database/connection');
+    return adapter.rotateRootCredentials(backend, name);
+  }
 
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
@@ -48,19 +57,45 @@ export default class DatabaseConnectionEdit extends Component {
     let secret = this.args.model;
     let secretId = secret.name;
     secret.set('id', secretId);
-    secret.save().then(() => {
-      this.transitionToRoute(SHOW_ROUTE, secretId);
-    });
+    secret
+      .save()
+      .then(() => {
+        this.showSaveModal = true;
+      })
+      .catch(e => {
+        const errorMessage = getErrorMessage(e.errors);
+        this.flashMessages.danger(errorMessage);
+      });
   }
 
   @action
-  async handleUpdateConnection(evt) {
+  continueWithoutRotate(evt) {
+    evt.preventDefault();
+    const { name } = this.args.model;
+    this.transitionToRoute(SHOW_ROUTE, name);
+  }
+
+  @action
+  continueWithRotate(evt) {
+    evt.preventDefault();
+    const { backend, name } = this.args.model;
+    this.rotateCredentials(backend, name)
+      .then(() => {
+        this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
+        this.transitionToRoute(SHOW_ROUTE, name);
+      })
+      .catch(e => {
+        const errorMessage = getErrorMessage(e.errors);
+        this.flashMessages.danger(`Error rotating root credentials: ${errorMessage}`);
+        this.transitionToRoute(SHOW_ROUTE, name);
+      });
+  }
+
+  @action
+  handleUpdateConnection(evt) {
     evt.preventDefault();
     let secret = this.args.model;
     let secretId = secret.name;
-    // TODO: remove password unless toggled on
-    // Set to null, and remove null values from request
-    // in serializer if `update`?
     secret.save().then(() => {
       this.transitionToRoute(SHOW_ROUTE, secretId);
     });
@@ -84,7 +119,6 @@ export default class DatabaseConnectionEdit extends Component {
       .resetConnection(backend, name)
       .then(() => {
         // TODO: Why isn't the confirmAction closing?
-        // this.args.onRefresh();
         this.flashMessages.success('Successfully reset connection');
       })
       .catch(e => {
@@ -96,9 +130,7 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   rotate() {
     const { name, backend } = this.args.model;
-    let adapter = this.store.adapterFor('database/connection');
-    adapter
-      .rotateRootCredentials(backend, name)
+    this.rotateCredentials(backend, name)
       .then(() => {
         // TODO: Why isn't the confirmAction closing?
         this.flashMessages.success('Successfully rotated credentials');

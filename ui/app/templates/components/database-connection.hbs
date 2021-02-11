@@ -75,8 +75,7 @@
 {{/if}}
 
 {{#if (eq @mode 'create')}}
-<form
-  {{on 'submit' this.handleCreateConnection}}>
+<form {{on 'submit' this.handleCreateConnection}}>
   {{#each @model.fieldAttrs as |attr|}}
     {{#if (eq attr.name "pluginConfig")}}
       {{!-- Plugin Config Section --}}
@@ -228,5 +227,35 @@
       {{/if}}
     {{/let}}
   {{/each}}
-
 {{/if}}
+
+<Modal
+  @title="Rotate your root credentials?"
+  @onClose={{action 'continueWithoutRotate'}}
+  @isActive={{this.showSaveModal}}
+  @type="info"
+  @showCloseButton={{false}}
+>
+  <section class="modal-card-body">
+    <p class="has-bottom-margin-s">It’s best practice to rotate the root credential immediately after the initial configuration of each database. Once rotated, <strong>only Vault knows the new root password</strong>.</p>
+    <p>Would you like to rotate your new credentials? You can also do this later.</p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      type="button"
+      class="button is-primary"
+      {{on 'click' this.continueWithRotate}}
+      data-test-enable-rotate-connection
+    >
+      Rotate and enable
+    </button>
+    <button
+      type="button"
+      class="button is-secondary"
+      {{on 'click' this.continueWithoutRotate}}
+      data-test-enable-connection
+    >
+      Enable without rotating
+    </button>
+  </footer>
+</Modal>

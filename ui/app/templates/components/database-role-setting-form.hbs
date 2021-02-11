@@ -9,12 +9,7 @@
     <div class="form-section">
       {{#each this.settingFields as |attr|}}
         {{#if (and (eq @mode 'edit') (eq attr.name 'username'))}}
-          <label for="{{attr.name}}" class="is-label">
-            Username
-          </label>
-          <p class="sub-text">{{attr.options.subText}} Not editable for static roles</p>
-          <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-            value={{or (get @model attr.name) attr.options.defaultValue}} disabled readonly class="field input is-readOnly" type={{attr.type}} />
+          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
           {{form-field data-test-field attr=attr model=@model}}
         {{/if}}
