@@ -51,7 +51,7 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -59,7 +59,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 
 	err := mapstructure.WeakDecode(req.Config, c)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, err
+		return err
 	}
 
 	if c.ConnectTimeoutRaw == nil {
@@ -67,7 +67,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
 	}
 
 	if c.SocketKeepAliveRaw == nil {
@@ -75,16 +75,16 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 	c.socketKeepAlive, err = parseutil.ParseDurationSecond(c.SocketKeepAliveRaw)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
+		return errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
 	}
 
 	switch {
 	case len(c.Hosts) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("hosts cannot be empty")
+		return fmt.Errorf("hosts cannot be empty")
 	case len(c.Username) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
+		return fmt.Errorf("username cannot be empty")
 	case len(c.Password) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
+		return fmt.Errorf("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -93,11 +93,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	case len(c.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -107,11 +107,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	case len(c.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -125,15 +125,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 
 	if req.VerifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 
-	resp := dbplugin.InitializeResponse{
-		Config: req.Config,
-	}
-
-	return resp, nil
+	return nil
 }
 
 func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
