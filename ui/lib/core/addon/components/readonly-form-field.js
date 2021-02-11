@@ -20,6 +20,9 @@ import layout from '../templates/components/readonly-form-field';
 
 class ReadonlyFormField extends Component {
   get labelString() {
+    if (!this.args.attr) {
+      return '';
+    }
     const label = this.args.attr.options ? this.args.attr.options.label : '';
     const name = this.args.attr.name;
     if (label) {

@@ -13,14 +13,5 @@ module('Integration | Component | readonly-form-field', function(hooks) {
     await render(hbs`<ReadonlyFormField />`);
 
     assert.equal(this.element.textContent.trim(), '');
-
-    // Template block usage:
-    await render(hbs`
-      <ReadonlyFormField>
-        template block text
-      </ReadonlyFormField>
-    `);
-
-    assert.equal(this.element.textContent.trim(), 'template block text');
   });
 });
