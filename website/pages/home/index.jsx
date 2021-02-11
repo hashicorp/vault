@@ -8,9 +8,13 @@ import HcpCalloutSection from 'components/hcp-callout-section'
 //  Imports below are used in getStaticProps only
 import RAW_CONTENT from './content.json'
 import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
   const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
   return { props: { content } }
 }
 
@@ -56,35 +60,7 @@ export default function Homepage({ content }) {
         {/* Before-After Diagram */}
 
         <section className="g-container before-after">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1579635889-static-infrastructure.svg',
-              format: 'svg',
-            }}
-            beforeHeadline="Static Infrastructure"
-            beforeContent={`Datacenters with inherently high-trust networks with clear network perimeters.
-
-#### Traditional Approach
-
-- High trust networks
-- A clear network perimeter
-- Security enforced by IP Address`}
-            afterImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg',
-              format: 'svg',
-            }}
-            afterHeadline="Dynamic Infrastructure"
-            afterContent={`Multiple clouds and private datacenters without a clear network perimeter.
-
-#### Vault Approach
-
-
-- Low-trust networks in public clouds
-- Unknown network perimeter across clouds
-- Security enforced by Identity`}
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </section>
 
         {/* Use cases */}

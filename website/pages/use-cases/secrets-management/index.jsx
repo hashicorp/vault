@@ -6,9 +6,13 @@ import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
 import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
   const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
   return { props: { content } }
 }
 
@@ -34,22 +38,7 @@ export default function SecretsManagmentUseCase({ content }) {
 
       <section>
         <div className="g-container">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1539885048-secrets-managementchallenge.svg',
-              format: 'svg',
-            }}
-            beforeHeadline="The Challenge"
-            beforeContent="Secrets for applications and systems need to be centralized and static IP-based solutions don't scale in dynamic environments with frequently changing applications and machines"
-            afterImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1539885054-secrets-managementsolution.svg',
-              format: 'svg',
-            }}
-            afterHeadline="The Solution"
-            afterContent="Vault centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity"
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
 
