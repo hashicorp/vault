@@ -779,7 +779,7 @@ github.com/mitchellh/cli
 github.com/mitchellh/copystructure
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
-# github.com/mitchellh/go-testing-interface v1.0.0
+# github.com/mitchellh/go-testing-interface v1.14.0
 github.com/mitchellh/go-testing-interface
 # github.com/mitchellh/gox v1.0.1
 github.com/mitchellh/gox

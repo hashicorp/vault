@@ -1161,6 +1161,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1199,6 +1200,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -1272,6 +1274,7 @@ func TestCore_StepDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1308,6 +1311,7 @@ func TestCore_StepDown(t *testing.T) {
 		DisableMlock: true,
 		Logger:       logger.Named("core2"),
 	})
+	defer core2.Shutdown()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1463,6 +1467,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1528,6 +1533,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -1640,6 +1646,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1694,6 +1701,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -2214,6 +2222,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -2235,6 +2244,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -2530,6 +2540,7 @@ func TestCore_ServiceRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer core.Shutdown()
 
 	// Vault should not yet be registered
 	if diff := deep.Equal(sr, &mockServiceRegistration{}); diff != nil {
