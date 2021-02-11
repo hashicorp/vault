@@ -17,15 +17,6 @@ const (
 	headerFieldTagKDCOffset = 1
 )
 
-// The first byte of the file always has the value 5.
-// The value of the second byte contains the version number (1 through 4)
-// Versions 1 and 2 of the file format use native byte order for integer representations.
-// Versions 3 and 4 always use big-endian byte order
-// After the two-byte version indicator, the file has three parts:
-//   1) the header (in version 4 only)
-//   2) the default principal name
-//   3) a sequence of credentials
-
 // CCache is the file credentials cache as define here: https://web.mit.edu/kerberos/krb5-latest/doc/formats/ccache_file_format.html
 type CCache struct {
 	Version          uint8
@@ -257,13 +248,7 @@ func (c *CCache) GetEntries() []*Credential {
 }
 
 func (h *headerField) valid() bool {
-	// At this time there is only one defined header field.
-	// Its tag value is 1, its length is always 8.
-	// Its contents are two 32-bit integers giving the seconds and microseconds
-	// of the time offset of the KDC relative to the client.
-	// Adding this offset to the current time on the client should give the current time on the KDC, if that offset has not changed since the initial authentication.
-
-	// Done as a switch in case other tag values are added in the future.
+	// See https://web.mit.edu/kerberos/krb5-latest/doc/formats/ccache_file_format.html - Header format
 	switch h.tag {
 	case headerFieldTagKDCOffset:
 		if h.length != 8 || len(h.value) != 8 {

@@ -1,10 +1,6 @@
 package rabbithole
 
-import (
-	"net/url"
-)
-
-// BriefConnectionDetails represents a brief (very incomplete) subset of connection information.
+// Brief (very incomplete) connection information.
 type BriefConnectionDetails struct {
 	// Connection name
 	Name string `json:"name"`
@@ -14,7 +10,6 @@ type BriefConnectionDetails struct {
 	PeerHost string `json:"peer_host"`
 }
 
-// ChannelInfo represents an AMQP 0-9-1 channel.
 type ChannelInfo struct {
 	// Channel number
 	Number int `json:"number"`
@@ -56,7 +51,7 @@ type ChannelInfo struct {
 // GET /api/channels
 //
 
-// ListChannels returns information about all open channels.
+// Returns information about all open channels.
 func (c *Client) ListChannels() (rec []ChannelInfo, err error) {
 	req, err := newGETRequest(c, "channels")
 	if err != nil {
@@ -74,9 +69,9 @@ func (c *Client) ListChannels() (rec []ChannelInfo, err error) {
 // GET /api/channels/{name}
 //
 
-// GetChannel returns channel information.
+// Returns channel information.
 func (c *Client) GetChannel(name string) (rec *ChannelInfo, err error) {
-	req, err := newGETRequest(c, "channels/"+url.PathEscape(name))
+	req, err := newGETRequest(c, "channels/"+PathEscape(name))
 	if err != nil {
 		return nil, err
 	}

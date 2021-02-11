@@ -2,7 +2,6 @@ package rabbithole
 
 import "fmt"
 
-// ErrorResponse represents an error reported by an API response.
 type ErrorResponse struct {
 	StatusCode int
 	Message    string `json:"error"`

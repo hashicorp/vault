@@ -91,7 +91,7 @@ func CreateRemoveUserFromGroupRequest() (request *RemoveUserFromGroupRequest) {
 	request = &RemoveUserFromGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "RemoveUserFromGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "RemoveUserFromGroup", "Ram", "openAPI")
 	return
 }
 

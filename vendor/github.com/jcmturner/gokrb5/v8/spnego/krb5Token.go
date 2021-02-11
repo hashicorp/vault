@@ -216,26 +216,3 @@ func newAuthenticatorChksum(flags []int) []byte {
 	}
 	return a
 }
-
-/*
-The authenticator checksum field SHALL have the following format:
-
-Octet        Name      Description
------------------------------------------------------------------
-0..3         Lgth    Number of octets in Bnd field;  Represented
-			in little-endian order;  Currently contains
-			hex value 10 00 00 00 (16).
-4..19        Bnd     Channel binding information, as described in
-			section 4.1.1.2.
-20..23       Flags   Four-octet context-establishment flags in
-			little-endian order as described in section
-			4.1.1.1.
-24..25       DlgOpt  The delegation option identifier (=1) in
-			little-endian order [optional].  This field
-			and the next two fields are present if and
-			only if GSS_C_DELEG_FLAG is set as described
-			in section 4.1.1.1.
-26..27       Dlgth   The length of the Deleg field in little-endian order [optional].
-28..(n-1)    Deleg   A KRB_CRED message (n = Dlgth + 28) [optional].
-n..last      Exts    Extensions [optional].
-*/

@@ -191,6 +191,21 @@ SignedURL for details.
     }
     fmt.Println(url)
 
+Post Policy V4 Signed Request
+
+A type of signed request that allows uploads through HTML forms directly to Cloud Storage with
+temporary permission. Conditions can be applied to restrict how the HTML form is used and exercised
+by a user.
+
+For more information, please see https://cloud.google.com/storage/docs/xml-api/post-object as well
+as the documentation of GenerateSignedPostPolicyV4.
+
+    pv4, err := storage.GenerateSignedPostPolicyV4(bucketName, objectName, opts)
+    if err != nil {
+        // TODO: Handle error.
+    }
+    fmt.Printf("URL: %s\nFields; %v\n", pv4.URL, pv4.Fields)
+
 Errors
 
 Errors returned by this client are often of the type [`googleapi.Error`](https://godoc.org/google.golang.org/api/googleapi#Error).

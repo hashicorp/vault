@@ -17,6 +17,6 @@ package kms
 
 // Key is a nested struct in kms response
 type Key struct {
-	KeyId  string `json:"KeyId" xml:"KeyId"`
 	KeyArn string `json:"KeyArn" xml:"KeyArn"`
+	KeyId  string `json:"KeyId" xml:"KeyId"`
 }

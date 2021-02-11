@@ -52,6 +52,7 @@ func (c *Client) ListServiceKeysByQuery(query url.Values) ([]ServiceKey, error) 
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting service keys")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading service keys request:")
@@ -144,7 +145,7 @@ func (c *Client) CreateServiceKey(csr CreateServiceKeyRequest) (ServiceKey, erro
 	if resp.StatusCode != http.StatusCreated {
 		return ServiceKey{}, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
-
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
@@ -155,7 +156,7 @@ func (c *Client) CreateServiceKey(csr CreateServiceKeyRequest) (ServiceKey, erro
 		return ServiceKey{}, err
 	}
 
-	return serviceKeyResource.Entity, nil
+	return c.mergeServiceKey(serviceKeyResource), nil
 }
 
 // DeleteServiceKey removes a service key instance
@@ -164,8 +165,17 @@ func (c *Client) DeleteServiceKey(guid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error deleting service instance key %s, response code %d", guid, resp.StatusCode)
 	}
 	return nil
+}
+
+func (c *Client) mergeServiceKey(key ServiceKeyResource) ServiceKey {
+	key.Entity.Guid = key.Meta.Guid
+	key.Entity.CreatedAt = key.Meta.CreatedAt
+	key.Entity.UpdatedAt = key.Meta.UpdatedAt
+	key.Entity.c = c
+	return key.Entity
 }

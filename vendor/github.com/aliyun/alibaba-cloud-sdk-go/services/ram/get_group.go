@@ -82,8 +82,8 @@ type GetGroupRequest struct {
 // GetGroupResponse is the response struct for api GetGroup
 type GetGroupResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
-	Group     Group  `json:"Group" xml:"Group"`
+	RequestId string          `json:"RequestId" xml:"RequestId"`
+	Group     GroupInGetGroup `json:"Group" xml:"Group"`
 }
 
 // CreateGetGroupRequest creates a request to invoke GetGroup API
@@ -91,7 +91,7 @@ func CreateGetGroupRequest() (request *GetGroupRequest) {
 	request = &GetGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetGroup", "Ram", "openAPI")
 	return
 }
 

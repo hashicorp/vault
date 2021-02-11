@@ -1,24 +1,45 @@
+// Copyright 2021 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mongodbatlas
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
-const privateEndpointsPath = "groups/%s/privateEndpoint"
+const (
+	privateEndpointsPath = "groups/%s/privateEndpoint"
+	regionalModePath     = privateEndpointsPath + "/regionalMode"
+)
 
 // PrivateEndpointsService is an interface for interfacing with the Private Endpoints
 // of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint/
 type PrivateEndpointsService interface {
 	Create(context.Context, string, *PrivateEndpointConnection) (*PrivateEndpointConnection, *Response, error)
-	Get(context.Context, string, string) (*PrivateEndpointConnection, *Response, error)
-	List(context.Context, string, *ListOptions) ([]PrivateEndpointConnection, *Response, error)
-	Delete(context.Context, string, string) (*Response, error)
-	AddOneInterfaceEndpoint(context.Context, string, string, string) (*InterfaceEndpointConnection, *Response, error)
-	GetOneInterfaceEndpoint(context.Context, string, string, string) (*InterfaceEndpointConnection, *Response, error)
-	DeleteOneInterfaceEndpoint(context.Context, string, string, string) (*Response, error)
+	Get(context.Context, string, string, string) (*PrivateEndpointConnection, *Response, error)
+	List(context.Context, string, string, *ListOptions) ([]PrivateEndpointConnection, *Response, error)
+	Delete(context.Context, string, string, string) (*Response, error)
+	AddOnePrivateEndpoint(context.Context, string, string, string, *InterfaceEndpointConnection) (*InterfaceEndpointConnection, *Response, error)
+	GetOnePrivateEndpoint(context.Context, string, string, string, string) (*InterfaceEndpointConnection, *Response, error)
+	DeleteOnePrivateEndpoint(context.Context, string, string, string, string) (*Response, error)
+	UpdateRegionalizedPrivateEndpointSetting(context.Context, string, bool) (*RegionalizedPrivateEndpointSetting, *Response, error)
+	GetRegionalizedPrivateEndpointSetting(context.Context, string) (*RegionalizedPrivateEndpointSetting, *Response, error)
 }
 
 // PrivateEndpointsServiceOp handles communication with the PrivateEndpoints related methods
@@ -29,25 +50,39 @@ var _ PrivateEndpointsService = &PrivateEndpointsServiceOp{}
 
 // PrivateEndpointConnection represents MongoDB Private Endpoint Connection.
 type PrivateEndpointConnection struct {
-	ID                  string   `json:"id,omitempty"`                  // Unique identifier of the AWS PrivateLink connection.
-	ProviderName        string   `json:"providerName,omitempty"`        // Name of the cloud provider you want to create the private endpoint connection for. Must be AWS.
-	Region              string   `json:"region,omitempty"`              // Cloud provider region in which you want to create the private endpoint connection.
-	EndpointServiceName string   `json:"endpointServiceName,omitempty"` // Name of the PrivateLink endpoint service in AWS. Returns null while the endpoint service is being created.
-	ErrorMessage        string   `json:"errorMessage,omitempty"`        // Error message pertaining to the AWS PrivateLink connection. Returns null if there are no errors.
-	InterfaceEndpoints  []string `json:"interfaceEndpoints,omitempty"`  // Unique identifiers of the interface endpoints in your VPC that you added to the AWS PrivateLink connection.
-	Status              string   `json:"status,omitempty"`              // Status of the AWS PrivateLink connection: INITIATING, WAITING_FOR_USER, FAILED, DELETING.
+	ID                           string   `json:"id,omitempty"`                           // Unique identifier of the AWS PrivateLink connection or Azure Private Link Service.
+	ProviderName                 string   `json:"providerName,omitempty"`                 // Name of the cloud provider for which you want to create the private endpoint service. Atlas accepts AWS or AZURE.
+	Region                       string   `json:"region,omitempty"`                       // Cloud provider region for which you want to create the private endpoint service.
+	EndpointServiceName          string   `json:"endpointServiceName,omitempty"`          // Name of the PrivateLink endpoint service in AWS. Returns null while the endpoint service is being created.
+	ErrorMessage                 string   `json:"errorMessage,omitempty"`                 // Error message pertaining to the AWS PrivateLink connection or Azure Private Link Service. Returns null if there are no errors.
+	InterfaceEndpoints           []string `json:"interfaceEndpoints,omitempty"`           // Unique identifiers of the interface endpoints in your VPC that you added to the AWS PrivateLink connection.
+	PrivateEndpoints             []string `json:"privateEndpoints,omitempty"`             // All private endpoints that you have added to this Azure Private Link Service.
+	PrivateLinkServiceName       string   `json:"privateLinkServiceName,omitempty"`       // Name of the Azure Private Link Service that Atlas manages.
+	PrivateLinkServiceResourceID string   `json:"privateLinkServiceResourceId,omitempty"` // Resource ID of the Azure Private Link Service that Atlas manages.
+	Status                       string   `json:"status,omitempty"`                       // Status of the AWS OR Azure PrivateLink connection: INITIATING, WAITING_FOR_USER, FAILED, DELETING, AVAILABLE.
 }
 
 // InterfaceEndpointConnection represents MongoDB Interface Endpoint Connection.
 type InterfaceEndpointConnection struct {
-	ID               string `json:"interfaceEndpointId,omitempty"` // Unique identifier of the interface endpoint.
-	DeleteRequested  *bool  `json:"deleteRequested,omitempty"`     // Indicates if Atlas received a request to remove the interface endpoint from the private endpoint connection.
-	ErrorMessage     string `json:"errorMessage,omitempty"`        // Error message pertaining to the interface endpoint. Returns null if there are no errors.
-	ConnectionStatus string `json:"connectionStatus,omitempty"`    // Status of the interface endpoint: NONE, PENDING_ACCEPTANCE, PENDING, AVAILABLE, REJECTED, DELETING.
+	ID                            string `json:"id,omitempty"`                            // Unique identifier of the private endpoint you created in your AWS VPC or Azure VNet.
+	InterfaceEndpointID           string `json:"interfaceEndpointId,omitempty"`           // Unique identifier of the interface endpoint.
+	PrivateEndpointConnectionName string `json:"privateEndpointConnectionName,omitempty"` // Name of the connection for this private endpoint that Atlas generates.
+	PrivateEndpointIPAddress      string `json:"privateEndpointIPAddress,omitempty"`      // Private IP address of the private endpoint network interface.
+	PrivateEndpointResourceID     string `json:"privateEndpointResourceId,omitempty"`     // Unique identifier of the private endpoint.
+	DeleteRequested               *bool  `json:"deleteRequested,omitempty"`               // Indicates if Atlas received a request to remove the interface endpoint from the private endpoint connection.
+	ErrorMessage                  string `json:"errorMessage,omitempty"`                  // Error message pertaining to the interface endpoint. Returns null if there are no errors.
+	AWSConnectionStatus           string `json:"connectionStatus,omitempty"`              // Status of the interface endpoint: NONE, PENDING_ACCEPTANCE, PENDING, AVAILABLE, REJECTED, DELETING.
+	AzureStatus                   string `json:"status,omitempty"`                        // Status of the interface endpoint AZURE: INITIATING, AVAILABLE, FAILED, DELETING.
 }
 
-// Create one private endpoint connection in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-create-one-private-endpoint-connection/
+// RegionalizedPrivateEndpointSetting represents MongoDB Regionalized private Endpoint Setting.
+type RegionalizedPrivateEndpointSetting struct {
+	Enabled bool `json:"enabled"` // Flag that indicates whether the regionalized private endpoint setting is enabled for one Atlas project.
+}
+
+// Create one private endpoint service for AWS or Azure in an Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-service-create-one/
 func (s *PrivateEndpointsServiceOp) Create(ctx context.Context, groupID string, createRequest *PrivateEndpointConnection) (*PrivateEndpointConnection, *Response, error) {
 	if groupID == "" {
 		return nil, nil, NewArgError("groupID", "must be set")
@@ -56,7 +91,8 @@ func (s *PrivateEndpointsServiceOp) Create(ctx context.Context, groupID string, 
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
 
-	path := fmt.Sprintf(privateEndpointsPath, groupID)
+	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
+	path := fmt.Sprintf("%s/endpointService", basePath)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodPost, path, createRequest)
 	if err != nil {
@@ -72,18 +108,22 @@ func (s *PrivateEndpointsServiceOp) Create(ctx context.Context, groupID string, 
 	return root, resp, err
 }
 
-// Get retrieves details for one private endpoint connection by ID in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-get-one-private-endpoint-connection/
-func (s *PrivateEndpointsServiceOp) Get(ctx context.Context, groupID, privateLinkID string) (*PrivateEndpointConnection, *Response, error) {
+// Get retrieve details for one private endpoint service for AWS or Azure in an Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-service-get-one/
+func (s *PrivateEndpointsServiceOp) Get(ctx context.Context, groupID, cloudProvider, endpointServiceID string) (*PrivateEndpointConnection, *Response, error) {
 	if groupID == "" {
 		return nil, nil, NewArgError("groupID", "must be set")
 	}
-	if privateLinkID == "" {
-		return nil, nil, NewArgError("privateLinkID", "must be set")
+	if endpointServiceID == "" {
+		return nil, nil, NewArgError("endpointServiceID", "must be set")
+	}
+	if cloudProvider == "" {
+		return nil, nil, NewArgError("cloudProvider", "must be set")
 	}
 
 	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
-	path := fmt.Sprintf("%s/%s", basePath, privateLinkID)
+	path := fmt.Sprintf("%s/%s/endpointService/%s", basePath, cloudProvider, endpointServiceID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -99,14 +139,19 @@ func (s *PrivateEndpointsServiceOp) Get(ctx context.Context, groupID, privateLin
 	return root, resp, err
 }
 
-// List retrieves details for all private endpoint connections in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-get-all-private-endpoint-connections/
-func (s *PrivateEndpointsServiceOp) List(ctx context.Context, groupID string, listOptions *ListOptions) ([]PrivateEndpointConnection, *Response, error) {
+// List retrieve details for all private endpoint services for AWS or Azure in one Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-service-get-all/
+func (s *PrivateEndpointsServiceOp) List(ctx context.Context, groupID, cloudProvider string, listOptions *ListOptions) ([]PrivateEndpointConnection, *Response, error) {
 	if groupID == "" {
 		return nil, nil, NewArgError("groupID", "must be set")
 	}
+	if cloudProvider == "" {
+		return nil, nil, NewArgError("cloudProvider", "must be set")
+	}
 
-	path := fmt.Sprintf(privateEndpointsPath, groupID)
+	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
+	path := fmt.Sprintf("%s/%s/endpointService", basePath, cloudProvider)
 
 	// Add query params from listOptions
 	path, err := setListOptions(path, listOptions)
@@ -128,18 +173,22 @@ func (s *PrivateEndpointsServiceOp) List(ctx context.Context, groupID string, li
 	return *root, resp, nil
 }
 
-// Delete removes one private endpoint connection in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-delete-one-private-endpoint-connection/
-func (s *PrivateEndpointsServiceOp) Delete(ctx context.Context, groupID, privateLinkID string) (*Response, error) {
+// Delete one private endpoint service for AWS or Azure in an Atlas project.
+//
+// See more https://docs.atlas.mongodb.com/reference/api/private-endpoints-service-delete-one/
+func (s *PrivateEndpointsServiceOp) Delete(ctx context.Context, groupID, cloudProvider, endpointServiceID string) (*Response, error) {
 	if groupID == "" {
 		return nil, NewArgError("groupID", "must be set")
 	}
-	if privateLinkID == "" {
-		return nil, NewArgError("privateLinkID", "must be set")
+	if endpointServiceID == "" {
+		return nil, NewArgError("endpointServiceID", "must be set")
+	}
+	if cloudProvider == "" {
+		return nil, NewArgError("cloudProvider", "must be set")
 	}
 
 	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
-	path := fmt.Sprintf("%s/%s", basePath, privateLinkID)
+	path := fmt.Sprintf("%s/%s/endpointService/%s", basePath, cloudProvider, endpointServiceID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
@@ -149,23 +198,27 @@ func (s *PrivateEndpointsServiceOp) Delete(ctx context.Context, groupID, private
 	return s.Client.Do(ctx, req, nil)
 }
 
-// AddOneInterfaceEndpoint adds one interface endpoint to a private endpoint connection in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-create-one-interface-endpoint/
-func (s *PrivateEndpointsServiceOp) AddOneInterfaceEndpoint(ctx context.Context, groupID, privateLinkID, interfaceEndpointID string) (*InterfaceEndpointConnection, *Response, error) {
+// AddOnePrivateEndpoint Adds one private endpoint for AWS or Azure in an Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-endpoint-create-one/
+func (s *PrivateEndpointsServiceOp) AddOnePrivateEndpoint(ctx context.Context, groupID, cloudProvider, endpointServiceID string, createRequest *InterfaceEndpointConnection) (*InterfaceEndpointConnection, *Response, error) {
 	if groupID == "" {
 		return nil, nil, NewArgError("groupID", "must be set")
 	}
-	if privateLinkID == "" {
-		return nil, nil, NewArgError("privateLinkID", "must be set")
+	if endpointServiceID == "" {
+		return nil, nil, NewArgError("endpointServiceID", "must be set")
 	}
-	if interfaceEndpointID == "" {
-		return nil, nil, NewArgError("interfaceEndpointID", "must be set")
+	if cloudProvider == "" {
+		return nil, nil, NewArgError("cloudProvider", "must be set")
+	}
+	if createRequest == nil {
+		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
 
 	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
-	path := fmt.Sprintf("%s/%s/interfaceEndpoints", basePath, privateLinkID)
+	path := fmt.Sprintf("%s/%s/endpointService/%s/endpoint", basePath, cloudProvider, endpointServiceID)
 
-	req, err := s.Client.NewRequest(ctx, http.MethodPost, path, &InterfaceEndpointConnection{ID: interfaceEndpointID})
+	req, err := s.Client.NewRequest(ctx, http.MethodPost, path, createRequest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -179,21 +232,25 @@ func (s *PrivateEndpointsServiceOp) AddOneInterfaceEndpoint(ctx context.Context,
 	return root, resp, err
 }
 
-// GetOneInterfaceEndpoint retrieves one interface endpoint in a private endpoint connection in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-get-one-interface-endpoint/
-func (s *PrivateEndpointsServiceOp) GetOneInterfaceEndpoint(ctx context.Context, groupID, privateLinkID, interfaceEndpointID string) (*InterfaceEndpointConnection, *Response, error) {
+// GetOnePrivateEndpoint retrieve details for one private endpoint for AWS or Azure in an Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-endpoint-get-one/
+func (s *PrivateEndpointsServiceOp) GetOnePrivateEndpoint(ctx context.Context, groupID, cloudProvider, endpointServiceID, privateEndpointID string) (*InterfaceEndpointConnection, *Response, error) {
 	if groupID == "" {
 		return nil, nil, NewArgError("groupID", "must be set")
 	}
-	if privateLinkID == "" {
-		return nil, nil, NewArgError("privateLinkID", "must be set")
+	if endpointServiceID == "" {
+		return nil, nil, NewArgError("endpointServiceID", "must be set")
 	}
-	if interfaceEndpointID == "" {
-		return nil, nil, NewArgError("interfaceEndpointID", "must be set")
+	if cloudProvider == "" {
+		return nil, nil, NewArgError("cloudProvider", "must be set")
+	}
+	if privateEndpointID == "" {
+		return nil, nil, NewArgError("privateEndpointID", "must be set")
 	}
 
 	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
-	path := fmt.Sprintf("%s/%s/interfaceEndpoints/%s", basePath, privateLinkID, interfaceEndpointID)
+	path := fmt.Sprintf("%s/%s/endpointService/%s/endpoint/%s", basePath, cloudProvider, endpointServiceID, url.PathEscape(privateEndpointID))
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -209,21 +266,25 @@ func (s *PrivateEndpointsServiceOp) GetOneInterfaceEndpoint(ctx context.Context,
 	return root, resp, err
 }
 
-// DeleteOneInterfaceEndpoint removes one interface endpoint from a private endpoint connection in an Atlas project.
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-delete-one-interface-endpoint/
-func (s *PrivateEndpointsServiceOp) DeleteOneInterfaceEndpoint(ctx context.Context, groupID, privateLinkID, interfaceEndpointID string) (*Response, error) {
+// DeleteOnePrivateEndpoint remove one private endpoint for AWS or Azure from an Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-endpoint-delete-one/
+func (s *PrivateEndpointsServiceOp) DeleteOnePrivateEndpoint(ctx context.Context, groupID, cloudProvider, endpointServiceID, privateEndpointID string) (*Response, error) {
 	if groupID == "" {
 		return nil, NewArgError("groupID", "must be set")
 	}
-	if privateLinkID == "" {
-		return nil, NewArgError("privateLinkID", "must be set")
+	if endpointServiceID == "" {
+		return nil, NewArgError("endpointServiceID", "must be set")
 	}
-	if interfaceEndpointID == "" {
-		return nil, NewArgError("interfaceEndpointID", "must be set")
+	if cloudProvider == "" {
+		return nil, NewArgError("cloudProvider", "must be set")
+	}
+	if privateEndpointID == "" {
+		return nil, NewArgError("privateEndpointID", "must be set")
 	}
 
 	basePath := fmt.Sprintf(privateEndpointsPath, groupID)
-	path := fmt.Sprintf("%s/%s/interfaceEndpoints/%s", basePath, privateLinkID, interfaceEndpointID)
+	path := fmt.Sprintf("%s/%s/endpointService/%s/endpoint/%s", basePath, cloudProvider, endpointServiceID, url.PathEscape(privateEndpointID))
 
 	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
@@ -231,4 +292,50 @@ func (s *PrivateEndpointsServiceOp) DeleteOneInterfaceEndpoint(ctx context.Conte
 	}
 
 	return s.Client.Do(ctx, req, nil)
+}
+
+// UpdateRegionalizedPrivateEndpointSetting updates the regionalized private endpoint setting for one Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-update-regional-mode
+func (s *PrivateEndpointsServiceOp) UpdateRegionalizedPrivateEndpointSetting(ctx context.Context, groupID string, enabled bool) (*RegionalizedPrivateEndpointSetting, *Response, error) {
+	if groupID == "" {
+		return nil, nil, NewArgError("groupID", "must be set")
+	}
+
+	path := fmt.Sprintf(regionalModePath, groupID)
+	req, err := s.Client.NewRequest(ctx, http.MethodPatch, path, enabled)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(RegionalizedPrivateEndpointSetting)
+	resp, err := s.Client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root, resp, err
+}
+
+// GetRegionalizedPrivateEndpointSetting updates the regionalized private endpoint setting for one Atlas project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints-get-regional-mode
+func (s *PrivateEndpointsServiceOp) GetRegionalizedPrivateEndpointSetting(ctx context.Context, groupID string) (*RegionalizedPrivateEndpointSetting, *Response, error) {
+	if groupID == "" {
+		return nil, nil, NewArgError("groupID", "must be set")
+	}
+
+	path := fmt.Sprintf(regionalModePath, groupID)
+	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(RegionalizedPrivateEndpointSetting)
+	resp, err := s.Client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root, resp, err
 }

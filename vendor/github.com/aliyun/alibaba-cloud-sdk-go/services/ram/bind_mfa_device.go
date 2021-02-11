@@ -93,7 +93,7 @@ func CreateBindMFADeviceRequest() (request *BindMFADeviceRequest) {
 	request = &BindMFADeviceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "BindMFADevice", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "BindMFADevice", "Ram", "openAPI")
 	return
 }
 

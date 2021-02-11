@@ -17,14 +17,21 @@ package kms
 
 // KeyMetadata is a nested struct in kms response
 type KeyMetadata struct {
+	NextRotationDate   string `json:"NextRotationDate" xml:"NextRotationDate"`
+	ProtectionLevel    string `json:"ProtectionLevel" xml:"ProtectionLevel"`
+	KeySpec            string `json:"KeySpec" xml:"KeySpec"`
+	KeyUsage           string `json:"KeyUsage" xml:"KeyUsage"`
+	DeleteDate         string `json:"DeleteDate" xml:"DeleteDate"`
+	AutomaticRotation  string `json:"AutomaticRotation" xml:"AutomaticRotation"`
+	LastRotationDate   string `json:"LastRotationDate" xml:"LastRotationDate"`
+	MaterialExpireTime string `json:"MaterialExpireTime" xml:"MaterialExpireTime"`
+	RotationInterval   string `json:"RotationInterval" xml:"RotationInterval"`
+	PrimaryKeyVersion  string `json:"PrimaryKeyVersion" xml:"PrimaryKeyVersion"`
 	Arn                string `json:"Arn" xml:"Arn"`
 	KeyState           string `json:"KeyState" xml:"KeyState"`
 	CreationDate       string `json:"CreationDate" xml:"CreationDate"`
-	KeyUsage           string `json:"KeyUsage" xml:"KeyUsage"`
-	DeleteDate         string `json:"DeleteDate" xml:"DeleteDate"`
 	Creator            string `json:"Creator" xml:"Creator"`
 	Origin             string `json:"Origin" xml:"Origin"`
 	Description        string `json:"Description" xml:"Description"`
 	KeyId              string `json:"KeyId" xml:"KeyId"`
-	MaterialExpireTime string `json:"MaterialExpireTime" xml:"MaterialExpireTime"`
 }

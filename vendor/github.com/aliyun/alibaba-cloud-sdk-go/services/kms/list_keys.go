@@ -21,7 +21,6 @@ import (
 )
 
 // ListKeys invokes the kms.ListKeys API synchronously
-// api document: https://help.aliyun.com/api/kms/listkeys.html
 func (client *Client) ListKeys(request *ListKeysRequest) (response *ListKeysResponse, err error) {
 	response = CreateListKeysResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) ListKeys(request *ListKeysRequest) (response *ListKeysResp
 }
 
 // ListKeysWithChan invokes the kms.ListKeys API asynchronously
-// api document: https://help.aliyun.com/api/kms/listkeys.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ListKeysWithChan(request *ListKeysRequest) (<-chan *ListKeysResponse, <-chan error) {
 	responseChan := make(chan *ListKeysResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) ListKeysWithChan(request *ListKeysRequest) (<-chan *ListKe
 }
 
 // ListKeysWithCallback invokes the kms.ListKeys API asynchronously
-// api document: https://help.aliyun.com/api/kms/listkeys.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ListKeysWithCallback(request *ListKeysRequest, callback func(response *ListKeysResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -77,16 +72,17 @@ func (client *Client) ListKeysWithCallback(request *ListKeysRequest, callback fu
 type ListKeysRequest struct {
 	*requests.RpcRequest
 	PageSize   requests.Integer `position:"Query" name:"PageSize"`
+	Filters    string           `position:"Query" name:"Filters"`
 	PageNumber requests.Integer `position:"Query" name:"PageNumber"`
 }
 
 // ListKeysResponse is the response struct for api ListKeys
 type ListKeysResponse struct {
 	*responses.BaseResponse
-	TotalCount int    `json:"TotalCount" xml:"TotalCount"`
 	PageNumber int    `json:"PageNumber" xml:"PageNumber"`
 	PageSize   int    `json:"PageSize" xml:"PageSize"`
 	RequestId  string `json:"RequestId" xml:"RequestId"`
+	TotalCount int    `json:"TotalCount" xml:"TotalCount"`
 	Keys       Keys   `json:"Keys" xml:"Keys"`
 }
 
@@ -96,6 +92,7 @@ func CreateListKeysRequest() (request *ListKeysRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "ListKeys", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

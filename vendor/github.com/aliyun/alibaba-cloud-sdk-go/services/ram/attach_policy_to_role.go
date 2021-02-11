@@ -92,7 +92,7 @@ func CreateAttachPolicyToRoleRequest() (request *AttachPolicyToRoleRequest) {
 	request = &AttachPolicyToRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "AttachPolicyToRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "AttachPolicyToRole", "Ram", "openAPI")
 	return
 }
 

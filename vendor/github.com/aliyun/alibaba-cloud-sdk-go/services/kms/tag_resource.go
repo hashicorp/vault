@@ -21,7 +21,6 @@ import (
 )
 
 // TagResource invokes the kms.TagResource API synchronously
-// api document: https://help.aliyun.com/api/kms/tagresource.html
 func (client *Client) TagResource(request *TagResourceRequest) (response *TagResourceResponse, err error) {
 	response = CreateTagResourceResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) TagResource(request *TagResourceRequest) (response *TagRes
 }
 
 // TagResourceWithChan invokes the kms.TagResource API asynchronously
-// api document: https://help.aliyun.com/api/kms/tagresource.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) TagResourceWithChan(request *TagResourceRequest) (<-chan *TagResourceResponse, <-chan error) {
 	responseChan := make(chan *TagResourceResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) TagResourceWithChan(request *TagResourceRequest) (<-chan *
 }
 
 // TagResourceWithCallback invokes the kms.TagResource API asynchronously
-// api document: https://help.aliyun.com/api/kms/tagresource.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) TagResourceWithCallback(request *TagResourceRequest, callback func(response *TagResourceResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -76,8 +71,10 @@ func (client *Client) TagResourceWithCallback(request *TagResourceRequest, callb
 // TagResourceRequest is the request struct for api TagResource
 type TagResourceRequest struct {
 	*requests.RpcRequest
-	KeyId string `position:"Query" name:"KeyId"`
-	Tags  string `position:"Query" name:"Tags"`
+	CertificateId string `position:"Query" name:"CertificateId"`
+	KeyId         string `position:"Query" name:"KeyId"`
+	SecretName    string `position:"Query" name:"SecretName"`
+	Tags          string `position:"Query" name:"Tags"`
 }
 
 // TagResourceResponse is the response struct for api TagResource
@@ -92,6 +89,7 @@ func CreateTagResourceRequest() (request *TagResourceRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "TagResource", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

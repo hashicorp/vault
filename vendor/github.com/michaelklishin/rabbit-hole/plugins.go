@@ -1,6 +1,5 @@
 package rabbithole
 
-// EnabledProtocols returns a list of names of the plugins enabled on target node.
 func (c *Client) EnabledProtocols() (xs []string, err error) {
 	overview, err := c.Overview()
 	if err != nil {
@@ -16,7 +15,6 @@ func (c *Client) EnabledProtocols() (xs []string, err error) {
 	return xs, nil
 }
 
-// ProtocolPorts returns a list of active (listening) ports on target node.
 func (c *Client) ProtocolPorts() (res map[string]Port, err error) {
 	res = map[string]Port{}
 

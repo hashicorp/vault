@@ -230,8 +230,7 @@ func walkMap(v reflect.Value, w interface{}) error {
 			ew.Enter(MapValue)
 		}
 
-		// get the map value again as it may have changed in the MapElem call
-		if err := walk(v.MapIndex(k), w); err != nil {
+		if err := walk(kv, w); err != nil {
 			return err
 		}
 

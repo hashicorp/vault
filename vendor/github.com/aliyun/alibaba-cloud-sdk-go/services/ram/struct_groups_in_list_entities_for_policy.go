@@ -17,5 +17,5 @@ package ram
 
 // GroupsInListEntitiesForPolicy is a nested struct in ram response
 type GroupsInListEntitiesForPolicy struct {
-	Group []Group `json:"Group" xml:"Group"`
+	Group []GroupInListEntitiesForPolicy `json:"Group" xml:"Group"`
 }

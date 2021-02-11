@@ -1,30 +1,34 @@
-.DEFAULT_GOAL := test
+export GOPATH := $(CURDIR)
 
-.PHONY: all
+COVER_FILE := coverage
+
 all: test
 
 .PHONY: test
-test:
+
+test: install-dependencies
 	go test -race -v
-.PHONY: tests
+
 tests: test
 
-COVER_FILE := coverage
-.PHONY: cover
-cover:
+test_only:
+	go test -race -v
+
+ginkgo:
+	./bin/ginkgo -race -v
+
+cover: install-dependencies install-cover
 	go test -v -test.coverprofile="$(COVER_FILE).prof"
 	sed -i.bak 's|_'$(GOPATH)'|.|g' $(COVER_FILE).prof
 	go tool cover -html=$(COVER_FILE).prof -o $(COVER_FILE).html
 	rm $(COVER_FILE).prof*
 
-.PHONY: ginkgo
-ginkgo:
-	command -v ginkgo || go install github.com/onsi/ginkgo/ginkgo
-	ginkgo -race -v
+install-cover:
+	go get code.google.com/p/go.tools/cmd/cover
 
-.PHONY: docker
-docker:
-	docker run --rm \
-	  --interactive --tty --entrypoint /bin/bash \
-	  --volume $(CURDIR):/usr/src/app --workdir /usr/src/app \
-	  golang:1.12
+install-dependencies:
+	go get github.com/onsi/ginkgo
+	go get github.com/onsi/gomega
+	go get github.com/streadway/amqp
+        # to get Ginkgo CLI
+	go install github.com/onsi/ginkgo/ginkgo
