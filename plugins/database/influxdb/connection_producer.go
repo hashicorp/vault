@@ -168,7 +168,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 	}
 
 	if i.TLS {
-		var tlsConfig *tls.Config
+		tlsConfig := &tls.Config{}
 		if len(i.certificate) > 0 || len(i.issuingCA) > 0 {
 			if len(i.certificate) > 0 && len(i.privateKey) == 0 {
 				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
