@@ -5,7 +5,7 @@
   "author": "HashiCorp",
   "dependencies": {
     "@hashicorp/mktg-global-styles": "2.1.0",
-    "@hashicorp/nextjs-scripts": "14.0.1",
+    "@hashicorp/nextjs-scripts": "16.0.1",
     "@hashicorp/react-alert-banner": "^5.0.0",
     "@hashicorp/react-button": "4.0.0",
     "@hashicorp/react-case-study-slider": "3.0.3",
@@ -24,7 +24,7 @@
     "@hashicorp/react-text-splits": "1.0.5",
     "@hashicorp/react-use-cases": "2.0.1",
     "@hashicorp/react-vertical-text-block-list": "3.0.1",
-    "next": "9.5.5",
+    "next": "10.0.6",
     "next-mdx-remote": "1.0.1",
     "next-remote-watch": "0.3.0",
     "react": "16.13.1",
