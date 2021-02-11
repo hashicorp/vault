@@ -19,3 +19,13 @@ func (b *RaftBackend) autopilotPromoter() autopilot.Promoter {
 func (b *RaftBackend) AddNonVotingPeer(ctx context.Context, peerID, clusterAddr string) error {
 	return errors.New("not implemented")
 }
+
+func autopilotToAPIServerEnterprise(_ *autopilot.ServerState, _ *AutopilotServer) {
+	// noop in oss
+}
+
+func autopilotToAPIStateEnterprise(state *autopilot.State, apiState *AutopilotHealth) {
+	// without the enterprise features there is no different between these two and we don't want to
+	// alarm anyone by leaving this as the zero value.
+	apiState.OptimisticFailureTolerance = state.FailureTolerance
+}

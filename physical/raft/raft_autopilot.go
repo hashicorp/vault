@@ -475,11 +475,13 @@ func autopilotToAPIHealth(state *autopilot.State) *AutopilotHealth {
 		out.Servers[string(id)] = autopilotToAPIServer(srv)
 	}
 
+	autopilotToAPIStateEnterprise(state, out)
+
 	return out
 }
 
 func autopilotToAPIServer(srv *autopilot.ServerState) AutopilotServer {
-	return AutopilotServer{
+	apiSrv := AutopilotServer{
 		ID:          string(srv.Server.ID),
 		Name:        srv.Server.Name,
 		Address:     string(srv.Server.Address),
@@ -493,6 +495,10 @@ func autopilotToAPIServer(srv *autopilot.ServerState) AutopilotServer {
 		Meta:        srv.Server.Meta,
 		NodeType:    string(srv.Server.NodeType),
 	}
+
+	autopilotToAPIServerEnterprise(srv, &apiSrv)
+
+	return apiSrv
 }
 
 // GetAutopilotServerHealth retrieves raft cluster health from autopilot to
