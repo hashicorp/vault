@@ -33,8 +33,6 @@ import (
 
 const tokenRequestTimeout = 30 * time.Second
 
-var logger = grpclog.Component("credentials")
-
 // NewDefaultCredentials returns a credentials bundle that is configured to work
 // with google services.
 //
@@ -46,14 +44,14 @@ func NewDefaultCredentials() credentials.Bundle {
 			defer cancel()
 			perRPCCreds, err := oauth.NewApplicationDefault(ctx)
 			if err != nil {
-				logger.Warningf("google default creds: failed to create application oauth: %v", err)
+				grpclog.Warningf("google default creds: failed to create application oauth: %v", err)
 			}
 			return perRPCCreds
 		},
 	}
 	bundle, err := c.NewWithMode(internal.CredsBundleModeFallback)
 	if err != nil {
-		logger.Warningf("google default creds: failed to create new creds: %v", err)
+		grpclog.Warningf("google default creds: failed to create new creds: %v", err)
 	}
 	return bundle
 }
@@ -71,7 +69,7 @@ func NewComputeEngineCredentials() credentials.Bundle {
 	}
 	bundle, err := c.NewWithMode(internal.CredsBundleModeFallback)
 	if err != nil {
-		logger.Warningf("compute engine creds: failed to create new creds: %v", err)
+		grpclog.Warningf("compute engine creds: failed to create new creds: %v", err)
 	}
 	return bundle
 }

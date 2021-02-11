@@ -6,6 +6,13 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace (
+	github.com/coreos/etcd => github.com/coreos/etcd v3.3.13+incompatible
+	go.etcd.io/bbolt => go.etcd.io/bbolt v1.3.5
+	go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489 // ae9734ed278b is the SHA for git tag v3.4.13
+	google.golang.org/grpc => google.golang.org/grpc v1.27.1
+)
+
 require (
 	cloud.google.com/go v0.76.0
 	cloud.google.com/go/spanner v1.5.1
@@ -109,8 +116,6 @@ require (
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210127185906-6b455835fa8c
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce // indirect
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
-	github.com/jcmturner/aescts v2.0.0+incompatible // indirect
-	github.com/jcmturner/dnsutils v2.0.0+incompatible // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
@@ -161,7 +166,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
+	go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
 	go.mongodb.org/atlas v0.7.2 // indirect
 	go.mongodb.org/mongo-driver v1.4.2
 	go.opencensus.io v0.22.6 // indirect
@@ -171,12 +176,9 @@ require (
 	golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
-	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	golang.org/x/tools v0.1.0
 	google.golang.org/api v0.39.0
-	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20210211154401-3a9a48ddfd6c // indirect
 	google.golang.org/grpc v1.35.0
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/ini.v1 v1.62.0 // indirect

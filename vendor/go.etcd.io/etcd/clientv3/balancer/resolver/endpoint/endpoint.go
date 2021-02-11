@@ -174,8 +174,7 @@ type Resolver struct {
 func epsToAddrs(eps ...string) (addrs []resolver.Address) {
 	addrs = make([]resolver.Address, 0, len(eps))
 	for _, ep := range eps {
-		_, host, _ := ParseEndpoint(ep)
-		addrs = append(addrs, resolver.Address{Addr: ep, ServerName: host})
+		addrs = append(addrs, resolver.Address{Addr: ep})
 	}
 	return addrs
 }

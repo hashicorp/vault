@@ -16,6 +16,8 @@
  *
  */
 
+//go:generate protoc --go_out=plugins=grpc:. grpc_testing/test.proto
+
 // Package stats is for collecting and reporting various network and RPC stats.
 // This package is for monitoring purpose only. All fields are read-only.
 // All APIs are experimental.
@@ -79,10 +81,6 @@ type InHeader struct {
 	Client bool
 	// WireLength is the wire length of header.
 	WireLength int
-	// Compression is the compression algorithm used for the RPC.
-	Compression string
-	// Header contains the header metadata received.
-	Header metadata.MD
 
 	// The following fields are valid only if Client is false.
 	// FullMethod is the full RPC method string, i.e., /package.service/method.
@@ -91,6 +89,10 @@ type InHeader struct {
 	RemoteAddr net.Addr
 	// LocalAddr is the local address of the corresponding connection.
 	LocalAddr net.Addr
+	// Compression is the compression algorithm used for the RPC.
+	Compression string
+	// Header contains the header metadata received.
+	Header metadata.MD
 }
 
 // IsClient indicates if the stats information is from client side.
@@ -139,10 +141,6 @@ func (s *OutPayload) isRPCStats() {}
 type OutHeader struct {
 	// Client is true if this OutHeader is from client side.
 	Client bool
-	// Compression is the compression algorithm used for the RPC.
-	Compression string
-	// Header contains the header metadata sent.
-	Header metadata.MD
 
 	// The following fields are valid only if Client is true.
 	// FullMethod is the full RPC method string, i.e., /package.service/method.
@@ -151,6 +149,10 @@ type OutHeader struct {
 	RemoteAddr net.Addr
 	// LocalAddr is the local address of the corresponding connection.
 	LocalAddr net.Addr
+	// Compression is the compression algorithm used for the RPC.
+	Compression string
+	// Header contains the header metadata sent.
+	Header metadata.MD
 }
 
 // IsClient indicates if this stats information is from client side.
@@ -163,9 +165,6 @@ type OutTrailer struct {
 	// Client is true if this OutTrailer is from client side.
 	Client bool
 	// WireLength is the wire length of trailer.
-	//
-	// Deprecated: This field is never set. The length is not known when this message is
-	// emitted because the trailer fields are compressed with hpack after that.
 	WireLength int
 	// Trailer contains the trailer metadata sent to the client. This
 	// field is only valid if this OutTrailer is from the server side.

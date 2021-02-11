@@ -98,9 +98,7 @@ func (rn *RawNode) ProposeConfChange(cc pb.ConfChangeI) error {
 	return rn.raft.Step(m)
 }
 
-// ApplyConfChange applies a config change to the local node. The app must call
-// this when it applies a configuration change, except when it decides to reject
-// the configuration change, in which case no call must take place.
+// ApplyConfChange applies a config change to the local node.
 func (rn *RawNode) ApplyConfChange(cc pb.ConfChangeI) *pb.ConfState {
 	cs := rn.raft.applyConfChange(cc.AsV2())
 	return &cs
