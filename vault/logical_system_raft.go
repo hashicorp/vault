@@ -394,6 +394,10 @@ func (b *SystemBackend) handleStorageRaftAutopilotHealth() framework.OperationFu
 			return nil, err
 		}
 
+		if health == nil {
+			return nil, nil
+		}
+
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"healthy":                      health.Healthy,
