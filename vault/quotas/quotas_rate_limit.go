@@ -100,6 +100,20 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, b
 	}
 }
 
+func (q *RateLimitQuota) Clone() *RateLimitQuota {
+	rlq := &RateLimitQuota{
+		ID:            q.ID,
+		Name:          q.Name,
+		MountPath:     q.MountPath,
+		Type:          q.Type,
+		NamespacePath: q.NamespacePath,
+		BlockInterval: q.BlockInterval,
+		Rate:          q.Rate,
+		Interval:      q.Interval,
+	}
+	return rlq
+}
+
 // initialize ensures the namespace and max requests are initialized, sets the ID
 // if it's currently empty, sets the purge interval and stale age to default
 // values, and finally starts the client purge go routine if it has been started
