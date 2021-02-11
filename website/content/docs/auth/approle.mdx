@@ -113,6 +113,7 @@ documentation.
    $ vault write -f auth/approle/role/my-role/secret-id
    secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
+   secret_id_ttl           10m
    ```
 
 ### Via the API
@@ -170,7 +171,8 @@ documentation.
    {
      "data": {
        "secret_id_accessor": "45946873-1d96-a9d4-678c-9229f74386a5",
-       "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25"
+       "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25",
+       "secret_id_ttl": 600
      }
    }
    ```

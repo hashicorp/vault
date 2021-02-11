@@ -1,16 +1,8 @@
-// ARG TODO need to replace with Lazy capabilities, don't want to step on toes for now.
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const STANDARD_FIELDS = [
-  { attr: 'name', required: true },
-  { attr: 'plugin_name', required: true },
-  { attr: 'verify_connection' },
-  { attr: 'allowed_roles' },
-];
 
 const AVAILABLE_PLUGIN_TYPES = [
   {

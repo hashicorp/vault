@@ -142,6 +142,7 @@ const SECRET_BACKENDS = {
 export function optionsForBackend([backend, tab]) {
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
+
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];

@@ -25,7 +25,6 @@ export default ApplicationAdapter.extend({
   fetchByQuery(store, query) {
     const { backend, id } = query;
     return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
-      // resp.id = id;
       resp.backend = backend;
       if (id) {
         resp.id = id;
@@ -34,12 +33,10 @@ export default ApplicationAdapter.extend({
     });
   },
   query(store, type, query) {
-    // ARG TODO pass in id
     return this.fetchByQuery(store, query);
   },
 
   queryRecord(store, type, query) {
-    // ARG TODO unsure if using??
     return this.fetchByQuery(store, query);
   },
 

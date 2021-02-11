@@ -8,7 +8,7 @@ import hbs from 'htmlbars-inline-precompile';
 
 const TITLE = 'Get Credentials';
 const SEARCH_LABEL = 'Role to use';
-// ARG TODO add both static and dynamic roles
+
 const storeService = Service.extend({
   query(modelType) {
     return new Promise((resolve, reject) => {
@@ -16,7 +16,6 @@ const storeService = Service.extend({
         case 'database/role':
           resolve([{ id: 'my-role', backend: 'database' }]);
           break;
-
         default:
           reject({ httpStatus: 404, message: 'not found' });
           break;
@@ -26,7 +25,7 @@ const storeService = Service.extend({
   },
 });
 
-module('Integration | Component get-credentials-card', function(hooks) {
+module('Integration | Component | get-credentials-card', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {

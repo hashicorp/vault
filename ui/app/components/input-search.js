@@ -13,7 +13,6 @@ export default class inputSelect extends Component {
   @tracked searchInput = '';
   @action
   inputChanged() {
-    // const onChange = this.onChange;
     this.args.onChange(this.searchInput);
   }
 }

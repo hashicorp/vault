@@ -23,7 +23,8 @@ import layout from '../templates/components/info-table-row';
  * @param [modelType=null] {string} - Passed through to InfoTableItemArray. Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param [queryParam] {String} - Passed through to InfoTableItemArray. If you want to specific a tab for the View All XX to display to.  Ex: role
  * @param [backend] {String} - Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex: transformation
- * @param [viewAll] {String} - Passed through to InfoTableItemArray. Specify the word at the end of the link View all xx.
+ * @param [viewAll] {String} - Passed through to InfoTableItemArray. Specify the word at the end of the link View all.
+ * @param [tooltipText] {String} - Text if a tooltip should display over the value.
  */
 
 export default Component.extend({
@@ -36,6 +37,7 @@ export default Component.extend({
   label: null,
   helperText: null,
   value: null,
+  tooltipText: '',
 
   valueIsBoolean: computed('value', function() {
     return typeOf(this.value) === 'boolean';
