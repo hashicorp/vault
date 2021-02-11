@@ -7,8 +7,7 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 const getErrorMessage = errors => {
-  let errorMessage =
-    'Something went wrong when creating the connection. Check the Vault logs for more information.';
+  let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
   if (errors?.join(' ').indexOf('failed to verify')) {
     errorMessage =
       'There was a verification error for this connection. Check the Vault logs for more information.';
@@ -85,8 +84,7 @@ export default class DatabaseConnectionEdit extends Component {
         this.transitionToRoute(SHOW_ROUTE, name);
       })
       .catch(e => {
-        const errorMessage = getErrorMessage(e.errors);
-        this.flashMessages.danger(`Error rotating root credentials: ${errorMessage}`);
+        this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
         this.transitionToRoute(SHOW_ROUTE, name);
       });
   }

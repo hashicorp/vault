@@ -18,7 +18,7 @@ module('Integration | Helper | is-empty-object', function(hooks) {
       Empty
       {{else}}
       Full
-      {{/else}}
+      {{/if}}
     `);
 
     assert.equal(this.element.textContent.trim(), 'Empty');
@@ -31,7 +31,7 @@ module('Integration | Helper | is-empty-object', function(hooks) {
       Empty
       {{else}}
       Full
-      {{/else}}
+      {{/if}}
     `);
 
     assert.equal(this.element.textContent.trim(), 'Full');

@@ -7,20 +7,20 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class DatabaseRoleEdit extends Component {
   @service router;
+  @service flashMessages;
 
-  get tooltipMessage() {
+  get warningMessages() {
+    let warnings = {};
     if (this.args.model.canUpdateDb === false) {
-      return `You don't have permissions to update the connection "${
-        this.args.model.database[0]
-      }", so this role cannot be created.`;
+      warnings.database = `You don’t have permissions to update this database connection, so this role cannot be created.`;
     }
-    if (!this.args.model.canCreateDynamic && this.args.model.type === 'dynamic') {
-      return `You don't have permissions to create dynamic roles.`;
+    if (
+      (this.args.model.type === 'dynamic' && this.args.model.canCreateDynamic === false) ||
+      (this.args.model.type === 'static' && this.args.model.canCreateStatic === false)
+    ) {
+      warnings.type = `You don't have permissions to create this type of role.`;
     }
-    if (!this.args.model.canCreateStatic && this.args.model.type === 'static') {
-      return `You don't have permissions to create static roles.`;
-    }
-    return null;
+    return warnings;
   }
 
   get databaseType() {
@@ -40,9 +40,14 @@ export default class DatabaseRoleEdit extends Component {
   delete() {
     const secret = this.args.model;
     const backend = secret.backend;
-    secret.destroyRecord().then(() => {
-      this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
-    });
+    secret
+      .destroyRecord()
+      .then(() => {
+        this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
+      })
+      .catch(e => {
+        this.flashMessages.danger(e.errors?.join('. '));
+      });
   }
 
   @action
