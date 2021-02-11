@@ -8,7 +8,7 @@
     "@hashicorp/nextjs-scripts": "16.0.1",
     "@hashicorp/react-alert-banner": "^5.0.0",
     "@hashicorp/react-button": "4.0.0",
-    "@hashicorp/react-case-study-slider": "3.0.3",
+    "@hashicorp/react-case-study-slider": "4.0.0",
     "@hashicorp/react-code-block": "3.0.3",
     "@hashicorp/react-docs-page": "10.3.2",
     "@hashicorp/react-hashi-stack-menu": "1.1.0",
