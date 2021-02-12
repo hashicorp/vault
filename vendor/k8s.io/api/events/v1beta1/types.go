@@ -23,8 +23,6 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:prerelease-lifecycle-gen:introduced=1.8
-// +k8s:prerelease-lifecycle-gen:deprecated=1.22
 
 // Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system.
 type Event struct {
@@ -32,65 +30,60 @@ type Event struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// eventTime is the time when this Event was first observed. It is required.
+	// Required. Time when this Event was first observed.
 	EventTime metav1.MicroTime `json:"eventTime" protobuf:"bytes,2,opt,name=eventTime"`
 
-	// series is data about the Event series this event represents or nil if it's a singleton Event.
+	// Data about the Event series this event represents or nil if it's a singleton Event.
 	// +optional
 	Series *EventSeries `json:"series,omitempty" protobuf:"bytes,3,opt,name=series"`
 
-	// reportingController is the name of the controller that emitted this Event, e.g. `kubernetes.io/kubelet`.
-	// This field cannot be empty for new Events.
+	// Name of the controller that emitted this Event, e.g. `kubernetes.io/kubelet`.
 	// +optional
 	ReportingController string `json:"reportingController,omitempty" protobuf:"bytes,4,opt,name=reportingController"`
 
-	// reportingInstance is the ID of the controller instance, e.g. `kubelet-xyzf`.
-	// This field cannot be empty for new Events and it can have at most 128 characters.
+	// ID of the controller instance, e.g. `kubelet-xyzf`.
 	// +optional
 	ReportingInstance string `json:"reportingInstance,omitempty" protobuf:"bytes,5,opt,name=reportingInstance"`
 
-	// action is what action was taken/failed regarding to the regarding object. It is machine-readable.
-	// This field can have at most 128 characters.
+	// What action was taken/failed regarding to the regarding object.
 	// +optional
 	Action string `json:"action,omitempty" protobuf:"bytes,6,name=action"`
 
-	// reason is why the action was taken. It is human-readable.
-	// This field can have at most 128 characters.
-	// +optional
+	// Why the action was taken.
 	Reason string `json:"reason,omitempty" protobuf:"bytes,7,name=reason"`
 
-	// regarding contains the object this Event is about. In most cases it's an Object reporting controller
-	// implements, e.g. ReplicaSetController implements ReplicaSets and this event is emitted because
+	// The object this Event is about. In most cases it's an Object reporting controller implements.
+	// E.g. ReplicaSetController implements ReplicaSets and this event is emitted because
 	// it acts on some changes in a ReplicaSet object.
 	// +optional
 	Regarding corev1.ObjectReference `json:"regarding,omitempty" protobuf:"bytes,8,opt,name=regarding"`
 
-	// related is the optional secondary object for more complex actions. E.g. when regarding object triggers
+	// Optional secondary object for more complex actions. E.g. when regarding object triggers
 	// a creation or deletion of related object.
 	// +optional
 	Related *corev1.ObjectReference `json:"related,omitempty" protobuf:"bytes,9,opt,name=related"`
 
-	// note is a human-readable description of the status of this operation.
+	// Optional. A human-readable description of the status of this operation.
 	// Maximal length of the note is 1kB, but libraries should be prepared to
 	// handle values up to 64kB.
 	// +optional
 	Note string `json:"note,omitempty" protobuf:"bytes,10,opt,name=note"`
 
-	// type is the type of this event (Normal, Warning), new types could be added in the future.
-	// It is machine-readable.
+	// Type of this event (Normal, Warning), new types could be added in the
+	// future.
 	// +optional
 	Type string `json:"type,omitempty" protobuf:"bytes,11,opt,name=type"`
 
-	// deprecatedSource is the deprecated field assuring backward compatibility with core.v1 Event type.
+	// Deprecated field assuring backward compatibility with core.v1 Event type
 	// +optional
 	DeprecatedSource corev1.EventSource `json:"deprecatedSource,omitempty" protobuf:"bytes,12,opt,name=deprecatedSource"`
-	// deprecatedFirstTimestamp is the deprecated field assuring backward compatibility with core.v1 Event type.
+	// Deprecated field assuring backward compatibility with core.v1 Event type
 	// +optional
 	DeprecatedFirstTimestamp metav1.Time `json:"deprecatedFirstTimestamp,omitempty" protobuf:"bytes,13,opt,name=deprecatedFirstTimestamp"`
-	// deprecatedLastTimestamp is the deprecated field assuring backward compatibility with core.v1 Event type.
+	// Deprecated field assuring backward compatibility with core.v1 Event type
 	// +optional
 	DeprecatedLastTimestamp metav1.Time `json:"deprecatedLastTimestamp,omitempty" protobuf:"bytes,14,opt,name=deprecatedLastTimestamp"`
-	// deprecatedCount is the deprecated field assuring backward compatibility with core.v1 Event type.
+	// Deprecated field assuring backward compatibility with core.v1 Event type
 	// +optional
 	DeprecatedCount int32 `json:"deprecatedCount,omitempty" protobuf:"varint,15,opt,name=deprecatedCount"`
 }
@@ -98,17 +91,24 @@ type Event struct {
 // EventSeries contain information on series of events, i.e. thing that was/is happening
 // continuously for some time.
 type EventSeries struct {
-	// count is the number of occurrences in this series up to the last heartbeat time.
+	// Number of occurrences in this series up to the last heartbeat time
 	Count int32 `json:"count" protobuf:"varint,1,opt,name=count"`
-	// lastObservedTime is the time when last Event from the series was seen before last heartbeat.
+	// Time when last Event from the series was seen before last heartbeat.
 	LastObservedTime metav1.MicroTime `json:"lastObservedTime" protobuf:"bytes,2,opt,name=lastObservedTime"`
-
-	// +k8s:deprecated=state,protobuf=3
+	// Information whether this series is ongoing or finished.
+	// Deprecated. Planned removal for 1.18
+	State EventSeriesState `json:"state" protobuf:"bytes,3,opt,name=state"`
 }
 
+type EventSeriesState string
+
+const (
+	EventSeriesStateOngoing  EventSeriesState = "Ongoing"
+	EventSeriesStateFinished EventSeriesState = "Finished"
+	EventSeriesStateUnknown  EventSeriesState = "Unknown"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:prerelease-lifecycle-gen:introduced=1.8
-// +k8s:prerelease-lifecycle-gen:deprecated=1.22
 
 // EventList is a list of Event objects.
 type EventList struct {
@@ -118,6 +118,6 @@ type EventList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// items is a list of schema objects.
+	// Items is a list of schema objects.
 	Items []Event `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

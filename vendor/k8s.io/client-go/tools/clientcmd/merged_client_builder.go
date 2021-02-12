@@ -20,7 +20,7 @@ import (
 	"io"
 	"sync"
 
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 
 	restclient "k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -60,26 +60,27 @@ func NewInteractiveDeferredLoadingClientConfig(loader ClientConfigLoader, overri
 }
 
 func (config *DeferredLoadingClientConfig) createClientConfig() (ClientConfig, error) {
-	config.loadingLock.Lock()
-	defer config.loadingLock.Unlock()
+	if config.clientConfig == nil {
+		config.loadingLock.Lock()
+		defer config.loadingLock.Unlock()
 
-	if config.clientConfig != nil {
-		return config.clientConfig, nil
-	}
-	mergedConfig, err := config.loader.Load()
-	if err != nil {
-		return nil, err
+		if config.clientConfig == nil {
+			mergedConfig, err := config.loader.Load()
+			if err != nil {
+				return nil, err
+			}
+
+			var mergedClientConfig ClientConfig
+			if config.fallbackReader != nil {
+				mergedClientConfig = NewInteractiveClientConfig(*mergedConfig, config.overrides.CurrentContext, config.overrides, config.fallbackReader, config.loader)
+			} else {
+				mergedClientConfig = NewNonInteractiveClientConfig(*mergedConfig, config.overrides.CurrentContext, config.overrides, config.loader)
+			}
+
+			config.clientConfig = mergedClientConfig
+		}
 	}
 
-	var currentContext string
-	if config.overrides != nil {
-		currentContext = config.overrides.CurrentContext
-	}
-	if config.fallbackReader != nil {
-		config.clientConfig = NewInteractiveClientConfig(*mergedConfig, currentContext, config.overrides, config.fallbackReader, config.loader)
-	} else {
-		config.clientConfig = NewNonInteractiveClientConfig(*mergedConfig, currentContext, config.overrides, config.loader)
-	}
 	return config.clientConfig, nil
 }
 

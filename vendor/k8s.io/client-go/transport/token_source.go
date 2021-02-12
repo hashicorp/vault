@@ -26,7 +26,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 )
 
 // TokenSourceWrapTransport returns a WrapTransport that injects bearer tokens

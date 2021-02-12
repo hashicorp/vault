@@ -286,9 +286,8 @@ func contextForChannel(parentCh <-chan struct{}) (context.Context, context.Cance
 }
 
 // BackoffManager manages backoff with a particular scheme based on its underlying implementation. It provides
-// an interface to return a timer for backoff, and caller shall backoff until Timer.C() drains. If the second Backoff()
-// is called before the timer from the first Backoff() call finishes, the first timer will NOT be drained and result in
-// undetermined behavior.
+// an interface to return a timer for backoff, and caller shall backoff until Timer.C returns. If the second Backoff()
+// is called before the timer from the first Backoff() call finishes, the first timer will NOT be drained.
 // The BackoffManager is supposed to be called in a single-threaded environment.
 type BackoffManager interface {
 	Backoff() clock.Timer
@@ -318,7 +317,7 @@ func NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration time.Du
 			Steps: math.MaxInt32,
 			Cap:   maxBackoff,
 		},
-		backoffTimer:         nil,
+		backoffTimer:         c.NewTimer(0),
 		initialBackoff:       initBackoff,
 		lastBackoffStart:     c.Now(),
 		backoffResetDuration: resetDuration,
@@ -335,14 +334,9 @@ func (b *exponentialBackoffManagerImpl) getNextBackoff() time.Duration {
 	return b.backoff.Step()
 }
 
-// Backoff implements BackoffManager.Backoff, it returns a timer so caller can block on the timer for exponential backoff.
-// The returned timer must be drained before calling Backoff() the second time
+// Backoff implements BackoffManager.Backoff, it returns a timer so caller can block on the timer for backoff.
 func (b *exponentialBackoffManagerImpl) Backoff() clock.Timer {
-	if b.backoffTimer == nil {
-		b.backoffTimer = b.clock.NewTimer(b.getNextBackoff())
-	} else {
-		b.backoffTimer.Reset(b.getNextBackoff())
-	}
+	b.backoffTimer.Reset(b.getNextBackoff())
 	return b.backoffTimer
 }
 
@@ -360,7 +354,7 @@ func NewJitteredBackoffManager(duration time.Duration, jitter float64, c clock.C
 		clock:        c,
 		duration:     duration,
 		jitter:       jitter,
-		backoffTimer: nil,
+		backoffTimer: c.NewTimer(0),
 	}
 }
 
@@ -372,15 +366,8 @@ func (j *jitteredBackoffManagerImpl) getNextBackoff() time.Duration {
 	return jitteredPeriod
 }
 
-// Backoff implements BackoffManager.Backoff, it returns a timer so caller can block on the timer for jittered backoff.
-// The returned timer must be drained before calling Backoff() the second time
 func (j *jitteredBackoffManagerImpl) Backoff() clock.Timer {
-	backoff := j.getNextBackoff()
-	if j.backoffTimer == nil {
-		j.backoffTimer = j.clock.NewTimer(backoff)
-	} else {
-		j.backoffTimer.Reset(backoff)
-	}
+	j.backoffTimer.Reset(j.getNextBackoff())
 	return j.backoffTimer
 }
 

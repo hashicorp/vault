@@ -26,7 +26,7 @@ import (
 
 	"strings"
 
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 )
 
 type AddressFamily uint
