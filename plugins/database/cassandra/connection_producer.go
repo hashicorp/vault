@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gocql/gocql"
-	"github.com/hashicorp/errwrap"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+
+	"github.com/gocql/gocql"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -67,7 +67,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return fmt.Errorf("invalid connect_timeout: %w", err)
 	}
 
 	if c.SocketKeepAliveRaw == nil {
@@ -75,7 +75,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 	c.socketKeepAlive, err = parseutil.ParseDurationSecond(c.SocketKeepAliveRaw)
 	if err != nil {
-		return errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
+		return fmt.Errorf("invalid socket_keep_alive: %w", err)
 	}
 
 	switch {
@@ -93,11 +93,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	case len(c.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
 		if err != nil {
-			return errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return fmt.Errorf("error marshaling PEM information: %w", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -107,11 +107,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	case len(c.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
 		if err != nil {
-			return errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return fmt.Errorf("error parsing the given PEM information: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return fmt.Errorf("error marshaling PEM information: %w", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -125,7 +125,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 
 	if req.VerifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return fmt.Errorf("error verifying connection: %w", err)
 		}
 	}
 
@@ -203,12 +203,12 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
+				return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
 			if err != nil || tlsConfig == nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
+				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%w", tlsConfig, err)
 			}
 			tlsConfig.InsecureSkipVerify = c.InsecureTLS
 
@@ -236,7 +236,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
+		return nil, fmt.Errorf("error creating session: %w", err)
 	}
 
 	if c.Consistency != "" {
@@ -258,11 +258,11 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 			if rowNum < 1 {
 				session.Close()
-				return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+				return nil, fmt.Errorf("error validating connection info: No role create permissions found, previous error: %w", err)
 			}
 		} else if err != nil {
 			session.Close()
-			return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
+			return nil, fmt.Errorf("error validating connection info: %w", err)
 		}
 	}
 
