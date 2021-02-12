@@ -141,6 +141,8 @@ type RaftBackend struct {
 	// leader. This is used to track some state of the peers and as well as used
 	// to see if the peers are "alive" using the heartbeat received from them.
 	followerStates *FollowerStates
+
+	nonVoter bool
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -1267,6 +1269,19 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 		value: []byte(value),
 		b:     b,
 	}, nil
+}
+
+func (b *RaftBackend) SetNonVoter(nonVoter bool) {
+	b.l.Lock()
+	b.nonVoter = nonVoter
+	b.l.Unlock()
+}
+
+func (b *RaftBackend) NonVoter() bool {
+	b.l.RLock()
+	nonVoter := b.nonVoter
+	b.l.RUnlock()
+	return nonVoter
 }
 
 // RaftLock implements the physical Lock interface and enables HA for this

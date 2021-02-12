@@ -325,7 +325,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0)
+			followerStates.Update(server.NodeID, 0, 0, raftBackend.NonVoter())
 		}
 	}
 
@@ -951,6 +951,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
+						raftBackend.SetNonVoter(nonVoter)
 						return nil
 					}
 				}
@@ -990,6 +991,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		}
 	}
 
+	raftBackend.SetNonVoter(nonVoter)
 	return true, nil
 }
 

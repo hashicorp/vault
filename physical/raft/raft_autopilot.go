@@ -97,6 +97,7 @@ type FollowerState struct {
 	LastHeartbeat time.Time
 	LastTerm      uint64
 	IsDead        bool
+	NonVoter      bool
 }
 
 // FollowerStates holds information about all the peers in the raft cluster
@@ -133,10 +134,11 @@ func (s *FollowerStates) MarkFollowerAsDead(nodeID string) {
 }
 
 // Update the peer information in the follower states
-func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64) {
+func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, nonVoter bool) {
 	state := FollowerState{
 		AppliedIndex: appliedIndex,
 		LastTerm:     term,
+		NonVoter:     nonVoter,
 	}
 	if appliedIndex > 0 {
 		state.LastHeartbeat = time.Now()
@@ -269,13 +271,13 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	followerStates.l.RLock()
 	defer followerStates.l.RUnlock()
 
-	d.logger.Trace("returning known servers")
 	ret := make(map[raft.ServerID]*autopilot.Server)
 	for id, state := range d.RaftBackend.followerStates.followers {
 		server := &autopilot.Server{
 			ID:          raft.ServerID(id),
 			Name:        id,
 			RaftVersion: raft.ProtocolVersionMax,
+			Ext:         d.autopilotServerExt(state.NonVoter),
 		}
 
 		switch state.IsDead {
@@ -287,7 +289,6 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		}
 
 		ret[raft.ServerID(id)] = server
-		d.logger.Trace("returning known server", "id", id)
 	}
 
 	// Add the leader
@@ -296,8 +297,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		Ext:         d.autopilotServerExt(false),
 	}
-	d.logger.Trace("returning known server", "id", d.localID)
 
 	return ret
 }

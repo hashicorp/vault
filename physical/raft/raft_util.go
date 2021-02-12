@@ -33,3 +33,7 @@ func autopilotToAPIStateEnterprise(state *autopilot.State, apiState *AutopilotHe
 func (d *Delegate) autopilotConfigExt() interface{} {
 	return nil
 }
+
+func (d *Delegate) autopilotServerExt(_ bool) interface{} {
+	return nil
+}
