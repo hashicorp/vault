@@ -29,3 +29,7 @@ func autopilotToAPIStateEnterprise(state *autopilot.State, apiState *AutopilotHe
 	// alarm anyone by leaving this as the zero value.
 	apiState.OptimisticFailureTolerance = state.FailureTolerance
 }
+
+func (d *Delegate) autopilotConfigExt() interface{} {
+	return nil
+}
