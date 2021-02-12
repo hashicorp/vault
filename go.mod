@@ -124,7 +124,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.8.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
@@ -195,7 +195,7 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
 	go.mongodb.org/atlas v0.7.2 // indirect
-	go.mongodb.org/mongo-driver v1.4.2
+	go.mongodb.org/mongo-driver v1.4.6
 	go.opencensus.io v0.22.6 // indirect
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
@@ -203,6 +203,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
+	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	golang.org/x/tools v0.1.0
 	google.golang.org/api v0.39.0

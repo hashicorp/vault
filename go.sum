@@ -804,6 +804,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0 h1:VoB3Q11LX+wF5w5TC8j
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0/go.mod h1:SSkKpSTOMnX84PfgYiWHgwVg+YMhxHNjo+YCJGNBoZk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.8.0 h1:3BAhoqqDN198vynAfS3rcxUW2STBjREluGPsYCOy2mA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.8.0/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
+github.com/hashicorp/vault-plugin-secrets-azure v0.8.1 h1:OVPAfhr4NVNu/CP8lR+QEk3l4uocP+gHRKQtKiB1AUo=
+github.com/hashicorp/vault-plugin-secrets-azure v0.8.1/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2 h1:iZDbNQnlNzwXnuUwOykQ54ReRmKc0VoxXz/b8V48EDM=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0 h1:dKPQIr6tLcMmhNKdc2A9pbwaIFLooC80UfNZL+jWMlA=
@@ -1354,6 +1356,8 @@ go.mongodb.org/atlas v0.7.2 h1:wB3+hP71t3mK+JOSrjBFbrzb5MsZRzDtZlpEKp58KK0=
 go.mongodb.org/atlas v0.7.2/go.mod h1:CIaBeO8GLHhtYLw7xSSXsw7N90Z4MFY87Oy9qcPyuEs=
 go.mongodb.org/mongo-driver v1.4.2 h1:WlnEglfTg/PfPq4WXs2Vkl/5ICC6hoG8+r+LraPmGk4=
 go.mongodb.org/mongo-driver v1.4.2/go.mod h1:WcMNYLx/IlOxLe6JRJiv2uXuCz6zBLndR4SoGjYphSc=
+go.mongodb.org/mongo-driver v1.4.6 h1:rh7GdYmDrb8AQSkF8yteAus8qYOgOASWDOv1BWqBXkU=
+go.mongodb.org/mongo-driver v1.4.6/go.mod h1:WcMNYLx/IlOxLe6JRJiv2uXuCz6zBLndR4SoGjYphSc=
 go.opencensus.io v0.19.1/go.mod h1:gug0GbSHa8Pafr0d2urOSgoXHZ6x/RUlaiT0d9pqb4A=
 go.opencensus.io v0.19.2/go.mod h1:NO/8qkisMZLZ1FCsKNqtJPwc8/TaclWyY0B6wcYNg9M=
 go.opencensus.io v0.20.1/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=

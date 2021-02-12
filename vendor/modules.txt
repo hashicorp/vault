@@ -581,7 +581,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 # github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.8.0
+# github.com/hashicorp/vault-plugin-secrets-azure v0.8.1
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.8.2
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
@@ -1052,7 +1052,7 @@ go.etcd.io/etcd/raft/tracker
 go.etcd.io/etcd/version
 # go.mongodb.org/atlas v0.7.2
 go.mongodb.org/atlas/mongodbatlas
-# go.mongodb.org/mongo-driver v1.4.2
+# go.mongodb.org/mongo-driver v1.4.6
 go.mongodb.org/mongo-driver/bson
 go.mongodb.org/mongo-driver/bson/bsoncodec
 go.mongodb.org/mongo-driver/bson/bsonoptions
