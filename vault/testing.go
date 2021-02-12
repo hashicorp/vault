@@ -427,6 +427,10 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 	return &dynamicSystemView{c, me}
 }
 
+func TestAddTestPluginBenchmarking(t gotesting.TB, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
+	TestAddTestPlugin(t.(testing.T), c, name, pluginType, testFunc, env, tempDir)
+}
+
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
 func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {

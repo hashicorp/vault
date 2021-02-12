@@ -57,14 +57,14 @@ func testVaultServerUnseal(t testing.TB) (*api.Client, []string, func()) {
 func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {
 	t.Helper()
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestClusterBenchmarking(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: http.Handler,
 	})
 	cluster.Start()
 
 	// Make it easy to get access to the active
 	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	vault.TestWaitActiveBenchmarking(t, core)
 
 	// Get the client already setup for us!
 	client := cluster.Cores[0].Client

@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
-	testinterface "github.com/mitchellh/go-testing-interface"
 )
 
 func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
@@ -40,7 +39,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		},
 	}
 
-	cluster := vault.NewTestCluster(t.(testinterface.T), coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestClusterBenchmarking(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		Logger:      logger.Named("testclusteroptions"),
 	})
@@ -51,8 +50,8 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestWaitActive(t.(testinterface.T), core.Core)
-	vault.TestAddTestPlugin(t.(testinterface.T), core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
+	vault.TestWaitActiveBenchmarking(t, core.Core)
+	vault.TestAddTestPluginBenchmarking(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{
