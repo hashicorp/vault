@@ -121,7 +121,11 @@ func (client ExpressRouteCircuitPeeringsClient) CreateOrUpdateSender(req *http.R
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if ercp.Response.Response, err = future.GetResult(sender); err == nil && ercp.Response.Response.StatusCode != http.StatusNoContent {
+		ercp.Response.Response, err = future.GetResult(sender)
+		if ercp.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.ExpressRouteCircuitPeeringsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && ercp.Response.Response.StatusCode != http.StatusNoContent {
 			ercp, err = client.CreateOrUpdateResponder(ercp.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.ExpressRouteCircuitPeeringsCreateOrUpdateFuture", "Result", ercp.Response.Response, "Failure responding to request")

@@ -121,7 +121,11 @@ func (client VirtualMachineExtensionsClient) CreateOrUpdateSender(req *http.Requ
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if vme.Response.Response, err = future.GetResult(sender); err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
+		vme.Response.Response, err = future.GetResult(sender)
+		if vme.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
 			vme, err = client.CreateOrUpdateResponder(vme.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsCreateOrUpdateFuture", "Result", vme.Response.Response, "Failure responding to request")
@@ -477,7 +481,11 @@ func (client VirtualMachineExtensionsClient) UpdateSender(req *http.Request) (fu
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if vme.Response.Response, err = future.GetResult(sender); err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
+		vme.Response.Response, err = future.GetResult(sender)
+		if vme.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
 			vme, err = client.UpdateResponder(vme.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsUpdateFuture", "Result", vme.Response.Response, "Failure responding to request")

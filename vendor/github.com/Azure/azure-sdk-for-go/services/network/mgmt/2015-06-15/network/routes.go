@@ -120,7 +120,11 @@ func (client RoutesClient) CreateOrUpdateSender(req *http.Request) (future Route
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if r.Response.Response, err = future.GetResult(sender); err == nil && r.Response.Response.StatusCode != http.StatusNoContent {
+		r.Response.Response, err = future.GetResult(sender)
+		if r.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.RoutesCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && r.Response.Response.StatusCode != http.StatusNoContent {
 			r, err = client.CreateOrUpdateResponder(r.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.RoutesCreateOrUpdateFuture", "Result", r.Response.Response, "Failure responding to request")

@@ -119,7 +119,11 @@ func (client LocalNetworkGatewaysClient) CreateOrUpdateSender(req *http.Request)
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if lng.Response.Response, err = future.GetResult(sender); err == nil && lng.Response.Response.StatusCode != http.StatusNoContent {
+		lng.Response.Response, err = future.GetResult(sender)
+		if lng.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.LocalNetworkGatewaysCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && lng.Response.Response.StatusCode != http.StatusNoContent {
 			lng, err = client.CreateOrUpdateResponder(lng.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.LocalNetworkGatewaysCreateOrUpdateFuture", "Result", lng.Response.Response, "Failure responding to request")

@@ -124,7 +124,11 @@ func (client LogAnalyticsClient) ExportRequestRateByIntervalSender(req *http.Req
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if laor.Response.Response, err = future.GetResult(sender); err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
+		laor.Response.Response, err = future.GetResult(sender)
+		if laor.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
 			laor, err = client.ExportRequestRateByIntervalResponder(laor.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", laor.Response.Response, "Failure responding to request")
@@ -229,7 +233,11 @@ func (client LogAnalyticsClient) ExportThrottledRequestsSender(req *http.Request
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if laor.Response.Response, err = future.GetResult(sender); err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
+		laor.Response.Response, err = future.GetResult(sender)
+		if laor.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
 			laor, err = client.ExportThrottledRequestsResponder(laor.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", laor.Response.Response, "Failure responding to request")

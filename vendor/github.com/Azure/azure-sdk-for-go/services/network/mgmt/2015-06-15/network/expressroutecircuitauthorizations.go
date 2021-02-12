@@ -123,7 +123,11 @@ func (client ExpressRouteCircuitAuthorizationsClient) CreateOrUpdateSender(req *
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if erca.Response.Response, err = future.GetResult(sender); err == nil && erca.Response.Response.StatusCode != http.StatusNoContent {
+		erca.Response.Response, err = future.GetResult(sender)
+		if erca.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.ExpressRouteCircuitAuthorizationsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && erca.Response.Response.StatusCode != http.StatusNoContent {
 			erca, err = client.CreateOrUpdateResponder(erca.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.ExpressRouteCircuitAuthorizationsCreateOrUpdateFuture", "Result", erca.Response.Response, "Failure responding to request")

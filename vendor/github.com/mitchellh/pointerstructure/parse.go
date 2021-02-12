@@ -17,7 +17,7 @@ func Parse(input string) (*Pointer, error) {
 	// We expect the first character to be "/"
 	if input[0] != '/' {
 		return nil, fmt.Errorf(
-			"parse Go pointer %q: first char must be '/'", input)
+			"parse Go pointer %q: %w", input, ErrParse)
 	}
 
 	// Trim out the first slash so we don't have to +1 every index

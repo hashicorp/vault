@@ -133,7 +133,11 @@ func (client GalleryImageVersionsClient) CreateOrUpdateSender(req *http.Request)
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if giv.Response.Response, err = future.GetResult(sender); err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
+		giv.Response.Response, err = future.GetResult(sender)
+		if giv.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
 			giv, err = client.CreateOrUpdateResponder(giv.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsCreateOrUpdateFuture", "Result", giv.Response.Response, "Failure responding to request")
@@ -538,7 +542,11 @@ func (client GalleryImageVersionsClient) UpdateSender(req *http.Request) (future
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if giv.Response.Response, err = future.GetResult(sender); err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
+		giv.Response.Response, err = future.GetResult(sender)
+		if giv.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
 			giv, err = client.UpdateResponder(giv.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsUpdateFuture", "Result", giv.Response.Response, "Failure responding to request")

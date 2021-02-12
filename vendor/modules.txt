@@ -23,7 +23,7 @@ cloud.google.com/go/storage
 code.cloudfoundry.org/gofileutils/fileutils
 # github.com/Azure/azure-pipeline-go v0.2.3
 github.com/Azure/azure-pipeline-go/pipeline
-# github.com/Azure/azure-sdk-for-go v51.1.0+incompatible
+# github.com/Azure/azure-sdk-for-go v51.2.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
@@ -778,7 +778,7 @@ github.com/michaelklishin/rabbit-hole
 github.com/miekg/dns
 # github.com/mitchellh/cli v1.1.0
 github.com/mitchellh/cli
-# github.com/mitchellh/copystructure v1.0.0
+# github.com/mitchellh/copystructure v1.1.1
 github.com/mitchellh/copystructure
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
@@ -790,11 +790,11 @@ github.com/mitchellh/gox
 github.com/mitchellh/hashstructure
 # github.com/mitchellh/iochan v1.0.0
 github.com/mitchellh/iochan
-# github.com/mitchellh/mapstructure v1.3.3
+# github.com/mitchellh/mapstructure v1.4.1
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/pointerstructure v1.0.0
+# github.com/mitchellh/pointerstructure v1.1.1
 github.com/mitchellh/pointerstructure
-# github.com/mitchellh/reflectwalk v1.0.0
+# github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
 # github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2
 github.com/moby/term
@@ -1256,7 +1256,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210202153253-cf70463f6119
+# google.golang.org/genproto v0.0.0-20210211221406-4ccc9a5e4183
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/distribution

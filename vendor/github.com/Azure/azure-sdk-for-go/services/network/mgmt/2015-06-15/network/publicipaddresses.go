@@ -131,7 +131,11 @@ func (client PublicIPAddressesClient) CreateOrUpdateSender(req *http.Request) (f
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if pia.Response.Response, err = future.GetResult(sender); err == nil && pia.Response.Response.StatusCode != http.StatusNoContent {
+		pia.Response.Response, err = future.GetResult(sender)
+		if pia.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.PublicIPAddressesCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && pia.Response.Response.StatusCode != http.StatusNoContent {
 			pia, err = client.CreateOrUpdateResponder(pia.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.PublicIPAddressesCreateOrUpdateFuture", "Result", pia.Response.Response, "Failure responding to request")

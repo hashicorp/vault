@@ -118,7 +118,11 @@ func (client VirtualNetworksClient) CreateOrUpdateSender(req *http.Request) (fut
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if vn.Response.Response, err = future.GetResult(sender); err == nil && vn.Response.Response.StatusCode != http.StatusNoContent {
+		vn.Response.Response, err = future.GetResult(sender)
+		if vn.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.VirtualNetworksCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && vn.Response.Response.StatusCode != http.StatusNoContent {
 			vn, err = client.CreateOrUpdateResponder(vn.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.VirtualNetworksCreateOrUpdateFuture", "Result", vn.Response.Response, "Failure responding to request")

@@ -152,7 +152,11 @@ func (client ContainerServicesClient) CreateOrUpdateSender(req *http.Request) (f
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if cs.Response.Response, err = future.GetResult(sender); err == nil && cs.Response.Response.StatusCode != http.StatusNoContent {
+		cs.Response.Response, err = future.GetResult(sender)
+		if cs.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.ContainerServicesCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && cs.Response.Response.StatusCode != http.StatusNoContent {
 			cs, err = client.CreateOrUpdateResponder(cs.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.ContainerServicesCreateOrUpdateFuture", "Result", cs.Response.Response, "Failure responding to request")

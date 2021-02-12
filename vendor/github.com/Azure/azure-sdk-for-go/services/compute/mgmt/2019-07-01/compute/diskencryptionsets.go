@@ -134,7 +134,11 @@ func (client DiskEncryptionSetsClient) CreateOrUpdateSender(req *http.Request) (
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if desVar.Response.Response, err = future.GetResult(sender); err == nil && desVar.Response.Response.StatusCode != http.StatusNoContent {
+		desVar.Response.Response, err = future.GetResult(sender)
+		if desVar.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && desVar.Response.Response.StatusCode != http.StatusNoContent {
 			desVar, err = client.CreateOrUpdateResponder(desVar.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsCreateOrUpdateFuture", "Result", desVar.Response.Response, "Failure responding to request")
@@ -636,7 +640,11 @@ func (client DiskEncryptionSetsClient) UpdateSender(req *http.Request) (future D
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if desVar.Response.Response, err = future.GetResult(sender); err == nil && desVar.Response.Response.StatusCode != http.StatusNoContent {
+		desVar.Response.Response, err = future.GetResult(sender)
+		if desVar.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && desVar.Response.Response.StatusCode != http.StatusNoContent {
 			desVar, err = client.UpdateResponder(desVar.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsUpdateFuture", "Result", desVar.Response.Response, "Failure responding to request")

@@ -118,7 +118,11 @@ func (client RouteTablesClient) CreateOrUpdateSender(req *http.Request) (future 
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if rt.Response.Response, err = future.GetResult(sender); err == nil && rt.Response.Response.StatusCode != http.StatusNoContent {
+		rt.Response.Response, err = future.GetResult(sender)
+		if rt.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.RouteTablesCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && rt.Response.Response.StatusCode != http.StatusNoContent {
 			rt, err = client.CreateOrUpdateResponder(rt.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.RouteTablesCreateOrUpdateFuture", "Result", rt.Response.Response, "Failure responding to request")

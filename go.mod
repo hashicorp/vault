@@ -17,7 +17,7 @@ require (
 	cloud.google.com/go v0.76.0
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.10.0
-	github.com/Azure/azure-sdk-for-go v51.1.0+incompatible // indirect
+	github.com/Azure/azure-sdk-for-go v51.2.0+incompatible // indirect
 	github.com/Azure/azure-storage-blob-go v0.11.0
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/adal v0.9.13
@@ -128,12 +128,13 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v1.5.0
 	github.com/mitchellh/cli v1.1.0
-	github.com/mitchellh/copystructure v1.0.0
+	github.com/mitchellh/copystructure v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/gox v0.4.0
-	github.com/mitchellh/mapstructure v1.3.3
-	github.com/mitchellh/reflectwalk v1.0.0
+	github.com/mitchellh/mapstructure v1.4.1
+	github.com/mitchellh/pointerstructure v1.1.1 // indirect
+	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
@@ -179,6 +180,7 @@ require (
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	golang.org/x/tools v0.1.0
 	google.golang.org/api v0.39.0
+	google.golang.org/genproto v0.0.0-20210211221406-4ccc9a5e4183 // indirect
 	google.golang.org/grpc v1.35.0
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/ini.v1 v1.62.0 // indirect

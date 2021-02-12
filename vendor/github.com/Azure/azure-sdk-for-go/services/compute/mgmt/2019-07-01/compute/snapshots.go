@@ -134,7 +134,11 @@ func (client SnapshotsClient) CreateOrUpdateSender(req *http.Request) (future Sn
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
+		s.Response.Response, err = future.GetResult(sender)
+		if s.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
 			s, err = client.CreateOrUpdateResponder(s.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.SnapshotsCreateOrUpdateFuture", "Result", s.Response.Response, "Failure responding to request")
@@ -409,7 +413,11 @@ func (client SnapshotsClient) GrantAccessSender(req *http.Request) (future Snaps
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if au.Response.Response, err = future.GetResult(sender); err == nil && au.Response.Response.StatusCode != http.StatusNoContent {
+		au.Response.Response, err = future.GetResult(sender)
+		if au.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsGrantAccessFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && au.Response.Response.StatusCode != http.StatusNoContent {
 			au, err = client.GrantAccessResponder(au.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.SnapshotsGrantAccessFuture", "Result", au.Response.Response, "Failure responding to request")
@@ -830,7 +838,11 @@ func (client SnapshotsClient) UpdateSender(req *http.Request) (future SnapshotsU
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
+		s.Response.Response, err = future.GetResult(sender)
+		if s.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
 			s, err = client.UpdateResponder(s.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.SnapshotsUpdateFuture", "Result", s.Response.Response, "Failure responding to request")

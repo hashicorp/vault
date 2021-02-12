@@ -118,7 +118,11 @@ func (client SecurityGroupsClient) CreateOrUpdateSender(req *http.Request) (futu
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if sg.Response.Response, err = future.GetResult(sender); err == nil && sg.Response.Response.StatusCode != http.StatusNoContent {
+		sg.Response.Response, err = future.GetResult(sender)
+		if sg.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.SecurityGroupsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && sg.Response.Response.StatusCode != http.StatusNoContent {
 			sg, err = client.CreateOrUpdateResponder(sg.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.SecurityGroupsCreateOrUpdateFuture", "Result", sg.Response.Response, "Failure responding to request")

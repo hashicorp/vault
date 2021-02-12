@@ -133,7 +133,11 @@ func (client DedicatedHostsClient) CreateOrUpdateSender(req *http.Request) (futu
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if dh.Response.Response, err = future.GetResult(sender); err == nil && dh.Response.Response.StatusCode != http.StatusNoContent {
+		dh.Response.Response, err = future.GetResult(sender)
+		if dh.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.DedicatedHostsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && dh.Response.Response.StatusCode != http.StatusNoContent {
 			dh, err = client.CreateOrUpdateResponder(dh.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.DedicatedHostsCreateOrUpdateFuture", "Result", dh.Response.Response, "Failure responding to request")
@@ -528,7 +532,11 @@ func (client DedicatedHostsClient) UpdateSender(req *http.Request) (future Dedic
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if dh.Response.Response, err = future.GetResult(sender); err == nil && dh.Response.Response.StatusCode != http.StatusNoContent {
+		dh.Response.Response, err = future.GetResult(sender)
+		if dh.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.DedicatedHostsUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && dh.Response.Response.StatusCode != http.StatusNoContent {
 			dh, err = client.UpdateResponder(dh.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "compute.DedicatedHostsUpdateFuture", "Result", dh.Response.Response, "Failure responding to request")

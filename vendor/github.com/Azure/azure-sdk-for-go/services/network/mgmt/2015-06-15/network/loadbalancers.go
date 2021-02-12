@@ -118,7 +118,11 @@ func (client LoadBalancersClient) CreateOrUpdateSender(req *http.Request) (futur
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		if lb.Response.Response, err = future.GetResult(sender); err == nil && lb.Response.Response.StatusCode != http.StatusNoContent {
+		lb.Response.Response, err = future.GetResult(sender)
+		if lb.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "network.LoadBalancersCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && lb.Response.Response.StatusCode != http.StatusNoContent {
 			lb, err = client.CreateOrUpdateResponder(lb.Response.Response)
 			if err != nil {
 				err = autorest.NewErrorWithError(err, "network.LoadBalancersCreateOrUpdateFuture", "Result", lb.Response.Response, "Failure responding to request")
