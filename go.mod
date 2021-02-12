@@ -35,7 +35,7 @@ require (
 	github.com/armon/go-metrics v0.3.6
 	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
 	github.com/armon/go-radix v1.0.0
-	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
+	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0
@@ -63,9 +63,11 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
+	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -187,5 +189,9 @@ require (
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	k8s.io/client-go v0.19.0 // indirect
+	k8s.io/klog/v2 v2.5.0 // indirect
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
+	sigs.k8s.io/structured-merge-diff/v4 v4.0.3 // indirect
 )
