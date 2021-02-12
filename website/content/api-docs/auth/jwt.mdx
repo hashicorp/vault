@@ -114,15 +114,18 @@ entities attempting to login. At least one of the bound values must be set.
 - `user_claim` `(string: <required>)` - The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login. The claim value must be a string.
-- `clock_skew_leeway` `(int: <optional>)` - The amount of leeway to add to all claims to
+- `clock_skew_leeway` `(int or string: <optional>)` - The amount of leeway to add to all claims to
   account for clock skew, in seconds. Defaults to `60` seconds if set to `0` and can be disabled
-  if set to `-1`. Only applicable with "jwt" roles.
-- `expiration_leeway` `(int: <optional>)` - The amount of leeway to add to expiration (`exp`) claims to
+  if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable
+  with "jwt" roles.
+- `expiration_leeway` `(int or string: <optional>)` - The amount of leeway to add to expiration (`exp`) claims to
   account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
-  if set to `-1`. Only applicable with "jwt" roles.
-- `not_before_leeway` `(int: <optional>)` - The amount of leeway to add to not before (`nbf`) claims to
+  if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable
+  with "jwt" roles.
+- `not_before_leeway` `(int or string: <optional>)` - The amount of leeway to add to not before (`nbf`) claims to
   account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
-  if set to `-1`. Only applicable with "jwt" roles.
+  if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable
+  with "jwt" roles.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`
   claim matches this value.
 - `bound_claims` `(map: <optional>)` - If set, a map of claims (keys) to match against respective claim values (values).
@@ -148,6 +151,10 @@ entities attempting to login. At least one of the bound values must be set.
 - `verbose_oidc_logging` `(bool: false)` - Log received OIDC tokens and claims when debug-level
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
+- `max_age` `(int or string: <optional>)` - Specifies the allowable elapsed time in seconds since the last
+  time the user was actively authenticated with the OIDC provider. If set, the `max_age` request parameter
+  will be included in the authentication request. See [AuthRequest](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
+  for additional details. Accepts an integer number of seconds, or a Go duration format string.
 
 @include 'tokenfields.mdx'
 
