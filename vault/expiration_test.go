@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	testinterface "github.com/mitchellh/go-testing-interface"
 )
 
 var (
@@ -31,12 +32,12 @@ var (
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(t.(testinterface.T))
 	return c.expiration
 }
 
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, _, _ := TestCoreUnsealedBackend(t, backend)
+	c, _, _ := TestCoreUnsealedBackend(t.(testinterface.T), backend)
 	return c, c.expiration
 }
 
@@ -495,7 +496,7 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
+	c, _, _ := TestCoreUnsealedBackendBenchmarking(b, physicalBackend)
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")

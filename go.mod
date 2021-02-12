@@ -130,7 +130,7 @@ require (
 	github.com/mitchellh/cli v1.1.0
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/go-testing-interface v1.0.0
+	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/gox v0.4.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mitchellh/reflectwalk v1.0.0

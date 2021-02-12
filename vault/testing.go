@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	gotesting "testing"
+
 	"github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -373,6 +375,10 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 }
 
+func TestCoreUnsealedBackendBenchmarking(t gotesting.TB, backend physical.Backend) (*Core, [][]byte, string) {
+	return TestCoreUnsealedBackend(t.(testing.T), backend)
+}
+
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
 	logger := logging.NewVaultLogger(log.Trace)
@@ -697,6 +703,10 @@ func GenerateRandBytes(length int) ([]byte, error) {
 	}
 
 	return buf, nil
+}
+
+func TestWaitActiveBenchmarking(t gotesting.TB, core *Core) {
+	TestWaitActive(t.(testing.T), core)
 }
 
 func TestWaitActive(t testing.T, core *Core) {
@@ -1123,6 +1133,10 @@ func NewTestLogger(t testing.T) *TestLogger {
 
 func (tl *TestLogger) StopLogging() {
 	tl.Logger.(log.InterceptLogger).DeregisterSink(tl.sink)
+}
+
+func NewTestClusterBenchmarking(t gotesting.TB, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
+	return NewTestCluster(t.(testing.T), base, opts)
 }
 
 // NewTestCluster creates a new test cluster based on the provided core config

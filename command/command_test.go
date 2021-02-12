@@ -125,7 +125,7 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {
 	tb.Helper()
 
-	cluster := vault.NewTestCluster(tb, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestClusterBenchmarking(tb, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1, // Default is 3, but we don't need that many
 	})
@@ -133,7 +133,7 @@ func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*ap
 
 	// Make it easy to get access to the active
 	core := cluster.Cores[0].Core
-	vault.TestWaitActive(tb, core)
+	vault.TestWaitActiveBenchmarking(tb, core)
 
 	// Get the client already setup for us!
 	client := cluster.Cores[0].Client
