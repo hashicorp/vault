@@ -26,24 +26,24 @@ import (
 type AutopilotConfig struct {
 	// CleanupDeadServers controls whether to remove dead servers from the Raft
 	// peer list periodically or when a new server joins
-	CleanupDeadServers bool `json:"cleanup_dead_servers" mapstructure:"cleanup_dead_servers"`
+	CleanupDeadServers bool `mapstructure:"cleanup_dead_servers"`
 
 	// LastContactThreshold is the limit on the amount of time a server can go
 	// without leader contact before being considered unhealthy.
-	LastContactThreshold time.Duration `json:"last_contact_threshold" mapstructure:"-"`
+	LastContactThreshold time.Duration `mapstructure:"-"`
 
 	// MaxTrailingLogs is the amount of entries in the Raft Log that a server can
 	// be behind before being considered unhealthy.
-	MaxTrailingLogs uint64 `json:"max_trailing_logs" mapstructure:"max_trailing_logs"`
+	MaxTrailingLogs uint64 `mapstructure:"max_trailing_logs"`
 
 	// MinQuorum sets the minimum number of servers allowed in a cluster before
 	// autopilot can prune dead servers.
-	MinQuorum uint `json:"min_quorum" mapstructure:"min_quorum"`
+	MinQuorum uint `mapstructure:"min_quorum"`
 
 	// ServerStabilizationTime is the minimum amount of time a server must be
 	// in a stable, healthy state before it can be added to the cluster. Only
 	// applicable with Raft protocol version 3 or higher.
-	ServerStabilizationTime time.Duration `json:"server_stabilization_time" mapstructure:"-"`
+	ServerStabilizationTime time.Duration `mapstructure:"-"`
 }
 
 // Clone returns a duplicate instance of AutopilotConfig with the exact same values.
