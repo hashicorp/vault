@@ -239,7 +239,7 @@ github.com/containerd/containerd/errdefs
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/sysx
-# github.com/coreos/go-oidc v2.1.0+incompatible
+# github.com/coreos/go-oidc v2.2.1+incompatible
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
@@ -382,7 +382,7 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
-# github.com/google/go-cmp v0.5.2
+# github.com/google/go-cmp v0.5.4
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -422,6 +422,11 @@ github.com/gorhill/cronexpr
 github.com/gorilla/websocket
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
+# github.com/hashicorp/cap v0.0.0-20210204173447-5fcddadbf7c7
+github.com/hashicorp/cap/jwt
+github.com/hashicorp/cap/oidc
+github.com/hashicorp/cap/oidc/internal/base62
+github.com/hashicorp/cap/oidc/internal/strutils
 # github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
 github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
@@ -545,7 +550,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 # github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20201203001230-e35700fcc0d5
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20210212182451-0d0819f8e5e3
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
 github.com/hashicorp/vault-plugin-auth-kerberos
@@ -904,7 +909,7 @@ github.com/pmezard/go-difflib/difflib
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-# github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
+# github.com/pquerna/cachecontrol v0.0.0-20201205024021-ac21108117ac
 github.com/pquerna/cachecontrol
 github.com/pquerna/cachecontrol/cacheobject
 # github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
@@ -1176,7 +1181,11 @@ golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/internal
 golang.org/x/text/encoding/internal/identifier
 golang.org/x/text/encoding/unicode
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/tag
 golang.org/x/text/internal/utf8internal
+golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
