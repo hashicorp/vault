@@ -189,8 +189,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-configuration"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-configuration"][1]),
 		},
 	}
 }
@@ -630,6 +630,14 @@ var sysRaftHelp = map[string][2]string{
 	},
 	"raft-snapshot-force": {
 		"Force restore a raft cluster snapshot",
+		"",
+	},
+	"raft-autopilot-state": {
+		"Returns the state of the raft cluster under integrated storage as seen by autopilot.",
+		"",
+	},
+	"raft-autopilot-configuration": {
+		"Returns autopilot configuration.",
 		"",
 	},
 }
