@@ -125,8 +125,8 @@ func (p PrettyFormatter) Format(data interface{}) ([]byte, error) {
 
 func (p PrettyFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	switch data.(type) {
-	case *api.AutopilotHealth:
-		p.OutputAutopilotHealth(ui, data)
+	case *api.AutopilotState:
+		p.OutputAutopilotState(ui, data)
 	default:
 		return errors.New("cannot use the pretty formatter for this type")
 	}
@@ -180,8 +180,8 @@ func formatServer(srv *api.AutopilotServer) string {
 	return buffer.String()
 }
 
-func (p PrettyFormatter) OutputAutopilotHealth(ui cli.Ui, data interface{}) {
-	state := data.(*api.AutopilotHealth)
+func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
+	state := data.(*api.AutopilotState)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))

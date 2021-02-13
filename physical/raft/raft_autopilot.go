@@ -377,8 +377,8 @@ func (b *RaftBackend) StopAutopilot() {
 	b.autopilot.Stop()
 }
 
-// AutopilotHealth represents the health information retrieved from autopilot.
-type AutopilotHealth struct {
+// AutopilotState represents the health information retrieved from autopilot.
+type AutopilotState struct {
 	Healthy                    bool `json:"healthy"`
 	FailureTolerance           int  `json:"failure_tolerance"`
 	OptimisticFailureTolerance int  `json:"optimistic_failure_tolerance"`
@@ -464,8 +464,8 @@ func stringIDs(ids []raft.ServerID) []string {
 	return out
 }
 
-func autopilotToAPIHealth(state *autopilot.State) *AutopilotHealth {
-	out := &AutopilotHealth{
+func autopilotToAPIHealth(state *autopilot.State) *AutopilotState {
+	out := &AutopilotState{
 		Healthy:          state.Healthy,
 		FailureTolerance: state.FailureTolerance,
 		Leader:           string(state.Leader),
@@ -503,9 +503,9 @@ func autopilotToAPIServer(srv *autopilot.ServerState) AutopilotServer {
 	return apiSrv
 }
 
-// GetAutopilotServerHealth retrieves raft cluster health from autopilot to
+// GetAutopilotServerState retrieves raft cluster health from autopilot to
 // return over the API.
-func (b *RaftBackend) GetAutopilotServerHealth(ctx context.Context) (*AutopilotHealth, error) {
+func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotState, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 

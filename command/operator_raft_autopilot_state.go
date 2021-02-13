@@ -9,28 +9,28 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftAutopilotHealthCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftAutopilotHealthCommand)(nil)
+var _ cli.Command = (*OperatorRaftAutopilotStateCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorRaftAutopilotStateCommand)(nil)
 
-type OperatorRaftAutopilotHealthCommand struct {
+type OperatorRaftAutopilotStateCommand struct {
 	*BaseCommand
 }
 
-func (c *OperatorRaftAutopilotHealthCommand) Synopsis() string {
-	return "Displays the health of the raft cluster under integrated storage as seen by autopilot"
+func (c *OperatorRaftAutopilotStateCommand) Synopsis() string {
+	return "Displays the state of the raft cluster under integrated storage as seen by autopilot"
 }
 
-func (c *OperatorRaftAutopilotHealthCommand) Help() string {
+func (c *OperatorRaftAutopilotStateCommand) Help() string {
 	helpText := `
-Usage: vault operator raft autopilot health
+Usage: vault operator raft autopilot state
 
-  Displays the health of the raft cluster under integrated storage as seen by autopilot.
+  Displays the state of the raft cluster under integrated storage as seen by autopilot.
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *OperatorRaftAutopilotHealthCommand) Flags() *FlagSets {
+func (c *OperatorRaftAutopilotStateCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// The output of the health endpoint contains nested values and not fit for
@@ -48,15 +48,15 @@ func (c *OperatorRaftAutopilotHealthCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *OperatorRaftAutopilotHealthCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorRaftAutopilotStateCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictAnything
 }
 
-func (c *OperatorRaftAutopilotHealthCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorRaftAutopilotStateCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *OperatorRaftAutopilotHealthCommand) Run(args []string) int {
+func (c *OperatorRaftAutopilotStateCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -78,11 +78,11 @@ func (c *OperatorRaftAutopilotHealthCommand) Run(args []string) int {
 		return 2
 	}
 
-	health, err := client.Sys().RaftAutopilotHealth()
+	state, err := client.Sys().RaftAutopilotState()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error checking autopilot health: %s", err))
 		return 2
 	}
 
-	return OutputData(c.UI, health)
+	return OutputData(c.UI, state)
 }
