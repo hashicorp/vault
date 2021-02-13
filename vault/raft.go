@@ -34,6 +34,8 @@ var (
 	raftTLSStoragePath    = "core/raft/tls"
 	raftTLSRotationPeriod = 24 * time.Hour
 
+	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
+
 	// TestingUpdateClusterAddr is used in tests to override the cluster address
 	TestingUpdateClusterAddr uint32
 )
@@ -1100,7 +1102,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 
 func (c *Core) autopilotConfiguration(ctx context.Context) (*raft.AutopilotConfig, error) {
 	var autopilotConfig *raft.AutopilotConfig
-	entry, err := c.barrier.Get(ctx, "core/raft/autopilot/configuration")
+	entry, err := c.barrier.Get(ctx, raftAutopilotConfigurationStoragePath)
 	if err != nil {
 		return nil, err
 	}

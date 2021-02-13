@@ -477,7 +477,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 		}
 
 		if persist {
-			entry, err := logical.StorageEntryJSON("core/raft/autopilot/configuration", configClone)
+			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, configClone)
 			if err != nil {
 				return nil, err
 			}
