@@ -418,7 +418,12 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.Operati
 		if !ok {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
+
 		config := raftStorage.AutopilotConfig()
+		if config == nil {
+			return nil, nil
+		}
+
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"cleanup_dead_servers":      config.CleanupDeadServers,
