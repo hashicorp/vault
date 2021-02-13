@@ -406,7 +406,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotState() framework.OperationFun
 				"servers":                      state.Servers,
 				"leader":                       state.Leader,
 				"voters":                       state.Voters,
-				"read_replicas":                state.ReadReplicas,
+				"non_voters":                   state.NonVoters,
 			},
 		}, nil
 	}

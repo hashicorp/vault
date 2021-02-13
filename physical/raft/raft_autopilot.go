@@ -383,10 +383,10 @@ type AutopilotState struct {
 	FailureTolerance           int  `json:"failure_tolerance"`
 	OptimisticFailureTolerance int  `json:"optimistic_failure_tolerance"`
 
-	Servers      map[string]AutopilotServer `json:"servers"`
-	Leader       string                     `json:"leader"`
-	Voters       []string                   `json:"voters"`
-	ReadReplicas []string                   `json:"read_replicas,omitempty"`
+	Servers   map[string]AutopilotServer `json:"servers"`
+	Leader    string                     `json:"leader"`
+	Voters    []string                   `json:"voters"`
+	NonVoters []string                   `json:"non_voters,omitempty"`
 }
 
 // AutopilotServer represents the health information of individual server node
@@ -401,10 +401,8 @@ type AutopilotServer struct {
 	LastIndex   uint64            `json:"last_index"`
 	Healthy     bool              `json:"healthy"`
 	StableSince time.Time         `json:"stable_since"`
-	ReadReplica bool              `json:"read_replica"`
 	Status      string            `json:"status"`
 	Meta        map[string]string `json:"meta"`
-	NodeType    string            `json:"node_type"`
 }
 
 // ReadableDuration is a duration type that is serialized to JSON in human readable format.
@@ -495,7 +493,6 @@ func autopilotToAPIServer(srv *autopilot.ServerState) AutopilotServer {
 		StableSince: srv.Health.StableSince,
 		Status:      string(srv.State),
 		Meta:        srv.Server.Meta,
-		NodeType:    string(srv.Server.NodeType),
 	}
 
 	autopilotToAPIServerEnterprise(srv, &apiSrv)

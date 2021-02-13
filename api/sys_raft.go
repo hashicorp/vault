@@ -30,15 +30,15 @@ type RaftJoinRequest struct {
 	NonVoter         bool   `json:"non_voter"`
 }
 
-// AutopilotHealth represents the response of the raft autopilot health API
-type AutopilotHealth struct {
+// AutopilotState represents the response of the raft autopilot health API
+type AutopilotState struct {
 	Healthy                    bool                       `json:"healthy" mapstructure:"healthy"`
 	FailureTolerance           int                        `json:"failure_tolerance" mapstructure:"failure_tolerance"`
 	OptimisticFailureTolerance int                        `json:"optimistic_failure_tolerance" mapstructure:"optimistic_failure_tolerance"`
 	Servers                    map[string]AutopilotServer `json:"servers" mapstructure:"servers"`
 	Leader                     string                     `json:"leader" mapstructure:"leader"`
 	Voters                     []string                   `json:"voters" mapstructure:"voters"`
-	ReadReplicas               []string                   `json:"read_replicas,omitempty" mapstructure:"read_replicas"`
+	NonVoters                  []string                   `json:"non_voters,omitempty" mapstructure:"non_voters"`
 }
 
 // AutopilotServer represents the server blocks in the response of the raft
@@ -53,10 +53,8 @@ type AutopilotServer struct {
 	LastIndex   uint64            `json:"last_index" mapstructure:"last_index"`
 	Healthy     bool              `json:"healthy" mapstructure:"healthy"`
 	StableSince string            `json:"stable_since" mapstructure:"stable_since"`
-	ReadReplica bool              `json:"read_replica" mapstructure:"read_replica"`
 	Status      string            `json:"status" mapstructure:"status"`
 	Meta        map[string]string `json:"meta" mapstructure:"meta"`
-	NodeType    string            `json:"node_type" mapstructure:"node_type"`
 }
 
 // RaftJoin adds the node from which this call is invoked from to the raft
@@ -193,9 +191,9 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 	return nil
 }
 
-// RaftAutopilotHealth returns the health of the raft cluster as seen by autopilot.
-func (c *Sys) RaftAutopilotHealth() (*AutopilotHealth, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/health")
+// RaftAutopilotState returns the health of the raft cluster as seen by autopilot.
+func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -213,7 +211,7 @@ func (c *Sys) RaftAutopilotHealth() (*AutopilotHealth, error) {
 		return nil, errors.New("data from server response is empty")
 	}
 
-	var result AutopilotHealth
+	var result AutopilotState
 	err = mapstructure.Decode(secret.Data, &result)
 	if err != nil {
 		return nil, err

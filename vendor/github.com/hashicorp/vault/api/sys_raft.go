@@ -38,7 +38,7 @@ type AutopilotState struct {
 	Servers                    map[string]AutopilotServer `json:"servers" mapstructure:"servers"`
 	Leader                     string                     `json:"leader" mapstructure:"leader"`
 	Voters                     []string                   `json:"voters" mapstructure:"voters"`
-	ReadReplicas               []string                   `json:"read_replicas,omitempty" mapstructure:"read_replicas"`
+	NonVoters                  []string                   `json:"non_voters,omitempty" mapstructure:"non_voters"`
 }
 
 // AutopilotServer represents the server blocks in the response of the raft
@@ -53,10 +53,8 @@ type AutopilotServer struct {
 	LastIndex   uint64            `json:"last_index" mapstructure:"last_index"`
 	Healthy     bool              `json:"healthy" mapstructure:"healthy"`
 	StableSince string            `json:"stable_since" mapstructure:"stable_since"`
-	ReadReplica bool              `json:"read_replica" mapstructure:"read_replica"`
 	Status      string            `json:"status" mapstructure:"status"`
 	Meta        map[string]string `json:"meta" mapstructure:"meta"`
-	NodeType    string            `json:"node_type" mapstructure:"node_type"`
 }
 
 // RaftJoin adds the node from which this call is invoked from to the raft
