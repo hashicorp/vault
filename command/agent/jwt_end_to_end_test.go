@@ -56,6 +56,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": TestECDSAPubKey,
+		"jwt_supported_algs":     "ES256",
 	})
 	if err != nil {
 		t.Fatal(err)

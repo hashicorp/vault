@@ -1,6 +1,10 @@
 ```release-note:feature
-auth/jwt: Adds `max_age` role parameter and `auth_time` claim validation
+auth/jwt: Adds `max_age` role parameter and `auth_time` claim validation.
 ```
 ```release-note:bug
-auth/jwt: Fixes an issue where JWT verification keys weren't updated after a `jwks_url` change
+auth/jwt: Fixes an issue where JWT verification keys weren't updated after a `jwks_url` change.
+```
+```release-note:bug
+auth/jwt: Fixes an issue where `jwt_supported_algs` were not being validated for JWT auth using
+`jwks_url` and `jwt_validation_pubkeys`.
 ```
