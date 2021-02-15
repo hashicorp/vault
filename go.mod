@@ -6,6 +6,7 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+// This replace directive comes from: https://github.com/etcd-io/etcd/issues/12569
 replace (
 	github.com/coreos/etcd => github.com/coreos/etcd v3.3.13+incompatible
 	go.etcd.io/bbolt => go.etcd.io/bbolt v1.3.5
