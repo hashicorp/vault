@@ -181,7 +181,12 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 		tb.Fatal(err)
 	}
 
-	return client, func() { ln.Close() }
+	closer := func() {
+		core.Shutdown()
+		ln.Close()
+	}
+
+	return client, closer
 }
 
 // testVaultServerBad creates an http server that returns a 500 on each request

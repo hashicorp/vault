@@ -180,6 +180,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		c.Shutdown()
+	})
+
 	return c
 }
 
@@ -348,6 +357,14 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 
 	testCoreAddSecretMount(t, core, token)
 
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		core.Shutdown()
+	})
 	return core, keys, token
 }
 
@@ -404,6 +421,15 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		core.Shutdown()
+	})
 
 	return core, keys, token
 }
@@ -2079,7 +2105,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
-	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
+	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins.
