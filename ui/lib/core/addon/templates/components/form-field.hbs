@@ -213,7 +213,7 @@
         }}
         @valueUpdated={{action "codemirrorUpdated" attr.name "string"}}
         @options={{hash
-          theme=(or attr.options.theme attr.options.theme 'hashi')
+          theme=(or attr.options.theme 'hashi')
         }}
       />
     {{else}}
