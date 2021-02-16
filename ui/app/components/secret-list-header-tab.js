@@ -36,8 +36,17 @@ export default class SecretListHeaderTab extends Component {
   }
 
   @task(function*() {
+    let capabilitiesArray = ['canList', 'canCreate', 'canUpdate'];
+    let checkCapabilities = function(object) {
+      let array = [];
+      // we only want to look at the canList, canCreate and canUpdate on the capabilities record
+      capabilitiesArray.forEach(item => {
+        array.push(object[item]);
+      });
+      return array;
+    };
+    let checker = arr => arr.every(item => !item); // same things as listing every item as !item && !item, etc.
     // For now only check capabilities for the Database Secrets Engine
-    // ARG TODO try and think of a way to clean up?  Unsure how.
     if (this.args.displayName === 'Database') {
       let peekRecordRoles = yield this.store.peekRecord('capabilities', 'database/roles/');
       let peekRecordStaticRoles = yield this.store.peekRecord('capabilities', 'database/static-roles/');
@@ -47,19 +56,14 @@ export default class SecretListHeaderTab extends Component {
         (peekRecordRoles && this.args.path === 'roles') ||
         (peekRecordStaticRoles && this.args.path === 'roles')
       ) {
-        let roles = !peekRecordRoles.canList && !peekRecordRoles.canCreate && !peekRecordRoles.canUpdate;
-        let staticRoles =
-          !peekRecordStaticRoles.canList &&
-          !peekRecordStaticRoles.canCreate &&
-          !peekRecordStaticRoles.canUpdate;
+        let roles = checker(checkCapabilities(peekRecordRoles));
+        let staticRoles = checker(checkCapabilities(peekRecordStaticRoles));
+
         this.dontShowTab = roles && staticRoles;
         return;
       }
       if (peekRecordConnections && this.args.path === 'config') {
-        this.dontShowTab =
-          !peekRecordConnections.canList &&
-          !peekRecordConnections.canCreate &&
-          !peekRecordConnections.canUpdate;
+        this.dontShowTab = checker(checkCapabilities(peekRecordConnections));
         return;
       }
       // otherwise queryRecord and create an instance on the capabilities.
@@ -67,7 +71,7 @@ export default class SecretListHeaderTab extends Component {
         'capabilities',
         this.pathQuery(this.args.id, this.args.path)
       );
-      this.dontShowTab = !response.canList && !response.canCreate && !response.canUpdate;
+      this.dontShowTab = checker(checkCapabilities(response));
     }
   })
   fetchCapabilities;
