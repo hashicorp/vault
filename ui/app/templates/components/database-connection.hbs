@@ -18,7 +18,7 @@
 {{#if (eq @mode "show")}}
 <Toolbar>
   <ToolbarActions>
-    {{!-- {{#if capabilities.canDelete}} --}}
+    {{#if @model.canDelete}}
     <button
       type="button"
       class="toolbar-link"
@@ -27,7 +27,8 @@
     >
       Delete connection
     </button>
-    {{!-- {{#if capabilities.canReset}} --}}
+    {{/if}}
+    {{#if @model.canReset}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
       @onConfirmAction={{action 'reset'}}
@@ -38,9 +39,11 @@
     >
       Reset connection
     </ConfirmAction>
-    {{!-- {{#if (and capabilities.canReset capabilities.canDelete)}} --}}
+    {{/if}}
+    {{#if (and @model.canReset @model.canDelete)}}
     <div class="toolbar-separator" />
-    {{!-- {{#if capabilities.canRotate }} --}}
+    {{/if}}
+    {{#if @model.canRotate }}
     <ConfirmAction
       @buttonClasses="toolbar-link"
       @onConfirmAction={{this.rotate}}
@@ -51,7 +54,8 @@
     >
       Rotate root credentials
     </ConfirmAction>
-    {{!-- {{#if capabilities.canAddRole}} --}}
+    {{/if}}
+    {{#if @model.canAddRole}}
     <ToolbarSecretLink
       @secret=''
       @mode="create"
@@ -61,7 +65,8 @@
     >
       Add role
     </ToolbarSecretLink>
-    {{!-- {{#if capabilities.canEdit}} --}}
+    {{/if}}
+    {{#if @model.canEdit}}
     <ToolbarSecretLink
       @secret={{@model.id}}
       @mode="edit"
@@ -70,6 +75,7 @@
     >
       Edit configuration
     </ToolbarSecretLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 {{/if}}

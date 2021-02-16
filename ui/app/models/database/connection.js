@@ -154,8 +154,12 @@ export default Model.extend({
   /* CAPABILITIES */
   editConnectionPath: lazyCapabilities(apiPath`${'backend'}/config/${'id'}`, 'backend', 'id'),
   canEdit: alias('editConnectionPath.canUpdate'),
+  canDelete: alias('editConnectionPath.canDelete'),
   resetConnectionPath: lazyCapabilities(apiPath`${'backend'}/reset/${'id'}`, 'backend', 'id'),
   canReset: computed.or('resetConnectionPath.canUpdate', 'resetConnectionPath.canCreate'),
   rotateRootPath: lazyCapabilities(apiPath`${'backend'}/rotate-root/${'id'}`, 'backend', 'id'),
   canRotateRoot: computed.or('rotateRootPath.canUpdate', 'rotateRootPath.canCreate'),
+  rolePath: lazyCapabilities(apiPath`${'backend'}/role/*`, 'backend'),
+  staticRolePath: lazyCapabilities(apiPath`${'backend'}/static-role/*`, 'backend'),
+  canAddRole: computed.or('rolePath.canCreate', 'staticRolePath.canCreate'),
 });
