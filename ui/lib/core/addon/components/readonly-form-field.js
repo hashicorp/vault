@@ -4,11 +4,9 @@
  *
  * @example
  * ```js
- * <ReadonlyFormField @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ReadonlyFormField @attr={attr} />
  * ```
  * @param {object} attr - Should be an attribute from a model exported with expandAttributeMeta
- * @param {any} value - This value's type should differ depending on
- * @param {string} [param1=defaultValue] - param1 is...
  */
 
 import Component from '@glimmer/component';
