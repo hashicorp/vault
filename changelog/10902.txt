@@ -1,0 +1,4 @@
+```release-note:bug
+secrets/azure (enterprise): Forward service principal credential creation to the
+primary cluster if called on a performance standby or performance secondary.
+```
