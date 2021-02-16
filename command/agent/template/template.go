@@ -27,7 +27,8 @@ import (
 type ServerConfig struct {
 	Logger hclog.Logger
 	// Client        *api.Client
-	VaultConf     *config.Vault
+	AgentConfig *config.Config
+
 	ExitAfterAuth bool
 	TemplateRetry *config.TemplateRetry
 	Namespace     string
@@ -239,7 +240,19 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// Always set these to ensure nothing is picked up from the environment
 	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
 	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.VaultConf.Address
+	conf.Vault.Address = &sc.AgentConfig.Vault.Address
+
+	if sc.AgentConfig.Cache != nil && len(sc.AgentConfig.Listeners) != 0 {
+		scheme := "unix:/"
+		if sc.AgentConfig.Listeners[0].Type == "tcp" {
+			scheme = "https://"
+			if sc.AgentConfig.Listeners[0].TLSDisable {
+				scheme = "http://"
+			}
+		}
+		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
+		conf.Vault.Address = &address
+	}
 
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
@@ -255,16 +268,26 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
-	if strings.HasPrefix(sc.VaultConf.Address, "https") || sc.VaultConf.CACert != "" {
-		skipVerify := sc.VaultConf.TLSSkipVerify
+	if strings.HasPrefix(*conf.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
+		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
 			Enabled: pointerutil.BoolPtr(true),
 			Verify:  &verify,
-			Cert:    &sc.VaultConf.ClientCert,
-			Key:     &sc.VaultConf.ClientKey,
-			CaCert:  &sc.VaultConf.CACert,
-			CaPath:  &sc.VaultConf.CAPath,
+			Cert:    &sc.AgentConfig.Vault.ClientCert,
+			Key:     &sc.AgentConfig.Vault.ClientKey,
+			CaCert:  &sc.AgentConfig.Vault.CACert,
+			CaPath:  &sc.AgentConfig.Vault.CAPath,
+		}
+
+		// Only configure TLS Skip Verify if CT is not going through the cache. We can
+		// skip verification if its using the cache because they're part of the same agent.
+		// Agent listener doesn't support mTLS listeners.
+		if sc.AgentConfig.Cache != nil {
+			conf.Vault.SSL.Enabled = pointerutil.BoolPtr(true)
+			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
+			conf.Vault.SSL.Cert = pointerutil.StringPtr("")
+			conf.Vault.SSL.Key = pointerutil.StringPtr("")
 		}
 	}
 
