@@ -19,10 +19,6 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'creation_statements' },
     ],
   },
-  {
-    value: 'mongodbatlas-database-plugin',
-    displayName: 'MongoDBA',
-  },
 ];
 
 export default Model.extend({
