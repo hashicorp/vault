@@ -23,12 +23,12 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestJWTEndToEnd(t *testing.T) {
-	testJWTEndToEnd(t, false)
-	testJWTEndToEnd(t, true)
+func TestJWTEndToEndFromFile(t *testing.T) {
+	testJWTEndToEndFromFile(t, false)
+	testJWTEndToEndFromFile(t, true)
 }
 
-func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
+func testJWTEndToEndFromFile(t *testing.T, ahWrapping bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -121,7 +121,11 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		logger.Trace("wrote dh param file", "path", dhpath)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	timer := time.AfterFunc(30*time.Second, func() {
+		cancelFunc()
+	})
+	defer timer.Stop()
 
 	am, err := agentjwt.NewJWTAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.jwt"),
@@ -194,12 +198,8 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		}
 	}()
 
-	// This has to be after the other defers so it happens first. It allows
-	// successful test runs to immediately cancel all of the runner goroutines
-	// and unblock any of the blocking defer calls by the runner's DoneCh that
-	// comes before this and avoid successful tests from taking the entire
-	// timeout duration.
-	defer cancel()
+	// This has to be after the other defers so it happens first
+	defer cancelFunc()
 
 	// Check that no jwt file exists
 	_, err = os.Lstat(in)
