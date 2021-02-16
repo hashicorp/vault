@@ -33,7 +33,8 @@ export default class GetCredentialsCard extends Component {
   }
   @action
   async transitionToCredential() {
-    if (this.role || this.manuallyEnteredRole) {
+    const role = this.role || this.manuallyEnteredRole;
+    if (role) {
       let role = this.role || this.manuallyEnteredRole;
       this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
     }
