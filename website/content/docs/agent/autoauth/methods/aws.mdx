@@ -57,6 +57,8 @@ parameters unset in your configuration.
 - `header_value` `(string: optional)` - If configured in Vault, the value to use for
   [`iam_server_id_header_value`](/api/auth/aws#iam_server_id_header_value).
 
+- `nonce` `(string: optional)` - If not provided, vault will generate a new UUID every time `vault agent` runs.  If set, make sure you understand the importance of generating a good, unique nonce and protecting it. See [Client Nonce](/docs/auth/aws#client-nonce) for more.
+
 ## Learn
 
 Refer to the [Vault Agent with
