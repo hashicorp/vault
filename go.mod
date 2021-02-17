@@ -6,7 +6,14 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.29.0
+// This replace directive comes from: https://github.com/etcd-io/etcd/issues/12569
+replace(
+ 	github.com/coreos/etcd => github.com/coreos/etcd v3.3.13+incompatible
+ 	go.etcd.io/bbolt => go.etcd.io/bbolt v1.3.5
+ 	go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489 // ae9734ed278b is the SHA for git tag v3.4.13
+ 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
+)
+
 
 require (
 	cloud.google.com/go v0.76.0

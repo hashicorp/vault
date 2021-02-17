@@ -142,6 +142,9 @@ func (c Changer) Simple(ccs ...pb.ConfChangeSingle) (tracker.Config, tracker.Pro
 	if n := symdiff(incoming(c.Tracker.Voters), incoming(cfg.Voters)); n > 1 {
 		return tracker.Config{}, nil, errors.New("more than one voter changed without entering joint config")
 	}
+	if err := checkInvariants(cfg, prs); err != nil {
+		return tracker.Config{}, tracker.ProgressMap{}, nil
+	}
 
 	return checkAndReturn(cfg, prs)
 }
