@@ -281,9 +281,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 
 		// Only configure TLS Skip Verify if CT is not going through the cache. We can
 		// skip verification if its using the cache because they're part of the same agent.
-		// Agent listener doesn't support mTLS listeners.
 		if sc.AgentConfig.Cache != nil {
-			conf.Vault.SSL.Enabled = pointerutil.BoolPtr(true)
 			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
 			conf.Vault.SSL.Cert = pointerutil.StringPtr("")
 			conf.Vault.SSL.Key = pointerutil.StringPtr("")
