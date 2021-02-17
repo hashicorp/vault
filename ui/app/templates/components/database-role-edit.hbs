@@ -58,7 +58,7 @@
       {{#if (eq attr.type "object")}}
         <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
       {{else}}
-        <InfoTableRow @renderBlank={{true}} @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{or (get @model attr.name) defaultDisplay}} />
+        <InfoTableRow @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{or (get @model attr.name) defaultDisplay}} />
       {{/if}}
     {{/let}}
   {{/each}}

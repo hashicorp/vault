@@ -34,7 +34,6 @@ export default Component.extend({
   isVisible: or('alwaysRender', 'value'),
 
   alwaysRender: false,
-  renderBlank: false,
   label: null,
   helperText: null,
   value: null,

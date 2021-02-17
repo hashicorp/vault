@@ -28,7 +28,7 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
-    {{else if (and renderBlank (is-empty value))}}
+    {{else if (and alwaysRender (is-empty value))}}
       <Icon
           aria-hidden="true"
           class="icon-false"
