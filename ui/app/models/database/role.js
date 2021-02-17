@@ -29,12 +29,14 @@ export default Model.extend({
     defaultValue: '1h',
     label: 'Generated credentials’s Time-to-Live (TTL)',
     subText: 'Vault will use the engine default of 1 hour',
+    defaultShown: 'Engine default',
   }),
   max_ttl: attr({
     editType: 'ttl',
     defaultValue: '24h',
     label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
     subText: 'Vault will use the engine default of 24 hours',
+    defaultShown: 'Engine default',
   }),
   username: attr('string', {
     subText: 'The database username that this Vault role corresponds to.',
@@ -47,20 +49,25 @@ export default Model.extend({
   }),
   creation_statements: attr('array', {
     editType: 'stringArray',
+    defaultShown: 'Default',
   }),
   revocation_statements: attr('array', {
     editType: 'stringArray',
+    defaultShown: 'Default',
   }),
   rotation_statements: attr('array', {
     editType: 'stringArray',
+    defaultShown: 'Default',
   }),
   creation_statement: attr('string', {
     editType: 'json',
     theme: 'hashi short',
+    defaultShown: 'Default',
   }),
-  w: attr('string', {
+  rotation_statement: attr('string', {
     editType: 'json',
     theme: 'hashi short',
+    defaultShown: 'Default',
   }),
 
   /* FIELD ATTRIBUTES */

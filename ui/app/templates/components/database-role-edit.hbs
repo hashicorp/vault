@@ -56,9 +56,19 @@
   {{#each @model.fieldAttrs as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get @model attr.name)}}
+        />
       {{else}}
-        <InfoTableRow @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{or (get @model attr.name) defaultDisplay}} />
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{or (get @model attr.name) defaultDisplay}}
+        />
       {{/if}}
     {{/let}}
   {{/each}}

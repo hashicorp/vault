@@ -63,6 +63,7 @@ export default Model.extend({
     subText: 'Optional. Must be in JSON. See our documentation for help.',
     editType: 'json',
     theme: 'hashi short',
+    defaultShown: 'Default',
     // defaultValue: '# For example: { "wmode": "majority", "wtimeout": 5000 }',
   }),
   max_open_connections: attr('string', {}),
@@ -82,6 +83,7 @@ export default Model.extend({
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
     editType: 'json',
     theme: 'hashi short',
+    defaultShown: 'Default',
   }),
 
   allowedFields: computed(function() {
