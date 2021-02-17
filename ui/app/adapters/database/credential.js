@@ -6,9 +6,10 @@ export default ApplicationAdapter.extend({
   fetchByQuery(store, query) {
     const { backend, roleType, secret } = query;
     let creds = roleType === 'static' ? 'static-creds' : 'creds';
-    return this.ajax(`${this.buildURL()}/${backend}/${creds}/${secret}`, 'GET').then(resp => {
-      return resp;
-    });
+    return this.ajax(
+      `${this.buildURL()}/${encodeURIComponent(backend)}/${creds}/${encodeURIComponent(secret)}`,
+      'GET'
+    );
   },
   queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);

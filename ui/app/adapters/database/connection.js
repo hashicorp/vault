@@ -3,7 +3,7 @@ import ApplicationAdapter from '../application';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  urlFor(backend, id, type = 'REST') {
+  urlFor(backend, id, type = '') {
     if (type === 'ROTATE') {
       return `${this.buildURL()}/${backend}/rotate-root/${id}`;
     } else if (type === 'RESET') {
