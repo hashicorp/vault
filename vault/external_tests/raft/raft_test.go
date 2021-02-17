@@ -8,9 +8,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
@@ -23,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	vaultcluster "github.com/hashicorp/vault/vault/cluster"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -41,9 +45,37 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 	return cluster
 }
 
+func raftClusterWithAutopilot(t testing.TB) *vault.TestCluster {
+	conf := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+
+	inmemCluster, err := vaultcluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: hclog.Trace,
+		Name:  "inmem-cluster",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var opts = vault.TestClusterOptions{
+		HandlerFunc:   vaulthttp.Handler,
+		ClusterLayers: inmemCluster,
+	}
+
+	teststorage.RaftBackendWithAutopilotSetup(conf, &opts)
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	return cluster
+}
+
 func TestRaft_Autopilot(t *testing.T) {
-	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftClusterWithAutopilot(t)
 	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
