@@ -17,7 +17,7 @@
     )
   )
 }}
-  <label for="{{attr.name}}" class="is-label">
+  <label for="{{attr.name}}" class="is-label" data-test-readonly-label>
     {{labelString}}
     {{#if attr.options.helpText}}
       {{#info-tooltip}}
@@ -27,6 +27,8 @@
       {{/info-tooltip}}
     {{/if}}
   </label>
+  {{log attr "what?"}}
+  Why
   {{#if attr.options.subText}}
     <p class="sub-text">{{attr.options.subText}}</p>
   {{/if}}
@@ -44,7 +46,6 @@
   </div>
 {{else}}
   <input
-    data-test-input={{attr.name}}
     id={{attr.name}}
     autocomplete="off"
     spellcheck="false"

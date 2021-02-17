@@ -7,6 +7,7 @@
  * <ReadonlyFormField @attr={attr} />
  * ```
  * @param {object} attr - Should be an attribute from a model exported with expandAttributeMeta
+ * @param {any} value - The value that should be displayed on the input
  */
 
 import Component from '@glimmer/component';
