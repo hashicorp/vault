@@ -1,8 +1,8 @@
 {{#unless
   (or
-    (eq attr.type "boolean")
+    (eq @attr.type "boolean")
     (contains
-      attr.options.editType
+      @attr.options.editType
       (array
         "boolean"
         "optionalText"
@@ -17,27 +17,25 @@
     )
   )
 }}
-  <label for="{{attr.name}}" class="is-label" data-test-readonly-label>
+  <label for="{{@attr.name}}" class="is-label" data-test-readonly-label>
     {{labelString}}
-    {{#if attr.options.helpText}}
+    {{#if @attr.options.helpText}}
       {{#info-tooltip}}
         <span data-test-help-text>
-          {{attr.options.helpText}}
+          {{@attr.options.helpText}}
         </span>
       {{/info-tooltip}}
     {{/if}}
   </label>
-  {{log attr "what?"}}
-  Why
-  {{#if attr.options.subText}}
-    <p class="sub-text">{{attr.options.subText}}</p>
+  {{#if @attr.options.subText}}
+    <p class="sub-text">{{@attr.options.subText}}</p>
   {{/if}}
 {{/unless}}
 
-{{#if attr.options.possibleValues}}
+{{#if @attr.options.possibleValues}}
   <div class="control is-expanded field is-readOnly">
     <div class="select is-fullwidth">
-      <select name="{{attr.name}}" id="{{attr.name}}" disabled readonly data-test-input={{attr.name}}>
+      <select name="{{@attr.name}}" id="{{@attr.name}}" disabled readonly data-test-input={{@attr.name}}>
         <option selected="true" value={{@value}}>
           {{@value}}
         </option>
@@ -46,12 +44,13 @@
   </div>
 {{else}}
   <input
-    id={{attr.name}}
+    data-test-input={{@attr.name}}
+    id={{@attr.name}}
     autocomplete="off"
     spellcheck="false"
     value={{@value}}
     readonly
     class="field input is-readOnly"
-    type={{attr.type}}
+    type={{@attr.type}}
   />
 {{/if}}
