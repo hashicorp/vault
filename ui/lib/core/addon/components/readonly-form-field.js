@@ -12,9 +12,7 @@
 
 import Component from '@glimmer/component';
 import { setComponentTemplate } from '@ember/component';
-import { capitalize } from 'vault/helpers/capitalize';
-import { humanize } from 'vault/helpers/humanize';
-import { dasherize } from 'vault/helpers/dasherize';
+import { capitalize, dasherize } from '@ember/string';
 import layout from '../templates/components/readonly-form-field';
 
 class ReadonlyFormField extends Component {
@@ -28,7 +26,7 @@ class ReadonlyFormField extends Component {
       return label;
     }
     if (name) {
-      return capitalize([humanize([dasherize([name])])]);
+      return capitalize(dasherize(name));
     }
     return '';
   }
