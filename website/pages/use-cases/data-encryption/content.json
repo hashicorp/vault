@@ -1,4 +1,18 @@
 {
+  "beforeAfterDiagram": {
+    "beforeImage": {
+      "url": "https://www.datocms-assets.com/2885/1539885046-data-protectionchallenge.svg",
+      "format": "svg"
+    },
+    "beforeHeadline": "The Challenge",
+    "beforeContent": "All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly",
+    "afterImage": {
+      "url": "https://www.datocms-assets.com/2885/1539885039-data-protectionsolution.svg",
+      "format": "svg"
+    },
+    "afterHeadline": "The Solution",
+    "afterContent": "Vault provides encryption as a service with centralized key management to simplify encrypting data in transit and at rest across clouds and data centers"
+  },
   "features": [
     {
       "textSplit": {

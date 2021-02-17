@@ -4,7 +4,6 @@ package net
 
 import (
 	"context"
-	"errors"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -109,7 +108,7 @@ func FilterCounters() ([]FilterStat, error) {
 }
 
 func FilterCountersWithContext(ctx context.Context) ([]FilterStat, error) {
-	return nil, errors.New("NetFilterCounters not implemented for freebsd")
+	return nil, common.ErrNotImplementedError
 }
 
 func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
@@ -117,7 +116,7 @@ func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
 }
 
 func ConntrackStatsWithContext(ctx context.Context, percpu bool) ([]ConntrackStat, error) {
-	return nil, errors.New("ConntrackStats not implemented for freebsd")
+	return nil, common.ErrNotImplementedError
 }
 
 // NetProtoCounters returns network statistics for the entire system
@@ -129,5 +128,5 @@ func ProtoCounters(protocols []string) ([]ProtoCountersStat, error) {
 }
 
 func ProtoCountersWithContext(ctx context.Context, protocols []string) ([]ProtoCountersStat, error) {
-	return nil, errors.New("NetProtoCounters not implemented for freebsd")
+	return nil, common.ErrNotImplementedError
 }

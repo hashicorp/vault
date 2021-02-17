@@ -1,10 +1,10 @@
-import marked from 'marked'
 import Image from '@hashicorp/react-image'
-import alertIcon from './img/alert-icon.svg?include'
-import checkIcon from './img/check-icon.svg?include'
-
+import InlineSvg from '@hashicorp/react-inline-svg'
+import alertIcon from 'public/img/icons/alert-icon.svg?include'
+import checkIcon from 'public/img/icons/check-icon.svg?include'
+import fragment from './fragment.graphql'
+import s from './style.module.css'
 function BeforeAfterDiagram(props) {
-  const markedOptions = generateMarkedOptions()
   const {
     theme,
     beforeHeadline,
@@ -12,73 +12,67 @@ function BeforeAfterDiagram(props) {
     beforeImage,
     afterHeadline,
     afterContent,
-    afterImage
+    afterImage,
   } = props
   return (
-    <div className={`g-before-after-diagrams ${theme}`}>
-      <div className="before">
-        <div className="image">
+    <div className={s.beforeAfterDiagram} data-theme={theme}>
+      <div className={s.beforeSide}>
+        <div className={s.image}>
           <div>
             <Image {...beforeImage} />
           </div>
         </div>
-        <div className="content">
-          <span className="line">
-            <span />
-            <div
-              dangerouslySetInnerHTML={{
-                __html: alertIcon
-              }}
-            />
-            <span />
+        <div className={s.contentContainer}>
+          <span className={s.iconLineContainer}>
+            <span className={s.lineSegmentOne} />
+            <InlineSvg className={s.beforeIcon} src={alertIcon} />
+            <span className={s.lineSegmentTwo} />
           </span>
           <div>
             {beforeHeadline && (
               <h3
-                className="g-type-display-3"
+                className={s.contentHeadline}
                 dangerouslySetInnerHTML={{
-                  __html: marked.inlineLexer(beforeHeadline, [])
+                  __html: beforeHeadline,
                 }}
               />
             )}
             {beforeContent && (
               <div
-                className="g-type-body-small"
+                className={s.beforeContent}
                 dangerouslySetInnerHTML={{
-                  __html: marked(beforeContent, markedOptions)
+                  __html: beforeContent,
                 }}
               />
             )}
           </div>
         </div>
       </div>
-      <div className="after">
-        <div className="image">
+      <div className={s.afterSide}>
+        <div className={s.image}>
           <div>
             <Image {...afterImage} />
           </div>
         </div>
-        <div className="content">
-          <div className="line">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: checkIcon
-              }}
-            />
-          </div>
+        <div className={s.contentContainer}>
+          <span className={s.iconLineContainer}>
+            <InlineSvg className={s.afterIcon} src={checkIcon} />
+          </span>
           <div>
             {afterHeadline && (
               <h3
-                className="g-type-display-3"
+                className={s.contentHeadline}
                 dangerouslySetInnerHTML={{
-                  __html: marked.inlineLexer(afterHeadline, [])
+                  __html: afterHeadline,
                 }}
               />
             )}
             {afterContent && (
               <div
+                className={s.afterContent}
+                data-theme={theme}
                 dangerouslySetInnerHTML={{
-                  __html: marked(afterContent, markedOptions)
+                  __html: afterContent,
                 }}
               />
             )}
@@ -89,20 +83,6 @@ function BeforeAfterDiagram(props) {
   )
 }
 
+BeforeAfterDiagram.fragmentSpec = { fragment, dependencies: [Image] }
+
 export default BeforeAfterDiagram
-
-function generateMarkedOptions() {
-  const markedRenderer = new marked.Renderer()
-
-  markedRenderer.heading = function(text, level) {
-    return `<h${level} class="g-type-label">${text}</h${level}>`
-  }
-  markedRenderer.paragraph = function(text) {
-    return `<p class="g-type-body-small">${text}</p>`
-  }
-  markedRenderer.list = function(text) {
-    return `<ul class="g-type-body-small">${text}</ul>`
-  }
-
-  return { renderer: markedRenderer }
-}

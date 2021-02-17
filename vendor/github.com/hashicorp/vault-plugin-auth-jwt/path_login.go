@@ -2,17 +2,15 @@ package jwtauth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/coreos/go-oidc"
+	"github.com/hashicorp/cap/jwt"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"golang.org/x/oauth2"
 )
 
 func pathLogin(b *jwtAuthBackend) *framework.Path {
@@ -88,132 +86,37 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	// Here is where things diverge. If it is using OIDC Discovery, validate that way;
-	// otherwise validate against the locally configured or JWKS keys. Once things are
-	// validated, we re-unify the request path when evaluating the claims.
-	allClaims := map[string]interface{}{}
-	configType := config.authType()
-
-	switch {
-	case configType == StaticKeys || configType == JWKS:
-		claims := jwt.Claims{}
-		if configType == JWKS {
-			keySet, err := b.getKeySet(config)
-			if err != nil {
-				return logical.ErrorResponse(errwrap.Wrapf("error fetching jwks keyset: {{err}}", err).Error()), nil
-			}
-
-			// Verify signature (and only signature... other elements are checked later)
-			payload, err := keySet.VerifySignature(ctx, token)
-			if err != nil {
-				return logical.ErrorResponse(errwrap.Wrapf("error verifying token: {{err}}", err).Error()), nil
-			}
-
-			// Unmarshal payload into two copies: public claims for library verification, and a set
-			// of all received claims.
-			if err := json.Unmarshal(payload, &claims); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal claims: %v", err)
-			}
-			if err := json.Unmarshal(payload, &allClaims); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal claims: %v", err)
-			}
-		} else {
-			parsedJWT, err := jwt.ParseSigned(token)
-			if err != nil {
-				return logical.ErrorResponse(errwrap.Wrapf("error parsing token: {{err}}", err).Error()), nil
-			}
-
-			var valid bool
-			for _, key := range config.ParsedJWTPubKeys {
-				if err := parsedJWT.Claims(key, &claims, &allClaims); err == nil {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				return logical.ErrorResponse("no known key successfully validated the token signature"), nil
-			}
-		}
-
-		// We require notbefore or expiry; if only one is provided, we allow 5 minutes of leeway by default.
-		// Configurable by ExpirationLeeway and NotBeforeLeeway
-		if claims.IssuedAt == nil {
-			claims.IssuedAt = new(jwt.NumericDate)
-		}
-		if claims.Expiry == nil {
-			claims.Expiry = new(jwt.NumericDate)
-		}
-		if claims.NotBefore == nil {
-			claims.NotBefore = new(jwt.NumericDate)
-		}
-		if *claims.IssuedAt == 0 && *claims.Expiry == 0 && *claims.NotBefore == 0 {
-			return logical.ErrorResponse("no issue time, notbefore, or expiration time encoded in token"), nil
-		}
-
-		if *claims.Expiry == 0 {
-			latestStart := *claims.IssuedAt
-			if *claims.NotBefore > *claims.IssuedAt {
-				latestStart = *claims.NotBefore
-			}
-			leeway := role.ExpirationLeeway.Seconds()
-			if role.ExpirationLeeway.Seconds() < 0 {
-				leeway = 0
-			} else if role.ExpirationLeeway.Seconds() == 0 {
-				leeway = claimDefaultLeeway
-			}
-			*claims.Expiry = jwt.NumericDate(int64(latestStart) + int64(leeway))
-		}
-
-		if *claims.NotBefore == 0 {
-			if *claims.IssuedAt != 0 {
-				*claims.NotBefore = *claims.IssuedAt
-			} else {
-				leeway := role.NotBeforeLeeway.Seconds()
-				if role.NotBeforeLeeway.Seconds() < 0 {
-					leeway = 0
-				} else if role.NotBeforeLeeway.Seconds() == 0 {
-					leeway = claimDefaultLeeway
-				}
-				*claims.NotBefore = jwt.NumericDate(int64(*claims.Expiry) - int64(leeway))
-			}
-		}
-
-		if len(claims.Audience) > 0 && len(role.BoundAudiences) == 0 {
-			return logical.ErrorResponse("audience claim found in JWT but no audiences bound to the role"), nil
-		}
-
-		expected := jwt.Expected{
-			Issuer:  config.BoundIssuer,
-			Subject: role.BoundSubject,
-			Time:    time.Now(),
-		}
-
-		cksLeeway := role.ClockSkewLeeway
-		if role.ClockSkewLeeway.Seconds() < 0 {
-			cksLeeway = 0
-		} else if role.ClockSkewLeeway.Seconds() == 0 {
-			cksLeeway = jwt.DefaultLeeway
-		}
-
-		if err := claims.ValidateWithLeeway(expected, cksLeeway); err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
-		}
-
-		if err := validateAudience(role.BoundAudiences, claims.Audience, true); err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
-		}
-
-	case configType == OIDCDiscovery:
-		allClaims, err = b.verifyOIDCToken(ctx, config, role, token)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
-	default:
-		return nil, errors.New("unhandled case during login")
+	// Get the JWT validator based on the configured auth type
+	validator, err := b.jwtValidator(config)
+	if err != nil {
+		return logical.ErrorResponse("error configuring token validator: %s", err.Error()), nil
 	}
 
-	alias, groupAliases, err := b.createIdentity(ctx, allClaims, role)
+	// Set expected claims values to assert on the JWT
+	expected := jwt.Expected{
+		Issuer:            config.BoundIssuer,
+		Subject:           role.BoundSubject,
+		Audiences:         role.BoundAudiences,
+		SigningAlgorithms: toAlg(config.JWTSupportedAlgs),
+		NotBeforeLeeway:   role.NotBeforeLeeway,
+		ExpirationLeeway:  role.ExpirationLeeway,
+		ClockSkewLeeway:   role.ClockSkewLeeway,
+	}
+
+	// Validate the JWT by verifying its signature and asserting expected claims values
+	allClaims, err := validator.Validate(ctx, token, expected)
+	if err != nil {
+		return logical.ErrorResponse("error validating token: %s", err.Error()), nil
+	}
+
+	// If there are no bound audiences for the role, then the existence of any audience
+	// in the audience claim should result in an error.
+	aud, ok := getClaim(b.Logger(), allClaims, "aud").([]interface{})
+	if ok && len(aud) > 0 && len(role.BoundAudiences) == 0 {
+		return logical.ErrorResponse("audience claim found in JWT but no audiences bound to the role"), nil
+	}
+
+	alias, groupAliases, err := b.createIdentity(ctx, allClaims, role, nil)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -266,49 +169,9 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
-	allClaims := make(map[string]interface{})
-
-	provider, err := b.getProvider(config)
-	if err != nil {
-		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
-	}
-
-	oidcConfig := &oidc.Config{
-		SupportedSigningAlgs: config.JWTSupportedAlgs,
-	}
-
-	if role.RoleType == "oidc" {
-		oidcConfig.ClientID = config.OIDCClientID
-	} else {
-		oidcConfig.SkipClientIDCheck = true
-	}
-
-	verifier := provider.Verifier(oidcConfig)
-
-	idToken, err := verifier.Verify(ctx, rawToken)
-	if err != nil {
-		return nil, errwrap.Wrapf("error validating signature: {{err}}", err)
-	}
-
-	if err := idToken.Claims(&allClaims); err != nil {
-		return nil, errwrap.Wrapf("unable to successfully parse all claims from token: {{err}}", err)
-	}
-
-	if role.BoundSubject != "" && role.BoundSubject != idToken.Subject {
-		return nil, errors.New("sub claim does not match bound subject")
-	}
-
-	if err := validateAudience(role.BoundAudiences, idToken.Audience, false); err != nil {
-		return nil, errwrap.Wrapf("error validating claims: {{err}}", err)
-	}
-
-	return allClaims, nil
-}
-
 // createIdentity creates an alias and set of groups aliases based on the role
 // definition and received claims.
-func (b *jwtAuthBackend) createIdentity(ctx context.Context, allClaims map[string]interface{}, role *jwtRole) (*logical.Alias, []*logical.Alias, error) {
+func (b *jwtAuthBackend) createIdentity(ctx context.Context, allClaims map[string]interface{}, role *jwtRole, tokenSource oauth2.TokenSource) (*logical.Alias, []*logical.Alias, error) {
 	userClaimRaw, ok := allClaims[role.UserClaim]
 	if !ok {
 		return nil, nil, fmt.Errorf("claim %q not found in token", role.UserClaim)
@@ -343,7 +206,7 @@ func (b *jwtAuthBackend) createIdentity(ctx context.Context, allClaims map[strin
 		return alias, groupAliases, nil
 	}
 
-	groupsClaimRaw, err := b.fetchGroups(ctx, pConfig, allClaims, role)
+	groupsClaimRaw, err := b.fetchGroups(ctx, pConfig, allClaims, role, tokenSource)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch groups: %s", err)
 	}
@@ -382,12 +245,12 @@ func (b *jwtAuthBackend) fetchUserInfo(ctx context.Context, pConfig CustomProvid
 }
 
 // Checks if there's a custom provider_config and calls FetchGroups() if implemented
-func (b *jwtAuthBackend) fetchGroups(ctx context.Context, pConfig CustomProvider, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
+func (b *jwtAuthBackend) fetchGroups(ctx context.Context, pConfig CustomProvider, allClaims map[string]interface{}, role *jwtRole, tokenSource oauth2.TokenSource) (interface{}, error) {
 	// If the custom provider implements interface GroupsFetcher, call it,
 	// otherwise fall through to the default method
 	if pConfig != nil {
 		if gf, ok := pConfig.(GroupsFetcher); ok {
-			groupsRaw, err := gf.FetchGroups(ctx, b, allClaims, role)
+			groupsRaw, err := gf.FetchGroups(ctx, b, allClaims, role, tokenSource)
 			if err != nil {
 				return nil, err
 			}
@@ -404,6 +267,14 @@ func (b *jwtAuthBackend) fetchGroups(ctx context.Context, pConfig CustomProvider
 	}
 
 	return groupsClaimRaw, nil
+}
+
+func toAlg(a []string) []jwt.Alg {
+	alg := make([]jwt.Alg, len(a))
+	for i, e := range a {
+		alg[i] = jwt.Alg(e)
+	}
+	return alg
 }
 
 const (
