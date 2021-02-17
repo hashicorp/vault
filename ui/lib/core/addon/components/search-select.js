@@ -39,7 +39,6 @@ export default Component.extend({
   store: service(),
 
   onChange: () => {},
-  getSelectedValue: () => {},
   inputValue: computed(function() {
     return [];
   }),
@@ -128,8 +127,6 @@ export default Component.extend({
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       this.onChange(Array.from(this.selectedOptions, option => option.id));
-      this.getSelectedValue(Array.from(this.selectedOptions, option => option.id));
-      // TODO: this.getSelectedValue is not a fn -- investigate
     } else {
       this.onChange(this.selectedOptions);
     }
@@ -151,7 +148,6 @@ export default Component.extend({
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
       // fire off getSelectedValue action higher up in get-credentials-card component
-      this.getSelectedValue('');
       if (!selected.new) {
         this.options.pushObject(selected);
       }

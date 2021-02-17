@@ -1,4 +1,5 @@
 import { helper } from '@ember/component/helper';
+import { assert } from '@ember/debug';
 import { formatDuration, intervalToDuration } from 'date-fns';
 
 export function duration([time]) {
@@ -8,6 +9,7 @@ export function duration([time]) {
 
   // time must be in seconds
   let duration = Number.parseInt(time, 10);
+  assert('could not parse time', !isNaN(duration));
   return formatDuration(intervalToDuration({ start: 0, end: duration * 1000 }));
 }
 
