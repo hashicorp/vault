@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	testinginterface "github.com/mitchellh/go-testing-interface"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -507,7 +506,7 @@ func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, 
 
 func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string, batch bool) {
 	t.Helper()
-	req := logical.TestRequest(t.(testinginterface.T), logical.UpdateOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	if batch {
 		req.Data["type"] = "batch"
@@ -607,7 +606,7 @@ func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string
 }
 
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period string, policy []string, batch bool, outAuth *logical.Auth) {
-	req := logical.TestRequest(t.(testinginterface.T), logical.UpdateOperation, "auth/token/create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	if batch {
 		req.Data["type"] = "batch"
