@@ -30,7 +30,6 @@ type ServerConfig struct {
 	AgentConfig *config.Config
 
 	ExitAfterAuth bool
-	TemplateRetry *config.TemplateRetry
 	Namespace     string
 
 	// LogLevel is needed to set the internal Consul Template Runner's log level
@@ -165,12 +164,12 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					},
 				}
 
-				if ts.config.TemplateRetry != nil && ts.config.TemplateRetry.Enabled {
+				if ts.config.AgentConfig.TemplateRetry != nil && ts.config.AgentConfig.TemplateRetry.Enabled {
 					ctv.Vault.Retry = &ctconfig.RetryConfig{
-						Attempts:   &ts.config.TemplateRetry.Attempts,
-						Backoff:    &ts.config.TemplateRetry.Backoff,
-						MaxBackoff: &ts.config.TemplateRetry.MaxBackoff,
-						Enabled:    &ts.config.TemplateRetry.Enabled,
+						Attempts:   &ts.config.AgentConfig.TemplateRetry.Attempts,
+						Backoff:    &ts.config.AgentConfig.TemplateRetry.Backoff,
+						MaxBackoff: &ts.config.AgentConfig.TemplateRetry.MaxBackoff,
+						Enabled:    &ts.config.AgentConfig.TemplateRetry.Enabled,
 					}
 				} else if ts.testingLimitRetry != 0 {
 					// If we're testing, limit retries to 3 attempts to avoid
@@ -243,7 +242,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	conf.Vault.Address = &sc.AgentConfig.Vault.Address
 
 	if sc.AgentConfig.Cache != nil && len(sc.AgentConfig.Listeners) != 0 {
-		scheme := "unix:/"
+		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"
 			if sc.AgentConfig.Listeners[0].TLSDisable {

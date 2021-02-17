@@ -590,7 +590,6 @@ func (c *AgentCommand) Run(args []string) int {
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
-			TemplateRetry: config.TemplateRetry,
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
