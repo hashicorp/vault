@@ -32,7 +32,7 @@ import (
 // ALTSRecordCrypto is the interface for gRPC ALTS record protocol.
 type ALTSRecordCrypto interface {
 	// Encrypt encrypts the plaintext and computes the tag (if any) of dst
-	// and plaintext. dst and plaintext may fully overlap or not at all.
+	// and plaintext, dst and plaintext do not overlap.
 	Encrypt(dst, plaintext []byte) ([]byte, error)
 	// EncryptionOverhead returns the tag size (if any) in bytes.
 	EncryptionOverhead() int
@@ -111,7 +111,6 @@ func NewConn(c net.Conn, side core.Side, recordProtocol string, key []byte, prot
 	}
 	overhead := MsgLenFieldSize + msgTypeFieldSize + crypto.EncryptionOverhead()
 	payloadLengthLimit := altsRecordDefaultLength - overhead
-	var protectedBuf []byte
 	if protected == nil {
 		// We pre-allocate protected to be of size
 		// 2*altsRecordDefaultLength-1 during initialization. We only
@@ -121,19 +120,16 @@ func NewConn(c net.Conn, side core.Side, recordProtocol string, key []byte, prot
 		// altsRecordDefaultLength (bytes) data into protected at one
 		// time. Therefore, 2*altsRecordDefaultLength-1 is large enough
 		// to buffer data read from the network.
-		protectedBuf = make([]byte, 0, 2*altsRecordDefaultLength-1)
-	} else {
-		protectedBuf = make([]byte, len(protected))
-		copy(protectedBuf, protected)
+		protected = make([]byte, 0, 2*altsRecordDefaultLength-1)
 	}
 
 	altsConn := &conn{
 		Conn:               c,
 		crypto:             crypto,
 		payloadLengthLimit: payloadLengthLimit,
-		protected:          protectedBuf,
+		protected:          protected,
 		writeBuf:           make([]byte, altsWriteBufferInitialSize),
-		nextFrame:          protectedBuf,
+		nextFrame:          protected,
 		overhead:           overhead,
 	}
 	return altsConn, nil

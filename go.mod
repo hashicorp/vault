@@ -6,6 +6,8 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace google.golang.org/grpc => google.golang.org/grpc v1.29.0
+
 require (
 	cloud.google.com/go v0.76.0
 	cloud.google.com/go/spanner v1.5.1

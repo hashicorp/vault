@@ -18,7 +18,8 @@
  *
  */
 
-package credentials
+// Package internal contains credentials-internal code.
+package internal
 
 import (
 	"net"

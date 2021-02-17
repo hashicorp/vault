@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2020 gRPC authors.
+ * Copyright 2017 gRPC authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,29 @@
  *
  */
 
-package health
+// This file contains wrappers for grpclog functions.
+// The transport package only logs to verbose level 2 by default.
+
+package transport
 
 import "google.golang.org/grpc/grpclog"
 
-var logger = grpclog.Component("health_service")
+const logLevel = 2
+
+func infof(format string, args ...interface{}) {
+	if grpclog.V(logLevel) {
+		grpclog.Infof(format, args...)
+	}
+}
+
+func warningf(format string, args ...interface{}) {
+	if grpclog.V(logLevel) {
+		grpclog.Warningf(format, args...)
+	}
+}
+
+func errorf(format string, args ...interface{}) {
+	if grpclog.V(logLevel) {
+		grpclog.Errorf(format, args...)
+	}
+}

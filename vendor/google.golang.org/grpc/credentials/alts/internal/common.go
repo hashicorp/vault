@@ -16,6 +16,8 @@
  *
  */
 
+//go:generate ./regenerate.sh
+
 // Package internal contains common core functionality for ALTS.
 package internal
 
