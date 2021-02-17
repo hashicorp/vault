@@ -19,14 +19,13 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
 
 export default class SecretListHeaderTab extends Component {
   @service store;
   @tracked dontShowTab;
   constructor() {
     super(...arguments);
-    this.fetchCapabilities.perform();
+    this.fetchCapabilities();
   }
 
   pathQuery(backend, path) {
@@ -35,7 +34,7 @@ export default class SecretListHeaderTab extends Component {
     };
   }
 
-  @task(function*() {
+  async fetchCapabilities() {
     let capabilitiesArray = ['canList', 'canCreate', 'canUpdate'];
     let checkCapabilities = function(object) {
       let array = [];
@@ -48,9 +47,9 @@ export default class SecretListHeaderTab extends Component {
     let checker = arr => arr.every(item => !item); // same things as listing every item as !item && !item, etc.
     // For now only check capabilities for the Database Secrets Engine
     if (this.args.displayName === 'Database') {
-      let peekRecordRoles = yield this.store.peekRecord('capabilities', 'database/roles/');
-      let peekRecordStaticRoles = yield this.store.peekRecord('capabilities', 'database/static-roles/');
-      let peekRecordConnections = yield this.store.peekRecord('capabilities', 'database/config/');
+      let peekRecordRoles = this.store.peekRecord('capabilities', 'database/roles/');
+      let peekRecordStaticRoles = this.store.peekRecord('capabilities', 'database/static-roles/');
+      let peekRecordConnections = this.store.peekRecord('capabilities', 'database/config/');
       // peekRecord if the capabilities store data is there for the connections (config) and roles model
       if (
         (peekRecordRoles && this.args.path === 'roles') ||
@@ -67,12 +66,11 @@ export default class SecretListHeaderTab extends Component {
         return;
       }
       // otherwise queryRecord and create an instance on the capabilities.
-      let response = yield this.store.queryRecord(
+      let response = await this.store.queryRecord(
         'capabilities',
         this.pathQuery(this.args.id, this.args.path)
       );
       this.dontShowTab = checker(checkCapabilities(response));
     }
-  })
-  fetchCapabilities;
+  }
 }
