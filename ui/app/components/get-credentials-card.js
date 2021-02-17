@@ -19,30 +19,26 @@ import { tracked } from '@glimmer/tracking';
 export default class GetCredentialsCard extends Component {
   @service router;
   @service store;
-  role = '';
-  manuallyEnteredRole = '';
-  @tracked buttonDisabled = true;
+  @tracked role = '';
 
   @action
-  async getSelectedValue(selectValue) {
-    this.role = selectValue[0];
-    let role = this.role;
-    if (role) {
-      this.buttonDisabled = false;
-    }
-  }
-  @action
   async transitionToCredential() {
-    const role = this.role || this.manuallyEnteredRole;
+    const role = this.role;
     if (role) {
       this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
     }
   }
+
+  get buttonDisabled() {
+    return !this.role;
+  }
   @action
-  getManuallyEnteredValue(path, value) {
-    this.manuallyEnteredRole = value;
-    if (value) {
-      this.buttonDisabled = false;
+  handleRoleInput(value) {
+    // if it comes in from the fallback component then the value is a string otherwise it's an array
+    let role = value;
+    if (Array.isArray(value)) {
+      role = value[0];
     }
+    this.role = role;
   }
 }
