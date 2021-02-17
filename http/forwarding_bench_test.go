@@ -28,7 +28,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		},
 	}
 
-	cluster := vault.NewTestClusterBenchmarking(b, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(b, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		Logger:      logging.NewVaultLoggerWithWriter(ioutil.Discard, log.Error),
 	})
@@ -38,7 +38,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 
 	// make it easy to get access to the active
 	core := cores[0].Core
-	vault.TestWaitActiveBenchmarking(b, core)
+	vault.TestWaitActive(b, core)
 
 	handler := cores[0].Handler
 	host := fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[0].Listeners[0].Address.Port)

@@ -35,9 +35,9 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 	}
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(conf, &opts)
-	cluster := vault.NewTestClusterBenchmarking(t, conf, &opts)
+	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
-	vault.TestWaitActiveBenchmarking(t, cluster.Cores[0].Core)
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
 }
 

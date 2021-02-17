@@ -39,7 +39,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		},
 	}
 
-	cluster := vault.NewTestClusterBenchmarking(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		Logger:      logger.Named("testclusteroptions"),
 	})
@@ -50,8 +50,8 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestWaitActiveBenchmarking(t, core.Core)
-	vault.TestAddTestPluginBenchmarking(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
+	vault.TestWaitActive(t, core.Core)
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{

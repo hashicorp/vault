@@ -28,7 +28,7 @@ const (
 )
 
 // Generates a root token on the target cluster.
-func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
+func GenerateRoot(t testing.TB, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
 	if err != nil {
@@ -37,7 +37,7 @@ func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind
 	return token
 }
 
-func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
+func GenerateRootWithError(t testing.TB, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
 	t.Helper()
 	// If recovery keys supported, use those to perform root token generation instead
 	var keys [][]byte
@@ -107,14 +107,14 @@ func RandomWithPrefix(name string) string {
 	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
 }
 
-func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
+func EnsureCoresSealed(t testing.TB, c *vault.TestCluster) {
 	t.Helper()
 	for _, core := range c.Cores {
 		EnsureCoreSealed(t, core)
 	}
 }
 
-func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
+func EnsureCoreSealed(t testing.TB, core *vault.TestClusterCore) {
 	t.Helper()
 	core.Seal(t)
 	timeout := time.Now().Add(60 * time.Second)
@@ -129,7 +129,7 @@ func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
 	}
 }
 
-func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
+func EnsureCoresUnsealed(t testing.TB, c *vault.TestCluster) {
 	t.Helper()
 	for i, core := range c.Cores {
 		err := AttemptUnsealCore(c, core)
@@ -139,7 +139,7 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
-func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+func EnsureCoreUnsealed(t testing.TB, c *vault.TestCluster, core *vault.TestClusterCore) {
 	t.Helper()
 	err := AttemptUnsealCore(c, core)
 	if err != nil {
@@ -193,15 +193,15 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 	return nil
 }
 
-func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+func EnsureStableActiveNode(t testing.TB, cluster *vault.TestCluster) {
 	deriveStableActiveCore(t, cluster)
 }
 
-func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func DeriveStableActiveCore(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	return deriveStableActiveCore(t, cluster)
 }
 
-func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func deriveStableActiveCore(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	activeCore := DeriveActiveCore(t, cluster)
 	minDuration := time.NewTimer(3 * time.Second)
 
@@ -229,7 +229,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 	return activeCore
 }
 
-func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func DeriveActiveCore(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	for i := 0; i < 20; i++ {
 		for _, core := range cluster.Cores {
 			leaderResp, err := core.Client.Sys().Leader()
@@ -246,7 +246,7 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	return nil
 }
 
-func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestClusterCore {
+func DeriveStandbyCores(t testing.TB, cluster *vault.TestCluster) []*vault.TestClusterCore {
 	cores := make([]*vault.TestClusterCore, 0, 2)
 	for _, core := range cluster.Cores {
 		leaderResp, err := core.Client.Sys().Leader()
@@ -261,7 +261,7 @@ func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestCl
 	return cores
 }
 
-func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
+func WaitForNCoresUnsealed(t testing.TB, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		unsealed := 0
@@ -280,7 +280,7 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Fatalf("%d cores were not unsealed", n)
 }
 
-func SealCores(t testing.T, cluster *vault.TestCluster) {
+func SealCores(t testing.TB, cluster *vault.TestCluster) {
 	t.Helper()
 	for _, core := range cluster.Cores {
 		if err := core.Shutdown(); err != nil {
@@ -299,7 +299,7 @@ func SealCores(t testing.T, cluster *vault.TestCluster) {
 	}
 }
 
-func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
+func WaitForNCoresSealed(t testing.TB, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 60; i++ {
 		sealed := 0
@@ -318,7 +318,7 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Fatalf("%d cores were not sealed", n)
 }
 
-func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func WaitForActiveNode(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		for _, core := range cluster.Cores {
@@ -334,7 +334,7 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 	return nil
 }
 
-func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
+func WaitForStandbyNode(t testing.TB, core *vault.TestClusterCore) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
@@ -347,7 +347,7 @@ func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
 	t.Fatalf("node did not become standby")
 }
 
-func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
+func RekeyCluster(t testing.TB, cluster *vault.TestCluster, recovery bool) [][]byte {
 	t.Helper()
 	cluster.Logger.Info("rekeying cluster", "recovery", recovery)
 	client := cluster.Cores[0].Client
@@ -430,7 +430,7 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 	return "", errors.New("could not find cluster addr")
 }
 
-func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+func RaftClusterJoinNodes(t testing.TB, cluster *vault.TestCluster) {
 
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
@@ -541,7 +541,7 @@ func RaftAppliedIndex(core *vault.TestClusterCore) uint64 {
 	return core.UnderlyingRawStorage.(*raft.RaftBackend).AppliedIndex()
 }
 
-func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
+func WaitForRaftApply(t testing.TB, core *vault.TestClusterCore, index uint64) {
 	t.Helper()
 
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
@@ -557,7 +557,7 @@ func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
 }
 
 // AwaitLeader waits for one of the cluster's nodes to become leader.
-func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
+func AwaitLeader(t testing.TB, cluster *vault.TestCluster) (int, error) {
 
 	timeout := time.Now().Add(30 * time.Second)
 	for {
@@ -582,7 +582,7 @@ func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
 	return 0, fmt.Errorf("timeout waiting leader")
 }
 
-func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
+func GenerateDebugLogs(t testing.TB, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
@@ -618,7 +618,7 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	return stopCh
 }
 
-func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
+func VerifyRaftPeers(t testing.TB, client *api.Client, expected map[string]bool) {
 	t.Helper()
 
 	resp, err := client.Logical().Read("sys/storage/raft/configuration")
