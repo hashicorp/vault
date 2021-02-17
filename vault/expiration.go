@@ -707,16 +707,12 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 	}
 
 	le.ExpireTime = time.Now()
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return err
-		}
-
-		m.updatePendingInternal(le)
+	// TODO: potential race with concurrent renew.
+	if err := m.persistEntry(ctx, le); err != nil {
 		m.pendingLock.Unlock()
+		return err
 	}
+	m.updatePending(le)
 
 	return nil
 }
@@ -737,6 +733,21 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		return nil
 	}
 
+	// Might get here either because timer already expired,
+	// or because revoke was explicitly called,
+	// or because we're doing a bulk revocation.  So we continue
+	// forward even if we can't stop the timer, but any renew
+	// that comes in after this point will fail.
+	restartNeeded := m.stopPending(leaseID)
+	defer func() {
+		// If we stopped the timer, then encountered an error,
+		// we want to put things back the way they were, so that
+		// the lease has the opportunity to expire normally.
+		if restartNeeded {
+			m.updatePending(le)
+		}
+	}()
+
 	// Revoke the entry
 	if !skipToken || le.Auth == nil {
 		if err := m.revokeEntry(ctx, le); err != nil {
@@ -754,6 +765,10 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	if err := m.deleteEntry(ctx, le); err != nil {
 		return err
 	}
+
+	// Entry should not be put back into the pending queue at this point,
+	// (even if removeIndexByToken fails.)
+	restartNeeded = false
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
@@ -836,16 +851,12 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 		if le != nil {
 			le.ExpireTime = time.Now()
 
-			{
-				m.pendingLock.Lock()
-				if err := m.persistEntry(ctx, le); err != nil {
-					m.pendingLock.Unlock()
-					return err
-				}
-
-				m.updatePendingInternal(le)
+			// TODO: storage race with concurrent renew
+			if err := m.persistEntry(ctx, le); err != nil {
 				m.pendingLock.Unlock()
+				return err
 			}
+			m.updatePending(le)
 		}
 	}
 
@@ -964,6 +975,15 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		return nil, fmt.Errorf("unable to retrieve system view from router")
 	}
 
+	// Stop the timer, fail if we cannot do so, which signals that there
+	// is a concurrent renew or revoke.
+	if !m.stopPending(leaseID) {
+		return nil, fmt.Errorf("renew disallowed because of concurrent renew or revoke")
+	}
+	// Ensure that the expiration timer is always restarted, even if
+	// renewal fails due to a later cause.
+	defer m.updatePending(le)
+
 	// Attempt to renew the entry
 	resp, err := m.renewEntry(ctx, le, increment)
 	if err != nil {
@@ -1024,19 +1044,20 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		}
 	}
 
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return nil, err
-		}
-
-		// Update the expiration time
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	// TODO: there is a race condition here with revocation, which may
+	// begin after we have stopped the entry timer, but finish before we get here
+	// and persist the entry.
+	//
+	// The stopEntry() call above protects against concurrent renewals; only one
+	// will be able to write the entry. Extending the lock to cover persistEntry,
+	// as was previously the case, would create more contention, but not solve
+	// the race with revocation.
+	if err := m.persistEntry(ctx, le); err != nil {
+		return nil, err
 	}
 
-	// Return the response
+	// updatePending(le) is caled by defer above
+
 	return resp, nil
 }
 
@@ -1089,6 +1110,12 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
+	if !m.stopPending(leaseID) {
+		return nil, fmt.Errorf("renew disallowed because of concurrent renew or revoke")
+	}
+	// Ensure that the expiration timer is restarted, even if renewal fails due to a later cause.
+	defer m.updatePending(le)
+
 	// Attempt to renew the auth entry
 	resp, err := m.renewAuthEntry(ctx, req, le, increment)
 	if err != nil {
@@ -1139,17 +1166,13 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	le.ExpireTime = resp.Auth.ExpirationTime()
 	le.LastRenewalTime = time.Now()
 
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return nil, err
-		}
-
-		// Update the expiration time
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	// See Renew() above for potential race condition between
+	// renew and revoke.
+	if err := m.persistEntry(ctx, le); err != nil {
+		return nil, err
 	}
+
+	// updatePending(le) is called by defer above
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1474,6 +1497,19 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 		m.uniquePolicies = make(map[string][]string)
 		m.pendingLock.Unlock()
 	}
+}
+
+// Stop the timer associated with a pending entry; return true on success;
+// false if the entry could not be found or the timer is already stopped.
+func (m *ExpirationManager) stopPending(leaseID string) bool {
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
+
+	info, ok := m.pending.Load(leaseID)
+	if !ok {
+		return false
+	}
+	return info.(pendingInfo).timer.Stop()
 }
 
 // updatePending is used to update a pending invocation for a lease
