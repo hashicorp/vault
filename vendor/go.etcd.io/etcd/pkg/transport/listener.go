@@ -115,17 +115,17 @@ func (info TLSInfo) Empty() bool {
 }
 
 func SelfCert(lg *zap.Logger, dirpath string, hosts []string, additionalUsages ...x509.ExtKeyUsage) (info TLSInfo, err error) {
-	info.Logger = lg
-	err = fileutil.TouchDirAll(dirpath)
-	if err != nil {
-		if info.Logger != nil {
-			info.Logger.Warn(
-				"cannot create cert directory",
-				zap.Error(err),
-			)
+	if fileutil.Exist(dirpath) {
+		err = fileutil.CheckDirPermission(dirpath, fileutil.PrivateDirMode)
+		if err != nil {
+			return
 		}
-		return
+	} else {
+		if err = os.MkdirAll(dirpath, fileutil.PrivateDirMode); err != nil {
+			return
+		}
 	}
+	info.Logger = lg
 
 	certPath := filepath.Join(dirpath, "cert.pem")
 	keyPath := filepath.Join(dirpath, "key.pem")
@@ -385,6 +385,11 @@ func (info TLSInfo) ServerConfig() (*tls.Config, error) {
 	// "h2" NextProtos is necessary for enabling HTTP2 for go's HTTP server
 	cfg.NextProtos = []string{"h2"}
 
+	// go1.13 enables TLS 1.3 by default
+	// and in TLS 1.3, cipher suites are not configurable
+	// setting Max TLS version to TLS 1.2 for go 1.13
+	cfg.MaxVersion = tls.VersionTLS12
+
 	return cfg, nil
 }
 
@@ -435,6 +440,11 @@ func (info TLSInfo) ClientConfig() (*tls.Config, error) {
 			return nil, fmt.Errorf("cert has non empty Common Name (%s)", cn)
 		}
 	}
+
+	// go1.13 enables TLS 1.3 by default
+	// and in TLS 1.3, cipher suites are not configurable
+	// setting Max TLS version to TLS 1.2 for go 1.13
+	cfg.MaxVersion = tls.VersionTLS12
 
 	return cfg, nil
 }

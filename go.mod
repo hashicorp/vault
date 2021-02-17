@@ -48,7 +48,6 @@ require (
 	github.com/containerd/fifo v0.0.0-20210129194248-f8e8fdba47ef // indirect
 	github.com/containerd/ttrpc v1.0.2 // indirect
 	github.com/containerd/typeurl v1.0.1 // indirect
-	github.com/coreos/etcd v3.3.13+incompatible // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
 	github.com/coreos/go-semver v0.2.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
@@ -199,7 +198,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
+	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/atlas v0.7.2 // indirect
 	go.mongodb.org/mongo-driver v1.4.6
 	go.opencensus.io v0.22.6 // indirect

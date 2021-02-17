@@ -250,10 +250,8 @@ github.com/containerd/continuity/sysx
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
-# github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-github.com/coreos/go-systemd/journal
-# github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
-github.com/coreos/pkg/capnslog
+# github.com/coreos/go-systemd/v22 v22.1.0
+github.com/coreos/go-systemd/v22/journal
 # github.com/couchbase/gocb/v2 v2.1.4
 github.com/couchbase/gocb/v2
 github.com/couchbase/gocb/v2/search
@@ -1021,7 +1019,7 @@ github.com/yuin/gopher-lua/parse
 github.com/yuin/gopher-lua/pm
 # go.etcd.io/bbolt v1.3.5
 go.etcd.io/bbolt
-# go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
+# go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 go.etcd.io/etcd/auth/authpb
 go.etcd.io/etcd/client
 go.etcd.io/etcd/clientv3
@@ -1031,6 +1029,7 @@ go.etcd.io/etcd/clientv3/balancer/picker
 go.etcd.io/etcd/clientv3/balancer/resolver/endpoint
 go.etcd.io/etcd/clientv3/concurrency
 go.etcd.io/etcd/clientv3/credentials
+go.etcd.io/etcd/etcdserver/api/membership/membershippb
 go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes
 go.etcd.io/etcd/etcdserver/etcdserverpb
 go.etcd.io/etcd/mvcc/mvccpb
@@ -1103,11 +1102,9 @@ go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
 # go.uber.org/atomic v1.6.0
 go.uber.org/atomic
-# go.uber.org/multierr v1.3.0
+# go.uber.org/multierr v1.5.0
 go.uber.org/multierr
-# go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
-go.uber.org/tools/update-license
-# go.uber.org/zap v1.13.0
+# go.uber.org/zap v1.14.1
 go.uber.org/zap
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/bufferpool
@@ -1199,20 +1196,9 @@ golang.org/x/text/unicode/norm
 golang.org/x/time/rate
 # golang.org/x/tools v0.1.0
 golang.org/x/tools/cmd/goimports
-golang.org/x/tools/go/analysis
-golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/astutil
-golang.org/x/tools/go/ast/inspector
-golang.org/x/tools/go/buildutil
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/cgo
 golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/go/loader
-golang.org/x/tools/go/packages
-golang.org/x/tools/go/types/objectpath
-golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/internal/analysisinternal
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
@@ -1221,9 +1207,6 @@ golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
-golang.org/x/tools/internal/lsp/fuzzy
-golang.org/x/tools/internal/packagesinternal
-golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
@@ -1407,36 +1390,6 @@ gopkg.in/square/go-jose.v2/jwt
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.0.1-2020.1.4
-honnef.co/go/tools/arg
-honnef.co/go/tools/cmd/staticcheck
-honnef.co/go/tools/code
-honnef.co/go/tools/config
-honnef.co/go/tools/deprecated
-honnef.co/go/tools/edit
-honnef.co/go/tools/facts
-honnef.co/go/tools/functions
-honnef.co/go/tools/go/types/typeutil
-honnef.co/go/tools/internal/cache
-honnef.co/go/tools/internal/passes/buildir
-honnef.co/go/tools/internal/renameio
-honnef.co/go/tools/internal/robustio
-honnef.co/go/tools/internal/sharedcheck
-honnef.co/go/tools/ir
-honnef.co/go/tools/ir/irutil
-honnef.co/go/tools/lint
-honnef.co/go/tools/lint/lintdsl
-honnef.co/go/tools/lint/lintutil
-honnef.co/go/tools/lint/lintutil/format
-honnef.co/go/tools/loader
-honnef.co/go/tools/pattern
-honnef.co/go/tools/printf
-honnef.co/go/tools/report
-honnef.co/go/tools/simple
-honnef.co/go/tools/staticcheck
-honnef.co/go/tools/stylecheck
-honnef.co/go/tools/unused
-honnef.co/go/tools/version
 # k8s.io/api v0.18.2
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
