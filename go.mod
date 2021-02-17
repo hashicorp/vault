@@ -6,8 +6,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/mitchellh/go-testing-interface => ./../go-testing-interface
-
 require (
 	cloud.google.com/go v0.76.0
 	cloud.google.com/go/spanner v1.5.1
@@ -151,7 +149,7 @@ require (
 	github.com/mitchellh/cli v1.1.0
 	github.com/mitchellh/copystructure v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/go-testing-interface v1.14.1
+	github.com/mitchellh/go-testing-interface v1.14.2-0.20210217184823-a52172cd2f64
 	github.com/mitchellh/gox v0.4.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mitchellh/pointerstructure v1.1.1 // indirect
