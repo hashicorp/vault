@@ -6,14 +6,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-// This replace directive comes from: https://github.com/etcd-io/etcd/issues/12569
-replace (
-	github.com/coreos/etcd => github.com/coreos/etcd v3.3.13+incompatible
-	go.etcd.io/bbolt => go.etcd.io/bbolt v1.3.5
-	go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489 // ae9734ed278b is the SHA for git tag v3.4.13
-	google.golang.org/grpc => google.golang.org/grpc v1.27.1
-)
-
 replace github.com/mitchellh/go-testing-interface => ./../go-testing-interface
 
 require (
@@ -58,6 +50,7 @@ require (
 	github.com/containerd/fifo v0.0.0-20210129194248-f8e8fdba47ef // indirect
 	github.com/containerd/ttrpc v1.0.2 // indirect
 	github.com/containerd/typeurl v1.0.1 // indirect
+	github.com/coreos/etcd v3.3.13+incompatible // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
 	github.com/coreos/go-semver v0.2.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
