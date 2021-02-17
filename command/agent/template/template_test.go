@@ -107,7 +107,7 @@ func TestCacheConfigUnix(t *testing.T) {
 		t.Fatalf("expected unix address, got %s", *ctConfig.Vault.Address)
 	}
 
-	expected := "unix:/foobar"
+	expected := "unix://foobar"
 	if *ctConfig.Vault.Address != expected {
 		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
 	}
