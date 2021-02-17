@@ -28,6 +28,13 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
+    {{else if (and renderBlank (is-empty value))}}
+      <Icon
+          aria-hidden="true"
+          class="icon-false"
+          @size="l"
+          @glyph="cancel-square-outline"
+        /> None
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray
