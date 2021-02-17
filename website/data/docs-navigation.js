@@ -40,6 +40,7 @@ export default [
       'resource-quotas',
       'client-count',
       'transform',
+      'username-templating'
     ],
   },
   {
