@@ -1,0 +1,4 @@
+```release-note:bug
+auth/kubernetes: Cancel API calls to TokenReview endpoint when request context
+is closed
+```
