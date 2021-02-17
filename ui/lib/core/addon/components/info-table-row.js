@@ -25,6 +25,7 @@ import layout from '../templates/components/info-table-row';
  * @param [backend] {String} - Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex: transformation
  * @param [viewAll] {String} - Passed through to InfoTableItemArray. Specify the word at the end of the link View all.
  * @param [tooltipText] {String} - Text if a tooltip should display over the value.
+ * @param [defaultShown] {String} - Text that renders as value if alwaysRender=true. Eg. "Vault default"
  */
 
 export default Component.extend({
@@ -38,6 +39,7 @@ export default Component.extend({
   helperText: null,
   value: null,
   tooltipText: '',
+  defaultShown: '',
 
   valueIsBoolean: computed('value', function() {
     return typeOf(this.value) === 'boolean';

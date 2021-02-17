@@ -72,9 +72,6 @@ export default Component.extend({
     return '';
   }),
 
-  // This is only used for `optional-text` editType
-  showInput: false,
-
   // both the path to mutate on the model, and the path to read the value from
   /*
    * @private
@@ -86,6 +83,9 @@ export default Component.extend({
   valuePath: or('attr.options.fieldValue', 'attr.name'),
 
   model: null,
+
+  // This is only used internally for `optional-text` editType
+  showInput: false,
 
   /*
    * @private
