@@ -116,14 +116,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
-	totp := d.Get("totp").(string)
 
 	cfg, err := b.getConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, totp)
+	// No TOTP entry is possible on renew. If push MFA is enabled it will still be triggered, however.
+	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "")
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
