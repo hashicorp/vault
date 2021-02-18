@@ -157,6 +157,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 	conf.MetricsHelper = opts.MetricsHelper
 	conf.MetricSink = opts.MetricSink
+	conf.NumExpirationWorkers = numExpirationWorkersTest
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -395,6 +396,7 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	logger := logging.NewVaultLogger(log.Trace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
+	conf.NumExpirationWorkers = numExpirationWorkersTest
 
 	core, err := NewCore(conf)
 	if err != nil {
@@ -1825,6 +1827,8 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if opts != nil && opts.CoreMetricSinkProvider != nil {
 		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
 	}
+
+	localConfig.NumExpirationWorkers = numExpirationWorkersTest
 
 	c, err := NewCore(&localConfig)
 	if err != nil {

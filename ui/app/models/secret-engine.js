@@ -63,6 +63,22 @@ export default Model.extend({
     if (type === 'kv' || type === 'generic') {
       defaultGroup.default.push('options.{version}');
     }
+    if (type === 'database') {
+      // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
+      defaultGroup.default.push('config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}');
+      return [
+        defaultGroup,
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ];
+    }
     return [
       defaultGroup,
       {
