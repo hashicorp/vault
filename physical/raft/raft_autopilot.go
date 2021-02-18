@@ -538,39 +538,29 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 }
 
 func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
-	// If there is a autopilot config in storage that takes precedence
-	if opts.AutopilotConfig != nil {
-		// Use the config present in storage
-		b.logger.Info("setting autopilot configuration retrieved from storage")
-		b.autopilotConfig = opts.AutopilotConfig
-	}
+	// Start with a default config
+	b.autopilotConfig = b.defaultAutopilotConfig()
 
-	// Autopilot config wasn't found in storage
-	if b.autopilotConfig == nil {
-		// Check if autopilot settings were part of config file
+	// Check if the config was present in storage
+	switch opts.AutopilotConfig {
+	case nil:
+		// Autopilot config wasn't found in storage. Check if autopilot settings were part of config file.
 		conf, err := b.autopilotConf()
 		if err != nil {
 			return err
 		}
-
-		switch {
-		case conf != nil:
+		if conf != nil {
 			b.logger.Info("setting autopilot configuration retrieved from config file")
-			// Use the config present in config file
 			b.autopilotConfig = conf
-		default:
-			// Autopilot config is not in both storage and config file. This is the case for
-			// existing customers who have not yet enabled autopilot. Disable autopilot.
-			b.logger.Info("autopilot configuration not found; disabling autopilot")
-			b.disableAutopilot = true
 		}
+	default:
+		b.logger.Info("setting autopilot configuration retrieved from storage")
+		b.autopilotConfig = opts.AutopilotConfig
 	}
 
-	if !b.disableAutopilot {
-		// Create the autopilot instance
-		b.logger.Info("setting up autopilot", "config", b.autopilotConfig)
-		b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
-	}
+	// Create the autopilot instance
+	b.logger.Info("setting up autopilot", "config", b.autopilotConfig)
+	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 
 	return nil
 }

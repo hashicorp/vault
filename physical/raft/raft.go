@@ -127,13 +127,6 @@ type RaftBackend struct {
 	// However, only active node will have a "running" autopilot.
 	autopilot *autopilot.Autopilot
 
-	// disableAutopilot if set will not put autopilot implementation to use. The
-	// fallback will be to interact with the raft instance directly. This is useful
-	// to retain state of operations on existing clusters which do not have
-	// autopilot enabled yet. For new clusters however, the default will be to have
-	// autopilot enabled from get-go.
-	disableAutopilot bool
-
 	// autopilotConfig represents the configuration required to instantiate autopilot.
 	autopilotConfig *AutopilotConfig
 
@@ -892,19 +885,12 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
-		return errors.New("raft storage is not initialized")
+	if b.autopilot == nil {
+		return errors.New("raft autopilot is not initialized")
 	}
 
-	switch b.disableAutopilot {
-	case true:
-		b.logger.Trace("removing server from raft", "id", peerID)
-		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
-		return future.Error()
-	default:
-		b.logger.Trace("removing server from raft via autopilot", "id", peerID)
-		return b.autopilot.RemoveServer(raft.ServerID(peerID))
-	}
+	b.logger.Trace("removing server from raft via autopilot", "id", peerID)
+	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
@@ -945,27 +931,18 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
-		return errors.New("raft storage is not initialized")
+	if b.autopilot == nil {
+		return errors.New("raft autopilot is not initialized")
 	}
 
 	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
-
-	switch b.disableAutopilot {
-	case true:
-		b.logger.Trace("adding server to raft", "id", peerID)
-		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
-		return future.Error()
-	default:
-		b.logger.Trace("adding server to raft via autopilot", "id", peerID)
-		return b.autopilot.AddServer(&autopilot.Server{
-			ID:          raft.ServerID(peerID),
-			Name:        peerID,
-			Address:     raft.ServerAddress(clusterAddr),
-			RaftVersion: raft.ProtocolVersionMax,
-			NodeType:    autopilot.NodeVoter,
-		})
-	}
+	return b.autopilot.AddServer(&autopilot.Server{
+		ID:          raft.ServerID(peerID),
+		Name:        peerID,
+		Address:     raft.ServerAddress(clusterAddr),
+		RaftVersion: raft.ProtocolVersionMax,
+		NodeType:    autopilot.NodeVoter,
+	})
 }
 
 // Peers returns all the servers present in the raft cluster
