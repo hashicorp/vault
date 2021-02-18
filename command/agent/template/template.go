@@ -241,18 +241,6 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	conf.Vault.Token = pointerutil.StringPtr("")
 	conf.Vault.Address = &sc.AgentConfig.Vault.Address
 
-	if sc.AgentConfig.Cache != nil && len(sc.AgentConfig.Listeners) != 0 {
-		scheme := "unix://"
-		if sc.AgentConfig.Listeners[0].Type == "tcp" {
-			scheme = "https://"
-			if sc.AgentConfig.Listeners[0].TLSDisable {
-				scheme = "http://"
-			}
-		}
-		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
-		conf.Vault.Address = &address
-	}
-
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
 	}
@@ -267,7 +255,26 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
-	if strings.HasPrefix(*conf.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
+	// Use the cache if available or fallback to the Vault server values.
+	if sc.AgentConfig.Cache != nil && len(sc.AgentConfig.Listeners) != 0 {
+		scheme := "unix://"
+		if sc.AgentConfig.Listeners[0].Type == "tcp" {
+			scheme = "https://"
+			if sc.AgentConfig.Listeners[0].TLSDisable {
+				scheme = "http://"
+			}
+		}
+		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
+		conf.Vault.Address = &address
+
+		// Only configure TLS Skip Verify if CT is not going through the cache. We can
+		// skip verification if its using the cache because they're part of the same agent.
+		if scheme == "https" {
+			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
+			conf.Vault.SSL.Cert = pointerutil.StringPtr("")
+			conf.Vault.SSL.Key = pointerutil.StringPtr("")
+		}
+	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
 		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
@@ -277,14 +284,6 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 			Key:     &sc.AgentConfig.Vault.ClientKey,
 			CaCert:  &sc.AgentConfig.Vault.CACert,
 			CaPath:  &sc.AgentConfig.Vault.CAPath,
-		}
-
-		// Only configure TLS Skip Verify if CT is not going through the cache. We can
-		// skip verification if its using the cache because they're part of the same agent.
-		if sc.AgentConfig.Cache != nil {
-			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
-			conf.Vault.SSL.Cert = pointerutil.StringPtr("")
-			conf.Vault.SSL.Key = pointerutil.StringPtr("")
 		}
 	}
 
