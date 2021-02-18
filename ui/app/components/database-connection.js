@@ -19,12 +19,22 @@ export default class DatabaseConnectionEdit extends Component {
   @service store;
   @service router;
   @service flashMessages;
+  @service wizard;
 
   @tracked
   showPasswordField = false; // used for edit mode
 
   @tracked
   showSaveModal = false; // used for create mode
+
+  constructor() {
+    super(...arguments);
+    if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
+      // when wizard featureState === details display secrets-connection
+      // when wizard featureState === connection display secrets-connection-show
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
+    }
+  }
 
   rotateCredentials(backend, name) {
     let adapter = this.store.adapterFor('database/connection');

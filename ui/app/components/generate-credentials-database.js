@@ -46,7 +46,7 @@ export default class GenerateCredentialsDatabase extends Component {
       this.roleType = 'static';
       return;
     } catch (error) {
-      errors.push(error.errors);
+      // you are not authorized error message will show
     }
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
@@ -58,7 +58,7 @@ export default class GenerateCredentialsDatabase extends Component {
       this.roleType = 'dynamic';
       return;
     } catch (error) {
-      errors.push(error.errors);
+      // you are not authorized error message will show
     }
     this.roleType = 'noRoleFound';
   })
