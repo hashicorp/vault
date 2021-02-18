@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/raft"
@@ -225,7 +227,6 @@ func (d *Delegate) AutopilotConfig() *autopilot.Config {
 // NotifyState is called by the autopilot library whenever there is a state
 // change. We update a few metrics when this happens.
 func (d *Delegate) NotifyState(state *autopilot.State) {
-	d.logger.Info("notify state called")
 	if d.raft.State() == raft.Leader {
 		metrics.SetGauge([]string{"autopilot", "failure_tolerance"}, float32(state.FailureTolerance))
 		if state.Healthy {
@@ -267,12 +268,31 @@ func (d *Delegate) FetchServerStats(ctx context.Context, servers map[raft.Server
 // node in the raft cluster. If the application thinks that certain nodes left,
 // it is here that we let the autopilot library know of the same.
 func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
+	d.l.RLock()
+	future := d.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		d.logger.Error("failed to get raft configuration when computing known servers", "error", err)
+	}
+
+	servers := future.Configuration().Servers
+	serverIDs := make([]string, 0, len(servers))
+	for _, server := range servers {
+		serverIDs = append(serverIDs, string(server.ID))
+	}
+	d.l.RUnlock()
+
 	followerStates := d.RaftBackend.followerStates
 	followerStates.l.RLock()
 	defer followerStates.l.RUnlock()
 
 	ret := make(map[raft.ServerID]*autopilot.Server)
 	for id, state := range d.RaftBackend.followerStates.followers {
+		// If the server is not in raft configuration, even if we received a follower
+		// heartbeat, it shouldn't be a known server for autopilot.
+		if !strutil.StrListContains(serverIDs, id) {
+			continue
+		}
+
 		server := &autopilot.Server{
 			ID:          raft.ServerID(id),
 			Name:        id,
