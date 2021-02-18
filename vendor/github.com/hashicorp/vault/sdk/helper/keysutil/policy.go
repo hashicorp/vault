@@ -1335,6 +1335,8 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	}
 }
 
+// Rotate rotates the policy and persists it to storage.
+// If the rotation partially fails, the policy state will be restored.
 func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
@@ -1354,6 +1356,38 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 			p.Keys = priorKeys
 		}
 	}()
+
+	if err := p.RotateInMemory(randReader, false); err != nil {
+		return err
+	}
+
+	return p.Persist(ctx, storage)
+}
+
+// RotateInMemory rotates the policy but does not persist it to storage.
+// If restoreOnError is true and the rotation partially fails, the policy
+// state will be restored.
+func (p *Policy) RotateInMemory(randReader io.Reader, restoreOnError bool) (retErr error) {
+	if restoreOnError {
+		priorLatestVersion := p.LatestVersion
+		priorMinDecryptionVersion := p.MinDecryptionVersion
+		var priorKeys keyEntryMap
+
+		if p.Keys != nil {
+			priorKeys = keyEntryMap{}
+			for k, v := range p.Keys {
+				priorKeys[k] = v
+			}
+		}
+
+		defer func() {
+			if retErr != nil {
+				p.LatestVersion = priorLatestVersion
+				p.MinDecryptionVersion = priorMinDecryptionVersion
+				p.Keys = priorKeys
+			}
+		}()
+	}
 
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
@@ -1458,7 +1492,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		p.MinDecryptionVersion = 1
 	}
 
-	return p.Persist(ctx, storage)
+	return nil
 }
 
 func (p *Policy) MigrateKeyToKeysMap() {
