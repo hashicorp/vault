@@ -76,6 +76,4 @@ func (request *RpcRequest) InitWithApiInfo(product, version, action, serviceCode
 	request.actionName = action
 	request.locationServiceCode = serviceCode
 	request.locationEndpointType = endpointType
-	request.Headers["x-acs-version"] = version
-	request.Headers["x-acs-action"] = action
 }

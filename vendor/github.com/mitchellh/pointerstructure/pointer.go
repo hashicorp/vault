@@ -12,12 +12,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type Config struct {
-	// The tag name that pointerstructure reads for field names. This
-	// defaults to "pointer"
-	TagName string
-}
-
 // Pointer represents a pointer to a specific value. You can construct
 // a pointer manually or use Parse.
 type Pointer struct {
@@ -25,10 +19,6 @@ type Pointer struct {
 	// The values are expected to be exact. If you have escape codes, use
 	// the Parse functions.
 	Parts []string
-
-	// Config is the configuration controlling how items are looked up
-	// in structures.
-	Config Config
 }
 
 // Get reads the value at the given pointer.
@@ -96,8 +86,7 @@ func (p *Pointer) Parent() *Pointer {
 	parts := make([]string, len(p.Parts)-1)
 	copy(parts, p.Parts[:len(p.Parts)-1])
 	return &Pointer{
-		Parts:  parts,
-		Config: p.Config,
+		Parts: parts,
 	}
 }
 
@@ -125,7 +114,7 @@ func coerce(value reflect.Value, to reflect.Type) (reflect.Value, error) {
 	// Decode
 	if err := mapstructure.WeakDecode(value.Interface(), result.Interface()); err != nil {
 		return result, fmt.Errorf(
-			"%w %#v to type %s", ErrConvert,
+			"couldn't convert value %#v to type %s",
 			value.Interface(), to.String())
 	}
 

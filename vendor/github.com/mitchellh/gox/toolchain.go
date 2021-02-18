@@ -3,13 +3,14 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/mitchellh/iochan"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/mitchellh/iochan"
 )
 
 // The "main" method for when the toolchain build is requested.
@@ -48,7 +49,7 @@ func mainBuildToolchain(parallel int, platformFlag PlatformFlag, verbose bool) i
 
 	if verbose {
 		fmt.Println("Verbose mode enabled. Output from building each toolchain will be")
-		fmt.Println("outputted to stdout as they are built.\n")
+		fmt.Println("outputted to stdout as they are built.\n ")
 	}
 
 	// Determine the platforms we're building the toolchain for.
@@ -58,7 +59,7 @@ func mainBuildToolchain(parallel int, platformFlag PlatformFlag, verbose bool) i
 	if parallel > 1 {
 		fmt.Println("The toolchain build can't be parallelized because compiling a single")
 		fmt.Println("Go source directory can only be done for one platform at a time. Therefore,")
-		fmt.Println("the toolchain for each platform will be built one at a time.\n")
+		fmt.Println("the toolchain for each platform will be built one at a time.\n ")
 	}
 	parallel = 1
 

@@ -82,8 +82,8 @@ type UnbindMFADeviceRequest struct {
 // UnbindMFADeviceResponse is the response struct for api UnbindMFADevice
 type UnbindMFADeviceResponse struct {
 	*responses.BaseResponse
-	RequestId string                     `json:"RequestId" xml:"RequestId"`
-	MFADevice MFADeviceInUnbindMFADevice `json:"MFADevice" xml:"MFADevice"`
+	RequestId string    `json:"RequestId" xml:"RequestId"`
+	MFADevice MFADevice `json:"MFADevice" xml:"MFADevice"`
 }
 
 // CreateUnbindMFADeviceRequest creates a request to invoke UnbindMFADevice API
@@ -91,7 +91,7 @@ func CreateUnbindMFADeviceRequest() (request *UnbindMFADeviceRequest) {
 	request = &UnbindMFADeviceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UnbindMFADevice", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UnbindMFADevice", "", "")
 	return
 }
 

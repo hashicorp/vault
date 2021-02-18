@@ -77,8 +77,8 @@ func (client *Client) DetachPolicyFromGroupWithCallback(request *DetachPolicyFro
 type DetachPolicyFromGroupRequest struct {
 	*requests.RpcRequest
 	PolicyType string `position:"Query" name:"PolicyType"`
-	GroupName  string `position:"Query" name:"GroupName"`
 	PolicyName string `position:"Query" name:"PolicyName"`
+	GroupName  string `position:"Query" name:"GroupName"`
 }
 
 // DetachPolicyFromGroupResponse is the response struct for api DetachPolicyFromGroup
@@ -92,7 +92,7 @@ func CreateDetachPolicyFromGroupRequest() (request *DetachPolicyFromGroupRequest
 	request = &DetachPolicyFromGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DetachPolicyFromGroup", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DetachPolicyFromGroup", "", "")
 	return
 }
 

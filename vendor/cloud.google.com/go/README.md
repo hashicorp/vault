@@ -1,6 +1,6 @@
 # Google Cloud Client Libraries for Go
 
-[![Go Reference](https://pkg.go.dev/badge/cloud.google.com/go.svg)](https://pkg.go.dev/cloud.google.com/go)
+[![GoDoc](https://pkg.go.dev/cloud.google.com/go?status.svg)](https://pkg.go.dev/cloud.google.com/go)
 
 Go packages for [Google Cloud Platform](https://cloud.google.com) services.
 
@@ -25,50 +25,52 @@ To install the packages on your system, *do not clone the repo*. Instead:
 **NOTE:** Some of these packages are under development, and may occasionally
 make backwards-incompatible changes.
 
+**NOTE:** Github repo is a mirror of [https://code.googlesource.com/gocloud](https://code.googlesource.com/gocloud).
+
 ## Supported APIs
 
-| Google API                                      | Status | Package                                                                                                                       |
-| ----------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| [Asset][cloud-asset]                            | stable | [`cloud.google.com/go/asset/apiv1`](https://pkg.go.dev/cloud.google.com/go/asset/v1beta)                                      |
-| [Automl][cloud-automl]                          | stable | [`cloud.google.com/go/automl/apiv1`](https://pkg.go.dev/cloud.google.com/go/automl/apiv1)                                     |
-| [BigQuery][cloud-bigquery]                      | stable | [`cloud.google.com/go/bigquery`](https://pkg.go.dev/cloud.google.com/go/bigquery)                                             |
-| [Bigtable][cloud-bigtable]                      | stable | [`cloud.google.com/go/bigtable`](https://pkg.go.dev/cloud.google.com/go/bigtable)                                             |
-| [Cloudbuild][cloud-build]                       | stable | [`cloud.google.com/go/cloudbuild/apiv1`](https://pkg.go.dev/cloud.google.com/go/cloudbuild/apiv1)                             |
-| [Cloudtasks][cloud-tasks]                       | stable | [`cloud.google.com/go/cloudtasks/apiv2`](https://pkg.go.dev/cloud.google.com/go/cloudtasks/apiv2)                             |
-| [Container][cloud-container]                    | stable | [`cloud.google.com/go/container/apiv1`](https://pkg.go.dev/cloud.google.com/go/container/apiv1)                               |
-| [ContainerAnalysis][cloud-containeranalysis]    | beta   | [`cloud.google.com/go/containeranalysis/apiv1`](https://pkg.go.dev/cloud.google.com/go/containeranalysis/apiv1)               |
-| [Dataproc][cloud-dataproc]                      | stable | [`cloud.google.com/go/dataproc/apiv1`](https://pkg.go.dev/cloud.google.com/go/dataproc/apiv1)                                 |
-| [Datastore][cloud-datastore]                    | stable | [`cloud.google.com/go/datastore`](https://pkg.go.dev/cloud.google.com/go/datastore)                                           |
-| [Debugger][cloud-debugger]                      | stable | [`cloud.google.com/go/debugger/apiv2`](https://pkg.go.dev/cloud.google.com/go/debugger/apiv2)                                 |
-| [Dialogflow][cloud-dialogflow]                  | stable | [`cloud.google.com/go/dialogflow/apiv2`](https://pkg.go.dev/cloud.google.com/go/dialogflow/apiv2)                             |
-| [Data Loss Prevention][cloud-dlp]               | stable | [`cloud.google.com/go/dlp/apiv2`](https://pkg.go.dev/cloud.google.com/go/dlp/apiv2)                                           |
-| [ErrorReporting][cloud-errors]                  | alpha  | [`cloud.google.com/go/errorreporting`](https://pkg.go.dev/cloud.google.com/go/errorreporting)                                 |
-| [Firestore][cloud-firestore]                    | stable | [`cloud.google.com/go/firestore`](https://pkg.go.dev/cloud.google.com/go/firestore)                                           |
-| [IAM][cloud-iam]                                | stable | [`cloud.google.com/go/iam`](https://pkg.go.dev/cloud.google.com/go/iam)                                                       |
-| [IoT][cloud-iot]                                | stable | [`cloud.google.com/go/iot/apiv1`](https://pkg.go.dev/cloud.google.com/go/iot/apiv1)                                           |
-| [IRM][cloud-irm]                                | alpha  | [`cloud.google.com/go/irm/apiv1alpha2`](https://pkg.go.dev/cloud.google.com/go/irm/apiv1alpha2)                               |
-| [KMS][cloud-kms]                                | stable | [`cloud.google.com/go/kms/apiv1`](https://pkg.go.dev/cloud.google.com/go/kms/apiv1)                                           |
-| [Natural Language][cloud-natural-language]      | stable | [`cloud.google.com/go/language/apiv1`](https://pkg.go.dev/cloud.google.com/go/language/apiv1)                                 |
-| [Logging][cloud-logging]                        | stable | [`cloud.google.com/go/logging`](https://pkg.go.dev/cloud.google.com/go/logging)                                               |
-| [Memorystore][cloud-memorystore]                | alpha  | [`cloud.google.com/go/redis/apiv1`](https://pkg.go.dev/cloud.google.com/go/redis/apiv1)                                       |
-| [Monitoring][cloud-monitoring]                  | stable | [`cloud.google.com/go/monitoring/apiv3`](https://pkg.go.dev/cloud.google.com/go/monitoring/apiv3)                             |
-| [OS Login][cloud-oslogin]                       | stable | [`cloud.google.com/go/oslogin/apiv1`](https://pkg.go.dev/cloud.google.com/go/oslogin/apiv1)                                   |
-| [Pub/Sub][cloud-pubsub]                         | stable | [`cloud.google.com/go/pubsub`](https://pkg.go.dev/cloud.google.com/go/pubsub)                                                 |
-| [Phishing Protection][cloud-phishingprotection] | alpha  | [`cloud.google.com/go/phishingprotection/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/phishingprotection/apiv1beta1)   |
-| [reCAPTCHA Enterprise][cloud-recaptcha]         | alpha  | [`cloud.google.com/go/recaptchaenterprise/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/recaptchaenterprise/apiv1beta1) |
-| [Recommender][cloud-recommender]                | beta   | [`cloud.google.com/go/recommender/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/recommender/apiv1beta1)                 |
-| [Scheduler][cloud-scheduler]                    | stable | [`cloud.google.com/go/scheduler/apiv1`](https://pkg.go.dev/cloud.google.com/go/scheduler/apiv1)                               |
-| [Securitycenter][cloud-securitycenter]          | stable | [`cloud.google.com/go/securitycenter/apiv1`](https://pkg.go.dev/cloud.google.com/go/securitycenter/apiv1)                     |
-| [Spanner][cloud-spanner]                        | stable | [`cloud.google.com/go/spanner`](https://pkg.go.dev/cloud.google.com/go/spanner)                                               |
-| [Speech][cloud-speech]                          | stable | [`cloud.google.com/go/speech/apiv1`](https://pkg.go.dev/cloud.google.com/go/speech/apiv1)                                     |
-| [Storage][cloud-storage]                        | stable | [`cloud.google.com/go/storage`](https://pkg.go.dev/cloud.google.com/go/storage)                                               |
-| [Talent][cloud-talent]                          | alpha  | [`cloud.google.com/go/talent/apiv4beta1`](https://pkg.go.dev/cloud.google.com/go/talent/apiv4beta1)                           |
-| [Text To Speech][cloud-texttospeech]            | stable | [`cloud.google.com/go/texttospeech/apiv1`](https://pkg.go.dev/cloud.google.com/go/texttospeech/apiv1)                         |
-| [Trace][cloud-trace]                            | stable | [`cloud.google.com/go/trace/apiv2`](https://pkg.go.dev/cloud.google.com/go/trace/apiv2)                                       |
-| [Translate][cloud-translate]                    | stable | [`cloud.google.com/go/translate`](https://pkg.go.dev/cloud.google.com/go/translate)                                           |
-| [Video Intelligence][cloud-video]               | beta   | [`cloud.google.com/go/videointelligence/apiv1beta2`](https://pkg.go.dev/cloud.google.com/go/videointelligence/apiv1beta2)     |
-| [Vision][cloud-vision]                          | stable | [`cloud.google.com/go/vision/apiv1`](https://pkg.go.dev/cloud.google.com/go/vision/apiv1)                                     |
-| [Webrisk][cloud-webrisk]                        | alpha  | [`cloud.google.com/go/webrisk/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/webrisk/apiv1beta1)                         |
+Google API                                      | Status       | Package
+------------------------------------------------|--------------|-----------------------------------------------------------
+[Asset][cloud-asset]                            | stable       | [`cloud.google.com/go/asset/apiv1`](https://pkg.go.dev/cloud.google.com/go/asset/v1beta)
+[Automl][cloud-automl]                          | stable       | [`cloud.google.com/go/automl/apiv1`](https://pkg.go.dev/cloud.google.com/go/automl/apiv1)
+[BigQuery][cloud-bigquery]                      | stable       | [`cloud.google.com/go/bigquery`](https://pkg.go.dev/cloud.google.com/go/bigquery)
+[Bigtable][cloud-bigtable]                      | stable       | [`cloud.google.com/go/bigtable`](https://pkg.go.dev/cloud.google.com/go/bigtable)
+[Cloudbuild][cloud-build]                       | stable       | [`cloud.google.com/go/cloudbuild/apiv1`](https://pkg.go.dev/cloud.google.com/go/cloudbuild/apiv1)
+[Cloudtasks][cloud-tasks]                       | stable       | [`cloud.google.com/go/cloudtasks/apiv2`](https://pkg.go.dev/cloud.google.com/go/cloudtasks/apiv2)
+[Container][cloud-container]                    | stable       | [`cloud.google.com/go/container/apiv1`](https://pkg.go.dev/cloud.google.com/go/container/apiv1)
+[ContainerAnalysis][cloud-containeranalysis]    | beta         | [`cloud.google.com/go/containeranalysis/apiv1`](https://pkg.go.dev/cloud.google.com/go/containeranalysis/apiv1)
+[Dataproc][cloud-dataproc]                      | stable       | [`cloud.google.com/go/dataproc/apiv1`](https://pkg.go.dev/cloud.google.com/go/dataproc/apiv1)
+[Datastore][cloud-datastore]                    | stable       | [`cloud.google.com/go/datastore`](https://pkg.go.dev/cloud.google.com/go/datastore)
+[Debugger][cloud-debugger]                      | stable       | [`cloud.google.com/go/debugger/apiv2`](https://pkg.go.dev/cloud.google.com/go/debugger/apiv2)
+[Dialogflow][cloud-dialogflow]                  | stable       | [`cloud.google.com/go/dialogflow/apiv2`](https://pkg.go.dev/cloud.google.com/go/dialogflow/apiv2)
+[Data Loss Prevention][cloud-dlp]               | stable       | [`cloud.google.com/go/dlp/apiv2`](https://pkg.go.dev/cloud.google.com/go/dlp/apiv2)
+[ErrorReporting][cloud-errors]                  | alpha        | [`cloud.google.com/go/errorreporting`](https://pkg.go.dev/cloud.google.com/go/errorreporting)
+[Firestore][cloud-firestore]                    | stable       | [`cloud.google.com/go/firestore`](https://pkg.go.dev/cloud.google.com/go/firestore)
+[IAM][cloud-iam]                                | stable       | [`cloud.google.com/go/iam`](https://pkg.go.dev/cloud.google.com/go/iam)
+[IoT][cloud-iot]                                | stable       | [`cloud.google.com/go/iot/apiv1`](https://pkg.go.dev/cloud.google.com/go/iot/apiv1)
+[IRM][cloud-irm]                                | alpha        | [`cloud.google.com/go/irm/apiv1alpha2`](https://pkg.go.dev/cloud.google.com/go/irm/apiv1alpha2)
+[KMS][cloud-kms]                                | stable       | [`cloud.google.com/go/kms/apiv1`](https://pkg.go.dev/cloud.google.com/go/kms/apiv1)
+[Natural Language][cloud-natural-language]      | stable       | [`cloud.google.com/go/language/apiv1`](https://pkg.go.dev/cloud.google.com/go/language/apiv1)
+[Logging][cloud-logging]                        | stable       | [`cloud.google.com/go/logging`](https://pkg.go.dev/cloud.google.com/go/logging)
+[Memorystore][cloud-memorystore]                | alpha        | [`cloud.google.com/go/redis/apiv1`](https://pkg.go.dev/cloud.google.com/go/redis/apiv1)
+[Monitoring][cloud-monitoring]                  | stable       | [`cloud.google.com/go/monitoring/apiv3`](https://pkg.go.dev/cloud.google.com/go/monitoring/apiv3)
+[OS Login][cloud-oslogin]                       | stable       | [`cloud.google.com/go/oslogin/apiv1`](https://pkg.go.dev/cloud.google.com/go/oslogin/apiv1)
+[Pub/Sub][cloud-pubsub]                         | stable       | [`cloud.google.com/go/pubsub`](https://pkg.go.dev/cloud.google.com/go/pubsub)
+[Phishing Protection][cloud-phishingprotection] | alpha        | [`cloud.google.com/go/phishingprotection/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/phishingprotection/apiv1beta1)
+[reCAPTCHA Enterprise][cloud-recaptcha]         | alpha        | [`cloud.google.com/go/recaptchaenterprise/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/recaptchaenterprise/apiv1beta1)
+[Recommender][cloud-recommender]                | beta         | [`cloud.google.com/go/recommender/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/recommender/apiv1beta1)
+[Scheduler][cloud-scheduler]                    | stable       | [`cloud.google.com/go/scheduler/apiv1`](https://pkg.go.dev/cloud.google.com/go/scheduler/apiv1)
+[Securitycenter][cloud-securitycenter]          | stable       | [`cloud.google.com/go/securitycenter/apiv1`](https://pkg.go.dev/cloud.google.com/go/securitycenter/apiv1)
+[Spanner][cloud-spanner]                        | stable       | [`cloud.google.com/go/spanner`](https://pkg.go.dev/cloud.google.com/go/spanner)
+[Speech][cloud-speech]                          | stable       | [`cloud.google.com/go/speech/apiv1`](https://pkg.go.dev/cloud.google.com/go/speech/apiv1)
+[Storage][cloud-storage]                        | stable       | [`cloud.google.com/go/storage`](https://pkg.go.dev/cloud.google.com/go/storage)
+[Talent][cloud-talent]                          | alpha        | [`cloud.google.com/go/talent/apiv4beta1`](https://pkg.go.dev/cloud.google.com/go/talent/apiv4beta1)
+[Text To Speech][cloud-texttospeech]            | stable       | [`cloud.google.com/go/texttospeech/apiv1`](https://pkg.go.dev/cloud.google.com/go/texttospeech/apiv1)
+[Trace][cloud-trace]                            | stable       | [`cloud.google.com/go/trace/apiv2`](https://pkg.go.dev/cloud.google.com/go/trace/apiv2)
+[Translate][cloud-translate]                    | stable       | [`cloud.google.com/go/translate`](https://pkg.go.dev/cloud.google.com/go/translate)
+[Video Intelligence][cloud-video]               | beta         | [`cloud.google.com/go/videointelligence/apiv1beta2`](https://pkg.go.dev/cloud.google.com/go/videointelligence/apiv1beta2)
+[Vision][cloud-vision]                          | stable       | [`cloud.google.com/go/vision/apiv1`](https://pkg.go.dev/cloud.google.com/go/vision/apiv1)
+[Webrisk][cloud-webrisk]                        | alpha        | [`cloud.google.com/go/webrisk/apiv1beta1`](https://pkg.go.dev/cloud.google.com/go/webrisk/apiv1beta1)
 
 > **Alpha status**: the API is still being actively developed. As a
 > result, it might change in backward-incompatible ways and is not recommended
@@ -83,9 +85,10 @@ make backwards-incompatible changes.
 
 Documentation and examples are available at [pkg.go.dev/cloud.google.com/go](https://pkg.go.dev/cloud.google.com/go)
 
-## [Go Versions Supported](#supported-versions)
+## Go Versions Supported
 
-We currently support Go versions 1.11 and newer.
+We support the two most recent major versions of Go. If Google App Engine uses
+an older version, we support that as well.
 
 ## Authorization
 
@@ -124,7 +127,8 @@ client, err := storage.NewClient(ctx, option.WithTokenSource(tokenSource))
 
 Contributions are welcome. Please, see the
 [CONTRIBUTING](https://github.com/GoogleCloudPlatform/google-cloud-go/blob/master/CONTRIBUTING.md)
-document for details.
+document for details. We're using Gerrit for our code reviews. Please don't open pull
+requests against this repo, new pull requests will be automatically closed.
 
 Please note that this project is released with a Contributor Code of Conduct.
 By participating in this project you agree to abide by its terms.
@@ -173,11 +177,3 @@ for more information.
 [cloud-video]: https://cloud.google.com/video-intelligence/
 [cloud-vision]: https://cloud.google.com/vision
 [cloud-webrisk]: https://cloud.google.com/web-risk/
-
-## Links
-
-- [Go on Google Cloud](https://cloud.google.com/go/home)
-- [Getting started with Go on Google Cloud](https://cloud.google.com/go/getting-started)
-- [App Engine Quickstart](https://cloud.google.com/appengine/docs/standard/go/quickstart)
-- [Cloud Functions Quickstart](https://cloud.google.com/functions/docs/quickstart-go)
-- [Cloud Run Quickstart](https://cloud.google.com/run/docs/quickstarts/build-and-deploy#go)

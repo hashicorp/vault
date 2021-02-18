@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/jcmturner/gokrb5/v8/kadmin"
 	"github.com/jcmturner/gokrb5/v8/messages"
@@ -54,22 +55,41 @@ func (cl *Client) sendToKPasswd(msg kadmin.Request) (r kadmin.Reply, err error) 
 	if err != nil {
 		return
 	}
+	addr := kps[1]
 	b, err := msg.Marshal()
 	if err != nil {
 		return
 	}
-	var rb []byte
 	if len(b) <= cl.Config.LibDefaults.UDPPreferenceLimit {
-		rb, err = dialSendUDP(kps, b)
-		if err != nil {
-			return
-		}
-	} else {
-		rb, err = dialSendTCP(kps, b)
-		if err != nil {
-			return
-		}
+		return cl.sendKPasswdUDP(b, addr)
 	}
+	return cl.sendKPasswdTCP(b, addr)
+}
+
+func (cl *Client) sendKPasswdTCP(b []byte, kadmindAddr string) (r kadmin.Reply, err error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", kadmindAddr)
+	if err != nil {
+		return
+	}
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		return
+	}
+	rb, err := cl.sendTCP(conn, b)
+	err = r.Unmarshal(rb)
+	return
+}
+
+func (cl *Client) sendKPasswdUDP(b []byte, kadmindAddr string) (r kadmin.Reply, err error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", kadmindAddr)
+	if err != nil {
+		return
+	}
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return
+	}
+	rb, err := cl.sendUDP(conn, b)
 	err = r.Unmarshal(rb)
 	return
 }

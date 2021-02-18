@@ -21,7 +21,7 @@ type TransitSealServer struct {
 	*vault.TestCluster
 }
 
-func NewTransitSealServer(t testing.TB, idx int) *TransitSealServer {
+func NewTransitSealServer(t testing.T, idx int) *TransitSealServer {
 	conf := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,

@@ -73,7 +73,6 @@ func (client OAuth2PermissionGrantClient) Create(ctx context.Context, body *OAut
 	result, err = client.CreateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "Create", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -151,7 +150,6 @@ func (client OAuth2PermissionGrantClient) Delete(ctx context.Context, objectID s
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "Delete", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -230,11 +228,6 @@ func (client OAuth2PermissionGrantClient) List(ctx context.Context, filter strin
 	result.oa2pglr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.oa2pglr.hasNextLink() && result.oa2pglr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -326,7 +319,6 @@ func (client OAuth2PermissionGrantClient) ListNext(ctx context.Context, nextLink
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "ListNext", resp, "Failure responding to request")
-		return
 	}
 
 	return

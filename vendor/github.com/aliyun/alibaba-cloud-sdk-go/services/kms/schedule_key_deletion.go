@@ -21,6 +21,7 @@ import (
 )
 
 // ScheduleKeyDeletion invokes the kms.ScheduleKeyDeletion API synchronously
+// api document: https://help.aliyun.com/api/kms/schedulekeydeletion.html
 func (client *Client) ScheduleKeyDeletion(request *ScheduleKeyDeletionRequest) (response *ScheduleKeyDeletionResponse, err error) {
 	response = CreateScheduleKeyDeletionResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) ScheduleKeyDeletion(request *ScheduleKeyDeletionRequest) (
 }
 
 // ScheduleKeyDeletionWithChan invokes the kms.ScheduleKeyDeletion API asynchronously
+// api document: https://help.aliyun.com/api/kms/schedulekeydeletion.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ScheduleKeyDeletionWithChan(request *ScheduleKeyDeletionRequest) (<-chan *ScheduleKeyDeletionResponse, <-chan error) {
 	responseChan := make(chan *ScheduleKeyDeletionResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) ScheduleKeyDeletionWithChan(request *ScheduleKeyDeletionRe
 }
 
 // ScheduleKeyDeletionWithCallback invokes the kms.ScheduleKeyDeletion API asynchronously
+// api document: https://help.aliyun.com/api/kms/schedulekeydeletion.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ScheduleKeyDeletionWithCallback(request *ScheduleKeyDeletionRequest, callback func(response *ScheduleKeyDeletionResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -87,7 +92,6 @@ func CreateScheduleKeyDeletionRequest() (request *ScheduleKeyDeletionRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "ScheduleKeyDeletion", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

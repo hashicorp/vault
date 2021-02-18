@@ -138,10 +138,10 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	for vhost, permissions := range role.VHostTopics {
 		for exchange, permission := range permissions {
 			if err := func() error {
-				resp, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
-					Configure: exchange,
-					Write:     permission.Write,
-					Read:      permission.Read,
+				resp, err := client.UpdateTopicPermissionsIn(vhost, username, rabbithole.TopicPermissions{
+					Exchange: exchange,
+					Write:    permission.Write,
+					Read:     permission.Read,
 				})
 				if err != nil {
 					return err

@@ -50,7 +50,7 @@ package credentials
 
 import (
 	"fmt"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -173,9 +173,7 @@ type Expiry struct {
 // the expiration time given to ensure no requests are made with expired
 // tokens.
 func (e *Expiry) SetExpiration(expiration time.Time, window time.Duration) {
-	// Passed in expirations should have the monotonic clock values stripped.
-	// This ensures time comparisons will be based on wall-time.
-	e.expiration = expiration.Round(0)
+	e.expiration = expiration
 	if window > 0 {
 		e.expiration = e.expiration.Add(-window)
 	}
@@ -207,10 +205,9 @@ func (e *Expiry) ExpiresAt() time.Time {
 // first instance of the credentials Value. All calls to Get() after that
 // will return the cached credentials Value until IsExpired() returns true.
 type Credentials struct {
-	sf singleflight.Group
+	creds atomic.Value
+	sf    singleflight.Group
 
-	m        sync.RWMutex
-	creds    Value
 	provider Provider
 }
 
@@ -219,6 +216,7 @@ func NewCredentials(provider Provider) *Credentials {
 	c := &Credentials{
 		provider: provider,
 	}
+	c.creds.Store(Value{})
 	return c
 }
 
@@ -235,17 +233,8 @@ func NewCredentials(provider Provider) *Credentials {
 //
 // Passed in Context is equivalent to aws.Context, and context.Context.
 func (c *Credentials) GetWithContext(ctx Context) (Value, error) {
-	// Check if credentials are cached, and not expired.
-	select {
-	case curCreds, ok := <-c.asyncIsExpired():
-		// ok will only be true, of the credentials were not expired. ok will
-		// be false and have no value if the credentials are expired.
-		if ok {
-			return curCreds, nil
-		}
-	case <-ctx.Done():
-		return Value{}, awserr.New("RequestCanceled",
-			"request context canceled", ctx.Err())
+	if curCreds := c.creds.Load(); !c.isExpired(curCreds) {
+		return curCreds.(Value), nil
 	}
 
 	// Cannot pass context down to the actual retrieve, because the first
@@ -263,23 +252,18 @@ func (c *Credentials) GetWithContext(ctx Context) (Value, error) {
 	}
 }
 
-func (c *Credentials) singleRetrieve(ctx Context) (interface{}, error) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	if curCreds := c.creds; !c.isExpiredLocked(curCreds) {
-		return curCreds, nil
+func (c *Credentials) singleRetrieve(ctx Context) (creds interface{}, err error) {
+	if curCreds := c.creds.Load(); !c.isExpired(curCreds) {
+		return curCreds.(Value), nil
 	}
 
-	var creds Value
-	var err error
 	if p, ok := c.provider.(ProviderWithContext); ok {
 		creds, err = p.RetrieveWithContext(ctx)
 	} else {
 		creds, err = c.provider.Retrieve()
 	}
 	if err == nil {
-		c.creds = creds
+		c.creds.Store(creds)
 	}
 
 	return creds, err
@@ -304,10 +288,7 @@ func (c *Credentials) Get() (Value, error) {
 // This will override the Provider's expired state, and force Credentials
 // to call the Provider's Retrieve().
 func (c *Credentials) Expire() {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	c.creds = Value{}
+	c.creds.Store(Value{})
 }
 
 // IsExpired returns if the credentials are no longer valid, and need
@@ -316,32 +297,11 @@ func (c *Credentials) Expire() {
 // If the Credentials were forced to be expired with Expire() this will
 // reflect that override.
 func (c *Credentials) IsExpired() bool {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	return c.isExpiredLocked(c.creds)
+	return c.isExpired(c.creds.Load())
 }
 
-// asyncIsExpired returns a channel of credentials Value. If the channel is
-// closed the credentials are expired and credentials value are not empty.
-func (c *Credentials) asyncIsExpired() <-chan Value {
-	ch := make(chan Value, 1)
-	go func() {
-		c.m.RLock()
-		defer c.m.RUnlock()
-
-		if curCreds := c.creds; !c.isExpiredLocked(curCreds) {
-			ch <- curCreds
-		}
-
-		close(ch)
-	}()
-
-	return ch
-}
-
-// isExpiredLocked helper method wrapping the definition of expired credentials.
-func (c *Credentials) isExpiredLocked(creds interface{}) bool {
+// isExpired helper method wrapping the definition of expired credentials.
+func (c *Credentials) isExpired(creds interface{}) bool {
 	return creds == nil || creds.(Value) == Value{} || c.provider.IsExpired()
 }
 
@@ -349,17 +309,13 @@ func (c *Credentials) isExpiredLocked(creds interface{}) bool {
 // the underlying Provider, if it supports that interface.  Otherwise, it returns
 // an error.
 func (c *Credentials) ExpiresAt() (time.Time, error) {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
 	expirer, ok := c.provider.(Expirer)
 	if !ok {
 		return time.Time{}, awserr.New("ProviderNotExpirer",
-			fmt.Sprintf("provider %s does not support ExpiresAt()",
-				c.creds.ProviderName),
+			fmt.Sprintf("provider %s does not support ExpiresAt()", c.creds.Load().(Value).ProviderName),
 			nil)
 	}
-	if c.creds == (Value{}) {
+	if c.creds.Load().(Value) == (Value{}) {
 		// set expiration time to the distant past
 		return time.Time{}, nil
 	}

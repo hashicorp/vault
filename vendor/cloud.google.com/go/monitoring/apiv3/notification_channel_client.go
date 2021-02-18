@@ -34,8 +34,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var newNotificationChannelClientHook clientHook
-
 // NotificationChannelCallOptions contains the retry settings for each method of NotificationChannelClient.
 type NotificationChannelCallOptions struct {
 	ListNotificationChannelDescriptors      []gax.CallOption
@@ -174,17 +172,7 @@ type NotificationChannelClient struct {
 // The Notification Channel API provides access to configuration that
 // controls how messages related to incidents are sent.
 func NewNotificationChannelClient(ctx context.Context, opts ...option.ClientOption) (*NotificationChannelClient, error) {
-	clientOpts := defaultNotificationChannelClientOptions()
-
-	if newNotificationChannelClientHook != nil {
-		hookOpts, err := newNotificationChannelClientHook(ctx, clientHookParams{})
-		if err != nil {
-			return nil, err
-		}
-		clientOpts = append(clientOpts, hookOpts...)
-	}
-
-	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
+	connPool, err := gtransport.DialPool(ctx, append(defaultNotificationChannelClientOptions(), opts...)...)
 	if err != nil {
 		return nil, err
 	}

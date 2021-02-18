@@ -10,6 +10,8 @@ script:
 
 matrix:
   include:
+    - go: 1.8.x
+      env: GOAPP=true
     - go: 1.9.x
       env: GOAPP=true
     - go: 1.10.x

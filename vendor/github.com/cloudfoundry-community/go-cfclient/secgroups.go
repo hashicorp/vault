@@ -92,14 +92,18 @@ func (c *Client) ListSecGroups() (secGroups []SecGroup, err error) {
 				if err != nil {
 					return nil, err
 				}
-				secGroup.Entity.SpacesData = append(secGroup.Entity.SpacesData, spaces...)
+				for _, space := range spaces {
+					secGroup.Entity.SpacesData = append(secGroup.Entity.SpacesData, space)
+				}
 			}
 			if len(secGroup.Entity.StagingSpacesData) == 0 {
 				spaces, err := secGroup.Entity.ListStagingSpaceResources()
 				if err != nil {
 					return nil, err
 				}
-				secGroup.Entity.StagingSpacesData = append(secGroup.Entity.SpacesData, spaces...)
+				for _, space := range spaces {
+					secGroup.Entity.StagingSpacesData = append(secGroup.Entity.SpacesData, space)
+				}
 			}
 			secGroups = append(secGroups, secGroup.Entity)
 		}

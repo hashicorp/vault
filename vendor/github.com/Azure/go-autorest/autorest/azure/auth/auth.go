@@ -16,6 +16,8 @@ package auth
 
 import (
 	"bytes"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -30,8 +32,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/cli"
-	"github.com/Azure/go-autorest/logger"
 	"github.com/dimchansky/utfbom"
+	"golang.org/x/crypto/pkcs12"
 )
 
 // The possible keys in the Values map.
@@ -61,7 +63,6 @@ const (
 // 3. Username password
 // 4. MSI
 func NewAuthorizerFromEnvironment() (autorest.Authorizer, error) {
-	logger.Instance.Writeln(logger.LogInfo, "NewAuthorizerFromEnvironment() determining authentication mechanism")
 	settings, err := GetSettingsFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -75,7 +76,6 @@ func NewAuthorizerFromEnvironment() (autorest.Authorizer, error) {
 // 3. Username password
 // 4. MSI
 func NewAuthorizerFromEnvironmentWithResource(resource string) (autorest.Authorizer, error) {
-	logger.Instance.Writeln(logger.LogInfo, "NewAuthorizerFromEnvironmentWithResource() determining authentication mechanism")
 	settings, err := GetSettingsFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -125,7 +125,6 @@ func (settings EnvironmentSettings) GetSubscriptionID() string {
 // adds the specified environment variable value to the Values map if it exists
 func (settings EnvironmentSettings) setValue(key string) {
 	if v := os.Getenv(key); v != "" {
-		logger.Instance.Writef(logger.LogInfo, "GetSettingsFromEnvironment() found environment var %s\n", key)
 		settings.Values[key] = v
 	}
 }
@@ -142,7 +141,6 @@ func (settings EnvironmentSettings) getClientAndTenant() (string, string) {
 func (settings EnvironmentSettings) GetClientCredentials() (ClientCredentialsConfig, error) {
 	secret := settings.Values[ClientSecret]
 	if secret == "" {
-		logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetClientCredentials() missing client secret")
 		return ClientCredentialsConfig{}, errors.New("missing client secret")
 	}
 	clientID, tenantID := settings.getClientAndTenant()
@@ -163,7 +161,6 @@ func (settings EnvironmentSettings) GetClientCredentials() (ClientCredentialsCon
 func (settings EnvironmentSettings) GetClientCertificate() (ClientCertificateConfig, error) {
 	certPath := settings.Values[CertificatePath]
 	if certPath == "" {
-		logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetClientCertificate() missing certificate path")
 		return ClientCertificateConfig{}, errors.New("missing certificate path")
 	}
 	certPwd := settings.Values[CertificatePassword]
@@ -180,7 +177,6 @@ func (settings EnvironmentSettings) GetUsernamePassword() (UsernamePasswordConfi
 	username := settings.Values[Username]
 	password := settings.Values[Password]
 	if username == "" || password == "" {
-		logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetUsernamePassword() missing username and/or password")
 		return UsernamePasswordConfig{}, errors.New("missing username/password")
 	}
 	clientID, tenantID := settings.getClientAndTenant()
@@ -215,41 +211,35 @@ func (settings EnvironmentSettings) GetDeviceFlow() DeviceFlowConfig {
 func (settings EnvironmentSettings) GetAuthorizer() (autorest.Authorizer, error) {
 	//1.Client Credentials
 	if c, e := settings.GetClientCredentials(); e == nil {
-		logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetAuthorizer() using client secret credentials")
 		return c.Authorizer()
 	}
 
 	//2. Client Certificate
 	if c, e := settings.GetClientCertificate(); e == nil {
-		logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetAuthorizer() using client certificate credentials")
 		return c.Authorizer()
 	}
 
 	//3. Username Password
 	if c, e := settings.GetUsernamePassword(); e == nil {
-		logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetAuthorizer() using user name/password credentials")
 		return c.Authorizer()
 	}
 
 	// 4. MSI
-	logger.Instance.Writeln(logger.LogInfo, "EnvironmentSettings.GetAuthorizer() using MSI authentication")
 	return settings.GetMSI().Authorizer()
 }
 
 // NewAuthorizerFromFile creates an Authorizer configured from a configuration file in the following order.
 // 1. Client credentials
 // 2. Client certificate
-// The path to the configuration file must be specified in the AZURE_AUTH_LOCATION environment variable.
-// resourceBaseURI - used to determine the resource type
-func NewAuthorizerFromFile(resourceBaseURI string) (autorest.Authorizer, error) {
+func NewAuthorizerFromFile(baseURI string) (autorest.Authorizer, error) {
 	settings, err := GetSettingsFromFile()
 	if err != nil {
 		return nil, err
 	}
-	if a, err := settings.ClientCredentialsAuthorizer(resourceBaseURI); err == nil {
+	if a, err := settings.ClientCredentialsAuthorizer(baseURI); err == nil {
 		return a, err
 	}
-	if a, err := settings.ClientCertificateAuthorizer(resourceBaseURI); err == nil {
+	if a, err := settings.ClientCertificateAuthorizer(baseURI); err == nil {
 		return a, err
 	}
 	return nil, errors.New("auth file missing client and certificate credentials")
@@ -258,7 +248,6 @@ func NewAuthorizerFromFile(resourceBaseURI string) (autorest.Authorizer, error) 
 // NewAuthorizerFromFileWithResource creates an Authorizer configured from a configuration file in the following order.
 // 1. Client credentials
 // 2. Client certificate
-// The path to the configuration file must be specified in the AZURE_AUTH_LOCATION environment variable.
 func NewAuthorizerFromFileWithResource(resource string) (autorest.Authorizer, error) {
 	s, err := GetSettingsFromFile()
 	if err != nil {
@@ -610,7 +599,6 @@ type ClientCertificateConfig struct {
 	CertificatePath     string
 	CertificatePassword string
 	TenantID            string
-	AuxTenants          []string
 	AADEndpoint         string
 	Resource            string
 }
@@ -625,44 +613,20 @@ func (ccc ClientCertificateConfig) ServicePrincipalToken() (*adal.ServicePrincip
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the certificate file (%s): %v", ccc.CertificatePath, err)
 	}
-	certificate, rsaPrivateKey, err := adal.DecodePfxCertificateData(certData, ccc.CertificatePassword)
+	certificate, rsaPrivateKey, err := decodePkcs12(certData, ccc.CertificatePassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode pkcs12 certificate while creating spt: %v", err)
 	}
 	return adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, ccc.ClientID, certificate, rsaPrivateKey, ccc.Resource)
 }
 
-// MultiTenantServicePrincipalToken creates a MultiTenantServicePrincipalToken from client certificate.
-func (ccc ClientCertificateConfig) MultiTenantServicePrincipalToken() (*adal.MultiTenantServicePrincipalToken, error) {
-	oauthConfig, err := adal.NewMultiTenantOAuthConfig(ccc.AADEndpoint, ccc.TenantID, ccc.AuxTenants, adal.OAuthOptions{})
-	if err != nil {
-		return nil, err
-	}
-	certData, err := ioutil.ReadFile(ccc.CertificatePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read the certificate file (%s): %v", ccc.CertificatePath, err)
-	}
-	certificate, rsaPrivateKey, err := adal.DecodePfxCertificateData(certData, ccc.CertificatePassword)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode pkcs12 certificate while creating spt: %v", err)
-	}
-	return adal.NewMultiTenantServicePrincipalTokenFromCertificate(oauthConfig, ccc.ClientID, certificate, rsaPrivateKey, ccc.Resource)
-}
-
 // Authorizer gets an authorizer object from client certificate.
 func (ccc ClientCertificateConfig) Authorizer() (autorest.Authorizer, error) {
-	if len(ccc.AuxTenants) == 0 {
-		spToken, err := ccc.ServicePrincipalToken()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get oauth token from certificate auth: %v", err)
-		}
-		return autorest.NewBearerAuthorizer(spToken), nil
-	}
-	mtSPT, err := ccc.MultiTenantServicePrincipalToken()
+	spToken, err := ccc.ServicePrincipalToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get multitenant SPT from certificate auth: %v", err)
+		return nil, fmt.Errorf("failed to get oauth token from certificate auth: %v", err)
 	}
-	return autorest.NewMultiTenantServicePrincipalTokenAuthorizer(mtSPT), nil
+	return autorest.NewBearerAuthorizer(spToken), nil
 }
 
 // DeviceFlowConfig provides the options to get a bearer authorizer using device flow authentication.
@@ -701,6 +665,20 @@ func (dfc DeviceFlowConfig) ServicePrincipalToken() (*adal.ServicePrincipalToken
 	return adal.NewServicePrincipalTokenFromManualToken(*oauthConfig, dfc.ClientID, dfc.Resource, *token)
 }
 
+func decodePkcs12(pkcs []byte, password string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	privateKey, certificate, err := pkcs12.Decode(pkcs, password)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rsaPrivateKey, isRsaKey := privateKey.(*rsa.PrivateKey)
+	if !isRsaKey {
+		return nil, nil, fmt.Errorf("PKCS#12 certificate must contain an RSA private key")
+	}
+
+	return certificate, rsaPrivateKey, nil
+}
+
 // UsernamePasswordConfig provides the options to get a bearer authorizer from a username and a password.
 type UsernamePasswordConfig struct {
 	ClientID    string
@@ -737,12 +715,24 @@ type MSIConfig struct {
 
 // ServicePrincipalToken creates a ServicePrincipalToken from MSI.
 func (mc MSIConfig) ServicePrincipalToken() (*adal.ServicePrincipalToken, error) {
-	spToken, err := adal.NewServicePrincipalTokenFromManagedIdentity(mc.Resource, &adal.ManagedIdentityOptions{
-		ClientID: mc.ClientID,
-	})
+	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get oauth token from MSI: %v", err)
+		return nil, err
 	}
+
+	var spToken *adal.ServicePrincipalToken
+	if mc.ClientID == "" {
+		spToken, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, mc.Resource)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get oauth token from MSI: %v", err)
+		}
+	} else {
+		spToken, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, mc.Resource, mc.ClientID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get oauth token from MSI for user assigned identity: %v", err)
+		}
+	}
+
 	return spToken, nil
 }
 

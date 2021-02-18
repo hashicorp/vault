@@ -6,15 +6,12 @@
 
 package bsonoptions
 
-var defaultOverwriteDuplicatedInlinedFields = true
-
 // StructCodecOptions represents all possible options for struct encoding and decoding.
 type StructCodecOptions struct {
-	DecodeZeroStruct                 *bool // Specifies if structs should be zeroed before decoding into them. Defaults to false.
-	DecodeDeepZeroInline             *bool // Specifies if structs should be recursively zeroed when a inline value is decoded. Defaults to false.
-	EncodeOmitDefaultStruct          *bool // Specifies if default structs should be considered empty by omitempty. Defaults to false.
-	AllowUnexportedFields            *bool // Specifies if unexported fields should be marshaled/unmarshaled. Defaults to false.
-	OverwriteDuplicatedInlinedFields *bool // Specifies if fields in inlined structs can be overwritten by higher level struct fields with the same key. Defaults to true.
+	DecodeZeroStruct        *bool // Specifies if structs should be zeroed before decoding into them. Defaults to false.
+	DecodeDeepZeroInline    *bool // Specifies if structs should be recursively zeroed when a inline value is decoded. Defaults to false.
+	EncodeOmitDefaultStruct *bool // Specifies if default structs should be considered empty by omitempty. Defaults to false.
+	AllowUnexportedFields   *bool // Specifies if unexported fields should be marshaled/unmarshaled. Defaults to false.
 }
 
 // StructCodec creates a new *StructCodecOptions
@@ -41,15 +38,6 @@ func (t *StructCodecOptions) SetEncodeOmitDefaultStruct(b bool) *StructCodecOpti
 	return t
 }
 
-// SetOverwriteDuplicatedInlinedFields specifies if inlined struct fields can be overwritten by higher level struct fields with the
-// same bson key. When true and decoding, values will be written to the outermost struct with a matching key, and when
-// encoding, keys will have the value of the top-most matching field. When false, decoding and encoding will error if
-// there are duplicate keys after the struct is inlined. Defaults to true.
-func (t *StructCodecOptions) SetOverwriteDuplicatedInlinedFields(b bool) *StructCodecOptions {
-	t.OverwriteDuplicatedInlinedFields = &b
-	return t
-}
-
 // SetAllowUnexportedFields specifies if unexported fields should be marshaled/unmarshaled. Defaults to false.
 func (t *StructCodecOptions) SetAllowUnexportedFields(b bool) *StructCodecOptions {
 	t.AllowUnexportedFields = &b
@@ -58,9 +46,7 @@ func (t *StructCodecOptions) SetAllowUnexportedFields(b bool) *StructCodecOption
 
 // MergeStructCodecOptions combines the given *StructCodecOptions into a single *StructCodecOptions in a last one wins fashion.
 func MergeStructCodecOptions(opts ...*StructCodecOptions) *StructCodecOptions {
-	s := &StructCodecOptions{
-		OverwriteDuplicatedInlinedFields: &defaultOverwriteDuplicatedInlinedFields,
-	}
+	s := StructCodec()
 	for _, opt := range opts {
 		if opt == nil {
 			continue
@@ -74,9 +60,6 @@ func MergeStructCodecOptions(opts ...*StructCodecOptions) *StructCodecOptions {
 		}
 		if opt.EncodeOmitDefaultStruct != nil {
 			s.EncodeOmitDefaultStruct = opt.EncodeOmitDefaultStruct
-		}
-		if opt.OverwriteDuplicatedInlinedFields != nil {
-			s.OverwriteDuplicatedInlinedFields = opt.OverwriteDuplicatedInlinedFields
 		}
 		if opt.AllowUnexportedFields != nil {
 			s.AllowUnexportedFields = opt.AllowUnexportedFields

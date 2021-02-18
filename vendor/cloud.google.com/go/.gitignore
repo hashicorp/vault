@@ -2,7 +2,6 @@
 .idea
 .vscode
 *.swp
-.history
 
 # Test files
 *.test

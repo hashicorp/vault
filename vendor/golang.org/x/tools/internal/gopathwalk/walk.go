@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"log"
 	"os"
@@ -44,6 +45,16 @@ const (
 type Root struct {
 	Path string
 	Type RootType
+}
+
+// SrcDirsRoots returns the roots from build.Default.SrcDirs(). Not modules-compatible.
+func SrcDirsRoots(ctx *build.Context) []Root {
+	var roots []Root
+	roots = append(roots, Root{filepath.Join(ctx.GOROOT, "src"), RootGOROOT})
+	for _, p := range filepath.SplitList(ctx.GOPATH) {
+		roots = append(roots, Root{filepath.Join(p, "src"), RootGOPATH})
+	}
+	return roots
 }
 
 // Walk walks Go source directories ($GOROOT, $GOPATH, etc) to find packages.

@@ -5,23 +5,30 @@ package logrus
 import (
 	"io"
 	"os"
+	"syscall"
 
-	"golang.org/x/sys/windows"
+	sequences "github.com/konsorten/go-windows-terminal-sequences"
 )
 
-func checkIfTerminal(w io.Writer) bool {
+func initTerminal(w io.Writer) {
 	switch v := w.(type) {
 	case *os.File:
-		handle := windows.Handle(v.Fd())
-		var mode uint32
-		if err := windows.GetConsoleMode(handle, &mode); err != nil {
-			return false
-		}
-		mode |= windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING
-		if err := windows.SetConsoleMode(handle, mode); err != nil {
-			return false
-		}
-		return true
+		sequences.EnableVirtualTerminalProcessing(syscall.Handle(v.Fd()), true)
 	}
-	return false
+}
+
+func checkIfTerminal(w io.Writer) bool {
+	var ret bool
+	switch v := w.(type) {
+	case *os.File:
+		var mode uint32
+		err := syscall.GetConsoleMode(syscall.Handle(v.Fd()), &mode)
+		ret = (err == nil)
+	default:
+		ret = false
+	}
+	if ret {
+		initTerminal(w)
+	}
+	return ret
 }

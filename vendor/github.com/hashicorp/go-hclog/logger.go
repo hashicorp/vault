@@ -38,9 +38,6 @@ const (
 
 	// Error information about unrecoverable events.
 	Error Level = 5
-
-	// Off disables all logging output.
-	Off Level = 6
 )
 
 // Format is a simple convience type for when formatting is required. When
@@ -99,8 +96,6 @@ func LevelFromString(levelStr string) Level {
 		return Warn
 	case "error":
 		return Error
-	case "off":
-		return Off
 	default:
 		return NoLevel
 	}
@@ -120,8 +115,6 @@ func (l Level) String() string {
 		return "error"
 	case NoLevel:
 		return "none"
-	case Off:
-		return "off"
 	default:
 		return "unknown"
 	}
@@ -186,8 +179,7 @@ type Logger interface {
 	// the current name as well.
 	ResetNamed(name string) Logger
 
-	// Updates the level. This should affect all related loggers as well,
-	// unless they were created with IndependentLevels. If an
+	// Updates the level. This should affect all sub-loggers as well. If an
 	// implementation cannot update the level on the fly, it should no-op.
 	SetLevel(level Level)
 
@@ -251,12 +243,6 @@ type LoggerOptions struct {
 	// This is useful when interacting with a system that you wish to suppress the log
 	// message for (because it's too noisy, etc)
 	Exclude func(level Level, msg string, args ...interface{}) bool
-
-	// IndependentLevels causes subloggers to be created with an independent
-	// copy of this logger's level. This means that using SetLevel on this
-	// logger will not effect any subloggers, and SetLevel on any subloggers
-	// will not effect the parent or sibling loggers.
-	IndependentLevels bool
 }
 
 // InterceptLogger describes the interface for using a logger
@@ -285,10 +271,10 @@ type InterceptLogger interface {
 	// the current name as well.
 	ResetNamedIntercept(name string) InterceptLogger
 
-	// Deprecated: use StandardLogger
+	// Return a value that conforms to the stdlib log.Logger interface
 	StandardLoggerIntercept(opts *StandardLoggerOptions) *log.Logger
 
-	// Deprecated: use StandardWriter
+	// Return a value that conforms to io.Writer, which can be passed into log.SetOutput()
 	StandardWriterIntercept(opts *StandardLoggerOptions) io.Writer
 }
 

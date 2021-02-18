@@ -24,12 +24,21 @@ func DeriveRandom(protocolKey, usage []byte, e etype.EType) ([]byte, error) {
 // DeriveKey derives a key from the protocol key based on the usage and the etype's specific methods.
 //
 // https://tools.ietf.org/html/rfc8009#section-5
+//
+// If the enctype is aes128-cts-hmac-sha256-128:
+// Kc = KDF-HMAC-SHA2(base-key, usage | 0x99, 128)
+// Ke = KDF-HMAC-SHA2(base-key, usage | 0xAA, 128)
+// Ki = KDF-HMAC-SHA2(base-key, usage | 0x55, 128)
+//
+// If the enctype is aes256-cts-hmac-sha384-192:
+// Kc = KDF-HMAC-SHA2(base-key, usage | 0x99, 192)
+// Ke = KDF-HMAC-SHA2(base-key, usage | 0xAA, 256)
+// Ki = KDF-HMAC-SHA2(base-key, usage | 0x55, 192)
 func DeriveKey(protocolKey, label []byte, e etype.EType) []byte {
 	var context []byte
 	var kl int
 	// Key length is longer for aes256-cts-hmac-sha384-192 is it is a Ke or from StringToKey (where label is "kerberos")
 	if e.GetETypeID() == etypeID.AES256_CTS_HMAC_SHA384_192 {
-	Swtch:
 		switch label[len(label)-1] {
 		case 0x73:
 			// 0x73 is "s" so label could be kerberos meaning StringToKey so now check if the label is "kerberos"
@@ -40,7 +49,7 @@ func DeriveKey(protocolKey, label []byte, e etype.EType) []byte {
 			for i, b := range label {
 				if b != kerblabel[i] {
 					kl = e.GetKeySeedBitLength()
-					break Swtch
+					break
 				}
 			}
 			if kl == 0 {

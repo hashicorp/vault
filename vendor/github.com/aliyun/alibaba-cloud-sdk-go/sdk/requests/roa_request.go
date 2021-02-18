@@ -88,6 +88,7 @@ func (request *RoaRequest) buildQueries() string {
 		}
 	}
 	result := urlBuilder.String()
+	result = popStandardUrlencode(result)
 	return result
 }
 
@@ -99,6 +100,13 @@ func (request *RoaRequest) buildQueryString() string {
 		q.Add(key, value)
 	}
 	return q.Encode()
+}
+
+func popStandardUrlencode(stringToSign string) (result string) {
+	result = strings.Replace(stringToSign, "+", "%20", -1)
+	result = strings.Replace(result, "*", "%2A", -1)
+	result = strings.Replace(result, "%7E", "~", -1)
+	return
 }
 
 func (request *RoaRequest) BuildUrl() string {
@@ -123,7 +131,6 @@ func (request *RoaRequest) InitWithApiInfo(product, version, action, uriPattern,
 	request.baseRequest = defaultBaseRequest()
 	request.PathParams = make(map[string]string)
 	request.Headers["x-acs-version"] = version
-	request.Headers["x-acs-action"] = action
 	request.pathPattern = uriPattern
 	request.locationServiceCode = serviceCode
 	request.locationEndpointType = endpointType
@@ -138,9 +145,6 @@ func (request *RoaRequest) initWithCommonRequest(commonRequest *CommonRequest) {
 	request.product = commonRequest.Product
 	//request.version = commonRequest.Version
 	request.Headers["x-acs-version"] = commonRequest.Version
-	if commonRequest.ApiName != "" {
-		request.Headers["x-acs-action"] = commonRequest.ApiName
-	}
 	request.actionName = commonRequest.ApiName
 	request.pathPattern = commonRequest.PathPattern
 	request.locationServiceCode = commonRequest.ServiceCode

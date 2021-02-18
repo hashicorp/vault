@@ -101,18 +101,6 @@ type envConfig struct {
 	//  AWS_CA_BUNDLE=$HOME/my_custom_ca_bundle
 	CustomCABundle string
 
-	// Sets the TLC client certificate that should be used by the SDK's HTTP transport
-	// when making requests. The certificate must be paired with a TLS client key file.
-	//
-	//  AWS_SDK_GO_CLIENT_TLS_CERT=$HOME/my_client_cert
-	ClientTLSCert string
-
-	// Sets the TLC client key that should be used by the SDK's HTTP transport
-	// when making requests. The key must be paired with a TLS client certificate file.
-	//
-	//  AWS_SDK_GO_CLIENT_TLS_KEY=$HOME/my_client_key
-	ClientTLSKey string
-
 	csmEnabled  string
 	CSMEnabled  *bool
 	CSMPort     string
@@ -231,15 +219,6 @@ var (
 	ec2IMDSEndpointEnvKey = []string{
 		"AWS_EC2_METADATA_SERVICE_ENDPOINT",
 	}
-	useCABundleKey = []string{
-		"AWS_CA_BUNDLE",
-	}
-	useClientTLSCert = []string{
-		"AWS_SDK_GO_CLIENT_TLS_CERT",
-	}
-	useClientTLSKey = []string{
-		"AWS_SDK_GO_CLIENT_TLS_KEY",
-	}
 )
 
 // loadEnvConfig retrieves the SDK's environment configuration.
@@ -323,9 +302,7 @@ func envConfigLoad(enableSharedConfig bool) (envConfig, error) {
 		cfg.SharedConfigFile = defaults.SharedConfigFilename()
 	}
 
-	setFromEnvVal(&cfg.CustomCABundle, useCABundleKey)
-	setFromEnvVal(&cfg.ClientTLSCert, useClientTLSCert)
-	setFromEnvVal(&cfg.ClientTLSKey, useClientTLSKey)
+	cfg.CustomCABundle = os.Getenv("AWS_CA_BUNDLE")
 
 	var err error
 	// STS Regional Endpoint variable

@@ -7,22 +7,19 @@ import (
 )
 
 func readHeader(reader io.Reader) (identifier Identifier, length int, read int, err error) {
-	var (
-		c, l int
-		i    Identifier
-	)
-
-	if i, c, err = readIdentifier(reader); err != nil {
+	if i, c, err := readIdentifier(reader); err != nil {
 		return Identifier{}, 0, read, err
+	} else {
+		identifier = i
+		read += c
 	}
-	identifier = i
-	read += c
 
-	if l, c, err = readLength(reader); err != nil {
+	if l, c, err := readLength(reader); err != nil {
 		return Identifier{}, 0, read, err
+	} else {
+		length = l
+		read += c
 	}
-	length = l
-	read += c
 
 	// Validate length type with identifier (x.600, 8.1.3.2.a)
 	if length == LengthIndefinite && identifier.TagType == TypePrimitive {

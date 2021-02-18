@@ -1,10 +1,9 @@
 package errors
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"os"
+	"io/ioutil"
 	"runtime"
 	"strings"
 )
@@ -63,29 +62,18 @@ func (frame *StackFrame) String() string {
 
 // SourceLine gets the line of code (from File and Line) of the original source if possible.
 func (frame *StackFrame) SourceLine() (string, error) {
-	if frame.LineNumber <= 0 {
-		return "???", nil
-	}
+	data, err := ioutil.ReadFile(frame.File)
 
-	file, err := os.Open(frame.File)
 	if err != nil {
 		return "", New(err)
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	currentLine := 1
-	for scanner.Scan() {
-		if currentLine == frame.LineNumber {
-			return string(bytes.Trim(scanner.Bytes(), " \t")), nil
-		}
-		currentLine++
+	lines := bytes.Split(data, []byte{'\n'})
+	if frame.LineNumber <= 0 || frame.LineNumber >= len(lines) {
+		return "???", nil
 	}
-	if err := scanner.Err(); err != nil {
-		return "", New(err)
-	}
-
-	return "???", nil
+	// -1 because line-numbers are 1 based, but our array is 0 based
+	return string(bytes.Trim(lines[frame.LineNumber-1], " \t")), nil
 }
 
 func packageAndName(fn *runtime.Func) (string, string) {

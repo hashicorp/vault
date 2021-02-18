@@ -77,31 +77,10 @@ func (e *Entry) GetAttributeValues(attribute string) []string {
 	return []string{}
 }
 
-// GetEqualFoldAttributeValues returns the values for the named attribute, or an
-// empty list. Attribute matching is done with strings.EqualFold.
-func (e *Entry) GetEqualFoldAttributeValues(attribute string) []string {
-	for _, attr := range e.Attributes {
-		if strings.EqualFold(attribute, attr.Name) {
-			return attr.Values
-		}
-	}
-	return []string{}
-}
-
 // GetRawAttributeValues returns the byte values for the named attribute, or an empty list
 func (e *Entry) GetRawAttributeValues(attribute string) [][]byte {
 	for _, attr := range e.Attributes {
 		if attr.Name == attribute {
-			return attr.ByteValues
-		}
-	}
-	return [][]byte{}
-}
-
-// GetEqualFoldRawAttributeValues returns the byte values for the named attribute, or an empty list
-func (e *Entry) GetEqualFoldRawAttributeValues(attribute string) [][]byte {
-	for _, attr := range e.Attributes {
-		if strings.EqualFold(attr.Name, attribute) {
 			return attr.ByteValues
 		}
 	}
@@ -117,28 +96,9 @@ func (e *Entry) GetAttributeValue(attribute string) string {
 	return values[0]
 }
 
-// GetEqualFoldAttributeValue returns the first value for the named attribute, or "".
-// Attribute comparison is done with strings.EqualFold.
-func (e *Entry) GetEqualFoldAttributeValue(attribute string) string {
-	values := e.GetEqualFoldAttributeValues(attribute)
-	if len(values) == 0 {
-		return ""
-	}
-	return values[0]
-}
-
 // GetRawAttributeValue returns the first value for the named attribute, or an empty slice
 func (e *Entry) GetRawAttributeValue(attribute string) []byte {
 	values := e.GetRawAttributeValues(attribute)
-	if len(values) == 0 {
-		return []byte{}
-	}
-	return values[0]
-}
-
-// GetEqualFoldRawAttributeValue returns the first value for the named attribute, or an empty slice
-func (e *Entry) GetEqualFoldRawAttributeValue(attribute string) []byte {
-	values := e.GetEqualFoldRawAttributeValues(attribute)
 	if len(values) == 0 {
 		return []byte{}
 	}
@@ -371,7 +331,7 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 	for {
 		packet, err := l.readPacket(msgCtx)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
 
 		switch packet.Children[1].Tag {
@@ -391,13 +351,13 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 		case 5:
 			err := GetLDAPError(packet)
 			if err != nil {
-				return result, err
+				return nil, err
 			}
 			if len(packet.Children) == 3 {
 				for _, child := range packet.Children[2].Children {
 					decodedChild, err := DecodeControl(child)
 					if err != nil {
-						return result, fmt.Errorf("failed to decode child control: %s", err)
+						return nil, fmt.Errorf("failed to decode child control: %s", err)
 					}
 					result.Controls = append(result.Controls, decodedChild)
 				}

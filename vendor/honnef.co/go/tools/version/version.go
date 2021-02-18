@@ -7,7 +7,7 @@ import (
 	"runtime"
 )
 
-const Version = "2020.1.4"
+const Version = "2020.1.3"
 
 // version returns a version descriptor and reports whether the
 // version is a known release.

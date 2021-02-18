@@ -78,7 +78,6 @@ func (client BaseClient) BackupCertificate(ctx context.Context, vaultBaseURL str
 	result, err = client.BackupCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "BackupCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -118,6 +117,7 @@ func (client BaseClient) BackupCertificateSender(req *http.Request) (*http.Respo
 func (client BaseClient) BackupCertificateResponder(resp *http.Response) (result BackupCertificateResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -164,7 +164,6 @@ func (client BaseClient) BackupKey(ctx context.Context, vaultBaseURL string, key
 	result, err = client.BackupKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "BackupKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -204,6 +203,7 @@ func (client BaseClient) BackupKeySender(req *http.Request) (*http.Response, err
 func (client BaseClient) BackupKeyResponder(resp *http.Response) (result BackupKeyResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -243,7 +243,6 @@ func (client BaseClient) BackupSecret(ctx context.Context, vaultBaseURL string, 
 	result, err = client.BackupSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "BackupSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -283,6 +282,7 @@ func (client BaseClient) BackupSecretSender(req *http.Request) (*http.Response, 
 func (client BaseClient) BackupSecretResponder(resp *http.Response) (result BackupSecretResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -322,7 +322,6 @@ func (client BaseClient) BackupStorageAccount(ctx context.Context, vaultBaseURL 
 	result, err = client.BackupStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "BackupStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -362,6 +361,7 @@ func (client BaseClient) BackupStorageAccountSender(req *http.Request) (*http.Re
 func (client BaseClient) BackupStorageAccountResponder(resp *http.Response) (result BackupStorageResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -415,7 +415,6 @@ func (client BaseClient) CreateCertificate(ctx context.Context, vaultBaseURL str
 	result, err = client.CreateCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "CreateCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -457,6 +456,7 @@ func (client BaseClient) CreateCertificateSender(req *http.Request) (*http.Respo
 func (client BaseClient) CreateCertificateResponder(resp *http.Response) (result CertificateOperation, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -503,7 +503,6 @@ func (client BaseClient) CreateKey(ctx context.Context, vaultBaseURL string, key
 	result, err = client.CreateKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "CreateKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -545,6 +544,7 @@ func (client BaseClient) CreateKeySender(req *http.Request) (*http.Response, err
 func (client BaseClient) CreateKeyResponder(resp *http.Response) (result KeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -595,7 +595,6 @@ func (client BaseClient) Decrypt(ctx context.Context, vaultBaseURL string, keyNa
 	result, err = client.DecryptResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "Decrypt", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -638,6 +637,7 @@ func (client BaseClient) DecryptSender(req *http.Request) (*http.Response, error
 func (client BaseClient) DecryptResponder(resp *http.Response) (result KeyOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -678,7 +678,6 @@ func (client BaseClient) DeleteCertificate(ctx context.Context, vaultBaseURL str
 	result, err = client.DeleteCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -718,6 +717,7 @@ func (client BaseClient) DeleteCertificateSender(req *http.Request) (*http.Respo
 func (client BaseClient) DeleteCertificateResponder(resp *http.Response) (result DeletedCertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -756,7 +756,6 @@ func (client BaseClient) DeleteCertificateContacts(ctx context.Context, vaultBas
 	result, err = client.DeleteCertificateContactsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificateContacts", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -792,6 +791,7 @@ func (client BaseClient) DeleteCertificateContactsSender(req *http.Request) (*ht
 func (client BaseClient) DeleteCertificateContactsResponder(resp *http.Response) (result Contacts, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -831,7 +831,6 @@ func (client BaseClient) DeleteCertificateIssuer(ctx context.Context, vaultBaseU
 	result, err = client.DeleteCertificateIssuerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificateIssuer", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -871,6 +870,7 @@ func (client BaseClient) DeleteCertificateIssuerSender(req *http.Request) (*http
 func (client BaseClient) DeleteCertificateIssuerResponder(resp *http.Response) (result IssuerBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -910,7 +910,6 @@ func (client BaseClient) DeleteCertificateOperation(ctx context.Context, vaultBa
 	result, err = client.DeleteCertificateOperationResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificateOperation", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -950,6 +949,7 @@ func (client BaseClient) DeleteCertificateOperationSender(req *http.Request) (*h
 func (client BaseClient) DeleteCertificateOperationResponder(resp *http.Response) (result CertificateOperation, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -990,7 +990,6 @@ func (client BaseClient) DeleteKey(ctx context.Context, vaultBaseURL string, key
 	result, err = client.DeleteKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1030,6 +1029,7 @@ func (client BaseClient) DeleteKeySender(req *http.Request) (*http.Response, err
 func (client BaseClient) DeleteKeyResponder(resp *http.Response) (result DeletedKeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1078,7 +1078,6 @@ func (client BaseClient) DeleteSasDefinition(ctx context.Context, vaultBaseURL s
 	result, err = client.DeleteSasDefinitionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteSasDefinition", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1119,6 +1118,7 @@ func (client BaseClient) DeleteSasDefinitionSender(req *http.Request) (*http.Res
 func (client BaseClient) DeleteSasDefinitionResponder(resp *http.Response) (result DeletedSasDefinitionBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1158,7 +1158,6 @@ func (client BaseClient) DeleteSecret(ctx context.Context, vaultBaseURL string, 
 	result, err = client.DeleteSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1198,6 +1197,7 @@ func (client BaseClient) DeleteSecretSender(req *http.Request) (*http.Response, 
 func (client BaseClient) DeleteSecretResponder(resp *http.Response) (result DeletedSecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1242,7 +1242,6 @@ func (client BaseClient) DeleteStorageAccount(ctx context.Context, vaultBaseURL 
 	result, err = client.DeleteStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1282,6 +1281,7 @@ func (client BaseClient) DeleteStorageAccountSender(req *http.Request) (*http.Re
 func (client BaseClient) DeleteStorageAccountResponder(resp *http.Response) (result DeletedStorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1334,7 +1334,6 @@ func (client BaseClient) Encrypt(ctx context.Context, vaultBaseURL string, keyNa
 	result, err = client.EncryptResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "Encrypt", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1377,6 +1376,7 @@ func (client BaseClient) EncryptSender(req *http.Request) (*http.Response, error
 func (client BaseClient) EncryptResponder(resp *http.Response) (result KeyOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1389,8 +1389,7 @@ func (client BaseClient) EncryptResponder(resp *http.Response) (result KeyOperat
 // Parameters:
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate in the given vault.
-// certificateVersion - the version of the certificate. This URI fragment is optional. If not specified, the
-// latest version of the certificate is returned.
+// certificateVersion - the version of the certificate.
 func (client BaseClient) GetCertificate(ctx context.Context, vaultBaseURL string, certificateName string, certificateVersion string) (result CertificateBundle, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificate")
@@ -1418,7 +1417,6 @@ func (client BaseClient) GetCertificate(ctx context.Context, vaultBaseURL string
 	result, err = client.GetCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1459,6 +1457,7 @@ func (client BaseClient) GetCertificateSender(req *http.Request) (*http.Response
 func (client BaseClient) GetCertificateResponder(resp *http.Response) (result CertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1497,7 +1496,6 @@ func (client BaseClient) GetCertificateContacts(ctx context.Context, vaultBaseUR
 	result, err = client.GetCertificateContactsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateContacts", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1533,6 +1531,7 @@ func (client BaseClient) GetCertificateContactsSender(req *http.Request) (*http.
 func (client BaseClient) GetCertificateContactsResponder(resp *http.Response) (result Contacts, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1572,7 +1571,6 @@ func (client BaseClient) GetCertificateIssuer(ctx context.Context, vaultBaseURL 
 	result, err = client.GetCertificateIssuerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateIssuer", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1612,6 +1610,7 @@ func (client BaseClient) GetCertificateIssuerSender(req *http.Request) (*http.Re
 func (client BaseClient) GetCertificateIssuerResponder(resp *http.Response) (result IssuerBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1662,11 +1661,6 @@ func (client BaseClient) GetCertificateIssuers(ctx context.Context, vaultBaseURL
 	result.cilr, err = client.GetCertificateIssuersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateIssuers", resp, "Failure responding to request")
-		return
-	}
-	if result.cilr.hasNextLink() && result.cilr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -1705,6 +1699,7 @@ func (client BaseClient) GetCertificateIssuersSender(req *http.Request) (*http.R
 func (client BaseClient) GetCertificateIssuersResponder(resp *http.Response) (result CertificateIssuerListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1781,7 +1776,6 @@ func (client BaseClient) GetCertificateOperation(ctx context.Context, vaultBaseU
 	result, err = client.GetCertificateOperationResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateOperation", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1821,6 +1815,7 @@ func (client BaseClient) GetCertificateOperationSender(req *http.Request) (*http
 func (client BaseClient) GetCertificateOperationResponder(resp *http.Response) (result CertificateOperation, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1860,7 +1855,6 @@ func (client BaseClient) GetCertificatePolicy(ctx context.Context, vaultBaseURL 
 	result, err = client.GetCertificatePolicyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificatePolicy", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1900,6 +1894,7 @@ func (client BaseClient) GetCertificatePolicySender(req *http.Request) (*http.Re
 func (client BaseClient) GetCertificatePolicyResponder(resp *http.Response) (result CertificatePolicy, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1951,11 +1946,6 @@ func (client BaseClient) GetCertificates(ctx context.Context, vaultBaseURL strin
 	result.clr, err = client.GetCertificatesResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificates", resp, "Failure responding to request")
-		return
-	}
-	if result.clr.hasNextLink() && result.clr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -1997,6 +1987,7 @@ func (client BaseClient) GetCertificatesSender(req *http.Request) (*http.Respons
 func (client BaseClient) GetCertificatesResponder(resp *http.Response) (result CertificateListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2085,11 +2076,6 @@ func (client BaseClient) GetCertificateVersions(ctx context.Context, vaultBaseUR
 	result.clr, err = client.GetCertificateVersionsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateVersions", resp, "Failure responding to request")
-		return
-	}
-	if result.clr.hasNextLink() && result.clr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -2132,6 +2118,7 @@ func (client BaseClient) GetCertificateVersionsSender(req *http.Request) (*http.
 func (client BaseClient) GetCertificateVersionsResponder(resp *http.Response) (result CertificateListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2209,7 +2196,6 @@ func (client BaseClient) GetDeletedCertificate(ctx context.Context, vaultBaseURL
 	result, err = client.GetDeletedCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -2249,6 +2235,7 @@ func (client BaseClient) GetDeletedCertificateSender(req *http.Request) (*http.R
 func (client BaseClient) GetDeletedCertificateResponder(resp *http.Response) (result DeletedCertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2302,11 +2289,6 @@ func (client BaseClient) GetDeletedCertificates(ctx context.Context, vaultBaseUR
 	result.dclr, err = client.GetDeletedCertificatesResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedCertificates", resp, "Failure responding to request")
-		return
-	}
-	if result.dclr.hasNextLink() && result.dclr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -2348,6 +2330,7 @@ func (client BaseClient) GetDeletedCertificatesSender(req *http.Request) (*http.
 func (client BaseClient) GetDeletedCertificatesResponder(resp *http.Response) (result DeletedCertificateListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2425,7 +2408,6 @@ func (client BaseClient) GetDeletedKey(ctx context.Context, vaultBaseURL string,
 	result, err = client.GetDeletedKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -2465,6 +2447,7 @@ func (client BaseClient) GetDeletedKeySender(req *http.Request) (*http.Response,
 func (client BaseClient) GetDeletedKeyResponder(resp *http.Response) (result DeletedKeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2517,11 +2500,6 @@ func (client BaseClient) GetDeletedKeys(ctx context.Context, vaultBaseURL string
 	result.dklr, err = client.GetDeletedKeysResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedKeys", resp, "Failure responding to request")
-		return
-	}
-	if result.dklr.hasNextLink() && result.dklr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -2560,6 +2538,7 @@ func (client BaseClient) GetDeletedKeysSender(req *http.Request) (*http.Response
 func (client BaseClient) GetDeletedKeysResponder(resp *http.Response) (result DeletedKeyListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2645,7 +2624,6 @@ func (client BaseClient) GetDeletedSasDefinition(ctx context.Context, vaultBaseU
 	result, err = client.GetDeletedSasDefinitionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedSasDefinition", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -2686,6 +2664,7 @@ func (client BaseClient) GetDeletedSasDefinitionSender(req *http.Request) (*http
 func (client BaseClient) GetDeletedSasDefinitionResponder(resp *http.Response) (result DeletedSasDefinitionBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2739,11 +2718,6 @@ func (client BaseClient) GetDeletedSasDefinitions(ctx context.Context, vaultBase
 	result.dsdlr, err = client.GetDeletedSasDefinitionsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedSasDefinitions", resp, "Failure responding to request")
-		return
-	}
-	if result.dsdlr.hasNextLink() && result.dsdlr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -2786,6 +2760,7 @@ func (client BaseClient) GetDeletedSasDefinitionsSender(req *http.Request) (*htt
 func (client BaseClient) GetDeletedSasDefinitionsResponder(resp *http.Response) (result DeletedSasDefinitionListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2862,7 +2837,6 @@ func (client BaseClient) GetDeletedSecret(ctx context.Context, vaultBaseURL stri
 	result, err = client.GetDeletedSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -2902,6 +2876,7 @@ func (client BaseClient) GetDeletedSecretSender(req *http.Request) (*http.Respon
 func (client BaseClient) GetDeletedSecretResponder(resp *http.Response) (result DeletedSecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -2952,11 +2927,6 @@ func (client BaseClient) GetDeletedSecrets(ctx context.Context, vaultBaseURL str
 	result.dslr, err = client.GetDeletedSecretsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedSecrets", resp, "Failure responding to request")
-		return
-	}
-	if result.dslr.hasNextLink() && result.dslr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -2995,6 +2965,7 @@ func (client BaseClient) GetDeletedSecretsSender(req *http.Request) (*http.Respo
 func (client BaseClient) GetDeletedSecretsResponder(resp *http.Response) (result DeletedSecretListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3077,7 +3048,6 @@ func (client BaseClient) GetDeletedStorageAccount(ctx context.Context, vaultBase
 	result, err = client.GetDeletedStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -3117,6 +3087,7 @@ func (client BaseClient) GetDeletedStorageAccountSender(req *http.Request) (*htt
 func (client BaseClient) GetDeletedStorageAccountResponder(resp *http.Response) (result DeletedStorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3167,11 +3138,6 @@ func (client BaseClient) GetDeletedStorageAccounts(ctx context.Context, vaultBas
 	result.dslr, err = client.GetDeletedStorageAccountsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedStorageAccounts", resp, "Failure responding to request")
-		return
-	}
-	if result.dslr.hasNextLink() && result.dslr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -3210,6 +3176,7 @@ func (client BaseClient) GetDeletedStorageAccountsSender(req *http.Request) (*ht
 func (client BaseClient) GetDeletedStorageAccountsResponder(resp *http.Response) (result DeletedStorageListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3259,8 +3226,7 @@ func (client BaseClient) GetDeletedStorageAccountsComplete(ctx context.Context, 
 // Parameters:
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // keyName - the name of the key to get.
-// keyVersion - adding the version parameter retrieves a specific version of a key. This URI fragment is
-// optional. If not specified, the latest version of the key is returned.
+// keyVersion - adding the version parameter retrieves a specific version of a key.
 func (client BaseClient) GetKey(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string) (result KeyBundle, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetKey")
@@ -3288,7 +3254,6 @@ func (client BaseClient) GetKey(ctx context.Context, vaultBaseURL string, keyNam
 	result, err = client.GetKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -3329,6 +3294,7 @@ func (client BaseClient) GetKeySender(req *http.Request) (*http.Response, error)
 func (client BaseClient) GetKeyResponder(resp *http.Response) (result KeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3381,11 +3347,6 @@ func (client BaseClient) GetKeys(ctx context.Context, vaultBaseURL string, maxre
 	result.klr, err = client.GetKeysResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetKeys", resp, "Failure responding to request")
-		return
-	}
-	if result.klr.hasNextLink() && result.klr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -3424,6 +3385,7 @@ func (client BaseClient) GetKeysSender(req *http.Request) (*http.Response, error
 func (client BaseClient) GetKeysResponder(resp *http.Response) (result KeyListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3512,11 +3474,6 @@ func (client BaseClient) GetKeyVersions(ctx context.Context, vaultBaseURL string
 	result.klr, err = client.GetKeyVersionsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetKeyVersions", resp, "Failure responding to request")
-		return
-	}
-	if result.klr.hasNextLink() && result.klr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -3559,6 +3516,7 @@ func (client BaseClient) GetKeyVersionsSender(req *http.Request) (*http.Response
 func (client BaseClient) GetKeyVersionsResponder(resp *http.Response) (result KeyListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3644,7 +3602,6 @@ func (client BaseClient) GetSasDefinition(ctx context.Context, vaultBaseURL stri
 	result, err = client.GetSasDefinitionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetSasDefinition", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -3685,6 +3642,7 @@ func (client BaseClient) GetSasDefinitionSender(req *http.Request) (*http.Respon
 func (client BaseClient) GetSasDefinitionResponder(resp *http.Response) (result SasDefinitionBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3738,11 +3696,6 @@ func (client BaseClient) GetSasDefinitions(ctx context.Context, vaultBaseURL str
 	result.sdlr, err = client.GetSasDefinitionsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetSasDefinitions", resp, "Failure responding to request")
-		return
-	}
-	if result.sdlr.hasNextLink() && result.sdlr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -3785,6 +3738,7 @@ func (client BaseClient) GetSasDefinitionsSender(req *http.Request) (*http.Respo
 func (client BaseClient) GetSasDefinitionsResponder(resp *http.Response) (result SasDefinitionListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3834,8 +3788,7 @@ func (client BaseClient) GetSasDefinitionsComplete(ctx context.Context, vaultBas
 // Parameters:
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // secretName - the name of the secret.
-// secretVersion - the version of the secret. This URI fragment is optional. If not specified, the latest
-// version of the secret is returned.
+// secretVersion - the version of the secret.
 func (client BaseClient) GetSecret(ctx context.Context, vaultBaseURL string, secretName string, secretVersion string) (result SecretBundle, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSecret")
@@ -3863,7 +3816,6 @@ func (client BaseClient) GetSecret(ctx context.Context, vaultBaseURL string, sec
 	result, err = client.GetSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -3904,6 +3856,7 @@ func (client BaseClient) GetSecretSender(req *http.Request) (*http.Response, err
 func (client BaseClient) GetSecretResponder(resp *http.Response) (result SecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -3955,11 +3908,6 @@ func (client BaseClient) GetSecrets(ctx context.Context, vaultBaseURL string, ma
 	result.slr, err = client.GetSecretsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetSecrets", resp, "Failure responding to request")
-		return
-	}
-	if result.slr.hasNextLink() && result.slr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -3998,6 +3946,7 @@ func (client BaseClient) GetSecretsSender(req *http.Request) (*http.Response, er
 func (client BaseClient) GetSecretsResponder(resp *http.Response) (result SecretListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4086,11 +4035,6 @@ func (client BaseClient) GetSecretVersions(ctx context.Context, vaultBaseURL str
 	result.slr, err = client.GetSecretVersionsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetSecretVersions", resp, "Failure responding to request")
-		return
-	}
-	if result.slr.hasNextLink() && result.slr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -4133,6 +4077,7 @@ func (client BaseClient) GetSecretVersionsSender(req *http.Request) (*http.Respo
 func (client BaseClient) GetSecretVersionsResponder(resp *http.Response) (result SecretListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4215,7 +4160,6 @@ func (client BaseClient) GetStorageAccount(ctx context.Context, vaultBaseURL str
 	result, err = client.GetStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4255,6 +4199,7 @@ func (client BaseClient) GetStorageAccountSender(req *http.Request) (*http.Respo
 func (client BaseClient) GetStorageAccountResponder(resp *http.Response) (result StorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4305,11 +4250,6 @@ func (client BaseClient) GetStorageAccounts(ctx context.Context, vaultBaseURL st
 	result.slr, err = client.GetStorageAccountsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetStorageAccounts", resp, "Failure responding to request")
-		return
-	}
-	if result.slr.hasNextLink() && result.slr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -4348,6 +4288,7 @@ func (client BaseClient) GetStorageAccountsSender(req *http.Request) (*http.Resp
 func (client BaseClient) GetStorageAccountsResponder(resp *http.Response) (result StorageListResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4440,7 +4381,6 @@ func (client BaseClient) ImportCertificate(ctx context.Context, vaultBaseURL str
 	result, err = client.ImportCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "ImportCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4482,6 +4422,7 @@ func (client BaseClient) ImportCertificateSender(req *http.Request) (*http.Respo
 func (client BaseClient) ImportCertificateResponder(resp *http.Response) (result CertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4531,7 +4472,6 @@ func (client BaseClient) ImportKey(ctx context.Context, vaultBaseURL string, key
 	result, err = client.ImportKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "ImportKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4573,6 +4513,7 @@ func (client BaseClient) ImportKeySender(req *http.Request) (*http.Response, err
 func (client BaseClient) ImportKeyResponder(resp *http.Response) (result KeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4619,7 +4560,6 @@ func (client BaseClient) MergeCertificate(ctx context.Context, vaultBaseURL stri
 	result, err = client.MergeCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "MergeCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4661,6 +4601,7 @@ func (client BaseClient) MergeCertificateSender(req *http.Request) (*http.Respon
 func (client BaseClient) MergeCertificateResponder(resp *http.Response) (result CertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -4701,7 +4642,6 @@ func (client BaseClient) PurgeDeletedCertificate(ctx context.Context, vaultBaseU
 	result, err = client.PurgeDeletedCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4741,6 +4681,7 @@ func (client BaseClient) PurgeDeletedCertificateSender(req *http.Request) (*http
 func (client BaseClient) PurgeDeletedCertificateResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -4780,7 +4721,6 @@ func (client BaseClient) PurgeDeletedKey(ctx context.Context, vaultBaseURL strin
 	result, err = client.PurgeDeletedKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4820,6 +4760,7 @@ func (client BaseClient) PurgeDeletedKeySender(req *http.Request) (*http.Respons
 func (client BaseClient) PurgeDeletedKeyResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -4859,7 +4800,6 @@ func (client BaseClient) PurgeDeletedSecret(ctx context.Context, vaultBaseURL st
 	result, err = client.PurgeDeletedSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4899,6 +4839,7 @@ func (client BaseClient) PurgeDeletedSecretSender(req *http.Request) (*http.Resp
 func (client BaseClient) PurgeDeletedSecretResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -4944,7 +4885,6 @@ func (client BaseClient) PurgeDeletedStorageAccount(ctx context.Context, vaultBa
 	result, err = client.PurgeDeletedStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -4984,6 +4924,7 @@ func (client BaseClient) PurgeDeletedStorageAccountSender(req *http.Request) (*h
 func (client BaseClient) PurgeDeletedStorageAccountResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -5023,7 +4964,6 @@ func (client BaseClient) RecoverDeletedCertificate(ctx context.Context, vaultBas
 	result, err = client.RecoverDeletedCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5063,6 +5003,7 @@ func (client BaseClient) RecoverDeletedCertificateSender(req *http.Request) (*ht
 func (client BaseClient) RecoverDeletedCertificateResponder(resp *http.Response) (result CertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5104,7 +5045,6 @@ func (client BaseClient) RecoverDeletedKey(ctx context.Context, vaultBaseURL str
 	result, err = client.RecoverDeletedKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5144,6 +5084,7 @@ func (client BaseClient) RecoverDeletedKeySender(req *http.Request) (*http.Respo
 func (client BaseClient) RecoverDeletedKeyResponder(resp *http.Response) (result KeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5192,7 +5133,6 @@ func (client BaseClient) RecoverDeletedSasDefinition(ctx context.Context, vaultB
 	result, err = client.RecoverDeletedSasDefinitionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedSasDefinition", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5233,6 +5173,7 @@ func (client BaseClient) RecoverDeletedSasDefinitionSender(req *http.Request) (*
 func (client BaseClient) RecoverDeletedSasDefinitionResponder(resp *http.Response) (result SasDefinitionBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5272,7 +5213,6 @@ func (client BaseClient) RecoverDeletedSecret(ctx context.Context, vaultBaseURL 
 	result, err = client.RecoverDeletedSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5312,6 +5252,7 @@ func (client BaseClient) RecoverDeletedSecretSender(req *http.Request) (*http.Re
 func (client BaseClient) RecoverDeletedSecretResponder(resp *http.Response) (result SecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5357,7 +5298,6 @@ func (client BaseClient) RecoverDeletedStorageAccount(ctx context.Context, vault
 	result, err = client.RecoverDeletedStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5397,6 +5337,7 @@ func (client BaseClient) RecoverDeletedStorageAccountSender(req *http.Request) (
 func (client BaseClient) RecoverDeletedStorageAccountResponder(resp *http.Response) (result StorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5445,7 +5386,6 @@ func (client BaseClient) RegenerateStorageAccountKey(ctx context.Context, vaultB
 	result, err = client.RegenerateStorageAccountKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RegenerateStorageAccountKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5487,6 +5427,7 @@ func (client BaseClient) RegenerateStorageAccountKeySender(req *http.Request) (*
 func (client BaseClient) RegenerateStorageAccountKeyResponder(resp *http.Response) (result StorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5532,7 +5473,6 @@ func (client BaseClient) RestoreCertificate(ctx context.Context, vaultBaseURL st
 	result, err = client.RestoreCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RestoreCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5570,6 +5510,7 @@ func (client BaseClient) RestoreCertificateSender(req *http.Request) (*http.Resp
 func (client BaseClient) RestoreCertificateResponder(resp *http.Response) (result CertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5622,7 +5563,6 @@ func (client BaseClient) RestoreKey(ctx context.Context, vaultBaseURL string, pa
 	result, err = client.RestoreKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RestoreKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5660,6 +5600,7 @@ func (client BaseClient) RestoreKeySender(req *http.Request) (*http.Response, er
 func (client BaseClient) RestoreKeyResponder(resp *http.Response) (result KeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5705,7 +5646,6 @@ func (client BaseClient) RestoreSecret(ctx context.Context, vaultBaseURL string,
 	result, err = client.RestoreSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RestoreSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5743,6 +5683,7 @@ func (client BaseClient) RestoreSecretSender(req *http.Request) (*http.Response,
 func (client BaseClient) RestoreSecretResponder(resp *http.Response) (result SecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5788,7 +5729,6 @@ func (client BaseClient) RestoreStorageAccount(ctx context.Context, vaultBaseURL
 	result, err = client.RestoreStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RestoreStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5826,6 +5766,7 @@ func (client BaseClient) RestoreStorageAccountSender(req *http.Request) (*http.R
 func (client BaseClient) RestoreStorageAccountResponder(resp *http.Response) (result StorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5865,7 +5806,6 @@ func (client BaseClient) SetCertificateContacts(ctx context.Context, vaultBaseUR
 	result, err = client.SetCertificateContactsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "SetCertificateContacts", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5904,6 +5844,7 @@ func (client BaseClient) SetCertificateContactsSender(req *http.Request) (*http.
 func (client BaseClient) SetCertificateContactsResponder(resp *http.Response) (result Contacts, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -5950,7 +5891,6 @@ func (client BaseClient) SetCertificateIssuer(ctx context.Context, vaultBaseURL 
 	result, err = client.SetCertificateIssuerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "SetCertificateIssuer", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -5992,6 +5932,7 @@ func (client BaseClient) SetCertificateIssuerSender(req *http.Request) (*http.Re
 func (client BaseClient) SetCertificateIssuerResponder(resp *http.Response) (result IssuerBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6044,7 +5985,6 @@ func (client BaseClient) SetSasDefinition(ctx context.Context, vaultBaseURL stri
 	result, err = client.SetSasDefinitionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "SetSasDefinition", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6087,6 +6027,7 @@ func (client BaseClient) SetSasDefinitionSender(req *http.Request) (*http.Respon
 func (client BaseClient) SetSasDefinitionResponder(resp *http.Response) (result SasDefinitionBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6135,7 +6076,6 @@ func (client BaseClient) SetSecret(ctx context.Context, vaultBaseURL string, sec
 	result, err = client.SetSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "SetSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6177,6 +6117,7 @@ func (client BaseClient) SetSecretSender(req *http.Request) (*http.Response, err
 func (client BaseClient) SetSecretResponder(resp *http.Response) (result SecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6226,7 +6167,6 @@ func (client BaseClient) SetStorageAccount(ctx context.Context, vaultBaseURL str
 	result, err = client.SetStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "SetStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6268,6 +6208,7 @@ func (client BaseClient) SetStorageAccountSender(req *http.Request) (*http.Respo
 func (client BaseClient) SetStorageAccountResponder(resp *http.Response) (result StorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6315,7 +6256,6 @@ func (client BaseClient) Sign(ctx context.Context, vaultBaseURL string, keyName 
 	result, err = client.SignResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "Sign", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6358,6 +6298,7 @@ func (client BaseClient) SignSender(req *http.Request) (*http.Response, error) {
 func (client BaseClient) SignResponder(resp *http.Response) (result KeyOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6407,7 +6348,6 @@ func (client BaseClient) UnwrapKey(ctx context.Context, vaultBaseURL string, key
 	result, err = client.UnwrapKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UnwrapKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6450,6 +6390,7 @@ func (client BaseClient) UnwrapKeySender(req *http.Request) (*http.Response, err
 func (client BaseClient) UnwrapKeyResponder(resp *http.Response) (result KeyOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6491,7 +6432,6 @@ func (client BaseClient) UpdateCertificate(ctx context.Context, vaultBaseURL str
 	result, err = client.UpdateCertificateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6534,6 +6474,7 @@ func (client BaseClient) UpdateCertificateSender(req *http.Request) (*http.Respo
 func (client BaseClient) UpdateCertificateResponder(resp *http.Response) (result CertificateBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6574,7 +6515,6 @@ func (client BaseClient) UpdateCertificateIssuer(ctx context.Context, vaultBaseU
 	result, err = client.UpdateCertificateIssuerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificateIssuer", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6616,6 +6556,7 @@ func (client BaseClient) UpdateCertificateIssuerSender(req *http.Request) (*http
 func (client BaseClient) UpdateCertificateIssuerResponder(resp *http.Response) (result IssuerBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6656,7 +6597,6 @@ func (client BaseClient) UpdateCertificateOperation(ctx context.Context, vaultBa
 	result, err = client.UpdateCertificateOperationResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificateOperation", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6698,6 +6638,7 @@ func (client BaseClient) UpdateCertificateOperationSender(req *http.Request) (*h
 func (client BaseClient) UpdateCertificateOperationResponder(resp *http.Response) (result CertificateOperation, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6738,7 +6679,6 @@ func (client BaseClient) UpdateCertificatePolicy(ctx context.Context, vaultBaseU
 	result, err = client.UpdateCertificatePolicyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificatePolicy", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6781,6 +6721,7 @@ func (client BaseClient) UpdateCertificatePolicySender(req *http.Request) (*http
 func (client BaseClient) UpdateCertificatePolicyResponder(resp *http.Response) (result CertificatePolicy, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6822,7 +6763,6 @@ func (client BaseClient) UpdateKey(ctx context.Context, vaultBaseURL string, key
 	result, err = client.UpdateKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6865,6 +6805,7 @@ func (client BaseClient) UpdateKeySender(req *http.Request) (*http.Response, err
 func (client BaseClient) UpdateKeyResponder(resp *http.Response) (result KeyBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6914,7 +6855,6 @@ func (client BaseClient) UpdateSasDefinition(ctx context.Context, vaultBaseURL s
 	result, err = client.UpdateSasDefinitionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateSasDefinition", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -6957,6 +6897,7 @@ func (client BaseClient) UpdateSasDefinitionSender(req *http.Request) (*http.Res
 func (client BaseClient) UpdateSasDefinitionResponder(resp *http.Response) (result SasDefinitionBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -6999,7 +6940,6 @@ func (client BaseClient) UpdateSecret(ctx context.Context, vaultBaseURL string, 
 	result, err = client.UpdateSecretResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateSecret", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -7042,6 +6982,7 @@ func (client BaseClient) UpdateSecretSender(req *http.Request) (*http.Response, 
 func (client BaseClient) UpdateSecretResponder(resp *http.Response) (result SecretBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -7088,7 +7029,6 @@ func (client BaseClient) UpdateStorageAccount(ctx context.Context, vaultBaseURL 
 	result, err = client.UpdateStorageAccountResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateStorageAccount", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -7130,6 +7070,7 @@ func (client BaseClient) UpdateStorageAccountSender(req *http.Request) (*http.Re
 func (client BaseClient) UpdateStorageAccountResponder(resp *http.Response) (result StorageBundle, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -7180,7 +7121,6 @@ func (client BaseClient) Verify(ctx context.Context, vaultBaseURL string, keyNam
 	result, err = client.VerifyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "Verify", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -7223,6 +7163,7 @@ func (client BaseClient) VerifySender(req *http.Request) (*http.Response, error)
 func (client BaseClient) VerifyResponder(resp *http.Response) (result KeyVerifyResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -7273,7 +7214,6 @@ func (client BaseClient) WrapKey(ctx context.Context, vaultBaseURL string, keyNa
 	result, err = client.WrapKeyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "WrapKey", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -7316,6 +7256,7 @@ func (client BaseClient) WrapKeySender(req *http.Request) (*http.Response, error
 func (client BaseClient) WrapKeyResponder(resp *http.Response) (result KeyOperationResult, err error) {
 	err = autorest.Respond(
 		resp,
+		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

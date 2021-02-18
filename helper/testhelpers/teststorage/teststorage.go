@@ -17,7 +17,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 )
 
-func MakeInmemBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +33,7 @@ func MakeInmemBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendB
 	}
 }
 
-func MakeInmemNonTransactionalBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeInmemNonTransactionalBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func MakeInmemNonTransactionalBackend(t testing.TB, logger hclog.Logger) *vault.
 	}
 }
 
-func MakeFileBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	path, err := ioutil.TempDir("", "vault-integ-file-")
 	if err != nil {
 		t.Fatal(err)
@@ -79,11 +79,11 @@ func MakeFileBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBu
 	}
 }
 
-func MakeRaftBackend(t testing.TB, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	return MakeRaftBackendWithConf(t, coreIdx, logger, nil)
 }
 
-func MakeRaftBackendWithConf(t testing.TB, coreIdx int, logger hclog.Logger, extraConf map[string]string) *vault.PhysicalBackendBundle {
+func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]string) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
@@ -120,8 +120,8 @@ func MakeRaftBackendWithConf(t testing.TB, coreIdx int, logger hclog.Logger, ext
 // RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
 // and the physical.Backend provided in PhysicalBackendBundler as the storage
 // backend.
-func RaftHAFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return func(t testing.TB, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 		// Call the factory func to create the storage backend
 		physFactory := SharedPhysicalFactory(f)
 		bundle := physFactory(t, coreIdx, logger)
@@ -164,10 +164,10 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, log
 	}
 }
 
-type PhysicalBackendBundler func(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle
+type PhysicalBackendBundler func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle
 
-func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return func(t testing.TB, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 		if coreIdx == 0 {
 			return f(t, logger)
 		}
@@ -191,7 +191,7 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	conf.DisablePerformanceStandby = true
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = MakeRaftBackend
-	opts.SetupFunc = func(t testing.TB, c *vault.TestCluster) {
+	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
 			testhelpers.RaftClusterJoinNodes(t, c)
 			time.Sleep(15 * time.Second)

@@ -1,8 +1,6 @@
 package topology
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // ConnectionError represents a connection error.
 type ConnectionError struct {
@@ -26,23 +24,4 @@ func (e ConnectionError) Error() string {
 // Unwrap returns the underlying error.
 func (e ConnectionError) Unwrap() error {
 	return e.Wrapped
-}
-
-// WaitQueueTimeoutError represents a timeout when requesting a connection from the pool
-type WaitQueueTimeoutError struct {
-	Wrapped error
-}
-
-// Error implements the error interface.
-func (w WaitQueueTimeoutError) Error() string {
-	errorMsg := "timed out while checking out a connection from connection pool"
-	if w.Wrapped != nil {
-		return fmt.Sprintf("%s: %s", errorMsg, w.Wrapped.Error())
-	}
-	return errorMsg
-}
-
-// Unwrap returns the underlying error.
-func (w WaitQueueTimeoutError) Unwrap() error {
-	return w.Wrapped
 }

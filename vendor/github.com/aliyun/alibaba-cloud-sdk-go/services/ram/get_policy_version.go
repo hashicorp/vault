@@ -76,16 +76,16 @@ func (client *Client) GetPolicyVersionWithCallback(request *GetPolicyVersionRequ
 // GetPolicyVersionRequest is the request struct for api GetPolicyVersion
 type GetPolicyVersionRequest struct {
 	*requests.RpcRequest
-	PolicyType string `position:"Query" name:"PolicyType"`
 	VersionId  string `position:"Query" name:"VersionId"`
+	PolicyType string `position:"Query" name:"PolicyType"`
 	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // GetPolicyVersionResponse is the response struct for api GetPolicyVersion
 type GetPolicyVersionResponse struct {
 	*responses.BaseResponse
-	RequestId     string                          `json:"RequestId" xml:"RequestId"`
-	PolicyVersion PolicyVersionInGetPolicyVersion `json:"PolicyVersion" xml:"PolicyVersion"`
+	RequestId     string        `json:"RequestId" xml:"RequestId"`
+	PolicyVersion PolicyVersion `json:"PolicyVersion" xml:"PolicyVersion"`
 }
 
 // CreateGetPolicyVersionRequest creates a request to invoke GetPolicyVersion API
@@ -93,7 +93,7 @@ func CreateGetPolicyVersionRequest() (request *GetPolicyVersionRequest) {
 	request = &GetPolicyVersionRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetPolicyVersion", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetPolicyVersion", "", "")
 	return
 }
 

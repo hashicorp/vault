@@ -34,8 +34,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var newUptimeCheckClientHook clientHook
-
 // UptimeCheckCallOptions contains the retry settings for each method of UptimeCheckClient.
 type UptimeCheckCallOptions struct {
 	ListUptimeCheckConfigs  []gax.CallOption
@@ -139,17 +137,7 @@ type UptimeCheckClient struct {
 // clicking on “Monitoring” on the left-hand side to navigate to Stackdriver,
 // and then clicking on “Uptime”.
 func NewUptimeCheckClient(ctx context.Context, opts ...option.ClientOption) (*UptimeCheckClient, error) {
-	clientOpts := defaultUptimeCheckClientOptions()
-
-	if newUptimeCheckClientHook != nil {
-		hookOpts, err := newUptimeCheckClientHook(ctx, clientHookParams{})
-		if err != nil {
-			return nil, err
-		}
-		clientOpts = append(clientOpts, hookOpts...)
-	}
-
-	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
+	connPool, err := gtransport.DialPool(ctx, append(defaultUptimeCheckClientOptions(), opts...)...)
 	if err != nil {
 		return nil, err
 	}
