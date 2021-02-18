@@ -66,6 +66,11 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
+			Persist: &Persist{
+				Path:              "/tmp/bolt-file.db",
+				RemoveAfterImport: true,
+				ExitOnErr:         true,
+			},
 		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
@@ -435,6 +440,49 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			UseAutoAuthTokenRaw: "false",
 			ForceAutoAuthToken:  false,
 		},
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-cache-persist-false.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		Cache: &Cache{
+			Persist: &Persist{
+				Path:              "/tmp/bolt-file.db",
+				RemoveAfterImport: false,
+				ExitOnErr:         false,
+			},
+		},
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+		},
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Blank export should be the same as export = false
+	config, err = LoadConfig("./test-fixtures/config-cache-persist-blank.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
 
 	config.Listeners[0].RawConfig = nil

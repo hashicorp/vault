@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -30,6 +31,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agent/cache/cachepersist"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -443,6 +446,8 @@ func (c *AgentCommand) Run(args []string) int {
 	default:
 	}
 
+	var leaseCache *cache.LeaseCache
+	var previousToken string
 	// Parse agent listener configurations
 	if config.Cache != nil && len(config.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
@@ -459,7 +464,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
-		leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
 			Client:      client,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
@@ -468,6 +473,72 @@ func (c *AgentCommand) Run(args []string) int {
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
 			return 1
+		}
+
+		// Configure persistent storage and add to LeaseCache
+		if config.Cache.Persist != nil {
+			if config.Cache.Persist.Path == "" {
+				c.UI.Error("must specify persistent cache path")
+				return 1
+			}
+			ps, err := cachepersist.NewBoltStorage(&cachepersist.BoltStorageConfig{
+				Path:       config.Cache.Persist.Path,
+				RootBucket: "<insert key hash here>",
+				Logger:     cacheLogger.Named("cachepersist"),
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
+				return 1
+			}
+			cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
+
+			// Restore anything in the persistent cache to the memory cache
+			if err := leaseCache.Restore(ps); err != nil {
+				c.UI.Error(fmt.Sprintf("Error restoring in-memory cache from persisted file: %v", err))
+				if config.Cache.Persist.ExitOnErr {
+					return 1
+				}
+			}
+			cacheLogger.Info("loaded memcache from persistent storage")
+
+			// Check for previous auto-auth token
+			oldTokenBytes, err := ps.GetAutoAuthToken()
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error in fetching previous auto-auth token: %s", err))
+				if config.Cache.Persist.ExitOnErr {
+					return 1
+				}
+			}
+			if len(oldTokenBytes) > 0 {
+				oldToken, err := cachememdb.Deserialize(oldTokenBytes)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error in deserializing previous auto-auth token cache entry: %s", err))
+					if config.Cache.Persist.ExitOnErr {
+						return 1
+					}
+				}
+				previousToken = oldToken.Token
+			}
+
+			// Remove the cache file if specified
+			if config.Cache.Persist.RemoveAfterImport {
+				if err := ps.Close(); err != nil {
+					c.UI.Error(fmt.Sprintf("failed to close persistent cache file: %s", err))
+					if config.Cache.Persist.ExitOnErr {
+						return 1
+					}
+				}
+				cacheFile := filepath.Join(config.Cache.Persist.Path, cachepersist.CacheFileName)
+				if err := os.Remove(cacheFile); err != nil {
+					c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", cacheFile, err))
+					if config.Cache.Persist.ExitOnErr {
+						return 1
+					}
+				}
+			} else {
+				defer ps.Close()
+				leaseCache.SetPersistentStorage(ps)
+			}
 		}
 
 		var inmemSink sink.Sink
@@ -559,6 +630,11 @@ func (c *AgentCommand) Run(args []string) int {
 			select {
 			case <-c.ShutdownCh:
 				c.UI.Output("==> Vault agent shutdown triggered")
+				// Let the lease cache know this is a shutdown; no need to evict
+				// everything
+				if leaseCache != nil {
+					leaseCache.SetShuttingDown(true)
+				}
 				return nil
 			case <-ctx.Done():
 				return nil
@@ -577,6 +653,7 @@ func (c *AgentCommand) Run(args []string) int {
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
+			Token:                        previousToken,
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
@@ -598,6 +675,11 @@ func (c *AgentCommand) Run(args []string) int {
 		g.Add(func() error {
 			return ah.Run(ctx, method)
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 		})
 
@@ -624,12 +706,22 @@ func (c *AgentCommand) Run(args []string) int {
 
 			return err
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 		})
 
 		g.Add(func() error {
 			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 			ts.Stop()
 		})
