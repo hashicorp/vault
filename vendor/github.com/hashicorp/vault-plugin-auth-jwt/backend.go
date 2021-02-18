@@ -3,11 +3,11 @@ package jwtauth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
+	"time"
 
-	"github.com/hashicorp/cap/jwt"
-	"github.com/hashicorp/cap/oidc"
+	"github.com/coreos/go-oidc"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
@@ -32,9 +32,9 @@ type jwtAuthBackend struct {
 
 	l            sync.RWMutex
 	provider     *oidc.Provider
-	validator    *jwt.Validator
+	keySet       oidc.KeySet
 	cachedConfig *jwtConfig
-	oidcRequests *cache.Cache
+	oidcStates   *cache.Cache
 
 	providerCtx       context.Context
 	providerCtxCancel context.CancelFunc
@@ -43,7 +43,7 @@ type jwtAuthBackend struct {
 func backend() *jwtAuthBackend {
 	b := new(jwtAuthBackend)
 	b.providerCtx, b.providerCtxCancel = context.WithCancel(context.Background())
-	b.oidcRequests = cache.New(oidcRequestTimeout, oidcRequestCleanupInterval)
+	b.oidcStates = cache.New(oidcStateTimeout, 1*time.Minute)
 
 	b.Backend = &framework.Backend{
 		AuthRenew:   b.pathLoginRenew,
@@ -86,9 +86,6 @@ func (b *jwtAuthBackend) cleanup(_ context.Context) {
 	if b.providerCtxCancel != nil {
 		b.providerCtxCancel()
 	}
-	if b.provider != nil {
-		b.provider.Done()
-	}
 	b.l.Unlock()
 }
 
@@ -101,18 +98,23 @@ func (b *jwtAuthBackend) invalidate(ctx context.Context, key string) {
 
 func (b *jwtAuthBackend) reset() {
 	b.l.Lock()
-	if b.provider != nil {
-		b.provider.Done()
-	}
 	b.provider = nil
 	b.cachedConfig = nil
-	b.validator = nil
 	b.l.Unlock()
 }
 
 func (b *jwtAuthBackend) getProvider(config *jwtConfig) (*oidc.Provider, error) {
+	b.l.RLock()
+	unlockFunc := b.l.RUnlock
+	defer func() { unlockFunc() }()
+
+	if b.provider != nil {
+		return b.provider, nil
+	}
+
+	b.l.RUnlock()
 	b.l.Lock()
-	defer b.l.Unlock()
+	unlockFunc = b.l.Unlock
 
 	if b.provider != nil {
 		return b.provider, nil
@@ -127,42 +129,27 @@ func (b *jwtAuthBackend) getProvider(config *jwtConfig) (*oidc.Provider, error) 
 	return provider, nil
 }
 
-// jwtValidator returns a new JWT validator based on the provided config.
-func (b *jwtAuthBackend) jwtValidator(config *jwtConfig) (*jwt.Validator, error) {
+// getKeySet returns a new JWKS KeySet based on the provided config.
+func (b *jwtAuthBackend) getKeySet(config *jwtConfig) (oidc.KeySet, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if b.validator != nil {
-		return b.validator, nil
+	if b.keySet != nil {
+		return b.keySet, nil
 	}
 
-	var err error
-	var keySet jwt.KeySet
-
-	// Configure the key set for the validator
-	switch config.authType() {
-	case JWKS:
-		keySet, err = jwt.NewJSONWebKeySet(b.providerCtx, config.JWKSURL, config.JWKSCAPEM)
-	case StaticKeys:
-		keySet, err = jwt.NewStaticKeySet(config.ParsedJWTPubKeys)
-	case OIDCDiscovery:
-		keySet, err = jwt.NewOIDCDiscoveryKeySet(b.providerCtx, config.OIDCDiscoveryURL, config.OIDCDiscoveryCAPEM)
-	default:
-		return nil, errors.New("unsupported config type")
+	if config.JWKSURL == "" {
+		return nil, errors.New("keyset error: jwks_url not configured")
 	}
 
+	ctx, err := b.createCAContext(b.providerCtx, config.JWKSCAPEM)
 	if err != nil {
-		return nil, fmt.Errorf("keyset configuration error: %w", err)
+		return nil, errwrap.Wrapf("error parsing jwks_ca_pem: {{err}}", err)
 	}
 
-	validator, err := jwt.NewValidator(keySet)
-	if err != nil {
-		return nil, fmt.Errorf("JWT validator configuration error: %w", err)
-	}
+	b.keySet = oidc.NewRemoteKeySet(ctx, config.JWKSURL)
 
-	b.validator = validator
-
-	return b.validator, nil
+	return b.keySet, nil
 }
 
 const (

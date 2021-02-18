@@ -66,7 +66,7 @@ var Analyzers = lintutil.InitializeAnalyzers(Docs, map[string]*analysis.Analyzer
 	"SA1018": makeCallCheckerAnalyzer(checkStringsReplaceZeroRules),
 	"SA1019": {
 		Run:      CheckDeprecated,
-		Requires: []*analysis.Analyzer{inspect.Analyzer, facts.Deprecated},
+		Requires: []*analysis.Analyzer{inspect.Analyzer, facts.Deprecated, facts.Generated},
 	},
 	"SA1020": makeCallCheckerAnalyzer(checkListenAddressRules),
 	"SA1021": makeCallCheckerAnalyzer(checkBytesEqualIPRules),

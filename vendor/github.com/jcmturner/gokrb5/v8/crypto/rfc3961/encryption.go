@@ -112,12 +112,6 @@ func DES3DecryptMessage(key, ciphertext []byte, usage uint32, e etype.EType) ([]
 
 // VerifyIntegrity verifies the integrity of cipertext bytes ct.
 func VerifyIntegrity(key, ct, pt []byte, usage uint32, etype etype.EType) bool {
-	//The ciphertext output is the concatenation of the output of the basic
-	//encryption function E and a (possibly truncated) HMAC using the
-	//specified hash function H, both applied to the plaintext with a
-	//random confounder prefix and sufficient padding to bring it to a
-	//multiple of the message block size.  When the HMAC is computed, the
-	//key is used in the protocol key form.
 	h := make([]byte, etype.GetHMACBitLength()/8)
 	copy(h, ct[len(ct)-etype.GetHMACBitLength()/8:])
 	expectedMAC, _ := common.GetIntegrityHash(pt, key, usage, etype)

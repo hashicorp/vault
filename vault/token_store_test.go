@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+
 	"time"
 
 	"github.com/go-test/deep"

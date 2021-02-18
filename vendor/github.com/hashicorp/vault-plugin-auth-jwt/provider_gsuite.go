@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 
 	"github.com/mitchellh/mapstructure"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin "google.golang.org/api/admin/directory/v1"
@@ -105,7 +104,7 @@ func (g *GSuiteProvider) SensitiveKeys() []string {
 }
 
 // FetchGroups fetches and returns groups from G Suite.
-func (g *GSuiteProvider) FetchGroups(ctx context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole, _ oauth2.TokenSource) (interface{}, error) {
+func (g *GSuiteProvider) FetchGroups(ctx context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
 	if !g.config.FetchGroups {
 		return nil, nil
 	}

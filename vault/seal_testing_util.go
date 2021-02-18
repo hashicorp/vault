@@ -9,7 +9,7 @@ import (
 	testing "github.com/mitchellh/go-testing-interface"
 )
 
-func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
+func NewTestSeal(t testing.TB, opts *seal.TestSealOpts) Seal {
 	t.Helper()
 	if opts == nil {
 		opts = &seal.TestSealOpts{}

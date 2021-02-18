@@ -2,6 +2,7 @@ package cfclient
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 
@@ -54,6 +55,32 @@ func (c *Client) ListStacksByQuery(query url.Values) ([]Stack, error) {
 
 func (c *Client) ListStacks() ([]Stack, error) {
 	return c.ListStacksByQuery(nil)
+}
+
+func (c *Client) GetStackByGuid(stackGUID string) (Stack, error) {
+	var stacksRes StacksResource
+	requestUrl := fmt.Sprintf("/v2/stacks/%s", stackGUID)
+	r := c.NewRequest("GET", requestUrl)
+	resp, err := c.DoRequest(r)
+	if err != nil {
+		return Stack{}, errors.Wrap(err, "Error requesting stack info")
+	}
+	resBody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		return Stack{}, errors.Wrap(err, "Error reading stack body")
+	}
+	err = json.Unmarshal(resBody, &stacksRes)
+	if err != nil {
+		return Stack{}, errors.Wrap(err, "Error unmarshalling stack")
+	}
+
+	stacksRes.Entity.Guid = stacksRes.Meta.Guid
+	stacksRes.Entity.CreatedAt = stacksRes.Meta.CreatedAt
+	stacksRes.Entity.UpdatedAt = stacksRes.Meta.UpdatedAt
+	stacksRes.Entity.c = c
+
+	return stacksRes.Entity, nil
 }
 
 func (c *Client) getStacksResponse(requestUrl string) (StacksResponse, error) {

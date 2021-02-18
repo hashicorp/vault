@@ -123,7 +123,7 @@ func (c *Client) ListAppEventsByQuery(eventType string, queries []AppEventQuery)
 
 	var query = "/v2/events?q=type:" + eventType
 	//adding the additional queries
-	if queries != nil && len(queries) > 0 {
+	if len(queries) > 0 {
 		for _, eventQuery := range queries {
 			if eventQuery.Filter != FilterTimestamp && eventQuery.Filter != FilterActee {
 				return nil, errors.New("Unsupported query filter type " + eventQuery.Filter)

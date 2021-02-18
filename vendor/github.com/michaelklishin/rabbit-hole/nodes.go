@@ -1,37 +1,25 @@
 package rabbithole
 
-import (
-	"net/url"
-)
-
-// OsPid is an operating system process ID.
 type OsPid string
 
-// NameDescriptionEnabled represents a named entity with a description.
 type NameDescriptionEnabled struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Enabled     bool   `json:"enabled"`
 }
 
-// AuthMechanism is a RabbbitMQ authentication and/or authorization mechanism
-// available on the node.
 type AuthMechanism NameDescriptionEnabled
 
-// ExchangeType is an exchange type available on the node.
 type ExchangeType NameDescriptionEnabled
 
-// NameDescriptionVersion represents a named, versioned entity.
 type NameDescriptionVersion struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Version     string `json:"version"`
 }
 
-// ErlangApp is an Erlang application running on a node.
 type ErlangApp NameDescriptionVersion
 
-// NodeInfo describes a RabbitMQ node and its basic metrics (such as resource usage).
 type NodeInfo struct {
 	Name      string `json:"name"`
 	NodeType  string `json:"type"`
@@ -68,7 +56,6 @@ type NodeInfo struct {
 // GET /api/nodes
 //
 
-// ListNodes returns a list of cluster nodes.
 func (c *Client) ListNodes() (rec []NodeInfo, err error) {
 	req, err := newGETRequest(c, "nodes")
 	if err != nil {
@@ -299,9 +286,8 @@ func (c *Client) ListNodes() (rec []NodeInfo, err error) {
 //   "running": true
 // }
 
-// GetNode return information about a node.
 func (c *Client) GetNode(name string) (rec *NodeInfo, err error) {
-	req, err := newGETRequest(c, "nodes/"+url.PathEscape(name))
+	req, err := newGETRequest(c, "nodes/"+PathEscape(name))
 	if err != nil {
 		return nil, err
 	}

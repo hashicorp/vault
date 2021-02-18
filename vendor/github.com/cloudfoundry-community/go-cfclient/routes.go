@@ -38,6 +38,7 @@ type Route struct {
 	Host                string `json:"host"`
 	Path                string `json:"path"`
 	DomainGuid          string `json:"domain_guid"`
+	DomainURL           string `json:"domain_url"`
 	SpaceGuid           string `json:"space_guid"`
 	ServiceInstanceGuid string `json:"service_instance_guid"`
 	Port                int    `json:"port"`
@@ -74,6 +75,28 @@ func (c *Client) BindRoute(routeGUID, appGUID string) error {
 	return nil
 }
 
+func (c *Client) GetRouteByGuid(guid string) (Route, error) {
+	var route RoutesResource
+
+	r := c.NewRequest("GET", fmt.Sprintf("/v2/routes/%s", guid))
+	resp, err := c.DoRequest(r)
+	if err != nil {
+		return route.Entity, errors.Wrap(err, "Error requesting route")
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&route)
+	if err != nil {
+		return route.Entity, errors.Wrap(err, "Error unmarshalling route response body")
+	}
+
+	route.Entity.Guid = route.Meta.Guid
+	route.Entity.CreatedAt = route.Meta.CreatedAt
+	route.Entity.UpdatedAt = route.Meta.UpdatedAt
+	route.Entity.c = c
+	return route.Entity, nil
+}
+
 func (c *Client) ListRoutesByQuery(query url.Values) ([]Route, error) {
 	return c.fetchRoutes("/v2/routes?" + query.Encode())
 }
@@ -102,6 +125,22 @@ func (c *Client) fetchRoutes(requestUrl string) ([]Route, error) {
 
 func (c *Client) ListRoutes() ([]Route, error) {
 	return c.ListRoutesByQuery(nil)
+}
+
+func (r *Route) Domain() (*Domain, error) {
+	req := r.c.NewRequest("GET", r.DomainURL)
+	resp, err := r.c.DoRequest(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "requesting domain for route "+r.DomainURL)
+	}
+
+	defer resp.Body.Close()
+	var domain DomainResource
+	if err = json.NewDecoder(resp.Body).Decode(&domain); err != nil {
+		return nil, errors.Wrap(err, "unmarshalling domain")
+	}
+
+	return r.c.mergeDomainResource(domain), nil
 }
 
 func (c *Client) getRoutesResponse(requestUrl string) (RoutesResponse, error) {

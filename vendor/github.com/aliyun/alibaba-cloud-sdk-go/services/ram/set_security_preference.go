@@ -76,20 +76,20 @@ func (client *Client) SetSecurityPreferenceWithCallback(request *SetSecurityPref
 // SetSecurityPreferenceRequest is the request struct for api SetSecurityPreference
 type SetSecurityPreferenceRequest struct {
 	*requests.RpcRequest
-	AllowUserToManageAccessKeys requests.Boolean `position:"Query" name:"AllowUserToManageAccessKeys"`
-	AllowUserToManageMFADevices requests.Boolean `position:"Query" name:"AllowUserToManageMFADevices"`
-	AllowUserToManagePublicKeys requests.Boolean `position:"Query" name:"AllowUserToManagePublicKeys"`
 	EnableSaveMFATicket         requests.Boolean `position:"Query" name:"EnableSaveMFATicket"`
 	LoginNetworkMasks           string           `position:"Query" name:"LoginNetworkMasks"`
 	AllowUserToChangePassword   requests.Boolean `position:"Query" name:"AllowUserToChangePassword"`
+	AllowUserToManagePublicKeys requests.Boolean `position:"Query" name:"AllowUserToManagePublicKeys"`
 	LoginSessionDuration        requests.Integer `position:"Query" name:"LoginSessionDuration"`
+	AllowUserToManageAccessKeys requests.Boolean `position:"Query" name:"AllowUserToManageAccessKeys"`
+	AllowUserToManageMFADevices requests.Boolean `position:"Query" name:"AllowUserToManageMFADevices"`
 }
 
 // SetSecurityPreferenceResponse is the response struct for api SetSecurityPreference
 type SetSecurityPreferenceResponse struct {
 	*responses.BaseResponse
-	RequestId          string             `json:"RequestId" xml:"RequestId"`
-	SecurityPreference SecurityPreference `json:"SecurityPreference" xml:"SecurityPreference"`
+	RequestId          string                                    `json:"RequestId" xml:"RequestId"`
+	SecurityPreference SecurityPreferenceInSetSecurityPreference `json:"SecurityPreference" xml:"SecurityPreference"`
 }
 
 // CreateSetSecurityPreferenceRequest creates a request to invoke SetSecurityPreference API
@@ -97,7 +97,7 @@ func CreateSetSecurityPreferenceRequest() (request *SetSecurityPreferenceRequest
 	request = &SetSecurityPreferenceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "SetSecurityPreference", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "SetSecurityPreference", "Ram", "openAPI")
 	return
 }
 

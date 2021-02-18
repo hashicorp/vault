@@ -24,18 +24,19 @@ type EventResource struct {
 
 // Event is a type that contains event data.
 type Event struct {
-	GUID             string `json:"guid"`
-	Type             string `json:"type"`
-	CreatedAt        string `json:"created_at"`
-	Actor            string `json:"actor"`
-	ActorType        string `json:"actor_type"`
-	ActorName        string `json:"actor_name"`
-	ActorUsername    string `json:"actor_username"`
-	Actee            string `json:"actee"`
-	ActeeType        string `json:"actee_type"`
-	ActeeName        string `json:"actee_name"`
-	OrganizationGUID string `json:"organization_guid"`
-	SpaceGUID        string `json:"space_guid"`
+	GUID             string                 `json:"guid"`
+	Type             string                 `json:"type"`
+	CreatedAt        string                 `json:"created_at"`
+	Actor            string                 `json:"actor"`
+	ActorType        string                 `json:"actor_type"`
+	ActorName        string                 `json:"actor_name"`
+	ActorUsername    string                 `json:"actor_username"`
+	Actee            string                 `json:"actee"`
+	ActeeType        string                 `json:"actee_type"`
+	ActeeName        string                 `json:"actee_name"`
+	OrganizationGUID string                 `json:"organization_guid"`
+	SpaceGUID        string                 `json:"space_guid"`
+	Metadata         map[string]interface{} `json:"metadata"`
 	c                *Client
 }
 

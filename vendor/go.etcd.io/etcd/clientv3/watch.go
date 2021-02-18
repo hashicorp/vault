@@ -23,7 +23,7 @@ import (
 
 	v3rpc "go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
 	pb "go.etcd.io/etcd/etcdserver/etcdserverpb"
-	"go.etcd.io/etcd/mvcc/mvccpb"
+	mvccpb "go.etcd.io/etcd/mvcc/mvccpb"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -48,8 +48,6 @@ type Watcher interface {
 	// through the returned channel. If revisions waiting to be sent over the
 	// watch are compacted, then the watch will be canceled by the server, the
 	// client will post a compacted error watch response, and the channel will close.
-	// If the requested revision is 0 or unspecified, the returned channel will
-	// return watch events that happen after the server receives the watch request.
 	// If the context "ctx" is canceled or timed out, returned "WatchChan" is closed,
 	// and "WatchResponse" from this closed channel has zero events and nil "Err()".
 	// The context "ctx" MUST be canceled, as soon as watcher is no longer being used,
@@ -180,6 +178,8 @@ type watchGrpcStream struct {
 	resumec chan struct{}
 	// closeErr is the error that closed the watch stream
 	closeErr error
+
+	lg *zap.Logger
 }
 
 // watchStreamRequest is a union of the supported watch request operation types
@@ -278,6 +278,7 @@ func (w *watcher) newWatcherGrpcStream(inctx context.Context) *watchGrpcStream {
 		errc:       make(chan error, 1),
 		closingc:   make(chan *watcherStream),
 		resumec:    make(chan struct{}),
+		lg:         w.lg,
 	}
 	go wgs.run()
 	return wgs
@@ -407,7 +408,10 @@ func (w *watcher) RequestProgress(ctx context.Context) (err error) {
 	case reqc <- pr:
 		return nil
 	case <-ctx.Done():
-		return ctx.Err()
+		if err == nil {
+			return ctx.Err()
+		}
+		return err
 	case <-donec:
 		if wgs.closeErr != nil {
 			return wgs.closeErr
@@ -547,12 +551,16 @@ func (w *watchGrpcStream) run() {
 				if len(w.resuming) == 1 {
 					// head of resume queue, can register a new watcher
 					if err := wc.Send(ws.initReq.toPB()); err != nil {
-						lg.Warningf("error when sending request: %v", err)
+						if w.lg != nil {
+							w.lg.Debug("error when sending request", zap.Error(err))
+						}
 					}
 				}
 			case *progressRequest:
 				if err := wc.Send(wreq.toPB()); err != nil {
-					lg.Warningf("error when sending request: %v", err)
+					if w.lg != nil {
+						w.lg.Debug("error when sending request", zap.Error(err))
+					}
 				}
 			}
 
@@ -578,7 +586,9 @@ func (w *watchGrpcStream) run() {
 
 				if ws := w.nextResume(); ws != nil {
 					if err := wc.Send(ws.initReq.toPB()); err != nil {
-						lg.Warningf("error when sending request: %v", err)
+						if w.lg != nil {
+							w.lg.Debug("error when sending request", zap.Error(err))
+						}
 					}
 				}
 
@@ -624,8 +634,13 @@ func (w *watchGrpcStream) run() {
 					},
 				}
 				req := &pb.WatchRequest{RequestUnion: cr}
+				if w.lg != nil {
+					w.lg.Debug("sending watch cancel request for failed dispatch", zap.Int64("watch-id", pbresp.WatchId))
+				}
 				if err := wc.Send(req); err != nil {
-					lg.Warningf("error when sending request: %v", err)
+					if w.lg != nil {
+						w.lg.Debug("failed to send watch cancel request", zap.Int64("watch-id", pbresp.WatchId), zap.Error(err))
+					}
 				}
 			}
 
@@ -640,7 +655,9 @@ func (w *watchGrpcStream) run() {
 			}
 			if ws := w.nextResume(); ws != nil {
 				if err := wc.Send(ws.initReq.toPB()); err != nil {
-					lg.Warningf("error when sending request: %v", err)
+					if w.lg != nil {
+						w.lg.Debug("error when sending request", zap.Error(err))
+					}
 				}
 			}
 			cancelSet = make(map[int64]struct{})
@@ -649,6 +666,25 @@ func (w *watchGrpcStream) run() {
 			return
 
 		case ws := <-w.closingc:
+			if ws.id != -1 {
+				// client is closing an established watch; close it on the server proactively instead of waiting
+				// to close when the next message arrives
+				cancelSet[ws.id] = struct{}{}
+				cr := &pb.WatchRequest_CancelRequest{
+					CancelRequest: &pb.WatchCancelRequest{
+						WatchId: ws.id,
+					},
+				}
+				req := &pb.WatchRequest{RequestUnion: cr}
+				if w.lg != nil {
+					w.lg.Debug("sending watch cancel request for closed watcher", zap.Int64("watch-id", ws.id))
+				}
+				if err := wc.Send(req); err != nil {
+					if w.lg != nil {
+						w.lg.Debug("failed to send watch cancel request", zap.Int64("watch-id", ws.id), zap.Error(err))
+					}
+				}
+			}
 			w.closeSubstream(ws)
 			delete(closing, ws)
 			// no more watchers on this stream, shutdown

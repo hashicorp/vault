@@ -65,7 +65,7 @@ func (client ImagesClient) CreateOrUpdate(ctx context.Context, resourceGroupName
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -103,7 +103,33 @@ func (client ImagesClient) CreateOrUpdateSender(req *http.Request) (future Image
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client ImagesClient) (i Image, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.ImagesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("compute.ImagesCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		i.Response.Response, err = future.GetResult(sender)
+		if i.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.ImagesCreateOrUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && i.Response.Response.StatusCode != http.StatusNoContent {
+			i, err = client.CreateOrUpdateResponder(i.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "compute.ImagesCreateOrUpdateFuture", "Result", i.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -142,7 +168,7 @@ func (client ImagesClient) Delete(ctx context.Context, resourceGroupName string,
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -178,7 +204,23 @@ func (client ImagesClient) DeleteSender(req *http.Request) (future ImagesDeleteF
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client ImagesClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.ImagesDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("compute.ImagesDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -225,6 +267,7 @@ func (client ImagesClient) Get(ctx context.Context, resourceGroupName string, im
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -302,6 +345,11 @@ func (client ImagesClient) List(ctx context.Context) (result ImageListResultPage
 	result.ilr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.ilr.hasNextLink() && result.ilr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -412,6 +460,11 @@ func (client ImagesClient) ListByResourceGroup(ctx context.Context, resourceGrou
 	result.ilr, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "ListByResourceGroup", resp, "Failure responding to request")
+		return
+	}
+	if result.ilr.hasNextLink() && result.ilr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -516,7 +569,7 @@ func (client ImagesClient) Update(ctx context.Context, resourceGroupName string,
 
 	result, err = client.UpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Update", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Update", nil, "Failure sending request")
 		return
 	}
 
@@ -554,7 +607,33 @@ func (client ImagesClient) UpdateSender(req *http.Request) (future ImagesUpdateF
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client ImagesClient) (i Image, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.ImagesUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("compute.ImagesUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		i.Response.Response, err = future.GetResult(sender)
+		if i.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.ImagesUpdateFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && i.Response.Response.StatusCode != http.StatusNoContent {
+			i, err = client.UpdateResponder(i.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "compute.ImagesUpdateFuture", "Result", i.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 

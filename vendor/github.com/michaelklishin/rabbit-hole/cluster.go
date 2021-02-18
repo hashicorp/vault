@@ -5,12 +5,10 @@ import (
 	"net/http"
 )
 
-// ClusterName represents a RabbitMQ cluster name (identifier).
 type ClusterName struct {
 	Name string `json:"name"`
 }
 
-// GetClusterName returns current cluster name.
 func (c *Client) GetClusterName() (rec *ClusterName, err error) {
 	req, err := newGETRequest(c, "cluster-name/")
 	if err != nil {
@@ -24,7 +22,6 @@ func (c *Client) GetClusterName() (rec *ClusterName, err error) {
 	return rec, nil
 }
 
-// SetClusterName sets cluster name.
 func (c *Client) SetClusterName(cn ClusterName) (res *http.Response, err error) {
 	body, err := json.Marshal(cn)
 	if err != nil {
@@ -35,9 +32,7 @@ func (c *Client) SetClusterName(cn ClusterName) (res *http.Response, err error) 
 		return nil, err
 	}
 
-	if res, err = executeRequest(c, req); err != nil {
-		return nil, err
-	}
+	res, err = executeRequest(c, req)
 
 	return res, nil
 }

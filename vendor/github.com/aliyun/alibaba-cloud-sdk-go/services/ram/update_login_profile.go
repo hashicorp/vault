@@ -76,8 +76,8 @@ func (client *Client) UpdateLoginProfileWithCallback(request *UpdateLoginProfile
 // UpdateLoginProfileRequest is the request struct for api UpdateLoginProfile
 type UpdateLoginProfileRequest struct {
 	*requests.RpcRequest
-	Password              string           `position:"Query" name:"Password"`
 	PasswordResetRequired requests.Boolean `position:"Query" name:"PasswordResetRequired"`
+	Password              string           `position:"Query" name:"Password"`
 	MFABindRequired       requests.Boolean `position:"Query" name:"MFABindRequired"`
 	UserName              string           `position:"Query" name:"UserName"`
 }
@@ -93,7 +93,7 @@ func CreateUpdateLoginProfileRequest() (request *UpdateLoginProfileRequest) {
 	request = &UpdateLoginProfileRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateLoginProfile", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateLoginProfile", "Ram", "openAPI")
 	return
 }
 

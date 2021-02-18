@@ -26,9 +26,7 @@ type CompileOpts struct {
 	OutputTpl   string
 	Ldflags     string
 	Gcflags     string
-	Asmflags    string
 	Tags        string
-	ModMode     string
 	Cgo         bool
 	Rebuild     bool
 	GoCmd       string
@@ -108,13 +106,9 @@ func GoCrossCompile(opts *CompileOpts) error {
 	if opts.Rebuild {
 		args = append(args, "-a")
 	}
-	if opts.ModMode != "" {
-		args = append(args, "-mod", opts.ModMode)
-	}
 	args = append(args,
 		"-gcflags", opts.Gcflags,
 		"-ldflags", opts.Ldflags,
-		"-asmflags", opts.Asmflags,
 		"-tags", opts.Tags,
 		"-o", outputPathReal,
 		opts.PackagePath)

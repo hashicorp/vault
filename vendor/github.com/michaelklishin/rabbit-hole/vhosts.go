@@ -3,7 +3,6 @@ package rabbithole
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 )
 
 //
@@ -49,7 +48,6 @@ import (
 //   }
 // ]
 
-// VhostInfo represents a virtual host, its properties and key metrics.
 type VhostInfo struct {
 	// Virtual host name
 	Name string `json:"name"`
@@ -79,7 +77,7 @@ type VhostInfo struct {
 	SendOctDetails RateDetails `json:"send_oct_details"`
 }
 
-// ListVhosts returns a list of virtual hosts.
+// Returns a list of virtual hosts.
 func (c *Client) ListVhosts() (rec []VhostInfo, err error) {
 	req, err := newGETRequest(c, "vhosts")
 	if err != nil {
@@ -97,9 +95,9 @@ func (c *Client) ListVhosts() (rec []VhostInfo, err error) {
 // GET /api/vhosts/{name}
 //
 
-// GetVhost returns information about a specific virtual host.
+// Returns information about a specific virtual host.
 func (c *Client) GetVhost(vhostname string) (rec *VhostInfo, err error) {
-	req, err := newGETRequest(c, "vhosts/"+url.PathEscape(vhostname))
+	req, err := newGETRequest(c, "vhosts/"+PathEscape(vhostname))
 	if err != nil {
 		return nil, err
 	}
@@ -115,25 +113,26 @@ func (c *Client) GetVhost(vhostname string) (rec *VhostInfo, err error) {
 // PUT /api/vhosts/{name}
 //
 
-// VhostSettings are properties used to create or modify virtual hosts.
+// Settings used to create or modify virtual hosts.
 type VhostSettings struct {
 	// True if tracing should be enabled.
 	Tracing bool `json:"tracing"`
 }
 
-// PutVhost creates or updates a virtual host.
+// Creates or updates a virtual host.
 func (c *Client) PutVhost(vhostname string, settings VhostSettings) (res *http.Response, err error) {
 	body, err := json.Marshal(settings)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "PUT", "vhosts/"+url.PathEscape(vhostname), body)
+	req, err := newRequestWithBody(c, "PUT", "vhosts/"+PathEscape(vhostname), body)
 	if err != nil {
 		return nil, err
 	}
 
-	if res, err = executeRequest(c, req); err != nil {
+	res, err = executeRequest(c, req)
+	if err != nil {
 		return nil, err
 	}
 
@@ -144,14 +143,15 @@ func (c *Client) PutVhost(vhostname string, settings VhostSettings) (res *http.R
 // DELETE /api/vhosts/{name}
 //
 
-// DeleteVhost deletes a virtual host.
+// Deletes a virtual host.
 func (c *Client) DeleteVhost(vhostname string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "vhosts/"+url.PathEscape(vhostname), nil)
+	req, err := newRequestWithBody(c, "DELETE", "vhosts/"+PathEscape(vhostname), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if res, err = executeRequest(c, req); err != nil {
+	res, err = executeRequest(c, req)
+	if err != nil {
 		return nil, err
 	}
 

@@ -21,7 +21,6 @@ import (
 )
 
 // ListAliasesByKeyId invokes the kms.ListAliasesByKeyId API synchronously
-// api document: https://help.aliyun.com/api/kms/listaliasesbykeyid.html
 func (client *Client) ListAliasesByKeyId(request *ListAliasesByKeyIdRequest) (response *ListAliasesByKeyIdResponse, err error) {
 	response = CreateListAliasesByKeyIdResponse()
 	err = client.DoAction(request, response)
@@ -29,8 +28,6 @@ func (client *Client) ListAliasesByKeyId(request *ListAliasesByKeyIdRequest) (re
 }
 
 // ListAliasesByKeyIdWithChan invokes the kms.ListAliasesByKeyId API asynchronously
-// api document: https://help.aliyun.com/api/kms/listaliasesbykeyid.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ListAliasesByKeyIdWithChan(request *ListAliasesByKeyIdRequest) (<-chan *ListAliasesByKeyIdResponse, <-chan error) {
 	responseChan := make(chan *ListAliasesByKeyIdResponse, 1)
 	errChan := make(chan error, 1)
@@ -53,8 +50,6 @@ func (client *Client) ListAliasesByKeyIdWithChan(request *ListAliasesByKeyIdRequ
 }
 
 // ListAliasesByKeyIdWithCallback invokes the kms.ListAliasesByKeyId API asynchronously
-// api document: https://help.aliyun.com/api/kms/listaliasesbykeyid.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) ListAliasesByKeyIdWithCallback(request *ListAliasesByKeyIdRequest, callback func(response *ListAliasesByKeyIdResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -97,6 +92,7 @@ func CreateListAliasesByKeyIdRequest() (request *ListAliasesByKeyIdRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "ListAliasesByKeyId", "kms", "openAPI")
+	request.Method = requests.POST
 	return
 }
 

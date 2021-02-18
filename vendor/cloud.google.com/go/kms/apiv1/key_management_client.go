@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,12 +27,15 @@ import (
 	gax "github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	"google.golang.org/api/option/internaloption"
 	gtransport "google.golang.org/api/transport/grpc"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
+
+var newKeyManagementClientHook clientHook
 
 // KeyManagementCallOptions contains the retry settings for each method of KeyManagementClient.
 type KeyManagementCallOptions struct {
@@ -63,9 +66,11 @@ type KeyManagementCallOptions struct {
 
 func defaultKeyManagementClientOptions() []option.ClientOption {
 	return []option.ClientOption{
-		option.WithEndpoint("cloudkms.googleapis.com:443"),
+		internaloption.WithDefaultEndpoint("cloudkms.googleapis.com:443"),
+		internaloption.WithDefaultMTLSEndpoint("cloudkms.mtls.googleapis.com:443"),
+		internaloption.WithDefaultAudience("https://cloudkms.googleapis.com/"),
+		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
 		option.WithGRPCDialOption(grpc.WithDisableServiceConfig()),
-		option.WithScopes(DefaultAuthScopes()...),
 		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32))),
 	}
@@ -358,6 +363,9 @@ type KeyManagementClient struct {
 	// Connection pool of gRPC connections to the service.
 	connPool gtransport.ConnPool
 
+	// flag to opt out of default deadlines via GOOGLE_API_GO_EXPERIMENTAL_DISABLE_DEFAULT_DEADLINE
+	disableDeadlines bool
+
 	// The gRPC API client.
 	keyManagementClient kmspb.KeyManagementServiceClient
 
@@ -386,13 +394,29 @@ type KeyManagementClient struct {
 // If you are using manual gRPC libraries, see
 // Using gRPC with Cloud KMS (at https://cloud.google.com/kms/docs/grpc).
 func NewKeyManagementClient(ctx context.Context, opts ...option.ClientOption) (*KeyManagementClient, error) {
-	connPool, err := gtransport.DialPool(ctx, append(defaultKeyManagementClientOptions(), opts...)...)
+	clientOpts := defaultKeyManagementClientOptions()
+
+	if newKeyManagementClientHook != nil {
+		hookOpts, err := newKeyManagementClientHook(ctx, clientHookParams{})
+		if err != nil {
+			return nil, err
+		}
+		clientOpts = append(clientOpts, hookOpts...)
+	}
+
+	disableDeadlines, err := checkDisableDeadlines()
+	if err != nil {
+		return nil, err
+	}
+
+	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
 	if err != nil {
 		return nil, err
 	}
 	c := &KeyManagementClient{
-		connPool:    connPool,
-		CallOptions: defaultKeyManagementCallOptions(),
+		connPool:         connPool,
+		disableDeadlines: disableDeadlines,
+		CallOptions:      defaultKeyManagementCallOptions(),
 
 		keyManagementClient: kmspb.NewKeyManagementServiceClient(connPool),
 	}
@@ -448,7 +472,7 @@ func (c *KeyManagementClient) ListKeyRings(ctx context.Context, req *kmspb.ListK
 		}
 
 		it.Response = resp
-		return resp.KeyRings, resp.NextPageToken, nil
+		return resp.GetKeyRings(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -459,8 +483,8 @@ func (c *KeyManagementClient) ListKeyRings(ctx context.Context, req *kmspb.ListK
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
@@ -489,7 +513,7 @@ func (c *KeyManagementClient) ListCryptoKeys(ctx context.Context, req *kmspb.Lis
 		}
 
 		it.Response = resp
-		return resp.CryptoKeys, resp.NextPageToken, nil
+		return resp.GetCryptoKeys(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -500,8 +524,8 @@ func (c *KeyManagementClient) ListCryptoKeys(ctx context.Context, req *kmspb.Lis
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
@@ -530,7 +554,7 @@ func (c *KeyManagementClient) ListCryptoKeyVersions(ctx context.Context, req *km
 		}
 
 		it.Response = resp
-		return resp.CryptoKeyVersions, resp.NextPageToken, nil
+		return resp.GetCryptoKeyVersions(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -541,8 +565,8 @@ func (c *KeyManagementClient) ListCryptoKeyVersions(ctx context.Context, req *km
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
@@ -571,7 +595,7 @@ func (c *KeyManagementClient) ListImportJobs(ctx context.Context, req *kmspb.Lis
 		}
 
 		it.Response = resp
-		return resp.ImportJobs, resp.NextPageToken, nil
+		return resp.GetImportJobs(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -582,13 +606,18 @@ func (c *KeyManagementClient) ListImportJobs(ctx context.Context, req *kmspb.Lis
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
 // GetKeyRing returns metadata for a given KeyRing.
 func (c *KeyManagementClient) GetKeyRing(ctx context.Context, req *kmspb.GetKeyRingRequest, opts ...gax.CallOption) (*kmspb.KeyRing, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.GetKeyRing[0:len(c.CallOptions.GetKeyRing):len(c.CallOptions.GetKeyRing)], opts...)
@@ -607,6 +636,11 @@ func (c *KeyManagementClient) GetKeyRing(ctx context.Context, req *kmspb.GetKeyR
 // GetCryptoKey returns metadata for a given CryptoKey, as well as its
 // primary CryptoKeyVersion.
 func (c *KeyManagementClient) GetCryptoKey(ctx context.Context, req *kmspb.GetCryptoKeyRequest, opts ...gax.CallOption) (*kmspb.CryptoKey, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.GetCryptoKey[0:len(c.CallOptions.GetCryptoKey):len(c.CallOptions.GetCryptoKey)], opts...)
@@ -624,6 +658,11 @@ func (c *KeyManagementClient) GetCryptoKey(ctx context.Context, req *kmspb.GetCr
 
 // GetCryptoKeyVersion returns metadata for a given CryptoKeyVersion.
 func (c *KeyManagementClient) GetCryptoKeyVersion(ctx context.Context, req *kmspb.GetCryptoKeyVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKeyVersion, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.GetCryptoKeyVersion[0:len(c.CallOptions.GetCryptoKeyVersion):len(c.CallOptions.GetCryptoKeyVersion)], opts...)
@@ -644,6 +683,11 @@ func (c *KeyManagementClient) GetCryptoKeyVersion(ctx context.Context, req *kmsp
 // ASYMMETRIC_SIGN or
 // ASYMMETRIC_DECRYPT.
 func (c *KeyManagementClient) GetPublicKey(ctx context.Context, req *kmspb.GetPublicKeyRequest, opts ...gax.CallOption) (*kmspb.PublicKey, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.GetPublicKey[0:len(c.CallOptions.GetPublicKey):len(c.CallOptions.GetPublicKey)], opts...)
@@ -661,6 +705,11 @@ func (c *KeyManagementClient) GetPublicKey(ctx context.Context, req *kmspb.GetPu
 
 // GetImportJob returns metadata for a given ImportJob.
 func (c *KeyManagementClient) GetImportJob(ctx context.Context, req *kmspb.GetImportJobRequest, opts ...gax.CallOption) (*kmspb.ImportJob, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.GetImportJob[0:len(c.CallOptions.GetImportJob):len(c.CallOptions.GetImportJob)], opts...)
@@ -678,6 +727,11 @@ func (c *KeyManagementClient) GetImportJob(ctx context.Context, req *kmspb.GetIm
 
 // CreateKeyRing create a new KeyRing in a given Project and Location.
 func (c *KeyManagementClient) CreateKeyRing(ctx context.Context, req *kmspb.CreateKeyRingRequest, opts ...gax.CallOption) (*kmspb.KeyRing, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.CreateKeyRing[0:len(c.CallOptions.CreateKeyRing):len(c.CallOptions.CreateKeyRing)], opts...)
@@ -699,6 +753,11 @@ func (c *KeyManagementClient) CreateKeyRing(ctx context.Context, req *kmspb.Crea
 // CryptoKey.version_template.algorithm
 // are required.
 func (c *KeyManagementClient) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKeyRequest, opts ...gax.CallOption) (*kmspb.CryptoKey, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.CreateCryptoKey[0:len(c.CallOptions.CreateCryptoKey):len(c.CallOptions.CreateCryptoKey)], opts...)
@@ -720,6 +779,11 @@ func (c *KeyManagementClient) CreateCryptoKey(ctx context.Context, req *kmspb.Cr
 // state will be set to
 // ENABLED.
 func (c *KeyManagementClient) CreateCryptoKeyVersion(ctx context.Context, req *kmspb.CreateCryptoKeyVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKeyVersion, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.CreateCryptoKeyVersion[0:len(c.CallOptions.CreateCryptoKeyVersion):len(c.CallOptions.CreateCryptoKeyVersion)], opts...)
@@ -741,6 +805,11 @@ func (c *KeyManagementClient) CreateCryptoKeyVersion(ctx context.Context, req *k
 // The version ID will be assigned the next sequential id within the
 // CryptoKey.
 func (c *KeyManagementClient) ImportCryptoKeyVersion(ctx context.Context, req *kmspb.ImportCryptoKeyVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKeyVersion, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.ImportCryptoKeyVersion[0:len(c.CallOptions.ImportCryptoKeyVersion):len(c.CallOptions.ImportCryptoKeyVersion)], opts...)
@@ -760,6 +829,11 @@ func (c *KeyManagementClient) ImportCryptoKeyVersion(ctx context.Context, req *k
 //
 // ImportJob.import_method is required.
 func (c *KeyManagementClient) CreateImportJob(ctx context.Context, req *kmspb.CreateImportJobRequest, opts ...gax.CallOption) (*kmspb.ImportJob, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "parent", url.QueryEscape(req.GetParent())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.CreateImportJob[0:len(c.CallOptions.CreateImportJob):len(c.CallOptions.CreateImportJob)], opts...)
@@ -777,6 +851,11 @@ func (c *KeyManagementClient) CreateImportJob(ctx context.Context, req *kmspb.Cr
 
 // UpdateCryptoKey update a CryptoKey.
 func (c *KeyManagementClient) UpdateCryptoKey(ctx context.Context, req *kmspb.UpdateCryptoKeyRequest, opts ...gax.CallOption) (*kmspb.CryptoKey, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "crypto_key.name", url.QueryEscape(req.GetCryptoKey().GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.UpdateCryptoKey[0:len(c.CallOptions.UpdateCryptoKey):len(c.CallOptions.UpdateCryptoKey)], opts...)
@@ -800,6 +879,11 @@ func (c *KeyManagementClient) UpdateCryptoKey(ctx context.Context, req *kmspb.Up
 // method. See DestroyCryptoKeyVersion and RestoreCryptoKeyVersion to
 // move between other states.
 func (c *KeyManagementClient) UpdateCryptoKeyVersion(ctx context.Context, req *kmspb.UpdateCryptoKeyVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKeyVersion, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "crypto_key_version.name", url.QueryEscape(req.GetCryptoKeyVersion().GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.UpdateCryptoKeyVersion[0:len(c.CallOptions.UpdateCryptoKeyVersion):len(c.CallOptions.UpdateCryptoKeyVersion)], opts...)
@@ -819,6 +903,11 @@ func (c *KeyManagementClient) UpdateCryptoKeyVersion(ctx context.Context, req *k
 // The CryptoKey.purpose must be
 // ENCRYPT_DECRYPT.
 func (c *KeyManagementClient) Encrypt(ctx context.Context, req *kmspb.EncryptRequest, opts ...gax.CallOption) (*kmspb.EncryptResponse, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.Encrypt[0:len(c.CallOptions.Encrypt):len(c.CallOptions.Encrypt)], opts...)
@@ -837,6 +926,11 @@ func (c *KeyManagementClient) Encrypt(ctx context.Context, req *kmspb.EncryptReq
 // Decrypt decrypts data that was protected by Encrypt. The CryptoKey.purpose
 // must be ENCRYPT_DECRYPT.
 func (c *KeyManagementClient) Decrypt(ctx context.Context, req *kmspb.DecryptRequest, opts ...gax.CallOption) (*kmspb.DecryptResponse, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.Decrypt[0:len(c.CallOptions.Decrypt):len(c.CallOptions.Decrypt)], opts...)
@@ -856,6 +950,11 @@ func (c *KeyManagementClient) Decrypt(ctx context.Context, req *kmspb.DecryptReq
 // ASYMMETRIC_SIGN, producing a signature that can be verified with the public
 // key retrieved from GetPublicKey.
 func (c *KeyManagementClient) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignRequest, opts ...gax.CallOption) (*kmspb.AsymmetricSignResponse, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.AsymmetricSign[0:len(c.CallOptions.AsymmetricSign):len(c.CallOptions.AsymmetricSign)], opts...)
@@ -875,6 +974,11 @@ func (c *KeyManagementClient) AsymmetricSign(ctx context.Context, req *kmspb.Asy
 // GetPublicKey corresponding to a CryptoKeyVersion with
 // CryptoKey.purpose ASYMMETRIC_DECRYPT.
 func (c *KeyManagementClient) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDecryptRequest, opts ...gax.CallOption) (*kmspb.AsymmetricDecryptResponse, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.AsymmetricDecrypt[0:len(c.CallOptions.AsymmetricDecrypt):len(c.CallOptions.AsymmetricDecrypt)], opts...)
@@ -894,6 +998,11 @@ func (c *KeyManagementClient) AsymmetricDecrypt(ctx context.Context, req *kmspb.
 //
 // Returns an error if called on an asymmetric key.
 func (c *KeyManagementClient) UpdateCryptoKeyPrimaryVersion(ctx context.Context, req *kmspb.UpdateCryptoKeyPrimaryVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKey, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.UpdateCryptoKeyPrimaryVersion[0:len(c.CallOptions.UpdateCryptoKeyPrimaryVersion):len(c.CallOptions.UpdateCryptoKeyPrimaryVersion)], opts...)
@@ -922,6 +1031,11 @@ func (c *KeyManagementClient) UpdateCryptoKeyPrimaryVersion(ctx context.Context,
 // Before the destroy_time is reached,
 // RestoreCryptoKeyVersion may be called to reverse the process.
 func (c *KeyManagementClient) DestroyCryptoKeyVersion(ctx context.Context, req *kmspb.DestroyCryptoKeyVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKeyVersion, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.DestroyCryptoKeyVersion[0:len(c.CallOptions.DestroyCryptoKeyVersion):len(c.CallOptions.DestroyCryptoKeyVersion)], opts...)
@@ -945,6 +1059,11 @@ func (c *KeyManagementClient) DestroyCryptoKeyVersion(ctx context.Context, req *
 // will be set to DISABLED,
 // and destroy_time will be cleared.
 func (c *KeyManagementClient) RestoreCryptoKeyVersion(ctx context.Context, req *kmspb.RestoreCryptoKeyVersionRequest, opts ...gax.CallOption) (*kmspb.CryptoKeyVersion, error) {
+	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
+		defer cancel()
+		ctx = cctx
+	}
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
 	opts = append(c.CallOptions.RestoreCryptoKeyVersion[0:len(c.CallOptions.RestoreCryptoKeyVersion):len(c.CallOptions.RestoreCryptoKeyVersion)], opts...)

@@ -16,6 +16,7 @@ package clientv3
 
 import (
 	"context"
+	"strings"
 
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
 	"go.etcd.io/etcd/version"
@@ -32,7 +33,7 @@ func WithRequireLeader(ctx context.Context) context.Context {
 	}
 	copied := md.Copy() // avoid racey updates
 	// overwrite/add 'hasleader' key/value
-	copied.Set(rpctypes.MetadataRequireLeaderKey, rpctypes.MetadataHasLeader)
+	metadataSet(copied, rpctypes.MetadataRequireLeaderKey, rpctypes.MetadataHasLeader)
 	return metadata.NewOutgoingContext(ctx, copied)
 }
 
@@ -45,6 +46,19 @@ func withVersion(ctx context.Context) context.Context {
 	}
 	copied := md.Copy() // avoid racey updates
 	// overwrite/add version key/value
-	copied.Set(rpctypes.MetadataClientAPIVersionKey, version.APIVersion)
+	metadataSet(copied, rpctypes.MetadataClientAPIVersionKey, version.APIVersion)
 	return metadata.NewOutgoingContext(ctx, copied)
+}
+
+func metadataGet(md metadata.MD, k string) []string {
+	k = strings.ToLower(k)
+	return md[k]
+}
+
+func metadataSet(md metadata.MD, k string, vals ...string) {
+	if len(vals) == 0 {
+		return
+	}
+	k = strings.ToLower(k)
+	md[k] = vals
 }

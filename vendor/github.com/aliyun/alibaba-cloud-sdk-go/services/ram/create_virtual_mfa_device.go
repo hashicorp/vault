@@ -82,8 +82,8 @@ type CreateVirtualMFADeviceRequest struct {
 // CreateVirtualMFADeviceResponse is the response struct for api CreateVirtualMFADevice
 type CreateVirtualMFADeviceResponse struct {
 	*responses.BaseResponse
-	RequestId        string           `json:"RequestId" xml:"RequestId"`
-	VirtualMFADevice VirtualMFADevice `json:"VirtualMFADevice" xml:"VirtualMFADevice"`
+	RequestId        string                                   `json:"RequestId" xml:"RequestId"`
+	VirtualMFADevice VirtualMFADeviceInCreateVirtualMFADevice `json:"VirtualMFADevice" xml:"VirtualMFADevice"`
 }
 
 // CreateCreateVirtualMFADeviceRequest creates a request to invoke CreateVirtualMFADevice API
@@ -91,7 +91,7 @@ func CreateCreateVirtualMFADeviceRequest() (request *CreateVirtualMFADeviceReque
 	request = &CreateVirtualMFADeviceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateVirtualMFADevice", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateVirtualMFADevice", "Ram", "openAPI")
 	return
 }
 

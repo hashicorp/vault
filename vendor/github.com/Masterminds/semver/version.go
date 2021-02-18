@@ -34,7 +34,7 @@ const SemVerRegex string = `v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 
 // ValidPrerelease is the regular expression which validates
 // both prerelease and metadata values.
-const ValidPrerelease string = `^([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)`
+const ValidPrerelease string = `^([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)$`
 
 // Version represents a single semantic version.
 type Version struct {
@@ -106,7 +106,7 @@ func MustParse(v string) *Version {
 // Note, if the original version contained a leading v this version will not.
 // See the Original() method to retrieve the original value. Semantic Versions
 // don't contain a leading v per the spec. Instead it's optional on
-// impelementation.
+// implementation.
 func (v *Version) String() string {
 	var buf bytes.Buffer
 
@@ -394,10 +394,14 @@ func comparePrePart(s, o string) int {
 	}
 
 	// When comparing strings "99" is greater than "103". To handle
-	// cases like this we need to detect numbers and compare them.
+	// cases like this we need to detect numbers and compare them. According
+	// to the semver spec, numbers are always positive. If there is a - at the
+	// start like -99 this is to be evaluated as an alphanum. numbers always
+	// have precedence over alphanum. Parsing as Uints because negative numbers
+	// are ignored.
 
-	oi, n1 := strconv.ParseInt(o, 10, 64)
-	si, n2 := strconv.ParseInt(s, 10, 64)
+	oi, n1 := strconv.ParseUint(o, 10, 64)
+	si, n2 := strconv.ParseUint(s, 10, 64)
 
 	// The case where both are strings compare the strings
 	if n1 != nil && n2 != nil {

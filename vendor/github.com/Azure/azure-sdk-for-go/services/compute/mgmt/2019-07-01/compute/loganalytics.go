@@ -72,7 +72,7 @@ func (client LogAnalyticsClient) ExportRequestRateByInterval(ctx context.Context
 
 	result, err = client.ExportRequestRateByIntervalSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.LogAnalyticsClient", "ExportRequestRateByInterval", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.LogAnalyticsClient", "ExportRequestRateByInterval", nil, "Failure sending request")
 		return
 	}
 
@@ -109,7 +109,33 @@ func (client LogAnalyticsClient) ExportRequestRateByIntervalSender(req *http.Req
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client LogAnalyticsClient) (laor LogAnalyticsOperationResult, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("compute.LogAnalyticsExportRequestRateByIntervalFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		laor.Response.Response, err = future.GetResult(sender)
+		if laor.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
+			laor, err = client.ExportRequestRateByIntervalResponder(laor.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", laor.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -155,7 +181,7 @@ func (client LogAnalyticsClient) ExportThrottledRequests(ctx context.Context, pa
 
 	result, err = client.ExportThrottledRequestsSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.LogAnalyticsClient", "ExportThrottledRequests", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.LogAnalyticsClient", "ExportThrottledRequests", nil, "Failure sending request")
 		return
 	}
 
@@ -192,7 +218,33 @@ func (client LogAnalyticsClient) ExportThrottledRequestsSender(req *http.Request
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client LogAnalyticsClient) (laor LogAnalyticsOperationResult, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("compute.LogAnalyticsExportThrottledRequestsFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		laor.Response.Response, err = future.GetResult(sender)
+		if laor.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", nil, "received nil response and error")
+		}
+		if err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
+			laor, err = client.ExportThrottledRequestsResponder(laor.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", laor.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 

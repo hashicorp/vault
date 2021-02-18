@@ -3,24 +3,22 @@ package jwtauth
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/coreos/go-oidc"
 	log "github.com/hashicorp/go-hclog"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
-	// Deprecated: The host of the Azure Active Directory (AAD) graph API
-	azureADGraphHost = "graph.windows.net"
-
-	// The host and version of the Microsoft Graph API
-	microsoftGraphHost       = "graph.microsoft.com"
-	microsoftGraphAPIVersion = "/v1.0"
+	// The old MS graph API requires setting an api-version query parameter
+	windowsGraphHost  = "graph.windows.net"
+	windowsAPIVersion = "1.6"
 
 	// Distributed claim fields
 	claimNamesField   = "_claim_names"
@@ -31,6 +29,9 @@ const (
 type AzureProvider struct {
 	// Context for azure calls
 	ctx context.Context
+
+	// OIDC provider
+	provider *oidc.Provider
 }
 
 // Initialize anything in the AzureProvider struct - satisfying the CustomProvider interface
@@ -44,7 +45,7 @@ func (a *AzureProvider) SensitiveKeys() []string {
 }
 
 // FetchGroups - custom groups fetching for azure - satisfying GroupsFetcher interface
-func (a *AzureProvider) FetchGroups(_ context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole, tokenSource oauth2.TokenSource) (interface{}, error) {
+func (a *AzureProvider) FetchGroups(_ context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
 	groupsClaimRaw := getClaim(b.Logger(), allClaims, role.GroupsClaim)
 
 	if groupsClaimRaw == nil {
@@ -56,12 +57,20 @@ func (a *AzureProvider) FetchGroups(_ context.Context, b *jwtAuthBackend, allCla
 			return nil, fmt.Errorf("unable to get claim sources: %s", err)
 		}
 
+		// Get provider because we'll need to get a new token for microsoft's
+		// graph API, specifically the old graph API
+		provider, err := b.getProvider(b.cachedConfig)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get provider: %s", err)
+		}
+		a.provider = provider
+
 		a.ctx, err = b.createCAContext(b.providerCtx, b.cachedConfig.OIDCDiscoveryCAPEM)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create CA Context: %s", err)
 		}
 
-		azureGroups, err := a.getAzureGroups(azureClaimSourcesURL, tokenSource)
+		azureGroups, err := a.getAzureGroups(azureClaimSourcesURL, b.cachedConfig)
 		if err != nil {
 			return nil, fmt.Errorf("%q claim not found in token: %v", role.GroupsClaim, err)
 		}
@@ -103,62 +112,46 @@ func (a *AzureProvider) getClaimSource(logger log.Logger, allClaims map[string]i
 	if val == nil {
 		return "", fmt.Errorf("unable to locate %s in claims", endpoint)
 	}
-
-	urlParsed, err := url.Parse(fmt.Sprintf("%v", val))
-	if err != nil {
-		return "", fmt.Errorf("unable to parse claim source URL: %w", err)
-	}
-
-	// If the endpoint source for the groups claim has a host of the deprecated AAD graph API,
-	// then replace it to instead use the Microsoft graph API. The AAD graph API is deprecated
-	// and will eventually stop servicing requests. See details at:
-	// - https://developer.microsoft.com/en-us/office/blogs/microsoft-graph-or-azure-ad-graph/
-	// - https://docs.microsoft.com/en-us/graph/api/overview?view=graph-rest-1.0
-	if urlParsed.Host == azureADGraphHost {
-		urlParsed.Host = microsoftGraphHost
-		urlParsed.Path = microsoftGraphAPIVersion + urlParsed.Path
-	}
-
-	logger.Debug(fmt.Sprintf("found Azure Graph API endpoint for group membership: %v", urlParsed.String()))
-	return urlParsed.String(), nil
+	logger.Debug(fmt.Sprintf("found Azure Graph API endpoint for group membership: %v", val))
+	return fmt.Sprintf("%v", val), nil
 }
 
-// Fetch user groups from the Microsoft Graph API
-func (a *AzureProvider) getAzureGroups(groupsURL string, tokenSource oauth2.TokenSource) (interface{}, error) {
+// Fetch user groups from the Azure AD Graph API
+func (a *AzureProvider) getAzureGroups(groupsURL string, c *jwtConfig) (interface{}, error) {
 	urlParsed, err := url.Parse(groupsURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse distributed groups source url %s: %s", groupsURL, err)
 	}
-
-	// Use the Access Token that was pre-negotiated between the Claims Provider and RP
-	// via https://openid.net/specs/openid-connect-core-1_0.html#AggregatedDistributedClaims.
-	if tokenSource == nil {
-		return nil, errors.New("token unavailable to call Microsoft Graph API")
-	}
-	token, err := tokenSource.Token()
+	token, err := a.getAzureToken(c, urlParsed.Host)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get token: %s", err)
 	}
 	payload := strings.NewReader("{\"securityEnabledOnly\": false}")
-	req, err := http.NewRequest("POST", urlParsed.String(), payload)
+	req, err := http.NewRequest("POST", groupsURL, payload)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing groups endpoint request: %s", err)
 	}
 	req.Header.Add("content-type", "application/json")
-	token.SetAuthHeader(req)
+	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", token))
 
+	// If endpoint is the old windows graph api, add api-version
+	if urlParsed.Host == windowsGraphHost {
+		query := req.URL.Query()
+		query.Add("api-version", windowsAPIVersion)
+		req.URL.RawQuery = query.Encode()
+	}
 	client := http.DefaultClient
 	if c, ok := a.ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
 		client = c
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to call Microsoft Graph API: %s", err)
+		return nil, fmt.Errorf("unable to call Azure AD Graph API: %s", err)
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read Microsoft Graph API response: %s", err)
+		return nil, fmt.Errorf("failed to read Azure AD Graph API response: %s", err)
 	}
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get groups: %s", string(body))
@@ -169,6 +162,25 @@ func (a *AzureProvider) getAzureGroups(groupsURL string, tokenSource oauth2.Toke
 		return nil, fmt.Errorf("unabled to decode response: %s", err)
 	}
 	return target.Value, nil
+}
+
+// Login to Azure, using client id and secret.
+func (a *AzureProvider) getAzureToken(c *jwtConfig, host string) (string, error) {
+	config := &clientcredentials.Config{
+		ClientID:     c.OIDCClientID,
+		ClientSecret: c.OIDCClientSecret,
+		TokenURL:     a.provider.Endpoint().TokenURL,
+		Scopes: []string{
+			"openid",
+			"profile",
+			"https://" + host + "/.default",
+		},
+	}
+	token, err := config.Token(a.ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch Azure token: %s", err)
+	}
+	return token.AccessToken, nil
 }
 
 type azureGroups struct {

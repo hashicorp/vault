@@ -2927,6 +2927,12 @@ func CheckDeprecated(pass *analysis.Pass) (interface{}, error) {
 		p := spec.Path.Value
 		path := p[1 : len(p)-1]
 		if depr, ok := deprs.Packages[imp]; ok {
+			if path == "github.com/golang/protobuf/proto" {
+				gen, ok := code.Generator(pass, spec.Path.Pos())
+				if ok && gen == facts.ProtocGenGo {
+					return
+				}
+			}
 			report.Report(pass, spec, fmt.Sprintf("package %s is deprecated: %s", path, depr.Msg))
 		}
 	}

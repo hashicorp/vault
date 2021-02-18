@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jcmturner/aescts"
+	"github.com/jcmturner/aescts/v2"
 	"github.com/jcmturner/gokrb5/v8/crypto/common"
 	"github.com/jcmturner/gokrb5/v8/crypto/etype"
 )

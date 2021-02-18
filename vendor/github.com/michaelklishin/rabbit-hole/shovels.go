@@ -3,7 +3,6 @@ package rabbithole
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 )
 
 // ShovelInfo contains the configuration of a shovel
@@ -64,7 +63,7 @@ func (c *Client) ListShovels() (rec []ShovelInfo, err error) {
 
 // ListShovelsIn returns all shovels in a vhost
 func (c *Client) ListShovelsIn(vhost string) (rec []ShovelInfo, err error) {
-	req, err := newGETRequest(c, "parameters/shovel/"+url.PathEscape(vhost))
+	req, err := newGETRequest(c, "parameters/shovel/"+PathEscape(vhost))
 	if err != nil {
 		return []ShovelInfo{}, err
 	}
@@ -82,7 +81,7 @@ func (c *Client) ListShovelsIn(vhost string) (rec []ShovelInfo, err error) {
 
 // GetShovel returns a shovel configuration
 func (c *Client) GetShovel(vhost, shovel string) (rec *ShovelInfo, err error) {
-	req, err := newGETRequest(c, "parameters/shovel/"+url.PathEscape(vhost)+"/"+url.PathEscape(shovel))
+	req, err := newGETRequest(c, "parameters/shovel/"+PathEscape(vhost)+"/"+PathEscape(shovel))
 
 	if err != nil {
 		return nil, err
@@ -108,12 +107,13 @@ func (c *Client) DeclareShovel(vhost, shovel string, info ShovelDefinition) (res
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "PUT", "parameters/shovel/"+url.PathEscape(vhost)+"/"+url.PathEscape(shovel), body)
+	req, err := newRequestWithBody(c, "PUT", "parameters/shovel/"+PathEscape(vhost)+"/"+PathEscape(shovel), body)
 	if err != nil {
 		return nil, err
 	}
 
-	if res, err = executeRequest(c, req); err != nil {
+	res, err = executeRequest(c, req)
+	if err != nil {
 		return nil, err
 	}
 
@@ -126,12 +126,13 @@ func (c *Client) DeclareShovel(vhost, shovel string, info ShovelDefinition) (res
 
 // DeleteShovel a shovel
 func (c *Client) DeleteShovel(vhost, shovel string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "parameters/shovel/"+url.PathEscape(vhost)+"/"+url.PathEscape(shovel), nil)
+	req, err := newRequestWithBody(c, "DELETE", "parameters/shovel/"+PathEscape(vhost)+"/"+PathEscape(shovel), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if res, err = executeRequest(c, req); err != nil {
+	res, err = executeRequest(c, req)
+	if err != nil {
 		return nil, err
 	}
 

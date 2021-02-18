@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
@@ -402,16 +401,6 @@ func (c *CLI) initAutocomplete() {
 
 	if c.autocompleteInstaller == nil {
 		c.autocompleteInstaller = &realAutocompleteInstaller{}
-	}
-
-	// We first set c.autocomplete to a noop autocompleter that outputs
-	// to nul so that we can detect if we're autocompleting or not. If we're
-	// not, then we do nothing. This saves a LOT of compute cycles since
-	// initAutoCompleteSub has to walk every command.
-	c.autocomplete = complete.New(c.Name, complete.Command{})
-	c.autocomplete.Out = ioutil.Discard
-	if !c.autocomplete.Complete() {
-		return
 	}
 
 	// Build the root command
