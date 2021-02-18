@@ -60,8 +60,6 @@ var (
 		Aggregation: DefaultMillisecondsDistribution,
 	}
 
-	// Purposely reuses the count from `ClientRoundtripLatency`, tagging
-	// with method and status to result in ClientCompletedRpcs.
 	ClientCompletedRPCsView = &view.View{
 		Measure:     ClientRoundtripLatency,
 		Name:        "grpc.io/client/completed_rpcs",

@@ -76,7 +76,6 @@ func (client VirtualMachineImagesClient) Get(ctx context.Context, location strin
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -158,7 +157,6 @@ func (client VirtualMachineImagesClient) List(ctx context.Context, location stri
 	result, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "List", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -245,7 +243,6 @@ func (client VirtualMachineImagesClient) ListOffers(ctx context.Context, locatio
 	result, err = client.ListOffersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "ListOffers", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -320,7 +317,6 @@ func (client VirtualMachineImagesClient) ListPublishers(ctx context.Context, loc
 	result, err = client.ListPublishersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "ListPublishers", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -396,7 +392,6 @@ func (client VirtualMachineImagesClient) ListSkus(ctx context.Context, location 
 	result, err = client.ListSkusResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "ListSkus", resp, "Failure responding to request")
-		return
 	}
 
 	return

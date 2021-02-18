@@ -15,7 +15,7 @@ import (
 
 // sortImports sorts runs of consecutive import lines in import blocks in f.
 // It also removes duplicate imports when it is possible to do so without data loss.
-func sortImports(localPrefix string, fset *token.FileSet, f *ast.File) {
+func sortImports(env *ProcessEnv, fset *token.FileSet, f *ast.File) {
 	for i, d := range f.Decls {
 		d, ok := d.(*ast.GenDecl)
 		if !ok || d.Tok != token.IMPORT {
@@ -40,11 +40,11 @@ func sortImports(localPrefix string, fset *token.FileSet, f *ast.File) {
 		for j, s := range d.Specs {
 			if j > i && fset.Position(s.Pos()).Line > 1+fset.Position(d.Specs[j-1].End()).Line {
 				// j begins a new run.  End this one.
-				specs = append(specs, sortSpecs(localPrefix, fset, f, d.Specs[i:j])...)
+				specs = append(specs, sortSpecs(env, fset, f, d.Specs[i:j])...)
 				i = j
 			}
 		}
-		specs = append(specs, sortSpecs(localPrefix, fset, f, d.Specs[i:])...)
+		specs = append(specs, sortSpecs(env, fset, f, d.Specs[i:])...)
 		d.Specs = specs
 
 		// Deduping can leave a blank line before the rparen; clean that up.
@@ -60,7 +60,7 @@ func sortImports(localPrefix string, fset *token.FileSet, f *ast.File) {
 
 // mergeImports merges all the import declarations into the first one.
 // Taken from golang.org/x/tools/ast/astutil.
-func mergeImports(fset *token.FileSet, f *ast.File) {
+func mergeImports(env *ProcessEnv, fset *token.FileSet, f *ast.File) {
 	if len(f.Decls) <= 1 {
 		return
 	}
@@ -142,7 +142,7 @@ type posSpan struct {
 	End   token.Pos
 }
 
-func sortSpecs(localPrefix string, fset *token.FileSet, f *ast.File, specs []ast.Spec) []ast.Spec {
+func sortSpecs(env *ProcessEnv, fset *token.FileSet, f *ast.File, specs []ast.Spec) []ast.Spec {
 	// Can't short-circuit here even if specs are already sorted,
 	// since they might yet need deduplication.
 	// A lone import, however, may be safely ignored.
@@ -191,7 +191,7 @@ func sortSpecs(localPrefix string, fset *token.FileSet, f *ast.File, specs []ast
 	// Reassign the import paths to have the same position sequence.
 	// Reassign each comment to abut the end of its spec.
 	// Sort the comments by new position.
-	sort.Sort(byImportSpec{localPrefix, specs})
+	sort.Sort(byImportSpec{env, specs})
 
 	// Dedup. Thanks to our sorting, we can just consider
 	// adjacent pairs of imports.
@@ -245,8 +245,8 @@ func sortSpecs(localPrefix string, fset *token.FileSet, f *ast.File, specs []ast
 }
 
 type byImportSpec struct {
-	localPrefix string
-	specs       []ast.Spec // slice of *ast.ImportSpec
+	env   *ProcessEnv
+	specs []ast.Spec // slice of *ast.ImportSpec
 }
 
 func (x byImportSpec) Len() int      { return len(x.specs) }
@@ -255,8 +255,8 @@ func (x byImportSpec) Less(i, j int) bool {
 	ipath := importPath(x.specs[i])
 	jpath := importPath(x.specs[j])
 
-	igroup := importGroup(x.localPrefix, ipath)
-	jgroup := importGroup(x.localPrefix, jpath)
+	igroup := importGroup(x.env, ipath)
+	jgroup := importGroup(x.env, jpath)
 	if igroup != jgroup {
 		return igroup < jgroup
 	}

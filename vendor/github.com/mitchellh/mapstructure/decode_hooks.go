@@ -1,7 +1,6 @@
 package mapstructure
 
 import (
-	"encoding"
 	"errors"
 	"fmt"
 	"net"
@@ -17,11 +16,10 @@ func typedDecodeHook(h DecodeHookFunc) DecodeHookFunc {
 	// Create variables here so we can reference them with the reflect pkg
 	var f1 DecodeHookFuncType
 	var f2 DecodeHookFuncKind
-	var f3 DecodeHookFuncValue
 
 	// Fill in the variables into this interface and the rest is done
 	// automatically using the reflect package.
-	potential := []interface{}{f1, f2, f3}
+	potential := []interface{}{f1, f2}
 
 	v := reflect.ValueOf(h)
 	vt := v.Type()
@@ -40,15 +38,13 @@ func typedDecodeHook(h DecodeHookFunc) DecodeHookFunc {
 // that took reflect.Kind instead of reflect.Type.
 func DecodeHookExec(
 	raw DecodeHookFunc,
-	from reflect.Value, to reflect.Value) (interface{}, error) {
-
+	from reflect.Type, to reflect.Type,
+	data interface{}) (interface{}, error) {
 	switch f := typedDecodeHook(raw).(type) {
 	case DecodeHookFuncType:
-		return f(from.Type(), to.Type(), from.Interface())
+		return f(from, to, data)
 	case DecodeHookFuncKind:
-		return f(from.Kind(), to.Kind(), from.Interface())
-	case DecodeHookFuncValue:
-		return f(from, to)
+		return f(from.Kind(), to.Kind(), data)
 	default:
 		return nil, errors.New("invalid decode hook signature")
 	}
@@ -60,16 +56,22 @@ func DecodeHookExec(
 // The composed funcs are called in order, with the result of the
 // previous transformation.
 func ComposeDecodeHookFunc(fs ...DecodeHookFunc) DecodeHookFunc {
-	return func(f reflect.Value, t reflect.Value) (interface{}, error) {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data interface{}) (interface{}, error) {
 		var err error
-		var data interface{}
-		newFrom := f
 		for _, f1 := range fs {
-			data, err = DecodeHookExec(f1, newFrom, t)
+			data, err = DecodeHookExec(f1, f, t, data)
 			if err != nil {
 				return nil, err
 			}
-			newFrom = reflect.ValueOf(data)
+
+			// Modify the from kind to be correct with the new data
+			f = nil
+			if val := reflect.ValueOf(data); val.IsValid() {
+				f = val.Type()
+			}
 		}
 
 		return data, nil
@@ -212,45 +214,4 @@ func WeaklyTypedHook(
 	}
 
 	return data, nil
-}
-
-func RecursiveStructToMapHookFunc() DecodeHookFunc {
-	return func(f reflect.Value, t reflect.Value) (interface{}, error) {
-		if f.Kind() != reflect.Struct {
-			return f.Interface(), nil
-		}
-
-		var i interface{} = struct{}{}
-		if t.Type() != reflect.TypeOf(&i).Elem() {
-			return f.Interface(), nil
-		}
-
-		m := make(map[string]interface{})
-		t.Set(reflect.ValueOf(m))
-
-		return f.Interface(), nil
-	}
-}
-
-// TextUnmarshallerHookFunc returns a DecodeHookFunc that applies
-// strings to the UnmarshalText function, when the target type
-// implements the encoding.TextUnmarshaler interface
-func TextUnmarshallerHookFunc() DecodeHookFuncType {
-	return func(
-		f reflect.Type,
-		t reflect.Type,
-		data interface{}) (interface{}, error) {
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-		result := reflect.New(t).Interface()
-		unmarshaller, ok := result.(encoding.TextUnmarshaler)
-		if !ok {
-			return data, nil
-		}
-		if err := unmarshaller.UnmarshalText([]byte(data.(string))); err != nil {
-			return nil, err
-		}
-		return result, nil
-	}
 }

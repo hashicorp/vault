@@ -21,6 +21,7 @@ import (
 )
 
 // Decrypt invokes the kms.Decrypt API synchronously
+// api document: https://help.aliyun.com/api/kms/decrypt.html
 func (client *Client) Decrypt(request *DecryptRequest) (response *DecryptResponse, err error) {
 	response = CreateDecryptResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) Decrypt(request *DecryptRequest) (response *DecryptRespons
 }
 
 // DecryptWithChan invokes the kms.Decrypt API asynchronously
+// api document: https://help.aliyun.com/api/kms/decrypt.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DecryptWithChan(request *DecryptRequest) (<-chan *DecryptResponse, <-chan error) {
 	responseChan := make(chan *DecryptResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) DecryptWithChan(request *DecryptRequest) (<-chan *DecryptR
 }
 
 // DecryptWithCallback invokes the kms.Decrypt API asynchronously
+// api document: https://help.aliyun.com/api/kms/decrypt.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DecryptWithCallback(request *DecryptRequest, callback func(response *DecryptResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -78,10 +83,9 @@ type DecryptRequest struct {
 // DecryptResponse is the response struct for api Decrypt
 type DecryptResponse struct {
 	*responses.BaseResponse
-	Plaintext    string `json:"Plaintext" xml:"Plaintext"`
-	KeyId        string `json:"KeyId" xml:"KeyId"`
-	RequestId    string `json:"RequestId" xml:"RequestId"`
-	KeyVersionId string `json:"KeyVersionId" xml:"KeyVersionId"`
+	Plaintext string `json:"Plaintext" xml:"Plaintext"`
+	KeyId     string `json:"KeyId" xml:"KeyId"`
+	RequestId string `json:"RequestId" xml:"RequestId"`
 }
 
 // CreateDecryptRequest creates a request to invoke Decrypt API
@@ -90,7 +94,6 @@ func CreateDecryptRequest() (request *DecryptRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "Decrypt", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

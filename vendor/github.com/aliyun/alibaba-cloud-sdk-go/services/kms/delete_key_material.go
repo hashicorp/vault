@@ -21,6 +21,7 @@ import (
 )
 
 // DeleteKeyMaterial invokes the kms.DeleteKeyMaterial API synchronously
+// api document: https://help.aliyun.com/api/kms/deletekeymaterial.html
 func (client *Client) DeleteKeyMaterial(request *DeleteKeyMaterialRequest) (response *DeleteKeyMaterialResponse, err error) {
 	response = CreateDeleteKeyMaterialResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) DeleteKeyMaterial(request *DeleteKeyMaterialRequest) (resp
 }
 
 // DeleteKeyMaterialWithChan invokes the kms.DeleteKeyMaterial API asynchronously
+// api document: https://help.aliyun.com/api/kms/deletekeymaterial.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DeleteKeyMaterialWithChan(request *DeleteKeyMaterialRequest) (<-chan *DeleteKeyMaterialResponse, <-chan error) {
 	responseChan := make(chan *DeleteKeyMaterialResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) DeleteKeyMaterialWithChan(request *DeleteKeyMaterialReques
 }
 
 // DeleteKeyMaterialWithCallback invokes the kms.DeleteKeyMaterial API asynchronously
+// api document: https://help.aliyun.com/api/kms/deletekeymaterial.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DeleteKeyMaterialWithCallback(request *DeleteKeyMaterialRequest, callback func(response *DeleteKeyMaterialResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -86,7 +91,6 @@ func CreateDeleteKeyMaterialRequest() (request *DeleteKeyMaterialRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "DeleteKeyMaterial", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

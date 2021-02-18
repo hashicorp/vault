@@ -76,18 +76,18 @@ func (client *Client) CreateUserWithCallback(request *CreateUserRequest, callbac
 // CreateUserRequest is the request struct for api CreateUser
 type CreateUserRequest struct {
 	*requests.RpcRequest
-	MobilePhone string `position:"Query" name:"MobilePhone"`
-	Email       string `position:"Query" name:"Email"`
 	Comments    string `position:"Query" name:"Comments"`
 	DisplayName string `position:"Query" name:"DisplayName"`
+	MobilePhone string `position:"Query" name:"MobilePhone"`
+	Email       string `position:"Query" name:"Email"`
 	UserName    string `position:"Query" name:"UserName"`
 }
 
 // CreateUserResponse is the response struct for api CreateUser
 type CreateUserResponse struct {
 	*responses.BaseResponse
-	RequestId string           `json:"RequestId" xml:"RequestId"`
-	User      UserInCreateUser `json:"User" xml:"User"`
+	RequestId string `json:"RequestId" xml:"RequestId"`
+	User      User   `json:"User" xml:"User"`
 }
 
 // CreateCreateUserRequest creates a request to invoke CreateUser API
@@ -95,7 +95,7 @@ func CreateCreateUserRequest() (request *CreateUserRequest) {
 	request = &CreateUserRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateUser", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateUser", "", "")
 	return
 }
 

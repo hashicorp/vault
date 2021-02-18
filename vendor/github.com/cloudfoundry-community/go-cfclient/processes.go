@@ -2,7 +2,9 @@ package cfclient
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
+	"reflect"
 )
 
 // ProcessListResponse is the json body returned from the API
@@ -47,12 +49,9 @@ func (c *Client) ListAllProcesses() ([]Process, error) {
 func (c *Client) ListAllProcessesByQuery(query url.Values) ([]Process, error) {
 	var allProcesses []Process
 
-	requestURL := "/v3/processes"
-	if e := query.Encode(); len(e) > 0 {
-		requestURL += "?" + e
-	}
+	urlPath := "/v3/processes"
 	for {
-		resp, err := c.getProcessPage(requestURL)
+		resp, err := c.getProcessPage(urlPath, query)
 		if err != nil {
 			return nil, err
 		}
@@ -66,25 +65,48 @@ func (c *Client) ListAllProcessesByQuery(query url.Values) ([]Process, error) {
 		}
 
 		allProcesses = append(allProcesses, resp.Processes...)
-		if resp.Pagination.Next.Href == "" {
-			break
-		}
-
-		requestURL := resp.Pagination.Next.Href
-		if requestURL == "" {
+		if resp.Pagination.Next == nil {
 			return allProcesses, nil
 		}
-		requestURL, err = extractPathFromURL(requestURL)
+
+		var nextURL string
+
+		if resp.Pagination.Next == nil {
+			return allProcesses, nil
+		}
+
+		switch resp.Pagination.Next.(type) {
+		case string:
+			nextURL = resp.Pagination.Next.(string)
+		case map[string]interface{}:
+			m := resp.Pagination.Next.(map[string]interface{})
+			u, ok := m["href"]
+			if ok {
+				nextURL = u.(string)
+			}
+		default:
+			return nil, fmt.Errorf("Unexpected type [%s] for next url", reflect.TypeOf(resp.Pagination.Next).String())
+		}
+
+		if nextURL == "" {
+			return allProcesses, nil
+		}
+
+		u, err := url.Parse(nextURL)
+		if err != nil {
+			return nil, err
+		}
+
+		urlPath = u.Path
+		query, err = url.ParseQuery(u.RawQuery)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	return allProcesses, nil
 }
 
-func (c *Client) getProcessPage(requestURL string) (*ProcessListResponse, error) {
-	req := c.NewRequest("GET", requestURL)
+func (c *Client) getProcessPage(urlPath string, query url.Values) (*ProcessListResponse, error) {
+	req := c.NewRequest("GET", fmt.Sprintf("%s?%s", urlPath, query.Encode()))
 
 	resp, err := c.DoRequest(req)
 	if err != nil {

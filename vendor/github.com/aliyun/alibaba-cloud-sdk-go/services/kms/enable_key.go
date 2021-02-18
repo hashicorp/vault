@@ -21,6 +21,7 @@ import (
 )
 
 // EnableKey invokes the kms.EnableKey API synchronously
+// api document: https://help.aliyun.com/api/kms/enablekey.html
 func (client *Client) EnableKey(request *EnableKeyRequest) (response *EnableKeyResponse, err error) {
 	response = CreateEnableKeyResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) EnableKey(request *EnableKeyRequest) (response *EnableKeyR
 }
 
 // EnableKeyWithChan invokes the kms.EnableKey API asynchronously
+// api document: https://help.aliyun.com/api/kms/enablekey.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) EnableKeyWithChan(request *EnableKeyRequest) (<-chan *EnableKeyResponse, <-chan error) {
 	responseChan := make(chan *EnableKeyResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) EnableKeyWithChan(request *EnableKeyRequest) (<-chan *Enab
 }
 
 // EnableKeyWithCallback invokes the kms.EnableKey API asynchronously
+// api document: https://help.aliyun.com/api/kms/enablekey.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) EnableKeyWithCallback(request *EnableKeyRequest, callback func(response *EnableKeyResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -86,7 +91,6 @@ func CreateEnableKeyRequest() (request *EnableKeyRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "EnableKey", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

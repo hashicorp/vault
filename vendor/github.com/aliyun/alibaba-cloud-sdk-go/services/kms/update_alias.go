@@ -21,6 +21,7 @@ import (
 )
 
 // UpdateAlias invokes the kms.UpdateAlias API synchronously
+// api document: https://help.aliyun.com/api/kms/updatealias.html
 func (client *Client) UpdateAlias(request *UpdateAliasRequest) (response *UpdateAliasResponse, err error) {
 	response = CreateUpdateAliasResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) UpdateAlias(request *UpdateAliasRequest) (response *Update
 }
 
 // UpdateAliasWithChan invokes the kms.UpdateAlias API asynchronously
+// api document: https://help.aliyun.com/api/kms/updatealias.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) UpdateAliasWithChan(request *UpdateAliasRequest) (<-chan *UpdateAliasResponse, <-chan error) {
 	responseChan := make(chan *UpdateAliasResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) UpdateAliasWithChan(request *UpdateAliasRequest) (<-chan *
 }
 
 // UpdateAliasWithCallback invokes the kms.UpdateAlias API asynchronously
+// api document: https://help.aliyun.com/api/kms/updatealias.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) UpdateAliasWithCallback(request *UpdateAliasRequest, callback func(response *UpdateAliasResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -87,7 +92,6 @@ func CreateUpdateAliasRequest() (request *UpdateAliasRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "UpdateAlias", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

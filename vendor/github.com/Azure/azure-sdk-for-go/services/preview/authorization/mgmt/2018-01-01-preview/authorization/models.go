@@ -188,15 +188,10 @@ func (calr ClassicAdministratorListResult) IsEmpty() bool {
 	return calr.Value == nil || len(*calr.Value) == 0
 }
 
-// hasNextLink returns true if the NextLink is not empty.
-func (calr ClassicAdministratorListResult) hasNextLink() bool {
-	return calr.NextLink != nil && len(*calr.NextLink) != 0
-}
-
 // classicAdministratorListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (calr ClassicAdministratorListResult) classicAdministratorListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if !calr.hasNextLink() {
+	if calr.NextLink == nil || len(to.String(calr.NextLink)) < 1 {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -224,16 +219,11 @@ func (page *ClassicAdministratorListResultPage) NextWithContext(ctx context.Cont
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	for {
-		next, err := page.fn(ctx, page.calr)
-		if err != nil {
-			return err
-		}
-		page.calr = next
-		if !next.hasNextLink() || !next.IsEmpty() {
-			break
-		}
+	next, err := page.fn(ctx, page.calr)
+	if err != nil {
+		return err
 	}
+	page.calr = next
 	return nil
 }
 
@@ -263,11 +253,8 @@ func (page ClassicAdministratorListResultPage) Values() []ClassicAdministrator {
 }
 
 // Creates a new instance of the ClassicAdministratorListResultPage type.
-func NewClassicAdministratorListResultPage(cur ClassicAdministratorListResult, getNextPage func(context.Context, ClassicAdministratorListResult) (ClassicAdministratorListResult, error)) ClassicAdministratorListResultPage {
-	return ClassicAdministratorListResultPage{
-		fn:   getNextPage,
-		calr: cur,
-	}
+func NewClassicAdministratorListResultPage(getNextPage func(context.Context, ClassicAdministratorListResult) (ClassicAdministratorListResult, error)) ClassicAdministratorListResultPage {
+	return ClassicAdministratorListResultPage{fn: getNextPage}
 }
 
 // ClassicAdministratorProperties classic Administrator properties.
@@ -367,15 +354,10 @@ func (pgr PermissionGetResult) IsEmpty() bool {
 	return pgr.Value == nil || len(*pgr.Value) == 0
 }
 
-// hasNextLink returns true if the NextLink is not empty.
-func (pgr PermissionGetResult) hasNextLink() bool {
-	return pgr.NextLink != nil && len(*pgr.NextLink) != 0
-}
-
 // permissionGetResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (pgr PermissionGetResult) permissionGetResultPreparer(ctx context.Context) (*http.Request, error) {
-	if !pgr.hasNextLink() {
+	if pgr.NextLink == nil || len(to.String(pgr.NextLink)) < 1 {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -403,16 +385,11 @@ func (page *PermissionGetResultPage) NextWithContext(ctx context.Context) (err e
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	for {
-		next, err := page.fn(ctx, page.pgr)
-		if err != nil {
-			return err
-		}
-		page.pgr = next
-		if !next.hasNextLink() || !next.IsEmpty() {
-			break
-		}
+	next, err := page.fn(ctx, page.pgr)
+	if err != nil {
+		return err
 	}
+	page.pgr = next
 	return nil
 }
 
@@ -442,11 +419,8 @@ func (page PermissionGetResultPage) Values() []Permission {
 }
 
 // Creates a new instance of the PermissionGetResultPage type.
-func NewPermissionGetResultPage(cur PermissionGetResult, getNextPage func(context.Context, PermissionGetResult) (PermissionGetResult, error)) PermissionGetResultPage {
-	return PermissionGetResultPage{
-		fn:  getNextPage,
-		pgr: cur,
-	}
+func NewPermissionGetResultPage(getNextPage func(context.Context, PermissionGetResult) (PermissionGetResult, error)) PermissionGetResultPage {
+	return PermissionGetResultPage{fn: getNextPage}
 }
 
 // ProviderOperation operation
@@ -560,15 +534,10 @@ func (pomlr ProviderOperationsMetadataListResult) IsEmpty() bool {
 	return pomlr.Value == nil || len(*pomlr.Value) == 0
 }
 
-// hasNextLink returns true if the NextLink is not empty.
-func (pomlr ProviderOperationsMetadataListResult) hasNextLink() bool {
-	return pomlr.NextLink != nil && len(*pomlr.NextLink) != 0
-}
-
 // providerOperationsMetadataListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (pomlr ProviderOperationsMetadataListResult) providerOperationsMetadataListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if !pomlr.hasNextLink() {
+	if pomlr.NextLink == nil || len(to.String(pomlr.NextLink)) < 1 {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -596,16 +565,11 @@ func (page *ProviderOperationsMetadataListResultPage) NextWithContext(ctx contex
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	for {
-		next, err := page.fn(ctx, page.pomlr)
-		if err != nil {
-			return err
-		}
-		page.pomlr = next
-		if !next.hasNextLink() || !next.IsEmpty() {
-			break
-		}
+	next, err := page.fn(ctx, page.pomlr)
+	if err != nil {
+		return err
 	}
+	page.pomlr = next
 	return nil
 }
 
@@ -635,11 +599,8 @@ func (page ProviderOperationsMetadataListResultPage) Values() []ProviderOperatio
 }
 
 // Creates a new instance of the ProviderOperationsMetadataListResultPage type.
-func NewProviderOperationsMetadataListResultPage(cur ProviderOperationsMetadataListResult, getNextPage func(context.Context, ProviderOperationsMetadataListResult) (ProviderOperationsMetadataListResult, error)) ProviderOperationsMetadataListResultPage {
-	return ProviderOperationsMetadataListResultPage{
-		fn:    getNextPage,
-		pomlr: cur,
-	}
+func NewProviderOperationsMetadataListResultPage(getNextPage func(context.Context, ProviderOperationsMetadataListResult) (ProviderOperationsMetadataListResult, error)) ProviderOperationsMetadataListResultPage {
+	return ProviderOperationsMetadataListResultPage{fn: getNextPage}
 }
 
 // ResourceType resource Type
@@ -849,15 +810,10 @@ func (ralr RoleAssignmentListResult) IsEmpty() bool {
 	return ralr.Value == nil || len(*ralr.Value) == 0
 }
 
-// hasNextLink returns true if the NextLink is not empty.
-func (ralr RoleAssignmentListResult) hasNextLink() bool {
-	return ralr.NextLink != nil && len(*ralr.NextLink) != 0
-}
-
 // roleAssignmentListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (ralr RoleAssignmentListResult) roleAssignmentListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if !ralr.hasNextLink() {
+	if ralr.NextLink == nil || len(to.String(ralr.NextLink)) < 1 {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -885,16 +841,11 @@ func (page *RoleAssignmentListResultPage) NextWithContext(ctx context.Context) (
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	for {
-		next, err := page.fn(ctx, page.ralr)
-		if err != nil {
-			return err
-		}
-		page.ralr = next
-		if !next.hasNextLink() || !next.IsEmpty() {
-			break
-		}
+	next, err := page.fn(ctx, page.ralr)
+	if err != nil {
+		return err
 	}
+	page.ralr = next
 	return nil
 }
 
@@ -924,11 +875,8 @@ func (page RoleAssignmentListResultPage) Values() []RoleAssignment {
 }
 
 // Creates a new instance of the RoleAssignmentListResultPage type.
-func NewRoleAssignmentListResultPage(cur RoleAssignmentListResult, getNextPage func(context.Context, RoleAssignmentListResult) (RoleAssignmentListResult, error)) RoleAssignmentListResultPage {
-	return RoleAssignmentListResultPage{
-		fn:   getNextPage,
-		ralr: cur,
-	}
+func NewRoleAssignmentListResultPage(getNextPage func(context.Context, RoleAssignmentListResult) (RoleAssignmentListResult, error)) RoleAssignmentListResultPage {
+	return RoleAssignmentListResultPage{fn: getNextPage}
 }
 
 // RoleAssignmentProperties role assignment properties.
@@ -1111,15 +1059,10 @@ func (rdlr RoleDefinitionListResult) IsEmpty() bool {
 	return rdlr.Value == nil || len(*rdlr.Value) == 0
 }
 
-// hasNextLink returns true if the NextLink is not empty.
-func (rdlr RoleDefinitionListResult) hasNextLink() bool {
-	return rdlr.NextLink != nil && len(*rdlr.NextLink) != 0
-}
-
 // roleDefinitionListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (rdlr RoleDefinitionListResult) roleDefinitionListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if !rdlr.hasNextLink() {
+	if rdlr.NextLink == nil || len(to.String(rdlr.NextLink)) < 1 {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -1147,16 +1090,11 @@ func (page *RoleDefinitionListResultPage) NextWithContext(ctx context.Context) (
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	for {
-		next, err := page.fn(ctx, page.rdlr)
-		if err != nil {
-			return err
-		}
-		page.rdlr = next
-		if !next.hasNextLink() || !next.IsEmpty() {
-			break
-		}
+	next, err := page.fn(ctx, page.rdlr)
+	if err != nil {
+		return err
 	}
+	page.rdlr = next
 	return nil
 }
 
@@ -1186,11 +1124,8 @@ func (page RoleDefinitionListResultPage) Values() []RoleDefinition {
 }
 
 // Creates a new instance of the RoleDefinitionListResultPage type.
-func NewRoleDefinitionListResultPage(cur RoleDefinitionListResult, getNextPage func(context.Context, RoleDefinitionListResult) (RoleDefinitionListResult, error)) RoleDefinitionListResultPage {
-	return RoleDefinitionListResultPage{
-		fn:   getNextPage,
-		rdlr: cur,
-	}
+func NewRoleDefinitionListResultPage(getNextPage func(context.Context, RoleDefinitionListResult) (RoleDefinitionListResult, error)) RoleDefinitionListResultPage {
+	return RoleDefinitionListResultPage{fn: getNextPage}
 }
 
 // RoleDefinitionProperties role definition properties.

@@ -25,6 +25,7 @@ import (
 
 	"github.com/containerd/continuity/sysx"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 func copyFileInfo(fi os.FileInfo, name string) error {
@@ -52,7 +53,8 @@ func copyFileInfo(fi os.FileInfo, name string) error {
 		}
 	}
 
-	if err := utimesNano(name, StatAtime(st), StatMtime(st)); err != nil {
+	timespec := []syscall.Timespec{StatAtime(st), StatMtime(st)}
+	if err := syscall.UtimesNano(name, timespec); err != nil {
 		return errors.Wrapf(err, "failed to utime %s", name)
 	}
 
@@ -99,4 +101,12 @@ func copyXAttrs(dst, src string, xeh XAttrErrorHandler) error {
 	}
 
 	return nil
+}
+
+func copyDevice(dst string, fi os.FileInfo) error {
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return errors.New("unsupported stat type")
+	}
+	return unix.Mknod(dst, uint32(fi.Mode()), int(st.Rdev))
 }

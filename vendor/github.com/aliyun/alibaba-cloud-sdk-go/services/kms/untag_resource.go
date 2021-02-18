@@ -21,6 +21,7 @@ import (
 )
 
 // UntagResource invokes the kms.UntagResource API synchronously
+// api document: https://help.aliyun.com/api/kms/untagresource.html
 func (client *Client) UntagResource(request *UntagResourceRequest) (response *UntagResourceResponse, err error) {
 	response = CreateUntagResourceResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) UntagResource(request *UntagResourceRequest) (response *Un
 }
 
 // UntagResourceWithChan invokes the kms.UntagResource API asynchronously
+// api document: https://help.aliyun.com/api/kms/untagresource.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) UntagResourceWithChan(request *UntagResourceRequest) (<-chan *UntagResourceResponse, <-chan error) {
 	responseChan := make(chan *UntagResourceResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) UntagResourceWithChan(request *UntagResourceRequest) (<-ch
 }
 
 // UntagResourceWithCallback invokes the kms.UntagResource API asynchronously
+// api document: https://help.aliyun.com/api/kms/untagresource.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) UntagResourceWithCallback(request *UntagResourceRequest, callback func(response *UntagResourceResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -71,16 +76,14 @@ func (client *Client) UntagResourceWithCallback(request *UntagResourceRequest, c
 // UntagResourceRequest is the request struct for api UntagResource
 type UntagResourceRequest struct {
 	*requests.RpcRequest
-	CertificateId string `position:"Query" name:"CertificateId"`
-	TagKeys       string `position:"Query" name:"TagKeys"`
-	KeyId         string `position:"Query" name:"KeyId"`
-	SecretName    string `position:"Query" name:"SecretName"`
+	TagKeys string `position:"Query" name:"TagKeys"`
+	KeyId   string `position:"Query" name:"KeyId"`
 }
 
 // UntagResourceResponse is the response struct for api UntagResource
 type UntagResourceResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
+	KeyId string `json:"KeyId" xml:"KeyId"`
 }
 
 // CreateUntagResourceRequest creates a request to invoke UntagResource API
@@ -89,7 +92,6 @@ func CreateUntagResourceRequest() (request *UntagResourceRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "UntagResource", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

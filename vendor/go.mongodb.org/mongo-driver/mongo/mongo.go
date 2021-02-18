@@ -306,13 +306,11 @@ func transformAggregatePipelinev2(registry *bsoncodec.Registry, pipeline interfa
 
 		var hasOutputStage bool
 		pipelineDoc := bsoncore.Document(val)
-		values, _ := pipelineDoc.Values()
-		if pipelineLen := len(values); pipelineLen > 0 {
-			if finalDoc, ok := values[pipelineLen-1].DocumentOK(); ok {
-				if elem, err := finalDoc.IndexErr(0); err == nil && (elem.Key() == "$out" || elem.Key() == "$merge") {
-					hasOutputStage = true
-				}
-			}
+		if _, err := pipelineDoc.LookupErr("$out"); err == nil {
+			hasOutputStage = true
+		}
+		if _, err := pipelineDoc.LookupErr("$merge"); err == nil {
+			hasOutputStage = true
 		}
 
 		return pipelineDoc, hasOutputStage, nil

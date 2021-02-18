@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -60,14 +59,13 @@ type Zeroer interface {
 
 // StructCodec is the Codec used for struct values.
 type StructCodec struct {
-	cache                            map[reflect.Type]*structDescription
-	l                                sync.RWMutex
-	parser                           StructTagParser
-	DecodeZeroStruct                 bool
-	DecodeDeepZeroInline             bool
-	EncodeOmitDefaultStruct          bool
-	AllowUnexportedFields            bool
-	OverwriteDuplicatedInlinedFields bool
+	cache                   map[reflect.Type]*structDescription
+	l                       sync.RWMutex
+	parser                  StructTagParser
+	DecodeZeroStruct        bool
+	DecodeDeepZeroInline    bool
+	EncodeOmitDefaultStruct bool
+	AllowUnexportedFields   bool
 }
 
 var _ ValueEncoder = &StructCodec{}
@@ -94,9 +92,6 @@ func NewStructCodec(p StructTagParser, opts ...*bsonoptions.StructCodecOptions) 
 	}
 	if structOpt.EncodeOmitDefaultStruct != nil {
 		codec.EncodeOmitDefaultStruct = *structOpt.EncodeOmitDefaultStruct
-	}
-	if structOpt.OverwriteDuplicatedInlinedFields != nil {
-		codec.OverwriteDuplicatedInlinedFields = *structOpt.OverwriteDuplicatedInlinedFields
 	}
 	if structOpt.AllowUnexportedFields != nil {
 		codec.AllowUnexportedFields = *structOpt.AllowUnexportedFields
@@ -413,35 +408,6 @@ type fieldDescription struct {
 	decoder   ValueDecoder
 }
 
-type byIndex []fieldDescription
-
-func (bi byIndex) Len() int { return len(bi) }
-
-func (bi byIndex) Swap(i, j int) { bi[i], bi[j] = bi[j], bi[i] }
-
-func (bi byIndex) Less(i, j int) bool {
-	// If a field is inlined, its index in the top level struct is stored at inline[0]
-	iIdx, jIdx := bi[i].idx, bi[j].idx
-	if len(bi[i].inline) > 0 {
-		iIdx = bi[i].inline[0]
-	}
-	if len(bi[j].inline) > 0 {
-		jIdx = bi[j].inline[0]
-	}
-	if iIdx != jIdx {
-		return iIdx < jIdx
-	}
-	for k, biik := range bi[i].inline {
-		if k >= len(bi[j].inline) {
-			return false
-		}
-		if biik != bi[j].inline[k] {
-			return biik < bi[j].inline[k]
-		}
-	}
-	return len(bi[i].inline) < len(bi[j].inline)
-}
-
 func (sc *StructCodec) describeStruct(r *Registry, t reflect.Type) (*structDescription, error) {
 	// We need to analyze the struct, including getting the tags, collecting
 	// information about inlining, and create a map of the field name to the field.
@@ -459,7 +425,6 @@ func (sc *StructCodec) describeStruct(r *Registry, t reflect.Type) (*structDescr
 		inlineMap: -1,
 	}
 
-	var fields []fieldDescription
 	for i := 0; i < numFields; i++ {
 		sf := t.Field(i)
 		if sf.PkgPath != "" && (!sc.AllowUnexportedFields || !sf.Anonymous) {
@@ -519,83 +484,36 @@ func (sc *StructCodec) describeStruct(r *Registry, t reflect.Type) (*structDescr
 					return nil, err
 				}
 				for _, fd := range inlinesf.fl {
+					if _, exists := sd.fm[fd.name]; exists {
+						return nil, fmt.Errorf("(struct %s) duplicated key %s", t.String(), fd.name)
+					}
 					if fd.inline == nil {
 						fd.inline = []int{i, fd.idx}
 					} else {
 						fd.inline = append([]int{i}, fd.inline...)
 					}
-					fields = append(fields, fd)
-
+					sd.fm[fd.name] = fd
+					sd.fl = append(sd.fl, fd)
 				}
 			default:
 				return nil, fmt.Errorf("(struct %s) inline fields must be a struct, a struct pointer, or a map", t.String())
 			}
 			continue
 		}
-		fields = append(fields, description)
+
+		if _, exists := sd.fm[description.name]; exists {
+			return nil, fmt.Errorf("struct %s) duplicated key %s", t.String(), description.name)
+		}
+
+		sd.fm[description.name] = description
+		sd.fl = append(sd.fl, description)
 	}
-
-	// Sort fieldDescriptions by name and use dominance rules to determine which should be added for each name
-	sort.Slice(fields, func(i, j int) bool {
-		x := fields
-		// sort field by name, breaking ties with depth, then
-		// breaking ties with index sequence.
-		if x[i].name != x[j].name {
-			return x[i].name < x[j].name
-		}
-		if len(x[i].inline) != len(x[j].inline) {
-			return len(x[i].inline) < len(x[j].inline)
-		}
-		return byIndex(x).Less(i, j)
-	})
-
-	for advance, i := 0, 0; i < len(fields); i += advance {
-		// One iteration per name.
-		// Find the sequence of fields with the name of this first field.
-		fi := fields[i]
-		name := fi.name
-		for advance = 1; i+advance < len(fields); advance++ {
-			fj := fields[i+advance]
-			if fj.name != name {
-				break
-			}
-		}
-		if advance == 1 { // Only one field with this name
-			sd.fl = append(sd.fl, fi)
-			sd.fm[name] = fi
-			continue
-		}
-		dominant, ok := dominantField(fields[i : i+advance])
-		if !ok || !sc.OverwriteDuplicatedInlinedFields {
-			return nil, fmt.Errorf("struct %s) duplicated key %s", t.String(), name)
-		}
-		sd.fl = append(sd.fl, dominant)
-		sd.fm[name] = dominant
-	}
-
-	sort.Sort(byIndex(sd.fl))
 
 	sc.l.Lock()
 	sc.cache[t] = sd
 	sc.l.Unlock()
 
 	return sd, nil
-}
-
-// dominantField looks through the fields, all of which are known to
-// have the same name, to find the single field that dominates the
-// others using Go's inlining rules. If there are multiple top-level
-// fields, the boolean will be false: This condition is an error in Go
-// and we skip all the fields.
-func dominantField(fields []fieldDescription) (fieldDescription, bool) {
-	// The fields are sorted in increasing index-length order, then by presence of tag.
-	// That means that the first field is the dominant one. We need only check
-	// for error cases: two fields at top level.
-	if len(fields) > 1 &&
-		len(fields[0].inline) == len(fields[1].inline) {
-		return fieldDescription{}, false
-	}
-	return fields[0], true
 }
 
 func fieldByIndexErr(v reflect.Value, index []int) (result reflect.Value, err error) {

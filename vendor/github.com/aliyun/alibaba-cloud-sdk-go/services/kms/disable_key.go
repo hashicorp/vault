@@ -21,6 +21,7 @@ import (
 )
 
 // DisableKey invokes the kms.DisableKey API synchronously
+// api document: https://help.aliyun.com/api/kms/disablekey.html
 func (client *Client) DisableKey(request *DisableKeyRequest) (response *DisableKeyResponse, err error) {
 	response = CreateDisableKeyResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) DisableKey(request *DisableKeyRequest) (response *DisableK
 }
 
 // DisableKeyWithChan invokes the kms.DisableKey API asynchronously
+// api document: https://help.aliyun.com/api/kms/disablekey.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DisableKeyWithChan(request *DisableKeyRequest) (<-chan *DisableKeyResponse, <-chan error) {
 	responseChan := make(chan *DisableKeyResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) DisableKeyWithChan(request *DisableKeyRequest) (<-chan *Di
 }
 
 // DisableKeyWithCallback invokes the kms.DisableKey API asynchronously
+// api document: https://help.aliyun.com/api/kms/disablekey.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DisableKeyWithCallback(request *DisableKeyRequest, callback func(response *DisableKeyResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -86,7 +91,6 @@ func CreateDisableKeyRequest() (request *DisableKeyRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "DisableKey", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

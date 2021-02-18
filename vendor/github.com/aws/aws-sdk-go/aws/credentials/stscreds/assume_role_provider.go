@@ -244,11 +244,9 @@ type AssumeRoleProvider struct {
 	MaxJitterFrac float64
 }
 
-// NewCredentials returns a pointer to a new Credentials value wrapping the
+// NewCredentials returns a pointer to a new Credentials object wrapping the
 // AssumeRoleProvider. The credentials will expire every 15 minutes and the
-// role will be named after a nanosecond timestamp of this operation. The
-// Credentials value will attempt to refresh the credentials using the provider
-// when Credentials.Get is called, if the cached credentials are expiring.
+// role will be named after a nanosecond timestamp of this operation.
 //
 // Takes a Config provider to create the STS client. The ConfigProvider is
 // satisfied by the session.Session type.
@@ -270,11 +268,9 @@ func NewCredentials(c client.ConfigProvider, roleARN string, options ...func(*As
 	return credentials.NewCredentials(p)
 }
 
-// NewCredentialsWithClient returns a pointer to a new Credentials value wrapping the
+// NewCredentialsWithClient returns a pointer to a new Credentials object wrapping the
 // AssumeRoleProvider. The credentials will expire every 15 minutes and the
-// role will be named after a nanosecond timestamp of this operation. The
-// Credentials value will attempt to refresh the credentials using the provider
-// when Credentials.Get is called, if the cached credentials are expiring.
+// role will be named after a nanosecond timestamp of this operation.
 //
 // Takes an AssumeRoler which can be satisfied by the STS client.
 //

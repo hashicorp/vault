@@ -11,7 +11,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 )
 
-func MakeConsulBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "")
 
 	consulConf := map[string]string{

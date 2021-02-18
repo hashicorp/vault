@@ -51,7 +51,7 @@ func (p *Pointer) Delete(s interface{}) (interface{}, error) {
 
 	f, ok := funcMap[val.Kind()]
 	if !ok {
-		return nil, fmt.Errorf("delete %s: %w: %s", p, ErrInvalidKind, val.Kind())
+		return nil, fmt.Errorf("delete %s: invalid value kind: %s", p, val.Kind())
 	}
 
 	result, err := f(originalS, val)
@@ -89,7 +89,7 @@ func (p *Pointer) deleteSlice(root interface{}, s reflect.Value) (interface{}, e
 	// Verify we're within bounds
 	if idx < 0 || idx >= s.Len() {
 		return root, fmt.Errorf(
-			"index %d is %w (length = %d)", idx, ErrOutOfRange, s.Len())
+			"index %d is out of range (length = %d)", idx, s.Len())
 	}
 
 	// Mimicing the following with reflection to do this:

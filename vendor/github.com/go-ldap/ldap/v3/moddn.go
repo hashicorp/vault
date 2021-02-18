@@ -39,12 +39,7 @@ func (req *ModifyDNRequest) appendTo(envelope *ber.Packet) error {
 	pkt := ber.Encode(ber.ClassApplication, ber.TypeConstructed, ApplicationModifyDNRequest, nil, "Modify DN Request")
 	pkt.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, req.DN, "DN"))
 	pkt.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, req.NewRDN, "New RDN"))
-	if req.DeleteOldRDN {
-		buf := []byte{0xff}
-		pkt.AppendChild(ber.NewString(ber.ClassUniversal,ber.TypePrimitive,ber.TagBoolean, string(buf),"Delete old RDN"))
-	}else{
-		pkt.AppendChild(ber.NewBoolean(ber.ClassUniversal, ber.TypePrimitive, ber.TagBoolean, req.DeleteOldRDN, "Delete old RDN"))
-	}  
+	pkt.AppendChild(ber.NewBoolean(ber.ClassUniversal, ber.TypePrimitive, ber.TagBoolean, req.DeleteOldRDN, "Delete old RDN"))
 	if req.NewSuperior != "" {
 		pkt.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, 0, req.NewSuperior, "New Superior"))
 	}

@@ -38,8 +38,8 @@ type GenericMapResponse struct {
 }
 
 type HttpError struct {
-	error          // error type
-	StatusCode int // HTTP status
+    error               // error type
+    StatusCode  int     // HTTP status
 }
 
 // BackendType is the type of backend that is being implemented
@@ -47,11 +47,10 @@ type RestClientMode uint32
 
 // RestClient represents a stateful API client (cookies maintained between calls, single service etc)
 type RestClient struct {
-	Service         string
-	Client          *http.Client
-	Headers         map[string]string
-	SourceHeader    string
-	ResponseHeaders http.Header
+	Service      string
+	Client       *http.Client
+	Headers      map[string]string
+	SourceHeader string
 }
 
 // GetNewRestClient creates a new RestClient for the specified endpoint.  If a factory for creating
@@ -140,14 +139,10 @@ func (r *RestClient) postAndGetBody(method string, args map[string]interface{}) 
 
 	httpresp, err := r.Client.Do(postreq)
 	if err != nil {
-		r.ResponseHeaders = nil
 		return nil, err
 	}
 
 	defer httpresp.Body.Close()
-
-	// save response heasder
-	r.ResponseHeaders = httpresp.Header
 
 	if httpresp.StatusCode == 200 {
 		return ioutil.ReadAll(httpresp.Body)
@@ -155,11 +150,6 @@ func (r *RestClient) postAndGetBody(method string, args map[string]interface{}) 
 
 	body, _ := ioutil.ReadAll(httpresp.Body)
 	return nil, &HttpError{error: fmt.Errorf("POST to %s failed with code %d, body: %s", method, httpresp.StatusCode, body), StatusCode: httpresp.StatusCode}
-}
-
-// GetLastResponseHeaders returns the response headers from last REST call
-func (r *RestClient) GetLastResponseHeaders() http.Header {
-	return r.ResponseHeaders
 }
 
 // This function converts a map[string]interface{} into json string

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/tools/internal/event/label"
 )
 
-// Event holds the information about an event of note that occurred.
+// Event holds the information about an event of note that ocurred.
 type Event struct {
 	at time.Time
 

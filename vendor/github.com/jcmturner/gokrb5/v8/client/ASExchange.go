@@ -86,7 +86,7 @@ func setPAData(cl *Client, krberr *messages.KRBError, ASReq *messages.ASReq) err
 		var et etype.EType
 		var err error
 		var key types.EncryptionKey
-		var kvno int
+		kvno := 1
 		if krberr == nil {
 			// This is not in response to an error from the KDC. It is preemptive or renewal
 			// There is no KRB Error that tells us the etype to use
@@ -145,7 +145,15 @@ func setPAData(cl *Client, krberr *messages.KRBError, ASReq *messages.ASReq) err
 
 // preAuthEType establishes what encryption type to use for pre-authentication from the KRBError returned from the KDC.
 func preAuthEType(krberr *messages.KRBError) (etype etype.EType, err error) {
-	//RFC 4120 5.2.7.5 covers the preference order of ETYPE-INFO2 and ETYPE-INFO.
+	//The preferred ordering of the "hint" pre-authentication data that
+	//affect client key selection is: ETYPE-INFO2, followed by ETYPE-INFO,
+	//followed by PW-SALT.
+	//A KDC SHOULD NOT send PA-PW-SALT when issuing a KRB-ERROR message
+	//that requests additional pre-authentication.  Implementation note:
+	//Some KDC implementations issue an erroneous PA-PW-SALT when issuing a
+	//KRB-ERROR message that requests additional pre-authentication.
+	//Therefore, clients SHOULD ignore a PA-PW-SALT accompanying a
+	//KRB-ERROR message that requests additional pre-authentication.
 	var etypeID int32
 	var pas types.PADataSequence
 	e := pas.Unmarshal(krberr.EData)
@@ -153,7 +161,6 @@ func preAuthEType(krberr *messages.KRBError) (etype etype.EType, err error) {
 		err = krberror.Errorf(e, krberror.EncodingError, "error unmashalling KRBError data")
 		return
 	}
-Loop:
 	for _, pa := range pas {
 		switch pa.PADataType {
 		case patype.PA_ETYPE_INFO2:
@@ -163,7 +170,7 @@ Loop:
 				return
 			}
 			etypeID = info[0].EType
-			break Loop
+			break
 		case patype.PA_ETYPE_INFO:
 			info, e := pa.GetETypeInfo()
 			if e != nil {

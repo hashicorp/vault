@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
-	exec "golang.org/x/sys/execabs"
+	"os/exec"
 	"strings"
 )
 

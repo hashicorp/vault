@@ -17,5 +17,5 @@ package ram
 
 // PolicyVersions is a nested struct in ram response
 type PolicyVersions struct {
-	PolicyVersion []PolicyVersionInListPolicyVersions `json:"PolicyVersion" xml:"PolicyVersion"`
+	PolicyVersion []PolicyVersion `json:"PolicyVersion" xml:"PolicyVersion"`
 }

@@ -17,5 +17,5 @@ package ram
 
 // GroupsInListGroups is a nested struct in ram response
 type GroupsInListGroups struct {
-	Group []GroupInListGroups `json:"Group" xml:"Group"`
+	Group []Group `json:"Group" xml:"Group"`
 }

@@ -70,7 +70,6 @@ func (client SignedInUserClient) Get(ctx context.Context) (result User, err erro
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.SignedInUserClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -147,11 +146,6 @@ func (client SignedInUserClient) ListOwnedObjects(ctx context.Context) (result D
 	result.dolr, err = client.ListOwnedObjectsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.SignedInUserClient", "ListOwnedObjects", resp, "Failure responding to request")
-		return
-	}
-	if result.dolr.hasNextLink() && result.dolr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -240,7 +234,6 @@ func (client SignedInUserClient) ListOwnedObjectsNext(ctx context.Context, nextL
 	result, err = client.ListOwnedObjectsNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.SignedInUserClient", "ListOwnedObjectsNext", resp, "Failure responding to request")
-		return
 	}
 
 	return

@@ -17,5 +17,5 @@ package ram
 
 // UsersInListEntitiesForPolicy is a nested struct in ram response
 type UsersInListEntitiesForPolicy struct {
-	User []UserInListEntitiesForPolicy `json:"User" xml:"User"`
+	User []User `json:"User" xml:"User"`
 }

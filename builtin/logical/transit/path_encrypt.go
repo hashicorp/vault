@@ -159,7 +159,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Context = casted
 			} else {
-				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T', value: '%v'", i, item["context"], item["context"]))
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
 			}
 		}
 
@@ -168,7 +168,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Ciphertext = casted
 			} else {
-				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T', value: '%v'", i, item["ciphertext"], item["ciphertext"]))
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
 			}
 		}
 
@@ -177,7 +177,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			if casted, ok := v.(string); ok {
 				(*dst)[i].Plaintext = casted
 			} else {
-				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T', value: '%v'", i, item["plaintext"], item["plaintext"]))
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T'", i, item["plaintext"]))
 			}
 		}
 
@@ -186,7 +186,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Nonce = casted
 			} else {
-				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T', value: '%v'", i, item["nonce"], item["nonce"]))
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T'", i, item["nonce"]))
 			}
 		}
 
@@ -195,7 +195,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			} else if casted, ok := v.(int); ok {
 				(*dst)[i].KeyVersion = casted
 			} else {
-				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T', value: '%v'", i, item["key_version"], item["key_version"]))
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
 			}
 		}
 	}

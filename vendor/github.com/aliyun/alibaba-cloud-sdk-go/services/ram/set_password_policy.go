@@ -76,22 +76,22 @@ func (client *Client) SetPasswordPolicyWithCallback(request *SetPasswordPolicyRe
 // SetPasswordPolicyRequest is the request struct for api SetPasswordPolicy
 type SetPasswordPolicyRequest struct {
 	*requests.RpcRequest
+	RequireNumbers             requests.Boolean `position:"Query" name:"RequireNumbers"`
 	PasswordReusePrevention    requests.Integer `position:"Query" name:"PasswordReusePrevention"`
 	RequireUppercaseCharacters requests.Boolean `position:"Query" name:"RequireUppercaseCharacters"`
-	MinimumPasswordLength      requests.Integer `position:"Query" name:"MinimumPasswordLength"`
-	RequireNumbers             requests.Boolean `position:"Query" name:"RequireNumbers"`
-	RequireLowercaseCharacters requests.Boolean `position:"Query" name:"RequireLowercaseCharacters"`
 	MaxPasswordAge             requests.Integer `position:"Query" name:"MaxPasswordAge"`
 	MaxLoginAttemps            requests.Integer `position:"Query" name:"MaxLoginAttemps"`
 	HardExpiry                 requests.Boolean `position:"Query" name:"HardExpiry"`
+	MinimumPasswordLength      requests.Integer `position:"Query" name:"MinimumPasswordLength"`
+	RequireLowercaseCharacters requests.Boolean `position:"Query" name:"RequireLowercaseCharacters"`
 	RequireSymbols             requests.Boolean `position:"Query" name:"RequireSymbols"`
 }
 
 // SetPasswordPolicyResponse is the response struct for api SetPasswordPolicy
 type SetPasswordPolicyResponse struct {
 	*responses.BaseResponse
-	RequestId      string                            `json:"RequestId" xml:"RequestId"`
-	PasswordPolicy PasswordPolicyInSetPasswordPolicy `json:"PasswordPolicy" xml:"PasswordPolicy"`
+	RequestId      string         `json:"RequestId" xml:"RequestId"`
+	PasswordPolicy PasswordPolicy `json:"PasswordPolicy" xml:"PasswordPolicy"`
 }
 
 // CreateSetPasswordPolicyRequest creates a request to invoke SetPasswordPolicy API
@@ -99,7 +99,7 @@ func CreateSetPasswordPolicyRequest() (request *SetPasswordPolicyRequest) {
 	request = &SetPasswordPolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "SetPasswordPolicy", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "SetPasswordPolicy", "", "")
 	return
 }
 

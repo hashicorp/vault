@@ -17,5 +17,5 @@ package ram
 
 // RolesInListRoles is a nested struct in ram response
 type RolesInListRoles struct {
-	Role []RoleInListRoles `json:"Role" xml:"Role"`
+	Role []Role `json:"Role" xml:"Role"`
 }

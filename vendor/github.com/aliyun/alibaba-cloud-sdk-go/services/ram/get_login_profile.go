@@ -82,8 +82,8 @@ type GetLoginProfileRequest struct {
 // GetLoginProfileResponse is the response struct for api GetLoginProfile
 type GetLoginProfileResponse struct {
 	*responses.BaseResponse
-	RequestId    string                        `json:"RequestId" xml:"RequestId"`
-	LoginProfile LoginProfileInGetLoginProfile `json:"LoginProfile" xml:"LoginProfile"`
+	RequestId    string       `json:"RequestId" xml:"RequestId"`
+	LoginProfile LoginProfile `json:"LoginProfile" xml:"LoginProfile"`
 }
 
 // CreateGetLoginProfileRequest creates a request to invoke GetLoginProfile API
@@ -91,7 +91,7 @@ func CreateGetLoginProfileRequest() (request *GetLoginProfileRequest) {
 	request = &GetLoginProfileRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetLoginProfile", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetLoginProfile", "", "")
 	return
 }
 

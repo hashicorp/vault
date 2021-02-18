@@ -16,12 +16,7 @@
 
 package storage
 
-import (
-	"net/url"
-	"strings"
-
-	"google.golang.org/api/googleapi"
-)
+import "google.golang.org/api/googleapi"
 
 func shouldRetry(err error) bool {
 	switch e := err.(type) {
@@ -29,17 +24,6 @@ func shouldRetry(err error) bool {
 		// Retry on 429 and 5xx, according to
 		// https://cloud.google.com/storage/docs/exponential-backoff.
 		return e.Code == 429 || (e.Code >= 500 && e.Code < 600)
-	case *url.Error:
-		// Retry socket-level errors ECONNREFUSED and ENETUNREACH (from syscall).
-		// Unfortunately the error type is unexported, so we resort to string
-		// matching.
-		retriable := []string{"connection refused", "connection reset"}
-		for _, s := range retriable {
-			if strings.Contains(e.Error(), s) {
-				return true
-			}
-		}
-		return false
 	case interface{ Temporary() bool }:
 		return e.Temporary()
 	default:

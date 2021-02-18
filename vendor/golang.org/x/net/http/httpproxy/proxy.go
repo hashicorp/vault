@@ -27,7 +27,8 @@ import (
 type Config struct {
 	// HTTPProxy represents the value of the HTTP_PROXY or
 	// http_proxy environment variable. It will be used as the proxy
-	// URL for HTTP requests unless overridden by NoProxy.
+	// URL for HTTP requests and HTTPS requests unless overridden by
+	// HTTPSProxy or NoProxy.
 	HTTPProxy string
 
 	// HTTPSProxy represents the HTTPS_PROXY or https_proxy
@@ -128,7 +129,8 @@ func (cfg *config) proxyForURL(reqURL *url.URL) (*url.URL, error) {
 	var proxy *url.URL
 	if reqURL.Scheme == "https" {
 		proxy = cfg.httpsProxy
-	} else if reqURL.Scheme == "http" {
+	}
+	if proxy == nil {
 		proxy = cfg.httpProxy
 		if proxy != nil && cfg.CGI {
 			return nil, errors.New("refusing to use HTTP_PROXY value in CGI environment; see golang.org/s/cgihttpproxy")

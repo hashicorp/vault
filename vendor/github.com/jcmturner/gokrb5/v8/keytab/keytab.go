@@ -4,16 +4,13 @@ package keytab
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"time"
 	"unsafe"
 
-	"github.com/jcmturner/gokrb5/v8/crypto"
 	"github.com/jcmturner/gokrb5/v8/types"
 )
 
@@ -36,33 +33,19 @@ type entry struct {
 	KVNO      uint32
 }
 
-func (e entry) String() string {
-	return fmt.Sprintf("% 4d %s %-56s %2d %-64x",
-		e.KVNO8,
-		e.Timestamp.Format("02/01/06 15:04:05"),
-		e.Principal.String(),
-		e.Key.KeyType,
-		e.Key.KeyValue,
-	)
-}
-
 // Keytab entry principal struct.
 type principal struct {
-	NumComponents int16 `json:"-"`
+	NumComponents int16
 	Realm         string
 	Components    []string
 	NameType      int32
-}
-
-func (p principal) String() string {
-	return fmt.Sprintf("%s@%s", strings.Join(p.Components, "/"), p.Realm)
 }
 
 // New creates new, empty Keytab type.
 func New() *Keytab {
 	var e []entry
 	return &Keytab{
-		version: 2,
+		version: 0,
 		Entries: e,
 	}
 }
@@ -72,7 +55,6 @@ func New() *Keytab {
 func (kt *Keytab) GetEncryptionKey(princName types.PrincipalName, realm string, kvno int, etype int32) (types.EncryptionKey, int, error) {
 	var key types.EncryptionKey
 	var t time.Time
-	var kv int
 	for _, k := range kt.Entries {
 		if k.Principal.Realm == realm && len(k.Principal.Components) == len(princName.NameString) &&
 			k.Key.KeyType == etype &&
@@ -87,7 +69,7 @@ func (kt *Keytab) GetEncryptionKey(princName types.PrincipalName, realm string, 
 			}
 			if p {
 				key = k.Key
-				kv = int(k.KVNO)
+				kvno = int(k.KVNO)
 				t = k.Timestamp
 			}
 		}
@@ -95,7 +77,7 @@ func (kt *Keytab) GetEncryptionKey(princName types.PrincipalName, realm string, 
 	if len(key.KeyValue) < 1 {
 		return key, 0, fmt.Errorf("matching key not found in keytab. Looking for %v realm: %v kvno: %v etype: %v", princName.NameString, realm, kvno, etype)
 	}
-	return key, kv, nil
+	return key, kvno, nil
 }
 
 // Create a new Keytab entry.
@@ -111,49 +93,6 @@ func newEntry() entry {
 		},
 		KVNO: 0,
 	}
-}
-
-func (kt Keytab) String() string {
-	var s string
-	s = `KVNO Timestamp         Principal                                                ET Key
----- ----------------- -------------------------------------------------------- -- ----------------------------------------------------------------
-`
-	for _, entry := range kt.Entries {
-		s += entry.String() + "\n"
-	}
-	return s
-}
-
-// AddEntry adds an entry to the keytab. The password should be provided in plain text and it will be converted using the defined enctype to be stored.
-func (kt *Keytab) AddEntry(principalName, realm, password string, ts time.Time, KVNO uint8, encType int32) error {
-	// Generate a key from the password
-	princ, _ := types.ParseSPNString(principalName)
-	key, _, err := crypto.GetKeyFromPassword(password, princ, realm, encType, types.PADataSequence{})
-	if err != nil {
-		return err
-	}
-
-	// Populate the keytab entry principal
-	ktep := newPrincipal()
-	ktep.NumComponents = int16(len(princ.NameString))
-	if kt.version == 1 {
-		ktep.NumComponents += 1
-	}
-
-	ktep.Realm = realm
-	ktep.Components = princ.NameString
-	ktep.NameType = princ.NameType
-
-	// Populate the keytab entry
-	e := newEntry()
-	e.Principal = ktep
-	e.Timestamp = ts
-	e.KVNO8 = KVNO
-	e.KVNO = uint32(KVNO)
-	e.Key = key
-
-	kt.Entries = append(kt.Entries, e)
-	return nil
 }
 
 // Create a new principal.
@@ -223,6 +162,12 @@ func (kt *Keytab) Unmarshal(b []byte) error {
 	if kt.version == 1 && isNativeEndianLittle() {
 		endian = binary.LittleEndian
 	}
+	/*
+		After the two-byte version indicator, the file contains a sequence of signed 32-bit record lengths followed by key records or holes.
+		A positive record length indicates a valid key entry whose size is equal to or less than the record length.
+		A negative length indicates a zero-filled hole whose size is the inverse of the length.
+		A length of 0 indicates the end of the file.
+	*/
 	// n tracks position in the byte array
 	n := 2
 	l, err := readInt32(b, &n, &endian)
@@ -235,6 +180,7 @@ func (kt *Keytab) Unmarshal(b []byte) error {
 			l = l * -1
 			n = n + int(l)
 		} else {
+			//fmt.Printf("Bytes for entry: %v\n", b[n:n+int(l)])
 			if n < 0 {
 				return fmt.Errorf("%d can't be less than zero", n)
 			}
@@ -271,9 +217,9 @@ func (kt *Keytab) Unmarshal(b []byte) error {
 			if err != nil {
 				return err
 			}
-			// The 32-bit key version overrides the 8-bit key version.
-			// If at least 4 bytes are left after the other fields are read and they are non-zero
-			// this indicates the 32-bit version is present.
+			//The 32-bit key version overrides the 8-bit key version.
+			// To determine if it is present, the implementation must check that at least 4 bytes remain in the record after the other fields are read,
+			// and that the value of the 32-bit integer contained in those bytes is non-zero.
 			if len(eb)-p >= 4 {
 				// The 32-bit key may be present
 				ri32, err := readInt32(eb, &p, &endian)
@@ -518,13 +464,4 @@ func isNativeEndianLittle() bool {
 		endian = false
 	}
 	return endian
-}
-
-// JSON return information about the keys held in the keytab in a JSON format.
-func (kt *Keytab) JSON() (string, error) {
-	b, err := json.MarshalIndent(kt, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }

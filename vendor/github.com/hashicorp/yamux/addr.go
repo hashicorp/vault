@@ -54,7 +54,7 @@ func (s *Stream) LocalAddr() net.Addr {
 	return s.session.LocalAddr()
 }
 
-// RemoteAddr returns the remote address
+// LocalAddr returns the remote address
 func (s *Stream) RemoteAddr() net.Addr {
 	return s.session.RemoteAddr()
 }

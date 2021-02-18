@@ -26,7 +26,7 @@
   "description": "Stores and retrieves potentially large, immutable data objects.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/storage/docs/json_api/",
-  "etag": "\"3138313838303239383939343230333837363830\"",
+  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/5Ir-e9ddNPcr5skzvRsSnJlvTYg\"",
   "icons": {
     "x16": "https://www.google.com/images/icons/product/cloud_storage-16.png",
     "x32": "https://www.google.com/images/icons/product/cloud_storage-32.png"
@@ -36,7 +36,6 @@
   "labels": [
     "labs"
   ],
-  "mtlsRootUrl": "https://storage.mtls.googleapis.com/",
   "name": "storage",
   "ownerDomain": "google.com",
   "ownerName": "Google",
@@ -1782,7 +1781,7 @@
               "type": "string"
             },
             "kmsKeyName": {
-              "description": "Resource name of the Cloud KMS key, of the form projects/my-project/locations/global/keyRings/my-kr/cryptoKeys/my-key, that will be used to encrypt the object. Overrides the object metadata's kms_key_name value, if any.",
+              "description": "Not currently supported. Specifying the parameter causes the request to fail with status code 400 - Bad Request.",
               "location": "query",
               "type": "string"
             },
@@ -3230,7 +3229,7 @@
       }
     }
   },
-  "revision": "20210127",
+  "revision": "20200611",
   "rootUrl": "https://storage.googleapis.com/",
   "schemas": {
     "Bucket": {
@@ -3337,10 +3336,6 @@
               },
               "type": "object"
             },
-            "publicAccessPrevention": {
-              "description": "The bucket's Public Access Prevention configuration. Currently, 'unspecified' and 'enforced' are supported.",
-              "type": "string"
-            },
             "uniformBucketLevelAccess": {
               "description": "The bucket's uniform bucket-level access configuration.",
               "properties": {
@@ -3411,8 +3406,8 @@
                         "type": "string"
                       },
                       "customTimeBefore": {
-                        "description": "A date in RFC 3339 format with only the date part (for instance, \"2013-01-15\"). This condition is satisfied when the custom time on an object is before this date in UTC.",
-                        "format": "date",
+                        "description": "A timestamp in RFC 3339 format. This condition is satisfied when the custom time on an object is before this timestamp.",
+                        "format": "date-time",
                         "type": "string"
                       },
                       "daysSinceCustomTime": {
@@ -3441,8 +3436,8 @@
                         "type": "array"
                       },
                       "noncurrentTimeBefore": {
-                        "description": "A date in RFC 3339 format with only the date part (for instance, \"2013-01-15\"). This condition is satisfied when the noncurrent time on an object is before this date in UTC. This condition is relevant only for versioned objects.",
-                        "format": "date",
+                        "description": "A timestamp in RFC 3339 format. This condition is satisfied when the noncurrent time on an object is before this timestamp. This condition is relevant only for versioned objects.",
+                        "format": "date-time",
                         "type": "string"
                       },
                       "numNewerVersions": {
@@ -3536,10 +3531,6 @@
           },
           "type": "object"
         },
-        "satisfiesPZS": {
-          "description": "Reserved for future use.",
-          "type": "boolean"
-        },
         "selfLink": {
           "description": "The URI of this bucket.",
           "type": "string"
@@ -3588,6 +3579,10 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "zoneSeparation": {
+          "description": "If set, objects placed in this bucket are required to be separated by disaster domain.",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -4101,7 +4096,7 @@
           "type": "string"
         },
         "kmsKeyName": {
-          "description": "Not currently supported. Specifying the parameter causes the request to fail with status code 400 - Bad Request.",
+          "description": "Cloud KMS Key used to encrypt this object, if the object is encrypted by such a key.",
           "type": "string"
         },
         "md5Hash": {

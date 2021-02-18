@@ -48,10 +48,8 @@ func (i internalOnly) ReportActiveSpans(name string) []*SpanData {
 	var out []*SpanData
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for activeSpan := range s.active {
-		if s, ok := activeSpan.(*span); ok {
-			out = append(out, s.makeSpanData())
-		}
+	for span := range s.active {
+		out = append(out, span.makeSpanData())
 	}
 	return out
 }
@@ -187,7 +185,7 @@ func (i internalOnly) ReportSpansByLatency(name string, minLatency, maxLatency t
 // bucketed by latency.
 type spanStore struct {
 	mu                     sync.Mutex // protects everything below.
-	active                 map[SpanInterface]struct{}
+	active                 map[*Span]struct{}
 	errors                 map[int32]*bucket
 	latency                []bucket
 	maxSpansPerErrorBucket int
@@ -196,7 +194,7 @@ type spanStore struct {
 // newSpanStore creates a span store.
 func newSpanStore(name string, latencyBucketSize int, errorBucketSize int) *spanStore {
 	s := &spanStore{
-		active:                 make(map[SpanInterface]struct{}),
+		active:                 make(map[*Span]struct{}),
 		latency:                make([]bucket, len(defaultLatencies)+1),
 		maxSpansPerErrorBucket: errorBucketSize,
 	}
@@ -273,7 +271,7 @@ func (s *spanStore) resize(latencyBucketSize int, errorBucketSize int) {
 }
 
 // add adds a span to the active bucket of the spanStore.
-func (s *spanStore) add(span SpanInterface) {
+func (s *spanStore) add(span *Span) {
 	s.mu.Lock()
 	s.active[span] = struct{}{}
 	s.mu.Unlock()
@@ -281,7 +279,7 @@ func (s *spanStore) add(span SpanInterface) {
 
 // finished removes a span from the active set, and adds a corresponding
 // SpanData to a latency or error bucket.
-func (s *spanStore) finished(span SpanInterface, sd *SpanData) {
+func (s *spanStore) finished(span *Span, sd *SpanData) {
 	latency := sd.EndTime.Sub(sd.StartTime)
 	if latency < 0 {
 		latency = 0

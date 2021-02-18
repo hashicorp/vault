@@ -40,10 +40,6 @@ func (c *CredentialsInfo) Unmarshal(b []byte, k types.EncryptionKey) (err error)
 		return
 	}
 	c.PACCredentialDataEncrypted, err = r.ReadBytes(len(b) - 8)
-	if err != nil {
-		err = fmt.Errorf("error reading PAC Credetials Data: %v", err)
-		return
-	}
 
 	err = c.DecryptEncPart(k)
 	if err != nil {
@@ -70,6 +66,10 @@ func (c *CredentialsInfo) DecryptEncPart(k types.EncryptionKey) error {
 }
 
 // CredentialData implements https://msdn.microsoft.com/en-us/library/cc237952.aspx
+// This structure is encrypted prior to being encoded in any other structures.
+// Encryption is performed by first serializing the data structure via Network Data Representation (NDR) encoding, as specified in [MS-RPCE].
+// Once serialized, the data is encrypted using the key and cryptographic system selected through the AS protocol and the KRB_AS_REP message
+// Fields (for capturing this information) and cryptographic parameters are specified in PAC_CREDENTIAL_INFO (section 2.6.1).
 type CredentialData struct {
 	CredentialCount uint32
 	Credentials     []SECPKGSupplementalCred // Size is the value of CredentialCount

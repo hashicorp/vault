@@ -1,5 +1,5 @@
 /*
-Rabbit Hole is a Go client for the RabbitMQ HTTP API.
+Package rabbithole is a Go client for the RabbitMQ HTTP API.
 
 All HTTP API operations are accessible via `rabbithole.Client`, which
 should be instantiated with `rabbithole.NewClient`.
@@ -172,6 +172,27 @@ Managing Permissions
 
         // revokes permissions in vhost
         resp, err := rmqc.ClearPermissionsIn("/", "my.user")
+        // => *http.Response, err
+
+Managing Topic Permissions
+
+        xs, err := rmqc.ListTopicPermissions()
+        // => []TopicPermissionInfo, err
+
+        // permissions of individual user
+        x, err := rmqc.ListTopicPermissionsOf("my.user")
+        // => []TopicPermissionInfo, err
+
+        // permissions of individual user in vhost
+        x, err := rmqc.GetTopicPermissionsIn("/", "my.user")
+        // => []TopicPermissionInfo, err
+
+        // updates permissions of user in vhost
+        resp, err := rmqc.UpdateTopicPermissionsIn("/", "my.user", Permissions{Exchange: "amq.topic", Write: ".*", Read: ".*"})
+        // => *http.Response, err
+
+        // revokes permissions in vhost
+        resp, err := rmqc.ClearTopicPermissionsIn("/", "my.user")
         // => *http.Response, err
 
 Operations on cluster name

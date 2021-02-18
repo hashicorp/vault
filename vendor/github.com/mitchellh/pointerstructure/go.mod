@@ -1,5 +1,5 @@
 module github.com/mitchellh/pointerstructure
 
-go 1.13
+go 1.12
 
-require github.com/mitchellh/mapstructure v1.4.1
+require github.com/mitchellh/mapstructure v1.1.2

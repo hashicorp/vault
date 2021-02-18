@@ -13,12 +13,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/jcmturner/gofork/encoding/asn1"
 	"github.com/jcmturner/goidentity/v6"
 	"github.com/jcmturner/gokrb5/v8/client"
 	"github.com/jcmturner/gokrb5/v8/credentials"
 	"github.com/jcmturner/gokrb5/v8/gssapi"
-	"github.com/jcmturner/gokrb5/v8/iana/nametype"
 	"github.com/jcmturner/gokrb5/v8/keytab"
 	"github.com/jcmturner/gokrb5/v8/krberror"
 	"github.com/jcmturner/gokrb5/v8/service"
@@ -48,14 +46,10 @@ type teeReadCloser struct {
 	io.Closer
 }
 
-// NewClient returns a SPNEGO enabled HTTP client.
-// Be careful when passing in the *http.Client if it is beginning reused in multiple calls to this function.
-// Ensure reuse of the provided *http.Client is for the same user as a session cookie may have been added to
-// http.Client's cookie jar.
-// Incorrect reuse of the provided *http.Client could lead to access to the wrong user's session.
+// NewClient returns an SPNEGO enabled HTTP client.
 func NewClient(krb5Cl *client.Client, httpCl *http.Client, spn string) *Client {
 	if httpCl == nil {
-		httpCl = &http.Client{}
+		httpCl = http.DefaultClient
 	}
 	// Add a cookie jar if there isn't one
 	if httpCl.Jar == nil {
@@ -116,8 +110,6 @@ func (c *Client) Do(req *http.Request) (resp *http.Response, err error) {
 			// Refresh the body reader so the body can be sent again
 			req.Body = ioutil.NopCloser(&body)
 		}
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
 		return c.Do(req)
 	}
 	return resp, err
@@ -165,43 +157,18 @@ func respUnauthorizedNegotiate(resp *http.Response) bool {
 	return false
 }
 
-func setRequestSPN(r *http.Request) (types.PrincipalName, error) {
-	h := strings.TrimSuffix(r.URL.Host, ".")
-	// This if statement checks if the host includes a port number
-	if strings.LastIndex(r.URL.Host, ":") > strings.LastIndex(r.URL.Host, "]") {
-		// There is a port number in the URL
-		h, p, err := net.SplitHostPort(h)
-		if err != nil {
-			return types.PrincipalName{}, err
-		}
-		name, err := net.LookupCNAME(h)
-		if err == nil {
-			// Underlyng canonical name should be used for SPN
-			h = name
-		}
-		h = strings.TrimSuffix(h, ".")
-		r.Host = fmt.Sprintf("%s:%s", h, p)
-		return types.NewPrincipalName(nametype.KRB_NT_PRINCIPAL, "HTTP/"+h), nil
-	}
-	name, err := net.LookupCNAME(h)
-	if err == nil {
-		// Underlyng canonical name should be used for SPN
-		h = name
-	}
-	h = strings.TrimSuffix(h, ".")
-	r.Host = h
-	return types.NewPrincipalName(nametype.KRB_NT_PRINCIPAL, "HTTP/"+h), nil
-}
-
 // SetSPNEGOHeader gets the service ticket and sets it as the SPNEGO authorization header on HTTP request object.
 // To auto generate the SPN from the request object pass a null string "".
 func SetSPNEGOHeader(cl *client.Client, r *http.Request, spn string) error {
 	if spn == "" {
-		pn, err := setRequestSPN(r)
-		if err != nil {
-			return err
+		h := strings.TrimSuffix(strings.SplitN(r.URL.Host, ":", 2)[0], ".")
+		name, err := net.LookupCNAME(h)
+		if err == nil {
+			// Underlyng canonical name should be used for SPN
+			h = strings.TrimSuffix(name, ".")
 		}
-		spn = pn.PrincipalNameString()
+		spn = "HTTP/" + h
+		r.Host = h
 	}
 	cl.Log("using SPN %s", spn)
 	s := SPNEGOClient(cl, spn)
@@ -324,19 +291,9 @@ func getAuthorizationNegotiationHeaderAsSPNEGOToken(spnego *SPNEGO, r *http.Requ
 	var st SPNEGOToken
 	err = st.Unmarshal(b)
 	if err != nil {
-		// Check if this is a raw KRB5 context token - issue #347.
-		var k5t KRB5Token
-		if k5t.Unmarshal(b) != nil {
-			err = fmt.Errorf("error in unmarshaling SPNEGO token: %v", err)
-			spnegoNegotiateKRB5MechType(spnego, w, "%s - SPNEGO %v", r.RemoteAddr, err)
-			return nil, err
-		}
-		// Wrap it into an SPNEGO context token
-		st.Init = true
-		st.NegTokenInit = NegTokenInit{
-			MechTypes:      []asn1.ObjectIdentifier{k5t.OID},
-			MechTokenBytes: b,
-		}
+		err = fmt.Errorf("error in unmarshaling SPNEGO token: %v", err)
+		spnegoNegotiateKRB5MechType(spnego, w, "%s - SPNEGO %v", r.RemoteAddr, err)
+		return nil, err
 	}
 	return &st, nil
 }

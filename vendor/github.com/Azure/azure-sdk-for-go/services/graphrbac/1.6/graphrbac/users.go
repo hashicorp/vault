@@ -84,7 +84,6 @@ func (client UsersClient) Create(ctx context.Context, parameters UserCreateParam
 	result, err = client.CreateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Create", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -159,7 +158,6 @@ func (client UsersClient) Delete(ctx context.Context, upnOrObjectID string) (res
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Delete", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -232,7 +230,6 @@ func (client UsersClient) Get(ctx context.Context, upnOrObjectID string) (result
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -313,7 +310,6 @@ func (client UsersClient) GetMemberGroups(ctx context.Context, objectID string, 
 	result, err = client.GetMemberGroupsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "GetMemberGroups", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -396,11 +392,6 @@ func (client UsersClient) List(ctx context.Context, filter string, expand string
 	result.ulr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.ulr.hasNextLink() && result.ulr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -495,7 +486,6 @@ func (client UsersClient) ListNext(ctx context.Context, nextLink string) (result
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "ListNext", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -570,7 +560,6 @@ func (client UsersClient) Update(ctx context.Context, upnOrObjectID string, para
 	result, err = client.UpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Update", resp, "Failure responding to request")
-		return
 	}
 
 	return
