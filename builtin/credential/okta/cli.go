@@ -38,13 +38,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		"password": password,
 	}
 
-	mfa_method, ok := m["method"]
-	if ok {
-		data["method"] = mfa_method
-	}
-	mfa_passcode, ok := m["passcode"]
-	if ok {
-		data["passcode"] = mfa_passcode
+	if totp, ok := m["totp"]; ok {
+		data["totp"] = totp
 	}
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)

@@ -15,14 +15,18 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login/(?P<username>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
+			},
+			"totp": {
+				Type:        framework.TypeString,
+				Description: "TOTP passcode.",
 			},
 		},
 
@@ -54,8 +58,9 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
+	totp := d.Get("totp").(string)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -111,13 +116,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
+	totp := d.Get("totp").(string)
 
 	cfg, err := b.getConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, totp)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
