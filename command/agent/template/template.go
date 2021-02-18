@@ -267,12 +267,11 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
 		conf.Vault.Address = &address
 
-		// Only configure TLS Skip Verify if CT is not going through the cache. We can
-		// skip verification if its using the cache because they're part of the same agent.
+		// Skip verification if its using the cache because they're part of the same agent.
 		if scheme == "https" {
 			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
-			conf.Vault.SSL.Cert = pointerutil.StringPtr("")
-			conf.Vault.SSL.Key = pointerutil.StringPtr("")
+			conf.Vault.SSL.Cert = &sc.AgentConfig.Vault.ClientCert
+			conf.Vault.SSL.Key = &sc.AgentConfig.Vault.ClientKey
 		}
 	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
 		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
