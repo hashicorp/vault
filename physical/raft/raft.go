@@ -898,9 +898,11 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 
 	switch b.disableAutopilot {
 	case true:
+		b.logger.Trace("removing server from raft", "id", peerID)
 		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
 		return future.Error()
 	default:
+		b.logger.Trace("removing server from raft via autopilot", "id", peerID)
 		return b.autopilot.RemoveServer(raft.ServerID(peerID))
 	}
 }
@@ -951,9 +953,11 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 	switch b.disableAutopilot {
 	case true:
+		b.logger.Trace("adding server to raft", "id", peerID)
 		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
 		return future.Error()
 	default:
+		b.logger.Trace("adding server to raft via autopilot", "id", peerID)
 		return b.autopilot.AddServer(&autopilot.Server{
 			ID:          raft.ServerID(peerID),
 			Name:        peerID,

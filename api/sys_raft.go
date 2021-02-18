@@ -38,7 +38,7 @@ type AutopilotState struct {
 	Servers                    map[string]AutopilotServer `json:"servers" mapstructure:"servers"`
 	Leader                     string                     `json:"leader" mapstructure:"leader"`
 	Voters                     []string                   `json:"voters" mapstructure:"voters"`
-	NonVoters                  []string                   `json:"non_voters,omitempty" mapstructure:"non_voters"`
+	NonVoters                  []string                   `json:"non_voters" mapstructure:"non_voters"`
 }
 
 // AutopilotServer represents the server blocks in the response of the raft

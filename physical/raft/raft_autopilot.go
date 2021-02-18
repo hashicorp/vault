@@ -20,7 +20,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// AutopilotConfiguration is used for querying/setting the Autopilot configuration.
+// AutopilotConfig is used for querying/setting the Autopilot configuration.
 // Autopilot helps manage operator tasks related to Vault servers like removing
 // failed servers from the Raft quorum.
 type AutopilotConfig struct {
@@ -210,9 +210,7 @@ type Delegate struct {
 // autopilot configuration.
 func (d *Delegate) AutopilotConfig() *autopilot.Config {
 	d.l.RLock()
-	defer d.l.RUnlock()
-
-	return &autopilot.Config{
+	config := &autopilot.Config{
 		CleanupDeadServers:      false,
 		LastContactThreshold:    d.autopilotConfig.LastContactThreshold,
 		MaxTrailingLogs:         d.autopilotConfig.MaxTrailingLogs,
@@ -220,6 +218,8 @@ func (d *Delegate) AutopilotConfig() *autopilot.Config {
 		ServerStabilizationTime: d.autopilotConfig.ServerStabilizationTime,
 		Ext:                     d.autopilotConfigExt(),
 	}
+	d.l.RUnlock()
+	return config
 }
 
 // NotifyState is called by the autopilot library whenever there is a state

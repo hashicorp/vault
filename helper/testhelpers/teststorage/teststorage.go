@@ -85,7 +85,7 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 
 func MakeRaftWithAutopilotBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	extraConf := map[string]string{
-		"autopilot": "[{\"cleanup_dead_servers\":true,\"last_contact_threshold\":\"5s\",\"max_trailing_logs\":500,\"min_quorum\":3,\"server_stabilization_time\":\"5s\"}]",
+		"autopilot": `[{"cleanup_dead_servers":true,"last_contact_threshold":"5s","max_trailing_logs":500,"min_quorum":3,"server_stabilization_time":"10s"}]`,
 	}
 	return MakeRaftBackendWithConf(t, coreIdx, logger, extraConf)
 }
