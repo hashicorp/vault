@@ -242,7 +242,10 @@ func (d *Delegate) NotifyState(state *autopilot.State) {
 func (d *Delegate) FetchServerStats(ctx context.Context, servers map[raft.ServerID]*autopilot.Server) map[raft.ServerID]*autopilot.ServerStats {
 	ret := make(map[raft.ServerID]*autopilot.ServerStats)
 
-	followerStates := d.RaftBackend.followerStates
+	d.l.RLock()
+	followerStates := d.followerStates
+	d.l.RUnlock()
+
 	followerStates.l.RLock()
 	defer followerStates.l.RUnlock()
 
@@ -279,14 +282,14 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	for _, server := range servers {
 		serverIDs = append(serverIDs, string(server.ID))
 	}
+	followerStates := d.followerStates
 	d.l.RUnlock()
 
-	followerStates := d.RaftBackend.followerStates
 	followerStates.l.RLock()
 	defer followerStates.l.RUnlock()
 
 	ret := make(map[raft.ServerID]*autopilot.Server)
-	for id, state := range d.RaftBackend.followerStates.followers {
+	for id, state := range d.followerStates.followers {
 		// If the server is not in raft configuration, even if we received a follower
 		// heartbeat, it shouldn't be a known server for autopilot.
 		if !strutil.StrListContains(serverIDs, id) {
@@ -382,6 +385,9 @@ func (b *RaftBackend) autopilotConf() (*AutopilotConfig, error) {
 // StartAutopilot puts autopilot subsystem to work. This should only be called
 // on the active node.
 func (b *RaftBackend) StartAutopilot(ctx context.Context) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	if b.autopilot == nil {
 		return
 	}
@@ -391,6 +397,9 @@ func (b *RaftBackend) StartAutopilot(ctx context.Context) {
 // StopAutopilot stops a running autopilot instance. This should only be called
 // on the active node.
 func (b *RaftBackend) StopAutopilot() {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	if b.autopilot == nil {
 		return
 	}
