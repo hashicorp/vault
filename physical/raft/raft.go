@@ -788,10 +788,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
-
-	if err := b.setupAutopilot(opts); err != nil {
-		return err
-	}
+	b.setupAutopilot(opts)
 
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.

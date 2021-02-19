@@ -124,7 +124,7 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	// Read autopilot configuration from storage
 	autopilotConfig, err := c.autopilotConfiguration(ctx)
 	if err != nil {
-		return err
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 
 	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
@@ -175,7 +175,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	// Read autopilot configuration from storage
 	autopilotConfig, err := c.autopilotConfiguration(ctx)
 	if err != nil {
-		return err
+		c.logger.Error("failed to load autopilot config from storage during autopilot startup; continuing since autopilot is already configured", "error", err)
 	}
 	// If the config wasn't found in storage, then either the default config, or
 	// the HCL config would have been used to instantiate autopilot. The
@@ -183,11 +183,10 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if autopilotConfig == nil {
 		entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, raftBackend.AutopilotConfig())
 		if err != nil {
-			return err
+			c.logger.Error("failed to encode autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
 		}
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("failed to persist autopilot config after setting up cluster", "error", err)
-			return err
+			c.logger.Error("failed to persist autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
 		}
 	}
 

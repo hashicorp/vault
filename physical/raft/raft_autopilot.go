@@ -561,7 +561,7 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 	return autopilotToAPIHealth(b.autopilot.GetState()), nil
 }
 
-func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
+func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	// Start with a default config
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
@@ -571,7 +571,7 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
 		// Autopilot config wasn't found in storage. Check if autopilot settings were part of config file.
 		conf, err := b.autopilotConf()
 		if err != nil {
-			return err
+			b.logger.Error("failed to load autopilot config supplied via config file; falling back to default config", "error", err)
 		}
 		if conf != nil {
 			b.logger.Info("setting autopilot configuration retrieved from config file", "config", conf)
@@ -585,6 +585,4 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance")
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
-
-	return nil
 }
