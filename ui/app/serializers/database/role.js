@@ -24,12 +24,17 @@ export default RESTSerializer.extend({
     if (payload.data.db_name) {
       database = [payload.data.db_name];
     }
+    // Copy to singular for MongoDB
+    const creation_statement = payload.data.creation_statements[0];
+    const revocation_statement = payload.data.revocation_statements[0];
     return {
       id: payload.secret,
       name: payload.secret,
       backend: payload.backend,
       database,
       path,
+      creation_statement,
+      revocation_statement,
       ...payload.data,
     };
   },
@@ -63,6 +68,18 @@ export default RESTSerializer.extend({
       const db = data.database[0];
       data.db_name = db;
       delete data.database;
+    }
+    // This is necessary because the input for MongoDB is a json string
+    // rather than an array, so we transpose that here
+    if (data.creation_statement) {
+      const singleStatement = data.creation_statement;
+      data.creation_statements = [singleStatement];
+      delete data.creation_statement;
+    }
+    if (data.revocation_statement) {
+      const singleStatement = data.revocation_statement;
+      data.revocation_statements = [singleStatement];
+      delete data.revocation_statement;
     }
 
     return data;
