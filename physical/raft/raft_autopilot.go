@@ -243,9 +243,9 @@ func (d *Delegate) NotifyState(state *autopilot.State) {
 				},
 			}
 			if state.Health.Healthy {
-				metrics.SetGaugeWithLabels([]string{"autopilot", "healthy"}, 1, labels)
+				metrics.SetGaugeWithLabels([]string{"autopilot", "node", "healthy"}, 1, labels)
 			} else {
-				metrics.SetGaugeWithLabels([]string{"autopilot", "healthy"}, 0, labels)
+				metrics.SetGaugeWithLabels([]string{"autopilot", "node", "healthy"}, 0, labels)
 			}
 		}
 	}
