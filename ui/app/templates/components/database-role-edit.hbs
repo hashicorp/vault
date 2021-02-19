@@ -23,7 +23,7 @@
         @buttonClasses="toolbar-link"
         @onConfirmAction={{action 'delete'}}
         @confirmTitle="Delete role?"
-        @confirmMessage="This role will be permanently deleted. You will need to re-create it to use it again."
+        @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
         @confirmButtonText="Delete"
         data-test-database-role-delete
       >
@@ -54,8 +54,10 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
+  {{log "------------------------"}}
   {{#each @model.showFields as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+      {{log attr.name (get @model attr.name)}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @alwaysRender={{true}}
@@ -64,6 +66,7 @@
           @value={{stringify (get @model attr.name)}}
         />
       {{else}}
+      {{!-- TODO: If TTL === 0, use default display --}}
         <InfoTableRow
           @alwaysRender={{true}}
           @defaultShown={{attr.options.defaultShown}}

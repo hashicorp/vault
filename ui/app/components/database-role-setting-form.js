@@ -44,25 +44,21 @@ export default class DatabaseRoleSettingForm extends Component {
     const type = this.args.roleType;
     if (!type) return null;
     const db = this.args.dbType || 'default';
-    const fields = ROLE_FIELDS[type][db];
-    if (!Array.isArray(fields)) return fields;
-    const filtered = this.args.attrs.filter(a => {
-      const includes = fields.includes(a.name);
-      return includes;
+    const dbValidFields = ROLE_FIELDS[type][db];
+    if (!Array.isArray(dbValidFields)) return dbValidFields;
+    return this.args.attrs.filter(a => {
+      return dbValidFields.includes(a.name);
     });
-    return filtered;
   }
 
   get statementFields() {
     const type = this.args.roleType;
     if (!type) return null;
     const db = this.args.dbType || 'default';
-    const fields = STATEMENT_FIELDS[type][db];
-    if (!Array.isArray(fields)) return fields;
-    const filtered = this.args.attrs.filter(a => {
-      const includes = fields.includes(a.name);
-      return includes;
+    const dbValidFields = STATEMENT_FIELDS[type][db];
+    if (!Array.isArray(dbValidFields)) return dbValidFields;
+    return this.args.attrs.filter(a => {
+      return dbValidFields.includes(a.name);
     });
-    return filtered;
   }
 }
