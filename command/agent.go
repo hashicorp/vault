@@ -575,6 +575,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       c.client,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 		})

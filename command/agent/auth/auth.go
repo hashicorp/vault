@@ -4,13 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"math/rand"
 	"net/http"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+)
+
+const (
+	initialBackoff    = 1 * time.Second
+	defaultMaxBackoff = 1 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent
@@ -48,6 +54,7 @@ type AuthHandler struct {
 	client                       *api.Client
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
+	maxBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
 }
@@ -56,6 +63,7 @@ type AuthHandlerConfig struct {
 	Logger                       hclog.Logger
 	Client                       *api.Client
 	WrapTTL                      time.Duration
+	MaxBackoff                   time.Duration
 	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
@@ -72,6 +80,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
+		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 	}
@@ -89,6 +98,13 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if am == nil {
 		return errors.New("auth handler: nil auth method")
+	}
+
+	backoff := initialBackoff
+	maxBackoff := defaultMaxBackoff
+
+	if ah.maxBackoff > 0 {
+		maxBackoff = ah.maxBackoff
 	}
 
 	ah.logger.Info("starting auth handler")
@@ -130,8 +146,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		default:
 		}
 
-		// Create a fresh backoff value
-		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
+		backoff = calculateBackoff(backoff, maxBackoff)
 
 		var clientToUse *api.Client
 		var err error
@@ -310,4 +325,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		}
 	}
+}
+
+// calculateBackoff determines a new backoff duration that is roughly twice
+// the previous value, capped to a max value, with a measure of randomness.
+func calculateBackoff(previous, max time.Duration) time.Duration {
+	maxBackoff := math.Min(2*previous.Seconds(), max.Seconds())
+	backoff := 0.75*maxBackoff + 0.25*rand.Float64()*maxBackoff
+
+	// Scale to ms to avoid truncation errors for < 2s values, which can
+	// leave the backoff stuck at 1s on successive calls.
+	return time.Duration(backoff*1000) * time.Millisecond
 }
