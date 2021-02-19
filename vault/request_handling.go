@@ -722,7 +722,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
-		c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+		c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 		retErr = multierror.Append(retErr, quotaErr)
 		return nil, auth, retErr
 	}
@@ -1120,7 +1120,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		})
 
 		if quotaErr != nil {
-			c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+			c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 			retErr = multierror.Append(retErr, quotaErr)
 			return
 		}

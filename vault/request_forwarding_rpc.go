@@ -74,7 +74,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
-		s.raftFollowerStates.Update(in.RaftNodeID, in.RaftAppliedIndex, in.RaftTerm)
+		s.raftFollowerStates.Update(in.RaftNodeID, in.RaftAppliedIndex, in.RaftTerm, in.RaftNonVoter)
 	}
 
 	reply := &EchoReply{
@@ -118,6 +118,7 @@ func (c *forwardingClient) startHeartbeat() {
 					req.RaftAppliedIndex = raftBackend.AppliedIndex()
 					req.RaftNodeID = raftBackend.NodeID()
 					req.RaftTerm = raftBackend.Term()
+					req.RaftNonVoter = raftBackend.NonVoter()
 				}
 			}
 

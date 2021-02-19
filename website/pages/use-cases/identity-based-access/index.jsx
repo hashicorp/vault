@@ -6,9 +6,13 @@ import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
 import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
   const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
   return { props: { content } }
 }
 
@@ -32,20 +36,7 @@ export default function DataEncryptionUseCase({ content }) {
       {/* Before/After Diagram */}
       <section>
         <div className="g-container">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url: require('./img/challenge.png'),
-              format: 'png',
-            }}
-            beforeHeadline="The Challenge"
-            beforeContent="With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl"
-            afterImage={{
-              url: require('./img/solution.png'),
-              format: 'png',
-            }}
-            afterHeadline="The Solution"
-            afterContent="Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
 

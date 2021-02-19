@@ -84,6 +84,9 @@ export default Component.extend({
 
   model: null,
 
+  // This is only used internally for `optional-text` editType
+  showInput: false,
+
   /*
    * @private
    * @param object
@@ -128,6 +131,14 @@ export default Component.extend({
       if (!hasErrors) {
         this.model.set(path, valToSet);
         this.onChange(path, valToSet);
+      }
+    },
+
+    toggleShow(path) {
+      const value = !this.showInput;
+      this.set('showInput', value);
+      if (!value) {
+        this.send('setAndBroadcast', path, null);
       }
     },
   },

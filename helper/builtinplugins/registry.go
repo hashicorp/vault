@@ -52,7 +52,6 @@ import (
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -94,10 +93,10 @@ func newRegistry() *registry {
 		databasePlugins: map[string]BuiltinFactory{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
-			"mysql-database-plugin":        dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen),
-			"mysql-aurora-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
-			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
-			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
+			"mysql-database-plugin":        dbMysql.New(dbMysql.DefaultUserNameTemplate),
+			"mysql-aurora-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			"mysql-rds-database-plugin":    dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			"mysql-legacy-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
 
 			"cassandra-database-plugin":     dbCass.New,
 			"couchbase-database-plugin":     dbCouchbase.New,

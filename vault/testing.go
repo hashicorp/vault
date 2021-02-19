@@ -157,6 +157,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 	conf.MetricsHelper = opts.MetricsHelper
 	conf.MetricSink = opts.MetricSink
+	conf.NumExpirationWorkers = numExpirationWorkersTest
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -177,6 +178,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		c.Shutdown()
+	})
 
 	return c
 }
@@ -346,6 +356,14 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 
 	testCoreAddSecretMount(t, core, token)
 
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		core.Shutdown()
+	})
 	return core, keys, token
 }
 
@@ -378,6 +396,7 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	logger := logging.NewVaultLogger(log.Trace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
+	conf.NumExpirationWorkers = numExpirationWorkersTest
 
 	core, err := NewCore(conf)
 	if err != nil {
@@ -398,6 +417,15 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		core.Shutdown()
+	})
 
 	return core, keys, token
 }
@@ -1767,6 +1795,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
+		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
 	}
 
 	switch {
@@ -1790,6 +1819,8 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if opts != nil && opts.CoreMetricSinkProvider != nil {
 		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
 	}
+
+	localConfig.NumExpirationWorkers = numExpirationWorkersTest
 
 	c, err := NewCore(&localConfig)
 	if err != nil {
@@ -2061,7 +2092,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
-	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
+	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins.

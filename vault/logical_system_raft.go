@@ -148,16 +148,16 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
 		},
 		{
-			Pattern: "storage/raft/autopilot/health",
+			Pattern: "storage/raft/autopilot/state",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftAutopilotHealth(),
-					Summary:  "Report on autopilot health status",
+					Callback: b.handleStorageRaftAutopilotState(),
+					Summary:  "Returns the state of the raft cluster under integrated storage as seen by autopilot.",
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-health"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-health"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-state"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-state"][1]),
 		},
 		{
 			Pattern: "storage/raft/autopilot/configuration",
@@ -189,8 +189,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-configuration"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-configuration"][1]),
 		},
 	}
 }
@@ -344,7 +344,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		}
 
 		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(serverID, 0, 0)
+			b.Core.raftFollowerStates.Update(serverID, 0, 0, nonVoter)
 		}
 
 		peers, err := raftBackend.Peers(ctx)
@@ -382,27 +382,31 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 	}
 }
 
-func (b *SystemBackend) handleStorageRaftAutopilotHealth() framework.OperationFunc {
+func (b *SystemBackend) handleStorageRaftAutopilotState() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		raftBackend, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
 		if !ok {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		health, err := raftBackend.GetAutopilotServerHealth(ctx)
+		state, err := raftBackend.GetAutopilotServerState(ctx)
 		if err != nil {
 			return nil, err
 		}
 
+		if state == nil {
+			return nil, nil
+		}
+
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"healthy":                      health.Healthy,
-				"failure_tolerance":            health.FailureTolerance,
-				"optimistic_failure_tolerance": health.OptimisticFailureTolerance,
-				"servers":                      health.Servers,
-				"leader":                       health.Leader,
-				"voters":                       health.Voters,
-				"read_replicas":                health.ReadReplicas,
+				"healthy":                      state.Healthy,
+				"failure_tolerance":            state.FailureTolerance,
+				"optimistic_failure_tolerance": state.OptimisticFailureTolerance,
+				"servers":                      state.Servers,
+				"leader":                       state.Leader,
+				"voters":                       state.Voters,
+				"non_voters":                   state.NonVoters,
 			},
 		}, nil
 	}
@@ -414,7 +418,12 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.Operati
 		if !ok {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
+
 		config := raftStorage.AutopilotConfig()
+		if config == nil {
+			return nil, nil
+		}
+
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"cleanup_dead_servers":      config.CleanupDeadServers,
@@ -473,7 +482,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 		}
 
 		if persist {
-			entry, err := logical.StorageEntryJSON("core/raft/autopilot/configuration", configClone)
+			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, configClone)
 			if err != nil {
 				return nil, err
 			}
@@ -626,6 +635,14 @@ var sysRaftHelp = map[string][2]string{
 	},
 	"raft-snapshot-force": {
 		"Force restore a raft cluster snapshot",
+		"",
+	},
+	"raft-autopilot-state": {
+		"Returns the state of the raft cluster under integrated storage as seen by autopilot.",
+		"",
+	},
+	"raft-autopilot-configuration": {
+		"Returns autopilot configuration.",
 		"",
 	},
 }

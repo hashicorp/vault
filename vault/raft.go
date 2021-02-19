@@ -34,6 +34,8 @@ var (
 	raftTLSStoragePath    = "core/raft/tls"
 	raftTLSRotationPeriod = 24 * time.Hour
 
+	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
+
 	// TestingUpdateClusterAddr is used in tests to override the cluster address
 	TestingUpdateClusterAddr uint32
 )
@@ -169,6 +171,26 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
+
+	// Read autopilot configuration from storage
+	autopilotConfig, err := c.autopilotConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+	// If the config wasn't found in storage, then either the default config, or
+	// the HCL config would have been used to instantiate autopilot. The
+	// resulting configuration should be persisted in storage.
+	if autopilotConfig == nil {
+		entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, raftBackend.AutopilotConfig())
+		if err != nil {
+			return err
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			c.logger.Error("failed to persist autopilot config after setting up cluster", "error", err)
+			return err
+		}
+	}
+
 	raftBackend.StartAutopilot(c.activeContext)
 
 	c.pendingRaftPeers = &sync.Map{}
@@ -325,7 +347,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0)
+			followerStates.Update(server.NodeID, 0, 0, raftBackend.NonVoter())
 		}
 	}
 
@@ -951,6 +973,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
+						raftBackend.SetNonVoter(nonVoter)
 						return nil
 					}
 				}
@@ -990,6 +1013,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		}
 	}
 
+	raftBackend.SetNonVoter(nonVoter)
 	return true, nil
 }
 
@@ -1098,7 +1122,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 
 func (c *Core) autopilotConfiguration(ctx context.Context) (*raft.AutopilotConfig, error) {
 	var autopilotConfig *raft.AutopilotConfig
-	entry, err := c.barrier.Get(ctx, "core/raft/autopilot/configuration")
+	entry, err := c.barrier.Get(ctx, raftAutopilotConfigurationStoragePath)
 	if err != nil {
 		return nil, err
 	}

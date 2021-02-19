@@ -125,8 +125,8 @@ func (p PrettyFormatter) Format(data interface{}) ([]byte, error) {
 
 func (p PrettyFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	switch data.(type) {
-	case *api.AutopilotHealth:
-		p.OutputAutopilotHealth(ui, data)
+	case *api.AutopilotState:
+		p.OutputAutopilotState(ui, data)
 	default:
 		return errors.New("cannot use the pretty formatter for this type")
 	}
@@ -151,16 +151,12 @@ func formatServer(srv *api.AutopilotServer) string {
 	buffer.WriteString(fmt.Sprintf("      Name:            %s\n", srv.Name))
 	buffer.WriteString(fmt.Sprintf("      Address:         %s\n", srv.Address))
 	buffer.WriteString(fmt.Sprintf("      Status:          %s\n", srv.Status))
-	buffer.WriteString(fmt.Sprintf("      Node Type:       %s\n", srv.NodeType))
 	buffer.WriteString(fmt.Sprintf("      Node Status:     %s\n", srv.NodeStatus))
 	buffer.WriteString(fmt.Sprintf("      Healthy:         %t\n", srv.Healthy))
 	buffer.WriteString(fmt.Sprintf("      Last Contact:    %s\n", srv.LastContact))
 	buffer.WriteString(fmt.Sprintf("      Last Term:       %d\n", srv.LastTerm))
 	buffer.WriteString(fmt.Sprintf("      Last Index:      %d\n", srv.LastIndex))
 
-	if srv.ReadReplica {
-		buffer.WriteString(fmt.Sprintf("      Read Replica:    %t\n", srv.ReadReplica))
-	}
 	if len(srv.Meta) > 0 {
 		buffer.WriteString(fmt.Sprintf("      Meta\n"))
 		var outputs []mapOutput
@@ -180,8 +176,8 @@ func formatServer(srv *api.AutopilotServer) string {
 	return buffer.String()
 }
 
-func (p PrettyFormatter) OutputAutopilotHealth(ui cli.Ui, data interface{}) {
-	state := data.(*api.AutopilotHealth)
+func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
+	state := data.(*api.AutopilotState)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))
@@ -191,9 +187,9 @@ func (p PrettyFormatter) OutputAutopilotHealth(ui cli.Ui, data interface{}) {
 	buffer.WriteString("Voters:\n")
 	outputStringSlice(&buffer, "   ", state.Voters)
 
-	if len(state.ReadReplicas) > 0 {
-		buffer.WriteString("Read Replicas:\n")
-		outputStringSlice(&buffer, "   ", state.ReadReplicas)
+	if len(state.NonVoters) > 0 {
+		buffer.WriteString("Non Voters:\n")
+		outputStringSlice(&buffer, "   ", state.NonVoters)
 	}
 
 	buffer.WriteString("Servers:\n")

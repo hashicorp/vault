@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -544,6 +545,9 @@ type Core struct {
 	// KeyRotateGracePeriod is how long we allow an upgrade path
 	// for standby instances before we delete the upgrade keys
 	keyRotateGracePeriod *int64
+
+	// number of workers to use for lease revocation in the expiration manager
+	numExpirationWorkers int
 }
 
 // CoreConfig is used to parameterize a core
@@ -646,6 +650,9 @@ type CoreConfig struct {
 
 	// Activity log controls
 	ActivityLogConfig ActivityLogCoreConfig
+
+	// number of workers to use for lease revocation in the expiration manager
+	NumExpirationWorkers int
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -728,6 +735,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterHeartbeatInterval = 5 * time.Second
 	}
 
+	if conf.NumExpirationWorkers == 0 {
+		conf.NumExpirationWorkers = numExpirationWorkersDefault
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:             entCore{},
@@ -787,6 +798,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
 		activityLogConfig:        conf.ActivityLogConfig,
 		keyRotateGracePeriod:     new(int64),
+		numExpirationWorkers:     conf.NumExpirationWorkers,
 		raftFollowerStates:       raft.NewFollowerStates(),
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1925,7 +1937,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startRollback(); err != nil {
 			return err
 		}
-		if err := c.setupExpiration(expireLeaseStrategyRevoke); err != nil {
+		var expirationStrategy ExpireLeaseStrategy
+		if os.Getenv("VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY") != "" {
+			expirationStrategy = expireLeaseStrategyRevoke
+		} else {
+			expirationStrategy = expireLeaseStrategyFairsharing
+		}
+		if err := c.setupExpiration(expirationStrategy); err != nil {
 			return err
 		}
 		if err := c.loadAudits(ctx); err != nil {

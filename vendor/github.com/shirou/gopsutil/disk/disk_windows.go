@@ -43,10 +43,6 @@ type diskPerformance struct {
 	alignmentPadding    uint32 // necessary for 32bit support, see https://github.com/elastic/beats/pull/16553
 }
 
-func Usage(path string) (*UsageStat, error) {
-	return UsageWithContext(context.Background(), path)
-}
-
 func UsageWithContext(ctx context.Context, path string) (*UsageStat, error) {
 	lpFreeBytesAvailable := int64(0)
 	lpTotalNumberOfBytes := int64(0)
@@ -71,10 +67,6 @@ func UsageWithContext(ctx context.Context, path string) (*UsageStat, error) {
 		// InodesUsedPercent: 0,
 	}
 	return ret, nil
-}
-
-func Partitions(all bool) ([]PartitionStat, error) {
-	return PartitionsWithContext(context.Background(), all)
 }
 
 func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, error) {
@@ -139,10 +131,6 @@ func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, erro
 	return ret, nil
 }
 
-func IOCounters(names ...string) (map[string]IOCountersStat, error) {
-	return IOCountersWithContext(context.Background(), names...)
-}
-
 func IOCountersWithContext(ctx context.Context, names ...string) (map[string]IOCountersStat, error) {
 	// https://github.com/giampaolo/psutil/blob/544e9daa4f66a9f80d7bf6c7886d693ee42f0a13/psutil/arch/windows/disk.c#L83
 	drivemap := make(map[string]IOCountersStat, 0)
@@ -155,7 +143,7 @@ func IOCountersWithContext(ctx context.Context, names ...string) (map[string]IOC
 	}
 	for _, v := range lpBuffer[:lpBufferLen] {
 		if 'A' <= v && v <= 'Z' {
-			path := string(v) + ":"
+			path := string(rune(v)) + ":"
 			typepath, _ := windows.UTF16PtrFromString(path)
 			typeret := windows.GetDriveType(typepath)
 			if typeret == 0 {

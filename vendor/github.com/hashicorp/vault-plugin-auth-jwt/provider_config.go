@@ -3,6 +3,8 @@ package jwtauth
 import (
 	"context"
 	"fmt"
+
+	"golang.org/x/oauth2"
 )
 
 // Provider-specific configuration interfaces
@@ -58,5 +60,5 @@ type UserInfoFetcher interface {
 // GroupsFetcher - Optional support for custom groups handling
 type GroupsFetcher interface {
 	// FetchGroups queries for groups claims during login
-	FetchGroups(context.Context, *jwtAuthBackend, map[string]interface{}, *jwtRole) (interface{}, error)
+	FetchGroups(context.Context, *jwtAuthBackend, map[string]interface{}, *jwtRole, oauth2.TokenSource) (interface{}, error)
 }

@@ -59,8 +59,10 @@ Specifying distinct per-mount options, or using long mount point paths, can
 increase the space required per mount.
 
 The number of mount points can be monitored by reading the
-[`sys/auth`](/api-docs/system/audit) and
-[`sys/mounts`](/api-docs/system/mounts) endpoints, which contain all mount points in all namespaces.
+[`sys/auth`](/api-docs/system/auth) and
+[`sys/mounts`](/api-docs/system/mounts) endpoints from the root namespace and 
+similar sub-paths for namespaces respectively, like: `namespace1/sys/auth`, 
+`namespace1/sys/mounts`, etc.
 
 ### Namespace limits
 

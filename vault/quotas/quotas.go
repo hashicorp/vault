@@ -397,6 +397,7 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 		quotas = append(quotas, raw.(Quota))
 	}
 	if len(quotas) > 1 {
+		m.logger.Debug("conflicting quotas in QuotaByFactors", "matching_quotas", quotas)
 		return nil, fmt.Errorf("conflicting quota definitions detected")
 	}
 	if len(quotas) == 0 {
@@ -446,6 +447,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 			quotas = append(quotas, quota)
 		}
 		if len(quotas) > 1 {
+			m.logger.Debug("conflicting quotas in queryQuota", "matching_quotas", quotas, "args", args)
 			return nil, fmt.Errorf("conflicting quota definitions detected")
 		}
 		if len(quotas) == 0 {
