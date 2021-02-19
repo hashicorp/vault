@@ -566,35 +566,27 @@ func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
 }
 
 func (n *noopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	// TODO: remove this
+	n.l.Lock()
+	defer n.l.Unlock()
+	var w bytes.Buffer
+	err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
 	return nil
-	/*
-		n.l.Lock()
-		defer n.l.Unlock()
-		var w bytes.Buffer
-		err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
-		if err != nil {
-			return err
-		}
-		n.records = append(n.records, w.Bytes())
-		return nil
-	*/
 }
 
 func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	// TODO: remove this
+	n.l.Lock()
+	defer n.l.Unlock()
+	var w bytes.Buffer
+	err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
 	return nil
-	/*
-		n.l.Lock()
-		defer n.l.Unlock()
-		var w bytes.Buffer
-		err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
-		if err != nil {
-			return err
-		}
-		n.records = append(n.records, w.Bytes())
-		return nil
-	*/
 }
 
 func (n *noopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {

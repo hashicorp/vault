@@ -420,10 +420,10 @@ type AutopilotState struct {
 	FailureTolerance           int  `json:"failure_tolerance"`
 	OptimisticFailureTolerance int  `json:"optimistic_failure_tolerance"`
 
-	Servers   map[string]AutopilotServer `json:"servers"`
-	Leader    string                     `json:"leader"`
-	Voters    []string                   `json:"voters"`
-	NonVoters []string                   `json:"non_voters,omitempty"`
+	Servers   map[string]*AutopilotServer `json:"servers"`
+	Leader    string                      `json:"leader"`
+	Voters    []string                    `json:"voters"`
+	NonVoters []string                    `json:"non_voters,omitempty"`
 }
 
 // AutopilotServer represents the health information of individual server node
@@ -505,7 +505,7 @@ func autopilotToAPIHealth(state *autopilot.State) *AutopilotState {
 		FailureTolerance: state.FailureTolerance,
 		Leader:           string(state.Leader),
 		Voters:           stringIDs(state.Voters),
-		Servers:          make(map[string]AutopilotServer),
+		Servers:          make(map[string]*AutopilotServer),
 	}
 
 	for id, srv := range state.Servers {
@@ -517,8 +517,8 @@ func autopilotToAPIHealth(state *autopilot.State) *AutopilotState {
 	return out
 }
 
-func autopilotToAPIServer(srv *autopilot.ServerState) AutopilotServer {
-	apiSrv := AutopilotServer{
+func autopilotToAPIServer(srv *autopilot.ServerState) *AutopilotServer {
+	apiSrv := &AutopilotServer{
 		ID:          string(srv.Server.ID),
 		Name:        srv.Server.Name,
 		Address:     string(srv.Server.Address),
@@ -532,7 +532,7 @@ func autopilotToAPIServer(srv *autopilot.ServerState) AutopilotServer {
 		Meta:        srv.Server.Meta,
 	}
 
-	autopilotToAPIServerEnterprise(srv, &apiSrv)
+	autopilotToAPIServerEnterprise(srv, apiSrv)
 
 	return apiSrv
 }
