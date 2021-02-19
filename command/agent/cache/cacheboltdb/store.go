@@ -1,4 +1,4 @@
-package cachepersist
+package cacheboltdb
 
 const (
 	// SecretLeaseType - Bucket/type for leases with secret info

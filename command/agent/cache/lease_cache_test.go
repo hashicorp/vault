@@ -21,8 +21,8 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/cachepersist"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -69,7 +69,7 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	return lc
 }
 
-func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, storage cachepersist.Storage) *LeaseCache {
+func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, storage cacheboltdb.Storage) *LeaseCache {
 	t.Helper()
 
 	client, err := api.NewClient(api.DefaultConfig())
@@ -674,12 +674,12 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 	}
 }
 
-func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cachepersist.BoltStorage) {
+func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cacheboltdb.BoltStorage) {
 	t.Helper()
 
 	tempCacheDir, err := ioutil.TempDir("", "agent-cache-test")
 	require.NoError(t, err)
-	boltStorage, err = cachepersist.NewBoltStorage(&cachepersist.BoltStorageConfig{
+	boltStorage, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 		Path:       tempCacheDir,
 		RootBucket: "topbucketname",
 		Logger:     hclog.Default(),
@@ -855,7 +855,7 @@ func TestEvictPersistent(t *testing.T) {
 	assert.Nil(t, resp.CacheMeta)
 
 	// Check bolt for the cached lease
-	secrets, err := lc.ps.GetByType(cachepersist.SecretLeaseType)
+	secrets, err := lc.ps.GetByType(cacheboltdb.SecretLeaseType)
 	require.NoError(t, err)
 	assert.Len(t, secrets, 1)
 
@@ -869,7 +869,7 @@ func TestEvictPersistent(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Check that cached item is gone
-	secrets, err = lc.ps.GetByType(cachepersist.SecretLeaseType)
+	secrets, err = lc.ps.GetByType(cacheboltdb.SecretLeaseType)
 	require.NoError(t, err)
 	assert.Len(t, secrets, 0)
 }

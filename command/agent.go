@@ -31,9 +31,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
+	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/cachepersist"
-	"github.com/hashicorp/vault/command/agent/cache/encrypt"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -483,11 +482,11 @@ func (c *AgentCommand) Run(args []string) int {
 				return 1
 			}
 			// TODO(tvoran): replace with real encrypter
-			e := encrypt.NewPassThru("fake-key", cacheLogger.Named("encrypter"))
-			ps, err := cachepersist.NewBoltStorage(&cachepersist.BoltStorageConfig{
+			e := cacheboltdb.NewPassThru("fake-key", cacheLogger.Named("encrypter"))
+			ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 				Path:       config.Cache.Persist.Path,
 				RootBucket: "<insert key hash here>",
-				Logger:     cacheLogger.Named("cachepersist"),
+				Logger:     cacheLogger.Named("cacheboltdb"),
 				Encrypter:  e,
 			})
 			if err != nil {
@@ -532,9 +531,9 @@ func (c *AgentCommand) Run(args []string) int {
 						return 1
 					}
 				}
-				cacheFile := filepath.Join(config.Cache.Persist.Path, cachepersist.CacheFileName)
-				if err := os.Remove(cacheFile); err != nil {
-					c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", cacheFile, err))
+				dbFile := filepath.Join(config.Cache.Persist.Path, cacheboltdb.DatabaseFileName)
+				if err := os.Remove(dbFile); err != nil {
+					c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
 					if config.Cache.Persist.ExitOnErr {
 						return 1
 					}

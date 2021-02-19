@@ -1,4 +1,4 @@
-package cachepersist
+package cacheboltdb
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ const (
 	storageVersionKey = "version"
 	storageVersion    = "1"
 
-	// CacheFileName - filename for the persistent cache file
+	// DatabaseFileName - filename for the persistent cache file
 	DatabaseFileName = "vault-agent-cache.db"
 )
 

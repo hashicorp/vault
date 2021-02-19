@@ -19,8 +19,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/cachepersist"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -87,7 +87,7 @@ type LeaseCache struct {
 	inflightCache *gocache.Cache
 
 	// ps is the persistent storage for tokens and leases
-	ps cachepersist.Storage
+	ps cacheboltdb.Storage
 
 	// shuttingDown is used to determine if cache needs to be evicted or not
 	// when the context is cancelled
@@ -101,7 +101,7 @@ type LeaseCacheConfig struct {
 	BaseContext context.Context
 	Proxier     Proxier
 	Logger      hclog.Logger
-	Storage     cachepersist.Storage
+	Storage     cacheboltdb.Storage
 }
 
 type inflightRequest struct {
@@ -162,7 +162,7 @@ func (c *LeaseCache) SetShuttingDown(in bool) {
 
 // SetPersistentStorage is a setter for the persistent storage field in
 // LeaseCache
-func (c *LeaseCache) SetPersistentStorage(storageIn cachepersist.Storage) {
+func (c *LeaseCache) SetPersistentStorage(storageIn cacheboltdb.Storage) {
 	c.ps = storageIn
 }
 
@@ -355,7 +355,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.Lease = secret.LeaseID
 		index.LeaseToken = req.Token
 
-		indexType = cachepersist.SecretLeaseType
+		indexType = cacheboltdb.SecretLeaseType
 
 	case secret.Auth != nil:
 		c.logger.Debug("processing auth response", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -385,7 +385,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.Token = secret.Auth.ClientToken
 		index.TokenAccessor = secret.Auth.Accessor
 
-		indexType = cachepersist.AuthLeaseType
+		indexType = cacheboltdb.AuthLeaseType
 
 	default:
 		// We shouldn't be hitting this, but will err on the side of caution and
@@ -941,9 +941,9 @@ func (c *LeaseCache) Flush() error {
 // Restore loads the cachememdb from the persistent storage passed in. Loads
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
-func (c *LeaseCache) Restore(storage cachepersist.Storage) error {
+func (c *LeaseCache) Restore(storage cacheboltdb.Storage) error {
 	// Process tokens first
-	tokens, err := storage.GetByType(cachepersist.TokenType)
+	tokens, err := storage.GetByType(cacheboltdb.TokenType)
 	if err != nil {
 		return err
 	}
@@ -952,7 +952,7 @@ func (c *LeaseCache) Restore(storage cachepersist.Storage) error {
 	}
 
 	// Then process auth leases
-	authLeases, err := storage.GetByType(cachepersist.AuthLeaseType)
+	authLeases, err := storage.GetByType(cacheboltdb.AuthLeaseType)
 	if err != nil {
 		return err
 	}
@@ -961,7 +961,7 @@ func (c *LeaseCache) Restore(storage cachepersist.Storage) error {
 	}
 
 	// Then process secret leases
-	secretLeases, err := storage.GetByType(cachepersist.SecretLeaseType)
+	secretLeases, err := storage.GetByType(cacheboltdb.SecretLeaseType)
 	if err != nil {
 		return err
 	}
@@ -1185,7 +1185,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 
 	// Store the index in the cache
 	c.logger.Debug("storing auto-auth token into the cache")
-	err = c.Set(index, cachepersist.TokenType)
+	err = c.Set(index, cacheboltdb.TokenType)
 	if err != nil {
 		c.logger.Error("failed to cache the auto-auth token", "error", err)
 		return err

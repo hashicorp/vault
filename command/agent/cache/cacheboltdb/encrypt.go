@@ -1,4 +1,4 @@
-package cachepersist
+package cacheboltdb
 
 import "github.com/hashicorp/go-hclog"
 
