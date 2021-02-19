@@ -1437,6 +1437,66 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 	}
 }
 
+func TestBackend_iamTagsCrud(t *testing.T) {
+	t.Parallel()
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteIamTags(t, "test", map[string]string{"key1":"value1", "key2":"value2"}),
+			testAccStepReadIamTags(t, "test", map[string]string{"key1":"value1", "key2":"value2"}),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadIamTags(t, "test", map[string]string{}),
+		},
+	})
+}
+
+func testAccStepWriteIamTags(t *testing.T, name string, tags map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + name,
+		Data: map[string]interface{}{
+			"credential_type": iamUserCred,
+			"iam_tags":        tags,
+		},
+	}
+}
+
+func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if len(tags) == 0 {
+					return nil
+				}
+
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			expected := map[string]interface{}{
+				"policy_arns":              []string(nil),
+				"role_arns":                []string(nil),
+				"policy_document":          "",
+				"credential_type":          iamUserCred,
+				"default_sts_ttl":          int64(0),
+				"max_sts_ttl":              int64(0),
+				"user_path":                "",
+				"permissions_boundary_arn": "",
+				"iam_groups":               []string(nil),
+				"iam_tags":                 tags,
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+			}
+
+			return nil
+		},
+	}
+}
+
 func generateUniqueName(prefix string) string {
 	return testhelpers.RandomWithPrefix(prefix)
 }

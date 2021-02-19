@@ -3,6 +3,9 @@ package aws
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"math/rand"
 	"regexp"
 	"time"
@@ -11,9 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const secretAccessKeyType = "access_keys"
@@ -210,7 +210,8 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
-	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
+	displayName, policyName string,
+	role *awsRoleEntry) (*logical.Response, error) {
 	iamClient, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -283,6 +284,23 @@ func (b *backend) secretAccessKeysCreate(
 		})
 		if err != nil {
 			return logical.ErrorResponse("Error adding user to group: %s", err), awsutil.CheckAWSError(err)
+		}
+	}
+
+	if len(role.IAMTags) > 0 {
+		var tags []*iam.Tag
+		for key, value := range role.IAMTags {
+			k, v := key, value
+			tags = append(tags, &iam.Tag{Key: &k, Value: &v})
+		}
+
+		_, err = iamClient.TagUser(&iam.TagUserInput{
+			Tags: tags,
+			UserName: &username,
+		})
+
+		if err != nil {
+			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}
 	}
 
