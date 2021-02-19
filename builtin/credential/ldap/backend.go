@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const errUserBindFailed = `ldap operation failed: failed to bind as user`
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -93,7 +95,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("error getting user bind DN", "error", err)
 		}
-		return nil, logical.ErrorResponse("ldap operation failed: unable to retrieve user bind DN"), nil, nil
+		return nil, logical.ErrorResponse(errUserBindFailed), nil, nil
 	}
 
 	if b.Logger().IsDebug() {
@@ -110,7 +112,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("ldap bind failed", "error", err)
 		}
-		return nil, logical.ErrorResponse("ldap operation failed: failed to bind as user"), nil, nil
+		return nil, logical.ErrorResponse(errUserBindFailed), nil, nil
 	}
 
 	// We re-bind to the BindDN if it's defined because we assume

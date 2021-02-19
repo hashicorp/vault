@@ -157,6 +157,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 	conf.MetricsHelper = opts.MetricsHelper
 	conf.MetricSink = opts.MetricSink
+	conf.NumExpirationWorkers = numExpirationWorkersTest
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -177,6 +178,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		c.Shutdown()
+	})
 
 	return c
 }
@@ -346,6 +356,14 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 
 	testCoreAddSecretMount(t, core, token)
 
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		core.Shutdown()
+	})
 	return core, keys, token
 }
 
@@ -378,6 +396,7 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	logger := logging.NewVaultLogger(log.Trace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
+	conf.NumExpirationWorkers = numExpirationWorkersTest
 
 	core, err := NewCore(conf)
 	if err != nil {
@@ -398,6 +417,15 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		core.Shutdown()
+	})
 
 	return core, keys, token
 }
@@ -554,6 +582,19 @@ func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	defer n.l.Unlock()
 	var w bytes.Buffer
 	err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
+	return nil
+}
+
+func (n *noopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	n.l.Lock()
+	defer n.l.Unlock()
+	var w bytes.Buffer
+	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	err := tempFormatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
 	if err != nil {
 		return err
 	}
@@ -1778,6 +1819,8 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.MetricSink, localConfig.MetricsHelper = opts.CoreMetricSinkProvider(localConfig.ClusterName)
 	}
 
+	localConfig.NumExpirationWorkers = numExpirationWorkersTest
+
 	c, err := NewCore(&localConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2048,7 +2091,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
-	return dbMysql.New(false), true
+	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins.
@@ -2076,6 +2119,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"postgresql-database-plugin",
 		"redshift-database-plugin",
+		"snowflake-database-plugin",
 	}
 }
 
@@ -2125,6 +2169,10 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	}
 
 	return n.RespErr
+}
+
+func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, options map[string]string) error {
+	return nil
 }
 
 func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {

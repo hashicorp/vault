@@ -238,15 +238,8 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	secretEntry.CreationTime = currentTime
 	secretEntry.LastUpdatedTime = currentTime
 
-	// If SecretIDTTL is not specified or if it crosses the backend mount's limit,
-	// cap the expiration to backend's max. Otherwise, use it to determine the
-	// expiration time.
-	if secretEntry.SecretIDTTL < time.Duration(0) || secretEntry.SecretIDTTL > b.System().MaxLeaseTTL() {
-		secretEntry.ExpirationTime = currentTime.Add(b.System().MaxLeaseTTL())
-	} else if secretEntry.SecretIDTTL != time.Duration(0) {
-		// Set the ExpirationTime only if SecretIDTTL was set. SecretIDs should not
-		// expire by default.
-		secretEntry.ExpirationTime = currentTime.Add(secretEntry.SecretIDTTL)
+	if ttl := b.deriveSecretIDTTL(secretEntry.SecretIDTTL); ttl != time.Duration(0) {
+		secretEntry.ExpirationTime = currentTime.Add(ttl)
 	}
 
 	// Before storing the SecretID, store its accessor.
@@ -259,6 +252,20 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	}
 
 	return secretEntry, nil
+}
+
+// deriveSecretIDTTL determines the secret ID TTL to use based on the system's
+// max lease TTL.
+//
+// If SecretIDTTL is negative or if it crosses the backend mount's limit,
+// return to backend's max lease TTL. Otherwise, return the provided secretIDTTL
+// value.
+func (b *backend) deriveSecretIDTTL(secretIDTTL time.Duration) time.Duration {
+	if secretIDTTL < time.Duration(0) || secretIDTTL > b.System().MaxLeaseTTL() {
+		return b.System().MaxLeaseTTL()
+	}
+
+	return secretIDTTL
 }
 
 // secretIDAccessorEntry is used to read the storage entry that maps an

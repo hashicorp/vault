@@ -6,9 +6,7 @@
 //   the landing page for the category
 
 export default [
-  {
-    category: 'install',
-  },
+  'install',
   {
     category: 'internals',
     content: [
@@ -41,7 +39,7 @@ export default [
       'recovery-mode',
       'resource-quotas',
       'client-count',
-      'transform'
+      'transform',
     ],
   },
   {
@@ -67,6 +65,7 @@ export default [
       {
         category: 'storage',
         content: [
+          'aerospike',
           'azure',
           'cassandra',
           'cockroachdb',
@@ -96,8 +95,8 @@ export default [
         content: ['consul', 'kubernetes'],
       },
       'telemetry',
-      { category: 'ui' },
-      { category: 'entropy-augmentation' },
+      'ui',
+      'entropy-augmentation',
     ],
   },
   {
@@ -150,6 +149,7 @@ export default [
           'seal',
           'step-down',
           'unseal',
+          'usage',
         ],
       },
       'path-help',
@@ -206,20 +206,21 @@ export default [
           },
         ],
       },
-      { category: 'caching' },
-      { category: 'template' },
+      'caching',
+      'template',
+      'winsvc',
     ],
   },
   '----------------',
   {
     category: 'secrets',
     content: [
-      { category: 'ad' },
-      { category: 'alicloud' },
-      { category: 'aws' },
-      { category: 'azure' },
-      { category: 'consul' },
-      { category: 'cubbyhole' },
+      'ad',
+      'alicloud',
+      'aws',
+      'azure',
+      'consul',
+      'cubbyhole',
       {
         category: 'databases',
         content: [
@@ -235,23 +236,24 @@ export default [
           'oracle',
           'postgresql',
           'redshift',
+          'snowflake',
           'custom',
         ],
       },
-      { category: 'gcp' },
-      { category: 'gcpkms' },
-      { category: 'key-management' },
-      { category: 'kmip' },
+      'gcp',
+      'gcpkms',
+      'key-management',
+      'kmip',
       {
         category: 'kv',
         content: ['kv-v1', 'kv-v2'],
       },
-      { category: 'identity' },
-      { category: 'mongodbatlas' },
-      { category: 'nomad' },
-      { category: 'openldap' },
-      { category: 'pki' },
-      { category: 'rabbitmq' },
+      'identity',
+      'mongodbatlas',
+      'nomad',
+      'openldap',
+      'pki',
+      'rabbitmq',
       {
         category: 'ssh',
         content: [
@@ -260,10 +262,10 @@ export default [
           'dynamic-ssh-keys',
         ],
       },
-      { category: 'totp' },
-      { category: 'transform' },
-      { category: 'transit' },
-      { category: 'venafi' },
+      'totp',
+      { category: 'transform', content: ['tokenization'] },
+      'transit',
+      'venafi',
     ],
   },
   {
@@ -295,22 +297,12 @@ export default [
     category: 'audit',
     content: ['file', 'syslog', 'socket'],
   },
-  {
-    category: 'plugin',
-  },
-  {
-    category: 'plugin-portal',
-  },
+  'plugin',
+  'plugin-portal',
   '----------------',
-  {
-    category: 'what-is-vault',
-  },
-  {
-    category: 'use-cases',
-  },
-  {
-    category: 'partnerships',
-  },
+  'what-is-vault',
+  'use-cases',
+  'partnerships',
   '----------------',
   {
     category: 'platform',
@@ -413,27 +405,24 @@ export default [
   '----------------',
   {
     category: 'release-notes',
-    content: [
-      '1.5.0',
-      '1.6.0',
-    ],
+    content: ['1.5.0', '1.6.0'],
   },
   '----------------',
   {
     category: 'enterprise',
     content: [
-      { category: 'replication' },
+      'replication',
       {
         category: 'hsm',
         content: ['behavior', 'security'],
       },
-      { category: 'automated-integrated-storage-snapshots' },
-      { category: 'lease-count-quotas' },
-      { category: 'entropy-augmentation' },
-      { category: 'sealwrap' },
-      { category: 'namespaces' },
-      { category: 'performance-standby' },
-      { category: 'control-groups' },
+      'automated-integrated-storage-snapshots',
+      'lease-count-quotas',
+      'entropy-augmentation',
+      'sealwrap',
+      'namespaces',
+      'performance-standby',
+      'control-groups',
       {
         category: 'mfa',
         content: ['mfa-duo', 'mfa-okta', 'mfa-pingid', 'mfa-totp'],

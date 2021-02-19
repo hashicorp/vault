@@ -12,5 +12,5 @@ export default create({
   type: fillable('[data-test-input="type"'),
   tweakSource: fillable('[data-test-input="tweak_source"'),
   maskingChar: fillable('[data-test-input="masking_character"'),
-  save: clickable('[data-test-transformation-save-button]'),
+  save: clickable('[data-test-transformation-save-button=true]'),
 });

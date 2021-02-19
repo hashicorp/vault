@@ -443,9 +443,14 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	err = waitForReplicationState(ctx, c, req)
+	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
 	}
 
 	if !hasNamespaces(c) && ns.Path != "" {
@@ -717,7 +722,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
-		c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+		c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 		retErr = multierror.Append(retErr, quotaErr)
 		return nil, auth, retErr
 	}
@@ -1115,7 +1120,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		})
 
 		if quotaErr != nil {
-			c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+			c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 			retErr = multierror.Append(retErr, quotaErr)
 			return
 		}

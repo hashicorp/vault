@@ -13,13 +13,13 @@ export default Component.extend({
   showLastSegment: false,
 
   normalizedNamespace: computed('targetNamespace', function() {
-    let ns = this.get('targetNamespace');
+    let ns = this.targetNamespace;
     return (ns || '').replace(/\.+/g, '/').replace(/☃/g, '.');
   }),
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
-    let ns = this.get('normalizedNamespace');
-    let showLastSegment = this.get('showLastSegment');
+    let ns = this.normalizedNamespace;
+    let showLastSegment = this.showLastSegment;
     let parts = ns.split('/');
     if (ns === '') {
       return 'root';
@@ -28,6 +28,18 @@ export default Component.extend({
   }),
 
   isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function() {
-    return this.get('currentNamespace') === this.get('targetNamespace');
+    return this.currentNamespace === this.targetNamespace;
   }),
+
+  get namespaceLink() {
+    let origin =
+      window.location.protocol +
+      '//' +
+      window.location.hostname +
+      (window.location.port ? ':' + window.location.port : '');
+
+    if (!this.normalizedNamespace) return `${origin}/ui/vault/secrets`;
+    // The full URL/origin is required so that the page is reloaded.
+    return `${origin}/ui/vault/secrets?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+  },
 });

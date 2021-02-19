@@ -6,16 +6,12 @@
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div id="ciphertext-control" class="control">
-        {{ivy-codemirror
-          valueUpdated=(action (mut ciphertext))
-          options=(hash
+        <IvyCodemirror @valueUpdated={{action (mut ciphertext)}} @options={{hash
             lineNumbers=true
             tabSize=2
             mode='ruby'
             theme='hashi'
-          )
-          data-test-transit-input="ciphertext"
-        }}
+          }} @data-test-transit-input="ciphertext" />
       </div>
     </div>
     {{#if key.derived}}
@@ -25,10 +21,10 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
-            {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
           </div>
         </div>
       </div>
@@ -38,10 +34,10 @@
         <label for="nonce" class="is-label">Nonce</label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
+            <Input @type="text" @id="nonce" @value={{nonce}} class="input" data-test-transit-input="nonce" />
           </div>
           <div class="control">
-            {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
+            <B64Toggle @value={{nonce}} @data-test-transit-b64-toggle="nonce" />
           </div>
         </div>
       </div>

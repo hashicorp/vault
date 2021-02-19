@@ -106,7 +106,7 @@ export default TtlForm.extend({
     ];
   }),
   handleChange() {
-    let { time, unit, enableTTL, seconds } = this.getProperties('time', 'unit', 'enableTTL', 'seconds');
+    let { time, unit, enableTTL, seconds } = this;
     const ttl = {
       enabled: enableTTL,
       seconds,
@@ -115,9 +115,16 @@ export default TtlForm.extend({
     this.onChange(ttl);
   },
 
-  helperText: computed('enableTTL', 'helperTextUnset', 'helperTextSet', function() {
-    return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
-  }),
+  helperText: computed(
+    'enableTTL',
+    'helperTextDisabled',
+    'helperTextEnabled',
+    'helperTextSet',
+    'helperTextUnset',
+    function() {
+      return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
+    }
+  ),
 
   recalculateSeconds: false,
   actions: {

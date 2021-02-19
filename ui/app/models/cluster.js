@@ -1,11 +1,10 @@
+import Model, { attr, hasMany } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import { alias, and, equal, gte, not, or } from '@ember/object/computed';
 import { get, computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
-const { hasMany, attr } = DS;
 
-export default DS.Model.extend({
+export default Model.extend({
   version: service(),
 
   nodes: hasMany('nodes', { async: false }),
@@ -16,18 +15,18 @@ export default DS.Model.extend({
 
   needsInit: computed('nodes', 'nodes.@each.initialized', function() {
     // needs init if no nodes are initialized
-    return this.get('nodes').isEvery('initialized', false);
+    return this.nodes.isEvery('initialized', false);
   }),
 
   unsealed: computed('nodes', 'nodes.{[],@each.sealed}', function() {
     // unsealed if there's at least one unsealed node
-    return !!this.get('nodes').findBy('sealed', false);
+    return !!this.nodes.findBy('sealed', false);
   }),
 
   sealed: not('unsealed'),
 
   leaderNode: computed('nodes', 'nodes.[]', function() {
-    const nodes = this.get('nodes');
+    const nodes = this.nodes;
     if (nodes.get('length') === 1) {
       return nodes.get('firstObject');
     } else {
@@ -64,7 +63,7 @@ export default DS.Model.extend({
     return !this.dr.mode || !this.performance.mode;
   }),
   replicationAttrs: computed('dr.mode', 'performance.mode', 'replicationMode', function() {
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.replicationMode;
     return replicationMode ? get(this, replicationMode) : null;
   }),
 });

@@ -1,10 +1,22 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
-import TextAndContent from '@hashicorp/react-text-and-content'
-import BeforeAfterDiagram from '../../../components/before-after-diagram'
-import UseCaseCtaSection from '../../../components/use-case-cta-section'
+import TextSplits from '@hashicorp/react-text-splits'
+import BeforeAfterDiagram from 'components/before-after-diagram'
+import UseCaseCtaSection from 'components/use-case-cta-section'
+//  Imports below are used in getStaticProps
+import RAW_CONTENT from './content.json'
+import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
-export default function SecretsManagmentUseCase() {
+export async function getStaticProps() {
+  const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
+  return { props: { content } }
+}
+
+export default function SecretsManagmentUseCase({ content }) {
   return (
     <div id="use-cases" className="g-section-block page-wrap">
       <section className="g-container">
@@ -26,22 +38,7 @@ export default function SecretsManagmentUseCase() {
 
       <section>
         <div className="g-container">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1539885048-secrets-managementchallenge.svg',
-              format: 'svg'
-            }}
-            beforeHeadline="The Challenge"
-            beforeContent="Secrets for applications and systems need to be centralized and static IP-based solutions don't scale in dynamic environments with frequently changing applications and machines"
-            afterImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1539885054-secrets-managementsolution.svg',
-              format: 'svg'
-            }}
-            afterHeadline="The Solution"
-            afterContent="Vault centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity"
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
 
@@ -104,135 +101,12 @@ export default function SecretsManagmentUseCase() {
         </div>
       </section>
 
-      {/* Features / Text and content */}
-      <section className="g-container">
-        <SectionHeader headline="Secret Management Features" />
-
-        <TextAndContent
-          data={{
-            text: `### Dynamic Secrets
-
-Dynamically create, revoke, and rotate secrets programmatically`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url:
-                  'https://www.datocms-assets.com/2885/1538684923-dynamic-secrets-screenshot.jpg',
-                format: 'jpg',
-                size: 71545,
-                width: 668,
-                height: 504
-              }
-            }
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Secret Storage
-
-Encrypt data while at rest, in the storage backend of your choice`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `$ cat vault.config
-storage "consul" {
-    address = "127.0.0.1:8500"
-    path    = "vault"
-}
-listener "tcp" {
-    address = "127.0.0.1:8200"
-}
-telemetry {
-    statsite_address = "127.0.0.1:8125"
-    disable_hostname = true
-}`
-            }
-          }}
-        />
-
-        <div className="g-text-and-content">
-          <div className="text">
-            <div>
-              <h3>Identity Plugins</h3>
-              <p>
-                Improve the extensibility of Vault with pluggable identity
-                backends
-              </p>
-            </div>
-          </div>
-          <div className="content logo-grid">
-            <ul className="g-logo-grid large">
-              {[
-                'https://www.datocms-assets.com/2885/1506540090-color.svg',
-                'https://www.datocms-assets.com/2885/1506540114-color.svg',
-                'https://www.datocms-assets.com/2885/1506527176-color.svg',
-                'https://www.datocms-assets.com/2885/1508434209-consul_primarylogo_fullcolor.svg',
-                'https://www.datocms-assets.com/2885/1510033601-aws_logo_rgb_fullcolor.svg',
-                'https://www.datocms-assets.com/2885/1506540175-color.svg',
-                'https://www.datocms-assets.com/2885/1539818112-postgresql.svg',
-                'https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg'
-              ].map(logo => (
-                <li key={logo}>
-                  <img src={logo} alt="company logo" />
-                </li>
-              ))}
-            </ul>
-          </div>
+      {/* Features */}
+      <section className="no-section-spacing">
+        <div className="g-grid-container">
+          <SectionHeader headline="Secret Management Features" />
         </div>
-
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Detailed Audit Logs
-
-Detailed audit log of all client interaction (authentication, token creation, secret access & revocation)`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `$ cat audit.log | jq {
-    "time": "2018-08-27T13:17:11.609621226Z",
-    "type": "response",
-    "auth": {
-        "client_token": "hmac-sha256:5c40f1e051ea75b83230a5bf16574090f697dfa22a78e437f12c1c9d226f45a5",
-        "accessor": "hmac-sha256:f254a2d442f172f0b761c9fd028f599ad91861ed16ac3a1e8d96771fd920e862",
-        "display_name": "token",
-        "metadata": null,
-        "entity_id": ""
-    }
-}`
-            }
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            text: `### Leasing & Revoking Secrets
-
-Manage authorization and create time-based tokens for automatic revocation or manual revocation`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `$ vault read database/creds/readonly
-Key             Value
----             -----
-lease_id        database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
-lease_duration  1h0m0s
-lease_renewable true
-password        A1a-w2xv2zsq4r5ru940
-username        v-token-readonly-48rt0t36sxp4wy81x8x1-1515627434
-[...]
-$ vault renew database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
-Key             Value
----             -----
-lease_id        database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
-lease_duration  1h0m0s
-lease_renewable true
-$ vault lease revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809`
-            }
-          }}
-        />
+        <TextSplits textSplits={content.features} />
       </section>
 
       <UseCaseCtaSection />

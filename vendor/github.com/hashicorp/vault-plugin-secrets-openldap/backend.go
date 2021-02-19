@@ -36,15 +36,19 @@ func Backend(client ldapClient) *backend {
 			},
 		},
 		Paths: framework.PathAppend(
-			b.pathListRoles(),
-			b.pathRoles(),
-			b.pathCredsCreate(),
+			b.pathListStaticRoles(),
+			b.pathStaticRoles(),
+			b.pathStaticCredsCreate(),
 			b.pathRotateCredentials(),
 			b.pathConfig(),
+
+			b.pathDynamicRoles(),
 		),
 		InitializeFunc: b.initialize,
 
-		Secrets:     []*framework.Secret{},
+		Secrets: []*framework.Secret{
+			dynamicSecretCreds(&b),
+		},
 		Clean:       b.clean,
 		BackendType: logical.TypeLogical,
 	}

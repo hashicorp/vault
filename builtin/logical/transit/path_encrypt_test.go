@@ -681,6 +681,11 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			},
 			dest: []BatchRequestItem{},
 		},
+		{
+			name: "src_plaintext-nil-nonce",
+			src:  []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "nonce": "null"}},
+			dest: []BatchRequestItem{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

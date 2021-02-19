@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -534,6 +535,17 @@ type Core struct {
 	clusterHeartbeatInterval time.Duration
 
 	activityLogConfig ActivityLogCoreConfig
+
+	// activeTime is set on active nodes indicating the time at which this node
+	// became active.
+	activeTime time.Time
+
+	// KeyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	keyRotateGracePeriod *int64
+
+	// number of workers to use for lease revocation in the expiration manager
+	numExpirationWorkers int
 }
 
 // CoreConfig is used to parameterize a core
@@ -636,6 +648,9 @@ type CoreConfig struct {
 
 	// Activity log controls
 	ActivityLogConfig ActivityLogCoreConfig
+
+	// number of workers to use for lease revocation in the expiration manager
+	NumExpirationWorkers int
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -718,6 +733,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterHeartbeatInterval = 5 * time.Second
 	}
 
+	if conf.NumExpirationWorkers == 0 {
+		conf.NumExpirationWorkers = numExpirationWorkersDefault
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:             entCore{},
@@ -776,6 +795,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		raftJoinDoneCh:           make(chan struct{}),
 		clusterHeartbeatInterval: clusterHeartbeatInterval,
 		activityLogConfig:        conf.ActivityLogConfig,
+		keyRotateGracePeriod:     new(int64),
+		numExpirationWorkers:     conf.NumExpirationWorkers,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -796,6 +817,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -1850,6 +1872,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Mark the active time. We do this first so it can be correlated to the logs
+	// for the active startup.
+	c.activeTime = time.Now().UTC()
+
 	if err := postUnsealPhysical(c); err != nil {
 		return err
 	}
@@ -1908,7 +1934,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startRollback(); err != nil {
 			return err
 		}
-		if err := c.setupExpiration(expireLeaseStrategyRevoke); err != nil {
+		var expirationStrategy ExpireLeaseStrategy
+		if os.Getenv("VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY") != "" {
+			expirationStrategy = expireLeaseStrategyRevoke
+		} else {
+			expirationStrategy = expireLeaseStrategyFairsharing
+		}
+		if err := c.setupExpiration(expirationStrategy); err != nil {
 			return err
 		}
 		if err := c.loadAudits(ctx); err != nil {
@@ -1926,7 +1958,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
-		if err := c.setupActivityLog(ctx); err != nil {
+		// not waiting on wg to avoid changing existing behavior
+		var wg sync.WaitGroup
+		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
 	} else {
@@ -2039,6 +2073,7 @@ func (c *Core) preSeal() error {
 
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
+	c.activeTime = time.Time{}
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
@@ -2661,4 +2696,12 @@ func (c *Core) RateLimitResponseHeadersEnabled() bool {
 	}
 
 	return false
+}
+
+func (c *Core) KeyRotateGracePeriod() time.Duration {
+	return time.Duration(atomic.LoadInt64(c.keyRotateGracePeriod))
+}
+
+func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
 }

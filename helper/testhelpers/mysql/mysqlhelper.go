@@ -40,7 +40,7 @@ func PrepareTestContainer(t *testing.T, legacy bool, pw string) (func(), string)
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		hostIP := docker.NewServiceHostPort(host, port)
-		connString := fmt.Sprintf("root:%s@(%s)/mysql?parseTime=true", pw, hostIP.Address())
+		connString := fmt.Sprintf("root:%s@tcp(%s)/mysql?parseTime=true", pw, hostIP.Address())
 		db, err := sql.Open("mysql", connString)
 		if err != nil {
 			return nil, err

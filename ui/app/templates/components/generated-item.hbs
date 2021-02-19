@@ -6,12 +6,9 @@
           <span class="sep">
             /
           </span>
-          {{#link-to
-            "vault.cluster.access.method.item.list"
-            itemType
-          }}
+          <LinkTo @route="vault.cluster.access.method.item.list" @model={{itemType}}>
             {{pluralize itemType}}
-          {{/link-to}}
+          </LinkTo>
         </li>
       </ul>
     </nav>
@@ -64,13 +61,13 @@
           Save
         </button>
         {{#if (eq mode "create")}}
-          {{#link-to 'vault.cluster.access.method.item.list' class="button" data-test-cancel-link=true}}
+          <LinkTo @route="vault.cluster.access.method.item.list" class="button" data-test-cancel-link={{true}}>
             Cancel
-          {{/link-to}}
+          </LinkTo>
         {{else}}
-          {{#link-to 'vault.cluster.access.method.item.show' model.id class="button" data-test-cancel-link=true}}
+          <LinkTo @route="vault.cluster.access.method.item.show" @model={{model.id}} class="button" data-test-cancel-link={{true}}>
             Cancel
-          {{/link-to}}
+          </LinkTo>
         {{/if}}
       </div>
     </div>

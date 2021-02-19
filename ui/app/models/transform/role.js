@@ -1,12 +1,10 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const { attr } = DS;
-
-const Model = DS.Model.extend({
+const ModelExport = Model.extend({
   // used for getting appropriate options for backend
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
@@ -40,6 +38,6 @@ const Model = DS.Model.extend({
   backend: attr('string', { readOnly: true }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   updatePath: apiPath`${'backend'}/role/${'id'}`,
 });

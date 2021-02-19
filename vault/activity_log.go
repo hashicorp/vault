@@ -31,6 +31,10 @@ const (
 	activityConfigKey      = "config"
 	activityIntentLogKey   = "endofmonth"
 
+	// for testing purposes (public as needed)
+	ActivityLogPrefix = "sys/counters/activity/log/"
+	ActivityPrefix    = "sys/counters/activity/"
+
 	// Time to wait on perf standby before sending fragment
 	activityFragmentStandbyTime = 10 * time.Minute
 
@@ -120,8 +124,6 @@ type ActivityLog struct {
 	activeEntities map[string]struct{}
 
 	// track metadata and contents of the most recent log segment
-	// currentSegment is currently unprotected by a mutex, because it is updated
-	// only by the worker performing rotation.
 	currentSegment segmentInfo
 
 	// Fragments received from performance standbys
@@ -132,11 +134,15 @@ type ActivityLog struct {
 	defaultReportMonths int
 	retentionMonths     int
 
-	// cancel function to stop loading entities/tokens from storage to memory
-	activityCancel context.CancelFunc
-
 	// channel closed by delete worker when done
 	deleteDone chan struct{}
+
+	// channel closed when deletion at startup is done
+	// (for unit test robustness)
+	retentionDone chan struct{}
+
+	// for testing: is config currently being invalidated. protected by l
+	configInvalidationInProgress bool
 }
 
 // These non-persistent configuration options allow us to disable
@@ -195,21 +201,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		config.RetentionMonths)
 
 	return a, nil
-}
-
-// Return the in-memory activeEntities from an activity log
-func (c *Core) GetActiveEntities() map[string]struct{} {
-	out := make(map[string]struct{})
-
-	c.stateLock.RLock()
-	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.activeEntities {
-		out[k] = v
-	}
-	c.activityLog.fragmentLock.RUnlock()
-	c.stateLock.RUnlock()
-
-	return out
 }
 
 // saveCurrentSegmentToStorage updates the record of Entities or
@@ -637,7 +628,7 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	return nil
 }
 
-// entityBackgroundLoader loads entity activity log records for start_date :t:
+// entityBackgroundLoader loads entity activity log records for start_date `t`
 func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitGroup, t time.Time, seqNums <-chan uint64) {
 	defer wg.Done()
 	for seqNum := range seqNums {
@@ -657,10 +648,10 @@ func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitG
 
 // Initialize a new current segment, based on the current time.
 // Call with fragmentLock and l held.
-func (a *ActivityLog) startNewCurrentLogLocked() {
+func (a *ActivityLog) startNewCurrentLogLocked(now time.Time) {
 	a.logger.Trace("initializing new log")
 	a.resetCurrentLog()
-	a.currentSegment.startTimestamp = time.Now().Unix()
+	a.currentSegment.startTimestamp = now.Unix()
 }
 
 // Should be called with fragmentLock and l held.
@@ -748,7 +739,7 @@ func (a *ActivityLog) WaitForDeletion() {
 // refreshFromStoredLog loads the appropriate entities/tokencounts for active and performance standbys
 // the most recent segment is loaded synchronously, and older segments are loaded in the background
 // this function expects stateLock to be held
-func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGroup) error {
+func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGroup, now time.Time) error {
 	a.l.Lock()
 	defer a.l.Unlock()
 	a.fragmentLock.Lock()
@@ -765,7 +756,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 				// reset the log without updating the timestamp
 				a.resetCurrentLog()
 			} else {
-				a.startNewCurrentLogLocked()
+				a.startNewCurrentLogLocked(now)
 			}
 		}
 
@@ -776,7 +767,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 
 	if !a.enabled {
 		a.logger.Debug("activity log not enabled, skipping refresh from storage")
-		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, time.Now().UTC()) {
+		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, now) {
 			a.logger.Debug("activity log is disabled, cleaning up logs for the current month")
 			go a.deleteLogWorker(mostRecent.Unix(), make(chan struct{}))
 		}
@@ -784,7 +775,6 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 		return nil
 	}
 
-	now := time.Now().UTC()
 	if timeutil.IsPreviousMonth(mostRecent, now) {
 		// no activity logs to load for this month. if we are enabled, interpret
 		// it as having missed the rotation, so let it fall through and load
@@ -805,7 +795,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 			// reset the log without updating the timestamp
 			a.resetCurrentLog()
 		} else {
-			a.startNewCurrentLogLocked()
+			a.startNewCurrentLogLocked(now)
 		}
 
 		return nil
@@ -896,7 +886,7 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 
 	forceSave := false
 	if a.enabled && a.currentSegment.startTimestamp == 0 {
-		a.startNewCurrentLogLocked()
+		a.startNewCurrentLogLocked(time.Now().UTC())
 		// Force a save so we can distinguish between
 		//
 		// Month N-1: present
@@ -954,7 +944,7 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 }
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
-func (c *Core) setupActivityLog(ctx context.Context) error {
+func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
 
@@ -972,10 +962,7 @@ func (c *Core) setupActivityLog(ctx context.Context) error {
 	c.activityLog = manager
 
 	// load activity log for "this month" into memory
-	refreshCtx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
-	manager.activityCancel = cancelFunc
-	var wg sync.WaitGroup
-	err = manager.refreshFromStoredLog(refreshCtx, &wg)
+	err = manager.refreshFromStoredLog(manager.core.activeContext, wg, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -992,7 +979,12 @@ func (c *Core) setupActivityLog(ctx context.Context) error {
 		go manager.precomputedQueryWorker()
 
 		// Catch up on garbage collection
-		go manager.retentionWorker(time.Now(), manager.retentionMonths)
+		// Signal when this is done so that unit tests can proceed.
+		manager.retentionDone = make(chan struct{})
+		go func() {
+			manager.retentionWorker(time.Now(), manager.retentionMonths)
+			close(manager.retentionDone)
+		}()
 	}
 
 	// Link the token store to this core
@@ -1012,10 +1004,6 @@ func (c *Core) stopActivityLog() error {
 	if c.activityLog != nil {
 		// Shut down background worker
 		close(c.activityLog.doneCh)
-		// cancel refreshing logs from storage
-		if c.activityLog.activityCancel != nil {
-			c.activityLog.activityCancel()
-		}
 	}
 
 	c.activityLog = nil
@@ -1520,6 +1508,17 @@ func (a *ActivityLog) HandleTokenCreation(entry *logical.TokenEntry) {
 	}
 }
 
+func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {
+	ns, err := NamespaceByID(ctx, nsID, a.core)
+	if err != nil || ns == nil {
+		return fmt.Sprintf("deleted-%v", nsID)
+	}
+	if ns.Path == "" {
+		return "root"
+	}
+	return ns.Path
+}
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -1622,7 +1621,13 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 			byNamespace[nsID].Tokens += v
 		}
 	}
+
 	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
+	activePeriodStart := timeutil.MonthsPreviousTo(a.defaultReportMonths, endTime)
+	// If not enough data, report as much as we have in the window
+	if activePeriodStart.Before(times[len(times)-1]) {
+		activePeriodStart = times[len(times)-1]
+	}
 
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
@@ -1648,12 +1653,33 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 			EndTime:    endTime,
 			Namespaces: make([]*activity.NamespaceRecord, 0, len(byNamespace)),
 		}
+
 		for nsID, counts := range byNamespace {
 			pq.Namespaces = append(pq.Namespaces, &activity.NamespaceRecord{
 				NamespaceID:     nsID,
 				Entities:        uint64(len(counts.Entities)),
 				NonEntityTokens: counts.Tokens,
 			})
+
+			// If this is the most recent month, or the start of the reporting period, output
+			// a metric for each namespace.
+			if startTime == times[0] {
+				a.metrics.SetGaugeWithLabels(
+					[]string{"identity", "entity", "active", "monthly"},
+					float32(len(counts.Entities)),
+					[]metricsutil.Label{
+						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+					},
+				)
+			} else if startTime == activePeriodStart {
+				a.metrics.SetGaugeWithLabels(
+					[]string{"identity", "entity", "active", "reporting_period"},
+					float32(len(counts.Entities)),
+					[]metricsutil.Label{
+						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+					},
+				)
+			}
 		}
 
 		err = a.queryStore.Put(ctx, pq)
@@ -1662,7 +1688,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 		}
 	}
 
-	// Delete the intent log
+	// delete the intent log
 	a.view.Delete(ctx, activityIntentLogKey)
 
 	a.logger.Info("finished computing queries", "month", endTime)
@@ -1714,4 +1740,34 @@ func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int
 	}
 
 	return nil
+}
+
+// Periodic report of number of active entities, with the current month.
+// We don't break this down by namespace because that would require going to storage (that information
+// is not currently stored in memory.)
+func (a *ActivityLog) PartialMonthMetrics(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+	if !a.enabled {
+		// Empty list
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	count := len(a.activeEntities)
+
+	return []metricsutil.GaugeLabelValues{
+		{
+			Labels: []metricsutil.Label{},
+			Value:  float32(count),
+		},
+	}, nil
+}
+
+func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	a := c.activityLog
+	c.stateLock.RUnlock()
+	if a == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	return a.PartialMonthMetrics(ctx)
 }

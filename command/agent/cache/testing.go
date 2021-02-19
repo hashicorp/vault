@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -79,4 +80,28 @@ func (p *mockTokenVerifierProxier) Send(ctx context.Context, req *SendRequest) (
 
 func (p *mockTokenVerifierProxier) GetCurrentRequestToken() string {
 	return p.currentToken
+}
+
+type mockDelayProxier struct {
+	cacheableResp bool
+	delay         int
+}
+
+func (p *mockDelayProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
+	if p.delay > 0 {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Duration(p.delay) * time.Millisecond):
+		}
+	}
+
+	// If this is a cacheable response, we return a unique response every time
+	if p.cacheableResp {
+		rand.Seed(time.Now().Unix())
+		s := fmt.Sprintf(`{"lease_id": "%d", "renewable": true, "data": {"foo": "bar"}}`, rand.Int())
+		return newTestSendResponse(http.StatusOK, s), nil
+	}
+
+	return newTestSendResponse(http.StatusOK, `{"value": "output"}`), nil
 }

@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/lib/pq"
 )
 
@@ -28,6 +28,8 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 
 	expirationFormat = "2006-01-02 15:04:05-0700"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 63 }}`
 )
 
 var (
@@ -68,6 +70,8 @@ func new() *PostgreSQL {
 
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -75,6 +79,26 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	p.usernameProducer = up
+
+	_, err = p.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
@@ -224,12 +248,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	p.Lock()
 	defer p.Unlock()
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 8),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 8),
-		credsutil.Separator("-"),
-		credsutil.MaxLength(63),
-	)
+	username, err := p.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
