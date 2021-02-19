@@ -64,7 +64,6 @@
           @value={{stringify (get @model attr.name)}}
         />
       {{else}}
-      {{!-- TODO: If TTL === 0, use default display --}}
         <InfoTableRow
           @alwaysRender={{true}}
           @defaultShown={{attr.options.defaultShown}}
