@@ -118,6 +118,8 @@ Router.map(function() {
           // transit-specific routes
           this.route('actions-root', { path: '/actions/' });
           this.route('actions', { path: '/actions/*secret' });
+          // database specific route
+          this.route('overview');
         });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
