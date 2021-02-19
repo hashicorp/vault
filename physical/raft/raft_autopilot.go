@@ -236,10 +236,16 @@ func (d *Delegate) NotifyState(state *autopilot.State) {
 		}
 
 		for id, state := range state.Servers {
+			labels := []metrics.Label{
+				{
+					Name:  "node_id",
+					Value: string(id),
+				},
+			}
 			if state.Health.Healthy {
-				metrics.SetGauge([]string{"autopilot", string(id), "healthy"}, 1)
+				metrics.SetGaugeWithLabels([]string{"autopilot", "healthy"}, 1, labels)
 			} else {
-				metrics.SetGauge([]string{"autopilot", string(id), "healthy"}, 0)
+				metrics.SetGaugeWithLabels([]string{"autopilot", "healthy"}, 0, labels)
 			}
 		}
 	}
