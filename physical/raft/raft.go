@@ -1370,8 +1370,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			return nil, nil
 		}
 	}
-
-	return nil, nil
 }
 
 // Unlock gives up leadership.

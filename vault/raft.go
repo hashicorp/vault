@@ -171,6 +171,26 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
+
+	// Read autopilot configuration from storage
+	autopilotConfig, err := c.autopilotConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+	// If the config wasn't found in storage, then either the default config, or
+	// the HCL config would have been used to instantiate autopilot. The
+	// resulting configuration should be persisted in storage.
+	if autopilotConfig == nil {
+		entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, raftBackend.AutopilotConfig())
+		if err != nil {
+			return err
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			c.logger.Error("failed to persist autopilot config after setting up cluster", "error", err)
+			return err
+		}
+	}
+
 	raftBackend.StartAutopilot(c.activeContext)
 
 	c.pendingRaftPeers = &sync.Map{}
