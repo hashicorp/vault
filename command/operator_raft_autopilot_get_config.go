@@ -24,7 +24,9 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Help() string {
 	helpText := `
 Usage: vault operator raft autopilot get-config
 
-  Returns the configuration of the autopilot subsystem under integrated storage.
+ Returns the configuration of the autopilot subsystem under integrated storage.
+ This returns the autopilot configuration that is in use, which is also
+ persisted in storage.
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
