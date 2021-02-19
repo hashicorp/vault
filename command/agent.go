@@ -481,8 +481,16 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error("must specify persistent cache path")
 				return 1
 			}
-			// TODO(tvoran): replace with real encrypter
-			e := cacheboltdb.NewPassThru("fake-key", cacheLogger.Named("encrypter"))
+			// TODO(tvoran): setup real key and aad
+			e, err := cacheboltdb.NewAES(&cacheboltdb.AESConfig{
+				Key:    []byte("thisisafakekey!!thisisafakekey!!"),
+				AAD:    []byte("extra-data"),
+				Logger: cacheLogger.Named("encrypter"),
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
+				return 1
+			}
 			ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 				Path:       config.Cache.Persist.Path,
 				RootBucket: "<insert key hash here>",
