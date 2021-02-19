@@ -41,7 +41,7 @@
 
 {{#if (eq model.config.queriesAvailable false)}}
   {{#if (eq model.config.enabled "On")}}
-    <EmptyState @title="No data is being received" @message='We haven\'t yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.. It will include the current namespace and all its children.' />
+    <EmptyState @title="No data is being received" @message="We haven't yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.. It will include the current namespace and all its children." />
   {{else}}
     <EmptyState @title="No data is being received" @message='Tracking is disabled, and no data is being collected. To turn it on, edit the configuration.'>
       <p>{{#link-to 'vault.cluster.metrics.config'}}Go to configuration{{/link-to}}</p>
