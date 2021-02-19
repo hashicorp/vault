@@ -355,6 +355,7 @@ func (b *RaftBackend) SetFollowerStates(states *FollowerStates) {
 // SetAutopilotConfig updates the autopilot configuration in the backend.
 func (b *RaftBackend) SetAutopilotConfig(config *AutopilotConfig) {
 	b.l.Lock()
+	b.logger.Info("updating autopilot configuration", "config", config)
 	b.autopilotConfig = config
 	b.l.Unlock()
 }
@@ -573,16 +574,16 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
 			return err
 		}
 		if conf != nil {
-			b.logger.Info("setting autopilot configuration retrieved from config file")
+			b.logger.Info("setting autopilot configuration retrieved from config file", "config", conf)
 			b.autopilotConfig = conf
 		}
 	default:
-		b.logger.Info("setting autopilot configuration retrieved from storage")
+		b.logger.Info("setting autopilot configuration retrieved from storage", "config", opts.AutopilotConfig)
 		b.autopilotConfig = opts.AutopilotConfig
 	}
 
 	// Create the autopilot instance
-	b.logger.Info("setting up autopilot", "config", b.autopilotConfig)
+	b.logger.Info("creating autopilot instance")
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 
 	return nil
