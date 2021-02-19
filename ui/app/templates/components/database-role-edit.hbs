@@ -54,10 +54,8 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  {{log "------------------------"}}
   {{#each @model.showFields as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
-      {{log attr.name (get @model attr.name)}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @alwaysRender={{true}}
