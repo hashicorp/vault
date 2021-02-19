@@ -39,6 +39,9 @@
   </nav>
 </div>
 
+<div class="box is-fullwidth is-shadowless">
+The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens. The data below includes the current namespace and all its children.
+</div>
 {{#if (eq model.config.queriesAvailable false)}}
   {{#if (eq model.config.enabled "On")}}
     <EmptyState @title="No data is being received" @message='We haven’t yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.' />
