@@ -268,10 +268,11 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		conf.Vault.Address = &address
 
 		// Skip verification if its using the cache because they're part of the same agent.
-		if scheme == "https" {
+		if scheme == "https://" {
+			if sc.AgentConfig.Listeners[0].TLSRequireAndVerifyClientCert {
+				return nil, errors.New("template server cannot use local cache when mTLS is enabled")
+			}
 			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
-			conf.Vault.SSL.Cert = &sc.AgentConfig.Vault.ClientCert
-			conf.Vault.SSL.Key = &sc.AgentConfig.Vault.ClientKey
 		}
 	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
 		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify

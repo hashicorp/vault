@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -181,6 +180,10 @@ func TestCacheConfigHTTPS(t *testing.T) {
 	if *ctConfig.Vault.Address != expected {
 		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
 	}
+
+	if *ctConfig.Vault.SSL.Verify {
+		t.Fatalf("expected %t, got %t", true, *ctConfig.Vault.SSL.Verify)
+	}
 }
 
 func TestCacheConfigNoCache(t *testing.T) {
@@ -234,6 +237,39 @@ func TestCacheConfigNoListener(t *testing.T) {
 	expected := "http://127.0.0.1:1111"
 	if *ctConfig.Vault.Address != expected {
 		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigRejectMTLS(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:                          "tcp",
+			Address:                       "127.0.0.1:8300",
+			TLSKeyFile:                    "/path/to/cakey.pem",
+			TLSCertFile:                   "/path/to/cacert.pem",
+			TLSRequireAndVerifyClientCert: true,
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8400",
+			TLSDisable: true,
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	_, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err == nil {
+		t.Fatal("expected error, got none")
 	}
 }
 
