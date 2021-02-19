@@ -697,9 +697,11 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 	opCount := new(int32)
 
 	clusterAddr := ""
+	interval := 100 * time.Millisecond
 	for {
 		select {
-		case <-time.After(leaderCheckInterval):
+		case <-time.After(interval):
+			interval = leaderCheckInterval
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
