@@ -103,10 +103,6 @@ func TestCacheConfigUnix(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	if !strings.HasPrefix(*ctConfig.Vault.Address, "unix") {
-		t.Fatalf("expected unix address, got %s", *ctConfig.Vault.Address)
-	}
-
 	expected := "unix://foobar"
 	if *ctConfig.Vault.Address != expected {
 		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
