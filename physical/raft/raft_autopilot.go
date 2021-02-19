@@ -365,7 +365,7 @@ func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
 	b.l.RLock()
 	conf := b.autopilotConfig
 	b.l.RUnlock()
-	return conf
+	return conf.Clone()
 }
 
 func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
