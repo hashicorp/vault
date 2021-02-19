@@ -207,7 +207,6 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 }
 
 func RaftBackendWithAutopilotSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-	conf.DisablePerformanceStandby = true
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = MakeRaftWithAutopilotBackend
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
