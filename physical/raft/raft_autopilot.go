@@ -321,7 +321,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 
 		switch state.IsDead {
 		case true:
-			d.logger.Info("informing autopilot that the node left", "id", id)
+			d.logger.Debug("informing autopilot that the node left", "id", id)
 			server.NodeStatus = autopilot.NodeLeft
 		default:
 			server.NodeStatus = autopilot.NodeAlive
