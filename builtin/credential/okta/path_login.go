@@ -123,6 +123,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	// No TOTP entry is possible on renew. If push MFA is enabled it will still be triggered, however.
+	// Sending "" as the totp will prompt the push action if it is configured.
 	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "")
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err

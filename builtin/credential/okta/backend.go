@@ -176,7 +176,8 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 
 		// Scan for available factors
 		for _, v := range result.Embedded.Factors {
-			v := v
+			v := v // create a new copy since we'll be taking the address later
+
 			if v.Provider != "OKTA" {
 				continue
 			}
