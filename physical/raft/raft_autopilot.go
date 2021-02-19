@@ -289,6 +289,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	future := d.raft.GetConfiguration()
 	if err := future.Error(); err != nil {
 		d.logger.Error("failed to get raft configuration when computing known servers", "error", err)
+		d.l.RUnlock()
+		return nil
 	}
 
 	servers := future.Configuration().Servers
