@@ -140,10 +140,6 @@ func TestCacheConfigHTTP(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	if !strings.HasPrefix(*ctConfig.Vault.Address, "http") {
-		t.Fatalf("expected http address, got %s", *ctConfig.Vault.Address)
-	}
-
 	expected := "http://127.0.0.1:8300"
 	if *ctConfig.Vault.Address != expected {
 		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
