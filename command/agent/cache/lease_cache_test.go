@@ -677,12 +677,20 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cacheboltdb.BoltStorage) {
 	t.Helper()
 
-	tempCacheDir, err := ioutil.TempDir("", "agent-cache-test")
+	e, err := cacheboltdb.NewAES(&cacheboltdb.AESConfig{
+		Key:    []byte("thisisafakekey!!thisisafakekey!!"),
+		AAD:    []byte("extra-data"),
+		Logger: hclog.NewNullLogger(),
+	})
+	require.NoError(t, err)
+
+	tempCacheDir, err = ioutil.TempDir("", "agent-cache-test")
 	require.NoError(t, err)
 	boltStorage, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 		Path:       tempCacheDir,
 		RootBucket: "topbucketname",
 		Logger:     hclog.Default(),
+		Encrypter:  e,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, boltStorage)
