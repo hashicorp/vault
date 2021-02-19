@@ -42,6 +42,10 @@ type BoltStorageConfig struct {
 // If the db already exists the buckets will just be created if they don't
 // exist.
 func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
+	if config.Encrypter == nil {
+		return nil, fmt.Errorf("bolt storage encrypter must not be nil")
+	}
+
 	dbPath := filepath.Join(config.Path, DatabaseFileName)
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {

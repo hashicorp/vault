@@ -10,6 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func getTestEncrypter(t *testing.T) Encryption {
+	t.Helper()
+
+	e, err := NewAES(&AESConfig{
+		Key:    []byte("thisisafakekey!!thisisafakekey!!"),
+		AAD:    []byte("extra-data"),
+		Logger: hclog.NewNullLogger(),
+	})
+	require.NoError(t, err)
+
+	return e
+}
+
 func TestBolt_SetGet(t *testing.T) {
 	path, err := ioutils.TempDir("", "bolt-test")
 	require.NoError(t, err)
@@ -19,6 +32,7 @@ func TestBolt_SetGet(t *testing.T) {
 		Path:       path,
 		RootBucket: "test",
 		Logger:     hclog.Default(),
+		Encrypter:  getTestEncrypter(t),
 	})
 	require.NoError(t, err)
 
@@ -43,6 +57,7 @@ func TestBoltDelete(t *testing.T) {
 		Path:       path,
 		RootBucket: "test",
 		Logger:     hclog.Default(),
+		Encrypter:  getTestEncrypter(t),
 	})
 	require.NoError(t, err)
 
@@ -73,6 +88,7 @@ func TestBoltClear(t *testing.T) {
 		Path:       path,
 		RootBucket: "test",
 		Logger:     hclog.Default(),
+		Encrypter:  getTestEncrypter(t),
 	})
 	require.NoError(t, err)
 
@@ -121,6 +137,7 @@ func TestBoltSetAutoAuthToken(t *testing.T) {
 		Path:       path,
 		RootBucket: "test",
 		Logger:     hclog.Default(),
+		Encrypter:  getTestEncrypter(t),
 	})
 	require.NoError(t, err)
 
