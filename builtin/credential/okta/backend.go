@@ -172,30 +172,33 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 			break
 		}
 
-		factorAvailable := false
+		var selectedFactor, totpFactor, pushFactor *mfaFactor
 
-		var selectedFactor mfaFactor
-
-		// Okta push and totp are currently supported. If a totp passcode is provided during
-		// login and is supported, that will be the preferred method.
+		// Scan for available factors
 		for _, v := range result.Embedded.Factors {
+			v := v
 			if v.Provider != "OKTA" {
 				continue
 			}
 
-			if v.Type == mfaTOTPMethod && totp != "" {
-				selectedFactor = v
-				factorAvailable = true
-				break
-			}
-
-			if v.Type == mfaPushMethod {
-				selectedFactor = v
-				factorAvailable = true
+			switch v.Type {
+			case mfaTOTPMethod:
+				totpFactor = &v
+			case mfaPushMethod:
+				pushFactor = &v
 			}
 		}
 
-		if !factorAvailable {
+		// Okta push and totp are currently supported. If a totp passcode is provided during
+		// login and is supported, that will be the preferred method.
+		switch {
+		case totpFactor != nil && totp != "":
+			selectedFactor = totpFactor
+		case pushFactor != nil:
+			selectedFactor = pushFactor
+		case totpFactor != nil && totp == "":
+			return nil, logical.ErrorResponse("'totp' passcode parameter is required to perform MFA"), nil, nil
+		default:
 			return nil, logical.ErrorResponse("Okta Verify Push or TOTP factor is required in order to perform MFA"), nil, nil
 		}
 
