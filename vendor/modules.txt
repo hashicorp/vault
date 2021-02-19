@@ -264,6 +264,8 @@ github.com/denisenkom/go-mssqldb/internal/querytext
 github.com/denverdino/aliyungo/common
 github.com/denverdino/aliyungo/ecs
 github.com/denverdino/aliyungo/util
+# github.com/dgrijalva/jwt-go v3.2.0+incompatible
+github.com/dgrijalva/jwt-go
 # github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 github.com/dgrijalva/jwt-go/v4
 # github.com/digitalocean/godo v1.7.5
@@ -368,6 +370,7 @@ github.com/golang-sql/civil
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.4.2
 github.com/golang/protobuf/internal/gengogrpc
+github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -479,6 +482,7 @@ github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
+github.com/hashicorp/go-kms-wrapping/wrappers/yandexcloudkms
 # github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
 github.com/hashicorp/go-kms-wrapping/entropy
 # github.com/hashicorp/go-memdb v1.0.2
@@ -1012,6 +1016,75 @@ github.com/xdg/scram
 github.com/xdg/stringprep
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
+# github.com/yandex-cloud/go-genproto v0.0.0-20200722140432-762fe965ce77
+github.com/yandex-cloud/go-genproto/yandex/cloud
+github.com/yandex-cloud/go-genproto/yandex/cloud/access
+github.com/yandex-cloud/go-genproto/yandex/cloud/ai/stt/v2
+github.com/yandex-cloud/go-genproto/yandex/cloud/ai/translate/v2
+github.com/yandex-cloud/go-genproto/yandex/cloud/ai/vision/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/api
+github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1/instancegroup
+github.com/yandex-cloud/go-genproto/yandex/cloud/containerregistry/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/dataproc/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/endpoint
+github.com/yandex-cloud/go-genproto/yandex/cloud/iam/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/iam/v1/awscompatibility
+github.com/yandex-cloud/go-genproto/yandex/cloud/iot/devices/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/k8s/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/kms/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/loadbalancer/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/marketplace/v1/metering
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/clickhouse/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/clickhouse/v1/config
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/mongodb/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/mongodb/v1/config
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/mysql/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/mysql/v1/config
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/postgresql/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/postgresql/v1/config
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/redis/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/redis/v1/config
+github.com/yandex-cloud/go-genproto/yandex/cloud/operation
+github.com/yandex-cloud/go-genproto/yandex/cloud/reference
+github.com/yandex-cloud/go-genproto/yandex/cloud/resourcemanager/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/serverless/functions/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/serverless/triggers/v1
+github.com/yandex-cloud/go-genproto/yandex/cloud/vpc/v1
+# github.com/yandex-cloud/go-sdk v0.0.0-20200722140627-2194e5077f13
+github.com/yandex-cloud/go-sdk
+github.com/yandex-cloud/go-sdk/dial
+github.com/yandex-cloud/go-sdk/gen/ai/stt
+github.com/yandex-cloud/go-sdk/gen/ai/translate
+github.com/yandex-cloud/go-sdk/gen/ai/vision
+github.com/yandex-cloud/go-sdk/gen/apiendpoint
+github.com/yandex-cloud/go-sdk/gen/compute
+github.com/yandex-cloud/go-sdk/gen/compute/instancegroup
+github.com/yandex-cloud/go-sdk/gen/containerregistry
+github.com/yandex-cloud/go-sdk/gen/dataproc
+github.com/yandex-cloud/go-sdk/gen/functions
+github.com/yandex-cloud/go-sdk/gen/iam
+github.com/yandex-cloud/go-sdk/gen/iam/awscompatibility
+github.com/yandex-cloud/go-sdk/gen/iot/devices
+github.com/yandex-cloud/go-sdk/gen/kms
+github.com/yandex-cloud/go-sdk/gen/kmscrypto
+github.com/yandex-cloud/go-sdk/gen/kubernetes
+github.com/yandex-cloud/go-sdk/gen/loadbalancer
+github.com/yandex-cloud/go-sdk/gen/marketplace/metering
+github.com/yandex-cloud/go-sdk/gen/mdb/clickhouse
+github.com/yandex-cloud/go-sdk/gen/mdb/mongodb
+github.com/yandex-cloud/go-sdk/gen/mdb/mysql
+github.com/yandex-cloud/go-sdk/gen/mdb/postgresql
+github.com/yandex-cloud/go-sdk/gen/mdb/redis
+github.com/yandex-cloud/go-sdk/gen/operation
+github.com/yandex-cloud/go-sdk/gen/resourcemanager
+github.com/yandex-cloud/go-sdk/gen/triggers
+github.com/yandex-cloud/go-sdk/gen/vpc
+github.com/yandex-cloud/go-sdk/iamkey
+github.com/yandex-cloud/go-sdk/operation
+github.com/yandex-cloud/go-sdk/pkg/grpcclient
+github.com/yandex-cloud/go-sdk/pkg/sdkerrors
+github.com/yandex-cloud/go-sdk/pkg/singleflight
 # github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da
 github.com/yuin/gopher-lua
 github.com/yuin/gopher-lua/ast
@@ -1269,7 +1342,9 @@ google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/spanner/admin/instance/v1
 google.golang.org/genproto/googleapis/spanner/v1
 google.golang.org/genproto/googleapis/type/calendarperiod
+google.golang.org/genproto/googleapis/type/dayofweek
 google.golang.org/genproto/googleapis/type/expr
+google.golang.org/genproto/googleapis/type/timeofday
 google.golang.org/genproto/protobuf/field_mask
 # google.golang.org/grpc v1.29.1
 google.golang.org/grpc
