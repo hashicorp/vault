@@ -112,6 +112,7 @@ func TestCacheConfigUnix(t *testing.T) {
 		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
 	}
 }
+
 func TestCacheConfigHTTP(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
