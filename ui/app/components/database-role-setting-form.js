@@ -35,7 +35,7 @@ const STATEMENT_FIELDS = {
   },
   dynamic: {
     default: ['creation_statements', 'revocation_statements', 'rotation_statements'],
-    'mongodb-database-plugin': ['creation_statement'],
+    'mongodb-database-plugin': ['creation_statement', 'revocation_statement'],
   },
 };
 

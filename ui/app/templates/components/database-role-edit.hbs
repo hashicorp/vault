@@ -18,16 +18,6 @@
 {{#if (eq @mode 'show')}}
   <Toolbar>
     <ToolbarActions>
-      {{#if @model.canGenerateCredentials}}
-      <button 
-        type="button"
-        class="toolbar-link"
-        {{on 'click' (fn this.generateCreds @model.id)}}
-        data-test-database-role-generate-creds
-      >
-        Generate credentials
-      </button>
-      {{/if}}
       {{#if @model.canDelete}}
       <ConfirmAction
         @buttonClasses="toolbar-link"
@@ -39,6 +29,17 @@
       >
         Delete role
       </ConfirmAction>
+      <div class="toolbar-separator" />
+      {{/if}}
+      {{#if @model.canGenerateCredentials}}
+      <button 
+        type="button"
+        class="toolbar-link"
+        {{on 'click' (fn this.generateCreds @model.id)}}
+        data-test-database-role-generate-creds
+      >
+        Generate credentials
+      </button>
       {{/if}}
       {{#if @model.canEditRole}}
       <ToolbarSecretLink
@@ -53,7 +54,7 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  {{#each @model.fieldAttrs as |attr|}}
+  {{#each @model.showFields as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow

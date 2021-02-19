@@ -64,7 +64,7 @@ export default Model.extend({
     theme: 'hashi short',
     defaultShown: 'Default',
   }),
-  rotation_statement: attr('string', {
+  revocation_statement: attr('string', {
     editType: 'json',
     theme: 'hashi short',
     defaultShown: 'Default',
@@ -72,7 +72,18 @@ export default Model.extend({
 
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
-    let fields = ['database', 'name', 'type'];
+    // Main fields on edit/create form
+    let fields = ['name', 'database', 'type'];
+    return expandAttributeMeta(this, fields);
+  },
+
+  get showFields() {
+    let fields = ['name', 'database', 'type'];
+    if (this.type === 'dynamic') {
+      fields = fields.concat(['ttl', 'max_ttl', 'creation_statements', 'revocation_statements']);
+    } else {
+      fields = fields.concat(['username', 'rotation_period']);
+    }
     return expandAttributeMeta(this, fields);
   },
 
@@ -86,8 +97,8 @@ export default Model.extend({
       'creation_statements',
       'creation_statement', // only for MongoDB (styling difference)
       'revocation_statements',
+      'revocation_statement', // only for MongoDB (styling difference)
       'rotation_statements',
-      'rotation_statement', // only for MongoDB (styling difference)
     ];
     return expandAttributeMeta(this, allRoleSettingFields);
   }),
