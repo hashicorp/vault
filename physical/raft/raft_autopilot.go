@@ -236,10 +236,16 @@ func (d *Delegate) NotifyState(state *autopilot.State) {
 		}
 
 		for id, state := range state.Servers {
+			labels := []metrics.Label{
+				{
+					Name:  "node_id",
+					Value: string(id),
+				},
+			}
 			if state.Health.Healthy {
-				metrics.SetGauge([]string{"autopilot", string(id), "healthy"}, 1)
+				metrics.SetGaugeWithLabels([]string{"autopilot", "node", "healthy"}, 1, labels)
 			} else {
-				metrics.SetGauge([]string{"autopilot", string(id), "healthy"}, 0)
+				metrics.SetGaugeWithLabels([]string{"autopilot", "node", "healthy"}, 0, labels)
 			}
 		}
 	}
@@ -283,6 +289,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	future := d.raft.GetConfiguration()
 	if err := future.Error(); err != nil {
 		d.logger.Error("failed to get raft configuration when computing known servers", "error", err)
+		d.l.RUnlock()
+		return nil
 	}
 
 	servers := future.Configuration().Servers
@@ -313,7 +321,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 
 		switch state.IsDead {
 		case true:
-			d.logger.Info("informing autopilot that the node left", "id", id)
+			d.logger.Debug("informing autopilot that the node left", "id", id)
 			server.NodeStatus = autopilot.NodeLeft
 		default:
 			server.NodeStatus = autopilot.NodeAlive
@@ -360,6 +368,7 @@ func (b *RaftBackend) SetFollowerStates(states *FollowerStates) {
 // SetAutopilotConfig updates the autopilot configuration in the backend.
 func (b *RaftBackend) SetAutopilotConfig(config *AutopilotConfig) {
 	b.l.Lock()
+	b.logger.Info("updating autopilot configuration", "config", config)
 	b.autopilotConfig = config
 	b.l.Unlock()
 }
@@ -369,7 +378,7 @@ func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
 	b.l.RLock()
 	conf := b.autopilotConfig
 	b.l.RUnlock()
-	return conf
+	return conf.Clone()
 }
 
 func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
@@ -586,7 +595,7 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 	return autopilotToAPIHealth(b.autopilot.GetState()), nil
 }
 
-func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
+func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	// Start with a default config
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
@@ -596,21 +605,19 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) error {
 		// Autopilot config wasn't found in storage. Check if autopilot settings were part of config file.
 		conf, err := b.autopilotConf()
 		if err != nil {
-			return err
+			b.logger.Error("failed to load autopilot config supplied via config file; falling back to default config", "error", err)
 		}
 		if conf != nil {
-			b.logger.Info("setting autopilot configuration retrieved from config file")
+			b.logger.Info("setting autopilot configuration retrieved from config file", "config", conf)
 			b.autopilotConfig = conf
 		}
 	default:
-		b.logger.Info("setting autopilot configuration retrieved from storage")
+		b.logger.Info("setting autopilot configuration retrieved from storage", "config", opts.AutopilotConfig)
 		b.autopilotConfig = opts.AutopilotConfig
 	}
 
 	// Create the autopilot instance
-	b.logger.Info("setting up autopilot", "config", b.autopilotConfig)
+	b.logger.Info("creating autopilot instance")
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 	b.followerHeartbeatTrackerStopCh = make(chan struct{})
-
-	return nil
 }
