@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachepersist"
+	"github.com/hashicorp/vault/command/agent/cache/encrypt"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -481,10 +482,13 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error("must specify persistent cache path")
 				return 1
 			}
+			// TODO(tvoran): replace with real encrypter
+			e := encrypt.NewPassThru("fake-key", cacheLogger.Named("encrypter"))
 			ps, err := cachepersist.NewBoltStorage(&cachepersist.BoltStorageConfig{
 				Path:       config.Cache.Persist.Path,
 				RootBucket: "<insert key hash here>",
 				Logger:     cacheLogger.Named("cachepersist"),
+				Encrypter:  e,
 			})
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))

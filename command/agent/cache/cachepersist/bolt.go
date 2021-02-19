@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -25,9 +26,7 @@ type BoltStorage struct {
 	db         *bolt.DB
 	rootBucket string
 	logger     hclog.Logger
-
-	// Internal encryption interface
-	encryption Encryption
+	encrypter  Encryption
 }
 
 // BoltStorageConfig is the collection of input parameters for setting up bolt
@@ -36,7 +35,7 @@ type BoltStorageConfig struct {
 	Path       string
 	RootBucket string
 	Logger     hclog.Logger
-	Encryption Encryption
+	Encrypter  Encryption
 }
 
 // NewBoltStorage opens a new bolt db at the specified file path and returns it.
@@ -58,6 +57,7 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 		db:         db,
 		rootBucket: config.RootBucket,
 		logger:     config.Logger,
+		encrypter:  config.Encrypter,
 	}
 	return bs, nil
 }
@@ -95,9 +95,12 @@ func createBoltSchema(tx *bolt.Tx, rootBucketName string) error {
 }
 
 // Set an index in bolt storage
-func (b *BoltStorage) Set(id string, index []byte, indexType string) error {
+func (b *BoltStorage) Set(id string, plainText []byte, indexType string) error {
 
-	// TODO(tvoran): encrypt index here
+	cipherText, err := b.encrypter.Encrypt(plainText)
+	if err != nil {
+		return fmt.Errorf("error encrypting %s index: %w", indexType, err)
+	}
 
 	return b.db.Update(func(tx *bolt.Tx) error {
 		top := tx.Bucket([]byte(b.rootBucket))
@@ -111,11 +114,11 @@ func (b *BoltStorage) Set(id string, index []byte, indexType string) error {
 		// If this is an auto-auth token, also stash it in the root bucket for
 		// easy retrieval upon restore
 		if indexType == TokenType {
-			if err := top.Put([]byte(AutoAuthToken), index); err != nil {
+			if err := top.Put([]byte(AutoAuthToken), cipherText); err != nil {
 				return fmt.Errorf("failed to set latest auto-auth token: %w", err)
 			}
 		}
-		return s.Put([]byte(id), index)
+		return s.Put([]byte(id), cipherText)
 	})
 }
 
@@ -156,23 +159,25 @@ func (b *BoltStorage) GetByType(indexType string) ([][]byte, error) {
 	returnBytes := [][]byte{}
 
 	err := b.db.View(func(tx *bolt.Tx) error {
+		var errors *multierror.Error
+
 		top := tx.Bucket([]byte(b.rootBucket))
 		if top == nil {
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
-		top.Bucket([]byte(indexType)).ForEach(func(k, v []byte) error {
-
-			// TODO(tvoran): decrypt v here
-
-			returnBytes = append(returnBytes, v)
+		top.Bucket([]byte(indexType)).ForEach(func(id, cipherText []byte) error {
+			plainText, err := b.encrypter.Decrypt(cipherText)
+			if err != nil {
+				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
+				return nil
+			}
+			returnBytes = append(returnBytes, plainText)
 			return nil
 		})
-		return nil
+		return errors.ErrorOrNil()
 	})
-	if err != nil {
-		return nil, err
-	}
-	return returnBytes, nil
+
+	return returnBytes, err
 }
 
 // GetAutoAuthToken retrieves the latest auto-auth token, and returns nil if non
@@ -191,7 +196,16 @@ func (b *BoltStorage) GetAutoAuthToken() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return token, nil
+
+	if token == nil {
+		return nil, nil
+	}
+
+	plainText, err := b.encrypter.Decrypt(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt auto-auth token: %w", err)
+	}
+	return plainText, nil
 }
 
 // Close the boltdb
@@ -204,13 +218,16 @@ func (b *BoltStorage) Close() error {
 // schema/layout
 func (b *BoltStorage) Clear() error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
+		err := tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
 			b.logger.Trace("deleting bolt bucket", "name", name)
 			if err := tx.DeleteBucket(name); err != nil {
 				return err
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 		return createBoltSchema(tx, b.rootBucket)
 	})
 }

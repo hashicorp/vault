@@ -35,9 +35,3 @@ type Storage interface {
 	// Clear the persistent storage
 	Clear() error
 }
-
-// Encryption is the internal interface for encrypting and decrypting items in storage
-type Encryption interface {
-	Encrypt([]byte) ([]byte, error)
-	Decrypt([]byte) ([]byte, error)
-}

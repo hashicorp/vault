@@ -902,7 +902,7 @@ func (c *LeaseCache) Set(index *cachememdb.Index, indexType string) error {
 		if err := c.ps.Set(index.ID, b, indexType); err != nil {
 			return err
 		}
-		c.logger.Debug("set entry in persistent storage", "type", indexType, "path", index.RequestPath, "id", index.ID)
+		c.logger.Debug("set entry in persistent storage", "type", indexType, "path", index.RequestPath, "id", index.ID, "lease", index.Lease)
 	}
 
 	return nil
