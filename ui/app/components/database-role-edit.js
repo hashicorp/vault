@@ -43,7 +43,11 @@ export default class DatabaseRoleEdit extends Component {
     secret
       .destroyRecord()
       .then(() => {
-        this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
+        try {
+          this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
+        } catch (e) {
+          console.debug(e);
+        }
       })
       .catch(e => {
         this.flashMessages.danger(e.errors?.join('. '));
@@ -59,7 +63,11 @@ export default class DatabaseRoleEdit extends Component {
     let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
     roleSecret.set('path', path);
     roleSecret.save().then(() => {
-      this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+      try {
+        this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+      } catch (e) {
+        console.debug(e);
+      }
     });
   }
 
@@ -75,7 +83,11 @@ export default class DatabaseRoleEdit extends Component {
       roleSecret.set('path', path);
     }
     roleSecret.save().then(() => {
-      this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+      try {
+        this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+      } catch (e) {
+        console.debug(e);
+      }
     });
   }
 }
