@@ -158,27 +158,27 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
-	err = validateVaultHeaderValue(postHeadersMissing, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue(http.MethodPost, postHeadersMissing, requestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with missing Vault header")
 	}
 
-	err = validateVaultHeaderValue(postHeadersInvalid, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue(http.MethodPost, postHeadersInvalid, requestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with invalid Vault header value")
 	}
 
-	err = validateVaultHeaderValue(postHeadersUnsigned, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue(http.MethodPost, postHeadersUnsigned, requestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with unsigned Vault header")
 	}
 
-	err = validateVaultHeaderValue(postHeadersValid, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue(http.MethodPost, postHeadersValid, requestURL, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request: %v", err)
 	}
 
-	err = validateVaultHeaderValue(postHeadersSplit, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue(http.MethodPost, postHeadersSplit, requestURL, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request with split Authorization header: %v", err)
 	}

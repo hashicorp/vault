@@ -97,7 +97,7 @@ significance.`,
 				Type: framework.TypeString,
 				Description: `HTTP method to use for the AWS request when auth_type is
 iam. This must match what has been signed in the
-presigned request. Currently, POST is the only supported value`,
+presigned request.`,
 			},
 
 			"iam_request_url": {
@@ -253,9 +253,8 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		return "", nil, nil, logical.ErrorResponse("missing iam_http_request_method"), nil
 	}
 
-	// In the future, might consider supporting GET
-	if method != "POST" {
-		return "", nil, nil, logical.ErrorResponse("invalid iam_http_request_method; currently only 'POST' is supported"), nil
+	if method != http.MethodGet && method != http.MethodPost {
+		return "", nil, nil, logical.ErrorResponse("invalid iam_http_request_method; currently only 'GET' and 'POST' are supported"), nil
 	}
 
 	rawUrlB64 := data.Get("iam_request_url").(string)
@@ -270,16 +269,13 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	if err != nil {
 		return "", nil, nil, logical.ErrorResponse("error parsing iam_request_url"), nil
 	}
-	if parsedUrl.RawQuery != "" {
+	if parsedUrl.RawQuery != "" && method != http.MethodGet {
 		// Should be no query parameters
 		return "", nil, nil, logical.ErrorResponse(logical.ErrInvalidRequest.Error()), nil
 	}
-	// TODO: There are two potentially valid cases we're not yet supporting that would
-	// necessitate this check being changed. First, if we support GET requests.
-	// Second if we support presigned POST requests
 	bodyB64 := data.Get("iam_request_body").(string)
-	if bodyB64 == "" {
-		return "", nil, nil, logical.ErrorResponse("missing iam_request_body"), nil
+	if bodyB64 == "" && method != http.MethodGet {
+		return "", nil, nil, logical.ErrorResponse("missing iam_request_body which is required for POST requests"), nil
 	}
 	bodyRaw, err := base64.StdEncoding.DecodeString(bodyB64)
 	if err != nil {
@@ -305,13 +301,18 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	maxRetries := awsClient.DefaultRetryerMaxNumRetries
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
-			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
+			err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
 			if err != nil {
 				return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
 		}
 		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
 			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+		}
+		if method == http.MethodGet {
+			if err = config.validateAllowedSTSQueryValues(parsedUrl.Query()); err != nil {
+				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+			}
 		}
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
@@ -1570,11 +1571,11 @@ func hasValuesForEc2Auth(data *framework.FieldData) (bool, bool) {
 }
 
 func hasValuesForIamAuth(data *framework.FieldData) (bool, bool) {
-	_, hasRequestMethod := data.GetOk("iam_http_request_method")
+	method, hasRequestMethod := data.GetOk("iam_http_request_method")
 	_, hasRequestURL := data.GetOk("iam_request_url")
 	_, hasRequestBody := data.GetOk("iam_request_body")
 	_, hasRequestHeaders := data.GetOk("iam_request_headers")
-	return (hasRequestMethod && hasRequestURL && hasRequestBody && hasRequestHeaders),
+	return (hasRequestMethod && hasRequestURL && (method == http.MethodGet || hasRequestBody) && hasRequestHeaders),
 		(hasRequestMethod || hasRequestURL || hasRequestBody || hasRequestHeaders)
 }
 
@@ -1628,7 +1629,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	return &entity, nil
 }
 
-func validateVaultHeaderValue(headers http.Header, _ *url.URL, requiredHeaderValue string) error {
+func validateVaultHeaderValue(method string, headers http.Header, parsed *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
 	for k, v := range headers {
 		if strings.EqualFold(iamServerIdHeader, k) {
@@ -1644,25 +1645,39 @@ func validateVaultHeaderValue(headers http.Header, _ *url.URL, requiredHeaderVal
 	if providedValue != requiredHeaderValue {
 		return fmt.Errorf("expected %q but got %q", requiredHeaderValue, providedValue)
 	}
-
-	if authzHeaders, ok := headers["Authorization"]; ok {
-		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
-		// We need to extract out the SignedHeaders
-		re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
-		authzHeader := strings.Join(authzHeaders, ",")
-		matches := re.FindSubmatch([]byte(authzHeader))
-		if len(matches) < 1 {
-			return fmt.Errorf("vault header wasn't signed")
+	switch method {
+	case http.MethodPost:
+		if authzHeaders, ok := headers["Authorization"]; ok {
+			// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
+			// We need to extract out the SignedHeaders
+			re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
+			authzHeader := strings.Join(authzHeaders, ",")
+			matches := re.FindSubmatch([]byte(authzHeader))
+			if len(matches) < 1 {
+				return fmt.Errorf("vault header wasn't signed")
+			}
+			if len(matches) > 2 {
+				return fmt.Errorf("found multiple SignedHeaders components")
+			}
+			signedHeaders := string(matches[1])
+			return ensureHeaderIsSigned(signedHeaders, iamServerIdHeader)
 		}
-		if len(matches) > 2 {
-			return fmt.Errorf("found multiple SignedHeaders components")
+		return fmt.Errorf("missing Authorization header")
+	case http.MethodGet:
+		actions := map[string][]string(parsed.Query())["Action"]
+		if len(actions) == 0 {
+			return fmt.Errorf("no action found in request")
 		}
-		signedHeaders := string(matches[1])
-		return ensureHeaderIsSigned(signedHeaders, iamServerIdHeader)
+		if len(actions) != 1 {
+			return fmt.Errorf("found multiple actions")
+		}
+		if actions[0] != "GetCallerIdentity" {
+			return fmt.Errorf("unexpected action parameter, %s", actions[0])
+		}
+		return ensureHeaderIsSigned(parsed.Query().Get("X-Amz-SignedHeaders"), iamServerIdHeader)
+	default:
+		return fmt.Errorf("unsupported method, %s", method)
 	}
-	// TODO: If we support GET requests, then we need to parse the X-Amz-SignedHeaders
-	// argument out of the query string and search in there for the header value
-	return fmt.Errorf("missing Authorization header")
 }
 
 func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) *http.Request {

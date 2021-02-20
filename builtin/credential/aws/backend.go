@@ -33,6 +33,7 @@ var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Security-Token",
 	"X-Amz-Signature",
 	"X-Amz-SignedHeaders",
+	"X-Amz-User-Agent",
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
