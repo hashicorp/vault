@@ -3,14 +3,9 @@ package pointerstructure
 import (
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 // Get reads the value out of the total value v.
-//
-// For struct values a `pointer:"<name>"` tag on the struct's
-// fields may be used to override that field's name for lookup purposes.
-// Alternatively the tag name used can be overridden in the `Config`.
 func (p *Pointer) Get(v interface{}) (interface{}, error) {
 	// fast-path the empty address case to avoid reflect.ValueOf below
 	if len(p.Parts) == 0 {
@@ -38,13 +33,13 @@ func (p *Pointer) Get(v interface{}) (interface{}, error) {
 		f, ok := funcMap[currentVal.Kind()]
 		if !ok {
 			return nil, fmt.Errorf(
-				"%s: at part %d, %w: %s", p, i, ErrInvalidKind, currentVal.Kind())
+				"%s: at part %d, invalid value kind: %s", p, i, currentVal.Kind())
 		}
 
 		var err error
 		currentVal, err = f(part, currentVal)
 		if err != nil {
-			return nil, fmt.Errorf("%s at part %d: %w", p, i, err)
+			return nil, fmt.Errorf("%s at part %d: %s", p, i, err)
 		}
 	}
 
@@ -69,7 +64,7 @@ func (p *Pointer) getMap(part string, m reflect.Value) (reflect.Value, error) {
 		}
 	}
 	if !found {
-		return zeroValue, fmt.Errorf("%w %#v", ErrNotFound, key.Interface())
+		return zeroValue, fmt.Errorf("couldn't find key %#v", key.Interface())
 	}
 
 	// Get the key
@@ -89,7 +84,7 @@ func (p *Pointer) getSlice(part string, v reflect.Value) (reflect.Value, error) 
 	// Verify we're within bounds
 	if idx < 0 || idx >= v.Len() {
 		return zeroValue, fmt.Errorf(
-			"index %d is %w (length = %d)", idx, ErrOutOfRange, v.Len())
+			"index %d is out of range (length = %d)", idx, v.Len())
 	}
 
 	// Get the key
@@ -97,63 +92,5 @@ func (p *Pointer) getSlice(part string, v reflect.Value) (reflect.Value, error) 
 }
 
 func (p *Pointer) getStruct(part string, m reflect.Value) (reflect.Value, error) {
-	var foundField reflect.Value
-	var found bool
-	var ignored bool
-	typ := m.Type()
-
-	tagName := p.Config.TagName
-	if tagName == "" {
-		tagName = "pointer"
-	}
-
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-
-		if field.PkgPath != "" {
-			// this is an unexported field so ignore it
-			continue
-		}
-
-		fieldTag := field.Tag.Get(tagName)
-
-		if fieldTag != "" {
-			if idx := strings.Index(fieldTag, ","); idx != -1 {
-				fieldTag = fieldTag[0:idx]
-			}
-
-			if strings.Contains(fieldTag, "|") {
-				// should this panic instead?
-				return foundField, fmt.Errorf("pointer struct tag cannot contain the '|' character")
-			}
-
-			if fieldTag == "-" {
-				// we should ignore this field but cannot immediately return because its possible another
-				// field has a tag that would allow it to assume this ones name.
-
-				if field.Name == part {
-					found = true
-					ignored = true
-				}
-				continue
-			} else if fieldTag == part {
-				// we can go ahead and return now as the tag is enough to
-				// indicate that this is the correct field
-				return m.Field(i), nil
-			}
-		} else if field.Name == part {
-			foundField = m.Field(i)
-			found = true
-		}
-	}
-
-	if !found {
-		return reflect.Value{}, fmt.Errorf("couldn't find struct field with name %q", part)
-	}
-
-	if ignored {
-		return reflect.Value{}, fmt.Errorf("struct field %q is ignored and cannot be used", part)
-	}
-
-	return foundField, nil
+	return m.FieldByName(part), nil
 }

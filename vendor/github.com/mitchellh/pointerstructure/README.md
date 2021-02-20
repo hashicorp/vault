@@ -72,31 +72,3 @@ fmt.Printf("%s", value)
 // Output:
 // Alice
 ```
-
-The library also supports `Get` operations on structs including using the `pointer`
-struct tag to override struct field names:
-
-```go
-	input := struct {
-		Values map[string]interface{} `pointer:"embedded"`
-	}{
-		Values: map[string]interface{}{
-			"alice": 42,
-			"bob": []interface{}{
-				map[string]interface{}{
-					"name": "Bob",
-				},
-			},
-		},
-	}
-
-	value, err := Get(input, "/embedded/bob/0/name")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("%s", value)
-// Output:
-// Bob
-```
-

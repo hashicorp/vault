@@ -80,7 +80,6 @@ func (client ServicePrincipalsClient) Create(ctx context.Context, parameters Ser
 	result, err = client.CreateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Create", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -155,7 +154,6 @@ func (client ServicePrincipalsClient) Delete(ctx context.Context, objectID strin
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Delete", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -228,7 +226,6 @@ func (client ServicePrincipalsClient) Get(ctx context.Context, objectID string) 
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -308,11 +305,6 @@ func (client ServicePrincipalsClient) List(ctx context.Context, filter string) (
 	result.splr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.splr.hasNextLink() && result.splr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -404,7 +396,6 @@ func (client ServicePrincipalsClient) ListKeyCredentials(ctx context.Context, ob
 	result, err = client.ListKeyCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListKeyCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -478,7 +469,6 @@ func (client ServicePrincipalsClient) ListNext(ctx context.Context, nextLink str
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListNext", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -553,11 +543,6 @@ func (client ServicePrincipalsClient) ListOwners(ctx context.Context, objectID s
 	result.dolr, err = client.ListOwnersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListOwners", resp, "Failure responding to request")
-		return
-	}
-	if result.dolr.hasNextLink() && result.dolr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -668,7 +653,6 @@ func (client ServicePrincipalsClient) ListPasswordCredentials(ctx context.Contex
 	result, err = client.ListPasswordCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListPasswordCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -743,7 +727,6 @@ func (client ServicePrincipalsClient) Update(ctx context.Context, objectID strin
 	result, err = client.UpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Update", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -819,7 +802,6 @@ func (client ServicePrincipalsClient) UpdateKeyCredentials(ctx context.Context, 
 	result, err = client.UpdateKeyCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "UpdateKeyCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -895,7 +877,6 @@ func (client ServicePrincipalsClient) UpdatePasswordCredentials(ctx context.Cont
 	result, err = client.UpdatePasswordCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "UpdatePasswordCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return

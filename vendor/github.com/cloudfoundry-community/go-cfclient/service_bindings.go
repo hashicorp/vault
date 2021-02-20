@@ -120,7 +120,7 @@ func (c *Client) DeleteServiceBinding(guid string) error {
 }
 
 func (c *Client) CreateServiceBinding(appGUID, serviceInstanceGUID string) (*ServiceBinding, error) {
-	req := c.NewRequest("POST", "/v2/service_bindings")
+	req := c.NewRequest("POST", fmt.Sprintf("/v2/service_bindings"))
 	req.obj = map[string]interface{}{
 		"app_guid":              appGUID,
 		"service_instance_guid": serviceInstanceGUID,

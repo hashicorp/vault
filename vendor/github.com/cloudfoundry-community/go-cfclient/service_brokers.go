@@ -47,6 +47,7 @@ type ServiceBroker struct {
 	Username  string `json:"auth_username"`
 	Password  string `json:"auth_password"`
 	SpaceGUID string `json:"space_guid,omitempty"`
+	c         *Client
 }
 
 func (c *Client) DeleteServiceBroker(guid string) error {

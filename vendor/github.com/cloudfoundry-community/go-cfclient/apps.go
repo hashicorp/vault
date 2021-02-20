@@ -495,9 +495,6 @@ func (c *Client) AppByName(appName, spaceGuid, orgGuid string) (app App, err err
 // UploadAppBits uploads the application's contents
 func (c *Client) UploadAppBits(file io.Reader, appGUID string) error {
 	requestFile, err := ioutil.TempFile("", "requests")
-	if err != nil {
-		return errors.Wrap(err, "Could not create temp file for app bits")
-	}
 
 	defer func() {
 		requestFile.Close()
@@ -575,32 +572,6 @@ func (c *Client) GetAppBits(guid string) (io.ReadCloser, error) {
 		}
 	} else {
 		return nil, errors.Wrapf(err, "Error downloading app %s bits, expected redirect to blobstore", guid)
-	}
-	return resp.Body, nil
-}
-
-// GetDropletBits downloads the application's droplet bits as a tar file
-func (c *Client) GetDropletBits(guid string) (io.ReadCloser, error) {
-	requestURL := fmt.Sprintf("/v2/apps/%s/droplet/download", guid)
-	req := c.NewRequest("GET", requestURL)
-	resp, err := c.DoRequestWithoutRedirects(req)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Error downloading droplet %s bits, API request failed", guid)
-	}
-	if isResponseRedirect(resp) {
-		// directly download the bits from blobstore using a non cloud controller transport
-		// some blobstores will return a 400 if an Authorization header is sent
-		blobStoreLocation := resp.Header.Get("Location")
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: c.Config.SkipSslValidation},
-		}
-		client := &http.Client{Transport: tr}
-		resp, err = client.Get(blobStoreLocation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Error downloading droplet %s bits from blobstore", guid)
-		}
-	} else {
-		return nil, errors.Wrapf(err, "Error downloading droplet %s bits, expected redirect to blobstore", guid)
 	}
 	return resp.Body, nil
 }

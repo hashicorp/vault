@@ -79,11 +79,6 @@ func (client ObjectsClient) GetObjectsByObjectIds(ctx context.Context, parameter
 	result.dolr, err = client.GetObjectsByObjectIdsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetObjectsByObjectIds", resp, "Failure responding to request")
-		return
-	}
-	if result.dolr.hasNextLink() && result.dolr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -174,7 +169,6 @@ func (client ObjectsClient) GetObjectsByObjectIdsNext(ctx context.Context, nextL
 	result, err = client.GetObjectsByObjectIdsNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetObjectsByObjectIdsNext", resp, "Failure responding to request")
-		return
 	}
 
 	return

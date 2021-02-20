@@ -80,7 +80,6 @@ func (client VirtualMachineSizesClient) List(ctx context.Context, location strin
 	result, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineSizesClient", "List", resp, "Failure responding to request")
-		return
 	}
 
 	return

@@ -87,7 +87,6 @@ func (client DedicatedHostGroupsClient) CreateOrUpdate(ctx context.Context, reso
 	result, err = client.CreateOrUpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.DedicatedHostGroupsClient", "CreateOrUpdate", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -165,7 +164,6 @@ func (client DedicatedHostGroupsClient) Delete(ctx context.Context, resourceGrou
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.DedicatedHostGroupsClient", "Delete", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -240,7 +238,6 @@ func (client DedicatedHostGroupsClient) Get(ctx context.Context, resourceGroupNa
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.DedicatedHostGroupsClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -317,11 +314,6 @@ func (client DedicatedHostGroupsClient) ListByResourceGroup(ctx context.Context,
 	result.dhglr, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.DedicatedHostGroupsClient", "ListByResourceGroup", resp, "Failure responding to request")
-		return
-	}
-	if result.dhglr.hasNextLink() && result.dhglr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -432,11 +424,6 @@ func (client DedicatedHostGroupsClient) ListBySubscription(ctx context.Context) 
 	result.dhglr, err = client.ListBySubscriptionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.DedicatedHostGroupsClient", "ListBySubscription", resp, "Failure responding to request")
-		return
-	}
-	if result.dhglr.hasNextLink() && result.dhglr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -548,7 +535,6 @@ func (client DedicatedHostGroupsClient) Update(ctx context.Context, resourceGrou
 	result, err = client.UpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.DedicatedHostGroupsClient", "Update", resp, "Failure responding to request")
-		return
 	}
 
 	return

@@ -81,7 +81,6 @@ func (client ApplicationsClient) AddOwner(ctx context.Context, applicationObject
 	result, err = client.AddOwnerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "AddOwner", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -162,7 +161,6 @@ func (client ApplicationsClient) Create(ctx context.Context, parameters Applicat
 	result, err = client.CreateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "Create", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -237,7 +235,6 @@ func (client ApplicationsClient) Delete(ctx context.Context, applicationObjectID
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "Delete", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -310,7 +307,6 @@ func (client ApplicationsClient) Get(ctx context.Context, applicationObjectID st
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -384,7 +380,6 @@ func (client ApplicationsClient) GetServicePrincipalsIDByAppID(ctx context.Conte
 	result, err = client.GetServicePrincipalsIDByAppIDResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "GetServicePrincipalsIDByAppID", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -464,11 +459,6 @@ func (client ApplicationsClient) List(ctx context.Context, filter string) (resul
 	result.alr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.alr.hasNextLink() && result.alr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -560,7 +550,6 @@ func (client ApplicationsClient) ListKeyCredentials(ctx context.Context, applica
 	result, err = client.ListKeyCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "ListKeyCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -634,7 +623,6 @@ func (client ApplicationsClient) ListNext(ctx context.Context, nextLink string) 
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "ListNext", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -709,11 +697,6 @@ func (client ApplicationsClient) ListOwners(ctx context.Context, applicationObje
 	result.dolr, err = client.ListOwnersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "ListOwners", resp, "Failure responding to request")
-		return
-	}
-	if result.dolr.hasNextLink() && result.dolr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -824,7 +807,6 @@ func (client ApplicationsClient) ListPasswordCredentials(ctx context.Context, ap
 	result, err = client.ListPasswordCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "ListPasswordCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -899,7 +881,6 @@ func (client ApplicationsClient) Patch(ctx context.Context, applicationObjectID 
 	result, err = client.PatchResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "Patch", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -975,7 +956,6 @@ func (client ApplicationsClient) RemoveOwner(ctx context.Context, applicationObj
 	result, err = client.RemoveOwnerResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "RemoveOwner", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1050,7 +1030,6 @@ func (client ApplicationsClient) UpdateKeyCredentials(ctx context.Context, appli
 	result, err = client.UpdateKeyCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "UpdateKeyCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -1126,7 +1105,6 @@ func (client ApplicationsClient) UpdatePasswordCredentials(ctx context.Context, 
 	result, err = client.UpdatePasswordCredentialsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ApplicationsClient", "UpdatePasswordCredentials", resp, "Failure responding to request")
-		return
 	}
 
 	return

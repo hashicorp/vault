@@ -65,7 +65,7 @@ func (client SecurityGroupsClient) CreateOrUpdate(ctx context.Context, resourceG
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "CreateOrUpdate", nil, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "CreateOrUpdate", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -103,33 +103,7 @@ func (client SecurityGroupsClient) CreateOrUpdateSender(req *http.Request) (futu
 	if err != nil {
 		return
 	}
-	var azf azure.Future
-	azf, err = azure.NewFutureFromResponse(resp)
-	future.FutureAPI = &azf
-	future.Result = func(client SecurityGroupsClient) (sg SecurityGroup, err error) {
-		var done bool
-		done, err = future.DoneWithContext(context.Background(), client)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "network.SecurityGroupsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-			return
-		}
-		if !done {
-			err = azure.NewAsyncOpIncompleteError("network.SecurityGroupsCreateOrUpdateFuture")
-			return
-		}
-		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		sg.Response.Response, err = future.GetResult(sender)
-		if sg.Response.Response == nil && err == nil {
-			err = autorest.NewErrorWithError(err, "network.SecurityGroupsCreateOrUpdateFuture", "Result", nil, "received nil response and error")
-		}
-		if err == nil && sg.Response.Response.StatusCode != http.StatusNoContent {
-			sg, err = client.CreateOrUpdateResponder(sg.Response.Response)
-			if err != nil {
-				err = autorest.NewErrorWithError(err, "network.SecurityGroupsCreateOrUpdateFuture", "Result", sg.Response.Response, "Failure responding to request")
-			}
-		}
-		return
-	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -168,7 +142,7 @@ func (client SecurityGroupsClient) Delete(ctx context.Context, resourceGroupName
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "Delete", nil, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "Delete", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -204,23 +178,7 @@ func (client SecurityGroupsClient) DeleteSender(req *http.Request) (future Secur
 	if err != nil {
 		return
 	}
-	var azf azure.Future
-	azf, err = azure.NewFutureFromResponse(resp)
-	future.FutureAPI = &azf
-	future.Result = func(client SecurityGroupsClient) (ar autorest.Response, err error) {
-		var done bool
-		done, err = future.DoneWithContext(context.Background(), client)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "network.SecurityGroupsDeleteFuture", "Result", future.Response(), "Polling failure")
-			return
-		}
-		if !done {
-			err = azure.NewAsyncOpIncompleteError("network.SecurityGroupsDeleteFuture")
-			return
-		}
-		ar.Response = future.Response()
-		return
-	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -267,7 +225,6 @@ func (client SecurityGroupsClient) Get(ctx context.Context, resourceGroupName st
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "Get", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -346,11 +303,6 @@ func (client SecurityGroupsClient) List(ctx context.Context, resourceGroupName s
 	result.sglr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.sglr.hasNextLink() && result.sglr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -460,11 +412,6 @@ func (client SecurityGroupsClient) ListAll(ctx context.Context) (result Security
 	result.sglr, err = client.ListAllResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.SecurityGroupsClient", "ListAll", resp, "Failure responding to request")
-		return
-	}
-	if result.sglr.hasNextLink() && result.sglr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return

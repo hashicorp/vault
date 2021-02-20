@@ -73,7 +73,6 @@ func (client DeletedApplicationsClient) HardDelete(ctx context.Context, applicat
 	result, err = client.HardDeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "HardDelete", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -152,11 +151,6 @@ func (client DeletedApplicationsClient) List(ctx context.Context, filter string)
 	result.alr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.alr.hasNextLink() && result.alr.IsEmpty() {
-		err = result.NextWithContext(ctx)
-		return
 	}
 
 	return
@@ -248,7 +242,6 @@ func (client DeletedApplicationsClient) ListNext(ctx context.Context, nextLink s
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "ListNext", resp, "Failure responding to request")
-		return
 	}
 
 	return
@@ -322,7 +315,6 @@ func (client DeletedApplicationsClient) Restore(ctx context.Context, objectID st
 	result, err = client.RestoreResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "Restore", resp, "Failure responding to request")
-		return
 	}
 
 	return

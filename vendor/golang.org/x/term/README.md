@@ -1,7 +1,5 @@
 # Go terminal/console support
 
-[![Go Reference](https://pkg.go.dev/badge/golang.org/x/term.svg)](https://pkg.go.dev/golang.org/x/term)
-
 This repository provides Go terminal and console support packages.
 
 ## Download/Install

@@ -3,10 +3,9 @@ package lz4
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pierrec/lz4/internal/xxh32"
 	"io"
 	"runtime"
-
-	"github.com/pierrec/lz4/internal/xxh32"
 )
 
 // zResult contains the results of compressing a block.
@@ -371,10 +370,6 @@ func (z *Writer) Reset(w io.Writer) {
 	z.checksum.Reset()
 	z.idx = 0
 	z.err = nil
-	// reset hashtable to ensure deterministic output.
-	for i := range z.hashtable {
-		z.hashtable[i] = 0
-	}
 	z.WithConcurrency(n)
 }
 
