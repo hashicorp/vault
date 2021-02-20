@@ -633,5 +633,4 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
-	b.followerHeartbeatTrackerStopCh = make(chan struct{})
 }
