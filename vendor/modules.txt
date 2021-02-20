@@ -64,7 +64,7 @@ github.com/BurntSushi/toml
 github.com/DataDog/datadog-go/statsd
 # github.com/Jeffail/gabs v1.1.1
 github.com/Jeffail/gabs
-# github.com/Masterminds/semver v1.5.0
+# github.com/Masterminds/semver v1.4.2
 github.com/Masterminds/semver
 # github.com/Microsoft/go-winio v0.4.16
 github.com/Microsoft/go-winio
