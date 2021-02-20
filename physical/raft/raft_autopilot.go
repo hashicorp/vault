@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -391,7 +392,7 @@ func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 	}
 }
 
-func (b *RaftBackend) autopilotConf() (*AutopilotConfig, error) {
+func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
 	config := b.conf["autopilot"]
 	if config == "" {
 		return nil, nil
@@ -408,6 +409,13 @@ func (b *RaftBackend) autopilotConf() (*AutopilotConfig, error) {
 	}
 
 	return configs[0], nil
+}
+
+func (b *RaftBackend) AutopilotDisabled() bool {
+	b.l.RLock()
+	disabled := b.disableAutopilot
+	b.l.RUnlock()
+	return disabled
 }
 
 // StartAutopilot puts autopilot subsystem to work. This should only be called
@@ -596,6 +604,12 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 }
 
 func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
+	if os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
+		b.logger.Info("disabling autopilot")
+		b.disableAutopilot = true
+		return
+	}
+
 	// Start with a default config
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
@@ -603,7 +617,7 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	switch opts.AutopilotConfig {
 	case nil:
 		// Autopilot config wasn't found in storage. Check if autopilot settings were part of config file.
-		conf, err := b.autopilotConf()
+		conf, err := b.AutopilotHCLConfig()
 		if err != nil {
 			b.logger.Error("failed to load autopilot config supplied via config file; falling back to default config", "error", err)
 		}
@@ -617,7 +631,7 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	}
 
 	// Create the autopilot instance
-	b.logger.Info("creating autopilot instance")
+	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 	b.followerHeartbeatTrackerStopCh = make(chan struct{})
 }

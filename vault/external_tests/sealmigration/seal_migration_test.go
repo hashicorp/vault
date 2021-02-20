@@ -1,13 +1,15 @@
 package sealmigration
 
 import (
+	"os"
+	"sync/atomic"
+	"testing"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
-	"sync/atomic"
-	"testing"
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
@@ -32,6 +34,10 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 
 			logger := logger.Named("raft")
 			raftBasePort := basePort + 400
+
+			envVar := "VAULT_RAFT_AUTOPILOT_DISABLE"
+			os.Setenv(envVar, "1")
+			defer os.Unsetenv(envVar)
 
 			atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, raftBasePort+10)
