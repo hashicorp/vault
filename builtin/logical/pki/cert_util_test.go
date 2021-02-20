@@ -184,6 +184,23 @@ func TestPki_PermitFQDNs(t *testing.T) {
 			},
 			expected: []string{"example.com."},
 		},
+		"case insensitivity validation": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "example.net",
+						"alt_names":   "EXAMPLE.COM",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
+					AllowBareDomains: true,
+				},
+			},
+			expected: []string{"example.net"},
+		},
 	}
 
 	for _, testCase := range cases {
