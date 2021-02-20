@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -399,6 +400,13 @@ func (b *RaftBackend) autopilotConf() (*AutopilotConfig, error) {
 	return configs[0], nil
 }
 
+func (b *RaftBackend) AutopilotDisabled() bool {
+	b.l.RLock()
+	disabled := b.disableAutopilot
+	b.l.RUnlock()
+	return disabled
+}
+
 // StartAutopilot puts autopilot subsystem to work. This should only be called
 // on the active node.
 func (b *RaftBackend) StartAutopilot(ctx context.Context) {
@@ -564,6 +572,12 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 }
 
 func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
+	if os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
+		b.logger.Info("disabling autopilot")
+		b.disableAutopilot = true
+		return
+	}
+
 	// Start with a default config
 	b.autopilotConfig = b.defaultAutopilotConfig()
 

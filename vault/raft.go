@@ -172,25 +172,26 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
-	// Read autopilot configuration from storage
-	autopilotConfig, err := c.autopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage during autopilot startup; continuing since autopilot is already configured", "error", err)
-	}
-	// If the config wasn't found in storage, then either the default config, or
-	// the HCL config would have been used to instantiate autopilot. The
-	// resulting configuration should be persisted in storage.
-	if autopilotConfig == nil {
-		entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, raftBackend.AutopilotConfig())
+	if !raftBackend.AutopilotDisabled() {
+		// Read autopilot configuration from storage
+		autopilotConfig, err := c.autopilotConfiguration(ctx)
 		if err != nil {
-			c.logger.Error("failed to encode autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
+			c.logger.Error("failed to load autopilot config from storage during autopilot startup; continuing since autopilot is already configured", "error", err)
 		}
-		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("failed to persist autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
+		// If the config wasn't found in storage, then either the default config, or
+		// the HCL config would have been used to instantiate autopilot. The
+		// resulting configuration should be persisted in storage.
+		if autopilotConfig == nil {
+			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, raftBackend.AutopilotConfig())
+			if err != nil {
+				c.logger.Error("failed to encode autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
+			}
+			if err := c.barrier.Put(ctx, entry); err != nil {
+				c.logger.Error("failed to persist autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
+			}
 		}
+		raftBackend.StartAutopilot(c.activeContext)
 	}
-
-	raftBackend.StartAutopilot(c.activeContext)
 
 	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)
@@ -203,7 +204,10 @@ func (c *Core) stopRaftActiveNode() {
 	}
 
 	c.logger.Info("stopping raft active node")
-	raftBackend.StopAutopilot()
+
+	if !raftBackend.AutopilotDisabled() {
+		raftBackend.StopAutopilot()
+	}
 
 	c.pendingRaftPeers = nil
 	c.stopPeriodicRaftTLSRotate()

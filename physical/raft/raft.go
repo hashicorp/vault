@@ -136,6 +136,10 @@ type RaftBackend struct {
 	followerStates *FollowerStates
 
 	nonVoter bool
+
+	// disableAutopilot if set will not put autopilot implementation to use. The
+	// fallback will be to interact with the raft instance directly.
+	disableAutopilot bool
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -882,12 +886,21 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.autopilot == nil {
-		return errors.New("raft autopilot is not initialized")
+	switch b.disableAutopilot {
+	case true:
+		if b.raft == nil {
+			return errors.New("raft storage is not initialized")
+		}
+		b.logger.Trace("removing server from raft", "id", peerID)
+		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+		return future.Error()
+	default:
+		if b.autopilot == nil {
+			return errors.New("raft storage autopilot is not initialized")
+		}
+		b.logger.Trace("removing server from raft via autopilot", "id", peerID)
+		return b.autopilot.RemoveServer(raft.ServerID(peerID))
 	}
-
-	b.logger.Trace("removing server from raft via autopilot", "id", peerID)
-	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
@@ -928,18 +941,27 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.autopilot == nil {
-		return errors.New("raft autopilot is not initialized")
+	switch b.disableAutopilot {
+	case true:
+		if b.raft == nil {
+			return errors.New("raft storage is not initialized")
+		}
+		b.logger.Trace("adding server to raft", "id", peerID)
+		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
+		return future.Error()
+	default:
+		if b.autopilot == nil {
+			return errors.New("raft storage autopilot is not initialized")
+		}
+		b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+		return b.autopilot.AddServer(&autopilot.Server{
+			ID:          raft.ServerID(peerID),
+			Name:        peerID,
+			Address:     raft.ServerAddress(clusterAddr),
+			RaftVersion: raft.ProtocolVersionMax,
+			NodeType:    autopilot.NodeVoter,
+		})
 	}
-
-	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
-	return b.autopilot.AddServer(&autopilot.Server{
-		ID:          raft.ServerID(peerID),
-		Name:        peerID,
-		Address:     raft.ServerAddress(clusterAddr),
-		RaftVersion: raft.ProtocolVersionMax,
-		NodeType:    autopilot.NodeVoter,
-	})
 }
 
 // Peers returns all the servers present in the raft cluster
@@ -948,7 +970,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return nil, errors.New("raft storage backend is not initialized")
+		return nil, errors.New("raft storage is not initialized")
 	}
 
 	future := b.raft.GetConfiguration()
@@ -984,7 +1006,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return errors.New("raft storage backend is sealed")
+		return errors.New("raft storage is sealed")
 	}
 
 	// If we have access to the seal create a sealer object
@@ -1009,7 +1031,7 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 
 	var metadata raft.SnapshotMeta
 	if b.raft == nil {
-		return nil, nil, metadata, errors.New("raft storage backend is sealed")
+		return nil, nil, metadata, errors.New("raft storage is sealed")
 	}
 
 	// If we have access to the seal create a sealer object
@@ -1177,7 +1199,7 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 // persisted to the local FSM. Caller should hold the backend's read lock.
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
-		return errors.New("raft storage backend is not initialized")
+		return errors.New("raft storage is not initialized")
 	}
 
 	commandBytes, err := proto.Marshal(command)
