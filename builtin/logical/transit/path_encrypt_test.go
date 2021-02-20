@@ -697,15 +697,17 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 				expectedErrOut = expectedErr.Error()
 			}
 
-			var gotErrOut string
+			var gotErrsOut []string
 			gotErr := decodeBatchRequestItems(tt.src, &tt.dest)
 			if gotErr != nil {
-				gotErrOut = gotErr.Error()
+				gotErrsOut = strings.Split(gotErr.Error(), "\n")
 			}
 			gotDest := tt.dest
 
-			if !strings.HasPrefix(expectedErrOut, gotErrOut) {
-				t.Errorf("decodeBatchRequestItems unexpected error value, want: '%v', got: '%v'", expectedErr, gotErr)
+			for _, e := range gotErrsOut {
+				if !strings.Contains(expectedErrOut, e) {
+					t.Errorf("decodeBatchRequestItems unexpected error value, want: '%s', to contain '%s'", expectedErr, e)
+				}
 			}
 
 			if !reflect.DeepEqual(expectedDest, gotDest) {
