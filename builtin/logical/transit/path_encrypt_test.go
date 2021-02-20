@@ -692,9 +692,9 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			expectedDest := append(tt.dest[:0:0], tt.dest...) // copy of the dest state
 			expectedErr := mapstructure.Decode(tt.src, &expectedDest)
-			var expectedErrOut string
+			var expectedErrsOut []string
 			if expectedErr != nil {
-				expectedErrOut = expectedErr.Error()
+				expectedErrsOut = strings.Split(expectedErr.Error(), "\n")
 			}
 
 			var gotErrsOut []string
@@ -704,8 +704,12 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			}
 			gotDest := tt.dest
 
-			for _, e := range gotErrsOut {
-				if !strings.Contains(expectedErrOut, e) {
+			if len(gotErrsOut) != len(expectedErrsOut) {
+				t.Errorf("incorrect number of errors in decode operation: Errors expected were: '%v', but errors found were: '%v'", expectedErrsOut, gotErrsOut)
+			}
+			for i, e := range gotErrsOut {
+				expectedErr := expectedErrsOut[i]
+				if !strings.HasPrefix(expectedErr, e) {
 					t.Errorf("decodeBatchRequestItems unexpected error value, want: '%s', to contain '%s'", expectedErr, e)
 				}
 			}
