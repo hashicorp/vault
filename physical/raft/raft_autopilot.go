@@ -381,7 +381,7 @@ func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 	}
 }
 
-func (b *RaftBackend) autopilotConf() (*AutopilotConfig, error) {
+func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
 	config := b.conf["autopilot"]
 	if config == "" {
 		return nil, nil
@@ -585,7 +585,7 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	switch opts.AutopilotConfig {
 	case nil:
 		// Autopilot config wasn't found in storage. Check if autopilot settings were part of config file.
-		conf, err := b.autopilotConf()
+		conf, err := b.AutopilotHCLConfig()
 		if err != nil {
 			b.logger.Error("failed to load autopilot config supplied via config file; falling back to default config", "error", err)
 		}
@@ -599,6 +599,6 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	}
 
 	// Create the autopilot instance
-	b.logger.Info("creating autopilot instance")
+	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 }
