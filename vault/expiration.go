@@ -133,10 +133,11 @@ type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *name
 
 // revocationJob should only be created through newRevocationJob()
 type revocationJob struct {
-	leaseID string
-	nsID    string
-	m       *ExpirationManager
-	nsCtx   context.Context
+	leaseID   string
+	nsID      string
+	m         *ExpirationManager
+	nsCtx     context.Context
+	startTime time.Time
 }
 
 func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *ExpirationManager) (*revocationJob, error) {
@@ -154,10 +155,11 @@ func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *Expiration
 	}
 
 	return &revocationJob{
-		leaseID: leaseID,
-		nsID:    nsID,
-		m:       m,
-		nsCtx:   nsCtx,
+		leaseID:   leaseID,
+		nsID:      nsID,
+		m:         m,
+		nsCtx:     nsCtx,
+		startTime: time.Now(),
 	}, nil
 }
 
@@ -167,6 +169,7 @@ func (r *revocationJob) GetID() string {
 
 func (r *revocationJob) Execute() error {
 	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", r.nsID}})
+	metrics.MeasureSinceWithLabels([]string{"expire", "time_in_queue"}, r.startTime, []metrics.Label{{"namespace", r.nsID}})
 
 	// don't start the timer until the revocation is being executed
 	revokeCtx, cancel := context.WithTimeout(r.nsCtx, DefaultMaxRequestDuration)
@@ -346,7 +349,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 	}
 
-	jobManager := fairshare.NewJobManager("expiration", getNumExpirationWorkers(c, logger), logger.Named("job-manager"))
+	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"))
 	jobManager.Start()
 
 	exp := &ExpirationManager{

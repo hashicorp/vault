@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -35,6 +36,7 @@ type JobManager struct {
 	onceStop          sync.Once
 	logger            log.Logger
 	wg                sync.WaitGroup
+	totalJobs         int
 
 	// protects `queues`, `queuesIndex`, `lastQueueAccessed`
 	l sync.RWMutex
@@ -110,6 +112,9 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 	}
 
 	j.queues[queueID].PushBack(job)
+	j.totalJobs++
+	metrics.AddSampleWithLabels([]string{j.name, "job_queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
+	metrics.SetGauge([]string{j.name, "total_jobs"}, float32(j.totalJobs))
 }
 
 // GetCurrentJobCount returns the total number of pending jobs in the job manager
@@ -159,6 +164,10 @@ func (j *JobManager) getNextJob() Job {
 
 	jobElement := j.queues[queueID].Front()
 	out := j.queues[queueID].Remove(jobElement)
+
+	j.totalJobs--
+	metrics.AddSampleWithLabels([]string{j.name, "job_queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
+	metrics.SetGauge([]string{j.name, "total_jobs"}, float32(j.totalJobs))
 
 	if j.queues[queueID].Len() == 0 {
 		j.removeLastQueueAccessed()
