@@ -180,8 +180,8 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // If one does not pass, it is returned in the string argument.
 func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
-		sanitizedName := name
-		emailDomain := name
+		sanitizedName := strings.ToLower(name)
+		emailDomain := sanitizedName
 		isEmail := false
 		isWildcard := false
 
@@ -191,8 +191,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// ends up being problematic for users, I guess that could be separated
 		// into dns_names and email_names in the future to be explicit, but I
 		// don't think this is likely.
-		if strings.Contains(name, "@") {
-			splitEmail := strings.Split(name, "@")
+		if strings.Contains(sanitizedName, "@") {
+			splitEmail := strings.Split(sanitizedName, "@")
 			if len(splitEmail) != 2 {
 				return name
 			}
@@ -241,7 +241,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// 1) If a role allows a certain class of base (localhost, token
 		// display name, role-configured domains), perform further tests
 		//
-		// 2) If there is a perfect match on either the name itself or it's an
+		// 2) If there is a perfect match on either the sanitized name or it's an
 		// email address with a perfect match on the hostname portion, allow it
 		//
 		// 3) If subdomains are allowed, we check based on the sanitized name;
@@ -254,8 +254,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// Variances are noted in-line
 
 		if data.role.AllowLocalhost {
-			if name == "localhost" ||
-				name == "localdomain" ||
+			if sanitizedName == "localhost" ||
+				sanitizedName == "localdomain" ||
 				(isEmail && emailDomain == "localhost") ||
 				(isEmail && emailDomain == "localdomain") {
 				continue
@@ -326,10 +326,14 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 					}
 				}
 
+				// Convert the allowed domain name to lower case for comparison
+				// The sanitized name should already be in lower case
+				currDomain = strings.ToLower(currDomain)
+
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if data.role.AllowBareDomains &&
-					(name == currDomain ||
+					(sanitizedName == currDomain ||
 						(isEmail && emailDomain == currDomain)) {
 					valid = true
 					break
@@ -345,7 +349,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, name) {
+					glob.Glob(currDomain, sanitizedName) {
 					valid = true
 					break
 				}
@@ -803,7 +807,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr == nil || !data.role.UseCSRSANs {
 			cnAltRaw, ok := data.apiData.GetOk("alt_names")
 			if ok {
-				cnAlt := strutil.ParseDedupLowercaseAndSortStrings(cnAltRaw.(string), ",")
+				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
 				for _, v := range cnAlt {
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
