@@ -7,6 +7,7 @@ export default ApplicationAdapter.extend({
   urlForItem() {},
   dynamicApiPath: '',
   getDynamicApiPath: task(function*(id) {
+    // TODO: remove yield at some point.
     let result = yield this.store.peekRecord('auth-method', id);
     this.dynamicApiPath = result.apiPath;
     return;
