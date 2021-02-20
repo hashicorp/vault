@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -691,11 +692,19 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			expectedDest := append(tt.dest[:0:0], tt.dest...) // copy of the dest state
 			expectedErr := mapstructure.Decode(tt.src, &expectedDest)
+			var expectedErrOut string
+			if expectedErr != nil {
+				expectedErrOut = expectedErr.Error()
+			}
 
+			var gotErrOut string
 			gotErr := decodeBatchRequestItems(tt.src, &tt.dest)
+			if gotErr != nil {
+				gotErrOut = gotErr.Error()
+			}
 			gotDest := tt.dest
 
-			if !reflect.DeepEqual(expectedErr, gotErr) {
+			if !strings.HasPrefix(expectedErrOut, gotErrOut) {
 				t.Errorf("decodeBatchRequestItems unexpected error value, want: '%v', got: '%v'", expectedErr, gotErr)
 			}
 
