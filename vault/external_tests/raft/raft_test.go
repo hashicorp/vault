@@ -38,7 +38,20 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 			"userpass": credUserpass.Factory,
 		},
 	}
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+
+	inmemCluster, err := vaultcluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: hclog.Trace,
+		Name:  "inmem-cluster",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var opts = vault.TestClusterOptions{
+		HandlerFunc:   vaulthttp.Handler,
+		ClusterLayers: inmemCluster,
+	}
 	teststorage.RaftBackendSetup(conf, &opts)
 	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()

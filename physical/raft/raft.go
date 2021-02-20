@@ -389,18 +389,17 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	return &RaftBackend{
-		logger:                         logger,
-		fsm:                            fsm,
-		raftInitCh:                     make(chan struct{}),
-		conf:                           conf,
-		logStore:                       log,
-		stableStore:                    stable,
-		snapStore:                      snap,
-		dataDir:                        path,
-		localID:                        localID,
-		permitPool:                     physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize:                   maxEntrySize,
-		followerHeartbeatTrackerStopCh: make(chan struct{}),
+		logger:       logger,
+		fsm:          fsm,
+		raftInitCh:   make(chan struct{}),
+		conf:         conf,
+		logStore:     log,
+		stableStore:  stable,
+		snapStore:    snap,
+		dataDir:      path,
+		localID:      localID,
+		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize: maxEntrySize,
 	}, nil
 }
 

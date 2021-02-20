@@ -435,6 +435,7 @@ func (b *RaftBackend) StartAutopilot(ctx context.Context) {
 func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
+	b.followerHeartbeatTrackerStopCh = make(chan struct{})
 	for {
 		select {
 		case <-b.followerHeartbeatTrackerStopCh:
@@ -460,7 +461,10 @@ func (b *RaftBackend) StopAutopilot() {
 		return
 	}
 	b.autopilot.Stop()
-	close(b.followerHeartbeatTrackerStopCh)
+
+	if b.followerHeartbeatTrackerStopCh != nil {
+		close(b.followerHeartbeatTrackerStopCh)
+	}
 }
 
 // AutopilotState represents the health information retrieved from autopilot.
