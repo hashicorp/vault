@@ -261,6 +261,7 @@ func TestJobManager_AddJob(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"))
 
 	expectedCount := make(map[string]int)
+	returnedCount := make(map[string]int)
 	for _, tc := range testCases {
 		if _, ok := expectedCount[tc.queueID]; !ok {
 			expectedCount[tc.queueID] = 1
@@ -269,7 +270,7 @@ func TestJobManager_AddJob(t *testing.T) {
 		}
 
 		job := newDefaultTestJob(t, tc.name)
-		j.AddJob(&job, tc.queueID)
+		returnedCount[tc.queueID] = j.AddJob(&job, tc.queueID)
 	}
 
 	if len(expectedCount) != len(j.queues) {
@@ -279,6 +280,9 @@ func TestJobManager_AddJob(t *testing.T) {
 	for k, v := range j.queues {
 		if v.Len() != expectedCount[k] {
 			t.Fatalf("queue %s has bad count. expected %d, got %d", k, expectedCount[k], v.Len())
+		}
+		if returnedCount[k] != expectedCount[k] {
+			t.Errorf("queue %s has bad returned count. expected %d, got %d", k, expectedCount[k], returnedCount[k])
 		}
 	}
 }

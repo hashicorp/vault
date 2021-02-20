@@ -245,7 +245,14 @@ func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, l
 		return
 	}
 
-	m.jobManager.AddJob(job, mountAccessor)
+	queueSize := m.jobManager.AddJob(job, mountAccessor)
+	metrics.SetGaugeWithLabels(
+		[]string{"expire", "lease_expiration", "pending"},
+		float32(queueSize),
+		[]metrics.Label{
+			{"mount_point", mountAccessor},
+		},
+	)
 }
 
 func revokeExponentialBackoff(attempt uint8) time.Duration {

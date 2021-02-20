@@ -94,7 +94,9 @@ func (j *JobManager) Stop() {
 }
 
 // AddJob adds a job to the given queue, creating the queue if it doesn't exist
-func (j *JobManager) AddJob(job Job, queueID string) {
+// it returns the length of the queue associated with `queueID` after the job
+// has been added
+func (j *JobManager) AddJob(job Job, queueID string) int {
 	j.l.Lock()
 	if len(j.queues) == 0 {
 		defer func() {
@@ -110,6 +112,7 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 	}
 
 	j.queues[queueID].PushBack(job)
+	return j.queues[queueID].Len()
 }
 
 // GetCurrentJobCount returns the total number of pending jobs in the job manager
