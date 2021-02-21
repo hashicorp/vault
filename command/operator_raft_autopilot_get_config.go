@@ -81,6 +81,7 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Run(args []string) int {
 	entries := []string{"Key | Value"}
 	entries = append(entries, fmt.Sprintf("%s | %t", "Cleanup Dead Servers", resp.Data["cleanup_dead_servers"]))
 	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Threshold", resp.Data["last_contact_threshold"]))
+	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Failure Threshold", resp.Data["last_contact_failure_threshold"]))
 	entries = append(entries, fmt.Sprintf("%s | %s", "Server Stabilization Time", resp.Data["server_stabilization_time"]))
 
 	minQuorum, _ := resp.Data["min_quorum"].(json.Number).Int64()

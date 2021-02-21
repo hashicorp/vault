@@ -169,6 +169,9 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				"last_contact_threshold": {
 					Type: framework.TypeDurationSecond,
 				},
+				"last_contact_failure_threshold": {
+					Type: framework.TypeDurationSecond,
+				},
 				"max_trailing_logs": {
 					Type: framework.TypeInt,
 				},
@@ -426,11 +429,12 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.Operati
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"cleanup_dead_servers":      config.CleanupDeadServers,
-				"last_contact_threshold":    config.LastContactThreshold.String(),
-				"max_trailing_logs":         config.MaxTrailingLogs,
-				"min_quorum":                config.MinQuorum,
-				"server_stabilization_time": config.ServerStabilizationTime.String(),
+				"cleanup_dead_servers":           config.CleanupDeadServers,
+				"last_contact_threshold":         config.LastContactThreshold.String(),
+				"last_contact_failure_threshold": config.LastContactFailureThreshold.String(),
+				"max_trailing_logs":              config.MaxTrailingLogs,
+				"min_quorum":                     config.MinQuorum,
+				"server_stabilization_time":      config.ServerStabilizationTime.String(),
 			},
 		}, nil
 	}
@@ -459,6 +463,11 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 		lastContactThreshold, ok := d.GetOk("last_contact_threshold")
 		if ok {
 			configClone.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
+			persist = true
+		}
+		lastContactFailureThreshold, ok := d.GetOk("last_contact_failure_threshold")
+		if ok {
+			configClone.LastContactFailureThreshold = time.Duration(lastContactFailureThreshold.(int)) * time.Second
 			persist = true
 		}
 		maxTrailingLogs, ok := d.GetOk("max_trailing_logs")

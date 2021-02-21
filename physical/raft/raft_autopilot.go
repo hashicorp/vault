@@ -35,6 +35,11 @@ type AutopilotConfig struct {
 	// without leader contact before being considered unhealthy.
 	LastContactThreshold time.Duration `mapstructure:"-"`
 
+	// LastContactFailureThreshold is the limit on the amount of time a server
+	// can go without leader contact before being considered failed. This takes
+	// effect only when CleanupDeadServers is set.
+	LastContactFailureThreshold time.Duration `mapstructure:"-"`
+
 	// MaxTrailingLogs is the amount of entries in the Raft Log that a server can
 	// be behind before being considered unhealthy.
 	MaxTrailingLogs uint64 `mapstructure:"max_trailing_logs"`
@@ -52,11 +57,12 @@ type AutopilotConfig struct {
 // Clone returns a duplicate instance of AutopilotConfig with the exact same values.
 func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 	return &AutopilotConfig{
-		CleanupDeadServers:      ac.CleanupDeadServers,
-		LastContactThreshold:    ac.LastContactThreshold,
-		MaxTrailingLogs:         ac.MaxTrailingLogs,
-		MinQuorum:               ac.MinQuorum,
-		ServerStabilizationTime: ac.ServerStabilizationTime,
+		CleanupDeadServers:          ac.CleanupDeadServers,
+		LastContactThreshold:        ac.LastContactThreshold,
+		LastContactFailureThreshold: ac.LastContactFailureThreshold,
+		MaxTrailingLogs:             ac.MaxTrailingLogs,
+		MinQuorum:                   ac.MinQuorum,
+		ServerStabilizationTime:     ac.ServerStabilizationTime,
 	}
 
 }
@@ -64,11 +70,12 @@ func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 // MarshalJSON makes the autopilot config fields JSON compatible
 func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"cleanup_dead_servers":      ac.CleanupDeadServers,
-		"last_contact_threshold":    ac.LastContactThreshold.String(),
-		"max_trailing_logs":         ac.MaxTrailingLogs,
-		"min_quorum":                ac.MinQuorum,
-		"server_stabilization_time": ac.ServerStabilizationTime.String(),
+		"cleanup_dead_servers":           ac.CleanupDeadServers,
+		"last_contact_threshold":         ac.LastContactThreshold.String(),
+		"last_contact_failure_threshold": ac.LastContactFailureThreshold.String(),
+		"max_trailing_logs":              ac.MaxTrailingLogs,
+		"min_quorum":                     ac.MinQuorum,
+		"server_stabilization_time":      ac.ServerStabilizationTime.String(),
 	})
 }
 
@@ -85,6 +92,9 @@ func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if ac.LastContactThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_threshold"]); err != nil {
+		return err
+	}
+	if ac.LastContactFailureThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_failure_threshold"]); err != nil {
 		return err
 	}
 	if ac.ServerStabilizationTime, err = parseutil.ParseDurationSecond(conf["server_stabilization_time"]); err != nil {
@@ -384,21 +394,23 @@ func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
 
 func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 	return &AutopilotConfig{
-		CleanupDeadServers:      false,
-		LastContactThreshold:    10 * time.Second,
-		MaxTrailingLogs:         1000,
-		MinQuorum:               3,
-		ServerStabilizationTime: 10 * time.Second,
+		CleanupDeadServers:          false,
+		LastContactThreshold:        10 * time.Second,
+		LastContactFailureThreshold: 24 * time.Hour,
+		MaxTrailingLogs:             1000,
+		MinQuorum:                   3,
+		ServerStabilizationTime:     10 * time.Second,
 	}
 }
 
 func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
+	defaultConfig := b.defaultAutopilotConfig()
+
 	config := b.conf["autopilot"]
 	if config == "" {
 		return nil, nil
 	}
 
-	// TODO: Find out why we are getting a list instead of a single item
 	var configs []*AutopilotConfig
 	err := jsonutil.DecodeJSON([]byte(config), &configs)
 	if err != nil {
@@ -406,6 +418,25 @@ func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
 	}
 	if len(configs) != 1 {
 		return nil, fmt.Errorf("expected a single block of autopilot config")
+	}
+
+	hclConfig := configs[0]
+
+	// Sanitize input
+	if hclConfig.LastContactThreshold == 0 {
+		hclConfig.LastContactThreshold = defaultConfig.LastContactThreshold
+	}
+	if hclConfig.LastContactFailureThreshold == 0 {
+		hclConfig.LastContactFailureThreshold = defaultConfig.LastContactFailureThreshold
+	}
+	if hclConfig.MaxTrailingLogs == 0 {
+		hclConfig.MaxTrailingLogs = defaultConfig.MaxTrailingLogs
+	}
+	if hclConfig.MinQuorum == 0 {
+		hclConfig.MinQuorum = defaultConfig.MinQuorum
+	}
+	if hclConfig.ServerStabilizationTime == 0 {
+		hclConfig.ServerStabilizationTime = defaultConfig.ServerStabilizationTime
 	}
 
 	return configs[0], nil
@@ -442,14 +473,14 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 			return
 		case <-ticker.C:
 			b.l.RLock()
-			followers := b.followerStates.followers
-			b.l.RUnlock()
-			for id, state := range followers {
-				// TODO: Plumb last_contact_failure_threshold setting here
-				if !state.LastHeartbeat.IsZero() && time.Now().After(state.LastHeartbeat.Add(5*time.Second)) {
-					b.followerStates.MarkFollowerAsDead(id)
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.LastContactFailureThreshold != 0 {
+				for id, state := range b.followerStates.followers {
+					if !state.LastHeartbeat.IsZero() && time.Now().After(state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)) {
+						b.followerStates.MarkFollowerAsDead(id)
+					}
 				}
 			}
+			b.l.RUnlock()
 		}
 	}
 }
@@ -556,7 +587,7 @@ func stringIDs(ids []raft.ServerID) []string {
 	return out
 }
 
-func autopilotToAPIHealth(state *autopilot.State) *AutopilotState {
+func autopilotToAPIState(state *autopilot.State) *AutopilotState {
 	out := &AutopilotState{
 		Healthy:          state.Healthy,
 		FailureTolerance: state.FailureTolerance,
@@ -594,7 +625,7 @@ func autopilotToAPIServer(srv *autopilot.ServerState) *AutopilotServer {
 	return apiSrv
 }
 
-// GetAutopilotServerState retrieves raft cluster health from autopilot to
+// GetAutopilotServerState retrieves raft cluster state from autopilot to
 // return over the API.
 func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotState, error) {
 	b.l.RLock()
@@ -608,7 +639,7 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 		return nil, nil
 	}
 
-	return autopilotToAPIHealth(b.autopilot.GetState()), nil
+	return autopilotToAPIState(b.autopilot.GetState()), nil
 }
 
 func (b *RaftBackend) setupAutopilot(opts SetupOpts) {

@@ -14,11 +14,12 @@ var _ cli.CommandAutocomplete = (*OperatorRaftAutopilotSetConfigCommand)(nil)
 
 type OperatorRaftAutopilotSetConfigCommand struct {
 	*BaseCommand
-	flagCleanupDeadServers      bool
-	flagLastContactThreshold    time.Duration
-	flagMaxTrailingLogs         uint64
-	flagMinQuorum               uint
-	flagServerStabilizationTime time.Duration
+	flagCleanupDeadServers          bool
+	flagLastContactThreshold        time.Duration
+	flagLastContactFailureThreshold time.Duration
+	flagMaxTrailingLogs             uint64
+	flagMinQuorum                   uint
+	flagServerStabilizationTime     time.Duration
 }
 
 func (c *OperatorRaftAutopilotSetConfigCommand) Synopsis() string {
@@ -50,6 +51,12 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Flags() *FlagSets {
 		Name:    "last-contact-threshold",
 		Target:  &c.flagLastContactThreshold,
 		Default: 10 * time.Second,
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:    "last-contact-failure-threshold",
+		Target:  &c.flagLastContactFailureThreshold,
+		Default: 24 * time.Hour,
 	})
 
 	f.Uint64Var(&Uint64Var{
@@ -104,11 +111,12 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 	}
 
 	secret, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
-		"cleanup_dead_servers":      c.flagCleanupDeadServers,
-		"max_trailing_logs":         c.flagMaxTrailingLogs,
-		"min_quorum":                c.flagMinQuorum,
-		"last_contact_threshold":    c.flagLastContactThreshold.String(),
-		"server_stabilization_time": c.flagServerStabilizationTime.String(),
+		"cleanup_dead_servers":           c.flagCleanupDeadServers,
+		"max_trailing_logs":              c.flagMaxTrailingLogs,
+		"min_quorum":                     c.flagMinQuorum,
+		"last_contact_threshold":         c.flagLastContactThreshold.String(),
+		"last_contact_failure_threshold": c.flagLastContactFailureThreshold.String(),
+		"server_stabilization_time":      c.flagServerStabilizationTime.String(),
 	})
 	if err != nil {
 		c.UI.Error(err.Error())
