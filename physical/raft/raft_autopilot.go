@@ -475,7 +475,10 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 			b.l.RLock()
 			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.LastContactFailureThreshold != 0 {
 				for id, state := range b.followerStates.followers {
-					if !state.LastHeartbeat.IsZero() && time.Now().After(state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)) {
+					now := time.Now()
+					threshold := state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)
+					if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
+						b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "last_contact_failure_threshold", b.autopilotConfig.LastContactFailureThreshold, "now", now, "threshold", threshold)
 						b.followerStates.MarkFollowerAsDead(id)
 					}
 				}
