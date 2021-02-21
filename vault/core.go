@@ -507,7 +507,7 @@ type Core struct {
 	// Stores request counters
 	counters counters
 
-	// Stores the raft applied index for standby nodes
+	// raftFollowerStates tracks information about all the raft follower nodes.
 	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}

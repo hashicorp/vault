@@ -24,11 +24,9 @@ import (
 )
 
 // AutopilotConfig is used for querying/setting the Autopilot configuration.
-// Autopilot helps manage operator tasks related to Vault servers like removing
-// failed servers from the Raft quorum.
 type AutopilotConfig struct {
 	// CleanupDeadServers controls whether to remove dead servers from the Raft
-	// peer list periodically or when a new server joins
+	// peer list periodically or when a new server joins.
 	CleanupDeadServers bool `mapstructure:"cleanup_dead_servers"`
 
 	// LastContactThreshold is the limit on the amount of time a server can go
@@ -48,8 +46,8 @@ type AutopilotConfig struct {
 	// autopilot can prune dead servers.
 	MinQuorum uint `mapstructure:"min_quorum"`
 
-	// ServerStabilizationTime is the minimum amount of time a server must be
-	// in a stable, healthy state before it can be added to the cluster. Only
+	// ServerStabilizationTime is the minimum amount of time a server must be in a
+	// stable, healthy state before it can be added to the cluster as a voter. Only
 	// applicable with Raft protocol version 3 or higher.
 	ServerStabilizationTime time.Duration `mapstructure:"-"`
 }
@@ -113,7 +111,7 @@ type FollowerState struct {
 	NonVoter      bool
 }
 
-// FollowerStates holds information about all the peers in the raft cluster
+// FollowerStates holds information about all the followers in the raft cluster
 // tracked by the leader.
 type FollowerStates struct {
 	l         sync.RWMutex
@@ -474,7 +472,10 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		case <-ticker.C:
 			b.l.RLock()
 			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.LastContactFailureThreshold != 0 {
-				for id, state := range b.followerStates.followers {
+				b.followerStates.l.RLock()
+				followers := b.followerStates.followers
+				b.followerStates.l.RUnlock()
+				for id, state := range followers {
 					now := time.Now()
 					threshold := state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)
 					if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {

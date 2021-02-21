@@ -33,8 +33,8 @@ Usage: vault operator raft autopilot state
 func (c *OperatorRaftAutopilotStateCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
-	// The output of the health endpoint contains nested values and not fit for
-	// the default "table" display. Override the default display format to
+	// The output of the state endpoint contains nested values and is not fit for
+	// the default "table" display format. Override the default display format to
 	// "pretty", both in the flag and in the UI.
 	set.mainSet.VisitAll(func(fl *flag.Flag) {
 		if fl.Name == "format" {
@@ -80,7 +80,7 @@ func (c *OperatorRaftAutopilotStateCommand) Run(args []string) int {
 
 	state, err := client.Sys().RaftAutopilotState()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error checking autopilot health: %s", err))
+		c.UI.Error(fmt.Sprintf("Error checking autopilot state: %s", err))
 		return 2
 	}
 

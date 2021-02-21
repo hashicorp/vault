@@ -28,7 +28,7 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Synopsis() string {
 
 func (c *OperatorRaftAutopilotSetConfigCommand) Help() string {
 	helpText := `
-Usage: vault operator raft snapshot save <snapshot_file>
+Usage: vault operator raft autopilot set-config [options]
 
   Modify the configuration of the autopilot subsystem under integrated storage.
 ` + c.Flags().Help()

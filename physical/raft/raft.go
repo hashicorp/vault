@@ -139,10 +139,15 @@ type RaftBackend struct {
 	// keeps track of follower heartbeats.
 	followerHeartbeatTrackerStopCh chan struct{}
 
+	// nonVoter indicates that this node is intended to be a non-voting node
+	// that doesn't get promoted into a voting node.
 	nonVoter bool
 
 	// disableAutopilot if set will not put autopilot implementation to use. The
-	// fallback will be to interact with the raft instance directly.
+	// fallback will be to interact with the raft instance directly. This can only
+	// be set during startup via the environment variable
+	// VAULT_RAFT_AUTOPILOT_DISABLE during startup and can't be updated once the
+	// node is up and running.
 	disableAutopilot bool
 }
 
@@ -611,6 +616,7 @@ type SetupOpts struct {
 	// mode.
 	RecoveryModeConfig *raft.Configuration
 
+	// AutopilotConfig is the configuration for the autopilot read from storage.
 	AutopilotConfig *AutopilotConfig
 }
 
@@ -1275,12 +1281,15 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	}, nil
 }
 
+// SetNonVoter sets a field in the backend indicating that this node is intended
+// to be a permanent non-voter.
 func (b *RaftBackend) SetNonVoter(nonVoter bool) {
 	b.l.Lock()
 	b.nonVoter = nonVoter
 	b.l.Unlock()
 }
 
+// NonVoter returns true if this node is intended to be a permanent non-voter.
 func (b *RaftBackend) NonVoter() bool {
 	b.l.RLock()
 	nonVoter := b.nonVoter

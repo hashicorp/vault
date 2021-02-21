@@ -30,31 +30,31 @@ type RaftJoinRequest struct {
 	NonVoter         bool   `json:"non_voter"`
 }
 
-// AutopilotState represents the response of the raft autopilot health API
+// AutopilotState represents the response of the raft autopilot state API
 type AutopilotState struct {
-	Healthy                    bool                       `json:"healthy" mapstructure:"healthy"`
-	FailureTolerance           int                        `json:"failure_tolerance" mapstructure:"failure_tolerance"`
-	OptimisticFailureTolerance int                        `json:"optimistic_failure_tolerance" mapstructure:"optimistic_failure_tolerance"`
-	Servers                    map[string]AutopilotServer `json:"servers" mapstructure:"servers"`
-	Leader                     string                     `json:"leader" mapstructure:"leader"`
-	Voters                     []string                   `json:"voters" mapstructure:"voters"`
-	NonVoters                  []string                   `json:"non_voters" mapstructure:"non_voters"`
+	Healthy                    bool                       `mapstructure:"healthy"`
+	FailureTolerance           int                        `mapstructure:"failure_tolerance"`
+	OptimisticFailureTolerance int                        `mapstructure:"optimistic_failure_tolerance"`
+	Servers                    map[string]AutopilotServer `mapstructure:"servers"`
+	Leader                     string                     `mapstructure:"leader"`
+	Voters                     []string                   `mapstructure:"voters"`
+	NonVoters                  []string                   `mapstructure:"non_voters"`
 }
 
 // AutopilotServer represents the server blocks in the response of the raft
-// autopilot health API.
+// autopilot state API.
 type AutopilotServer struct {
-	ID          string            `json:"id" mapstructure:"id"`
-	Name        string            `json:"name" mapstructure:"name"`
-	Address     string            `json:"address" mapstructure:"address"`
-	NodeStatus  string            `json:"node_status" mapstructure:"node_status"`
-	LastContact string            `json:"last_contact" mapstructure:"last_contact"`
-	LastTerm    uint64            `json:"last_term" mapstructure:"last_term"`
-	LastIndex   uint64            `json:"last_index" mapstructure:"last_index"`
-	Healthy     bool              `json:"healthy" mapstructure:"healthy"`
-	StableSince string            `json:"stable_since" mapstructure:"stable_since"`
-	Status      string            `json:"status" mapstructure:"status"`
-	Meta        map[string]string `json:"meta" mapstructure:"meta"`
+	ID          string            `mapstructure:"id"`
+	Name        string            `mapstructure:"name"`
+	Address     string            `mapstructure:"address"`
+	NodeStatus  string            `mapstructure:"node_status"`
+	LastContact string            `mapstructure:"last_contact"`
+	LastTerm    uint64            `mapstructure:"last_term"`
+	LastIndex   uint64            `mapstructure:"last_index"`
+	Healthy     bool              `mapstructure:"healthy"`
+	StableSince string            `mapstructure:"stable_since"`
+	Status      string            `mapstructure:"status"`
+	Meta        map[string]string `mapstructure:"meta"`
 }
 
 // RaftJoin adds the node from which this call is invoked from to the raft
@@ -191,7 +191,7 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 	return nil
 }
 
-// RaftAutopilotState returns the health of the raft cluster as seen by autopilot.
+// RaftAutopilotState returns the state of the raft cluster as seen by autopilot.
 func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
 
