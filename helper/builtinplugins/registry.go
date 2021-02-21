@@ -22,6 +22,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -130,6 +131,7 @@ func newRegistry() *registry {
 			"postgresql":   logicalPostgres.Factory, // Deprecated
 			"rabbitmq":     logicalRabbit.Factory,
 			"ssh":          logicalSsh.Factory,
+			"terraform":    logicalTerraform.Factory,
 			"totp":         logicalTotp.Factory,
 			"transit":      logicalTransit.Factory,
 		},
