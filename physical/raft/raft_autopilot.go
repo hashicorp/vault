@@ -441,7 +441,10 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		case <-b.followerHeartbeatTrackerStopCh:
 			return
 		case <-ticker.C:
-			for id, state := range b.followerStates.followers {
+			b.l.RLock()
+			followers := b.followerStates.followers
+			b.l.RUnlock()
+			for id, state := range followers {
 				// TODO: Plumb last_contact_failure_threshold setting here
 				if !state.LastHeartbeat.IsZero() && time.Now().After(state.LastHeartbeat.Add(5*time.Second)) {
 					b.followerStates.MarkFollowerAsDead(id)
