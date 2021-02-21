@@ -135,6 +135,10 @@ type RaftBackend struct {
 	// to see if the peers are "alive" using the heartbeat received from them.
 	followerStates *FollowerStates
 
+	// followerHeartbeatTrackerStopCh is used to terminate the goroutine that
+	// keeps track of follower heartbeats.
+	followerHeartbeatTrackerStopCh chan struct{}
+
 	nonVoter bool
 
 	// disableAutopilot if set will not put autopilot implementation to use. The

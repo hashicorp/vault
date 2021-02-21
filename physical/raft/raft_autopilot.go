@@ -214,7 +214,7 @@ type Delegate struct {
 func (d *Delegate) AutopilotConfig() *autopilot.Config {
 	d.l.RLock()
 	config := &autopilot.Config{
-		CleanupDeadServers:      false,
+		CleanupDeadServers:      d.autopilotConfig.CleanupDeadServers,
 		LastContactThreshold:    d.autopilotConfig.LastContactThreshold,
 		MaxTrailingLogs:         d.autopilotConfig.MaxTrailingLogs,
 		MinQuorum:               d.autopilotConfig.MinQuorum,
@@ -343,8 +343,19 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	return ret
 }
 
+// RemoveFailedServer is called by the autopilot library when it desires a node
+// to be removed from the raft configuration. This function removes the node
+// from the raft cluster and stops tracking its information in follower states.
+// This function needs to return quickly. Hence removal is performed in a
+// goroutine.
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
-	// TODO: implement me
+	go func() {
+		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
+		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
+			d.logger.Error("failed to remove server", "server_id", server.ID, "server_address", server.Address, "server_name", server.Name, "error", future.Error())
+		}
+		d.followerStates.Delete(string(server.ID))
+	}()
 }
 
 // SetFollowerStates sets the followerStates field in the backend to track peers
@@ -416,7 +427,31 @@ func (b *RaftBackend) StartAutopilot(ctx context.Context) {
 	if b.autopilot == nil {
 		return
 	}
+
 	b.autopilot.Start(ctx)
+	b.followerHeartbeatTrackerStopCh = make(chan struct{})
+	go b.startFollowerHeartbeatTracker()
+}
+
+func (b *RaftBackend) startFollowerHeartbeatTracker() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-b.followerHeartbeatTrackerStopCh:
+			return
+		case <-ticker.C:
+			b.l.RLock()
+			followers := b.followerStates.followers
+			b.l.RUnlock()
+			for id, state := range followers {
+				// TODO: Plumb last_contact_failure_threshold setting here
+				if !state.LastHeartbeat.IsZero() && time.Now().After(state.LastHeartbeat.Add(5*time.Second)) {
+					b.followerStates.MarkFollowerAsDead(id)
+				}
+			}
+		}
+	}
 }
 
 // StopAutopilot stops a running autopilot instance. This should only be called
@@ -429,6 +464,11 @@ func (b *RaftBackend) StopAutopilot() {
 		return
 	}
 	b.autopilot.Stop()
+
+	if b.followerHeartbeatTrackerStopCh != nil {
+		close(b.followerHeartbeatTrackerStopCh)
+	}
+	b.followerHeartbeatTrackerStopCh = nil
 }
 
 // AutopilotState represents the health information retrieved from autopilot.
