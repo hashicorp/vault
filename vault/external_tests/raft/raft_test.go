@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -32,30 +33,50 @@ import (
 	"golang.org/x/net/http2"
 )
 
-func raftCluster(t testing.TB, joinNodes bool) *vault.TestCluster {
+type RaftClusterOpts struct {
+	DisableFollowerJoins bool
+	InmemCluster         bool
+	EnableAutopilot      bool
+}
+
+func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
+	if ropts == nil {
+		ropts = &RaftClusterOpts{}
+	}
+
 	conf := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
 	}
 
-	inmemCluster, err := vaultcluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
-		Mutex: &sync.Mutex{},
-		Level: hclog.Trace,
-		Name:  "inmem-cluster",
-	}))
-	if err != nil {
-		t.Fatal(err)
+	var opts = vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
 	}
 
-	var opts = vault.TestClusterOptions{
-		HandlerFunc:   vaulthttp.Handler,
-		ClusterLayers: inmemCluster,
+	if ropts.InmemCluster {
+		inmemCluster, err := vaultcluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
+			Mutex: &sync.Mutex{},
+			Level: hclog.Trace,
+			Name:  "inmem-cluster",
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		opts.ClusterLayers = inmemCluster
 	}
+
 	teststorage.RaftBackendSetup(conf, &opts)
-	if !joinNodes {
+	if ropts.DisableFollowerJoins {
 		opts.SetupFunc = nil
 	}
+
+	if !ropts.EnableAutopilot {
+		envVar := "VAULT_RAFT_AUTOPILOT_DISABLE"
+		os.Setenv(envVar, "1")
+		defer os.Unsetenv(envVar)
+	}
+
 	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
@@ -241,7 +262,7 @@ func TestRaft_Join(t *testing.T) {
 
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, true)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -284,7 +305,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, true)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -331,7 +352,7 @@ func TestRaft_Configuration(t *testing.T) {
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, true)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -343,7 +364,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, true)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -449,7 +470,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t, true)
+			cluster := raftCluster(t, nil)
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -607,7 +628,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t, true)
+			cluster := raftCluster(t, nil)
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -778,7 +799,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, true)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -824,7 +845,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 	// Cluster 2
 	{
-		cluster2 := raftCluster(t, true)
+		cluster2 := raftCluster(t, nil)
 		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
@@ -871,7 +892,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 }
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
-	cluster := raftCluster(b, true)
+	cluster := raftCluster(b, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client

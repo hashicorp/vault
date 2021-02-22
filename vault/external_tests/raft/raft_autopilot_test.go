@@ -59,7 +59,11 @@ func raftClusterWithAutopilot(t testing.TB, joinNodes bool) *vault.TestCluster {
 
 func TestRaft_Autopilot(t *testing.T) {
 	// Start the raft cluster with a single node with inmem cluster layer
-	cluster := raftCluster(t, false)
+	cluster := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		InmemCluster:         true,
+		EnableAutopilot:      true,
+	})
 	defer cluster.Cleanup()
 
 	// Wait 11s before trying to add nodes: the autopilot ServerStabilization time
