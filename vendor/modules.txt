@@ -548,7 +548,7 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.1
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0
 github.com/hashicorp/vault-plugin-secrets-openldap
@@ -999,7 +999,7 @@ go.etcd.io/etcd/raft/quorum
 go.etcd.io/etcd/raft/raftpb
 go.etcd.io/etcd/raft/tracker
 go.etcd.io/etcd/version
-# go.mongodb.org/atlas v0.5.0
+# go.mongodb.org/atlas v0.7.1
 go.mongodb.org/atlas/mongodbatlas
 # go.mongodb.org/mongo-driver v1.4.2
 go.mongodb.org/mongo-driver/bson

@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200305172021-03a3749f220d
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pierrec/lz4 v2.2.6+incompatible // indirect
-	go.mongodb.org/atlas v0.5.0
+	go.mongodb.org/atlas v0.7.1
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64 // indirect
 )

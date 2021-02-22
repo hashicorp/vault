@@ -1,0 +1,3 @@
+```release-note:change
+secrets/mongodbatlas: Move from whitelist to access list API
+```
