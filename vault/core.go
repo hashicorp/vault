@@ -3,10 +3,14 @@ package vault
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +20,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -48,6 +54,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/patrickmn/go-cache"
+	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
 
@@ -72,6 +79,8 @@ const (
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
+
+	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 )
 
 var (
@@ -108,6 +117,7 @@ var (
 	PerformanceMerkleRoot        = merkleRootImpl
 	DRMerkleRoot                 = merkleRootImpl
 	LastRemoteWAL                = lastRemoteWALImpl
+	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
 )
 
@@ -391,6 +401,8 @@ type Core struct {
 	//
 	// Name
 	clusterName string
+	// ID
+	clusterID uberAtomic.String
 	// Specific cipher suites to use for clustering, if any
 	clusterCipherSuites []uint16
 	// Used to modify cluster parameters
@@ -546,6 +558,8 @@ type Core struct {
 
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
+
+	IndexHeaderHMACKey uberAtomic.Value
 }
 
 // CoreConfig is used to parameterize a core
@@ -1985,6 +1999,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 	}
 
+	if err := c.setupHeaderHMACKey(ctx); err != nil {
+		return err
+	}
+
 	c.clusterParamsLock.Lock()
 	defer c.clusterParamsLock.Unlock()
 	if err := startReplication(c); err != nil {
@@ -2198,6 +2216,10 @@ func lastPerformanceWALImpl(c *Core) uint64 {
 }
 
 func lastRemoteWALImpl(c *Core) uint64 {
+	return 0
+}
+
+func lastRemoteUpstreamWALImpl(c *Core) uint64 {
 	return 0
 }
 
@@ -2542,6 +2564,10 @@ func (c *Core) IsDRSecondary() bool {
 	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
 }
 
+func (c *Core) IsPerfSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+}
+
 func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
@@ -2704,4 +2730,173 @@ func (c *Core) KeyRotateGracePeriod() time.Duration {
 
 func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
+}
+
+func (c *Core) MissingRequiredState(raw []string) bool {
+	if c.IsDRSecondary() {
+		return false
+	}
+	for _, r := range raw {
+		walState, err := ParseRequiredState(r, c.headerHMACKey())
+		if err != nil {
+			return false
+		}
+		if !c.HasWALState(walState) {
+			return true
+		}
+	}
+	return false
+}
+
+func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
+	cooked, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return nil, err
+	}
+	s := string(cooked)
+
+	lastIndex := strings.LastIndexByte(s, ':')
+	if lastIndex == -1 {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
+	stateHMAC, err := hex.DecodeString(stateHMACRaw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header HMAC: %v, %w", stateHMACRaw, err)
+	}
+
+	if len(hmacKey) != 0 {
+		hm := hmac.New(sha256.New, hmacKey)
+		hm.Write([]byte(state))
+		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
+			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
+		}
+	}
+
+	pieces := strings.Split(state, ":")
+	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+
+	return &logical.WALState{
+		ClusterID:       pieces[1],
+		LocalIndex:      localIndex,
+		ReplicatedIndex: replicatedIndex,
+	}, nil
+}
+
+// clusterid is always that of the receiving node except when a request is
+// forwarded to another cluster.  Primary nodes only care about localindex,
+// secondary nodes care only about replicatedindex when clusterid is not their
+// own, otherwise they care about both.
+func (c *Core) HasWALState(required *logical.WALState) bool {
+	myClusterID := c.clusterID.Load()
+	if myClusterID == "" {
+		return false
+	}
+	sameClusterID := required.ClusterID == myClusterID
+
+	var ourLocalIndex, ourReplicatedIndex uint64
+	if c.perfStandby {
+		ourLocalIndex = LastRemoteWAL(c)
+	} else {
+		ourLocalIndex = LastWAL(c)
+	}
+
+	if !c.IsPerfSecondary() {
+		if !sameClusterID {
+			// If we're a primary and this isn't our clusterID, the state means
+			// nothing to us.
+			return true
+		}
+
+		// If we're a primary we don't care about replicatedIndex.
+		return ourLocalIndex >= required.LocalIndex
+	}
+
+	if c.PerfStandby() {
+		ourReplicatedIndex = LastRemoteUpstreamWAL(c)
+	} else {
+		ourReplicatedIndex = LastRemoteWAL(c)
+	}
+
+	satisfied := ourReplicatedIndex >= required.ReplicatedIndex
+	if sameClusterID {
+		satisfied = satisfied && ourLocalIndex >= required.LocalIndex
+	}
+
+	return satisfied
+}
+
+func (c *Core) WALHeader(walState *logical.WALState) string {
+	key := c.headerHMACKey()
+	if key == nil {
+		// It's possible that the primary active node hasn't yet written the
+		// key to storage (maybe it's not yet upgraded), or that it has but
+		// we haven't yet seen it.
+		return ""
+	}
+	stateStr := fmt.Sprintf("v1:%s:%d:%d", walState.ClusterID, walState.LocalIndex, walState.ReplicatedIndex)
+	hm := hmac.New(sha256.New, key)
+	hm.Write([]byte(stateStr))
+	header := stateStr + ":" + hex.EncodeToString(hm.Sum(nil))
+	return base64.StdEncoding.EncodeToString([]byte(header))
+}
+
+func (c *Core) loadHeaderHMACKey(ctx context.Context) error {
+	ent, err := c.barrier.Get(ctx, indexHeaderHMACKeyPath)
+	if err != nil {
+		return err
+	}
+
+	if ent != nil {
+		c.IndexHeaderHMACKey.Store(ent.Value)
+	}
+	return nil
+}
+
+func (c *Core) setupHeaderHMACKey(ctx context.Context) error {
+	if c.IsPerfSecondary() || c.IsDRSecondary() {
+		return c.loadHeaderHMACKey(ctx)
+	}
+
+	ent, err := c.barrier.Get(ctx, indexHeaderHMACKeyPath)
+	if err != nil {
+		return err
+	}
+
+	if ent != nil {
+		c.IndexHeaderHMACKey.Store(ent.Value)
+		return nil
+	}
+
+	key, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	err = c.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   indexHeaderHMACKeyPath,
+		Value: []byte(key),
+	})
+	if err != nil {
+		return err
+	}
+	c.IndexHeaderHMACKey.Store([]byte(key))
+	return nil
+}
+
+func (c *Core) headerHMACKey() []byte {
+	key := c.IndexHeaderHMACKey.Load()
+	if key == nil {
+		return nil
+	}
+	return key.([]byte)
 }

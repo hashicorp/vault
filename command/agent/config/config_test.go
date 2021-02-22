@@ -740,3 +740,32 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-consistency.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "",
+		},
+		Cache: &Cache{
+			EnforceConsistency: "always",
+			WhenInconsistent:   "retry",
+		},
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}

@@ -48,6 +48,8 @@ type Cache struct {
 	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
 	UseAutoAuthToken    bool        `hcl:"-"`
 	ForceAutoAuthToken  bool        `hcl:"-"`
+	EnforceConsistency  string      `hcl:"enforce_consistency"`
+	WhenInconsistent    string      `hcl:"when_inconsistent"`
 }
 
 // AutoAuth is the configured authentication method and sinks

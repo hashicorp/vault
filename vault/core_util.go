@@ -158,3 +158,7 @@ func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction
 func (c *Core) namespaceByPath(path string) *namespace.Namespace {
 	return namespace.RootNamespace
 }
+
+func (c *Core) AllowForwardingViaHeader() bool {
+	return false
+}
