@@ -67,9 +67,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 			Persist: &Persist{
-				Path:              "/tmp/bolt-file.db",
-				RemoveAfterImport: true,
-				ExitOnErr:         true,
+				Path:            "/tmp/bolt-file.db",
+				KeepAfterImport: true,
+				ExitOnErr:       true,
 			},
 		},
 		Vault: &Vault{
@@ -457,9 +457,9 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	expected := &Config{
 		Cache: &Cache{
 			Persist: &Persist{
-				Path:              "/tmp/bolt-file.db",
-				RemoveAfterImport: false,
-				ExitOnErr:         false,
+				Path:            "/tmp/bolt-file.db",
+				KeepAfterImport: false,
+				ExitOnErr:       false,
 			},
 		},
 		SharedConfig: &configutil.SharedConfig{

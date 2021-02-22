@@ -53,9 +53,9 @@ type Cache struct {
 
 // Persist contains configuration needed for persistent caching
 type Persist struct {
-	Path              string `hcl:"path"`
-	RemoveAfterImport bool   `hcl:"remove_after_import"`
-	ExitOnErr         bool   `hcl:"exit_on_err"`
+	Path            string `hcl:"path"`
+	KeepAfterImport bool   `hcl:"keep_after_import"`
+	ExitOnErr       bool   `hcl:"exit_on_err"`
 }
 
 // AutoAuth is the configured authentication method and sinks

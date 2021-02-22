@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -481,72 +482,117 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error("must specify persistent cache path")
 				return 1
 			}
-			// TODO(tvoran): setup real key and aad
-			e, err := cacheboltdb.NewAES(&cacheboltdb.AESConfig{
-				Key:    []byte("thisisafakekey!!thisisafakekey!!"),
-				AAD:    []byte("extra-data"),
-				Logger: cacheLogger.Named("encrypter"),
-			})
+			// Check if bolt file exists already
+			dbFileExists, err := cacheboltdb.DBFileExists(config.Cache.Persist.Path)
 			if err != nil {
-				c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
+				c.UI.Error(fmt.Sprintf("failed to check if bolt file exists at path %s: %s", config.Cache.Persist.Path, err))
 				return 1
 			}
-			ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-				Path:       config.Cache.Persist.Path,
-				RootBucket: "<insert key hash here>",
-				Logger:     cacheLogger.Named("cacheboltdb"),
-				Encrypter:  e,
-			})
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
-				return 1
-			}
-			cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
-
-			// Restore anything in the persistent cache to the memory cache
-			if err := leaseCache.Restore(ps); err != nil {
-				c.UI.Error(fmt.Sprintf("Error restoring in-memory cache from persisted file: %v", err))
-				if config.Cache.Persist.ExitOnErr {
-					return 1
-				}
-			}
-			cacheLogger.Info("loaded memcache from persistent storage")
-
-			// Check for previous auto-auth token
-			oldTokenBytes, err := ps.GetAutoAuthToken()
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error in fetching previous auto-auth token: %s", err))
-				if config.Cache.Persist.ExitOnErr {
-					return 1
-				}
-			}
-			if len(oldTokenBytes) > 0 {
-				oldToken, err := cachememdb.Deserialize(oldTokenBytes)
+			if dbFileExists {
+				// Open the bolt file, but wait to setup Encryption
+				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+					Path:       config.Cache.Persist.Path,
+					RootBucket: "<insert key hash here>",
+					Logger:     cacheLogger.Named("cacheboltdb"),
+				})
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error in deserializing previous auto-auth token cache entry: %s", err))
-					if config.Cache.Persist.ExitOnErr {
-						return 1
-					}
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					return 1
 				}
-				previousToken = oldToken.Token
-			}
+				// Grab the key material from bolt, then setup encryption so
+				// that restore is possible
+				key, err := ps.GetKey()
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error retrieving key from persistent cache: %v", err))
+				}
+				e, err := cacheboltdb.NewAES(&cacheboltdb.AESConfig{
+					Key:    key,
+					AAD:    []byte("extra-data"),
+					Logger: cacheLogger.Named("encrypter"),
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
+					return 1
+				}
+				ps.SetEncrypter(e)
 
-			// Remove the cache file if specified
-			if config.Cache.Persist.RemoveAfterImport {
-				if err := ps.Close(); err != nil {
-					c.UI.Error(fmt.Sprintf("failed to close persistent cache file: %s", err))
+				// Restore anything in the persistent cache to the memory cache
+				if err := leaseCache.Restore(ps); err != nil {
+					c.UI.Error(fmt.Sprintf("Error restoring in-memory cache from persisted file: %v", err))
 					if config.Cache.Persist.ExitOnErr {
 						return 1
 					}
 				}
-				dbFile := filepath.Join(config.Cache.Persist.Path, cacheboltdb.DatabaseFileName)
-				if err := os.Remove(dbFile); err != nil {
-					c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
+				cacheLogger.Info("loaded memcache from persistent storage")
+
+				// Check for previous auto-auth token
+				oldTokenBytes, err := ps.GetAutoAuthToken()
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error in fetching previous auto-auth token: %s", err))
 					if config.Cache.Persist.ExitOnErr {
 						return 1
+					}
+				}
+				if len(oldTokenBytes) > 0 {
+					oldToken, err := cachememdb.Deserialize(oldTokenBytes)
+					if err != nil {
+						c.UI.Error(fmt.Sprintf("Error in deserializing previous auto-auth token cache entry: %s", err))
+						if config.Cache.Persist.ExitOnErr {
+							return 1
+						}
+					}
+					previousToken = oldToken.Token
+				}
+
+				// If keep_after_import true, set persistent storage layer in
+				// leaseCache, else remove db file
+				if config.Cache.Persist.KeepAfterImport {
+					defer ps.Close()
+					leaseCache.SetPersistentStorage(ps)
+				} else {
+					if err := ps.Close(); err != nil {
+						c.UI.Warn(fmt.Sprintf("failed to close persistent cache file: %s", err))
+					}
+					dbFile := filepath.Join(config.Cache.Persist.Path, cacheboltdb.DatabaseFileName)
+					if err := os.Remove(dbFile); err != nil {
+						c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
+						if config.Cache.Persist.ExitOnErr {
+							return 1
+						}
 					}
 				}
 			} else {
+				// generate some random bytes to simulate generating a key
+				key := make([]byte, 32)
+				rand.Seed(time.Now().UnixNano())
+				rand.Read(key)
+				e, err := cacheboltdb.NewAES(&cacheboltdb.AESConfig{
+					Key: key,
+					// TODO(tvoran): get extra data from somewhere
+					AAD:    []byte("extra-data"),
+					Logger: cacheLogger.Named("encrypter"),
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
+					return 1
+				}
+				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+					Path:       config.Cache.Persist.Path,
+					RootBucket: "<insert key hash here>",
+					Logger:     cacheLogger.Named("cacheboltdb"),
+					Encrypter:  e,
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
+					return 1
+				}
+				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
+
+				// Stash the key material in bolt
+				if err := ps.SetKey(key); err != nil {
+					c.UI.Error(fmt.Sprintf("Error setting key in persistent cache: %v", err))
+				}
+
 				defer ps.Close()
 				leaseCache.SetPersistentStorage(ps)
 			}

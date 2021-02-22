@@ -1,7 +1,9 @@
 package cacheboltdb
 
 import (
+	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -166,4 +168,51 @@ func TestBoltSetAutoAuthToken(t *testing.T) {
 	token, err = b.GetAutoAuthToken()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello 2"), token)
+}
+
+func TestDBFileExists(t *testing.T) {
+	testCases := []struct {
+		name        string
+		mkDir       bool
+		createFile  bool
+		expectExist bool
+	}{
+		{
+			name:        "all exists",
+			mkDir:       true,
+			createFile:  true,
+			expectExist: true,
+		},
+		{
+			name:        "dir exist, file missing",
+			mkDir:       true,
+			createFile:  false,
+			expectExist: false,
+		},
+		{
+			name:        "all missing",
+			mkDir:       false,
+			createFile:  false,
+			expectExist: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var tmpPath string
+			var err error
+			if tc.mkDir {
+				tmpPath, err = ioutil.TempDir("", "test-db-path")
+				require.NoError(t, err)
+			}
+			if tc.createFile {
+				err = ioutil.WriteFile(path.Join(tmpPath, DatabaseFileName), []byte("test-db-path"), 0600)
+				require.NoError(t, err)
+			}
+			exists, err := DBFileExists(tmpPath)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectExist, exists)
+		})
+	}
+
 }

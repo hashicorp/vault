@@ -23,7 +23,7 @@ cache {
 	use_auto_auth_token = true
 	persist = {
 		path = "/tmp/bolt-file.db"
-		remove_after_import = true
+		keep_after_import = true
 		exit_on_err = true
 	}
 }

@@ -1,19 +1,5 @@
 package cacheboltdb
 
-const (
-	// SecretLeaseType - Bucket/type for leases with secret info
-	SecretLeaseType = "secret-lease"
-
-	// AuthLeaseType - Bucket/type for leases with auth info
-	AuthLeaseType = "auth-lease"
-
-	// TokenType - Bucket/type for auto-auth tokens
-	TokenType = "token"
-
-	// AutoAuthToken - key for the latest auto-auth token
-	AutoAuthToken = "auto-auth-token"
-)
-
 // Storage interface for persistent storage
 type Storage interface {
 	// Set saves an Index item in the persistent storage, with a string key,
