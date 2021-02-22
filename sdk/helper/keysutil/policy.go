@@ -1357,7 +1357,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		}
 	}()
 
-	if err := p.RotateInMemory(randReader, false); err != nil {
+	if err := p.RotateInMemory(randReader); err != nil {
 		return err
 	}
 
@@ -1365,38 +1365,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 }
 
 // RotateInMemory rotates the policy but does not persist it to storage.
-// If restoreOnError is true and the rotation partially fails, the policy
-// state will be restored.
-func (p *Policy) RotateInMemory(randReader io.Reader, restoreOnError bool) (retErr error) {
-	if restoreOnError {
-		priorLatestVersion := p.LatestVersion
-		priorMinDecryptionVersion := p.MinDecryptionVersion
-		var priorKeys keyEntryMap
-
-		if p.Keys != nil {
-			priorKeys = keyEntryMap{}
-			for k, v := range p.Keys {
-				priorKeys[k] = v
-			}
-		}
-
-		defer func() {
-			if retErr != nil {
-				p.LatestVersion = priorLatestVersion
-				p.MinDecryptionVersion = priorMinDecryptionVersion
-				p.Keys = priorKeys
-			}
-		}()
-	}
-
-	if p.Keys == nil {
-		// This is an initial key rotation when generating a new policy. We
-		// don't need to call migrate here because if we've called getPolicy to
-		// get the policy in the first place it will have been run.
-		p.Keys = keyEntryMap{}
-	}
-
-	p.LatestVersion += 1
+func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1483,6 +1452,14 @@ func (p *Policy) RotateInMemory(randReader io.Reader, restoreOnError bool) (retE
 		}
 	}
 
+	if p.Keys == nil {
+		// This is an initial key rotation when generating a new policy. We
+		// don't need to call migrate here because if we've called getPolicy to
+		// get the policy in the first place it will have been run.
+		p.Keys = keyEntryMap{}
+	}
+
+	p.LatestVersion += 1
 	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
 	// This ensures that with new key creations min decryption version is set
