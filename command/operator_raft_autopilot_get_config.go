@@ -72,6 +72,10 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Run(args []string) int {
 		return 2
 	}
 
+	if resp == nil {
+		return 0
+	}
+
 	if Format(c.UI) != "table" {
 		return OutputData(c.UI, resp)
 	}
