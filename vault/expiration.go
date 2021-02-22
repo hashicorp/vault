@@ -991,7 +991,7 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	// renewal fails due to a later cause. On an error, re-insert the
 	// original lease saved above.
 	defer func() {
-		if renewErr != nil || renewResp == nil {
+		if renewError != nil || renewResp == nil {
 			m.updatePending(originalLease)
 		} else {
 			m.updatePending(le)
@@ -2192,15 +2192,15 @@ type leaseEntry struct {
 // Returns a shallow clone; data, secret, and auth are shared with original object.
 func (le *leaseEntry) Clone() *leaseEntry {
 	return &leaseEntry{
-		LeaseID:         le.leaseID,
+		LeaseID:         le.LeaseID,
 		ClientToken:     le.ClientToken,
 		ClientTokenType: le.ClientTokenType,
 		Path:            le.Path,
 		Data:            le.Data,
 		Secret:          le.Secret,
 		Auth:            le.Auth,
-		IssueType:       le.IssueTime,
-		ExpireTime:      le.ExireTime,
+		IssueTime:       le.IssueTime,
+		ExpireTime:      le.ExpireTime,
 		LastRenewalTime: le.LastRenewalTime,
 		Version:         le.Version,
 		namespace:       le.namespace,
