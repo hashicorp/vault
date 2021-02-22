@@ -15,12 +15,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+var validCapacityString = regexp.MustCompile("^[\t ]*([0-9]+)[\t ]?([kmgtKMGT][iI]?[bB])?[\t ]*$")
+
 // ParseCapacityString parses a capacity string and returns the number of bytes it represents.
 // Capacity strings are things like 5gib or 10MB. Supported prefixes are kb, kib, mb, mib, gb,
 // gib, tb, tib, which are not case sensitive. If no prefix is present, the number is assumed
 // to be in bytes already.
 func ParseCapacityString(in interface{}) (uint64, error) {
-	var validCapacityString = regexp.MustCompile("^[\t ]*([0-9]+)[\t ]?([kmgtKMGT][iI]?[bB])?[\t ]*$")
 	var cap uint64
 
 	jsonIn, ok := in.(json.Number)
