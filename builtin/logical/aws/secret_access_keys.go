@@ -3,12 +3,13 @@ package aws
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"math/rand"
 	"regexp"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -290,12 +291,15 @@ func (b *backend) secretAccessKeysCreate(
 	if len(role.IAMTags) > 0 {
 		var tags []*iam.Tag
 		for key, value := range role.IAMTags {
+			// This assignment needs to be done in order to create unique addresses for
+			// these variables. Without doing so, all the tags will be copies of the last
+			// tag listed in the role.
 			k, v := key, value
 			tags = append(tags, &iam.Tag{Key: &k, Value: &v})
 		}
 
 		_, err = iamClient.TagUser(&iam.TagUserInput{
-			Tags: tags,
+			Tags:     tags,
 			UserName: &username,
 		})
 

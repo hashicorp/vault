@@ -1444,8 +1444,8 @@ func TestBackend_iamTagsCrud(t *testing.T) {
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccStepWriteIamTags(t, "test", map[string]string{"key1":"value1", "key2":"value2"}),
-			testAccStepReadIamTags(t, "test", map[string]string{"key1":"value1", "key2":"value2"}),
+			testAccStepWriteIamTags(t, "test", map[string]string{"key1": "value1", "key2": "value2"}),
+			testAccStepReadIamTags(t, "test", map[string]string{"key1": "value1", "key2": "value2"}),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadIamTags(t, "test", map[string]string{}),
 		},
@@ -1473,7 +1473,7 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 					return nil
 				}
 
-				return fmt.Errorf("bad: %#v", resp)
+				return fmt.Errorf("vault response not received")
 			}
 
 			expected := map[string]interface{}{

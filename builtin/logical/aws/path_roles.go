@@ -313,7 +313,6 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if iamTags, ok := d.GetOk("iam_tags"); ok {
-
 		roleEntry.IAMTags = iamTags.(map[string]string)
 	}
 
