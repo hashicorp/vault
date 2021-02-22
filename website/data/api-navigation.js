@@ -62,6 +62,7 @@ export default [
       'pki',
       'rabbitmq',
       'ssh',
+      'terraform',
       'totp',
       'transform',
       'transit',
