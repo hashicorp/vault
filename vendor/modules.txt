@@ -427,7 +427,7 @@ github.com/hashicorp/cap/jwt
 github.com/hashicorp/cap/oidc
 github.com/hashicorp/cap/oidc/internal/base62
 github.com/hashicorp/cap/oidc/internal/strutils
-# github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
+# github.com/hashicorp/consul-template v0.25.2
 github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
 github.com/hashicorp/consul-template/dependency
