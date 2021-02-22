@@ -56,7 +56,11 @@ func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 // up and enables the cluster handler.
 func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	raftBackend := c.getRaftBackend()
-	if raftBackend == nil || raftBackend.Initialized() {
+	if raftBackend == nil {
+		return nil
+	}
+	if raftBackend.Initialized() {
+		raftBackend.SetFollowerStates(c.raftFollowerStates)
 		return nil
 	}
 
@@ -118,7 +122,6 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
-	raftBackend.SetFollowerStates(c.raftFollowerStates)
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
 	// Read autopilot configuration from storage
