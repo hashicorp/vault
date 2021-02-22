@@ -26,6 +26,9 @@ export default class GenerateCredentialsDatabase extends Component {
   roleName = null;
   @tracked roleType = '';
   @tracked model = null;
+  @tracked errorMessage = '';
+  @tracked errorHttpStatus = '';
+  @tracked errorTitle = 'Something went wrong';
 
   constructor() {
     super(...arguments);
@@ -46,7 +49,21 @@ export default class GenerateCredentialsDatabase extends Component {
       this.roleType = 'static';
       return;
     } catch (error) {
-      errors.push(error.errors);
+      console.log(error, 'ERORR:lj');
+      this.errorHttpStatus = error.httpStatus;
+      this.errorMessage = error.errors[0];
+      if (error.httpStatus === 403) {
+        this.errorTitle = 'You are not authorized';
+        this.errorMessage =
+          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
+      }
+      if (error.httpStatus == 404) {
+        this.errorTitle = 'Role not found';
+        this.errorMessage =
+          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
+      }
+
+      // errors.push(error.errors);
     }
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
