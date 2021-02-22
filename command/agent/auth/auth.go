@@ -16,7 +16,7 @@ import (
 
 const (
 	initialBackoff    = 1 * time.Second
-	defaultMaxBackoff = 1 * time.Minute
+	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent
