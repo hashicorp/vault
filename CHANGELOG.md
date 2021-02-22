@@ -56,7 +56,6 @@ BUG FIXES:
 * api/sys/config/ui: Fixes issue where multiple UI custom header values are ignored and only the first given value is used [[GH-10490](https://github.com/hashicorp/vault/pull/10490)]
 * api: Fixes CORS API methods that were outdated and invalid [[GH-10444](https://github.com/hashicorp/vault/pull/10444)]
 * auth/jwt: Fixes `bound_claims` validation for provider-specific group and user info fetching. [[GH-10546](https://github.com/hashicorp/vault/pull/10546)]
-* auth/oci: Fixes alias name to use the role name, and not the literal string `name` [[GH-10](https://github.com/hashicorp/vault-plugin-auth-oci/pull/10)]
 * core (enterprise): Limit entropy augmentation during token generation to root tokens. [[GH-10487](https://github.com/hashicorp/vault/pull/10487)]
 * core (enterprise): Vault EGP policies attached to path * were not correctly scoped to the namespace.
 * core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
