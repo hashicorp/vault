@@ -122,6 +122,7 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
+	raftBackend.SetFollowerStates(c.raftFollowerStates)
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
 	// Read autopilot configuration from storage
