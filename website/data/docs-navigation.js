@@ -261,6 +261,7 @@ export default [
           'dynamic-ssh-keys',
         ],
       },
+      'terraform',
       'totp',
       { category: 'transform', content: ['tokenization'] },
       'transit',

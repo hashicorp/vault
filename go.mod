@@ -51,7 +51,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
+	github.com/hashicorp/consul-template v0.25.2
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
