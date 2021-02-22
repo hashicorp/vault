@@ -709,7 +709,6 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 	le.ExpireTime = time.Now()
 	// TODO: potential race with concurrent renew.
 	if err := m.persistEntry(ctx, le); err != nil {
-		m.pendingLock.Unlock()
 		return err
 	}
 	m.updatePending(le)
@@ -853,7 +852,6 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 
 			// TODO: storage race with concurrent renew
 			if err := m.persistEntry(ctx, le); err != nil {
-				m.pendingLock.Unlock()
 				return err
 			}
 			m.updatePending(le)
