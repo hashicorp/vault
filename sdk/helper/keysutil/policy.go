@@ -1452,14 +1452,14 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 	}
 
+	p.LatestVersion += 1
+
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
 		// get the policy in the first place it will have been run.
 		p.Keys = keyEntryMap{}
 	}
-
-	p.LatestVersion += 1
 	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
 	// This ensures that with new key creations min decryption version is set
