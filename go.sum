@@ -638,8 +638,6 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.8.1 h1:6EE5drejNWoIDj6akBCHrTaaQDq
 github.com/hashicorp/vault-plugin-auth-jwt v0.8.1/go.mod h1:pyR4z5f2Vuz9TXucuN0rivUJTtSdlOtDdZ16IqBjZVo=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0 h1:7ct50ngVFTeO7EJ3N9PvPHeHc+2cANTHi2+9RwIUIHM=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0/go.mod h1:IM/n7LY1rIM4MVzOfSH6cRmY/C2rGkrjGrEr0B/yO9c=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0 h1:v1jOqR70chxRxONey7g/v0/57MneP05z2dfw6qmlE+8=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0/go.mod h1:2c/k3nsoGPKV+zpAWCiajt4e66vncEq8Li/eKLqErAc=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.1 h1:gUQPCgHu0yvdOSzX9i0YNm3jpeueGNxScwDnYWB+rVI=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.1/go.mod h1:2c/k3nsoGPKV+zpAWCiajt4e66vncEq8Li/eKLqErAc=
 github.com/hashicorp/vault-plugin-auth-oci v0.6.0 h1:ag69AcGbWvFADQ0TQxiJiJAztCiY5/CXMItF02oi5oY=
@@ -664,8 +662,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0 h1:dKPQIr6tLcMmhNKdc2A9p
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0/go.mod h1:hhwps56f2ATeC4Smgghrc5JH9dXR31b4ehSf1HblP5Q=
 github.com/hashicorp/vault-plugin-secrets-kv v0.7.0 h1:Sq5CmKWxQu+MtO6AXYM+STPHGnrGD50iKuwzaw87OVM=
 github.com/hashicorp/vault-plugin-secrets-kv v0.7.0/go.mod h1:B/Cybh5aVF7LNAMHwVBxY8t7r2eL0C6HVGgTyP4nKK4=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0 h1:uTtKxt5qfwTj6PqwnwPdU0fg1lIaaoqTtauuNpI2Epc=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0/go.mod h1:JOqn2mWJJbTp9NaC0CSCc3q5HQA99LfeSqgpC3YS+oA=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.1 h1:eX89F+LcMmKAUeI/IM2hS9PKlNyGjdfqdWAfqg1rgSw=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.1/go.mod h1:4mdgPqlkO+vfFX1cFAWcxkeqz6JAtZgKxL/67q/58Oo=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0 h1:aDdWZMdr93OtwZRE3TPKJyZgY6ZTe09G7bb2GL1HeAo=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.3.0/go.mod h1:pRE6pJzEVTSn3reeEn6YOV73R/6PcyylwQBz33zZKds=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
@@ -1138,6 +1136,8 @@ go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547 h1:s71VGheLtWmCYsnN
 go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547/go.mod h1:YoUyTScD3Vcv2RBm3eGVOq7i1ULiz3OuXoQFWOirmAM=
 go.mongodb.org/atlas v0.5.0 h1:WoeXdXSLCyquhSqSqTa0PwpjxWZbm70E1Gkbx+w3Sco=
 go.mongodb.org/atlas v0.5.0/go.mod h1:CIaBeO8GLHhtYLw7xSSXsw7N90Z4MFY87Oy9qcPyuEs=
+go.mongodb.org/atlas v0.7.1 h1:hNBtwtKgmhB9vmSX/JyN/cArmhzyy4ihKpmXSMIc4mw=
+go.mongodb.org/atlas v0.7.1/go.mod h1:CIaBeO8GLHhtYLw7xSSXsw7N90Z4MFY87Oy9qcPyuEs=
 go.mongodb.org/mongo-driver v1.4.2 h1:WlnEglfTg/PfPq4WXs2Vkl/5ICC6hoG8+r+LraPmGk4=
 go.mongodb.org/mongo-driver v1.4.2/go.mod h1:WcMNYLx/IlOxLe6JRJiv2uXuCz6zBLndR4SoGjYphSc=
 go.opencensus.io v0.19.1/go.mod h1:gug0GbSHa8Pafr0d2urOSgoXHZ6x/RUlaiT0d9pqb4A=
