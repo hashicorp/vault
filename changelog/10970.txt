@@ -1,0 +1,4 @@
+```release-note:bug
+replication (enterprise): Don't write request count data on DR Secondaries.
+Fixes DR Secondaries becoming out of sync approximately every 30s.
+```

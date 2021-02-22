@@ -15,8 +15,18 @@ import (
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
-	writeTimer := time.Tick(c.counters.syncInterval)
+
 	identityCountTimer := time.Tick(time.Minute * 10)
+	// Only emit on active node of cluster that is not a DR cecondary.
+	if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
+		identityCountTimer = nil
+	}
+
+	writeTimer := time.Tick(c.counters.syncInterval)
+	// Do not process the writeTimer on DR Secondary nodes
+	if c.IsDRSecondary() {
+		writeTimer = nil
+	}
 
 	// This loop covers
 	// vault.expire.num_leases
@@ -68,11 +78,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
-			// Only emit on active node of cluster that is not a DR cecondary.
-			if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
-				break
-			}
-
 			// TODO: this can be replaced by the identity gauge counter; we need to
 			// sum across all namespaces.
 			go func() {
