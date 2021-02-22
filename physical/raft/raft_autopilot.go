@@ -462,6 +462,26 @@ func (b *RaftBackend) StartAutopilot(ctx context.Context) {
 	go b.startFollowerHeartbeatTracker()
 }
 
+// AutopilotExecutionStatus represents the current status of the autopilot background go routines
+type AutopilotExecutionStatus string
+
+const (
+	AutopilotNotRunning   AutopilotExecutionStatus = "not-running"
+	AutopilotRunning      AutopilotExecutionStatus = "running"
+	AutopilotShuttingDown AutopilotExecutionStatus = "shutting-down"
+)
+
+func autopilotStatusToStatus(status autopilot.ExecutionStatus) AutopilotExecutionStatus {
+	switch status {
+	case autopilot.Running:
+		return AutopilotRunning
+	case autopilot.ShuttingDown:
+		return AutopilotShuttingDown
+	default:
+		return AutopilotNotRunning
+	}
+}
+
 func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -508,9 +528,10 @@ func (b *RaftBackend) StopAutopilot() {
 
 // AutopilotState represents the health information retrieved from autopilot.
 type AutopilotState struct {
-	Healthy                    bool `json:"healthy"`
-	FailureTolerance           int  `json:"failure_tolerance"`
-	OptimisticFailureTolerance int  `json:"optimistic_failure_tolerance"`
+	ExecutionStatus            AutopilotExecutionStatus `json:"execution_status"`
+	Healthy                    bool                     `json:"healthy"`
+	FailureTolerance           int                      `json:"failure_tolerance"`
+	OptimisticFailureTolerance int                      `json:"optimistic_failure_tolerance"`
 
 	Servers   map[string]*AutopilotServer `json:"servers"`
 	Leader    string                      `json:"leader"`
@@ -643,7 +664,17 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 		return nil, nil
 	}
 
-	return autopilotToAPIState(b.autopilot.GetState()), nil
+	apState := b.autopilot.GetState()
+	if apState == nil {
+		return nil, nil
+	}
+
+	state := autopilotToAPIState(apState)
+
+	apStatus, _ := b.autopilot.IsRunning()
+	state.ExecutionStatus = autopilotStatusToStatus(apStatus)
+
+	return state, nil
 }
 
 func (b *RaftBackend) setupAutopilot(opts SetupOpts) {

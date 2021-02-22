@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -57,7 +59,7 @@ func raftClusterWithAutopilot(t testing.TB, joinNodes bool) *vault.TestCluster {
 
 func TestRaft_Autopilot(t *testing.T) {
 	// Start the raft cluster with a single node with inmem cluster layer
-	cluster := raftClusterWithAutopilot(t, false)
+	cluster := raftCluster(t, false)
 	defer cluster.Cleanup()
 
 	// Wait 11s before trying to add nodes: the autopilot ServerStabilization time
@@ -74,17 +76,18 @@ func TestRaft_Autopilot(t *testing.T) {
 				Retry:         true,
 			},
 		}, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		time.Sleep(2 * time.Second)
 		cluster.UnsealCore(t, core)
 	}
 
+	client := cluster.Cores[0].Client
+	state, err := client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.Equal(t, state.ExecutionStatus, api.AutopilotRunning)
+
 	joinFunc(cluster.Cores[1])
 	joinFunc(cluster.Cores[2])
-
-	client := cluster.Cores[0].Client
 
 	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
@@ -96,12 +99,9 @@ func TestRaft_Autopilot(t *testing.T) {
 	success := false
 	healthy := false
 
-	var state *api.AutopilotState
 	for time.Now().Before(deadline) {
 		state, err := client.Sys().RaftAutopilotState()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if state.Healthy {
 			healthy = true
 		}

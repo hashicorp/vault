@@ -403,6 +403,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotState() framework.OperationFun
 
 		return &logical.Response{
 			Data: map[string]interface{}{
+				"execution_status":             state.ExecutionStatus,
 				"healthy":                      state.Healthy,
 				"failure_tolerance":            state.FailureTolerance,
 				"optimistic_failure_tolerance": state.OptimisticFailureTolerance,

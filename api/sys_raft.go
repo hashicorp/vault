@@ -30,8 +30,18 @@ type RaftJoinRequest struct {
 	NonVoter         bool   `json:"non_voter"`
 }
 
+// AutopilotExecutionStatus represents the current status of the autopilot background go routines
+type AutopilotExecutionStatus string
+
+const (
+	AutopilotNotRunning   AutopilotExecutionStatus = "not-running"
+	AutopilotRunning      AutopilotExecutionStatus = "running"
+	AutopilotShuttingDown AutopilotExecutionStatus = "shutting-down"
+)
+
 // AutopilotState represents the response of the raft autopilot state API
 type AutopilotState struct {
+	ExecutionStatus            AutopilotExecutionStatus   `mapstructure:"execution_status"`
 	Healthy                    bool                       `mapstructure:"healthy"`
 	FailureTolerance           int                        `mapstructure:"failure_tolerance"`
 	OptimisticFailureTolerance int                        `mapstructure:"optimistic_failure_tolerance"`

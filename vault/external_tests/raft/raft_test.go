@@ -32,7 +32,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-func raftCluster(t testing.TB) *vault.TestCluster {
+func raftCluster(t testing.TB, joinNodes bool) *vault.TestCluster {
 	conf := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
@@ -53,6 +53,9 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 		ClusterLayers: inmemCluster,
 	}
 	teststorage.RaftBackendSetup(conf, &opts)
+	if !joinNodes {
+		opts.SetupFunc = nil
+	}
 	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
@@ -238,7 +241,7 @@ func TestRaft_Join(t *testing.T) {
 
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, true)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -281,7 +284,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, true)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -328,7 +331,7 @@ func TestRaft_Configuration(t *testing.T) {
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, true)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -340,7 +343,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, true)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -446,7 +449,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t)
+			cluster := raftCluster(t, true)
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -604,7 +607,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t)
+			cluster := raftCluster(t, true)
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -775,7 +778,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, true)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -821,7 +824,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 	// Cluster 2
 	{
-		cluster2 := raftCluster(t)
+		cluster2 := raftCluster(t, true)
 		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
@@ -868,7 +871,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 }
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
-	cluster := raftCluster(b)
+	cluster := raftCluster(b, true)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
