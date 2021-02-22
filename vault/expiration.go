@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
@@ -160,10 +161,6 @@ func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *Expiration
 	}, nil
 }
 
-func (r *revocationJob) GetID() string {
-	return r.leaseID
-}
-
 func (r *revocationJob) Execute() error {
 	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", r.nsID}})
 
@@ -218,8 +215,7 @@ func (r *revocationJob) OnFailure(err error) {
 		return
 	}
 
-	// TODO vault 1.8 we added an exponential backoff library, check to see if it would be useful here
-	pending.timer.Reset((1 << pending.revokesAttempted) * revokeRetryBase)
+	pending.timer.Reset(revokeExponentialBackoff(pending.revokesAttempted))
 	r.m.pending.Store(r.leaseID, pending)
 }
 
@@ -246,6 +242,15 @@ func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, l
 	}
 
 	m.jobManager.AddJob(job, mountAccessor)
+}
+
+func revokeExponentialBackoff(attempt uint8) time.Duration {
+	exp := (1 << attempt) * revokeRetryBase
+	randomDelta := 0.5 * float64(exp)
+
+	// Allow backoff time to be a random value between exp +/- (0.5*exp)
+	backoffTime := (float64(exp) - randomDelta) + (rand.Float64() * (2 * randomDelta))
+	return time.Duration(backoffTime)
 }
 
 // revokeIDFunc is invoked when a given ID is expired

@@ -12,7 +12,6 @@ import (
 
 // Job is an interface for jobs used with this job manager
 type Job interface {
-	GetID() string
 	Execute() error
 	OnFailure(err error)
 }
@@ -37,7 +36,6 @@ func (w *worker) start() {
 				w.wg.Done()
 				return
 			case job := <-w.jobCh:
-				w.logger.Trace("starting new job", "worker", w.name, "job_id", job.GetID())
 				err := job.Execute()
 				if err != nil {
 					job.OnFailure(err)

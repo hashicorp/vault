@@ -1,12 +1,11 @@
 package dependency
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
-
-	"encoding/json"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -118,6 +117,16 @@ func leaseCheckWait(s *Secret) time.Duration {
 			if expData, err := expInterface.(json.Number).Int64(); err == nil {
 				base = int(expData - time.Now().Unix())
 				log.Printf("[DEBUG] Found certificate and set lease duration to %d seconds", base)
+			}
+		}
+	}
+
+	// Handle if this is an AppRole secret_id with no lease
+	if _, ok := s.Data["secret_id"]; ok && s.LeaseID == "" {
+		if expInterface, ok := s.Data["secret_id_ttl"]; ok {
+			if ttlData, err := expInterface.(json.Number).Int64(); err == nil && ttlData > 0 {
+				base = int(ttlData) + 1
+				log.Printf("[DEBUG] Found approle secret_id and non-zero secret_id_ttl, setting lease duration to %d seconds", base)
 			}
 		}
 	}

@@ -51,7 +51,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/consul-template v0.25.2-0.20210123001810-166043f8559d
+	github.com/hashicorp/consul-template v0.25.2
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
@@ -96,6 +96,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.6-0.20210201204049-4f0f91977798
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210127185906-6b455835fa8c
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
