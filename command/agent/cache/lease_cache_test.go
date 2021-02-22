@@ -69,7 +69,7 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	return lc
 }
 
-func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, storage cacheboltdb.Storage) *LeaseCache {
+func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, storage *cacheboltdb.BoltStorage) *LeaseCache {
 	t.Helper()
 
 	client, err := api.NewClient(api.DefaultConfig())

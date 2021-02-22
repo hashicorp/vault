@@ -216,3 +216,47 @@ func TestDBFileExists(t *testing.T) {
 	}
 
 }
+
+func Test_SetGetKey(t *testing.T) {
+	testCases := []struct {
+		name        string
+		keyToSet    []byte
+		expectedKey []byte
+	}{
+		{
+			name:        "normal set and get",
+			keyToSet:    []byte("test key"),
+			expectedKey: []byte("test key"),
+		},
+		{
+			name:        "no key set",
+			keyToSet:    nil,
+			expectedKey: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			path, err := ioutils.TempDir("", "bolt-test")
+			require.NoError(t, err)
+			defer os.RemoveAll(path)
+
+			b, err := NewBoltStorage(&BoltStorageConfig{
+				Path:       path,
+				RootBucket: tc.name,
+				Logger:     hclog.Default(),
+				Encrypter:  getTestEncrypter(t),
+			})
+			require.NoError(t, err)
+			defer b.Close()
+
+			if tc.keyToSet != nil {
+				err := b.SetKey(tc.keyToSet)
+				require.NoError(t, err)
+			}
+			gotKey, err := b.GetKey()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedKey, gotKey)
+		})
+	}
+}

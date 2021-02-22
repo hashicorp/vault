@@ -87,7 +87,7 @@ type LeaseCache struct {
 	inflightCache *gocache.Cache
 
 	// ps is the persistent storage for tokens and leases
-	ps cacheboltdb.Storage
+	ps *cacheboltdb.BoltStorage
 
 	// shuttingDown is used to determine if cache needs to be evicted or not
 	// when the context is cancelled
@@ -101,7 +101,7 @@ type LeaseCacheConfig struct {
 	BaseContext context.Context
 	Proxier     Proxier
 	Logger      hclog.Logger
-	Storage     cacheboltdb.Storage
+	Storage     *cacheboltdb.BoltStorage
 }
 
 type inflightRequest struct {
@@ -162,7 +162,7 @@ func (c *LeaseCache) SetShuttingDown(in bool) {
 
 // SetPersistentStorage is a setter for the persistent storage field in
 // LeaseCache
-func (c *LeaseCache) SetPersistentStorage(storageIn cacheboltdb.Storage) {
+func (c *LeaseCache) SetPersistentStorage(storageIn *cacheboltdb.BoltStorage) {
 	c.ps = storageIn
 }
 
@@ -941,7 +941,7 @@ func (c *LeaseCache) Flush() error {
 // Restore loads the cachememdb from the persistent storage passed in. Loads
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
-func (c *LeaseCache) Restore(storage cacheboltdb.Storage) error {
+func (c *LeaseCache) Restore(storage *cacheboltdb.BoltStorage) error {
 	// Process tokens first
 	tokens, err := storage.GetByType(cacheboltdb.TokenType)
 	if err != nil {
