@@ -69,6 +69,7 @@
           @defaultShown={{attr.options.defaultShown}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{or (get @model attr.name) defaultDisplay}}
+          @isLink={{eq attr.name 'database'}}
         />
       {{/if}}
     {{/let}}
