@@ -706,11 +706,17 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 		return nil
 	}
 
+	m.stopPending(leaseID)
+	originalEntry := le.Clone()
+
 	le.ExpireTime = time.Now()
 	// TODO: potential race with concurrent renew.
 	if err := m.persistEntry(ctx, le); err != nil {
+		// Restart old timer
+		m.updatePending(originalEntry)
 		return err
 	}
+	// Start timer to fire immediately
 	m.updatePending(le)
 
 	return nil
@@ -938,7 +944,7 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 
 // Renew is used to renew a secret using the given leaseID
 // and a renew interval. The increment may be ignored.
-func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment time.Duration) (renewResp *logical.Response, renewError error) {
 	defer metrics.MeasureSince([]string{"expire", "renew"}, time.Now())
 
 	// Load the entry
@@ -978,9 +984,19 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	if !m.stopPending(leaseID) {
 		return nil, fmt.Errorf("renew disallowed because of concurrent renew or revoke")
 	}
+
+	originalLease := le.Clone()
+
 	// Ensure that the expiration timer is always restarted, even if
-	// renewal fails due to a later cause.
-	defer m.updatePending(le)
+	// renewal fails due to a later cause. On an error, re-insert the
+	// original lease saved above.
+	defer func() {
+		if renewErr != nil || renewResp == nil {
+			m.updatePending(originalLease)
+		} else {
+			m.updatePending(le)
+		}
+	}()
 
 	// Attempt to renew the entry
 	resp, err := m.renewEntry(ctx, le, increment)
@@ -2171,6 +2187,24 @@ type leaseEntry struct {
 	Version int `json:"version"`
 
 	namespace *namespace.Namespace
+}
+
+// Returns a shallow clone; data, secret, and auth are shared with original object.
+func (le *leaseEntry) Clone() *leaseEntry {
+	return &leaseEntry{
+		LeaseID:         le.leaseID,
+		ClientToken:     le.ClientToken,
+		ClientTokenType: le.ClientTokenType,
+		Path:            le.Path,
+		Data:            le.Data,
+		Secret:          le.Secret,
+		Auth:            le.Auth,
+		IssueType:       le.IssueTime,
+		ExpireTime:      le.ExireTime,
+		LastRenewalTime: le.LastRenewalTime,
+		Version:         le.Version,
+		namespace:       le.namespace,
+	}
 }
 
 // encode is used to JSON encode the lease entry
