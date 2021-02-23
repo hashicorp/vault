@@ -42,7 +42,6 @@ export const DEFAULTS = {
 
 export const FEATURE_MACHINE_STEPS = {
   secrets: {
-    connection: 4, // ARG TODO unsure just making this up for now
     encryption: 5,
     secret: {
       list: 4,
