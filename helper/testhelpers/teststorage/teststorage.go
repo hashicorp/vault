@@ -83,9 +83,10 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 	return MakeRaftBackendWithConf(t, coreIdx, logger, nil)
 }
 
-func MakeRaftWithAutopilotBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeRaftWithHCLAutopilotBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	extraConfAutopilotValue := os.Getenv("TEST_AUTOPILOT_HCL_VALUE")
 	extraConf := map[string]string{
-		"autopilot": `[{"cleanup_dead_servers":true,"last_contact_threshold":"5s","max_trailing_logs":500,"min_quorum":3,"server_stabilization_time":"10s"}]`,
+		"autopilot": extraConfAutopilotValue,
 	}
 	return MakeRaftBackendWithConf(t, coreIdx, logger, extraConf)
 }
@@ -206,9 +207,9 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	}
 }
 
-func RaftBackendWithAutopilotSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
+func RaftBackendWithHCLAutopilotSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
-	opts.PhysicalFactory = MakeRaftWithAutopilotBackend
+	opts.PhysicalFactory = MakeRaftWithHCLAutopilotBackend
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
 			testhelpers.RaftClusterJoinNodes(t, c)

@@ -164,22 +164,28 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Fields: map[string]*framework.FieldSchema{
 				"cleanup_dead_servers": {
-					Type: framework.TypeBool,
+					Type:        framework.TypeBool,
+					Description: "Controls whether to remove dead servers from the Raft peer list periodically or when a new server joins.",
 				},
 				"last_contact_threshold": {
-					Type: framework.TypeDurationSecond,
+					Type:        framework.TypeDurationSecond,
+					Description: "Limit on the amount of time a server can go without leader contact before being considered unhealthy.",
 				},
 				"last_contact_failure_threshold": {
-					Type: framework.TypeDurationSecond,
+					Type:        framework.TypeDurationSecond,
+					Description: "Limit on the amount of time a server can go without leader contact before being considered failed. This takes effect only when cleanup_dead_servers is set.",
 				},
 				"max_trailing_logs": {
-					Type: framework.TypeInt,
+					Type:        framework.TypeInt,
+					Description: "Amount of entries in the Raft Log that a server can be behind before being considered unhealthy.",
 				},
 				"min_quorum": {
-					Type: framework.TypeInt,
+					Type:        framework.TypeInt,
+					Description: "Minimum number of servers allowed in a cluster before autopilot can prune dead servers. This should at least be 3.",
 				},
 				"server_stabilization_time": {
-					Type: framework.TypeDurationSecond,
+					Type:        framework.TypeDurationSecond,
+					Description: "Minimum amount of time a server must be in a stable, healthy state before it can be added to the cluster as a voter.",
 				},
 			},
 
