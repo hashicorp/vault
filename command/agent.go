@@ -589,8 +589,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:        c.logger.Named("template.server"),
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
-			VaultConf:     config.Vault,
-			TemplateRetry: config.TemplateRetry,
+			AgentConfig:   config,
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})

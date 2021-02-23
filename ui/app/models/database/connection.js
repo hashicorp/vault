@@ -79,10 +79,9 @@ export default Model.extend({
     subText: 'x509 CA file for validating the certificate presented by the MongoDB server.',
     editType: 'file',
   }),
-  root_rotation_statements: attr('string', {
+  root_rotation_statements: attr({
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
-    editType: 'json',
-    theme: 'hashi short',
+    editType: 'stringArray',
     defaultShown: 'Default',
   }),
 
@@ -115,15 +114,7 @@ export default Model.extend({
 
   // for both create and edit fields
   mainFields: computed('plugin_name', function() {
-    return [
-      'plugin_name',
-      'name',
-      'connection_url',
-      'verify_connection',
-      'password_policy',
-      'pluginConfig',
-      'root_rotation_statements',
-    ];
+    return ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy', 'pluginConfig'];
   }),
 
   showAttrs: computed('plugin_name', function() {
@@ -133,13 +124,15 @@ export default Model.extend({
       'connection_url',
       'write_concern',
       'verify_connection',
-      'root_rotation_statements',
       'allowed_roles',
     ];
     return expandAttributeMeta(this, f);
   }),
 
   pluginFieldGroups: computed('plugin_name', function() {
+    if (!this.plugin_name) {
+      return null;
+    }
     let groups = [{ default: ['username', 'password', 'write_concern'] }];
     // TODO: Get plugin options based on plugin
     groups.push({

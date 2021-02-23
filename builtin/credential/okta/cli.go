@@ -38,6 +38,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		"password": password,
 	}
 
+	// Okta totp code
+	if totp, ok := m["totp"]; ok {
+		data["totp"] = totp
+	}
+
+	// Legacy MFA support
 	mfa_method, ok := m["method"]
 	if ok {
 		data["method"] = mfa_method

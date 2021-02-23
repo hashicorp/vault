@@ -28,7 +28,7 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
-    {{else if (and alwaysRender defaultShown)}}
+    {{else if (and (not value) (and alwaysRender defaultShown))}}
       {{defaultShown}}
     {{else}}
       {{#if (eq type 'array')}}
@@ -42,6 +42,8 @@
           @viewAll={{viewAll}}
           @wildcardLabel={{wildcardLabel}}
         />
+      {{else if isLink}}
+        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{value.[0]}} >{{value}}</LinkTo>
       {{else}}
         {{#if tooltipText}}
           <ToolTip

@@ -8,7 +8,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 const getErrorMessage = errors => {
   let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
-  if (errors?.join(' ').indexOf('failed to verify')) {
+  if (errorMessage.indexOf('failed to verify') >= 0) {
     errorMessage =
       'There was a verification error for this connection. Check the Vault logs for more information.';
   }
