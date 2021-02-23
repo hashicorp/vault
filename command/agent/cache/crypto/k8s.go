@@ -11,7 +11,6 @@ import (
 
 var _ KeyManager = (*KubeEncryptionKey)(nil)
 
-// KubeEncryptionKey TODO
 type KubeEncryptionKey struct {
 	renewable bool
 	wrapper   *aead.Wrapper
@@ -70,7 +69,7 @@ func (k *KubeEncryptionKey) Renewer(ctx context.Context, ch chan struct{}) error
 }
 
 // Encrypt takes plaintext values and encrypts them using the store key and additional
-// data. The ciphertext and nonce are returned and should be used for decryption.
+// data. For Kubernetes the AAD should be the service account JWT.
 func (k *KubeEncryptionKey) Encrypt(ctx context.Context, plaintext, aad []byte) ([]byte, error) {
 	blob, err := k.wrapper.Encrypt(ctx, plaintext, aad)
 	if err != nil {
@@ -79,7 +78,8 @@ func (k *KubeEncryptionKey) Encrypt(ctx context.Context, plaintext, aad []byte) 
 	return blob.Ciphertext, nil
 }
 
-// Decrypt takes ciphertext and nonce values and returns the decrypted value.
+// Decrypt takes ciphertext and AAD values and returns the decrypted value. For Kubernetes the AAD
+// should be the service account JWT.
 func (k *KubeEncryptionKey) Decrypt(ctx context.Context, ciphertext, aad []byte) ([]byte, error) {
 	blob := &wrapping.EncryptedBlobInfo{
 		Ciphertext: ciphertext,
