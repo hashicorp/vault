@@ -12,9 +12,14 @@ func TestCrypto_KubernetesNewKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
 
-	key := k8sKey.Get()
+	key := k8sKey.GetKey()
 	if key == nil {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", key))
+	}
+
+	persistentKey := k8sKey.GetPersistentKey()
+	if persistentKey == nil {
+		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", persistentKey))
 	}
 
 	plaintextInput := []byte("test")
@@ -54,12 +59,16 @@ func TestCrypto_KubernetesExistingKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
 
-	key := k8sKey.Get()
+	key := k8sKey.GetKey()
 	if key == nil {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", key))
 	}
 
-	if string(key) != string(rootKey) {
+	persistentKey := k8sKey.GetPersistentKey()
+	if persistentKey == nil {
+		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", persistentKey))
+	}
+	if string(persistentKey) != string(rootKey) {
 		t.Fatalf(fmt.Sprintf("expected keys to be the same, they weren't: expected: %s, got: %s", rootKey, key))
 	}
 
@@ -91,9 +100,9 @@ func TestCrypto_KubernetesPassGeneratedKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
 
-	firstKey := k8sFirstKey.Get()
-	if firstKey == nil {
-		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", firstKey))
+	firstPersistentKey := k8sFirstKey.GetKey()
+	if firstPersistentKey == nil {
+		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", firstPersistentKey))
 	}
 
 	plaintextInput := []byte("test")
@@ -108,17 +117,17 @@ func TestCrypto_KubernetesPassGeneratedKey(t *testing.T) {
 		t.Fatalf("ciphertext nil, it shouldn't be")
 	}
 
-	k8sLoadedKey, err := NewK8s(firstKey)
+	k8sLoadedKey, err := NewK8s(firstPersistentKey)
 	if err != nil {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
 
-	loadedKey := k8sLoadedKey.Get()
+	loadedKey := k8sLoadedKey.GetPersistentKey()
 	if loadedKey == nil {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", loadedKey))
 	}
 
-	if string(loadedKey) != string(firstKey) {
+	if string(loadedKey) != string(firstPersistentKey) {
 		t.Fatalf(fmt.Sprintf("keys do not match"))
 	}
 

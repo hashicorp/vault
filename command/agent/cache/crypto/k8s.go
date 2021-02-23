@@ -50,9 +50,15 @@ func NewK8s(existingKey []byte) (*KubeEncryptionKey, error) {
 	return k, nil
 }
 
-// Get returns the encryption key in a format optimized for storage.
+// GetKey returns the encryption key in a format optimized for storage.
 // In k8s we store the key as is, so just return the key stored.
-func (k *KubeEncryptionKey) Get() []byte {
+func (k *KubeEncryptionKey) GetKey() []byte {
+	return k.wrapper.GetKeyBytes()
+}
+
+// GetPersistentKey returns the key which should be stored in the persisent
+// cache. In k8s we store the key as is, so just return the key stored.
+func (k *KubeEncryptionKey) GetPersistentKey() []byte {
 	return k.wrapper.GetKeyBytes()
 }
 

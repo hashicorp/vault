@@ -8,9 +8,9 @@ const (
 	KeyID = "root"
 )
 
-// KeyManager TODO
 type KeyManager interface {
-	Get() []byte
+	GetKey() []byte
+	GetPersistentKey() []byte
 	Renewable() bool
 	Renewer(context.Context, chan struct{}) error
 	Encrypt(context.Context, []byte, []byte) ([]byte, error)
