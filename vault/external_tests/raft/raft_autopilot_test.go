@@ -58,7 +58,6 @@ func raftClusterWithAutopilot(t testing.TB, joinNodes bool) *vault.TestCluster {
 }
 
 func TestRaft_Autopilot(t *testing.T) {
-	// Start the raft cluster with a single node with inmem cluster layer
 	cluster := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
@@ -124,4 +123,37 @@ func TestRaft_Autopilot(t *testing.T) {
 	if !success {
 		t.Fatalf("servers failed to promote followers; state: %#v", state)
 	}
+}
+
+func TestRaft_Autopilot_DefaultConfiguration(t *testing.T) {
+	// Create a single node raft cluster with autopilot enabled
+	cluster := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		InmemCluster:         true,
+		EnableAutopilot:      true,
+	})
+	defer cluster.Cleanup()
+
+	// Check that autopilot execution state is running
+	client := cluster.Cores[0].Client
+	state, err := client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.Equal(t, state.ExecutionStatus, api.AutopilotRunning)
+	require.Equal(t, state.Healthy, true)
+
+	configCheckFunc := func(config *api.AutopilotConfig) {
+		conf, err := client.Sys().RaftAutopilotConfiguration()
+		require.NoError(t, err)
+		require.Equal(t, conf, config)
+	}
+
+	config := &api.AutopilotConfig{
+		CleanupDeadServers:          false,
+		LastContactFailureThreshold: 24 * time.Hour,
+		LastContactThreshold:        10 * time.Second,
+		MaxTrailingLogs:             1000,
+		MinQuorum:                   3,
+		ServerStabilizationTime:     10 * time.Second,
+	}
+	configCheckFunc(config)
 }
