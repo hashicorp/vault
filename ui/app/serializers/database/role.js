@@ -25,8 +25,14 @@ export default RESTSerializer.extend({
       database = [payload.data.db_name];
     }
     // Copy to singular for MongoDB
-    const creation_statement = payload.data.creation_statements[0];
-    const revocation_statement = payload.data.revocation_statements[0];
+    let creation_statement = '';
+    let revocation_statement = '';
+    if (payload.data.creation_statements) {
+      creation_statement = payload.data.creation_statements[0];
+    }
+    if (payload.data.revocation_statements) {
+      revocation_statement = payload.data.revocation_statements[0];
+    }
     return {
       id: payload.secret,
       name: payload.secret,

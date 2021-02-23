@@ -226,9 +226,29 @@
   {{#each @model.showAttrs as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
-        <InfoTableRow @alwaysRender={{true}} @defaultShown={{attr.options.defaultShown}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get @model attr.name)}} />
+        <InfoTableRow 
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get @model attr.name)}} 
+        />
+      {{else if (eq attr.type "array")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{or (get @model attr.name) defaultDisplay}}
+          @isLink={{true}}
+          @queryParam="role"
+          @type={{attr.type}}
+        />
       {{else}}
-        <InfoTableRow @alwaysRender={{true}} @defaultShown={{attr.options.defaultShown}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{or (get @model attr.name) defaultDisplay}} />
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{or (get @model attr.name) defaultDisplay}}
+        />
       {{/if}}
     {{/let}}
   {{/each}}
