@@ -2,6 +2,7 @@ package rafttests
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -84,6 +85,79 @@ func TestRaft_Autopilot_ServerStabilization(t *testing.T) {
 	}
 }
 
+func TestRaft_Autopilot_ServerStabilization_UnstableServer(t *testing.T) {
+	cluster := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		InmemCluster:         true,
+		EnableAutopilot:      true,
+	})
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	config, err := client.Sys().RaftAutopilotConfiguration()
+	require.NoError(t, err)
+
+	// Wait for 110% of the stabilization time to add nodes
+	waitTime := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
+	time.Sleep(waitTime)
+
+	joinFunc := func(core *vault.TestClusterCore) {
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
+			{
+				LeaderAPIAddr: client.Address(),
+				TLSConfig:     cluster.Cores[0].TLSConfig,
+				Retry:         true,
+			},
+		}, false)
+		require.NoError(t, err)
+		time.Sleep(2 * time.Second)
+		cluster.UnsealCore(t, core)
+	}
+
+	joinFunc(cluster.Cores[1])
+	joinFunc(cluster.Cores[2])
+
+	// Stabilization time + twice the reconcile time is what we will be waiting for.
+	// Keep the server unstable till then.
+	waitTime = time.Duration(float64(config.ServerStabilizationTime)) + 20*time.Second
+
+	deadline := time.Now().Add(waitTime)
+	success := false
+	healthy := false
+
+	var state *api.AutopilotState
+	for time.Now().Before(deadline) {
+		testhelpers.EnsureCoreSealed(t, cluster.Cores[1])
+		cluster.UnsealCore(t, cluster.Cores[1])
+
+		state, err := client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+
+		fmt.Printf("=====vishal: state: %# v\n", pretty.Formatter(state))
+
+		if state.Healthy {
+			healthy = true
+		}
+
+		if healthy && len(state.Voters) == 3 {
+			success = true
+			break
+		}
+
+		time.Sleep(2 * time.Second)
+	}
+
+	fmt.Printf("=====vishal: final state: %# v\n", pretty.Formatter(state))
+	fmt.Printf("=====vishal: success: %#v\n", success)
+	if !healthy {
+		t.Fatalf("servers failed to become healthy ")
+	}
+
+	if !success {
+		t.Fatalf("servers failed to promote followers; state: %#v\n", state)
+	}
+}
+
 func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 	cluster := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
@@ -140,7 +214,7 @@ func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 	configCheckFunc(config)
 
 	leaderCore = cluster.Cores[0]
-	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
+	testhelpers.EnsureCoreSealed(t, leaderCore)
 	cluster.UnsealCore(t, leaderCore)
 	vault.TestWaitActive(t, leaderCore.Core)
 	configCheckFunc(config)

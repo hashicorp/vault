@@ -125,13 +125,11 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// MarkFollowerAsDead marks the node represented by the nodeID as dead. This
+// markFollowerAsDead marks the node represented by the nodeID as dead. This
 // implies that Vault will indicate that the node "left" the cluster, the next
-// time autopilot asks for known servers.
-func (s *FollowerStates) MarkFollowerAsDead(nodeID string) {
-	s.l.Lock()
-	defer s.l.Unlock()
-
+// time autopilot asks for known servers. This function should be called with
+// the FollowerStates lock held.
+func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 	state, ok := s.followers[nodeID]
 	if !ok {
 		return
@@ -490,18 +488,32 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		case <-b.followerHeartbeatTrackerStopCh:
 			return
 		case <-ticker.C:
+			markingCandidatePresent := false
 			b.l.RLock()
 			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.LastContactFailureThreshold != 0 {
 				b.followerStates.l.RLock()
-				followers := b.followerStates.followers
-				b.followerStates.l.RUnlock()
-				for id, state := range followers {
+				for _, state := range b.followerStates.followers {
 					now := time.Now()
 					threshold := state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)
 					if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
-						b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "last_contact_failure_threshold", b.autopilotConfig.LastContactFailureThreshold, "now", now, "threshold", threshold)
-						b.followerStates.MarkFollowerAsDead(id)
+						markingCandidatePresent = true
 					}
+				}
+				b.followerStates.l.RUnlock()
+
+				if markingCandidatePresent {
+					// Switch locks and check again
+					b.followerStates.l.Lock()
+					for id, state := range b.followerStates.followers {
+						now := time.Now()
+						threshold := state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)
+						if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
+							b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "last_contact_failure_threshold", b.autopilotConfig.LastContactFailureThreshold, "now", now, "threshold", threshold)
+							b.followerStates.markFollowerAsDead(id)
+
+						}
+					}
+					b.followerStates.l.Unlock()
 				}
 			}
 			b.l.RUnlock()
