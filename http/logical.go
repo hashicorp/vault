@@ -515,12 +515,7 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 		}
 	}
 
-	if !core.IsDRSecondary() {
-		walState := req.ResponseState()
-		if walState != nil {
-			w.Header().Set(VaultIndexHeaderName, core.WALHeader(walState))
-		}
-	}
+	adjustResponse(core, w, req)
 
 	// Respond
 	respondOk(w, ret)
