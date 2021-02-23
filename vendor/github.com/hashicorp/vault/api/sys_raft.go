@@ -2,10 +2,14 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 
 	"github.com/mitchellh/mapstructure"
 
@@ -28,6 +32,40 @@ type RaftJoinRequest struct {
 	LeaderClientKey  string `json:"leader_client_key"`
 	Retry            bool   `json:"retry"`
 	NonVoter         bool   `json:"non_voter"`
+}
+
+// AutopilotConfig is used for querying/setting the Autopilot configuration.
+type AutopilotConfig struct {
+	CleanupDeadServers          bool          `json:"cleanup_dead_servers" mapstructure:"cleanup_dead_servers"`
+	LastContactThreshold        time.Duration `json:"last_contact_threshold" mapstructure:"-"`
+	LastContactFailureThreshold time.Duration `json:"last_contact_failure_threshold" mapstructure:"-"`
+	MaxTrailingLogs             uint64        `json:"max_trailing_logs" mapstructure:"max_trailing_logs"`
+	MinQuorum                   uint          `json:"min_quorum" mapstructure:"min_quorum"`
+	ServerStabilizationTime     time.Duration `json:"server_stabilization_time" mapstructure:"-"`
+}
+
+// UnmarshalJSON parses the autopilot config JSON blob
+func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
+	var data interface{}
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
+
+	conf := data.(map[string]interface{})
+	if err = mapstructure.WeakDecode(conf, ac); err != nil {
+		return err
+	}
+	if ac.LastContactThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_threshold"]); err != nil {
+		return err
+	}
+	if ac.LastContactFailureThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_failure_threshold"]); err != nil {
+		return err
+	}
+	if ac.ServerStabilizationTime, err = parseutil.ParseDurationSecond(conf["server_stabilization_time"]); err != nil {
+		return err
+	}
+	return nil
 }
 
 // AutopilotExecutionStatus represents the current status of the autopilot background go routines
@@ -224,6 +262,43 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 	var result AutopilotState
 	err = mapstructure.Decode(secret.Data, &result)
 	if err != nil {
+		return nil, err
+	}
+
+	return &result, err
+}
+
+// RaftAutopilotConfiguration fetches the autopilot config.
+func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	var result AutopilotConfig
+	if err = mapstructure.Decode(secret.Data, &result); err != nil {
+		return nil, err
+	}
+	if result.LastContactThreshold, err = parseutil.ParseDurationSecond(secret.Data["last_contact_threshold"]); err != nil {
+		return nil, err
+	}
+	if result.LastContactFailureThreshold, err = parseutil.ParseDurationSecond(secret.Data["last_contact_failure_threshold"]); err != nil {
+		return nil, err
+	}
+	if result.ServerStabilizationTime, err = parseutil.ParseDurationSecond(secret.Data["server_stabilization_time"]); err != nil {
 		return nil, err
 	}
 

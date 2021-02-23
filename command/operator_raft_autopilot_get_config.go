@@ -1,7 +1,6 @@
 package command
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -66,31 +65,27 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	resp, err := client.Logical().Read("sys/storage/raft/autopilot/configuration")
+	config, err := client.Sys().RaftAutopilotConfiguration()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	if resp == nil {
+	if config == nil {
 		return 0
 	}
 
 	if Format(c.UI) != "table" {
-		return OutputData(c.UI, resp)
+		return OutputData(c.UI, config)
 	}
 
 	entries := []string{"Key | Value"}
-	entries = append(entries, fmt.Sprintf("%s | %t", "Cleanup Dead Servers", resp.Data["cleanup_dead_servers"]))
-	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Threshold", resp.Data["last_contact_threshold"]))
-	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Failure Threshold", resp.Data["last_contact_failure_threshold"]))
-	entries = append(entries, fmt.Sprintf("%s | %s", "Server Stabilization Time", resp.Data["server_stabilization_time"]))
-
-	minQuorum, _ := resp.Data["min_quorum"].(json.Number).Int64()
-	entries = append(entries, fmt.Sprintf("%s | %d", "Min Quorum", minQuorum))
-
-	maxTrailingLogs, _ := resp.Data["max_trailing_logs"].(json.Number).Int64()
-	entries = append(entries, fmt.Sprintf("%s | %d", "Max Trailing Logs", maxTrailingLogs))
+	entries = append(entries, fmt.Sprintf("%s | %t", "Cleanup Dead Servers", config.CleanupDeadServers))
+	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Threshold", config.LastContactThreshold.String()))
+	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Failure Threshold", config.LastContactFailureThreshold.String()))
+	entries = append(entries, fmt.Sprintf("%s | %s", "Server Stabilization Time", config.ServerStabilizationTime.String()))
+	entries = append(entries, fmt.Sprintf("%s | %d", "Min Quorum", config.MinQuorum))
+	entries = append(entries, fmt.Sprintf("%s | %d", "Max Trailing Logs", config.MaxTrailingLogs))
 
 	return OutputData(c.UI, entries)
 }
