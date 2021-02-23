@@ -195,7 +195,7 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 	buffer.WriteString("Servers:\n")
 	var outputs []mapOutput
 	for id, srv := range state.Servers {
-		outputs = append(outputs, mapOutput{key: id, value: formatServer(&srv)})
+		outputs = append(outputs, mapOutput{key: id, value: formatServer(srv)})
 	}
 
 	sort.Slice(outputs, func(i, j int) bool {

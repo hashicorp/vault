@@ -79,14 +79,14 @@ const (
 
 // AutopilotState represents the response of the raft autopilot state API
 type AutopilotState struct {
-	ExecutionStatus            AutopilotExecutionStatus   `mapstructure:"execution_status"`
-	Healthy                    bool                       `mapstructure:"healthy"`
-	FailureTolerance           int                        `mapstructure:"failure_tolerance"`
-	OptimisticFailureTolerance int                        `mapstructure:"optimistic_failure_tolerance"`
-	Servers                    map[string]AutopilotServer `mapstructure:"servers"`
-	Leader                     string                     `mapstructure:"leader"`
-	Voters                     []string                   `mapstructure:"voters"`
-	NonVoters                  []string                   `mapstructure:"non_voters"`
+	ExecutionStatus            AutopilotExecutionStatus    `mapstructure:"execution_status"`
+	Healthy                    bool                        `mapstructure:"healthy"`
+	FailureTolerance           int                         `mapstructure:"failure_tolerance"`
+	OptimisticFailureTolerance int                         `mapstructure:"optimistic_failure_tolerance"`
+	Servers                    map[string]*AutopilotServer `mapstructure:"servers"`
+	Leader                     string                      `mapstructure:"leader"`
+	Voters                     []string                    `mapstructure:"voters"`
+	NonVoters                  []string                    `mapstructure:"non_voters"`
 }
 
 // AutopilotServer represents the server blocks in the response of the raft
