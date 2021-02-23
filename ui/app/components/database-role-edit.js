@@ -80,12 +80,10 @@ export default class DatabaseRoleEdit extends Component {
         }
       })
       .catch(e => {
-        const errorMessage = e.message || e.errors?.join('. ');
+        const errorMessage = e.errors?.join('. ') || e.message;
         this.flashMessages.danger(
           errorMessage || 'Could not save the role. Please check Vault logs for more information.'
         );
-      })
-      .finally(() => {
         this.loading = false;
       });
   }
