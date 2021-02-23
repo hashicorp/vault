@@ -512,8 +512,8 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 // StopAutopilot stops a running autopilot instance. This should only be called
 // on the active node.
 func (b *RaftBackend) StopAutopilot() {
-	b.l.RLock()
-	defer b.l.RUnlock()
+	b.l.Lock()
+	defer b.l.Unlock()
 
 	if b.autopilot == nil {
 		return
