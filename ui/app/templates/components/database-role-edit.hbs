@@ -104,8 +104,8 @@
               <button
                 data-test-secret-save
                 type="submit"
-                {{!-- disabled={{this.missingFields}} // TODO validation --}}
-                class="button is-primary"
+                disabled={{this.loading}}
+                class="button is-primary {{if this.loading 'is-loading'}}"
               >
                 Save
               </button>
