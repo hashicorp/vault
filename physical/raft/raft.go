@@ -276,7 +276,6 @@ func EnsurePath(path string, dir bool) error {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-
 	path := os.Getenv(EnvVaultRaftPath)
 	if path == "" {
 		pathFromConfig, ok := conf["path"]

@@ -89,7 +89,9 @@ func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
-		AutopilotHCLValue:    `[{"cleanup_dead_servers":true,"last_contact_threshold":"500s","last_contact_failure_threshold":"500h","max_trailing_logs":500,"min_quorum":500,"server_stabilization_time":"500s"}]`,
+		PhysicalFactoryConfig: map[string]interface{}{
+			"autopilot": `[{"cleanup_dead_servers":true,"last_contact_threshold":"500s","last_contact_failure_threshold":"500h","max_trailing_logs":500,"min_quorum":500,"server_stabilization_time":"500s"}]`,
+		},
 	})
 	defer cluster.Cleanup()
 
@@ -123,7 +125,9 @@ func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
-		AutopilotHCLValue:    `[{"cleanup_dead_servers":true,"server_stabilization_time":"500s"}]`,
+		PhysicalFactoryConfig: map[string]interface{}{
+			"autopilot": `[{"cleanup_dead_servers":true,"server_stabilization_time":"500s"}]`,
+		},
 	})
 	defer cluster.Cleanup()
 

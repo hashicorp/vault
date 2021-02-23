@@ -34,10 +34,10 @@ import (
 )
 
 type RaftClusterOpts struct {
-	DisableFollowerJoins bool
-	InmemCluster         bool
-	EnableAutopilot      bool
-	AutopilotHCLValue    string
+	DisableFollowerJoins  bool
+	InmemCluster          bool
+	EnableAutopilot       bool
+	PhysicalFactoryConfig map[string]interface{}
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -67,15 +67,8 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		opts.ClusterLayers = inmemCluster
 	}
 
-	switch {
-	case ropts.AutopilotHCLValue != "":
-		envVar := "TEST_AUTOPILOT_HCL_VALUE"
-		os.Setenv(envVar, ropts.AutopilotHCLValue)
-		defer os.Unsetenv(envVar)
-		teststorage.RaftBackendWithHCLAutopilotSetup(conf, &opts)
-	default:
-		teststorage.RaftBackendSetup(conf, &opts)
-	}
+	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
+	teststorage.RaftBackendSetup(conf, &opts)
 
 	if ropts.DisableFollowerJoins {
 		opts.SetupFunc = nil

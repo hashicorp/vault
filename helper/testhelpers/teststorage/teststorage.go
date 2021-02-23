@@ -79,19 +79,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return MakeRaftBackendWithConf(t, coreIdx, logger, nil)
-}
-
-func MakeRaftWithHCLAutopilotBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	extraConfAutopilotValue := os.Getenv("TEST_AUTOPILOT_HCL_VALUE")
-	extraConf := map[string]string{
-		"autopilot": extraConfAutopilotValue,
-	}
-	return MakeRaftBackendWithConf(t, coreIdx, logger, extraConf)
-}
-
-func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]string) *vault.PhysicalBackendBundle {
+func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
@@ -110,7 +98,10 @@ func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extr
 		"performance_multiplier": "8",
 	}
 	for k, v := range extraConf {
-		conf[k] = v
+		val, ok := v.(string)
+		if ok {
+			conf[k] = val
+		}
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
@@ -128,11 +119,11 @@ func MakeRaftBackendWithConf(t testing.T, coreIdx int, logger hclog.Logger, extr
 // RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
 // and the physical.Backend provided in PhysicalBackendBundler as the storage
 // backend.
-func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 		// Call the factory func to create the storage backend
 		physFactory := SharedPhysicalFactory(f)
-		bundle := physFactory(t, coreIdx, logger)
+		bundle := physFactory(t, coreIdx, logger, nil)
 
 		// This can happen if a shared physical backend is called on a non-0th core.
 		if bundle == nil {
@@ -145,14 +136,14 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 		}
 
 		nodeID := fmt.Sprintf("core-%d", coreIdx)
-		conf := map[string]string{
+		backendConf := map[string]string{
 			"path":                   raftDir,
 			"node_id":                nodeID,
 			"performance_multiplier": "8",
 		}
 
 		// Create and set the HA Backend
-		raftBackend, err := raft.NewRaftBackend(conf, logger)
+		raftBackend, err := raft.NewRaftBackend(backendConf, logger)
 		if err != nil {
 			bundle.Cleanup()
 			t.Fatal(err)
@@ -174,8 +165,8 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 
 type PhysicalBackendBundler func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle
 
-func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 		if coreIdx == 0 {
 			return f(t, logger)
 		}
@@ -199,17 +190,6 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	conf.DisablePerformanceStandby = true
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = MakeRaftBackend
-	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
-		if opts.NumCores != 1 {
-			testhelpers.RaftClusterJoinNodes(t, c)
-			time.Sleep(15 * time.Second)
-		}
-	}
-}
-
-func RaftBackendWithHCLAutopilotSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-	opts.KeepStandbysSealed = true
-	opts.PhysicalFactory = MakeRaftWithHCLAutopilotBackend
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
 			testhelpers.RaftClusterJoinNodes(t, c)

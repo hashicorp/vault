@@ -437,7 +437,7 @@ func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
 		hclConfig.ServerStabilizationTime = defaultConfig.ServerStabilizationTime
 	}
 
-	return configs[0], nil
+	return hclConfig, nil
 }
 
 func (b *RaftBackend) AutopilotDisabled() bool {
