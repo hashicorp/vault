@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"math/rand"
 	"net/http"
 	"time"
@@ -330,10 +329,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 // calculateBackoff determines a new backoff duration that is roughly twice
 // the previous value, capped to a max value, with a measure of randomness.
 func calculateBackoff(previous, max time.Duration) time.Duration {
-	maxBackoff := math.Min(2*previous.Seconds(), max.Seconds())
-	backoff := 0.75*maxBackoff + 0.25*rand.Float64()*maxBackoff
+	maxBackoff := 2 * previous
+	if maxBackoff > max {
+		maxBackoff = max
+	}
 
-	// Scale to ms to avoid truncation errors for < 2s values, which can
-	// leave the backoff stuck at 1s on successive calls.
-	return time.Duration(backoff*1000) * time.Millisecond
+	// Trim a random amount (0-25%) off the doubled duration
+	trim := rand.Int63n(int64(maxBackoff) / 4)
+	return maxBackoff - time.Duration(trim)
 }
