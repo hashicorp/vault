@@ -126,6 +126,7 @@ func TestLoadConfigFile(t *testing.T) {
 				Config: map[string]interface{}{
 					"role": "foobar",
 				},
+				MaxBackoff: 0,
 			},
 			Sinks: []*Sink{
 				{
@@ -178,9 +179,10 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
-				Type:      "aws",
-				MountPath: "auth/aws",
-				WrapTTL:   5 * time.Minute,
+				Type:       "aws",
+				MountPath:  "auth/aws",
+				WrapTTL:    5 * time.Minute,
+				MaxBackoff: 2 * time.Minute,
 				Config: map[string]interface{}{
 					"role": "foobar",
 				},
