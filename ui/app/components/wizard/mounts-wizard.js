@@ -20,8 +20,8 @@ export default Component.extend({
   nextStep: computed('fullNextStep', function() {
     return this.fullNextStep.split('.').lastObject;
   }),
+  needsConnection: equal('mountSubtype', 'database'),
   needsEncryption: equal('mountSubtype', 'transit'),
-  meep: equal('mountSubtype', 'database'),
   stepComponent: alias('wizard.stepComponent'),
   detailsComponent: computed('currentMachine', 'mountSubtype', function() {
     let suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';

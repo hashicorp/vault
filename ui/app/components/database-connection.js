@@ -30,8 +30,6 @@ export default class DatabaseConnectionEdit extends Component {
   constructor() {
     super(...arguments);
     if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
-      // when wizard featureState === details display secrets-connection
-      // when wizard featureState === connection display secrets-connection-show
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
     }
   }
