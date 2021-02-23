@@ -1,0 +1,3 @@
+```release-node:improvement
+core: Do not hold expiration manager's mutex while performing storage operations.
+```
