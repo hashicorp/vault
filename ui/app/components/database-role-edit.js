@@ -9,6 +9,18 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
+  @service wizard;
+
+  constructor() {
+    super(...arguments);
+    console.log(this.wizard.featureState, 'featureSTate');
+    if (
+      this.wizard.featureState === 'displayConnection' ||
+      this.wizard.featureState === 'displayRoleDatabase'
+    ) {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
+    }
+  }
 
   @tracked loading = false;
 

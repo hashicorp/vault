@@ -108,7 +108,11 @@
                 disabled={{this.loading}}
                 class="button is-primary {{if this.loading 'is-loading'}}"
               >
-                Save
+                {{#if (eq @mode 'create')}}
+                  Create role
+                {{else}}
+                  Save
+                {{/if}}
               </button>
             {{else}}
               <ToolTip @horizontalPosition="left" as |T|>
