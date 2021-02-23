@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kr/pretty"
+
 	"github.com/hashicorp/vault/api"
 
 	"github.com/stretchr/testify/require"
@@ -275,7 +277,7 @@ func TestRaft_Autopilot_State(t *testing.T) {
 		require.Equal(t, state.Servers[nodeID].NodeStatus, "alive")
 		require.Equal(t, state.Servers[nodeID].Status, "non-voter")
 
-		// Wait till the stabilization period is over and give a buffer of 2 seconds
+		// Wait till the stabilization period is over
 		waitTime = time.Duration(float64(config.ServerStabilizationTime))
 		time.Sleep(waitTime)
 		state, err = client.Sys().RaftAutopilotState()
@@ -290,7 +292,7 @@ func TestRaft_Autopilot_State(t *testing.T) {
 		for time.Now().Before(deadline) {
 			state, err = client.Sys().RaftAutopilotState()
 			require.NoError(t, err)
-			if state.Servers[nodeID].Healthy {
+			if state.Servers[nodeID].Status == "voter" {
 				failed = false
 				break
 			}
@@ -298,9 +300,12 @@ func TestRaft_Autopilot_State(t *testing.T) {
 		}
 
 		if failed {
-			t.Fatalf("failed to promote node: id: %#v: state:%#v\n", nodeID, state)
+			t.Fatalf("failed to promote node: id: %#v: state:%# v\n", nodeID, pretty.Formatter(state))
 		}
 	}
 	joinAndStabilizeFunc(cluster.Cores[1], "core-1", 2)
 	joinAndStabilizeFunc(cluster.Cores[2], "core-2", 3)
+	state, err = client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
 }
