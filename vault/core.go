@@ -1999,10 +1999,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 	}
 
-	if err := c.setupHeaderHMACKey(ctx); err != nil {
-		return err
-	}
-
 	c.clusterParamsLock.Lock()
 	defer c.clusterParamsLock.Unlock()
 	if err := startReplication(c); err != nil {
@@ -2732,22 +2728,6 @@ func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
 }
 
-func (c *Core) MissingRequiredState(raw []string) bool {
-	if c.IsDRSecondary() {
-		return false
-	}
-	for _, r := range raw {
-		walState, err := ParseRequiredState(r, c.headerHMACKey())
-		if err != nil {
-			return false
-		}
-		if !c.HasWALState(walState) {
-			return true
-		}
-	}
-	return false
-}
-
 func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
@@ -2791,112 +2771,4 @@ func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,
 	}, nil
-}
-
-// clusterid is always that of the receiving node except when a request is
-// forwarded to another cluster.  Primary nodes only care about localindex,
-// secondary nodes care only about replicatedindex when clusterid is not their
-// own, otherwise they care about both.
-func (c *Core) HasWALState(required *logical.WALState) bool {
-	myClusterID := c.clusterID.Load()
-	if myClusterID == "" {
-		return false
-	}
-	sameClusterID := required.ClusterID == myClusterID
-
-	var ourLocalIndex, ourReplicatedIndex uint64
-	if c.perfStandby {
-		ourLocalIndex = LastRemoteWAL(c)
-	} else {
-		ourLocalIndex = LastWAL(c)
-	}
-
-	if !c.IsPerfSecondary() {
-		if !sameClusterID {
-			// If we're a primary and this isn't our clusterID, the state means
-			// nothing to us.
-			return true
-		}
-
-		// If we're a primary we don't care about replicatedIndex.
-		return ourLocalIndex >= required.LocalIndex
-	}
-
-	if c.PerfStandby() {
-		ourReplicatedIndex = LastRemoteUpstreamWAL(c)
-	} else {
-		ourReplicatedIndex = LastRemoteWAL(c)
-	}
-
-	satisfied := ourReplicatedIndex >= required.ReplicatedIndex
-	if sameClusterID {
-		satisfied = satisfied && ourLocalIndex >= required.LocalIndex
-	}
-
-	return satisfied
-}
-
-func (c *Core) WALHeader(walState *logical.WALState) string {
-	key := c.headerHMACKey()
-	if key == nil {
-		// It's possible that the primary active node hasn't yet written the
-		// key to storage (maybe it's not yet upgraded), or that it has but
-		// we haven't yet seen it.
-		return ""
-	}
-	stateStr := fmt.Sprintf("v1:%s:%d:%d", walState.ClusterID, walState.LocalIndex, walState.ReplicatedIndex)
-	hm := hmac.New(sha256.New, key)
-	hm.Write([]byte(stateStr))
-	header := stateStr + ":" + hex.EncodeToString(hm.Sum(nil))
-	return base64.StdEncoding.EncodeToString([]byte(header))
-}
-
-func (c *Core) loadHeaderHMACKey(ctx context.Context) error {
-	ent, err := c.barrier.Get(ctx, indexHeaderHMACKeyPath)
-	if err != nil {
-		return err
-	}
-
-	if ent != nil {
-		c.IndexHeaderHMACKey.Store(ent.Value)
-	}
-	return nil
-}
-
-func (c *Core) setupHeaderHMACKey(ctx context.Context) error {
-	if c.IsPerfSecondary() || c.IsDRSecondary() {
-		return c.loadHeaderHMACKey(ctx)
-	}
-
-	ent, err := c.barrier.Get(ctx, indexHeaderHMACKeyPath)
-	if err != nil {
-		return err
-	}
-
-	if ent != nil {
-		c.IndexHeaderHMACKey.Store(ent.Value)
-		return nil
-	}
-
-	key, err := uuid.GenerateUUID()
-	if err != nil {
-		return err
-	}
-	err = c.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   indexHeaderHMACKeyPath,
-		Value: []byte(key),
-	})
-	if err != nil {
-		return err
-	}
-	c.IndexHeaderHMACKey.Store([]byte(key))
-	return nil
-}
-
-func (c *Core) headerHMACKey() []byte {
-	key := c.IndexHeaderHMACKey.Load()
-	if key == nil {
-		return nil
-	}
-	return key.([]byte)
 }

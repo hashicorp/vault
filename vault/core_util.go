@@ -162,3 +162,7 @@ func (c *Core) namespaceByPath(path string) *namespace.Namespace {
 func (c *Core) AllowForwardingViaHeader() bool {
 	return false
 }
+
+func (c *Core) MissingRequiredState(raw []string) bool {
+	return false
+}
