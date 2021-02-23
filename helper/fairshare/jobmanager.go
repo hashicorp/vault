@@ -113,8 +113,8 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 
 	j.queues[queueID].PushBack(job)
 	j.totalJobs++
-	metrics.AddSampleWithLabels([]string{j.name, "job_queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
-	metrics.SetGauge([]string{j.name, "total_jobs"}, float32(j.totalJobs))
+	metrics.AddSampleWithLabels([]string{j.name, "job_manager", "queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
+	metrics.SetGauge([]string{j.name, "job_manager", "total_jobs"}, float32(j.totalJobs))
 }
 
 // GetCurrentJobCount returns the total number of pending jobs in the job manager
@@ -166,8 +166,8 @@ func (j *JobManager) getNextJob() Job {
 	out := j.queues[queueID].Remove(jobElement)
 
 	j.totalJobs--
-	metrics.AddSampleWithLabels([]string{j.name, "job_queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
-	metrics.SetGauge([]string{j.name, "total_jobs"}, float32(j.totalJobs))
+	metrics.AddSampleWithLabels([]string{j.name, "job_manager", "queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
+	metrics.SetGauge([]string{j.name, "job_manager", "total_jobs"}, float32(j.totalJobs))
 
 	if j.queues[queueID].Len() == 0 {
 		j.removeLastQueueAccessed()

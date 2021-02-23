@@ -169,7 +169,7 @@ func (r *revocationJob) GetID() string {
 
 func (r *revocationJob) Execute() error {
 	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", r.nsID}})
-	metrics.MeasureSinceWithLabels([]string{"expire", "time_in_queue"}, r.startTime, []metrics.Label{{"namespace", r.nsID}})
+	metrics.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{{"namespace", r.nsID}})
 
 	// don't start the timer until the revocation is being executed
 	revokeCtx, cancel := context.WithTimeout(r.nsCtx, DefaultMaxRequestDuration)
