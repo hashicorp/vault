@@ -67,10 +67,14 @@ type boolPtrValue struct {
 	target *BoolPtr
 }
 
-func newBoolPtrValue(target *BoolPtr) *boolPtrValue {
-	return &boolPtrValue{
+func newBoolPtrValue(def *bool, target *BoolPtr) *boolPtrValue {
+	val := &boolPtrValue{
 		target: target,
 	}
+	if def != nil {
+		val.target.Set(strconv.FormatBool(*def))
+	}
+	return val
 }
 
 func (b *boolPtrValue) IsBoolFlag() bool {
@@ -91,6 +95,7 @@ type BoolPtrVar struct {
 	Aliases    []string
 	Usage      string
 	Hidden     bool
+	Default    *bool
 	Target     *BoolPtr
 	Completion complete.Predictor
 }
@@ -100,7 +105,7 @@ func (f *FlagSet) BoolPtrVar(i *BoolPtrVar) {
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Value:      newBoolPtrValue(i.Target),
+		Value:      newBoolPtrValue(i.Default, i.Target),
 		Completion: i.Completion,
 	})
 }
