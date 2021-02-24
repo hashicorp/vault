@@ -16,8 +16,6 @@ package ram
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
-	"reflect"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider"
@@ -28,25 +26,10 @@ type Client struct {
 	sdk.Client
 }
 
-// SetClientProperty Set Property by Reflect
-func SetClientProperty(client *Client, propertyName string, propertyValue interface{}) {
-	v := reflect.ValueOf(client).Elem()
-	if v.FieldByName(propertyName).IsValid() && v.FieldByName(propertyName).CanSet() {
-		v.FieldByName(propertyName).Set(reflect.ValueOf(propertyValue))
-	}
-}
-
-// SetEndpointDataToClient Set EndpointMap and ENdpointType
-func SetEndpointDataToClient(client *Client) {
-	SetClientProperty(client, "EndpointMap", GetEndpointMap())
-	SetClientProperty(client, "EndpointType", GetEndpointType())
-}
-
 // NewClient creates a sdk client with environment variables
 func NewClient() (client *Client, err error) {
 	client = &Client{}
 	err = client.Init()
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -61,7 +44,6 @@ func NewClientWithProvider(regionId string, providers ...provider.Provider) (cli
 		pc = provider.NewProviderChain(providers)
 	}
 	err = client.InitWithProviderChain(regionId, pc)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -70,7 +52,6 @@ func NewClientWithProvider(regionId string, providers ...provider.Provider) (cli
 func NewClientWithOptions(regionId string, config *sdk.Config, credential auth.Credential) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithOptions(regionId, config, credential)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -79,7 +60,6 @@ func NewClientWithOptions(regionId string, config *sdk.Config, credential auth.C
 func NewClientWithAccessKey(regionId, accessKeyId, accessKeySecret string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithAccessKey(regionId, accessKeyId, accessKeySecret)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -88,7 +68,6 @@ func NewClientWithAccessKey(regionId, accessKeyId, accessKeySecret string) (clie
 func NewClientWithStsToken(regionId, stsAccessKeyId, stsAccessKeySecret, stsToken string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithStsToken(regionId, stsAccessKeyId, stsAccessKeySecret, stsToken)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -97,7 +76,6 @@ func NewClientWithStsToken(regionId, stsAccessKeyId, stsAccessKeySecret, stsToke
 func NewClientWithRamRoleArn(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithRamRoleArn(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -106,7 +84,6 @@ func NewClientWithRamRoleArn(regionId string, accessKeyId, accessKeySecret, role
 func NewClientWithRamRoleArnAndPolicy(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithRamRoleArnAndPolicy(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -115,7 +92,6 @@ func NewClientWithRamRoleArnAndPolicy(regionId string, accessKeyId, accessKeySec
 func NewClientWithEcsRamRole(regionId string, roleName string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithEcsRamRole(regionId, roleName)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -124,6 +100,5 @@ func NewClientWithEcsRamRole(regionId string, roleName string) (client *Client, 
 func NewClientWithRsaKeyPair(regionId string, publicKeyId, privateKey string, sessionExpiration int) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithRsaKeyPair(regionId, publicKeyId, privateKey, sessionExpiration)
-	SetEndpointDataToClient(client)
 	return
 }

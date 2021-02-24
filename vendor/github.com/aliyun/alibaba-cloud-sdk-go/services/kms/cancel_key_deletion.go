@@ -21,6 +21,7 @@ import (
 )
 
 // CancelKeyDeletion invokes the kms.CancelKeyDeletion API synchronously
+// api document: https://help.aliyun.com/api/kms/cancelkeydeletion.html
 func (client *Client) CancelKeyDeletion(request *CancelKeyDeletionRequest) (response *CancelKeyDeletionResponse, err error) {
 	response = CreateCancelKeyDeletionResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) CancelKeyDeletion(request *CancelKeyDeletionRequest) (resp
 }
 
 // CancelKeyDeletionWithChan invokes the kms.CancelKeyDeletion API asynchronously
+// api document: https://help.aliyun.com/api/kms/cancelkeydeletion.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) CancelKeyDeletionWithChan(request *CancelKeyDeletionRequest) (<-chan *CancelKeyDeletionResponse, <-chan error) {
 	responseChan := make(chan *CancelKeyDeletionResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) CancelKeyDeletionWithChan(request *CancelKeyDeletionReques
 }
 
 // CancelKeyDeletionWithCallback invokes the kms.CancelKeyDeletion API asynchronously
+// api document: https://help.aliyun.com/api/kms/cancelkeydeletion.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) CancelKeyDeletionWithCallback(request *CancelKeyDeletionRequest, callback func(response *CancelKeyDeletionResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -86,7 +91,6 @@ func CreateCancelKeyDeletionRequest() (request *CancelKeyDeletionRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "CancelKeyDeletion", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

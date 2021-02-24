@@ -16,11 +16,8 @@ package kms
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
-	"reflect"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider"
 )
 
 // Client is the sdk client struct, each func corresponds to an OpenAPI
@@ -28,40 +25,10 @@ type Client struct {
 	sdk.Client
 }
 
-// SetClientProperty Set Property by Reflect
-func SetClientProperty(client *Client, propertyName string, propertyValue interface{}) {
-	v := reflect.ValueOf(client).Elem()
-	if v.FieldByName(propertyName).IsValid() && v.FieldByName(propertyName).CanSet() {
-		v.FieldByName(propertyName).Set(reflect.ValueOf(propertyValue))
-	}
-}
-
-// SetEndpointDataToClient Set EndpointMap and ENdpointType
-func SetEndpointDataToClient(client *Client) {
-	SetClientProperty(client, "EndpointMap", GetEndpointMap())
-	SetClientProperty(client, "EndpointType", GetEndpointType())
-}
-
 // NewClient creates a sdk client with environment variables
 func NewClient() (client *Client, err error) {
 	client = &Client{}
 	err = client.Init()
-	SetEndpointDataToClient(client)
-	return
-}
-
-// NewClientWithProvider creates a sdk client with providers
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
-func NewClientWithProvider(regionId string, providers ...provider.Provider) (client *Client, err error) {
-	client = &Client{}
-	var pc provider.Provider
-	if len(providers) == 0 {
-		pc = provider.DefaultChain
-	} else {
-		pc = provider.NewProviderChain(providers)
-	}
-	err = client.InitWithProviderChain(regionId, pc)
-	SetEndpointDataToClient(client)
 	return
 }
 
@@ -70,60 +37,45 @@ func NewClientWithProvider(regionId string, providers ...provider.Provider) (cli
 func NewClientWithOptions(regionId string, config *sdk.Config, credential auth.Credential) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithOptions(regionId, config, credential)
-	SetEndpointDataToClient(client)
 	return
 }
 
 // NewClientWithAccessKey is a shortcut to create sdk client with accesskey
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
+// usage: https://help.aliyun.com/document_detail/66217.html
 func NewClientWithAccessKey(regionId, accessKeyId, accessKeySecret string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithAccessKey(regionId, accessKeyId, accessKeySecret)
-	SetEndpointDataToClient(client)
 	return
 }
 
 // NewClientWithStsToken is a shortcut to create sdk client with sts token
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
+// usage: https://help.aliyun.com/document_detail/66222.html
 func NewClientWithStsToken(regionId, stsAccessKeyId, stsAccessKeySecret, stsToken string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithStsToken(regionId, stsAccessKeyId, stsAccessKeySecret, stsToken)
-	SetEndpointDataToClient(client)
 	return
 }
 
 // NewClientWithRamRoleArn is a shortcut to create sdk client with ram roleArn
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
+// usage: https://help.aliyun.com/document_detail/66222.html
 func NewClientWithRamRoleArn(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithRamRoleArn(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName)
-	SetEndpointDataToClient(client)
-	return
-}
-
-// NewClientWithRamRoleArn is a shortcut to create sdk client with ram roleArn and policy
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
-func NewClientWithRamRoleArnAndPolicy(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy string) (client *Client, err error) {
-	client = &Client{}
-	err = client.InitWithRamRoleArnAndPolicy(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy)
-	SetEndpointDataToClient(client)
 	return
 }
 
 // NewClientWithEcsRamRole is a shortcut to create sdk client with ecs ram role
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
+// usage: https://help.aliyun.com/document_detail/66223.html
 func NewClientWithEcsRamRole(regionId string, roleName string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithEcsRamRole(regionId, roleName)
-	SetEndpointDataToClient(client)
 	return
 }
 
 // NewClientWithRsaKeyPair is a shortcut to create sdk client with rsa key pair
-// usage: https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/docs/2-Client-EN.md
+// attention: rsa key pair auth is only Japan regions available
 func NewClientWithRsaKeyPair(regionId string, publicKeyId, privateKey string, sessionExpiration int) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithRsaKeyPair(regionId, publicKeyId, privateKey, sessionExpiration)
-	SetEndpointDataToClient(client)
 	return
 }

@@ -81,8 +81,8 @@ type GetSecurityPreferenceRequest struct {
 // GetSecurityPreferenceResponse is the response struct for api GetSecurityPreference
 type GetSecurityPreferenceResponse struct {
 	*responses.BaseResponse
-	RequestId          string                                    `json:"RequestId" xml:"RequestId"`
-	SecurityPreference SecurityPreferenceInGetSecurityPreference `json:"SecurityPreference" xml:"SecurityPreference"`
+	RequestId          string             `json:"RequestId" xml:"RequestId"`
+	SecurityPreference SecurityPreference `json:"SecurityPreference" xml:"SecurityPreference"`
 }
 
 // CreateGetSecurityPreferenceRequest creates a request to invoke GetSecurityPreference API
@@ -90,7 +90,7 @@ func CreateGetSecurityPreferenceRequest() (request *GetSecurityPreferenceRequest
 	request = &GetSecurityPreferenceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetSecurityPreference", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetSecurityPreference", "", "")
 	return
 }
 

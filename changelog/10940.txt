@@ -1,0 +1,3 @@
+```release-note:improvement
+vendor: Upgrade vulnerable dependencies to fix versions. 
+```

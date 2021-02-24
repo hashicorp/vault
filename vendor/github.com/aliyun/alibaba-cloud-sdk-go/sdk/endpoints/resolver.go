@@ -70,6 +70,8 @@ func Resolve(param *ResolveParam) (endpoint string, err error) {
 func getAllResolvers() []Resolver {
 	once.Do(func() {
 		resolvers = []Resolver{
+			&SimpleHostResolver{},
+			&MappingResolver{},
 			&LocationResolver{},
 			&LocalRegionalResolver{},
 			&LocalGlobalResolver{},

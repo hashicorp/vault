@@ -83,8 +83,8 @@ type CreateGroupRequest struct {
 // CreateGroupResponse is the response struct for api CreateGroup
 type CreateGroupResponse struct {
 	*responses.BaseResponse
-	RequestId string             `json:"RequestId" xml:"RequestId"`
-	Group     GroupInCreateGroup `json:"Group" xml:"Group"`
+	RequestId string `json:"RequestId" xml:"RequestId"`
+	Group     Group  `json:"Group" xml:"Group"`
 }
 
 // CreateCreateGroupRequest creates a request to invoke CreateGroup API
@@ -92,7 +92,7 @@ func CreateCreateGroupRequest() (request *CreateGroupRequest) {
 	request = &CreateGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateGroup", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateGroup", "", "")
 	return
 }
 

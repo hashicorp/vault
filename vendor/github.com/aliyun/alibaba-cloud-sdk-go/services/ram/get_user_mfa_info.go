@@ -82,8 +82,8 @@ type GetUserMFAInfoRequest struct {
 // GetUserMFAInfoResponse is the response struct for api GetUserMFAInfo
 type GetUserMFAInfoResponse struct {
 	*responses.BaseResponse
-	RequestId string                    `json:"RequestId" xml:"RequestId"`
-	MFADevice MFADeviceInGetUserMFAInfo `json:"MFADevice" xml:"MFADevice"`
+	RequestId string    `json:"RequestId" xml:"RequestId"`
+	MFADevice MFADevice `json:"MFADevice" xml:"MFADevice"`
 }
 
 // CreateGetUserMFAInfoRequest creates a request to invoke GetUserMFAInfo API
@@ -91,7 +91,7 @@ func CreateGetUserMFAInfoRequest() (request *GetUserMFAInfoRequest) {
 	request = &GetUserMFAInfoRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetUserMFAInfo", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetUserMFAInfo", "", "")
 	return
 }
 

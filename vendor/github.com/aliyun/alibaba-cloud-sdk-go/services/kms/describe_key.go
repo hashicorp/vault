@@ -21,6 +21,7 @@ import (
 )
 
 // DescribeKey invokes the kms.DescribeKey API synchronously
+// api document: https://help.aliyun.com/api/kms/describekey.html
 func (client *Client) DescribeKey(request *DescribeKeyRequest) (response *DescribeKeyResponse, err error) {
 	response = CreateDescribeKeyResponse()
 	err = client.DoAction(request, response)
@@ -28,6 +29,8 @@ func (client *Client) DescribeKey(request *DescribeKeyRequest) (response *Descri
 }
 
 // DescribeKeyWithChan invokes the kms.DescribeKey API asynchronously
+// api document: https://help.aliyun.com/api/kms/describekey.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DescribeKeyWithChan(request *DescribeKeyRequest) (<-chan *DescribeKeyResponse, <-chan error) {
 	responseChan := make(chan *DescribeKeyResponse, 1)
 	errChan := make(chan error, 1)
@@ -50,6 +53,8 @@ func (client *Client) DescribeKeyWithChan(request *DescribeKeyRequest) (<-chan *
 }
 
 // DescribeKeyWithCallback invokes the kms.DescribeKey API asynchronously
+// api document: https://help.aliyun.com/api/kms/describekey.html
+// asynchronous document: https://help.aliyun.com/document_detail/66220.html
 func (client *Client) DescribeKeyWithCallback(request *DescribeKeyRequest, callback func(response *DescribeKeyResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
@@ -87,7 +92,6 @@ func CreateDescribeKeyRequest() (request *DescribeKeyRequest) {
 		RpcRequest: &requests.RpcRequest{},
 	}
 	request.InitWithApiInfo("Kms", "2016-01-20", "DescribeKey", "kms", "openAPI")
-	request.Method = requests.POST
 	return
 }
 

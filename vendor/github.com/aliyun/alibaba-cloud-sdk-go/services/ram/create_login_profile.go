@@ -76,8 +76,8 @@ func (client *Client) CreateLoginProfileWithCallback(request *CreateLoginProfile
 // CreateLoginProfileRequest is the request struct for api CreateLoginProfile
 type CreateLoginProfileRequest struct {
 	*requests.RpcRequest
-	PasswordResetRequired requests.Boolean `position:"Query" name:"PasswordResetRequired"`
 	Password              string           `position:"Query" name:"Password"`
+	PasswordResetRequired requests.Boolean `position:"Query" name:"PasswordResetRequired"`
 	MFABindRequired       requests.Boolean `position:"Query" name:"MFABindRequired"`
 	UserName              string           `position:"Query" name:"UserName"`
 }
@@ -85,8 +85,8 @@ type CreateLoginProfileRequest struct {
 // CreateLoginProfileResponse is the response struct for api CreateLoginProfile
 type CreateLoginProfileResponse struct {
 	*responses.BaseResponse
-	RequestId    string                           `json:"RequestId" xml:"RequestId"`
-	LoginProfile LoginProfileInCreateLoginProfile `json:"LoginProfile" xml:"LoginProfile"`
+	RequestId    string       `json:"RequestId" xml:"RequestId"`
+	LoginProfile LoginProfile `json:"LoginProfile" xml:"LoginProfile"`
 }
 
 // CreateCreateLoginProfileRequest creates a request to invoke CreateLoginProfile API
@@ -94,7 +94,7 @@ func CreateCreateLoginProfileRequest() (request *CreateLoginProfileRequest) {
 	request = &CreateLoginProfileRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateLoginProfile", "Ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateLoginProfile", "", "")
 	return
 }
 
