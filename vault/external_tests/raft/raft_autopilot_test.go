@@ -178,7 +178,7 @@ func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		PhysicalFactoryConfig: map[string]interface{}{
-			"autopilot": `[{"cleanup_dead_servers":true,"last_contact_threshold":"500s","left_server_last_contact_threshold":"500h","max_trailing_logs":500,"min_quorum":500,"server_stabilization_time":"500s"}]`,
+			"autopilot": `[{"cleanup_dead_servers":true,"last_contact_threshold":"500s","dead_server_last_contact_threshold":"500h","max_trailing_logs":500,"min_quorum":500,"server_stabilization_time":"500s"}]`,
 		},
 	})
 	defer cluster.Cleanup()
@@ -193,7 +193,7 @@ func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 
 	config := &api.AutopilotConfig{
 		CleanupDeadServers:             true,
-		LeftServerLastContactThreshold: 500 * time.Hour,
+		DeadServerLastContactThreshold: 500 * time.Hour,
 		LastContactThreshold:           500 * time.Second,
 		MaxTrailingLogs:                500,
 		MinQuorum:                      500,
@@ -219,7 +219,7 @@ func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
 	})
 	defer cluster.Cleanup()
 
-	config.LeftServerLastContactThreshold = 24 * time.Hour
+	config.DeadServerLastContactThreshold = 24 * time.Hour
 	config.LastContactThreshold = 10 * time.Second
 	config.MaxTrailingLogs = 1000
 	config.MinQuorum = 3
@@ -262,7 +262,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	// Ensure autopilot's default config has taken effect
 	config := &api.AutopilotConfig{
 		CleanupDeadServers:             false,
-		LeftServerLastContactThreshold: 24 * time.Hour,
+		DeadServerLastContactThreshold: 24 * time.Hour,
 		LastContactThreshold:           10 * time.Second,
 		MaxTrailingLogs:                1000,
 		MinQuorum:                      3,
@@ -273,7 +273,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	// Update config
 	writableConfig := map[string]interface{}{
 		"cleanup_dead_servers":               true,
-		"left_server_last_contact_threshold": "100h",
+		"dead_server_last_contact_threshold": "100h",
 		"last_contact_threshold":             "100s",
 		"max_trailing_logs":                  100,
 		"min_quorum":                         100,
@@ -283,7 +283,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 
 	// Ensure update has taken effect
 	config.CleanupDeadServers = true
-	config.LeftServerLastContactThreshold = 100 * time.Hour
+	config.DeadServerLastContactThreshold = 100 * time.Hour
 	config.LastContactThreshold = 100 * time.Second
 	config.MaxTrailingLogs = 100
 	config.MinQuorum = 100
@@ -292,14 +292,14 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 
 	// Update some fields and leave the rest as it is.
 	writableConfig = map[string]interface{}{
-		"left_server_last_contact_threshold": "50h",
+		"dead_server_last_contact_threshold": "50h",
 		"max_trailing_logs":                  50,
 		"server_stabilization_time":          "50s",
 	}
 	writeConfigFunc(writableConfig, false)
 
 	// Check update
-	config.LeftServerLastContactThreshold = 50 * time.Hour
+	config.DeadServerLastContactThreshold = 50 * time.Hour
 	config.MaxTrailingLogs = 50
 	config.ServerStabilizationTime = 50 * time.Second
 	configCheckFunc(config)
@@ -307,7 +307,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	// Check error case
 	writableConfig = map[string]interface{}{
 		"min_quorum":                         2,
-		"left_server_last_contact_threshold": "48h",
+		"dead_server_last_contact_threshold": "48h",
 	}
 	writeConfigFunc(writableConfig, true)
 	configCheckFunc(config)

@@ -171,7 +171,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 					Type:        framework.TypeDurationSecond,
 					Description: "Limit on the amount of time a server can go without leader contact before being considered unhealthy.",
 				},
-				"left_server_last_contact_threshold": {
+				"dead_server_last_contact_threshold": {
 					Type:        framework.TypeDurationSecond,
 					Description: "Limit on the amount of time a server can go without leader contact before being considered failed. This takes effect only when cleanup_dead_servers is set.",
 				},
@@ -438,7 +438,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.Operati
 			Data: map[string]interface{}{
 				"cleanup_dead_servers":               config.CleanupDeadServers,
 				"last_contact_threshold":             config.LastContactThreshold.String(),
-				"left_server_last_contact_threshold": config.LeftServerLastContactThreshold.String(),
+				"dead_server_last_contact_threshold": config.DeadServerLastContactThreshold.String(),
 				"max_trailing_logs":                  config.MaxTrailingLogs,
 				"min_quorum":                         config.MinQuorum,
 				"server_stabilization_time":          config.ServerStabilizationTime.String(),
@@ -472,9 +472,9 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			configClone.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
 			persist = true
 		}
-		leftServerLastContactThreshold, ok := d.GetOk("left_server_last_contact_threshold")
+		deadServerLastContactThreshold, ok := d.GetOk("dead_server_last_contact_threshold")
 		if ok {
-			configClone.LeftServerLastContactThreshold = time.Duration(leftServerLastContactThreshold.(int)) * time.Second
+			configClone.DeadServerLastContactThreshold = time.Duration(deadServerLastContactThreshold.(int)) * time.Second
 			persist = true
 		}
 		maxTrailingLogs, ok := d.GetOk("max_trailing_logs")

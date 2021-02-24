@@ -38,7 +38,7 @@ type RaftJoinRequest struct {
 type AutopilotConfig struct {
 	CleanupDeadServers             bool          `json:"cleanup_dead_servers" mapstructure:"cleanup_dead_servers"`
 	LastContactThreshold           time.Duration `json:"last_contact_threshold" mapstructure:"-"`
-	LeftServerLastContactThreshold time.Duration `json:"left_server_last_contact_threshold" mapstructure:"-"`
+	DeadServerLastContactThreshold time.Duration `json:"dead_server_last_contact_threshold" mapstructure:"-"`
 	MaxTrailingLogs                uint64        `json:"max_trailing_logs" mapstructure:"max_trailing_logs"`
 	MinQuorum                      uint          `json:"min_quorum" mapstructure:"min_quorum"`
 	ServerStabilizationTime        time.Duration `json:"server_stabilization_time" mapstructure:"-"`
@@ -59,7 +59,7 @@ func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 	if ac.LastContactThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_threshold"]); err != nil {
 		return err
 	}
-	if ac.LeftServerLastContactThreshold, err = parseutil.ParseDurationSecond(conf["left_server_last_contact_threshold"]); err != nil {
+	if ac.DeadServerLastContactThreshold, err = parseutil.ParseDurationSecond(conf["dead_server_last_contact_threshold"]); err != nil {
 		return err
 	}
 	if ac.ServerStabilizationTime, err = parseutil.ParseDurationSecond(conf["server_stabilization_time"]); err != nil {
@@ -295,7 +295,7 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	if result.LastContactThreshold, err = parseutil.ParseDurationSecond(secret.Data["last_contact_threshold"]); err != nil {
 		return nil, err
 	}
-	if result.LeftServerLastContactThreshold, err = parseutil.ParseDurationSecond(secret.Data["left_server_last_contact_threshold"]); err != nil {
+	if result.DeadServerLastContactThreshold, err = parseutil.ParseDurationSecond(secret.Data["dead_server_last_contact_threshold"]); err != nil {
 		return nil, err
 	}
 	if result.ServerStabilizationTime, err = parseutil.ParseDurationSecond(secret.Data["server_stabilization_time"]); err != nil {

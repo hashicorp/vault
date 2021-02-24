@@ -82,7 +82,7 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Run(args []string) int {
 	entries := []string{"Key | Value"}
 	entries = append(entries, fmt.Sprintf("%s | %t", "Cleanup Dead Servers", config.CleanupDeadServers))
 	entries = append(entries, fmt.Sprintf("%s | %s", "Last Contact Threshold", config.LastContactThreshold.String()))
-	entries = append(entries, fmt.Sprintf("%s | %s", "Left Server Last Contact Threshold", config.LeftServerLastContactThreshold.String()))
+	entries = append(entries, fmt.Sprintf("%s | %s", "Dead Server Last Contact Threshold", config.DeadServerLastContactThreshold.String()))
 	entries = append(entries, fmt.Sprintf("%s | %s", "Server Stabilization Time", config.ServerStabilizationTime.String()))
 	entries = append(entries, fmt.Sprintf("%s | %d", "Min Quorum", config.MinQuorum))
 	entries = append(entries, fmt.Sprintf("%s | %d", "Max Trailing Logs", config.MaxTrailingLogs))

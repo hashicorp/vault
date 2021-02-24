@@ -16,7 +16,7 @@ type OperatorRaftAutopilotSetConfigCommand struct {
 	*BaseCommand
 	flagCleanupDeadServers             bool
 	flagLastContactThreshold           time.Duration
-	flagLeftServerLastContactThreshold time.Duration
+	flagDeadServerLastContactThreshold time.Duration
 	flagMaxTrailingLogs                uint64
 	flagMinQuorum                      uint
 	flagServerStabilizationTime        time.Duration
@@ -54,8 +54,8 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Flags() *FlagSets {
 	})
 
 	f.DurationVar(&DurationVar{
-		Name:    "left-server-last-contact-threshold",
-		Target:  &c.flagLeftServerLastContactThreshold,
+		Name:    "dead-server-last-contact-threshold",
+		Target:  &c.flagDeadServerLastContactThreshold,
 		Default: 24 * time.Hour,
 	})
 
@@ -115,7 +115,7 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 		"max_trailing_logs":                  c.flagMaxTrailingLogs,
 		"min_quorum":                         c.flagMinQuorum,
 		"last_contact_threshold":             c.flagLastContactThreshold.String(),
-		"left_server_last_contact_threshold": c.flagLeftServerLastContactThreshold.String(),
+		"dead_server_last_contact_threshold": c.flagDeadServerLastContactThreshold.String(),
 		"server_stabilization_time":          c.flagServerStabilizationTime.String(),
 	})
 	if err != nil {
