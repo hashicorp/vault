@@ -145,12 +145,10 @@ func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 // Update the peer information in the follower states
 func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, nonVoter bool) {
 	state := FollowerState{
-		AppliedIndex: appliedIndex,
-		LastTerm:     term,
-		NonVoter:     nonVoter,
-	}
-	if appliedIndex > 0 {
-		state.LastHeartbeat = time.Now()
+		AppliedIndex:  appliedIndex,
+		LastTerm:      term,
+		NonVoter:      nonVoter,
+		LastHeartbeat: time.Now(),
 	}
 
 	s.l.Lock()
@@ -493,21 +491,27 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				b.followerStates.l.RLock()
 				for _, state := range b.followerStates.followers {
+					if state.LastHeartbeat.IsZero() || state.IsDead {
+						continue
+					}
 					now := time.Now()
-					threshold := state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)
-					if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
+					if now.After(state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)) {
 						markingCandidatePresent = true
 					}
 				}
 				b.followerStates.l.RUnlock()
 
+				// If marking a node as dead, switch read with a write lock and
+				// check the conditions again.
 				if markingCandidatePresent {
-					// Switch locks and check again
 					b.followerStates.l.Lock()
 					for id, state := range b.followerStates.followers {
+						if state.LastHeartbeat.IsZero() || state.IsDead {
+							continue
+						}
 						now := time.Now()
 						threshold := state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)
-						if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
+						if now.After(threshold) {
 							b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "dead_server_last_contact_threshold", b.autopilotConfig.DeadServerLastContactThreshold, "now", now, "threshold", threshold)
 							b.followerStates.markFollowerAsDead(id)
 
