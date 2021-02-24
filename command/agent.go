@@ -482,17 +482,17 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error("must specify persistent cache path")
 				return 1
 			}
-			// Set AAD based on crypto type
+			// Set AAD based on key protection type
 			var aad string
-			switch config.Cache.Persist.Crypto.Type {
+			switch config.Cache.Persist.Type {
 			case "kubernetes":
-				aad, err = cacheboltdb.GetServiceAccountJWT(config.Cache.Persist.Crypto.ServiceAccountPath)
+				aad, err = cacheboltdb.GetServiceAccountJWT(config.Cache.Persist.ServiceAccountPath)
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.Crypto.ServiceAccountPath, err))
+					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountPath, err))
 					return 1
 				}
 			default:
-				c.UI.Error(fmt.Sprintf("persistent crypto type %q not supported", config.Cache.Persist.Crypto.Type))
+				c.UI.Error(fmt.Sprintf("persistent key protection type %q not supported", config.Cache.Persist.Type))
 				return 1
 			}
 

@@ -22,13 +22,11 @@ auto_auth {
 cache {
 	use_auto_auth_token = true
 	persist = {
+		type = "kubernetes"
 		path = "/tmp/bolt-file.db"
 		keep_after_import = true
 		exit_on_err = true
-		crypto = {
-			type = "kubernetes"
-			service_account_path = "/tmp/serviceaccount"
-		}
+		service_account_path = "/tmp/serviceaccount"
 	}
 }
 

@@ -67,13 +67,11 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 			Persist: &Persist{
-				Path:            "/tmp/bolt-file.db",
-				KeepAfterImport: true,
-				ExitOnErr:       true,
-				Crypto: &Crypto{
-					Type:               "kubernetes",
-					ServiceAccountPath: "/tmp/serviceaccount",
-				},
+				Type:               "kubernetes",
+				Path:               "/tmp/bolt-file.db",
+				KeepAfterImport:    true,
+				ExitOnErr:          true,
+				ServiceAccountPath: "/tmp/serviceaccount",
 			},
 		},
 		Vault: &Vault{
@@ -463,12 +461,11 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	expected := &Config{
 		Cache: &Cache{
 			Persist: &Persist{
-				Path:            "/tmp/bolt-file.db",
-				KeepAfterImport: false,
-				ExitOnErr:       false,
-				Crypto: &Crypto{
-					Type: "kubernetes",
-				},
+				Type:               "kubernetes",
+				Path:               "/tmp/bolt-file.db",
+				KeepAfterImport:    false,
+				ExitOnErr:          false,
+				ServiceAccountPath: "",
 			},
 		},
 		SharedConfig: &configutil.SharedConfig{
@@ -488,27 +485,16 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Blank export should be the same as export = false
-	config, err = LoadConfig("./test-fixtures/config-cache-persist-blank.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
 }
 
-func TestLoadConfigFile_AgentCache_PersistCrypto(t *testing.T) {
-	_, err := LoadConfig("./test-fixtures/config-cache-crypto-missing.hcl")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	_, err = LoadConfig("./test-fixtures/config-cache-crypto-empty-type.hcl")
-	if err == nil {
-		t.Fatal("expected error")
+func TestLoadConfigFile_AgentCache_PersistMissingType(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/config-cache-persist-empty-type.hcl")
+	if err == nil || os.IsNotExist(err) {
+		t.Fatal("expected error or file is missing")
 	}
 }
 
