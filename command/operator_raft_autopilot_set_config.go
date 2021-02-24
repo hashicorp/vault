@@ -14,7 +14,7 @@ var _ cli.CommandAutocomplete = (*OperatorRaftAutopilotSetConfigCommand)(nil)
 
 type OperatorRaftAutopilotSetConfigCommand struct {
 	*BaseCommand
-	flagCleanupDeadServers             bool
+	flagCleanupDeadServers             BoolPtr
 	flagLastContactThreshold           time.Duration
 	flagDeadServerLastContactThreshold time.Duration
 	flagMaxTrailingLogs                uint64
@@ -41,40 +41,34 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Common Options")
 
-	f.BoolVar(&BoolVar{
-		Name:    "cleanup-dead-servers",
-		Target:  &c.flagCleanupDeadServers,
-		Default: false,
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   "cleanup-dead-servers",
+		Target: &c.flagCleanupDeadServers,
 	})
 
 	f.DurationVar(&DurationVar{
-		Name:    "last-contact-threshold",
-		Target:  &c.flagLastContactThreshold,
-		Default: 10 * time.Second,
+		Name:   "last-contact-threshold",
+		Target: &c.flagLastContactThreshold,
 	})
 
 	f.DurationVar(&DurationVar{
-		Name:    "dead-server-last-contact-threshold",
-		Target:  &c.flagDeadServerLastContactThreshold,
-		Default: 24 * time.Hour,
+		Name:   "dead-server-last-contact-threshold",
+		Target: &c.flagDeadServerLastContactThreshold,
 	})
 
 	f.Uint64Var(&Uint64Var{
-		Name:    "max-trailing-logs",
-		Target:  &c.flagMaxTrailingLogs,
-		Default: 1000,
+		Name:   "max-trailing-logs",
+		Target: &c.flagMaxTrailingLogs,
 	})
 
 	f.UintVar(&UintVar{
-		Name:    "min-quorum",
-		Target:  &c.flagMinQuorum,
-		Default: 3,
+		Name:   "min-quorum",
+		Target: &c.flagMinQuorum,
 	})
 
 	f.DurationVar(&DurationVar{
-		Name:    "server-stabilization-time",
-		Target:  &c.flagServerStabilizationTime,
-		Default: 10 * time.Second,
+		Name:   "server-stabilization-time",
+		Target: &c.flagServerStabilizationTime,
 	})
 
 	return set
@@ -110,14 +104,27 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
-		"cleanup_dead_servers":               c.flagCleanupDeadServers,
-		"max_trailing_logs":                  c.flagMaxTrailingLogs,
-		"min_quorum":                         c.flagMinQuorum,
-		"last_contact_threshold":             c.flagLastContactThreshold.String(),
-		"dead_server_last_contact_threshold": c.flagDeadServerLastContactThreshold.String(),
-		"server_stabilization_time":          c.flagServerStabilizationTime.String(),
-	})
+	data := make(map[string]interface{})
+	if c.flagCleanupDeadServers.IsSet() {
+		data["cleanup_dead_servers"] = c.flagCleanupDeadServers.Get()
+	}
+	if c.flagMaxTrailingLogs > 0 {
+		data["max_trailing_logs"] = c.flagMaxTrailingLogs
+	}
+	if c.flagMinQuorum > 0 {
+		data["min_quorum"] = c.flagMinQuorum
+	}
+	if c.flagLastContactThreshold > 0 {
+		data["last_contact_threshold"] = c.flagLastContactThreshold.String()
+	}
+	if c.flagDeadServerLastContactThreshold > 0 {
+		data["dead_server_last_contact_threshold"] = c.flagDeadServerLastContactThreshold.String()
+	}
+	if c.flagServerStabilizationTime > 0 {
+		data["server_stabilization_time"] = c.flagServerStabilizationTime.String()
+	}
+
+	secret, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", data)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
