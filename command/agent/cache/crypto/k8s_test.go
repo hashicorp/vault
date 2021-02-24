@@ -22,6 +22,10 @@ func TestCrypto_KubernetesNewKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", persistentKey))
 	}
 
+	if string(key) != string(persistentKey) {
+		t.Fatalf("keys don't match, they should: key: %s, persistentKey: %s", key, persistentKey)
+	}
+
 	plaintextInput := []byte("test")
 	aad := []byte("kubernetes")
 
@@ -64,12 +68,21 @@ func TestCrypto_KubernetesExistingKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", key))
 	}
 
+	if string(key) != string(rootKey) {
+		t.Fatalf(fmt.Sprintf("expected keys to be the same, they weren't: expected: %s, got: %s", rootKey, key))
+	}
+
 	persistentKey, _ := k8sKey.GetPersistentKey()
 	if persistentKey == nil {
-		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", persistentKey))
+		t.Fatalf("key is nil, it shouldn't be")
 	}
+
 	if string(persistentKey) != string(rootKey) {
-		t.Fatalf(fmt.Sprintf("expected keys to be the same, they weren't: expected: %s, got: %s", rootKey, key))
+		t.Fatalf(fmt.Sprintf("expected keys to be the same, they weren't: expected: %s, got: %s", rootKey, persistentKey))
+	}
+
+	if string(key) != string(persistentKey) {
+		t.Fatalf(fmt.Sprintf("expected keys to be the same, they weren't: %s %s", rootKey, persistentKey))
 	}
 
 	plaintextInput := []byte("test")
@@ -131,7 +144,7 @@ func TestCrypto_KubernetesPassGeneratedKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("keys do not match"))
 	}
 
-	plaintext, err := k8sFirstKey.Decrypt(nil, ciphertext, aad)
+	plaintext, err := k8sLoadedKey.Decrypt(nil, ciphertext, aad)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
