@@ -70,7 +70,7 @@ func (k *KubeEncryptionKey) Renewable() bool {
 
 // Renewer is used when the encryption key type is renewable. Since Kubernetes
 // keys aren't renewable, returning nothing.
-func (k *KubeEncryptionKey) Renewer(ctx context.Context, ch chan struct{}) error {
+func (k *KubeEncryptionKey) Renewer(ctx context.Context) error {
 	return nil
 }
 
