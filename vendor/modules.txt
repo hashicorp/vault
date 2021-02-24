@@ -793,7 +793,7 @@ github.com/mitchellh/copystructure
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-testing-interface v1.14.2-0.20210217184823-a52172cd2f64
 github.com/mitchellh/go-testing-interface
-# github.com/mitchellh/gox v0.4.0
+# github.com/mitchellh/gox v1.0.1
 github.com/mitchellh/gox
 # github.com/mitchellh/hashstructure v1.0.0
 github.com/mitchellh/hashstructure

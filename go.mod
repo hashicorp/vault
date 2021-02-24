@@ -129,7 +129,7 @@ require (
 	github.com/mitchellh/copystructure v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.2-0.20210217184823-a52172cd2f64
-	github.com/mitchellh/gox v0.4.0
+	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
