@@ -13,12 +13,15 @@
 }
 
 .empty-state-title {
-  white-space: nowrap;
   color: $grey;
   font-size: $size-4;
   font-weight: $font-weight-semibold;
   line-height: 1.2;
   margin-bottom: $spacing-xs;
+  // ARG TODO COME BACK
+  .no-wrap {
+    white-space: nowrap;
+  }
 }
 
 .empty-state-subTitle {
