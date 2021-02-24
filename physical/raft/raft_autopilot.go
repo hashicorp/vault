@@ -33,10 +33,10 @@ type AutopilotConfig struct {
 	// without leader contact before being considered unhealthy.
 	LastContactThreshold time.Duration `mapstructure:"-"`
 
-	// LastContactFailureThreshold is the limit on the amount of time a server
+	// LeftServerLastContactThreshold is the limit on the amount of time a server
 	// can go without leader contact before being considered failed. This takes
 	// effect only when CleanupDeadServers is set.
-	LastContactFailureThreshold time.Duration `mapstructure:"-"`
+	LeftServerLastContactThreshold time.Duration `mapstructure:"-"`
 
 	// MaxTrailingLogs is the amount of entries in the Raft Log that a server can
 	// be behind before being considered unhealthy.
@@ -55,12 +55,12 @@ type AutopilotConfig struct {
 // Clone returns a duplicate instance of AutopilotConfig with the exact same values.
 func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 	return &AutopilotConfig{
-		CleanupDeadServers:          ac.CleanupDeadServers,
-		LastContactThreshold:        ac.LastContactThreshold,
-		LastContactFailureThreshold: ac.LastContactFailureThreshold,
-		MaxTrailingLogs:             ac.MaxTrailingLogs,
-		MinQuorum:                   ac.MinQuorum,
-		ServerStabilizationTime:     ac.ServerStabilizationTime,
+		CleanupDeadServers:             ac.CleanupDeadServers,
+		LastContactThreshold:           ac.LastContactThreshold,
+		LeftServerLastContactThreshold: ac.LeftServerLastContactThreshold,
+		MaxTrailingLogs:                ac.MaxTrailingLogs,
+		MinQuorum:                      ac.MinQuorum,
+		ServerStabilizationTime:        ac.ServerStabilizationTime,
 	}
 
 }
@@ -68,12 +68,12 @@ func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 // MarshalJSON makes the autopilot config fields JSON compatible
 func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"cleanup_dead_servers":           ac.CleanupDeadServers,
-		"last_contact_threshold":         ac.LastContactThreshold.String(),
-		"last_contact_failure_threshold": ac.LastContactFailureThreshold.String(),
-		"max_trailing_logs":              ac.MaxTrailingLogs,
-		"min_quorum":                     ac.MinQuorum,
-		"server_stabilization_time":      ac.ServerStabilizationTime.String(),
+		"cleanup_dead_servers":               ac.CleanupDeadServers,
+		"last_contact_threshold":             ac.LastContactThreshold.String(),
+		"left_server_last_contact_threshold": ac.LeftServerLastContactThreshold.String(),
+		"max_trailing_logs":                  ac.MaxTrailingLogs,
+		"min_quorum":                         ac.MinQuorum,
+		"server_stabilization_time":          ac.ServerStabilizationTime.String(),
 	})
 }
 
@@ -92,7 +92,7 @@ func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 	if ac.LastContactThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_threshold"]); err != nil {
 		return err
 	}
-	if ac.LastContactFailureThreshold, err = parseutil.ParseDurationSecond(conf["last_contact_failure_threshold"]); err != nil {
+	if ac.LeftServerLastContactThreshold, err = parseutil.ParseDurationSecond(conf["left_server_last_contact_threshold"]); err != nil {
 		return err
 	}
 	if ac.ServerStabilizationTime, err = parseutil.ParseDurationSecond(conf["server_stabilization_time"]); err != nil {
@@ -390,12 +390,12 @@ func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
 
 func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 	return &AutopilotConfig{
-		CleanupDeadServers:          false,
-		LastContactThreshold:        10 * time.Second,
-		LastContactFailureThreshold: 24 * time.Hour,
-		MaxTrailingLogs:             1000,
-		MinQuorum:                   3,
-		ServerStabilizationTime:     10 * time.Second,
+		CleanupDeadServers:             false,
+		LastContactThreshold:           10 * time.Second,
+		LeftServerLastContactThreshold: 24 * time.Hour,
+		MaxTrailingLogs:                1000,
+		MinQuorum:                      3,
+		ServerStabilizationTime:        10 * time.Second,
 	}
 }
 
@@ -422,8 +422,8 @@ func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
 	if hclConfig.LastContactThreshold == 0 {
 		hclConfig.LastContactThreshold = defaultConfig.LastContactThreshold
 	}
-	if hclConfig.LastContactFailureThreshold == 0 {
-		hclConfig.LastContactFailureThreshold = defaultConfig.LastContactFailureThreshold
+	if hclConfig.LeftServerLastContactThreshold == 0 {
+		hclConfig.LeftServerLastContactThreshold = defaultConfig.LeftServerLastContactThreshold
 	}
 	if hclConfig.MaxTrailingLogs == 0 {
 		hclConfig.MaxTrailingLogs = defaultConfig.MaxTrailingLogs
@@ -490,11 +490,11 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		case <-ticker.C:
 			markingCandidatePresent := false
 			b.l.RLock()
-			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.LastContactFailureThreshold != 0 {
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.LeftServerLastContactThreshold != 0 {
 				b.followerStates.l.RLock()
 				for _, state := range b.followerStates.followers {
 					now := time.Now()
-					threshold := state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)
+					threshold := state.LastHeartbeat.Add(b.autopilotConfig.LeftServerLastContactThreshold)
 					if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
 						markingCandidatePresent = true
 					}
@@ -506,9 +506,9 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 					b.followerStates.l.Lock()
 					for id, state := range b.followerStates.followers {
 						now := time.Now()
-						threshold := state.LastHeartbeat.Add(b.autopilotConfig.LastContactFailureThreshold)
+						threshold := state.LastHeartbeat.Add(b.autopilotConfig.LeftServerLastContactThreshold)
 						if !state.LastHeartbeat.IsZero() && now.After(threshold) && !state.IsDead {
-							b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "last_contact_failure_threshold", b.autopilotConfig.LastContactFailureThreshold, "now", now, "threshold", threshold)
+							b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "left_server_last_contact_threshold", b.autopilotConfig.LeftServerLastContactThreshold, "now", now, "threshold", threshold)
 							b.followerStates.markFollowerAsDead(id)
 
 						}

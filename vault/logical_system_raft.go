@@ -171,7 +171,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 					Type:        framework.TypeDurationSecond,
 					Description: "Limit on the amount of time a server can go without leader contact before being considered unhealthy.",
 				},
-				"last_contact_failure_threshold": {
+				"left_server_last_contact_threshold": {
 					Type:        framework.TypeDurationSecond,
 					Description: "Limit on the amount of time a server can go without leader contact before being considered failed. This takes effect only when cleanup_dead_servers is set.",
 				},
@@ -436,12 +436,12 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.Operati
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"cleanup_dead_servers":           config.CleanupDeadServers,
-				"last_contact_threshold":         config.LastContactThreshold.String(),
-				"last_contact_failure_threshold": config.LastContactFailureThreshold.String(),
-				"max_trailing_logs":              config.MaxTrailingLogs,
-				"min_quorum":                     config.MinQuorum,
-				"server_stabilization_time":      config.ServerStabilizationTime.String(),
+				"cleanup_dead_servers":               config.CleanupDeadServers,
+				"last_contact_threshold":             config.LastContactThreshold.String(),
+				"left_server_last_contact_threshold": config.LeftServerLastContactThreshold.String(),
+				"max_trailing_logs":                  config.MaxTrailingLogs,
+				"min_quorum":                         config.MinQuorum,
+				"server_stabilization_time":          config.ServerStabilizationTime.String(),
 			},
 		}, nil
 	}
@@ -472,9 +472,9 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			configClone.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
 			persist = true
 		}
-		lastContactFailureThreshold, ok := d.GetOk("last_contact_failure_threshold")
+		leftServerLastContactThreshold, ok := d.GetOk("left_server_last_contact_threshold")
 		if ok {
-			configClone.LastContactFailureThreshold = time.Duration(lastContactFailureThreshold.(int)) * time.Second
+			configClone.LeftServerLastContactThreshold = time.Duration(leftServerLastContactThreshold.(int)) * time.Second
 			persist = true
 		}
 		maxTrailingLogs, ok := d.GetOk("max_trailing_logs")
