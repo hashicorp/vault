@@ -64,10 +64,11 @@ func (b *BoolPtr) String() string {
 }
 
 type boolPtrValue struct {
+	hidden bool
 	target *BoolPtr
 }
 
-func newBoolPtrValue(def *bool, target *BoolPtr) *boolPtrValue {
+func newBoolPtrValue(def *bool, target *BoolPtr, hidden bool) *boolPtrValue {
 	val := &boolPtrValue{
 		target: target,
 	}
@@ -88,24 +89,38 @@ func (b *boolPtrValue) Set(s string) error {
 	return b.target.Set(s)
 }
 
-func (b *boolPtrValue) String() string { return b.target.String() }
+func (b *boolPtrValue) Get() interface{} { return *b.target }
+func (b *boolPtrValue) String() string   { return b.target.String() }
+func (b *boolPtrValue) Example() string  { return "*bool" }
+func (b *boolPtrValue) Hidden() bool     { return b.hidden }
 
 type BoolPtrVar struct {
 	Name       string
 	Aliases    []string
 	Usage      string
 	Hidden     bool
+	EnvVar     string
 	Default    *bool
 	Target     *BoolPtr
 	Completion complete.Predictor
 }
 
 func (f *FlagSet) BoolPtrVar(i *BoolPtrVar) {
+	def := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if b, err := strconv.ParseBool(v); err == nil {
+			if def == nil {
+				def = new(bool)
+			}
+			*def = b
+		}
+	}
+
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Value:      newBoolPtrValue(i.Default, i.Target),
+		Value:      newBoolPtrValue(i.Default, i.Target, i.Hidden),
 		Completion: i.Completion,
 	})
 }
