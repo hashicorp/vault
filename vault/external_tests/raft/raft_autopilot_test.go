@@ -98,68 +98,6 @@ func TestRaft_Autopilot_ServerStabilization(t *testing.T) {
 	}
 }
 
-func TestRaft_Autopilot_HCLConfiguration(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
-		DisableFollowerJoins: true,
-		InmemCluster:         true,
-		EnableAutopilot:      true,
-		PhysicalFactoryConfig: map[string]interface{}{
-			"autopilot": `[{"cleanup_dead_servers":true,"last_contact_threshold":"500s","dead_server_last_contact_threshold":"500h","max_trailing_logs":500,"min_quorum":500,"server_stabilization_time":"500s"}]`,
-		},
-	})
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-
-	configCheckFunc := func(config *api.AutopilotConfig) {
-		conf, err := client.Sys().RaftAutopilotConfiguration()
-		require.NoError(t, err)
-		require.Equal(t, config, conf)
-	}
-
-	config := &api.AutopilotConfig{
-		CleanupDeadServers:             true,
-		DeadServerLastContactThreshold: 500 * time.Hour,
-		LastContactThreshold:           500 * time.Second,
-		MaxTrailingLogs:                500,
-		MinQuorum:                      500,
-		ServerStabilizationTime:        500 * time.Second,
-	}
-	configCheckFunc(config)
-
-	// Ensure that the configuration stays across reboots
-	leaderCore := cluster.Cores[0]
-	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
-	cluster.UnsealCore(t, leaderCore)
-	vault.TestWaitActive(t, leaderCore.Core)
-	configCheckFunc(config)
-
-	// Only set some values, expect others to assume default values
-	cluster = raftCluster(t, &RaftClusterOpts{
-		DisableFollowerJoins: true,
-		InmemCluster:         true,
-		EnableAutopilot:      true,
-		PhysicalFactoryConfig: map[string]interface{}{
-			"autopilot": `[{"cleanup_dead_servers":true,"server_stabilization_time":"500s"}]`,
-		},
-	})
-	defer cluster.Cleanup()
-
-	config.DeadServerLastContactThreshold = 24 * time.Hour
-	config.LastContactThreshold = 10 * time.Second
-	config.MaxTrailingLogs = 1000
-	config.MinQuorum = 3
-
-	client = cluster.Cores[0].Client
-	configCheckFunc(config)
-
-	leaderCore = cluster.Cores[0]
-	testhelpers.EnsureCoreSealed(t, leaderCore)
-	cluster.UnsealCore(t, leaderCore)
-	vault.TestWaitActive(t, leaderCore.Core)
-	configCheckFunc(config)
-}
-
 func TestRaft_Autopilot_Configuration(t *testing.T) {
 	cluster := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
