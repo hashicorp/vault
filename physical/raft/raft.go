@@ -291,6 +291,16 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
 
+	if delayRaw, ok := conf["apply_delay"]; ok {
+		delay, err := time.ParseDuration(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
+		}
+		fsm.applyCallback = func() {
+			time.Sleep(delay)
+		}
+	}
+
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
 	var log raft.LogStore

@@ -3,10 +3,14 @@ package vault
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +20,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,6 +56,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/patrickmn/go-cache"
+	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
 
@@ -74,6 +81,8 @@ const (
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
+
+	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 )
 
 var (
@@ -110,6 +119,7 @@ var (
 	PerformanceMerkleRoot        = merkleRootImpl
 	DRMerkleRoot                 = merkleRootImpl
 	LastRemoteWAL                = lastRemoteWALImpl
+	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
 )
 
@@ -393,6 +403,8 @@ type Core struct {
 	//
 	// Name
 	clusterName string
+	// ID
+	clusterID uberAtomic.String
 	// Specific cipher suites to use for clustering, if any
 	clusterCipherSuites []uint16
 	// Used to modify cluster parameters
@@ -548,6 +560,8 @@ type Core struct {
 
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
+
+	IndexHeaderHMACKey uberAtomic.Value
 
 	// disableAutopilot is used to disable the autopilot subsystem in raft storage
 	disableAutopilot bool
@@ -2211,6 +2225,10 @@ func lastRemoteWALImpl(c *Core) uint64 {
 	return 0
 }
 
+func lastRemoteUpstreamWALImpl(c *Core) uint64 {
+	return 0
+}
+
 func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfig, error) {
 	pe, err := c.physical.Get(ctx, barrierSealConfigPath)
 	if err != nil {
@@ -2552,6 +2570,10 @@ func (c *Core) IsDRSecondary() bool {
 	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
 }
 
+func (c *Core) IsPerfSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+}
+
 func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
@@ -2714,4 +2736,49 @@ func (c *Core) KeyRotateGracePeriod() time.Duration {
 
 func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
+}
+
+func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
+	cooked, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return nil, err
+	}
+	s := string(cooked)
+
+	lastIndex := strings.LastIndexByte(s, ':')
+	if lastIndex == -1 {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
+	stateHMAC, err := hex.DecodeString(stateHMACRaw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header HMAC: %v, %w", stateHMACRaw, err)
+	}
+
+	if len(hmacKey) != 0 {
+		hm := hmac.New(sha256.New, hmacKey)
+		hm.Write([]byte(state))
+		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
+			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
+		}
+	}
+
+	pieces := strings.Split(state, ":")
+	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+
+	return &logical.WALState{
+		ClusterID:       pieces[1],
+		LocalIndex:      localIndex,
+		ReplicatedIndex: replicatedIndex,
+	}, nil
 }
