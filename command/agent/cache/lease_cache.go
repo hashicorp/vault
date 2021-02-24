@@ -902,7 +902,7 @@ func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index, indexType
 		if err := c.ps.Set(ctx, index.ID, b, indexType); err != nil {
 			return err
 		}
-		c.logger.Debug("set entry in persistent storage", "type", indexType, "path", index.RequestPath, "id", index.ID, "lease", index.Lease)
+		c.logger.Trace("set entry in persistent storage", "type", indexType, "path", index.RequestPath, "id", index.ID, "lease", index.Lease)
 	}
 
 	return nil
@@ -932,6 +932,7 @@ func (c *LeaseCache) Flush() error {
 	}
 
 	if c.ps != nil {
+		c.logger.Trace("clearing persistent storage")
 		return c.ps.Clear()
 	}
 

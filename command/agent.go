@@ -513,13 +513,13 @@ func (c *AgentCommand) Run(args []string) int {
 					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
 					return 1
 				}
-				// Grab the key material from bolt, then setup encryption so
-				// that restore is possible
-				key, err := ps.GetKey()
+				// Get the token from bolt for retrieving the encryption key,
+				// then setup encryption so that restore is possible
+				token, err := ps.GetRetrievalToken()
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error retrieving key from persistent cache: %v", err))
+					c.UI.Error(fmt.Sprintf("Error getting retrieval token from persistent cache: %v", err))
 				}
-				km, err := crypto.NewK8s(key)
+				km, err := crypto.NewK8s(token)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
@@ -596,7 +596,7 @@ func (c *AgentCommand) Run(args []string) int {
 					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
 					return 1
 				}
-				if err := ps.SetKey(key); err != nil {
+				if err := ps.StoreRetrievalToken(key); err != nil {
 					c.UI.Error(fmt.Sprintf("Error setting key in persistent cache: %v", err))
 					return 1
 				}

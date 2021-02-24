@@ -39,11 +39,12 @@ const (
 	// AutoAuthToken - key for the latest auto-auth token
 	AutoAuthToken = "auto-auth-token"
 
-	// KeyBucket names the bucket that stores the key or wrapped token
-	KeyBucket = "key"
+	// RetrievalTokenBucket names the bucket that stores the retrieval material
+	// needed for unlocking (decrypting) the persisted tokens and leases
+	RetrievalTokenBucket = "retrieval-token"
 
-	// KeyMaterial is the actual key or token in the key bucket
-	KeyMaterial = "key-material"
+	// RetrievalTokenMaterial is the actual key or token in the key bucket
+	RetrievalTokenMaterial = "retrieval-token-material"
 )
 
 // BoltStorage is a persistent cache using a bolt db. Items are organized with
@@ -95,7 +96,7 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 }
 
 func createBoltSchema(tx *bolt.Tx) error {
-	_, err := tx.CreateBucketIfNotExists([]byte(KeyBucket))
+	_, err := tx.CreateBucketIfNotExists([]byte(RetrievalTokenBucket))
 	if err != nil {
 		return fmt.Errorf("failed to create key bucket: %w", err)
 	}
@@ -248,38 +249,34 @@ func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 	return plainText, nil
 }
 
-// GetKey retrieves a plaintext key/token from the KeyBucket, nil if none set
-func (b *BoltStorage) GetKey() ([]byte, error) {
-	key := []byte{}
+// GetRetrievalToken retrieves a plaintext token from the KeyBucket, which will
+// be used by the key manager to retrieve the encryption key, nil if none set
+func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
+	token := []byte{}
 
 	err := b.db.View(func(tx *bolt.Tx) error {
-		keyBucket := tx.Bucket([]byte(KeyBucket))
+		keyBucket := tx.Bucket([]byte(RetrievalTokenBucket))
 		if keyBucket == nil {
-			return fmt.Errorf("bucket %q not found", KeyBucket)
+			return fmt.Errorf("bucket %q not found", RetrievalTokenBucket)
 		}
-		key = keyBucket.Get([]byte(KeyMaterial))
+		token = keyBucket.Get([]byte(RetrievalTokenMaterial))
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return key, err
+	return token, err
 }
 
-// SetKey sets plaintext key material in the KeyBucket
-func (b *BoltStorage) SetKey(key []byte) error {
-	return b.SetInKeyBucket([]byte(KeyMaterial), key)
-}
-
-// SetInKeyBucket sets a key-value pair as plaintext in the Key Bucket
-func (b *BoltStorage) SetInKeyBucket(key, value []byte) error {
+// StoreRetrievalToken sets plaintext token material in the RetrievalTokenBucket
+func (b *BoltStorage) StoreRetrievalToken(token []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		keyBucket := tx.Bucket([]byte(KeyBucket))
-		if keyBucket == nil {
-			return fmt.Errorf("bucket %q not found", KeyBucket)
+		bucket := tx.Bucket([]byte(RetrievalTokenBucket))
+		if bucket == nil {
+			return fmt.Errorf("bucket %q not found", RetrievalTokenBucket)
 		}
-		return keyBucket.Put(key, value)
+		return bucket.Put([]byte(RetrievalTokenMaterial), token)
 	})
 }
 

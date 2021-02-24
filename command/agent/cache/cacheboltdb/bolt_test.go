@@ -219,21 +219,21 @@ func TestDBFileExists(t *testing.T) {
 
 }
 
-func Test_SetGetKey(t *testing.T) {
+func Test_SetGetRetrievalToken(t *testing.T) {
 	testCases := []struct {
-		name        string
-		keyToSet    []byte
-		expectedKey []byte
+		name          string
+		tokenToSet    []byte
+		expectedToken []byte
 	}{
 		{
-			name:        "normal set and get",
-			keyToSet:    []byte("test key"),
-			expectedKey: []byte("test key"),
+			name:          "normal set and get",
+			tokenToSet:    []byte("test token"),
+			expectedToken: []byte("test token"),
 		},
 		{
-			name:        "no key set",
-			keyToSet:    nil,
-			expectedKey: nil,
+			name:          "no token set",
+			tokenToSet:    nil,
+			expectedToken: nil,
 		},
 	}
 
@@ -251,13 +251,13 @@ func Test_SetGetKey(t *testing.T) {
 			require.NoError(t, err)
 			defer b.Close()
 
-			if tc.keyToSet != nil {
-				err := b.SetKey(tc.keyToSet)
+			if tc.tokenToSet != nil {
+				err := b.StoreRetrievalToken(tc.tokenToSet)
 				require.NoError(t, err)
 			}
-			gotKey, err := b.GetKey()
+			gotKey, err := b.GetRetrievalToken()
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedKey, gotKey)
+			assert.Equal(t, tc.expectedToken, gotKey)
 		})
 	}
 }
