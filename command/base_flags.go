@@ -36,13 +36,13 @@ type BoolPtr struct {
 }
 
 func (b *BoolPtr) Set(v string) error {
-	if b.v == nil {
-		b.v = new(bool)
-	}
-
 	val, err := strconv.ParseBool(v)
 	if err != nil {
 		return err
+	}
+
+	if b.v == nil {
+		b.v = new(bool)
 	}
 	*b.v = val
 
@@ -75,10 +75,11 @@ type boolPtrValue struct {
 
 func newBoolPtrValue(def *bool, target *BoolPtr, hidden bool) *boolPtrValue {
 	val := &boolPtrValue{
+		hidden: hidden,
 		target: target,
 	}
 	if def != nil {
-		val.target.Set(strconv.FormatBool(*def))
+		_ = val.target.Set(strconv.FormatBool(*def))
 	}
 	return val
 }

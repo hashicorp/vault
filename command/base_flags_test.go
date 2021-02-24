@@ -9,7 +9,7 @@ import (
 
 func Test_BoolPtr(t *testing.T) {
 	var boolPtr BoolPtr
-	value := newBoolPtrValue(nil, &boolPtr)
+	value := newBoolPtrValue(nil, &boolPtr, false)
 
 	require.False(t, boolPtr.IsSet())
 	require.False(t, boolPtr.Get())
@@ -27,17 +27,21 @@ func Test_BoolPtr(t *testing.T) {
 	require.True(t, boolPtr.Get())
 
 	var boolPtrFalseDefault BoolPtr
-	value = newBoolPtrValue(new(bool), &boolPtrFalseDefault)
+	value = newBoolPtrValue(new(bool), &boolPtrFalseDefault, false)
 
 	require.True(t, boolPtrFalseDefault.IsSet())
 	require.False(t, boolPtrFalseDefault.Get())
 
 	var boolPtrTrueDefault BoolPtr
 	defTrue := true
-	value = newBoolPtrValue(&defTrue, &boolPtrTrueDefault)
+	value = newBoolPtrValue(&defTrue, &boolPtrTrueDefault, false)
 
 	require.True(t, boolPtrTrueDefault.IsSet())
 	require.True(t, boolPtrTrueDefault.Get())
+
+	var boolPtrHidden BoolPtr
+	value = newBoolPtrValue(nil, &boolPtrHidden, true)
+	require.Equal(t, true, value.Hidden())
 }
 
 func Test_TimeParsing(t *testing.T) {
