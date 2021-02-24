@@ -420,6 +420,30 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
+	enforceConsistency := cache.EnforceConsistencyNever
+	whenInconsistent := cache.WhenInconsistentFail
+	if config.Cache != nil {
+		switch config.Cache.EnforceConsistency {
+		case "always":
+			enforceConsistency = cache.EnforceConsistencyAlways
+		case "never", "":
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown cache setting for enforce_consistency: %q", config.Cache.EnforceConsistency))
+			return 1
+		}
+
+		switch config.Cache.WhenInconsistent {
+		case "retry":
+			whenInconsistent = cache.WhenInconsistentRetry
+		case "forward":
+			whenInconsistent = cache.WhenInconsistentForward
+		case "fail", "":
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown cache setting for when_inconsistent: %q", config.Cache.WhenInconsistent))
+			return 1
+		}
+	}
+
 	// Warn if cache _and_ cert auto-auth is enabled but certificates were not
 	// provided in the auto_auth.method["cert"].config stanza.
 	if config.Cache != nil && (config.AutoAuth != nil && config.AutoAuth.Method != nil && config.AutoAuth.Method.Type == "cert") {
@@ -441,12 +465,6 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
-	// Inform any tests that the server is ready
-	select {
-	case c.startedCh <- struct{}{}:
-	default:
-	}
-
 	var leaseCache *cache.LeaseCache
 	var previousToken string
 	// Parse agent listener configurations
@@ -455,8 +473,10 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client: client,
-			Logger: cacheLogger.Named("apiproxy"),
+			Client:                 client,
+			Logger:                 cacheLogger.Named("apiproxy"),
+			EnforceConsistency:     enforceConsistency,
+			WhenInconsistentAction: whenInconsistent,
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -681,6 +701,12 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 		}
 		defer c.cleanupGuard.Do(listenerCloseFunc)
+	}
+
+	// Inform any tests that the server is ready
+	select {
+	case c.startedCh <- struct{}{}:
+	default:
 	}
 
 	// Listen for signals

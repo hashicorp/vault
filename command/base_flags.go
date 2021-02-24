@@ -30,6 +30,107 @@ type FlagBool interface {
 	IsBoolFlag() bool
 }
 
+// BoolPtr is a bool which is aware if it has been set.
+type BoolPtr struct {
+	v *bool
+}
+
+func (b *BoolPtr) Set(v string) error {
+	val, err := strconv.ParseBool(v)
+	if err != nil {
+		return err
+	}
+
+	if b.v == nil {
+		b.v = new(bool)
+	}
+	*b.v = val
+
+	return nil
+}
+
+func (b *BoolPtr) IsSet() bool {
+	return b.v != nil
+}
+
+func (b *BoolPtr) Get() bool {
+	if b.v == nil {
+		return false
+	}
+	return *b.v
+}
+
+func (b *BoolPtr) String() string {
+	var current bool
+	if b.v != nil {
+		current = *(b.v)
+	}
+	return fmt.Sprintf("%v", current)
+}
+
+type boolPtrValue struct {
+	hidden bool
+	target *BoolPtr
+}
+
+func newBoolPtrValue(def *bool, target *BoolPtr, hidden bool) *boolPtrValue {
+	val := &boolPtrValue{
+		hidden: hidden,
+		target: target,
+	}
+	if def != nil {
+		_ = val.target.Set(strconv.FormatBool(*def))
+	}
+	return val
+}
+
+func (b *boolPtrValue) IsBoolFlag() bool {
+	return true
+}
+
+func (b *boolPtrValue) Set(s string) error {
+	if b.target == nil {
+		b.target = new(BoolPtr)
+	}
+	return b.target.Set(s)
+}
+
+func (b *boolPtrValue) Get() interface{} { return *b.target }
+func (b *boolPtrValue) String() string   { return b.target.String() }
+func (b *boolPtrValue) Example() string  { return "*bool" }
+func (b *boolPtrValue) Hidden() bool     { return b.hidden }
+
+type BoolPtrVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Hidden     bool
+	EnvVar     string
+	Default    *bool
+	Target     *BoolPtr
+	Completion complete.Predictor
+}
+
+func (f *FlagSet) BoolPtrVar(i *BoolPtrVar) {
+	def := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if b, err := strconv.ParseBool(v); err == nil {
+			if def == nil {
+				def = new(bool)
+			}
+			*def = b
+		}
+	}
+
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Value:      newBoolPtrValue(i.Default, i.Target, i.Hidden),
+		Completion: i.Completion,
+	})
+}
+
 // -- BoolVar  and boolValue
 type BoolVar struct {
 	Name       string
