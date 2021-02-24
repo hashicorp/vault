@@ -1,14 +1,18 @@
 package cacheboltdb
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/command/agent/cache/crypto"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -19,6 +23,9 @@ const (
 
 	// DatabaseFileName - filename for the persistent cache file
 	DatabaseFileName = "vault-agent-cache.db"
+
+	// rootBucketName - naming the root bucket
+	rootBucketName = "root"
 
 	// SecretLeaseType - Bucket/type for leases with secret info
 	SecretLeaseType = "secret-lease"
@@ -46,19 +53,17 @@ type BoltStorage struct {
 	db         *bolt.DB
 	rootBucket string
 	logger     hclog.Logger
-	encrypter  Encryption
+	keyMgr     crypto.KeyManager
+	aad        string
 }
 
 // BoltStorageConfig is the collection of input parameters for setting up bolt
 // storage
 type BoltStorageConfig struct {
 	Path       string
-	RootBucket string
 	Logger     hclog.Logger
-	Encrypter  Encryption
-
-	// Existing marks whether the bolt file already exists
-	Existing bool
+	AAD        string
+	KeyManager crypto.KeyManager
 }
 
 // NewBoltStorage opens a new bolt db at the specified file path and returns it.
@@ -71,21 +76,25 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 		return nil, err
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		return createBoltSchema(tx, config.RootBucket)
+		return createBoltSchema(tx)
 	})
 	if err != nil {
 		return nil, err
 	}
 	bs := &BoltStorage{
 		db:         db,
-		rootBucket: config.RootBucket,
+		rootBucket: rootBucketName,
 		logger:     config.Logger,
-		encrypter:  config.Encrypter,
+		keyMgr:     config.KeyManager,
+		aad:        config.AAD,
+	}
+	if config.KeyManager != nil {
+		bs.SetKeyMgr(config.KeyManager)
 	}
 	return bs, nil
 }
 
-func createBoltSchema(tx *bolt.Tx, rootBucketName string) error {
+func createBoltSchema(tx *bolt.Tx) error {
 	_, err := tx.CreateBucketIfNotExists([]byte(KeyBucket))
 	if err != nil {
 		return fmt.Errorf("failed to create key bucket: %w", err)
@@ -121,15 +130,14 @@ func createBoltSchema(tx *bolt.Tx, rootBucketName string) error {
 	return nil
 }
 
-// SetEncrypter sets the encryption for a bolt storage
-func (b *BoltStorage) SetEncrypter(e Encryption) {
-	b.encrypter = e
+// SetKeyMgr sets the encryption for a bolt storage
+func (b *BoltStorage) SetKeyMgr(km crypto.KeyManager) {
+	b.keyMgr = km
 }
 
 // Set an index in bolt storage
-func (b *BoltStorage) Set(id string, plainText []byte, indexType string) error {
-
-	cipherText, err := b.encrypter.Encrypt(plainText)
+func (b *BoltStorage) Set(ctx context.Context, id string, plainText []byte, indexType string) error {
+	cipherText, err := b.keyMgr.Encrypt(ctx, plainText, []byte(b.aad))
 	if err != nil {
 		return fmt.Errorf("error encrypting %s index: %w", indexType, err)
 	}
@@ -187,7 +195,7 @@ func (b *BoltStorage) Delete(id string) error {
 }
 
 // GetByType returns a list of stored items of the specified type
-func (b *BoltStorage) GetByType(indexType string) ([][]byte, error) {
+func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte, error) {
 	returnBytes := [][]byte{}
 
 	err := b.db.View(func(tx *bolt.Tx) error {
@@ -198,7 +206,7 @@ func (b *BoltStorage) GetByType(indexType string) ([][]byte, error) {
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
 		top.Bucket([]byte(indexType)).ForEach(func(id, cipherText []byte) error {
-			plainText, err := b.encrypter.Decrypt(cipherText)
+			plainText, err := b.keyMgr.Decrypt(ctx, cipherText, []byte(b.aad))
 			if err != nil {
 				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
 				return nil
@@ -214,7 +222,7 @@ func (b *BoltStorage) GetByType(indexType string) ([][]byte, error) {
 
 // GetAutoAuthToken retrieves the latest auto-auth token, and returns nil if non
 // exists yet
-func (b *BoltStorage) GetAutoAuthToken() ([]byte, error) {
+func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 	token := []byte{}
 
 	err := b.db.View(func(tx *bolt.Tx) error {
@@ -233,7 +241,7 @@ func (b *BoltStorage) GetAutoAuthToken() ([]byte, error) {
 		return nil, nil
 	}
 
-	plainText, err := b.encrypter.Decrypt(token)
+	plainText, err := b.keyMgr.Decrypt(ctx, token, []byte(b.aad))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt auto-auth token: %w", err)
 	}
@@ -261,13 +269,17 @@ func (b *BoltStorage) GetKey() ([]byte, error) {
 
 // SetKey sets plaintext key material in the KeyBucket
 func (b *BoltStorage) SetKey(key []byte) error {
+	return b.SetInKeyBucket([]byte(KeyMaterial), key)
+}
 
+// SetInKeyBucket sets a key-value pair as plaintext in the Key Bucket
+func (b *BoltStorage) SetInKeyBucket(key, value []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
 		keyBucket := tx.Bucket([]byte(KeyBucket))
 		if keyBucket == nil {
 			return fmt.Errorf("bucket %q not found", KeyBucket)
 		}
-		return keyBucket.Put([]byte(KeyMaterial), key)
+		return keyBucket.Put(key, value)
 	})
 }
 
@@ -291,7 +303,7 @@ func (b *BoltStorage) Clear() error {
 		if err != nil {
 			return err
 		}
-		return createBoltSchema(tx, b.rootBucket)
+		return createBoltSchema(tx)
 	})
 }
 
@@ -307,4 +319,15 @@ func DBFileExists(filePath string) (bool, error) {
 	default:
 		return false, fmt.Errorf("failed to check if bolt file exists at path %s: %w", filePath, err)
 	}
+}
+
+func GetServiceAccountJWT(path string) (string, error) {
+	if len(path) == 0 {
+		path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	}
+	token, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(token)), nil
 }

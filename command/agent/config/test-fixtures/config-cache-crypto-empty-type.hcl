@@ -3,7 +3,9 @@ pid_file = "./pidfile"
 cache {
     persist = {
         path = "/tmp/bolt-file.db"
-        crypto "kubernetes" {}
+        crypto = {
+            service_account_path = "/tmp/serviceaccount"
+        }
     }
 }
 

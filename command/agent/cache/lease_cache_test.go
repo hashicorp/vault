@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agent/cache/crypto"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -677,20 +678,15 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cacheboltdb.BoltStorage) {
 	t.Helper()
 
-	e, err := cacheboltdb.NewAES(&cacheboltdb.AESConfig{
-		Key:    []byte("thisisafakekey!!thisisafakekey!!"),
-		AAD:    []byte("extra-data"),
-		Logger: hclog.NewNullLogger(),
-	})
+	km, err := crypto.NewK8s(nil)
 	require.NoError(t, err)
 
 	tempCacheDir, err = ioutil.TempDir("", "agent-cache-test")
 	require.NoError(t, err)
 	boltStorage, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 		Path:       tempCacheDir,
-		RootBucket: "topbucketname",
 		Logger:     hclog.Default(),
-		Encrypter:  e,
+		KeyManager: km,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, boltStorage)
@@ -786,7 +782,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// cache's storage
 	restoredCache := testNewLeaseCache(t, nil)
 
-	err := restoredCache.Restore(boltStorage)
+	err := restoredCache.Restore(context.Background(), boltStorage)
 	assert.NoError(t, err)
 
 	// Now compare before and after
@@ -841,6 +837,8 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 }
 
 func TestEvictPersistent(t *testing.T) {
+	ctx := context.Background()
+
 	responses := []*SendResponse{
 		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
 	}
@@ -863,7 +861,7 @@ func TestEvictPersistent(t *testing.T) {
 	assert.Nil(t, resp.CacheMeta)
 
 	// Check bolt for the cached lease
-	secrets, err := lc.ps.GetByType(cacheboltdb.SecretLeaseType)
+	secrets, err := lc.ps.GetByType(ctx, cacheboltdb.SecretLeaseType)
 	require.NoError(t, err)
 	assert.Len(t, secrets, 1)
 
@@ -877,7 +875,7 @@ func TestEvictPersistent(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Check that cached item is gone
-	secrets, err = lc.ps.GetByType(cacheboltdb.SecretLeaseType)
+	secrets, err = lc.ps.GetByType(ctx, cacheboltdb.SecretLeaseType)
 	require.NoError(t, err)
 	assert.Len(t, secrets, 0)
 }

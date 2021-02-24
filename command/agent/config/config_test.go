@@ -70,6 +70,10 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				Path:            "/tmp/bolt-file.db",
 				KeepAfterImport: true,
 				ExitOnErr:       true,
+				Crypto: &Crypto{
+					Type:               "kubernetes",
+					ServiceAccountPath: "/tmp/serviceaccount",
+				},
 			},
 		},
 		Vault: &Vault{
@@ -490,6 +494,18 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_PersistCrypto(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/config-cache-crypto-missing.hcl")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	_, err = LoadConfig("./test-fixtures/config-cache-crypto-empty-type.hcl")
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 

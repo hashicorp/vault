@@ -53,9 +53,16 @@ type Cache struct {
 
 // Persist contains configuration needed for persistent caching
 type Persist struct {
-	Path            string `hcl:"path"`
-	KeepAfterImport bool   `hcl:"keep_after_import"`
-	ExitOnErr       bool   `hcl:"exit_on_err"`
+	Path            string  `hcl:"path"`
+	KeepAfterImport bool    `hcl:"keep_after_import"`
+	ExitOnErr       bool    `hcl:"exit_on_err"`
+	Crypto          *Crypto `hcl:"crypto"`
+}
+
+// Crypto contains configuration needed for persistent caching encryption
+type Crypto struct {
+	Type               string
+	ServiceAccountPath string `hcl:"service_account_path"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -350,6 +357,52 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Cache.Persist = &s
+
+	subs, ok := item.Val.(*ast.ObjectType)
+	if !ok {
+		return fmt.Errorf("could not parse %q as an object", name)
+	}
+	subList := subs.List
+	if err := parseCrypto(result, subList); err != nil {
+		return fmt.Errorf("error parsing crypto: %w", err)
+	}
+	if result.Cache.Persist.Crypto == nil {
+		return fmt.Errorf("missing persistent crypto config")
+	}
+
+	return nil
+}
+
+func parseCrypto(result *Config, list *ast.ObjectList) error {
+	name := "crypto"
+
+	cryptoList := list.Filter(name)
+	if len(cryptoList.Items) == 0 {
+		return nil
+	}
+
+	if len(cryptoList.Items) > 1 {
+		return fmt.Errorf("only one %q block is required", name)
+	}
+
+	item := cryptoList.Items[0]
+
+	var c Crypto
+	err := hcl.DecodeObject(&c, item.Val)
+	if err != nil {
+		return err
+	}
+
+	if c.Type == "" {
+		if len(item.Keys) == 1 {
+			c.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+		}
+		if c.Type == "" {
+			return errors.New("method type must be specified")
+		}
+	}
+
+	result.Cache.Persist.Crypto = &c
 	return nil
 }
 

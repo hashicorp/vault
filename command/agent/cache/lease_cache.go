@@ -428,7 +428,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	// Store the index in the cache
 	c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
-	err = c.Set(index, indexType)
+	err = c.Set(ctx, index, indexType)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
 		return nil, err
@@ -888,7 +888,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 // Set stores the index in the cachememdb, and also stores it in the persistent
 // cache (if enabled)
-func (c *LeaseCache) Set(index *cachememdb.Index, indexType string) error {
+func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index, indexType string) error {
 	if err := c.db.Set(index); err != nil {
 		return err
 	}
@@ -899,7 +899,7 @@ func (c *LeaseCache) Set(index *cachememdb.Index, indexType string) error {
 			return err
 		}
 
-		if err := c.ps.Set(index.ID, b, indexType); err != nil {
+		if err := c.ps.Set(ctx, index.ID, b, indexType); err != nil {
 			return err
 		}
 		c.logger.Debug("set entry in persistent storage", "type", indexType, "path", index.RequestPath, "id", index.ID, "lease", index.Lease)
@@ -941,9 +941,9 @@ func (c *LeaseCache) Flush() error {
 // Restore loads the cachememdb from the persistent storage passed in. Loads
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
-func (c *LeaseCache) Restore(storage *cacheboltdb.BoltStorage) error {
+func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStorage) error {
 	// Process tokens first
-	tokens, err := storage.GetByType(cacheboltdb.TokenType)
+	tokens, err := storage.GetByType(ctx, cacheboltdb.TokenType)
 	if err != nil {
 		return err
 	}
@@ -952,7 +952,7 @@ func (c *LeaseCache) Restore(storage *cacheboltdb.BoltStorage) error {
 	}
 
 	// Then process auth leases
-	authLeases, err := storage.GetByType(cacheboltdb.AuthLeaseType)
+	authLeases, err := storage.GetByType(ctx, cacheboltdb.AuthLeaseType)
 	if err != nil {
 		return err
 	}
@@ -961,7 +961,7 @@ func (c *LeaseCache) Restore(storage *cacheboltdb.BoltStorage) error {
 	}
 
 	// Then process secret leases
-	secretLeases, err := storage.GetByType(cacheboltdb.SecretLeaseType)
+	secretLeases, err := storage.GetByType(ctx, cacheboltdb.SecretLeaseType)
 	if err != nil {
 		return err
 	}
@@ -1185,7 +1185,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 
 	// Store the index in the cache
 	c.logger.Debug("storing auto-auth token into the cache")
-	err = c.Set(index, cacheboltdb.TokenType)
+	err = c.Set(c.baseCtxInfo.Ctx, index, cacheboltdb.TokenType)
 	if err != nil {
 		c.logger.Error("failed to cache the auto-auth token", "error", err)
 		return err
