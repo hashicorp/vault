@@ -369,7 +369,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	respondLogical(w, nil, nil, resp404, false)
+	respondLogical(nil, w, nil, nil, resp404, false)
 
 	if w.Code != 404 {
 		t.Fatalf("Bad Status code: %d", w.Code)

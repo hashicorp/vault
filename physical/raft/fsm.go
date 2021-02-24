@@ -77,8 +77,8 @@ type FSM struct {
 	logger      log.Logger
 	noopRestore bool
 
-	// applyDelay is used to simulate a slow apply in tests
-	applyDelay time.Duration
+	// applyCallback is used to control the pace of applies in tests
+	applyCallback func()
 
 	db *bolt.DB
 
@@ -131,8 +131,12 @@ func (f *FSM) getDB() *bolt.DB {
 // SetFSMDelay adds a delay to the FSM apply. This is used in tests to simulate
 // a slow apply.
 func (r *RaftBackend) SetFSMDelay(delay time.Duration) {
+	r.SetFSMApplyCallback(func() { time.Sleep(delay) })
+}
+
+func (r *RaftBackend) SetFSMApplyCallback(f func()) {
 	r.fsm.l.Lock()
-	r.fsm.applyDelay = delay
+	r.fsm.applyCallback = f
 	r.fsm.l.Unlock()
 }
 
@@ -469,8 +473,8 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	if f.applyDelay > 0 {
-		time.Sleep(f.applyDelay)
+	if f.applyCallback != nil {
+		f.applyCallback()
 	}
 
 	err = f.db.Update(func(tx *bolt.Tx) error {

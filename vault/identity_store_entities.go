@@ -569,6 +569,8 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 	}
 }
 
+// handleEntityDeleteCommon deletes an entity by removing it from groups of
+// which it's a member and then, if update is true, deleting the entity itself.
 func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, update bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
