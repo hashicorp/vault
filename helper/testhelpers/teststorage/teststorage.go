@@ -188,7 +188,6 @@ func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 }
 
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-	conf.DisablePerformanceStandby = true
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = MakeRaftBackend
 	opts.SetupFunc = func(t testing.TB, c *vault.TestCluster) {

@@ -280,6 +280,18 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		}
 	}
 
+	c.clusterID.Store(cluster.ID)
+	return nil
+}
+
+func (c *Core) loadCluster(ctx context.Context) error {
+	cluster, err := c.Cluster(ctx)
+	if err != nil {
+		c.logger.Error("failed to get cluster details", "error", err)
+		return err
+	}
+
+	c.clusterID.Store(cluster.ID)
 	return nil
 }
 

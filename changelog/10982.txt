@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Adds the wizard to the Database Secret Engine
+```
