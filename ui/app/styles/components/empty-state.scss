@@ -13,6 +13,7 @@
 }
 
 .empty-state-title {
+  white-space: nowrap;
   color: $grey;
   font-size: $size-4;
   font-weight: $font-weight-semibold;

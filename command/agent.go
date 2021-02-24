@@ -708,6 +708,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       c.client,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 			Token:                        previousToken,
@@ -723,8 +724,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:        c.logger.Named("template.server"),
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
-			VaultConf:     config.Vault,
-			TemplateRetry: config.TemplateRetry,
+			AgentConfig:   config,
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
