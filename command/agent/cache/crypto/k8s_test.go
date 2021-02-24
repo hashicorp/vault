@@ -7,7 +7,7 @@ import (
 )
 
 func TestCrypto_KubernetesNewKey(t *testing.T) {
-	k8sKey, err := NewK8s([]byte{})
+	k8sKey, err := NewKubeEncrypter([]byte{})
 	if err != nil {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
@@ -58,7 +58,7 @@ func TestCrypto_KubernetesExistingKey(t *testing.T) {
 		t.Fatal(n)
 	}
 
-	k8sKey, err := NewK8s(rootKey)
+	k8sKey, err := NewKubeEncrypter(rootKey)
 	if err != nil {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
@@ -108,7 +108,7 @@ func TestCrypto_KubernetesExistingKey(t *testing.T) {
 }
 
 func TestCrypto_KubernetesPassGeneratedKey(t *testing.T) {
-	k8sFirstKey, err := NewK8s([]byte{})
+	k8sFirstKey, err := NewKubeEncrypter([]byte{})
 	if err != nil {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
@@ -130,7 +130,7 @@ func TestCrypto_KubernetesPassGeneratedKey(t *testing.T) {
 		t.Fatalf("ciphertext nil, it shouldn't be")
 	}
 
-	k8sLoadedKey, err := NewK8s(firstPersistentKey)
+	k8sLoadedKey, err := NewKubeEncrypter(firstPersistentKey)
 	if err != nil {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
