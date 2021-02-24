@@ -1438,7 +1438,6 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 }
 
 func TestBackend_iamTagsCrud(t *testing.T) {
-	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		LogicalBackend: getBackend(t),

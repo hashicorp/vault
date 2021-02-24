@@ -288,16 +288,16 @@ func (b *backend) secretAccessKeysCreate(
 		}
 	}
 
-	if len(role.IAMTags) > 0 {
-		var tags []*iam.Tag
-		for key, value := range role.IAMTags {
-			// This assignment needs to be done in order to create unique addresses for
-			// these variables. Without doing so, all the tags will be copies of the last
-			// tag listed in the role.
-			k, v := key, value
-			tags = append(tags, &iam.Tag{Key: &k, Value: &v})
-		}
+	var tags []*iam.Tag
+	for key, value := range role.IAMTags {
+		// This assignment needs to be done in order to create unique addresses for
+		// these variables. Without doing so, all the tags will be copies of the last
+		// tag listed in the role.
+		k, v := key, value
+		tags = append(tags, &iam.Tag{Key: &k, Value: &v})
+	}
 
+	if len(tags) > 0 {
 		_, err = iamClient.TagUser(&iam.TagUserInput{
 			Tags:     tags,
 			UserName: &username,
