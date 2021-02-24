@@ -1178,8 +1178,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		}
 	}
 
-	// TODO: there is a race condition here with revocation, which may
-	// begin after we have stopped the entry timer, but finish before we get here
+	// TODO: there is a race condition here with revocation, which may begin after
+	// we have checked renewable(), but finish before we get here
 	// and persist the entry. There is also a race with simultaneous renewals
 	// on the same lease that may cause in-memory and in-storage versions to differ.
 
