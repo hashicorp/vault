@@ -30,6 +30,81 @@ type FlagBool interface {
 	IsBoolFlag() bool
 }
 
+// BoolPtr is a bool which is aware if it has been set.
+type BoolPtr struct {
+	v *bool
+}
+
+func (b *BoolPtr) Set(v string) error {
+	if b.v == nil {
+		b.v = new(bool)
+	}
+	var err error
+	*(b.v), err = strconv.ParseBool(v)
+	return err
+}
+
+func (b *BoolPtr) IsSet() bool {
+	return b.v != nil
+}
+
+func (b *BoolPtr) Get() bool {
+	if b.v == nil {
+		return false
+	}
+	return *b.v
+}
+
+func (b *BoolPtr) String() string {
+	var current bool
+	if b.v != nil {
+		current = *(b.v)
+	}
+	return fmt.Sprintf("%v", current)
+}
+
+type boolPtrValue struct {
+	target *BoolPtr
+}
+
+func newBoolPtrValue(target *BoolPtr) *boolPtrValue {
+	return &boolPtrValue{
+		target: target,
+	}
+}
+
+func (b *boolPtrValue) IsBoolFlag() bool {
+	return true
+}
+
+func (b *boolPtrValue) Set(s string) error {
+	if b.target == nil {
+		b.target = new(BoolPtr)
+	}
+	return b.target.Set(s)
+}
+
+func (b *boolPtrValue) String() string { return b.target.String() }
+
+type BoolPtrVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Hidden     bool
+	Target     *BoolPtr
+	Completion complete.Predictor
+}
+
+func (f *FlagSet) BoolPtrVar(i *BoolPtrVar) {
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Value:      newBoolPtrValue(i.Target),
+		Completion: i.Completion,
+	})
+}
+
 // -- BoolVar  and boolValue
 type BoolVar struct {
 	Name       string

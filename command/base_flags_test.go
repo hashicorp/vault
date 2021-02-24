@@ -3,7 +3,29 @@ package command
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
+
+func Test_BoolPtr(t *testing.T) {
+	var boolPtr BoolPtr
+	value := newBoolPtrValue(&boolPtr)
+
+	require.False(t, boolPtr.IsSet())
+	require.False(t, boolPtr.Get())
+
+	err := value.Set("false")
+	require.NoError(t, err)
+
+	require.True(t, boolPtr.IsSet())
+	require.False(t, boolPtr.Get())
+
+	err = value.Set("true")
+	require.NoError(t, err)
+
+	require.True(t, boolPtr.IsSet())
+	require.True(t, boolPtr.Get())
+}
 
 func Test_TimeParsing(t *testing.T) {
 	var zeroTime time.Time
