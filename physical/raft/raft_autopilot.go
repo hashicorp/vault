@@ -11,15 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -397,45 +393,6 @@ func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 	}
 }
 
-func (b *RaftBackend) AutopilotHCLConfig() (*AutopilotConfig, error) {
-	defaultConfig := b.defaultAutopilotConfig()
-
-	config := b.conf["autopilot"]
-	if config == "" {
-		return nil, nil
-	}
-
-	var configs []*AutopilotConfig
-	err := jsonutil.DecodeJSON([]byte(config), &configs)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode autopilot config: {{err}}", err)
-	}
-	if len(configs) != 1 {
-		return nil, fmt.Errorf("expected a single block of autopilot config")
-	}
-
-	hclConfig := configs[0]
-
-	// Sanitize input
-	if hclConfig.LastContactThreshold == 0 {
-		hclConfig.LastContactThreshold = defaultConfig.LastContactThreshold
-	}
-	if hclConfig.DeadServerLastContactThreshold == 0 {
-		hclConfig.DeadServerLastContactThreshold = defaultConfig.DeadServerLastContactThreshold
-	}
-	if hclConfig.MaxTrailingLogs == 0 {
-		hclConfig.MaxTrailingLogs = defaultConfig.MaxTrailingLogs
-	}
-	if hclConfig.MinQuorum == 0 {
-		hclConfig.MinQuorum = defaultConfig.MinQuorum
-	}
-	if hclConfig.ServerStabilizationTime == 0 {
-		hclConfig.ServerStabilizationTime = defaultConfig.ServerStabilizationTime
-	}
-
-	return hclConfig, nil
-}
-
 func (b *RaftBackend) AutopilotDisabled() bool {
 	b.l.RLock()
 	disabled := b.disableAutopilot
@@ -715,18 +672,8 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
 	// Check if the config was present in storage
-	switch opts.AutopilotConfig {
-	case nil:
-		// Autopilot config wasn't found in storage. Check if autopilot settings were part of config file.
-		conf, err := b.AutopilotHCLConfig()
-		if err != nil {
-			b.logger.Error("failed to load autopilot config supplied via config file; falling back to default config", "error", err)
-		}
-		if conf != nil {
-			b.logger.Info("setting autopilot configuration retrieved from config file", "config", conf)
-			b.autopilotConfig = conf
-		}
-	default:
+	if opts.AutopilotConfig != nil {
+		// TODO: do the config merge here
 		b.logger.Info("setting autopilot configuration retrieved from storage", "config", opts.AutopilotConfig)
 		b.autopilotConfig = opts.AutopilotConfig
 	}

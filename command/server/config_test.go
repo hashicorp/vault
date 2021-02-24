@@ -57,7 +57,3 @@ func TestConfigRaftRetryJoin(t *testing.T) {
 func TestParseSeals(t *testing.T) {
 	testParseSeals(t)
 }
-
-func TestConfigRaftAutopilot(t *testing.T) {
-	testConfigRaftAutopilot(t)
-}
