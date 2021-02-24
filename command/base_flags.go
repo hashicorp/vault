@@ -39,9 +39,14 @@ func (b *BoolPtr) Set(v string) error {
 	if b.v == nil {
 		b.v = new(bool)
 	}
-	var err error
-	*(b.v), err = strconv.ParseBool(v)
-	return err
+
+	val, err := strconv.ParseBool(v)
+	if err != nil {
+		return err
+	}
+	*b.v = val
+
+	return nil
 }
 
 func (b *BoolPtr) IsSet() bool {
