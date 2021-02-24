@@ -10,7 +10,7 @@ const (
 
 type KeyManager interface {
 	GetKey() []byte
-	GetPersistentKey() []byte
+	GetPersistentKey() ([]byte, error)
 	Renewable() bool
 	Renewer(context.Context) error
 	Encrypt(context.Context, []byte, []byte) ([]byte, error)

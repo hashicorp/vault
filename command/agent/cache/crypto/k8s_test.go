@@ -17,7 +17,7 @@ func TestCrypto_KubernetesNewKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", key))
 	}
 
-	persistentKey := k8sKey.GetPersistentKey()
+	persistentKey, _ := k8sKey.GetPersistentKey()
 	if persistentKey == nil {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", persistentKey))
 	}
@@ -64,7 +64,7 @@ func TestCrypto_KubernetesExistingKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", key))
 	}
 
-	persistentKey := k8sKey.GetPersistentKey()
+	persistentKey, _ := k8sKey.GetPersistentKey()
 	if persistentKey == nil {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", persistentKey))
 	}
@@ -122,7 +122,7 @@ func TestCrypto_KubernetesPassGeneratedKey(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("unexpected error: %s", err))
 	}
 
-	loadedKey := k8sLoadedKey.GetPersistentKey()
+	loadedKey, _ := k8sLoadedKey.GetPersistentKey()
 	if loadedKey == nil {
 		t.Fatalf(fmt.Sprintf("key is nil, it shouldn't be: %s", loadedKey))
 	}

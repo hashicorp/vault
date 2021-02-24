@@ -58,8 +58,8 @@ func (k *KubeEncryptionKey) GetKey() []byte {
 
 // GetPersistentKey returns the key which should be stored in the persisent
 // cache. In k8s we store the key as is, so just return the key stored.
-func (k *KubeEncryptionKey) GetPersistentKey() []byte {
-	return k.wrapper.GetKeyBytes()
+func (k *KubeEncryptionKey) GetPersistentKey() ([]byte, error) {
+	return k.wrapper.GetKeyBytes(), nil
 }
 
 // Renewable lets the caller know if this encryption key type is
