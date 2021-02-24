@@ -1,7 +1,10 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, fillIn, findAll } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
+
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
@@ -14,7 +17,26 @@ const MODEL = {
   id: 'database-name',
 };
 
-// ARG TODO add more to test her once you fill out the flow
+const WRITE_CONCERN = { wtimeout: 5000 };
+
+const mount = async () => {
+  let path = `database-${Date.now()}`;
+  await mountSecrets.enable('database', path);
+  await settled();
+  return path;
+};
+
+const newConnection = async backend => {
+  const name = `connection-${Date.now()}`;
+  await connectionPage.visitCreate({ backend });
+  await connectionPage.dbPlugin('mongodb-database-plugin');
+  await connectionPage.name(name);
+  await connectionPage.url(`mongodb://127.0.0.1:4321/${name}`);
+  await connectionPage.toggleVerify();
+  await connectionPage.save();
+  return name;
+};
+
 module('Acceptance | secrets/database/*', function(hooks) {
   setupApplicationTest(hooks);
 
@@ -24,6 +46,136 @@ module('Acceptance | secrets/database/*', function(hooks) {
   });
   hooks.afterEach(function() {
     this.server.shutdown();
+  });
+
+  test('can enable the database secrets engine', async function(assert) {
+    let backend = `database-${Date.now()}`;
+    await mountSecrets.enable('database', backend);
+    await settled();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/list`,
+      'Mounts and redirects to connection list page'
+    );
+    assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
+    assert
+      .dom('.is-active[data-test-secret-list-tab="Connections"]')
+      .exists('Has Connections tab which is active');
+    await click('[data-test-tab="overview"]');
+    assert.equal(currentURL(), `/vault/secrets/${backend}/overview`, 'Tab links to overview page');
+    assert.dom('[data-test-component="empty-state"]').exists('Empty state also exists on overview page');
+    assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
+  });
+
+  test('Connection create and edit form happy path works as expected', async function(assert) {
+    const backend = await mount();
+    const connectionDetails = {
+      plugin: 'mongodb-database-plugin',
+      id: 'horses-db',
+      fields: [
+        { label: 'Connection Name', name: 'name', value: 'horses-db' },
+        { label: 'Connection url', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
+        { label: 'Username', name: 'username', value: 'user', hideOnShow: true },
+        { label: 'Password', name: 'password', password: 'so-secure', hideOnShow: true },
+        { label: 'Write concern', name: 'write_concern' },
+      ],
+    };
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/list`,
+      'Mounts and redirects to connection list page'
+    );
+    await connectionPage.createLink();
+    assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
+    assert
+      .dom('[data-test-empty-state-title')
+      .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
+    await connectionPage.dbPlugin(connectionDetails.plugin);
+    assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
+    connectionDetails.fields.forEach(async ({ name, value }) => {
+      assert
+        .dom(`[data-test-input="${name}"]`)
+        .exists(`Field ${name} exists for ${connectionDetails.plugin}`);
+      if (value) {
+        await fillIn(`[data-test-input="${name}"]`, value);
+      }
+    });
+    // uncheck verify for the save step to work
+    await connectionPage.toggleVerify();
+    await connectionPage.save();
+    assert
+      .dom('[data-test-modal-title]')
+      .hasText('Rotate your root credentials?', 'Modal appears asking to ');
+    await connectionPage.enable();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/show/${connectionDetails.id}`,
+      'Saves connection and takes you to show page'
+    );
+    connectionDetails.fields.forEach(({ label, name, value, hideOnShow }) => {
+      if (hideOnShow) {
+        assert
+          .dom(`[data-test-row-value="${label}"]`)
+          .doesNotExist(`Does not show ${name} value on show page for ${connectionDetails.plugin}`);
+      } else if (!value) {
+        assert.dom(`[data-test-row-value="${label}"]`).hasText('Default');
+      } else {
+        assert.dom(`[data-test-row-value="${label}"]`).hasText(value);
+      }
+    });
+    // go back and edit write_concern
+    await connectionPage.edit();
+    assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
+    assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
+    // assert password is hidden
+    findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify(WRITE_CONCERN));
+    // uncheck verify for the save step to work
+    await connectionPage.toggleVerify();
+    await connectionPage.save();
+    assert
+      .dom(`[data-test-row-value="Write concern"]`)
+      .hasText('{ "wtimeout": 5000 }', 'Write concern is now showing on the table');
+  });
+
+  test('buttons show up for managing connection', async function(assert) {
+    const backend = await mount();
+    const connection = await newConnection(backend);
+    await connectionPage.visitShow({ backend, id: connection });
+    assert
+      .dom('[data-test-database-connection-delete]')
+      .hasText('Delete connection', 'Delete connection button exists with correct text');
+    assert
+      .dom('[data-test-database-connection-reset]')
+      .hasText('Reset connection', 'Reset button exists with correct text');
+    assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
+    assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
+    const CONNECTION_VIEW_ONLY = `
+path "${backend}/*" {
+  capabilities = ["deny"]
+}
+path "${backend}/config/*" {
+  capabilities = ["read"]
+}
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=database`,
+      `write sys/policies/acl/test-policy policy=${btoa(CONNECTION_VIEW_ONLY)}`,
+      'write -field=client_token auth/token/create policies=test-policy ttl=1h',
+    ]);
+    let token = consoleComponent.lastTextOutput;
+    await logout.visit();
+    await authPage.login(token);
+    await connectionPage.visitShow({ backend, id: connection });
+    assert.equal(currentURL(), `/vault/secrets/${backend}/show/${connection}`, 'Allows reading connection');
+    assert
+      .dom('[data-test-database-connection-delete]')
+      .doesNotExist('Delete button does not show due to permissions');
+    assert
+      .dom('[data-test-database-connection-reset]')
+      .doesNotExist('Reset button does not show due to permissions');
+    assert.dom('[data-test-secret-create]').doesNotExist('Add role button does not show due to permissions');
+    assert.dom('[data-test-edit-link]').doesNotExist('Edit button does not show due to permissions');
+    await this.pauseTest();
   });
 
   test('root and limited access', async function(assert) {
