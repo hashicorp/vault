@@ -867,16 +867,15 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 	}
 
 	le.ExpireTime = time.Now()
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return err
-		}
 
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	// TODO: there is a race between lazy revoke and renew; a renew might
+	// have already started, and re-create the lease with a longer expiration
+	// time before the timer fires.
+	if err := m.persistEntry(ctx, le); err != nil {
+		return err
 	}
+
+	m.updatePending(le)
 
 	return nil
 }
@@ -996,16 +995,11 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 		if le != nil {
 			le.ExpireTime = time.Now()
 
-			{
-				m.pendingLock.Lock()
-				if err := m.persistEntry(ctx, le); err != nil {
-					m.pendingLock.Unlock()
-					return err
-				}
-
-				m.updatePendingInternal(le)
-				m.pendingLock.Unlock()
+			if err := m.persistEntry(ctx, le); err != nil {
+				return err
 			}
+
+			m.updatePending(le)
 		}
 	}
 
@@ -1184,17 +1178,17 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		}
 	}
 
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return nil, err
-		}
+	// TODO: there is a race condition here with revocation, which may
+	// begin after we have stopped the entry timer, but finish before we get here
+	// and persist the entry. There is also a race with simultaneous renewals
+	// on the same lease that may cause in-memory and in-storage versions to differ.
 
-		// Update the expiration time
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	if err := m.persistEntry(ctx, le); err != nil {
+		return nil, err
 	}
+
+	// Update the expiration time
+	m.updatePending(le)
 
 	// Return the response
 	return resp, nil
@@ -1299,17 +1293,12 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	le.ExpireTime = resp.Auth.ExpirationTime()
 	le.LastRenewalTime = time.Now()
 
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return nil, err
-		}
-
-		// Update the expiration time
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	if err := m.persistEntry(ctx, le); err != nil {
+		return nil, err
 	}
+
+	// Update the expiration time
+	m.updatePending(le)
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
