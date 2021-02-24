@@ -466,6 +466,9 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 				Path:            "/tmp/bolt-file.db",
 				KeepAfterImport: false,
 				ExitOnErr:       false,
+				Crypto: &Crypto{
+					Type: "kubernetes",
+				},
 			},
 		},
 		SharedConfig: &configutil.SharedConfig{

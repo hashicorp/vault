@@ -5,6 +5,7 @@ cache {
         exit_on_err = false
         keep_after_import = false
         path = "/tmp/bolt-file.db"
+        crypto "kubernetes" {}
     }
 }
 
