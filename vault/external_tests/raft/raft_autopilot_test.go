@@ -19,6 +19,20 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+func TestRaft_Autopilot_Disable(t *testing.T) {
+	cluster := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		InmemCluster:         true,
+	})
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	state, err := client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.EqualValues(t, "not-running", state.ExecutionStatus)
+}
+
 func TestRaft_Autopilot_ServerStabilization(t *testing.T) {
 	cluster := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,

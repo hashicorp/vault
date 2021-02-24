@@ -131,6 +131,10 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 
+	if c.disableAutopilot {
+		raftBackend.DisableAutopilot()
+	}
+
 	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      raftTLS,
 		ClusterListener: c.getClusterListener(),

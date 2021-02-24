@@ -548,6 +548,9 @@ type Core struct {
 
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
+
+	// disableAutopilot is used to disable the autopilot subsystem in raft storage
+	disableAutopilot bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -653,6 +656,9 @@ type CoreConfig struct {
 
 	// number of workers to use for lease revocation in the expiration manager
 	NumExpirationWorkers int
+
+	// DisableAutopilot is used to disable autopilot subsystem in raft storage
+	DisableAutopilot bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -800,6 +806,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		keyRotateGracePeriod:     new(int64),
 		numExpirationWorkers:     conf.NumExpirationWorkers,
 		raftFollowerStates:       raft.NewFollowerStates(),
+		disableAutopilot:         conf.DisableAutopilot,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -49,6 +48,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
+		DisableAutopilot: !ropts.EnableAutopilot,
 	}
 
 	var opts = vault.TestClusterOptions{
@@ -72,12 +72,6 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 
 	if ropts.DisableFollowerJoins {
 		opts.SetupFunc = nil
-	}
-
-	if !ropts.EnableAutopilot {
-		envVar := "VAULT_RAFT_AUTOPILOT_DISABLE"
-		os.Setenv(envVar, "1")
-		defer os.Unsetenv(envVar)
 	}
 
 	cluster := vault.NewTestCluster(t, conf, &opts)

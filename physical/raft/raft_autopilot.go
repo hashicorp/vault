@@ -689,7 +689,18 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 	return state, nil
 }
 
+func (b *RaftBackend) DisableAutopilot() {
+	b.l.Lock()
+	b.disableAutopilot = true
+	b.l.Unlock()
+}
+
 func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
+	if b.disableAutopilot {
+		b.logger.Info("disabling autopilot")
+		return
+	}
+
 	if os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
 		b.logger.Info("disabling autopilot")
 		b.disableAutopilot = true

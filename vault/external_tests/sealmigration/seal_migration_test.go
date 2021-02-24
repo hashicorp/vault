@@ -1,7 +1,6 @@
 package sealmigration
 
 import (
-	"os"
 	"sync/atomic"
 	"testing"
 
@@ -34,10 +33,6 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 
 			logger := logger.Named("raft")
 			raftBasePort := basePort + 400
-
-			envVar := "VAULT_RAFT_AUTOPILOT_DISABLE"
-			os.Setenv(envVar, "1")
-			defer os.Unsetenv(envVar)
 
 			atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, raftBasePort+10)
