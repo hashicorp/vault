@@ -811,7 +811,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	if err := b.fsm.upgradeConfiguration(); err != nil {
 		// TODO: Should we swallow the error?
-		b.logger.Error("failed to refresh fsm raft configuration")
+		b.logger.Error("failed to upgrade fsm raft configuration")
 		return err
 	}
 
@@ -1292,8 +1292,8 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	}, nil
 }
 
-// SetDesiredSuffrage sets a field in the backend indicating that this node is
-// intended to be a permanent non-voter.
+// SetDesiredSuffrage sets a field in the fsm indicating the suffrage intent for
+// this node.
 func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
 	b.l.Lock()
 	defer b.l.Unlock()

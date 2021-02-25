@@ -290,10 +290,10 @@ func (f *FSM) upgradeConfiguration() error {
 	return nil
 }
 
-// This is called when a node successfully joins the cluster. This intent should
-// land in the stored configuration. If the config isn't available yet, we still
-// go ahead and store the intent in the fsm. During the next updated to the
-// configuration, this intent will be persisted.
+// witnessSuffrage is called when a node successfully joins the cluster. This
+// intent should land in the stored configuration. If the config isn't available
+// yet, we still go ahead and store the intent in the fsm. During the next
+// update to the configuration, this intent will be persisted.
 func (f *FSM) witnessSuffrage(desiredSuffrage string) error {
 	config := f.latestConfig.Load().(*ConfigurationValue)
 	if config == nil {
@@ -327,11 +327,7 @@ func (f *FSM) persistConfig(config *ConfigurationValue) error {
 	}
 
 	return f.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(configBucketName)
-		if err != nil {
-			return err
-		}
-		return b.Put(latestConfigKey, configBytes)
+		return tx.Bucket(configBucketName).Put(latestConfigKey, configBytes)
 	})
 }
 
