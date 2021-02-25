@@ -34,7 +34,9 @@ type JobManager struct {
 	onceStart         sync.Once
 	onceStop          sync.Once
 	logger            log.Logger
-	wg                sync.WaitGroup
+
+	// waitgroup for testing stop functionality
+	wg sync.WaitGroup
 
 	// protects `queues`, `queuesIndex`, `lastQueueAccessed`
 	l sync.RWMutex
@@ -82,14 +84,12 @@ func (j *JobManager) Start() {
 	})
 }
 
-// Stop stops the job manager, and waits for the worker pool and
-// job manager to quit gracefully
+// Stop stops the job manager asynchronously
 func (j *JobManager) Stop() {
 	j.onceStop.Do(func() {
-		j.logger.Trace("terminating job manager and waiting...")
-		j.workerPool.stop()
+		j.logger.Trace("terminating job manager...")
 		close(j.quit)
-		j.wg.Wait()
+		j.workerPool.stop()
 	})
 }
 
