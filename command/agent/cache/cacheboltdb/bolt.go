@@ -135,8 +135,8 @@ func createBoltSchema(tx *bolt.Tx) error {
 }
 
 // Set an index in bolt storage
-func (b *BoltStorage) Set(ctx context.Context, id string, plainText []byte, indexType string) error {
-	blob, err := b.wrapper.Encrypt(ctx, plainText, []byte(b.aad))
+func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, indexType string) error {
+	blob, err := b.wrapper.Encrypt(ctx, plaintext, []byte(b.aad))
 	if err != nil {
 		return fmt.Errorf("error encrypting %s index: %w", indexType, err)
 	}
@@ -218,14 +218,14 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 		if top == nil {
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
-		top.Bucket([]byte(indexType)).ForEach(func(id, cipherText []byte) error {
-			plainText, err := b.decrypt(ctx, cipherText)
+		top.Bucket([]byte(indexType)).ForEach(func(id, ciphertext []byte) error {
+			plaintext, err := b.decrypt(ctx, ciphertext)
 			if err != nil {
 				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
 				return nil
 			}
 
-			returnBytes = append(returnBytes, plainText)
+			returnBytes = append(returnBytes, plaintext)
 			return nil
 		})
 		return errors.ErrorOrNil()
@@ -255,11 +255,11 @@ func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 		return nil, nil
 	}
 
-	plainText, err := b.decrypt(ctx, encryptedToken)
+	plaintext, err := b.decrypt(ctx, encryptedToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt auto-auth token: %w", err)
 	}
-	return plainText, nil
+	return plaintext, nil
 }
 
 // GetRetrievalToken retrieves a plaintext token from the KeyBucket, which will
