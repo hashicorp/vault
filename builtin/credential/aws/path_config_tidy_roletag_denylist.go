@@ -26,7 +26,7 @@ Defaults to 4320h (180 days).`,
 			"disable_periodic_tidy": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of denylisted entries.",
+				Description: "If set to 'true', disables the periodic tidying of deny listed entries.",
 			},
 		},
 
