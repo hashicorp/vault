@@ -31,10 +31,13 @@ message Server {
     int32 suffrage = 1;
     string id = 2;
     string address = 3;
-    string desired_suffrage = 4;
 }
 
 message ConfigurationValue {
     uint64 index = 1;
     repeated Server servers = 2;
+}
+
+message DesiredSuffrageValue {
+  string desired_suffrage = 1;
 }

@@ -38,10 +38,11 @@ const (
 
 var (
 	// dataBucketName is the value we use for the bucket
-	dataBucketName   = []byte("data")
-	configBucketName = []byte("config")
-	latestIndexKey   = []byte("latest_indexes")
-	latestConfigKey  = []byte("latest_config")
+	dataBucketName     = []byte("data")
+	configBucketName   = []byte("config")
+	latestIndexKey     = []byte("latest_indexes")
+	latestConfigKey    = []byte("latest_config")
+	desiredSuffrageKey = []byte("desired_suffrage")
 )
 
 // Verify FSM satisfies the correct interfaces
@@ -251,43 +252,63 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 	return nil
 }
 
-func (f *FSM) upgradeConfiguration() error {
+func (f *FSM) upgradeDesiredSuffrage() error {
+	// Read the desired suffrage entry
+	var dsBytes []byte
+	if err := f.db.View(func(tx *bolt.Tx) error {
+		value := tx.Bucket(configBucketName).Get(desiredSuffrageKey)
+		if value != nil {
+			dsBytes = make([]byte, len(value))
+			copy(dsBytes, value)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
 
-	config := f.latestConfig.Load().(*ConfigurationValue)
+	var ds DesiredSuffrageValue
 
-	// When a fresh cluster is being brought up, there won't be a config. Do
-	// nothing in that case.
-	if config == nil {
+	// Entry is already present. Read and get the suffrage value.
+	if dsBytes != nil {
+		err := proto.Unmarshal(dsBytes, &ds)
+		if err != nil {
+			return err
+		}
+		f.desiredSuffrage = ds.DesiredSuffrage
 		return nil
 	}
 
-	upgraded := false
+	//
+	// This is the upgrade case where there is no entry
+	//
+
+	// Refer to the persisted latest raft config
+	config := f.latestConfig.Load().(*ConfigurationValue)
+
+	// If there is no config, then this is a fresh node coming up. This could end up
+	// being a voter or non-voter. But by default assume that this is a voter. It
+	// will be changed if this node joins the cluster as a non-voter.
+	if config == nil {
+		ds.DesiredSuffrage = f.desiredSuffrage
+		return f.persistDesiredSuffrage(&ds)
+	}
+
+	// Get the last known suffrage of the node and assume that it is the desired
+	// suffrage. There is no better alternative here.
 	for _, srv := range config.Servers {
 		if srv.Id == f.localID {
-			// DesiredSuffrage not being set is the upgrade criterion. Use the
-			// current suffrage of the node in the raft cluster as the desired
-			// suffrage, as there is no other better option.
-			if srv.DesiredSuffrage == "" {
-				switch srv.Suffrage {
-				case int32(raft.Nonvoter):
-					srv.DesiredSuffrage = "non-voter"
-				default:
-					srv.DesiredSuffrage = "voter"
-				}
-				upgraded = true
+			switch srv.Suffrage {
+			case int32(raft.Nonvoter):
+				ds.DesiredSuffrage = "non-voter"
+			default:
+				ds.DesiredSuffrage = "voter"
 			}
-			// Bring the intent to the fsm instance. This will be used by
-			// autopilot to keep the non-voters from getting promoted.
-			f.desiredSuffrage = srv.DesiredSuffrage
 		}
+		// Bring the intent to the fsm instance.
+		f.desiredSuffrage = ds.DesiredSuffrage
 	}
-	if upgraded {
-		if err := f.persistConfig(config); err != nil {
-			return err
-		}
-		f.latestConfig.Store(config)
-	}
-	return nil
+
+	return f.persistDesiredSuffrage(&ds)
 }
 
 // witnessSuffrage is called when a node successfully joins the cluster. This
@@ -295,39 +316,20 @@ func (f *FSM) upgradeConfiguration() error {
 // yet, we still go ahead and store the intent in the fsm. During the next
 // update to the configuration, this intent will be persisted.
 func (f *FSM) witnessSuffrage(desiredSuffrage string) error {
-	config := f.latestConfig.Load().(*ConfigurationValue)
-	if config == nil {
-		// This will be persisted when the fsm receives the `LogConfiguration`
-		// log.
-		// TODO: Do we want to explicitly create the config entry here?
-		f.desiredSuffrage = desiredSuffrage
-		return nil
-	}
-
-	for _, srv := range config.Servers {
-		if srv.Id == f.localID {
-			srv.DesiredSuffrage = desiredSuffrage
-		}
-	}
-
-	if err := f.persistConfig(config); err != nil {
-		return err
-	}
-
-	f.latestConfig.Store(config)
+	var ds DesiredSuffrageValue
+	ds.DesiredSuffrage = desiredSuffrage
 	f.desiredSuffrage = desiredSuffrage
-
-	return nil
+	return f.persistDesiredSuffrage(&ds)
 }
 
-func (f *FSM) persistConfig(config *ConfigurationValue) error {
-	configBytes, err := proto.Marshal(config)
+func (f *FSM) persistDesiredSuffrage(ds *DesiredSuffrageValue) error {
+	dsBytes, err := proto.Marshal(ds)
 	if err != nil {
 		return err
 	}
 
 	return f.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket(configBucketName).Put(latestConfigKey, configBytes)
+		return tx.Bucket(configBucketName).Put(desiredSuffrageKey, dsBytes)
 	})
 }
 
@@ -529,13 +531,6 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		case raft.LogConfiguration:
 			configuration := raft.DecodeConfiguration(log.Data)
 			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
-
-			// Add the desired suffrage to the config
-			for _, srv := range config.Servers {
-				if srv.Id == f.localID {
-					srv.DesiredSuffrage = f.desiredSuffrage
-				}
-			}
 
 			commands = append(commands, config)
 
