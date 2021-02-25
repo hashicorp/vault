@@ -66,7 +66,7 @@ export default Model.extend({
   }),
   allowedUsers: attr('string', {
     helpText:
-      'Create an allow list of users that can use this key (e.g. `admin, dev`, use `*` to allow all.)',
+      'Create a list of users who are allowed to use this key (e.g. `admin, dev`, or use `*` to allow all.)',
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:
