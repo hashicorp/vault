@@ -541,7 +541,9 @@ func (c *AgentCommand) Run(args []string) int {
 					c.UI.Error(fmt.Sprintf("Error getting retrieval token from persistent cache: %v", err))
 				}
 
-				ps.Close()
+				if err := ps.Close(); err != nil {
+					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
+				}
 
 				km, err := keymanager.NewPassthroughKeyManager(token)
 				if err != nil {
