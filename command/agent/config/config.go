@@ -48,20 +48,17 @@ type Cache struct {
 	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
 	UseAutoAuthToken    bool        `hcl:"-"`
 	ForceAutoAuthToken  bool        `hcl:"-"`
+	EnforceConsistency  string      `hcl:"enforce_consistency"`
+	WhenInconsistent    string      `hcl:"when_inconsistent"`
 	Persist             *Persist    `hcl:"persist"`
 }
 
 // Persist contains configuration needed for persistent caching
 type Persist struct {
-	Path            string  `hcl:"path"`
-	KeepAfterImport bool    `hcl:"keep_after_import"`
-	ExitOnErr       bool    `hcl:"exit_on_err"`
-	Crypto          *Crypto `hcl:"crypto"`
-}
-
-// Crypto contains configuration needed for persistent caching encryption
-type Crypto struct {
 	Type               string
+	Path               string `hcl:"path"`
+	KeepAfterImport    bool   `hcl:"keep_after_import"`
+	ExitOnErr          bool   `hcl:"exit_on_err"`
 	ServiceAccountPath string `hcl:"service_account_path"`
 }
 
@@ -350,59 +347,23 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var s Persist
-	err := hcl.DecodeObject(&s, item.Val)
+	var p Persist
+	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err
 	}
 
-	result.Cache.Persist = &s
-
-	subs, ok := item.Val.(*ast.ObjectType)
-	if !ok {
-		return fmt.Errorf("could not parse %q as an object", name)
-	}
-	subList := subs.List
-	if err := parseCrypto(result, subList); err != nil {
-		return fmt.Errorf("error parsing crypto: %w", err)
-	}
-	if result.Cache.Persist.Crypto == nil {
-		return fmt.Errorf("missing persistent crypto config")
-	}
-
-	return nil
-}
-
-func parseCrypto(result *Config, list *ast.ObjectList) error {
-	name := "crypto"
-
-	cryptoList := list.Filter(name)
-	if len(cryptoList.Items) == 0 {
-		return nil
-	}
-
-	if len(cryptoList.Items) > 1 {
-		return fmt.Errorf("only one %q block is required", name)
-	}
-
-	item := cryptoList.Items[0]
-
-	var c Crypto
-	err := hcl.DecodeObject(&c, item.Val)
-	if err != nil {
-		return err
-	}
-
-	if c.Type == "" {
+	if p.Type == "" {
 		if len(item.Keys) == 1 {
-			c.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+			p.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
 		}
-		if c.Type == "" {
-			return errors.New("method type must be specified")
+		if p.Type == "" {
+			return errors.New("persist type must be specified")
 		}
 	}
 
-	result.Cache.Persist.Crypto = &c
+	result.Cache.Persist = &p
+
 	return nil
 }
 

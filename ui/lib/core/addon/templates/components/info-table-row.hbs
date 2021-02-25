@@ -42,8 +42,6 @@
           @viewAll={{viewAll}}
           @wildcardLabel={{wildcardLabel}}
         />
-      {{else if isLink}}
-        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{value.[0]}} >{{value}}</LinkTo>
       {{else}}
         {{#if tooltipText}}
           <ToolTip
