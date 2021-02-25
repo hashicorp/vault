@@ -7,7 +7,6 @@ export default Route.extend(UnloadModel, {
   secretMountPath: service(),
   pathHelp: service(),
   async beforeModel() {
-    await this.store.unloadAll('kmip/config');
     return this.pathHelp.getNewModel('kmip/config', this.secretMountPath.currentPath);
   },
   model() {
