@@ -31,6 +31,7 @@ message Server {
     int32 suffrage = 1;
     string id = 2;
     string address = 3;
+    string desired_suffrage = 4;
 }
 
 message ConfigurationValue {

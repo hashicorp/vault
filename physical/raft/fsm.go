@@ -86,10 +86,13 @@ type FSM struct {
 	restoreCb restoreCallback
 
 	chunker *raftchunking.ChunkingBatchingFSM
+
+	localID         string
+	desiredSuffrage string
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(path string, logger log.Logger) (*FSM, error) {
+func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
@@ -106,6 +109,11 @@ func NewFSM(path string, logger log.Logger) (*FSM, error) {
 		latestTerm:   latestTerm,
 		latestIndex:  latestIndex,
 		latestConfig: latestConfig,
+		// Assume that the default intent is to join as as voter. This will be updated
+		// when this node joins a cluster with a different suffrage, or during cluster
+		// setup if this is already part of a cluster with a desired suffrage.
+		desiredSuffrage: "voter",
+		localID:         localID,
 	}
 
 	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
@@ -241,6 +249,90 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 	}
 
 	return nil
+}
+
+func (f *FSM) upgradeConfiguration() error {
+
+	config := f.latestConfig.Load().(*ConfigurationValue)
+
+	// When a fresh cluster is being brought up, there won't be a config. Do
+	// nothing in that case.
+	if config == nil {
+		return nil
+	}
+
+	upgraded := false
+	for _, srv := range config.Servers {
+		if srv.Id == f.localID {
+			// DesiredSuffrage not being set is the upgrade criterion. Use the
+			// current suffrage of the node in the raft cluster as the desired
+			// suffrage, as there is no other better option.
+			if srv.DesiredSuffrage == "" {
+				switch srv.Suffrage {
+				case int32(raft.Nonvoter):
+					srv.DesiredSuffrage = "non-voter"
+				default:
+					srv.DesiredSuffrage = "voter"
+				}
+				upgraded = true
+			}
+			// Bring the intent to the fsm instance. This will be used by
+			// autopilot to keep the non-voters from getting promoted.
+			f.desiredSuffrage = srv.DesiredSuffrage
+		}
+	}
+	if upgraded {
+		if err := f.persistConfig(config); err != nil {
+			return err
+		}
+		f.latestConfig.Store(config)
+	}
+	return nil
+}
+
+// This is called when a node successfully joins the cluster. This intent should
+// land in the stored configuration. If the config isn't available yet, we still
+// go ahead and store the intent in the fsm. During the next updated to the
+// configuration, this intent will be persisted.
+func (f *FSM) witnessSuffrage(desiredSuffrage string) error {
+	config := f.latestConfig.Load().(*ConfigurationValue)
+	if config == nil {
+		// This will be persisted when the fsm receives the `LogConfiguration`
+		// log.
+		// TODO: Do we want to explicitly create the config entry here?
+		f.desiredSuffrage = desiredSuffrage
+		return nil
+	}
+
+	for _, srv := range config.Servers {
+		if srv.Id == f.localID {
+			srv.DesiredSuffrage = desiredSuffrage
+		}
+	}
+
+	if err := f.persistConfig(config); err != nil {
+		return err
+	}
+
+	f.latestConfig.Store(config)
+	f.desiredSuffrage = desiredSuffrage
+
+	return nil
+}
+
+func (f *FSM) persistConfig(config *ConfigurationValue) error {
+	configBytes, err := proto.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	return f.db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists(configBucketName)
+		if err != nil {
+			return err
+		}
+		return b.Put(latestConfigKey, configBytes)
+	})
 }
 
 func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
@@ -441,6 +533,13 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		case raft.LogConfiguration:
 			configuration := raft.DecodeConfiguration(log.Data)
 			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
+
+			// Add the desired suffrage to the config
+			for _, srv := range config.Servers {
+				if srv.Id == f.localID {
+					srv.DesiredSuffrage = f.desiredSuffrage
+				}
+			}
 
 			commands = append(commands, config)
 

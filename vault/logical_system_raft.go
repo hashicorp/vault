@@ -353,8 +353,16 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, err
 		}
 
+		var suffrage string
+		switch nonVoter {
+		case true:
+			suffrage = "voter"
+		default:
+			suffrage = "non-voter"
+		}
+
 		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(serverID, 0, 0, nonVoter)
+			b.Core.raftFollowerStates.Update(serverID, 0, 0, suffrage)
 		}
 
 		peers, err := raftBackend.Peers(ctx)
@@ -500,10 +508,14 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			persist = true
 		}
 
-		if config.CleanupDeadServersValue != raft.CleanupDeadServersUnset && config.MinQuorum < 3 {
-			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", config.CleanupDeadServers, config.MinQuorum)), logical.ErrInvalidRequest
+		effectiveConf := raftStorage.AutopilotConfig()
+		effectiveConf.Merge(config)
+
+		if effectiveConf.CleanupDeadServers && effectiveConf.MinQuorum < 3 {
+			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", effectiveConf.CleanupDeadServers, effectiveConf.MinQuorum)), logical.ErrInvalidRequest
 		}
 
+		// Persist only the user supplied fields
 		if persist {
 			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, config)
 			if err != nil {
@@ -514,7 +526,8 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			}
 		}
 
-		raftStorage.SetAutopilotConfig(config)
+		// Set the effectiveConfig
+		raftStorage.SetAutopilotConfig(effectiveConf)
 
 		return nil, nil
 	}

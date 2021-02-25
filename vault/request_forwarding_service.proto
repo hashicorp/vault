@@ -19,7 +19,7 @@ message EchoRequest {
 	string raft_node_id = 5;
 	NodeInformation node_info = 6;
 	uint64 raft_term = 7;
-	bool raft_non_voter = 8;
+	string raft_desired_suffrage = 8;
 }
 
 message EchoReply {

@@ -33,6 +33,6 @@ func (d *Delegate) autopilotConfigExt() interface{} {
 	return nil
 }
 
-func (d *Delegate) autopilotServerExt(_ bool) interface{} {
+func (d *Delegate) autopilotServerExt(_ string) interface{} {
 	return nil
 }

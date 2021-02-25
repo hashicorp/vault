@@ -139,10 +139,6 @@ type RaftBackend struct {
 	// keeps track of follower heartbeats.
 	followerHeartbeatTrackerStopCh chan struct{}
 
-	// nonVoter indicates that this node is intended to be a non-voting node
-	// that doesn't get promoted into a voting node.
-	nonVoter bool
-
 	// disableAutopilot if set will not put autopilot implementation to use. The
 	// fallback will be to interact with the raft instance directly. This can only
 	// be set during startup via the environment variable
@@ -285,8 +281,50 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		path = pathFromConfig
 	}
 
+	var localID string
+	{
+		// Determine the local node ID from the environment.
+		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
+			localID = raftNodeID
+		}
+
+		// If not set in the environment check the configuration file.
+		if len(localID) == 0 {
+			localID = conf["node_id"]
+		}
+
+		// If not set in the config check the "node-id" file.
+		if len(localID) == 0 {
+			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
+			switch {
+			case err == nil:
+				if len(localIDRaw) > 0 {
+					localID = string(localIDRaw)
+				}
+			case os.IsNotExist(err):
+			default:
+				return nil, err
+			}
+		}
+
+		// If all of the above fails generate a UUID and persist it to the
+		// "node-id" file.
+		if len(localID) == 0 {
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				return nil, err
+			}
+
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+				return nil, err
+			}
+
+			localID = id
+		}
+	}
+
 	// Create the FSM.
-	fsm, err := NewFSM(path, logger.Named("fsm"))
+	fsm, err := NewFSM(path, localID, logger.Named("fsm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
@@ -348,48 +386,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
 		}
 		snap = newSnapshotStoreDelay(snap, delay)
-	}
-
-	var localID string
-	{
-		// Determine the local node ID from the environment.
-		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
-			localID = raftNodeID
-		}
-
-		// If not set in the environment check the configuration file.
-		if len(localID) == 0 {
-			localID = conf["node_id"]
-		}
-
-		// If not set in the config check the "node-id" file.
-		if len(localID) == 0 {
-			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
-			switch {
-			case err == nil:
-				if len(localIDRaw) > 0 {
-					localID = string(localIDRaw)
-				}
-			case os.IsNotExist(err):
-			default:
-				return nil, err
-			}
-		}
-
-		// If all of the above fails generate a UUID and persist it to the
-		// "node-id" file.
-		if len(localID) == 0 {
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, err
-			}
-
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
-				return nil, err
-			}
-
-			localID = id
-		}
 	}
 
 	maxEntrySize := defaultMaxEntrySize
@@ -813,11 +809,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raftNotifyCh = raftNotifyCh
 	b.setupAutopilot(opts)
 
-	_, latestConfig := b.fsm.LatestState()
-	for _, srv := range latestConfig.Servers {
-		if srv.Id == b.localID {
-			b.nonVoter = srv.Suffrage == int32(raft.Nonvoter)
-		}
+	if err := b.fsm.upgradeConfiguration(); err != nil {
+		// TODO: Should we swallow the error?
+		b.logger.Error("failed to refresh fsm raft configuration")
+		return err
 	}
 
 	if b.streamLayer != nil {
@@ -1297,20 +1292,33 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	}, nil
 }
 
-// SetNonVoter sets a field in the backend indicating that this node is intended
-// to be a permanent non-voter.
-func (b *RaftBackend) SetNonVoter(nonVoter bool) {
+// SetDesiredSuffrage sets a field in the backend indicating that this node is
+// intended to be a permanent non-voter.
+func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
 	b.l.Lock()
-	b.nonVoter = nonVoter
-	b.l.Unlock()
+	defer b.l.Unlock()
+
+	var desiredSuffrage string
+	switch nonVoter {
+	case true:
+		desiredSuffrage = "non-voter"
+	default:
+		desiredSuffrage = "voter"
+	}
+
+	err := b.fsm.witnessSuffrage(desiredSuffrage)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// NonVoter returns true if this node is intended to be a permanent non-voter.
-func (b *RaftBackend) NonVoter() bool {
+func (b *RaftBackend) DesiredSuffrage() string {
 	b.l.RLock()
-	nonVoter := b.nonVoter
+	desiredSuffrage := b.fsm.desiredSuffrage
 	b.l.RUnlock()
-	return nonVoter
+	return desiredSuffrage
 }
 
 // RaftLock implements the physical Lock interface and enables HA for this

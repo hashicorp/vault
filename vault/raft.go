@@ -341,7 +341,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0, raftBackend.NonVoter())
+			followerStates.Update(server.NodeID, 0, 0, raftBackend.DesiredSuffrage())
 		}
 	}
 
@@ -967,7 +967,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
-						raftBackend.SetNonVoter(nonVoter)
+						if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+							// TODO: Should we swallow the error?
+							c.logger.Error("failed to set desired suffrage for this node", "error", err)
+							return err
+						}
 						return nil
 					}
 				}
@@ -1007,7 +1011,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		}
 	}
 
-	raftBackend.SetNonVoter(nonVoter)
+	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+		c.logger.Error("failed to set desired suffrage for this node", "error", err)
+		// TODO: Should we swallow the error?
+		return false, nil
+	}
 	return true, nil
 }
 

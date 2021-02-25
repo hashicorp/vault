@@ -149,7 +149,7 @@ type FollowerState struct {
 	LastHeartbeat time.Time
 	LastTerm      uint64
 	IsDead        bool
-	NonVoter      bool
+	Suffrage      string
 }
 
 // FollowerStates holds information about all the followers in the raft cluster
@@ -184,11 +184,11 @@ func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 }
 
 // Update the peer information in the follower states
-func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, nonVoter bool) {
+func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, suffrage string) {
 	state := &FollowerState{
 		AppliedIndex:  appliedIndex,
 		LastTerm:      term,
-		NonVoter:      nonVoter,
+		Suffrage:      suffrage,
 		LastHeartbeat: time.Now(),
 	}
 
@@ -354,7 +354,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			ID:          raft.ServerID(id),
 			Name:        id,
 			RaftVersion: raft.ProtocolVersionMax,
-			Ext:         d.autopilotServerExt(state.NonVoter),
+			Ext:         d.autopilotServerExt(state.Suffrage),
 		}
 
 		switch state.IsDead {
@@ -374,7 +374,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
-		Ext:         d.autopilotServerExt(false),
+		Ext:         d.autopilotServerExt("voter"),
 	}
 
 	return ret
@@ -406,7 +406,7 @@ func (b *RaftBackend) SetFollowerStates(states *FollowerStates) {
 // SetAutopilotConfig updates the autopilot configuration in the backend.
 func (b *RaftBackend) SetAutopilotConfig(config *AutopilotConfig) {
 	b.l.Lock()
-	b.autopilotConfig.Merge(config)
+	b.autopilotConfig = config
 	b.logger.Info("updated autopilot configuration", "config", b.autopilotConfig)
 	b.l.Unlock()
 }
