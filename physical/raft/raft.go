@@ -813,6 +813,13 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raftNotifyCh = raftNotifyCh
 	b.setupAutopilot(opts)
 
+	_, latestConfig := b.fsm.LatestState()
+	for _, srv := range latestConfig.Servers {
+		if srv.Id == b.localID {
+			b.nonVoter = srv.Suffrage == int32(raft.Nonvoter)
+		}
+	}
+
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
 		opts.ClusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
