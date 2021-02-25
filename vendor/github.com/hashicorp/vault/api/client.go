@@ -1060,5 +1060,8 @@ func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bo
 	if err != nil || retry {
 		return retry, err
 	}
-	return resp.StatusCode == 412, nil
+	if resp != nil && resp.StatusCode == 412 {
+		return true, nil
+	}
+	return false, nil
 }
