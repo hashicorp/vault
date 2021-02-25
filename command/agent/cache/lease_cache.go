@@ -91,7 +91,7 @@ type LeaseCache struct {
 
 	// shuttingDown is used to determine if cache needs to be evicted or not
 	// when the context is cancelled
-	shuttingDown bool
+	shuttingDown atomic.Bool
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -157,7 +157,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 
 // SetShuttingDown is a setter for the shuttingDown field
 func (c *LeaseCache) SetShuttingDown(in bool) {
-	c.shuttingDown = in
+	c.shuttingDown.Store(in)
 }
 
 // SetPersistentStorage is a setter for the persistent storage field in
@@ -452,7 +452,7 @@ func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo 
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
 	defer func() {
 		id := ctx.Value(contextIndexID).(string)
-		if c.shuttingDown {
+		if c.shuttingDown.Load() {
 			c.logger.Trace("not evicting index from cache during shutdown", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
 			return
 		}

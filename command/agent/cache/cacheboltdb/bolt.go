@@ -96,14 +96,24 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 }
 
 func createBoltSchema(tx *bolt.Tx) error {
-	_, err := tx.CreateBucketIfNotExists([]byte(RetrievalTokenBucket))
-	if err != nil {
-		return fmt.Errorf("failed to create key bucket: %w", err)
-	}
+	// create the root bucket at the top level
 	root, err := tx.CreateBucketIfNotExists([]byte(rootBucketName))
 	if err != nil {
 		return fmt.Errorf("failed to create bucket %s: %w", rootBucketName, err)
 	}
+	// check and set file version in the root bucket
+	version := root.Get([]byte(storageVersionKey))
+	switch {
+	case version == nil:
+		err = root.Put([]byte(storageVersionKey), []byte(storageVersion))
+		if err != nil {
+			return fmt.Errorf("failed to set storage version: %w", err)
+		}
+	case string(version) != storageVersion:
+		return fmt.Errorf("storage migration from %s to %s not implemented", string(version), storageVersion)
+	}
+
+	// create the sub-buckets off root for tokens and leases
 	_, err = root.CreateBucketIfNotExists([]byte(TokenType))
 	if err != nil {
 		return fmt.Errorf("failed to create token sub-bucket: %w", err)
@@ -117,17 +127,12 @@ func createBoltSchema(tx *bolt.Tx) error {
 		return fmt.Errorf("failed to create secret lease sub-bucket: %w", err)
 	}
 
-	// check and set file version in the root bucket
-	version := root.Get([]byte(storageVersionKey))
-	switch {
-	case version == nil:
-		err = root.Put([]byte(storageVersionKey), []byte(storageVersion))
-		if err != nil {
-			return fmt.Errorf("failed to set storage version: %w", err)
-		}
-	case string(version) != storageVersion:
-		return fmt.Errorf("storage migration from %s to %s not implemented", string(version), storageVersion)
+	// create the retrieval token bucket at the top level
+	_, err = tx.CreateBucketIfNotExists([]byte(RetrievalTokenBucket))
+	if err != nil {
+		return fmt.Errorf("failed to create key bucket: %w", err)
 	}
+
 	return nil
 }
 
