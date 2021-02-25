@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/kr/pretty"
 
 	autopilot "github.com/hashicorp/raft-autopilot"
-
-	"github.com/kr/pretty"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,7 +33,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 	require.EqualValues(t, "not-running", state.ExecutionStatus)
 }
 
-func TestRaft_Autopilot_ServerStabilization(t *testing.T) {
+func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	cluster := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
@@ -42,62 +41,87 @@ func TestRaft_Autopilot_ServerStabilization(t *testing.T) {
 	})
 	defer cluster.Cleanup()
 
+	// Check that autopilot execution state is running
 	client := cluster.Cores[0].Client
+	state, err := client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.Equal(t, state.ExecutionStatus, api.AutopilotRunning)
+	require.Equal(t, state.Healthy, true)
+	require.Len(t, state.Servers, 1)
+	require.Equal(t, state.Servers["core-0"].ID, "core-0")
+	require.Equal(t, state.Servers["core-0"].NodeStatus, "alive")
+	require.Equal(t, state.Servers["core-0"].Status, "leader")
+
 	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
 
 	// Wait for 110% of the stabilization time to add nodes
-	waitTime := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
-	time.Sleep(waitTime)
+	stabilizationKickOffWaitDuration := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
+	time.Sleep(stabilizationKickOffWaitDuration)
 
-	joinFunc := func(core *vault.TestClusterCore) {
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
-			{
-				LeaderAPIAddr: client.Address(),
-				TLSConfig:     cluster.Cores[0].TLSConfig,
-				Retry:         true,
-			},
-		}, false)
+	joinAndStabilizeFunc := func(core *vault.TestClusterCore, nodeID string, numServers int) {
+		joinFunc := func(core *vault.TestClusterCore) {
+			_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
+				{
+					LeaderAPIAddr: client.Address(),
+					TLSConfig:     cluster.Cores[0].TLSConfig,
+					Retry:         true,
+				},
+			}, false)
+			require.NoError(t, err)
+			time.Sleep(1 * time.Second)
+			cluster.UnsealCore(t, core)
+		}
+		joinFunc(core)
+
+		state, err = client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-		cluster.UnsealCore(t, core)
-	}
+		require.Equal(t, state.Healthy, false)
+		require.Len(t, state.Servers, numServers)
+		require.Equal(t, state.Servers[nodeID].Healthy, false)
+		require.Equal(t, state.Servers[nodeID].NodeStatus, "alive")
+		require.Equal(t, state.Servers[nodeID].Status, "non-voter")
 
-	joinFunc(cluster.Cores[1])
-	joinFunc(cluster.Cores[2])
-
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
-	})
-
-	deadline := time.Now().Add(2 * autopilot.DefaultReconcileInterval)
-	success := false
-	healthy := false
-
-	var state *api.AutopilotState
-	for time.Now().Before(deadline) {
-		state, err := client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		if state.Healthy {
-			healthy = true
+		// Wait till the stabilization period is over
+		stabilizationWaitDuration := time.Duration(float64(config.ServerStabilizationTime))
+		deadline := time.Now().Add(stabilizationWaitDuration)
+		healthy := false
+		for time.Now().Before(deadline) {
+			state, err := client.Sys().RaftAutopilotState()
+			require.NoError(t, err)
+			if state.Healthy {
+				healthy = true
+			}
+			time.Sleep(1 * time.Second)
+		}
+		if !healthy {
+			t.Fatalf("cluster failed to stabilize")
 		}
 
-		if healthy && len(state.Voters) == 3 {
-			success = true
-			break
+		// Now that the server is stable, wait for autopilot to reconcile and
+		// promotion to happen. Reconcile interval is 10 seconds. Bound it by
+		// doubling.
+		deadline = time.Now().Add(2 * autopilot.DefaultReconcileInterval)
+		failed := true
+		for time.Now().Before(deadline) {
+			state, err = client.Sys().RaftAutopilotState()
+			require.NoError(t, err)
+			if state.Servers[nodeID].Status == "voter" {
+				failed = false
+				break
+			}
+			time.Sleep(1 * time.Second)
 		}
-		time.Sleep(1 * time.Second)
-	}
 
-	if !healthy {
-		t.Fatalf("servers failed to become healthy ")
+		if failed {
+			t.Fatalf("autopilot failed to promote node: id: %#v: state:%# v\n", nodeID, pretty.Formatter(state))
+		}
 	}
-
-	if !success {
-		t.Fatalf("servers failed to promote followers; state: %#v\n", state)
-	}
+	joinAndStabilizeFunc(cluster.Cores[1], "core-1", 2)
+	joinAndStabilizeFunc(cluster.Cores[2], "core-2", 3)
+	state, err = client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
@@ -184,86 +208,4 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	cluster.UnsealCore(t, leaderCore)
 	vault.TestWaitActive(t, leaderCore.Core)
 	configCheckFunc(config)
-}
-
-func TestRaft_Autopilot_State(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
-		DisableFollowerJoins: true,
-		InmemCluster:         true,
-		EnableAutopilot:      true,
-	})
-	defer cluster.Cleanup()
-
-	// Check that autopilot execution state is running
-	client := cluster.Cores[0].Client
-	state, err := client.Sys().RaftAutopilotState()
-	require.NoError(t, err)
-	require.Equal(t, state.ExecutionStatus, api.AutopilotRunning)
-	require.Equal(t, state.Healthy, true)
-	require.Len(t, state.Servers, 1)
-	require.Equal(t, state.Servers["core-0"].ID, "core-0")
-	require.Equal(t, state.Servers["core-0"].NodeStatus, "alive")
-	require.Equal(t, state.Servers["core-0"].Status, "leader")
-
-	config, err := client.Sys().RaftAutopilotConfiguration()
-	require.NoError(t, err)
-
-	// Wait for 110% of the stabilization time to add nodes
-	waitTime := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
-	time.Sleep(waitTime)
-
-	joinAndStabilizeFunc := func(core *vault.TestClusterCore, nodeID string, numServers int) {
-		joinFunc := func(core *vault.TestClusterCore) {
-			_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
-				{
-					LeaderAPIAddr: client.Address(),
-					TLSConfig:     cluster.Cores[0].TLSConfig,
-					Retry:         true,
-				},
-			}, false)
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
-			cluster.UnsealCore(t, core)
-		}
-		joinFunc(core)
-
-		state, err = client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		require.Equal(t, state.Healthy, false)
-		require.Len(t, state.Servers, numServers)
-		require.Equal(t, state.Servers[nodeID].Healthy, false)
-		require.Equal(t, state.Servers[nodeID].NodeStatus, "alive")
-		require.Equal(t, state.Servers[nodeID].Status, "non-voter")
-
-		// Wait till the stabilization period is over
-		waitTime = time.Duration(float64(config.ServerStabilizationTime))
-		time.Sleep(waitTime)
-		state, err = client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		require.Equal(t, state.Servers[nodeID].Healthy, true)
-
-		// Now that the server is stable, wait for autopilot to reconcile and
-		// promotion to happen. Reconcile interval is 10 seconds. Bound it by
-		// doubling.
-		deadline := time.Now().Add(20 * time.Second)
-		failed := true
-		for time.Now().Before(deadline) {
-			state, err = client.Sys().RaftAutopilotState()
-			require.NoError(t, err)
-			if state.Servers[nodeID].Status == "voter" {
-				failed = false
-				break
-			}
-			time.Sleep(1 * time.Second)
-		}
-
-		if failed {
-			t.Fatalf("failed to promote node: id: %#v: state:%# v\n", nodeID, pretty.Formatter(state))
-		}
-	}
-	joinAndStabilizeFunc(cluster.Cores[1], "core-1", 2)
-	joinAndStabilizeFunc(cluster.Cores[2], "core-2", 3)
-	state, err = client.Sys().RaftAutopilotState()
-	require.NoError(t, err)
-	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
 }
