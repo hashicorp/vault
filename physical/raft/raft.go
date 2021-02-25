@@ -1306,7 +1306,7 @@ func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
 		desiredSuffrage = "voter"
 	}
 
-	err := b.fsm.witnessSuffrage(desiredSuffrage)
+	err := b.fsm.recordSuffrage(desiredSuffrage)
 	if err != nil {
 		return err
 	}

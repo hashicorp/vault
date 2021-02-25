@@ -310,11 +310,11 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 	return f.persistDesiredSuffrage(&lnConfig)
 }
 
-// witnessSuffrage is called when a node successfully joins the cluster. This
+// recordSuffrage is called when a node successfully joins the cluster. This
 // intent should land in the stored configuration. If the config isn't available
 // yet, we still go ahead and store the intent in the fsm. During the next
 // update to the configuration, this intent will be persisted.
-func (f *FSM) witnessSuffrage(desiredSuffrage string) error {
+func (f *FSM) recordSuffrage(desiredSuffrage string) error {
 	var lnConfig LocalNodeConfigValue
 	lnConfig.DesiredSuffrage = desiredSuffrage
 	f.desiredSuffrage = desiredSuffrage
