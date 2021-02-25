@@ -225,7 +225,6 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	if err := b.validatePath(entry.Key); err != nil {
 		return err
 	}
-cd protoc-gen-go
 	path, key := b.expandPath(entry.Key)
 
 	select {
