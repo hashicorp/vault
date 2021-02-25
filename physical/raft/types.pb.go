@@ -320,7 +320,7 @@ func (x *ConfigurationValue) GetServers() []*Server {
 	return nil
 }
 
-type DesiredSuffrageValue struct {
+type LocalNodeConfigValue struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -328,8 +328,8 @@ type DesiredSuffrageValue struct {
 	DesiredSuffrage string `protobuf:"bytes,1,opt,name=desired_suffrage,json=desiredSuffrage,proto3" json:"desired_suffrage,omitempty"`
 }
 
-func (x *DesiredSuffrageValue) Reset() {
-	*x = DesiredSuffrageValue{}
+func (x *LocalNodeConfigValue) Reset() {
+	*x = LocalNodeConfigValue{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_physical_raft_types_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -337,13 +337,13 @@ func (x *DesiredSuffrageValue) Reset() {
 	}
 }
 
-func (x *DesiredSuffrageValue) String() string {
+func (x *LocalNodeConfigValue) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DesiredSuffrageValue) ProtoMessage() {}
+func (*LocalNodeConfigValue) ProtoMessage() {}
 
-func (x *DesiredSuffrageValue) ProtoReflect() protoreflect.Message {
+func (x *LocalNodeConfigValue) ProtoReflect() protoreflect.Message {
 	mi := &file_physical_raft_types_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -355,12 +355,12 @@ func (x *DesiredSuffrageValue) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DesiredSuffrageValue.ProtoReflect.Descriptor instead.
-func (*DesiredSuffrageValue) Descriptor() ([]byte, []int) {
+// Deprecated: Use LocalNodeConfigValue.ProtoReflect.Descriptor instead.
+func (*LocalNodeConfigValue) Descriptor() ([]byte, []int) {
 	return file_physical_raft_types_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *DesiredSuffrageValue) GetDesiredSuffrage() string {
+func (x *LocalNodeConfigValue) GetDesiredSuffrage() string {
 	if x != nil {
 		return x.DesiredSuffrage
 	}
@@ -396,8 +396,8 @@ var file_physical_raft_types_proto_rawDesc = []byte{
 	0x20, 0x01, 0x28, 0x04, 0x52, 0x05, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x12, 0x26, 0x0a, 0x07, 0x73,
 	0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x72,
 	0x61, 0x66, 0x74, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x52, 0x07, 0x73, 0x65, 0x72, 0x76,
-	0x65, 0x72, 0x73, 0x22, 0x41, 0x0a, 0x14, 0x44, 0x65, 0x73, 0x69, 0x72, 0x65, 0x64, 0x53, 0x75,
-	0x66, 0x66, 0x72, 0x61, 0x67, 0x65, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x12, 0x29, 0x0a, 0x10, 0x64,
+	0x65, 0x72, 0x73, 0x22, 0x41, 0x0a, 0x14, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x4e, 0x6f, 0x64, 0x65,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x12, 0x29, 0x0a, 0x10, 0x64,
 	0x65, 0x73, 0x69, 0x72, 0x65, 0x64, 0x5f, 0x73, 0x75, 0x66, 0x66, 0x72, 0x61, 0x67, 0x65, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x64, 0x65, 0x73, 0x69, 0x72, 0x65, 0x64, 0x53, 0x75,
 	0x66, 0x66, 0x72, 0x61, 0x67, 0x65, 0x42, 0x2a, 0x5a, 0x28, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
@@ -425,7 +425,7 @@ var file_physical_raft_types_proto_goTypes = []interface{}{
 	(*IndexValue)(nil),           // 2: raft.IndexValue
 	(*Server)(nil),               // 3: raft.Server
 	(*ConfigurationValue)(nil),   // 4: raft.ConfigurationValue
-	(*DesiredSuffrageValue)(nil), // 5: raft.DesiredSuffrageValue
+	(*LocalNodeConfigValue)(nil), // 5: raft.LocalNodeConfigValue
 }
 var file_physical_raft_types_proto_depIdxs = []int32{
 	0, // 0: raft.LogData.operations:type_name -> raft.LogOperation
@@ -504,7 +504,7 @@ func file_physical_raft_types_proto_init() {
 			}
 		}
 		file_physical_raft_types_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DesiredSuffrageValue); i {
+			switch v := v.(*LocalNodeConfigValue); i {
 			case 0:
 				return &v.state
 			case 1:

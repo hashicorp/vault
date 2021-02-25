@@ -42,7 +42,7 @@ var (
 	configBucketName   = []byte("config")
 	latestIndexKey     = []byte("latest_indexes")
 	latestConfigKey    = []byte("latest_config")
-	desiredSuffrageKey = []byte("desired_suffrage")
+	localNodeConfigKey = []byte("local_node_config")
 )
 
 // Verify FSM satisfies the correct interfaces
@@ -252,29 +252,28 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 	return nil
 }
 
-func (f *FSM) upgradeDesiredSuffrage() error {
-	// Read the desired suffrage entry
-	var dsBytes []byte
+func (f *FSM) upgradeLocalNodeConfig() error {
+	// Read the local node config
+	var lnConfigBytes []byte
 	if err := f.db.View(func(tx *bolt.Tx) error {
-		value := tx.Bucket(configBucketName).Get(desiredSuffrageKey)
+		value := tx.Bucket(configBucketName).Get(localNodeConfigKey)
 		if value != nil {
-			dsBytes = make([]byte, len(value))
-			copy(dsBytes, value)
+			lnConfigBytes = make([]byte, len(value))
+			copy(lnConfigBytes, value)
 		}
 		return nil
 	}); err != nil {
 		return err
 	}
 
-	var ds DesiredSuffrageValue
-
+	var lnConfig LocalNodeConfigValue
 	// Entry is already present. Read and get the suffrage value.
-	if dsBytes != nil {
-		err := proto.Unmarshal(dsBytes, &ds)
+	if lnConfigBytes != nil {
+		err := proto.Unmarshal(lnConfigBytes, &lnConfig)
 		if err != nil {
 			return err
 		}
-		f.desiredSuffrage = ds.DesiredSuffrage
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
 		return nil
 	}
 
@@ -289,8 +288,8 @@ func (f *FSM) upgradeDesiredSuffrage() error {
 	// being a voter or non-voter. But by default assume that this is a voter. It
 	// will be changed if this node joins the cluster as a non-voter.
 	if config == nil {
-		ds.DesiredSuffrage = f.desiredSuffrage
-		return f.persistDesiredSuffrage(&ds)
+		lnConfig.DesiredSuffrage = f.desiredSuffrage
+		return f.persistDesiredSuffrage(&lnConfig)
 	}
 
 	// Get the last known suffrage of the node and assume that it is the desired
@@ -299,16 +298,16 @@ func (f *FSM) upgradeDesiredSuffrage() error {
 		if srv.Id == f.localID {
 			switch srv.Suffrage {
 			case int32(raft.Nonvoter):
-				ds.DesiredSuffrage = "non-voter"
+				lnConfig.DesiredSuffrage = "non-voter"
 			default:
-				ds.DesiredSuffrage = "voter"
+				lnConfig.DesiredSuffrage = "voter"
 			}
 		}
 		// Bring the intent to the fsm instance.
-		f.desiredSuffrage = ds.DesiredSuffrage
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
 	}
 
-	return f.persistDesiredSuffrage(&ds)
+	return f.persistDesiredSuffrage(&lnConfig)
 }
 
 // witnessSuffrage is called when a node successfully joins the cluster. This
@@ -316,20 +315,20 @@ func (f *FSM) upgradeDesiredSuffrage() error {
 // yet, we still go ahead and store the intent in the fsm. During the next
 // update to the configuration, this intent will be persisted.
 func (f *FSM) witnessSuffrage(desiredSuffrage string) error {
-	var ds DesiredSuffrageValue
-	ds.DesiredSuffrage = desiredSuffrage
+	var lnConfig LocalNodeConfigValue
+	lnConfig.DesiredSuffrage = desiredSuffrage
 	f.desiredSuffrage = desiredSuffrage
-	return f.persistDesiredSuffrage(&ds)
+	return f.persistDesiredSuffrage(&lnConfig)
 }
 
-func (f *FSM) persistDesiredSuffrage(ds *DesiredSuffrageValue) error {
-	dsBytes, err := proto.Marshal(ds)
+func (f *FSM) persistDesiredSuffrage(lnconfig *LocalNodeConfigValue) error {
+	dsBytes, err := proto.Marshal(lnconfig)
 	if err != nil {
 		return err
 	}
 
 	return f.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket(configBucketName).Put(desiredSuffrageKey, dsBytes)
+		return tx.Bucket(configBucketName).Put(localNodeConfigKey, dsBytes)
 	})
 }
 

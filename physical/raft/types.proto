@@ -38,6 +38,6 @@ message ConfigurationValue {
     repeated Server servers = 2;
 }
 
-message DesiredSuffrageValue {
+message LocalNodeConfigValue{
   string desired_suffrage = 1;
 }

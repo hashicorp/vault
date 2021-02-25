@@ -809,7 +809,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raftNotifyCh = raftNotifyCh
 	b.setupAutopilot(opts)
 
-	if err := b.fsm.upgradeDesiredSuffrage(); err != nil {
+	if err := b.fsm.upgradeLocalNodeConfig(); err != nil {
 		// TODO: Should we swallow the error?
 		b.logger.Error("failed to upgrade fsm raft configuration")
 		return err
