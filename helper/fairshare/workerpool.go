@@ -89,7 +89,7 @@ func (d *dispatcher) start() {
 	})
 }
 
-// stop stops the worker pool and waits for all workers to finish their jobs
+// stop stops the worker pool asynchronously
 func (d *dispatcher) stop() {
 	d.onceStop.Do(func() {
 		d.logger.Trace("terminating dispatcher")

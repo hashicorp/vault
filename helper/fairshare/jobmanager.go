@@ -84,8 +84,7 @@ func (j *JobManager) Start() {
 	})
 }
 
-// Stop stops the job manager, and waits for the worker pool and
-// job manager to quit gracefully
+// Stop stops the job manager asynchronously
 func (j *JobManager) Stop() {
 	j.onceStop.Do(func() {
 		j.logger.Trace("terminating job manager...")
