@@ -156,13 +156,13 @@ type FollowerState struct {
 // tracked by the leader.
 type FollowerStates struct {
 	l         sync.RWMutex
-	followers map[string]FollowerState
+	followers map[string]*FollowerState
 }
 
 // NewFollowerStates creates a new FollowerStates object
 func NewFollowerStates() *FollowerStates {
 	return &FollowerStates{
-		followers: make(map[string]FollowerState),
+		followers: make(map[string]*FollowerState),
 	}
 }
 
@@ -175,7 +175,7 @@ func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 	if !ok {
 		return
 	}
-	s.followers[nodeID] = FollowerState{
+	s.followers[nodeID] = &FollowerState{
 		LastHeartbeat: state.LastHeartbeat,
 		LastTerm:      state.LastTerm,
 		AppliedIndex:  state.AppliedIndex,
@@ -185,7 +185,7 @@ func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 
 // Update the peer information in the follower states
 func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, nonVoter bool) {
-	state := FollowerState{
+	state := &FollowerState{
 		AppliedIndex:  appliedIndex,
 		LastTerm:      term,
 		NonVoter:      nonVoter,
@@ -211,14 +211,6 @@ func (s *FollowerStates) Delete(nodeID string) {
 	s.l.Lock()
 	delete(s.followers, nodeID)
 	s.l.Unlock()
-}
-
-// Get retrieves information about a peer from the follower states.
-func (s *FollowerStates) Get(nodeID string) FollowerState {
-	s.l.RLock()
-	state := s.followers[nodeID]
-	s.l.RUnlock()
-	return state
 }
 
 // MinIndex returns the minimum raft index applied in the raft cluster.
