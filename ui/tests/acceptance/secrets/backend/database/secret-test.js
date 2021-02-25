@@ -2,13 +2,18 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, settled, click, visit, fillIn, findAll } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
+import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
+import rolePage from 'vault/tests/pages/secrets/backend/database/role';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import searchSelect from 'vault/tests/pages/components/search-select';
+
+const searchSelectComponent = create(searchSelect);
 
 const consoleComponent = create(consoleClass);
 
@@ -16,8 +21,6 @@ const MODEL = {
   engineType: 'database',
   id: 'database-name',
 };
-
-const WRITE_CONCERN = { wtimeout: 5000 };
 
 const mount = async () => {
   let path = `database-${Date.now()}`;
@@ -34,6 +37,7 @@ const newConnection = async backend => {
   await connectionPage.url(`mongodb://127.0.0.1:4321/${name}`);
   await connectionPage.toggleVerify();
   await connectionPage.save();
+  await connectionPage.enable();
   return name;
 };
 
@@ -128,7 +132,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
     assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
     // assert password is hidden
-    findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify(WRITE_CONCERN));
+    findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify({ wtimeout: 5000 }));
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
     await connectionPage.save();
@@ -153,6 +157,9 @@ module('Acceptance | secrets/database/*', function(hooks) {
 path "${backend}/*" {
   capabilities = ["deny"]
 }
+path "${backend}/config" {
+  capabilities = ["list"]
+}
 path "${backend}/config/*" {
   capabilities = ["read"]
 }
@@ -175,7 +182,42 @@ path "${backend}/config/*" {
       .doesNotExist('Reset button does not show due to permissions');
     assert.dom('[data-test-secret-create]').doesNotExist('Add role button does not show due to permissions');
     assert.dom('[data-test-edit-link]').doesNotExist('Edit button does not show due to permissions');
-    await this.pauseTest();
+    await visit(`/vault/secrets/${backend}/overview`);
+    assert.dom('[data-test-selectable-card="Connections"]').exists('Connections card exists on overview');
+    assert
+      .dom('[data-test-selectable-card="Roles"]')
+      .doesNotExist('Roles card does not exist on overview w/ policy');
+    assert.dom('.title-number').hasText('1', 'Lists the correct number of connections');
+  });
+
+  test('Role create form', async function(assert) {
+    const backend = await mount();
+    // Connection needed for role fields
+    await newConnection(backend);
+    await rolePage.visitCreate({ backend });
+    await rolePage.name('bar');
+    assert
+      .dom('[data-test-component="empty-state"]')
+      .exists({ count: 2 }, 'Two empty states exist before selections made');
+    await clickTrigger('#database');
+    assert.equal(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
+    await selectChoose('#database', '.ember-power-select-option', 0);
+    assert
+      .dom('[data-test-component="empty-state"]')
+      .exists({ count: 2 }, 'Two empty states exist before selections made');
+    await rolePage.roleType('static');
+    assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
+    assert.dom('[data-test-input="username"]').exists('Username field appears for static role');
+    assert
+      .dom('[data-test-toggle-input="Rotation period"]')
+      .exists('Rotation period field appears for static role');
+    await rolePage.roleType('dynamic');
+    assert
+      .dom('[data-test-toggle-input="Generated credentials’s Time-to-Live (TTL)"]')
+      .exists('TTL field exists for dynamic');
+    assert
+      .dom('[data-test-toggle-input="Generated credentials’s maximum Time-to-Live (Max TTL)"]')
+      .exists('Max TTL field exists for dynamic');
   });
 
   test('root and limited access', async function(assert) {
