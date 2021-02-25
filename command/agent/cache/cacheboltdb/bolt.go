@@ -193,9 +193,18 @@ func (b *BoltStorage) Delete(id string) error {
 	})
 }
 
+func (b *BoltStorage) decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+	var blob wrapping.EncryptedBlobInfo
+	if err := proto.Unmarshal(ciphertext, &blob); err != nil {
+		return nil, err
+	}
+
+	return b.wrapper.Decrypt(ctx, &blob, []byte(b.aad))
+}
+
 // GetByType returns a list of stored items of the specified type
 func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte, error) {
-	returnBytes := [][]byte{}
+	var returnBytes [][]byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		var errors *multierror.Error
@@ -205,16 +214,12 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
 		top.Bucket([]byte(indexType)).ForEach(func(id, cipherText []byte) error {
-			var blob wrapping.EncryptedBlobInfo
-			if err := proto.Unmarshal(cipherText, &blob); err != nil {
-				return err
-			}
-
-			plainText, err := b.wrapper.Decrypt(ctx, &blob, []byte(b.aad))
+			plainText, err := b.decrypt(ctx, cipherText)
 			if err != nil {
 				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
 				return nil
 			}
+
 			returnBytes = append(returnBytes, plainText)
 			return nil
 		})
@@ -227,30 +232,25 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 // GetAutoAuthToken retrieves the latest auto-auth token, and returns nil if non
 // exists yet
 func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
-	var token []byte
+	var encryptedToken []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		top := tx.Bucket([]byte(b.rootBucket))
 		if top == nil {
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
-		token = top.Get([]byte(AutoAuthToken))
+		encryptedToken = top.Get([]byte(AutoAuthToken))
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if token == nil {
+	if encryptedToken == nil {
 		return nil, nil
 	}
 
-	var blob wrapping.EncryptedBlobInfo
-	if err := proto.Unmarshal(token, &blob); err != nil {
-		return nil, err
-	}
-
-	plainText, err := b.wrapper.Decrypt(ctx, &blob, []byte(b.aad))
+	plainText, err := b.decrypt(ctx, encryptedToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt auto-auth token: %w", err)
 	}
@@ -260,7 +260,7 @@ func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 // GetRetrievalToken retrieves a plaintext token from the KeyBucket, which will
 // be used by the key manager to retrieve the encryption key, nil if none set
 func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
-	token := []byte{}
+	var token []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		keyBucket := tx.Bucket([]byte(RetrievalTokenBucket))

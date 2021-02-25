@@ -516,14 +516,14 @@ func (c *AgentCommand) Run(args []string) int {
 
 				// Get the token from bolt for retrieving the encryption key,
 				// then setup encryption so that restore is possible
-				key, err := ps.GetRetrievalToken()
+				token, err := ps.GetRetrievalToken()
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error retrieving key from persistent cache: %v", err))
 				}
 
 				ps.Close()
 
-				km, err := keymanager.NewPassthroughKeyManager(key)
+				km, err := keymanager.NewPassthroughKeyManager(token)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
