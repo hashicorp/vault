@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/crypto"
+	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -523,7 +523,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 				ps.Close()
 
-				km, err := crypto.NewPassthroughKeyManager(key)
+				km, err := keymanager.NewPassthroughKeyManager(key)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
@@ -589,7 +589,7 @@ func (c *AgentCommand) Run(args []string) int {
 					}
 				}
 			} else {
-				km, err := crypto.NewPassthroughKeyManager(nil)
+				km, err := keymanager.NewPassthroughKeyManager(nil)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1

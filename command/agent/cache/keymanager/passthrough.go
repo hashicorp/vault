@@ -1,4 +1,4 @@
-package crypto
+package keymanager
 
 import (
 	"crypto/rand"
@@ -14,8 +14,9 @@ type PassthroughKeyManager struct {
 	wrapper *aead.Wrapper
 }
 
-// NewPassthroughKeyManager returns a new instance of the Kube encryption key. Kubernetes
-// encryption keys aren't renewable.
+// NewPassthroughKeyManager returns a new instance of the Kube encryption key.
+// If a key is provided, it will be used as the encryption key for the wrapper,
+// otherwise one will be generated.
 func NewPassthroughKeyManager(key []byte) (*PassthroughKeyManager, error) {
 
 	var rootKey []byte = nil
@@ -50,10 +51,14 @@ func NewPassthroughKeyManager(key []byte) (*PassthroughKeyManager, error) {
 	return k, nil
 }
 
+// Wrapper returns the manager's wrapper for key operations.
 func (w *PassthroughKeyManager) Wrapper() wrapping.Wrapper {
 	return w.wrapper
 }
 
+// RetrievalToken returns the key that was used on the wrapper since this key
+// manager is simply a passthrough and does not provide a mechanism to abstract
+// this key.
 func (w *PassthroughKeyManager) RetrievalToken() ([]byte, error) {
 	if w.wrapper == nil {
 		return nil, fmt.Errorf("unable to get wrapper for token retrieval")

@@ -1,4 +1,4 @@
-package crypto
+package keymanager
 
 import wrapping "github.com/hashicorp/go-kms-wrapping"
 
