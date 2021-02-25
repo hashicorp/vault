@@ -10,7 +10,7 @@ description: >-
 # Username Templating
 
 Some of the secrets engines that generate dynamic users for external systems provide the ability for Vault operators
-to customize how usernames are generated for said external systems. This uses the
+to customize how usernames are generated for said external systems. This customization feature uses the
 [Go template language](https://golang.org/pkg/text/template/). This page describes the basics of using these templates
 for username generation but does not go into great depth of using the templating language for more advanced usages.
 See the API documentation for the given secret engine to determine if it supports username templating and for more
@@ -25,23 +25,23 @@ In addition to the functionality built into the Go template language, a number o
 
 ### String/Character Manipulation
 
-`lowercase` - Lowercases the provided value.<br/>
+`lowercase` - Lowercases the input value.<br/>
 **Example**: `{{.FieldName | lowercase}}`
 
-`replace` - Find/replace on the provided value.<br/>
+`replace` - Find/replace on the input value.<br/>
 **Example**: `{{.FieldName | replace - _}}`
 
-`truncate` - truncates the previous value to the provided number of characters.<br/>
+`truncate` - truncates the input value to the specified number of characters.<br/>
 **Example**: `{{.FieldName | truncate 10}}`
 
-`truncate_sha256` - Truncates the previous value to the provided number of characters. The last 8 characters of the
-truncated value will be the first 8 characters of the SHA256 hash of the truncated characters.<br/>
+`truncate_sha256` - Truncates the input value to the specified number of characters. The last 8 characters of the
+new value will be replace by the first 8 characters of the SHA256 hash of the truncated characters.<br/>
 **Example**: `{{.FieldName | truncate_sha256 20}}`. If `FieldName` is `abcdefghijklmnopqrstuvwxyz`, all characters after
 the 12th (`l`) are removed and SHA256 hashed (`872808ffbf...1886ca6f20`).
 The first 8 characters of the hash (`872808ff`) are then appended to the end of the first 12 characters from the
 original value: `abcdefghijkl872808ff`.
 
-`uppercase` - Uppercases the provided value.<br/>
+`uppercase` - Uppercases the input value.<br/>
 **Example**: `{{.FieldName | uppercase}}`
 
 ### Generating Values
@@ -50,7 +50,7 @@ original value: `abcdefghijkl872808ff`.
 number indicating how many characters to generate.<br/>
 **Example**: `{{random 20}}` generates 20 random characters
 
-`timestamp` - The current time. Must provide a formatting string based on Go’s time package.<br/>
+`timestamp` - The current time. Must provide a formatting string based on Go’s [time package](https://golang.org/pkg/time/).<br/>
 **Example**: `{{timestamp "2006-01-02T15:04:05Z"}}`
 
 `unix_time` - The current unix timestamp (number of seconds since Jan 1 1970).<br/>
@@ -64,10 +64,10 @@ number indicating how many characters to generate.<br/>
 
 ### Hashing
 
-`base64` - Base64 encodes the provided value.<br/>
+`base64` - Base64 encodes the input value.<br/>
 **Example**: `{{.FieldName | base64}}`
 
-`sha256` - SHA256 hashes the provided value.<br/>
+`sha256` - SHA256 hashes the input value.<br/>
 **Example**: `{{.FieldName | sha256}}`
 
 ## Examples
