@@ -528,8 +528,6 @@ func (c *AgentCommand) Run(args []string) int {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
 				}
-				// // sets the key manager to use in bolt
-				// ps.SetKeyMgr(km)
 
 				// Open the bolt file with the wrapper provided
 				ps, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
