@@ -8,7 +8,7 @@ export default create({
   visitCreate: visitable('/vault/secrets/:backend/create?itemType=role'),
   createLink: clickable('[data-test-secret-create="true"]'),
   name: fillable('[data-test-input="name"]'),
-  roleType: fillable('[data-test-input="type"'),
+  roleType: selectable('[data-test-input="type"'),
   save: clickable('[data-test-secret-save=""]'),
   edit: clickable('[data-test-edit-link="true"]'),
 });
