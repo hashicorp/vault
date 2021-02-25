@@ -40,7 +40,7 @@ expiration, before it is removed from the backend storage.`,
 	}
 }
 
-// tidyDenyListRoleTag is used to clean-up the entries in the role tag denylist.
+// tidyDenyListRoleTag is used to clean-up the entries in the role tag deny list.
 func (b *backend) tidyDenyListRoleTag(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
 	// If we are a performance standby forward the request to the active node
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
