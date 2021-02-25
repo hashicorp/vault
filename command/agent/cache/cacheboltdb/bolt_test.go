@@ -8,16 +8,16 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/agent/cache/crypto"
+	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	"github.com/ory/dockertest/v3/docker/pkg/ioutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func getTestKeyManager(t *testing.T) crypto.KeyManager {
+func getTestKeyManager(t *testing.T) keymanager.KeyManager {
 	t.Helper()
 
-	km, err := crypto.NewK8s(nil)
+	km, err := keymanager.NewPassthroughKeyManager(nil)
 	require.NoError(t, err)
 
 	return km
@@ -31,9 +31,9 @@ func TestBolt_SetGet(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	b, err := NewBoltStorage(&BoltStorageConfig{
-		Path:       path,
-		Logger:     hclog.Default(),
-		KeyManager: getTestKeyManager(t),
+		Path:    path,
+		Logger:  hclog.Default(),
+		Wrapper: getTestKeyManager(t).Wrapper(),
 	})
 	require.NoError(t, err)
 
@@ -57,9 +57,9 @@ func TestBoltDelete(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	b, err := NewBoltStorage(&BoltStorageConfig{
-		Path:       path,
-		Logger:     hclog.Default(),
-		KeyManager: getTestKeyManager(t),
+		Path:    path,
+		Logger:  hclog.Default(),
+		Wrapper: getTestKeyManager(t).Wrapper(),
 	})
 	require.NoError(t, err)
 
@@ -89,9 +89,9 @@ func TestBoltClear(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	b, err := NewBoltStorage(&BoltStorageConfig{
-		Path:       path,
-		Logger:     hclog.Default(),
-		KeyManager: getTestKeyManager(t),
+		Path:    path,
+		Logger:  hclog.Default(),
+		Wrapper: getTestKeyManager(t).Wrapper(),
 	})
 	require.NoError(t, err)
 
@@ -139,9 +139,9 @@ func TestBoltSetAutoAuthToken(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	b, err := NewBoltStorage(&BoltStorageConfig{
-		Path:       path,
-		Logger:     hclog.Default(),
-		KeyManager: getTestKeyManager(t),
+		Path:    path,
+		Logger:  hclog.Default(),
+		Wrapper: getTestKeyManager(t).Wrapper(),
 	})
 	require.NoError(t, err)
 
@@ -244,9 +244,9 @@ func Test_SetGetRetrievalToken(t *testing.T) {
 			defer os.RemoveAll(path)
 
 			b, err := NewBoltStorage(&BoltStorageConfig{
-				Path:       path,
-				Logger:     hclog.Default(),
-				KeyManager: getTestKeyManager(t),
+				Path:    path,
+				Logger:  hclog.Default(),
+				Wrapper: getTestKeyManager(t).Wrapper(),
 			})
 			require.NoError(t, err)
 			defer b.Close()

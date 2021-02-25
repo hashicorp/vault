@@ -15,17 +15,16 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/atomic"
-
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/crypto"
+	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 )
 
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
@@ -678,15 +677,15 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cacheboltdb.BoltStorage) {
 	t.Helper()
 
-	km, err := crypto.NewK8s(nil)
+	km, err := keymanager.NewPassthroughKeyManager(nil)
 	require.NoError(t, err)
 
 	tempCacheDir, err = ioutil.TempDir("", "agent-cache-test")
 	require.NoError(t, err)
 	boltStorage, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-		Path:       tempCacheDir,
-		Logger:     hclog.Default(),
-		KeyManager: km,
+		Path:    tempCacheDir,
+		Logger:  hclog.Default(),
+		Wrapper: km.Wrapper(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, boltStorage)

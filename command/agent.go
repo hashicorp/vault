@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/crypto"
+	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -502,6 +502,7 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error("must specify persistent cache path")
 				return 1
 			}
+
 			// Set AAD based on key protection type
 			var aad string
 			switch config.Cache.Persist.Type {
@@ -527,25 +528,40 @@ func (c *AgentCommand) Run(args []string) int {
 				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 					Path:   config.Cache.Persist.Path,
 					Logger: cacheLogger.Named("cacheboltdb"),
-					AAD:    aad,
 				})
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
 					return 1
 				}
+
 				// Get the token from bolt for retrieving the encryption key,
 				// then setup encryption so that restore is possible
 				token, err := ps.GetRetrievalToken()
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error getting retrieval token from persistent cache: %v", err))
 				}
-				km, err := crypto.NewK8s(token)
+
+				if err := ps.Close(); err != nil {
+					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
+				}
+
+				km, err := keymanager.NewPassthroughKeyManager(token)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
 				}
-				// sets the key manager to use in bolt
-				ps.SetKeyMgr(km)
+
+				// Open the bolt file with the wrapper provided
+				ps, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+					Path:    config.Cache.Persist.Path,
+					Logger:  cacheLogger.Named("cacheboltdb"),
+					Wrapper: km.Wrapper(),
+					AAD:     aad,
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					return 1
+				}
 
 				// Restore anything in the persistent cache to the memory cache
 				if err := leaseCache.Restore(ctx, ps); err != nil {
@@ -593,16 +609,16 @@ func (c *AgentCommand) Run(args []string) int {
 					}
 				}
 			} else {
-				km, err := crypto.NewK8s(nil)
+				km, err := keymanager.NewPassthroughKeyManager(nil)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
 				}
 				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:       config.Cache.Persist.Path,
-					Logger:     cacheLogger.Named("cacheboltdb"),
-					AAD:        aad,
-					KeyManager: km,
+					Path:    config.Cache.Persist.Path,
+					Logger:  cacheLogger.Named("cacheboltdb"),
+					Wrapper: km.Wrapper(),
+					AAD:     aad,
 				})
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
@@ -611,12 +627,12 @@ func (c *AgentCommand) Run(args []string) int {
 				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
 
 				// Stash the key material in bolt
-				key, err := km.GetPersistentKey()
+				token, err := km.RetrievalToken()
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
 					return 1
 				}
-				if err := ps.StoreRetrievalToken(key); err != nil {
+				if err := ps.StoreRetrievalToken(token); err != nil {
 					c.UI.Error(fmt.Sprintf("Error setting key in persistent cache: %v", err))
 					return 1
 				}

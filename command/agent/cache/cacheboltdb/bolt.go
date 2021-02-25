@@ -10,9 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/command/agent/cache/crypto"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -54,17 +55,17 @@ type BoltStorage struct {
 	db         *bolt.DB
 	rootBucket string
 	logger     hclog.Logger
-	keyMgr     crypto.KeyManager
+	wrapper    wrapping.Wrapper
 	aad        string
 }
 
 // BoltStorageConfig is the collection of input parameters for setting up bolt
 // storage
 type BoltStorageConfig struct {
-	Path       string
-	Logger     hclog.Logger
-	AAD        string
-	KeyManager crypto.KeyManager
+	Path    string
+	Logger  hclog.Logger
+	Wrapper wrapping.Wrapper
+	AAD     string
 }
 
 // NewBoltStorage opens a new bolt db at the specified file path and returns it.
@@ -86,11 +87,8 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 		db:         db,
 		rootBucket: rootBucketName,
 		logger:     config.Logger,
-		keyMgr:     config.KeyManager,
+		wrapper:    config.Wrapper,
 		aad:        config.AAD,
-	}
-	if config.KeyManager != nil {
-		bs.SetKeyMgr(config.KeyManager)
 	}
 	return bs, nil
 }
@@ -136,16 +134,16 @@ func createBoltSchema(tx *bolt.Tx) error {
 	return nil
 }
 
-// SetKeyMgr sets the encryption for a bolt storage
-func (b *BoltStorage) SetKeyMgr(km crypto.KeyManager) {
-	b.keyMgr = km
-}
-
 // Set an index in bolt storage
 func (b *BoltStorage) Set(ctx context.Context, id string, plainText []byte, indexType string) error {
-	cipherText, err := b.keyMgr.Encrypt(ctx, plainText, []byte(b.aad))
+	blob, err := b.wrapper.Encrypt(ctx, plainText, []byte(b.aad))
 	if err != nil {
 		return fmt.Errorf("error encrypting %s index: %w", indexType, err)
+	}
+
+	protoBlob, err := proto.Marshal(blob)
+	if err != nil {
+		return err
 	}
 
 	return b.db.Update(func(tx *bolt.Tx) error {
@@ -160,11 +158,11 @@ func (b *BoltStorage) Set(ctx context.Context, id string, plainText []byte, inde
 		// If this is an auto-auth token, also stash it in the root bucket for
 		// easy retrieval upon restore
 		if indexType == TokenType {
-			if err := top.Put([]byte(AutoAuthToken), cipherText); err != nil {
+			if err := top.Put([]byte(AutoAuthToken), protoBlob); err != nil {
 				return fmt.Errorf("failed to set latest auto-auth token: %w", err)
 			}
 		}
-		return s.Put([]byte(id), cipherText)
+		return s.Put([]byte(id), protoBlob)
 	})
 }
 
@@ -200,9 +198,18 @@ func (b *BoltStorage) Delete(id string) error {
 	})
 }
 
+func (b *BoltStorage) decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+	var blob wrapping.EncryptedBlobInfo
+	if err := proto.Unmarshal(ciphertext, &blob); err != nil {
+		return nil, err
+	}
+
+	return b.wrapper.Decrypt(ctx, &blob, []byte(b.aad))
+}
+
 // GetByType returns a list of stored items of the specified type
 func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte, error) {
-	returnBytes := [][]byte{}
+	var returnBytes [][]byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		var errors *multierror.Error
@@ -212,11 +219,12 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
 		top.Bucket([]byte(indexType)).ForEach(func(id, cipherText []byte) error {
-			plainText, err := b.keyMgr.Decrypt(ctx, cipherText, []byte(b.aad))
+			plainText, err := b.decrypt(ctx, cipherText)
 			if err != nil {
 				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
 				return nil
 			}
+
 			returnBytes = append(returnBytes, plainText)
 			return nil
 		})
@@ -229,25 +237,25 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 // GetAutoAuthToken retrieves the latest auto-auth token, and returns nil if non
 // exists yet
 func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
-	token := []byte{}
+	var encryptedToken []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		top := tx.Bucket([]byte(b.rootBucket))
 		if top == nil {
 			return fmt.Errorf("bucket %q not found", b.rootBucket)
 		}
-		token = top.Get([]byte(AutoAuthToken))
+		encryptedToken = top.Get([]byte(AutoAuthToken))
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if token == nil {
+	if encryptedToken == nil {
 		return nil, nil
 	}
 
-	plainText, err := b.keyMgr.Decrypt(ctx, token, []byte(b.aad))
+	plainText, err := b.decrypt(ctx, encryptedToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt auto-auth token: %w", err)
 	}
@@ -257,7 +265,7 @@ func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 // GetRetrievalToken retrieves a plaintext token from the KeyBucket, which will
 // be used by the key manager to retrieve the encryption key, nil if none set
 func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
-	token := []byte{}
+	var token []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		keyBucket := tx.Bucket([]byte(RetrievalTokenBucket))
