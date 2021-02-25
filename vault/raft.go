@@ -181,24 +181,6 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	c.logger.Info("starting raft active node")
 
 	if !raftBackend.AutopilotDisabled() {
-		// Read autopilot configuration from storage
-		storageConfig, err := c.autopilotConfiguration(ctx)
-		if err != nil {
-			c.logger.Error("failed to load autopilot config from storage during autopilot startup; continuing since autopilot is already configured", "error", err)
-		}
-
-		// If the autopilot config wasn't found in storage, and if it was found
-		// in HCL config file, then HCL config would have been put to use.
-		// Persist that to storage.
-		if storageConfig == nil {
-			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, raftBackend.AutopilotConfig())
-			if err != nil {
-				c.logger.Error("failed to encode autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
-			}
-			if err := c.barrier.Put(ctx, entry); err != nil {
-				c.logger.Error("failed to persist autopilot config during autopilot startup; continuing since autopilot falls back to default config the next time", "error", err)
-			}
-		}
 		raftBackend.StartAutopilot(c.activeContext)
 	}
 

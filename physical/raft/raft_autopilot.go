@@ -19,11 +19,33 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+type CleanupDeadServersValue int
+
+const (
+	CleanupDeadServersUnset CleanupDeadServersValue = 0
+	CleanupDeadServersTrue  CleanupDeadServersValue = 1
+	CleanupDeadServersFalse CleanupDeadServersValue = 2
+)
+
+func (c CleanupDeadServersValue) Value() bool {
+	switch c {
+	case CleanupDeadServersTrue:
+		return true
+	default:
+		return false
+	}
+}
+
 // AutopilotConfig is used for querying/setting the Autopilot configuration.
 type AutopilotConfig struct {
 	// CleanupDeadServers controls whether to remove dead servers from the Raft
 	// peer list periodically or when a new server joins.
 	CleanupDeadServers bool `mapstructure:"cleanup_dead_servers"`
+
+	// CleanupDeadServersValue is used to shadow the CleanupDeadServers field in
+	// storage. Having it as an int helps in knowing if the value was set explicitly
+	// using the API or not.
+	CleanupDeadServersValue CleanupDeadServersValue `mapstructure:"cleanup_dead_servers_value"`
 
 	// LastContactThreshold is the limit on the amount of time a server can go
 	// without leader contact before being considered unhealthy.
@@ -48,6 +70,29 @@ type AutopilotConfig struct {
 	ServerStabilizationTime time.Duration `mapstructure:"-"`
 }
 
+// Merge combines the supplied config with the receiver. Supplied ones take
+// priority.
+func (to *AutopilotConfig) Merge(from *AutopilotConfig) {
+	if from.CleanupDeadServersValue != CleanupDeadServersUnset {
+		to.CleanupDeadServers = from.CleanupDeadServersValue.Value()
+	}
+	if from.MinQuorum != 0 {
+		to.MinQuorum = from.MinQuorum
+	}
+	if from.LastContactThreshold != 0 {
+		to.LastContactThreshold = from.LastContactThreshold
+	}
+	if from.DeadServerLastContactThreshold != 0 {
+		to.DeadServerLastContactThreshold = from.DeadServerLastContactThreshold
+	}
+	if from.MaxTrailingLogs != 0 {
+		to.MaxTrailingLogs = from.MaxTrailingLogs
+	}
+	if from.ServerStabilizationTime != 0 {
+		to.ServerStabilizationTime = from.ServerStabilizationTime
+	}
+}
+
 // Clone returns a duplicate instance of AutopilotConfig with the exact same values.
 func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 	return &AutopilotConfig{
@@ -58,13 +103,13 @@ func (ac *AutopilotConfig) Clone() *AutopilotConfig {
 		MinQuorum:                      ac.MinQuorum,
 		ServerStabilizationTime:        ac.ServerStabilizationTime,
 	}
-
 }
 
 // MarshalJSON makes the autopilot config fields JSON compatible
 func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"cleanup_dead_servers":               ac.CleanupDeadServers,
+		"cleanup_dead_servers_value":         ac.CleanupDeadServersValue,
 		"last_contact_threshold":             ac.LastContactThreshold.String(),
 		"dead_server_last_contact_threshold": ac.DeadServerLastContactThreshold.String(),
 		"max_trailing_logs":                  ac.MaxTrailingLogs,
@@ -369,8 +414,8 @@ func (b *RaftBackend) SetFollowerStates(states *FollowerStates) {
 // SetAutopilotConfig updates the autopilot configuration in the backend.
 func (b *RaftBackend) SetAutopilotConfig(config *AutopilotConfig) {
 	b.l.Lock()
-	b.logger.Info("updating autopilot configuration", "config", config)
-	b.autopilotConfig = config
+	b.autopilotConfig.Merge(config)
+	b.logger.Info("updated autopilot configuration", "config", b.autopilotConfig)
 	b.l.Unlock()
 }
 
@@ -671,11 +716,11 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 	// Start with a default config
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
-	// Check if the config was present in storage
+	// Check if the config was present in storage. If it was merge it on top of
+	// default configuration.
 	if opts.AutopilotConfig != nil {
-		// TODO: do the config merge here
-		b.logger.Info("setting autopilot configuration retrieved from storage", "config", opts.AutopilotConfig)
-		b.autopilotConfig = opts.AutopilotConfig
+		b.autopilotConfig.Merge(opts.AutopilotConfig)
+		b.logger.Info("merged stored autopilot configuration with default configuration", "stored_config", b.autopilotConfig)
 	}
 
 	// Create the autopilot instance

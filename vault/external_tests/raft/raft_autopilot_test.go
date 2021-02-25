@@ -6,9 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kr/pretty"
-
 	"github.com/hashicorp/vault/api"
+
+	autopilot "github.com/hashicorp/raft-autopilot"
+
+	"github.com/kr/pretty"
 
 	"github.com/stretchr/testify/require"
 
@@ -70,7 +72,7 @@ func TestRaft_Autopilot_ServerStabilization(t *testing.T) {
 		"core-2": true,
 	})
 
-	deadline := time.Now().Add(20 * time.Second)
+	deadline := time.Now().Add(2 * autopilot.DefaultReconcileInterval)
 	success := false
 	healthy := false
 

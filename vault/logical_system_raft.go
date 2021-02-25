@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -454,51 +455,57 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		// Get the config present in the backend
-		config := raftStorage.AutopilotConfig()
-
-		// Mutate the clone of the actual config to avoid setting values in
-		// failure cases.
-		configClone := config.Clone()
+		// Read autopilot configuration from storage
+		config, err := b.Core.autopilotConfiguration(ctx)
+		if err != nil {
+			b.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+		}
+		if config == nil {
+			config = &raft.AutopilotConfig{}
+		}
 
 		persist := false
 		cleanupDeadServers, ok := d.GetOk("cleanup_dead_servers")
 		if ok {
-			configClone.CleanupDeadServers = cleanupDeadServers.(bool)
+			if cleanupDeadServers.(bool) {
+				config.CleanupDeadServersValue = raft.CleanupDeadServersTrue
+			} else {
+				config.CleanupDeadServersValue = raft.CleanupDeadServersFalse
+			}
 			persist = true
 		}
 		lastContactThreshold, ok := d.GetOk("last_contact_threshold")
 		if ok {
-			configClone.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
+			config.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
 			persist = true
 		}
 		deadServerLastContactThreshold, ok := d.GetOk("dead_server_last_contact_threshold")
 		if ok {
-			configClone.DeadServerLastContactThreshold = time.Duration(deadServerLastContactThreshold.(int)) * time.Second
+			config.DeadServerLastContactThreshold = time.Duration(deadServerLastContactThreshold.(int)) * time.Second
 			persist = true
 		}
 		maxTrailingLogs, ok := d.GetOk("max_trailing_logs")
 		if ok {
-			configClone.MaxTrailingLogs = uint64(maxTrailingLogs.(int))
+			config.MaxTrailingLogs = uint64(maxTrailingLogs.(int))
 			persist = true
 		}
 		minQuorum, ok := d.GetOk("min_quorum")
 		if ok {
-			configClone.MinQuorum = uint(minQuorum.(int))
+			config.MinQuorum = uint(minQuorum.(int))
 			persist = true
 		}
 		serverStabilizationTime, ok := d.GetOk("server_stabilization_time")
 		if ok {
-			configClone.ServerStabilizationTime = time.Duration(serverStabilizationTime.(int)) * time.Second
+			config.ServerStabilizationTime = time.Duration(serverStabilizationTime.(int)) * time.Second
 			persist = true
 		}
 
-		if configClone.CleanupDeadServers && configClone.MinQuorum < 3 {
-			return logical.ErrorResponse("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3"), logical.ErrInvalidRequest
+		if config.CleanupDeadServersValue != raft.CleanupDeadServersUnset && config.MinQuorum < 3 {
+			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", config.CleanupDeadServers, config.MinQuorum)), logical.ErrInvalidRequest
 		}
 
 		if persist {
-			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, configClone)
+			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, config)
 			if err != nil {
 				return nil, err
 			}
@@ -507,7 +514,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			}
 		}
 
-		raftStorage.SetAutopilotConfig(configClone)
+		raftStorage.SetAutopilotConfig(config)
 
 		return nil, nil
 	}
