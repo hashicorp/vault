@@ -78,7 +78,7 @@ Your PR is almost certain to be one of `bug` or `improvement`, but don't
 worry too much about getting it exactly right, we'll tell you if a change is 
 needed.
 
-To determine the relevant component, consul [CHANGELOG](CHANGELOG.md) and pick
+To determine the relevant component, consult [CHANGELOG](CHANGELOG.md) and pick
 whichever one you see that seems the closest match.
 
 You do not need to include the link at the end of the summary that appears in
