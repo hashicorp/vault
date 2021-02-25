@@ -252,27 +252,44 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 	return nil
 }
 
-func (f *FSM) upgradeLocalNodeConfig() error {
-	// Read the local node config
-	var lnConfigBytes []byte
+func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
+	var configBytes []byte
 	if err := f.db.View(func(tx *bolt.Tx) error {
 		value := tx.Bucket(configBucketName).Get(localNodeConfigKey)
 		if value != nil {
-			lnConfigBytes = make([]byte, len(value))
-			copy(lnConfigBytes, value)
+			configBytes = make([]byte, len(value))
+			copy(configBytes, value)
 		}
 		return nil
 	}); err != nil {
-		return err
+		return nil, err
+	}
+	if configBytes == nil {
+		return nil, nil
 	}
 
 	var lnConfig LocalNodeConfigValue
-	// Entry is already present. Read and get the suffrage value.
-	if lnConfigBytes != nil {
-		err := proto.Unmarshal(lnConfigBytes, &lnConfig)
+	if configBytes != nil {
+		err := proto.Unmarshal(configBytes, &lnConfig)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
+		return &lnConfig, nil
+	}
+
+	return nil, nil
+}
+
+func (f *FSM) upgradeLocalNodeConfig() error {
+	// Read the local node config
+	lnConfig, err := f.localNodeConfig()
+	if err != nil {
+		return err
+	}
+
+	// Entry is already present. Get the suffrage value.
+	if lnConfig != nil {
 		f.desiredSuffrage = lnConfig.DesiredSuffrage
 		return nil
 	}
@@ -280,6 +297,8 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 	//
 	// This is the upgrade case where there is no entry
 	//
+
+	lnConfig = &LocalNodeConfigValue{}
 
 	// Refer to the persisted latest raft config
 	config := f.latestConfig.Load().(*ConfigurationValue)
@@ -289,7 +308,7 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 	// will be changed if this node joins the cluster as a non-voter.
 	if config == nil {
 		lnConfig.DesiredSuffrage = f.desiredSuffrage
-		return f.persistDesiredSuffrage(&lnConfig)
+		return f.persistDesiredSuffrage(lnConfig)
 	}
 
 	// Get the last known suffrage of the node and assume that it is the desired
@@ -307,7 +326,7 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 		f.desiredSuffrage = lnConfig.DesiredSuffrage
 	}
 
-	return f.persistDesiredSuffrage(&lnConfig)
+	return f.persistDesiredSuffrage(lnConfig)
 }
 
 // recordSuffrage is called when a node successfully joins the cluster. This
@@ -734,6 +753,12 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	f.l.Lock()
 	defer f.l.Unlock()
 
+	// Cache the local node config before closing the db file
+	lnConfig, err := f.localNodeConfig()
+	if err != nil {
+		return err
+	}
+
 	// Close the db file
 	if err := f.db.Close(); err != nil {
 		f.logger.Error("failed to close database file", "error", err)
@@ -758,6 +783,24 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	if err := f.openDBFile(dbPath); err != nil {
 		f.logger.Error("failed to open new database file", "error", err)
 		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to open new bolt file: {{err}}", err))
+	}
+
+	// Handle local node config restore
+	switch lnConfig {
+	case nil:
+		// If it wasn't there. It is possible that the snapshot was taken before
+		// 1.7, where we did not have local node config. Perform the upgrade so we will have one now.
+		if err := f.upgradeLocalNodeConfig(); err != nil {
+			f.logger.Error("failed to upgrade local node config post snapshot restore", "error", err)
+			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to upgrade local node config post snapshot restore: {{err}}", err))
+		}
+	default:
+		// If there was a local node config before restore, persist that again on
+		// the new fsm.
+		if err := f.persistDesiredSuffrage(lnConfig); err != nil {
+			f.logger.Error("failed to persist old local node config", "error", err)
+			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to persist old local node config: {{err}}", err))
+		}
 	}
 
 	return retErr.ErrorOrNil()
