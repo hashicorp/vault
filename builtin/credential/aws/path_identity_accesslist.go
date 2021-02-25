@@ -156,7 +156,7 @@ action can be triggered via the API as well, using the 'tidy/identities' endpoin
 `
 
 const pathListIdentityAccessListHelpSyn = `
-Lists the items present in the identity accesslist.
+Lists the items present in the identity access list.
 `
 
 const pathListIdentityAccessListHelpDesc = `
