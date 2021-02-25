@@ -1,18 +1,16 @@
 package crypto
 
-import (
-	"context"
-)
+import wrapping "github.com/hashicorp/go-kms-wrapping"
 
 const (
 	KeyID = "root"
 )
 
 type KeyManager interface {
-	GetKey() []byte
-	GetPersistentKey() ([]byte, error)
-	Renewable() bool
-	Renewer(context.Context) error
-	Encrypt(context.Context, []byte, []byte) ([]byte, error)
-	Decrypt(context.Context, []byte, []byte) ([]byte, error)
+	// Returns a wrapping.Wrapper which can be used to perform key-related operations.
+	Wrapper() wrapping.Wrapper
+	// RetrievalToken is the material returned which can be used to source back the
+	// encryption key. Depending on the implementation, the token can be the
+	// encryption key itself or a token/identifier used to exchange the token.
+	RetrievalToken() ([]byte, error)
 }
