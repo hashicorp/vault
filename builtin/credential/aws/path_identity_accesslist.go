@@ -141,7 +141,7 @@ type accessListIdentity struct {
 }
 
 const pathIdentityAccessListSyn = `
-Read or delete entries in the identity accesslist.
+Read or delete entries in the identity access list.
 `
 
 const pathIdentityAccessListDesc = `
