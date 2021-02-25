@@ -73,7 +73,7 @@ COMPONENT: summary of change
 ```
 ````
 
-CATEGORY is one of `security`, `change`, `feature`, `improvement`, `bug`.
+CATEGORY is one of `security`, `change`, `feature`, `improvement`, or `bug`.
 Your PR is almost certain to be one of `bug` or `improvement`, but don't
 worry too much about getting it exactly right, we'll tell you if a change is 
 needed.
