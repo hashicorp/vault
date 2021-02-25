@@ -150,7 +150,7 @@ type tidyDenyListRoleTagConfig struct {
 }
 
 const pathConfigTidyRoletagDenyListHelpSyn = `
-Configures the periodic tidying operation of the denylisted role tag entries.
+Configures the periodic tidying operation of the deny listed role tag entries.
 `
 const pathConfigTidyRoletagDenyListHelpDesc = `
 By default, the expired entries in the deny list will be attempted to be removed
