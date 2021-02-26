@@ -507,9 +507,9 @@ func (c *AgentCommand) Run(args []string) int {
 			var aad string
 			switch config.Cache.Persist.Type {
 			case "kubernetes":
-				aad, err = cacheboltdb.GetServiceAccountJWT(config.Cache.Persist.ServiceAccountPath)
+				aad, err = cacheboltdb.GetServiceAccountJWT(config.Cache.Persist.ServiceAccountTokenFile)
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountPath, err))
+					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountTokenFile, err))
 					return 1
 				}
 			default:

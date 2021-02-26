@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -318,8 +317,8 @@ func (b *BoltStorage) Clear() error {
 }
 
 // DBFileExists checks whether the vault agent cache file at `filePath` exists
-func DBFileExists(filePath string) (bool, error) {
-	checkFile, err := os.OpenFile(path.Join(filePath, DatabaseFileName), os.O_RDWR, 0600)
+func DBFileExists(path string) (bool, error) {
+	checkFile, err := os.OpenFile(filepath.Join(path, DatabaseFileName), os.O_RDWR, 0600)
 	defer checkFile.Close()
 	switch {
 	case err == nil:
@@ -327,15 +326,17 @@ func DBFileExists(filePath string) (bool, error) {
 	case os.IsNotExist(err):
 		return false, nil
 	default:
-		return false, fmt.Errorf("failed to check if bolt file exists at path %s: %w", filePath, err)
+		return false, fmt.Errorf("failed to check if bolt file exists at path %s: %w", path, err)
 	}
 }
 
-func GetServiceAccountJWT(path string) (string, error) {
-	if len(path) == 0 {
-		path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
+// the default service account file path in kubernetes.
+func GetServiceAccountJWT(tokenFile string) (string, error) {
+	if len(tokenFile) == 0 {
+		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	}
-	token, err := ioutil.ReadFile(path)
+	token, err := ioutil.ReadFile(tokenFile)
 	if err != nil {
 		return "", err
 	}

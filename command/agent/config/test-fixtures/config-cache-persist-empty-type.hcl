@@ -2,7 +2,7 @@ pid_file = "./pidfile"
 
 cache {
     persist = {
-        path = "/tmp/bolt-file.db"
+        path = "/vault/agent-cache/"
     }
 }
 

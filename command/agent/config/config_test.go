@@ -67,11 +67,11 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 			Persist: &Persist{
-				Type:               "kubernetes",
-				Path:               "/tmp/bolt-file.db",
-				KeepAfterImport:    true,
-				ExitOnErr:          true,
-				ServiceAccountPath: "/tmp/serviceaccount",
+				Type:                    "kubernetes",
+				Path:                    "/vault/agent-cache/",
+				KeepAfterImport:         true,
+				ExitOnErr:               true,
+				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
 		},
 		Vault: &Vault{
@@ -461,11 +461,11 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	expected := &Config{
 		Cache: &Cache{
 			Persist: &Persist{
-				Type:               "kubernetes",
-				Path:               "/tmp/bolt-file.db",
-				KeepAfterImport:    false,
-				ExitOnErr:          false,
-				ServiceAccountPath: "",
+				Type:                    "kubernetes",
+				Path:                    "/vault/agent-cache/",
+				KeepAfterImport:         false,
+				ExitOnErr:               false,
+				ServiceAccountTokenFile: "",
 			},
 		},
 		SharedConfig: &configutil.SharedConfig{
