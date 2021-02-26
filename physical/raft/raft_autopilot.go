@@ -384,6 +384,7 @@ func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
 		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
 			d.logger.Error("failed to remove server", "server_id", server.ID, "server_address", server.Address, "server_name", server.Name, "error", future.Error())
+			return
 		}
 		d.followerStates.Delete(string(server.ID))
 	}()
