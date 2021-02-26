@@ -93,6 +93,17 @@ and policy_arns parameters.`,
 				},
 			},
 
+			"iam_tags": &framework.FieldSchema{
+				Type: framework.TypeKVPairs,
+				Description: `IAM tags to be set for any users created by this role. These must be presented
+as Key-Value pairs. This can be represented as a map or a list of equal sign
+delimited key pairs.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "IAM Tags",
+					Value: "[key1=value1, key2=value2]",
+				},
+			},
+
 			"default_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
@@ -301,6 +312,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.IAMGroups = iamGroups.([]string)
 	}
 
+	if iamTags, ok := d.GetOk("iam_tags"); ok {
+		roleEntry.IAMTags = iamTags.(map[string]string)
+	}
+
 	if legacyRole != "" {
 		roleEntry = upgradeLegacyPolicyEntry(legacyRole)
 		if roleEntry.InvalidData != "" {
@@ -481,18 +496,19 @@ func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEnt
 }
 
 type awsRoleEntry struct {
-	CredentialTypes          []string      `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
-	PolicyArns               []string      `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
-	RoleArns                 []string      `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
-	PolicyDocument           string        `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
-	IAMGroups                []string      `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
-	InvalidData              string        `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
-	ProhibitFlexibleCredPath bool          `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
-	Version                  int           `json:"version"`                               // Version number of the role format
-	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
-	MaxSTSTTL                time.Duration `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
-	UserPath                 string        `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
-	PermissionsBoundaryARN   string        `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
+	CredentialTypes          []string          `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
+	PolicyArns               []string          `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
+	RoleArns                 []string          `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
+	PolicyDocument           string            `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
+	IAMGroups                []string          `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
+	IAMTags                  map[string]string `json:"iam_tags"`                              // IAM tags that will be added to the generated IAM users
+	InvalidData              string            `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
+	ProhibitFlexibleCredPath bool              `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
+	Version                  int               `json:"version"`                               // Version number of the role format
+	DefaultSTSTTL            time.Duration     `json:"default_sts_ttl"`                       // Default TTL for STS credentials
+	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
+	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
+	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -502,6 +518,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"role_arns":                r.RoleArns,
 		"policy_document":          r.PolicyDocument,
 		"iam_groups":               r.IAMGroups,
+		"iam_tags":                 r.IAMTags,
 		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
 		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
 		"user_path":                r.UserPath,
