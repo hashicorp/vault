@@ -240,6 +240,14 @@ var _ autopilot.ApplicationIntegration = (*Delegate)(nil)
 // application specific tasks performed.
 type Delegate struct {
 	*RaftBackend
+	deadServerRemovals sync.Map
+}
+
+func newDelegate(b *RaftBackend) *Delegate {
+	return &Delegate{
+		RaftBackend:        b,
+		deadServerRemovals: sync.Map{},
+	}
 }
 
 // AutopilotConfig is called by the autopilot library to know the desired
@@ -381,12 +389,21 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 // goroutine.
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 	go func() {
+		if _, ok := d.deadServerRemovals.Load(server.ID); ok {
+			d.logger.Info("removal of dead server is already initiated", "id", server.ID)
+			return
+		}
+
+		d.deadServerRemovals.Store(server.ID, true)
+
 		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
 		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
 			d.logger.Error("failed to remove server", "server_id", server.ID, "server_address", server.Address, "server_name", server.Name, "error", future.Error())
 			return
 		}
+
 		d.followerStates.Delete(string(server.ID))
+		d.deadServerRemovals.Delete(server.ID)
 	}()
 }
 
@@ -665,7 +682,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
-	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
+	b.autopilot = autopilot.New(b.raft, newDelegate(b), autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 	b.autopilot.Start(ctx)
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 	go b.startFollowerHeartbeatTracker()
