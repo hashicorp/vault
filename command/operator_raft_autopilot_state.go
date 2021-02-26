@@ -84,5 +84,9 @@ func (c *OperatorRaftAutopilotStateCommand) Run(args []string) int {
 		return 2
 	}
 
+	if state == nil {
+		return 0
+	}
+
 	return OutputData(c.UI, state)
 }

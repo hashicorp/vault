@@ -246,10 +246,15 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if resp != nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	secret, err := ParseSecret(resp.Body)
 	if err != nil {
@@ -275,10 +280,15 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if resp != nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	secret, err := ParseSecret(resp.Body)
 	if err != nil {
