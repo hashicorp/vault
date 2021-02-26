@@ -693,7 +693,7 @@ func (b *RaftBackend) DisableAutopilot() {
 	b.l.Unlock()
 }
 
-func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
+func (b *RaftBackend) ReconcileAutopilotSettings(opts SetupOpts) {
 	if b.disableAutopilot {
 		b.logger.Info("disabling autopilot")
 		return
@@ -714,7 +714,10 @@ func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
 		b.autopilotConfig.Merge(opts.AutopilotConfig)
 		b.logger.Info("merged stored autopilot configuration with default configuration", "stored_config", b.autopilotConfig)
 	}
+}
 
+func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
+	b.ReconcileAutopilotSettings(opts)
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))

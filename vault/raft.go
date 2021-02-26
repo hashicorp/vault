@@ -181,6 +181,14 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	c.logger.Info("starting raft active node")
 
 	if !raftBackend.AutopilotDisabled() {
+		autopilotConfig, err := c.autopilotConfiguration(ctx)
+		if err != nil {
+			c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+		}
+		raftBackend.ReconcileAutopilotSettings(raft.SetupOpts{
+			AutopilotConfig: autopilotConfig,
+		})
+
 		raftBackend.StartAutopilot(c.activeContext)
 	}
 
