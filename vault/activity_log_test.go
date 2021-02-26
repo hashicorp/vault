@@ -2435,3 +2435,41 @@ func TestActivityLog_Deletion(t *testing.T) {
 	checkPresent(21)
 
 }
+
+func TestActivityLog_partialMonthClientCount(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	// entities[0] is from a previous month
+	partialMonthEntityCount := len(entities[1:])
+	var partialMonthTokenCount int
+	for _, countByNS := range tokenCounts {
+		partialMonthTokenCount += int(countByNS)
+	}
+
+	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
+
+	results, ok := a.partialMonthClientCount(ctx)
+	if !ok {
+		t.Fatal("no results to test")
+	}
+
+	clientCount, ok := results["client_count"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", clientCount)
+	}
+	if clientCount != expectedClientCount {
+		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	}
+}
