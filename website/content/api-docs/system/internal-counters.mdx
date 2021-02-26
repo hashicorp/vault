@@ -233,6 +233,49 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z
 ```
 
+## Partial Month Client Count
+
+This endpoint returns the number of clients for the current month, as the sum of active entities and non-entity tokens.
+An "active entity" is a distinct entity that has created one or more tokens in the given time period.
+A "non-entity token" is a token with no attached entity ID.
+
+The time period is from the start of the current month, up until the time that this request was made.
+
+Note: the client count may be inaccurate in the moments following a Vault reboot, or leadership change.
+The estimate will stabilize when background loading of client counts has completed.
+
+This endpoint was added in Vault 1.6.4.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `GET`  | `/sys/internal/counters/activity/monthly` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity/monthly
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca64742",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "clients": 220,
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
 ## Update the Client Count Configuration
 
 The `/sys/internal/counters/config` endpoint is used to configure logging of active clients.

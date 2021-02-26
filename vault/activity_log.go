@@ -1791,7 +1791,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]in
 	clientCount := entityCount + tokenCount
 
 	responseData := make(map[string]interface{})
-	responseData["client_count"] = clientCount
+	responseData["clients"] = clientCount
 
 	return responseData
 }

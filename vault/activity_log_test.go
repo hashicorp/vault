@@ -2460,12 +2460,12 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
 
-	results, ok := a.partialMonthClientCount(ctx)
-	if !ok {
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
 		t.Fatal("no results to test")
 	}
 
-	clientCount, ok := results["client_count"]
+	clientCount, ok := results["clients"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", clientCount)
 	}
