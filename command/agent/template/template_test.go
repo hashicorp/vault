@@ -13,6 +13,7 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/nomad/command/agent"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -28,7 +29,7 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
-func newAgentConfig(listeners []*configutil.Listener, enableCache bool) *config.Config {
+func newAgentConfig(listeners []*configutil.Listener, enableCache, enablePersisentCache bool) *config.Config {
 	agentConfig := &config.Config{
 		SharedConfig: &configutil.SharedConfig{
 			PidFile:   "./pidfile",
@@ -65,7 +66,13 @@ func newAgentConfig(listeners []*configutil.Listener, enableCache bool) *config.
 		},
 	}
 	if enableCache {
-		agentConfig.Cache = &config.Cache{UseAutoAuthToken: true}
+		agentConfig.Cache = &config.Cache{
+			UseAutoAuthToken: true,
+		}
+	}
+
+	if enablePersisentCache {
+		agent.Config.Cache.Persist = &config.Persist{Type: "kubernetes"}
 	}
 
 	return agentConfig
@@ -94,7 +101,7 @@ func TestCacheConfigUnix(t *testing.T) {
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, true)
+	agentConfig := newAgentConfig(listeners, true, true)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
@@ -131,7 +138,7 @@ func TestCacheConfigHTTP(t *testing.T) {
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, true)
+	agentConfig := newAgentConfig(listeners, true, true)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
@@ -168,7 +175,7 @@ func TestCacheConfigHTTPS(t *testing.T) {
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, true)
+	agentConfig := newAgentConfig(listeners, true, true)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
@@ -209,7 +216,44 @@ func TestCacheConfigNoCache(t *testing.T) {
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, false)
+	agentConfig := newAgentConfig(listeners, false, false)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "http://127.0.0.1:1111"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigNoPersistentCache(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:        "tcp",
+			Address:     "127.0.0.1:8300",
+			TLSKeyFile:  "/path/to/cakey.pem",
+			TLSCertFile: "/path/to/cacert.pem",
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8400",
+			TLSDisable: true,
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true, false)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})

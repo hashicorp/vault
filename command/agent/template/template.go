@@ -256,7 +256,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	}
 
 	// Use the cache if available or fallback to the Vault server values.
-	if sc.AgentConfig.Cache != nil && len(sc.AgentConfig.Listeners) != 0 {
+	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
 		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"
