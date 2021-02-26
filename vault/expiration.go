@@ -134,18 +134,15 @@ type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *name
 // revocationJob should only be created through newRevocationJob()
 type revocationJob struct {
 	leaseID   string
-	nsID      string
+	ns        *namespace.Namespace
 	m         *ExpirationManager
 	nsCtx     context.Context
 	startTime time.Time
 }
 
-func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *ExpirationManager) (*revocationJob, error) {
+func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Namespace, m *ExpirationManager) (*revocationJob, error) {
 	if leaseID == "" {
 		return nil, fmt.Errorf("cannot have empty lease id")
-	}
-	if nsID == "" {
-		return nil, fmt.Errorf("cannot have empty namespace id")
 	}
 	if m == nil {
 		return nil, fmt.Errorf("cannot have nil expiration manager")
@@ -156,7 +153,7 @@ func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *Expiration
 
 	return &revocationJob{
 		leaseID:   leaseID,
-		nsID:      nsID,
+		ns:        ns,
 		m:         m,
 		nsCtx:     nsCtx,
 		startTime: time.Now(),
@@ -164,8 +161,8 @@ func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *Expiration
 }
 
 func (r *revocationJob) Execute() error {
-	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", r.nsID}})
-	metrics.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{{"namespace", r.nsID}})
+	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
+	r.m.core.metricSink.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 
 	// don't start the timer until the revocation is being executed
 	revokeCtx, cancel := context.WithTimeout(r.nsCtx, DefaultMaxRequestDuration)
@@ -197,8 +194,7 @@ func (r *revocationJob) Execute() error {
 }
 
 func (r *revocationJob) OnFailure(err error) {
-	// TODO vault 1.8 do another one of these metrics for the zombie lease count and such (see metrics section of VLT-145)
-	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", r.nsID}})
+	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 	r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err)
 
 	r.m.pendingLock.Lock()
@@ -213,7 +209,6 @@ func (r *revocationJob) OnFailure(err error) {
 	pending.revokesAttempted++
 
 	if pending.revokesAttempted >= maxRevokeAttempts {
-		// TODO vault 1.8 mark this as a zombie
 		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
 		return
 	}
@@ -238,7 +233,7 @@ func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, l
 		mountAccessor = mount.Accessor
 	}
 
-	job, err := newRevocationJob(nsCtx, leaseID, ns.ID, m)
+	job, err := newRevocationJob(nsCtx, leaseID, ns, m)
 	if err != nil {
 		m.logger.Warn("error creating revocation job", "error", err)
 		return
@@ -345,7 +340,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 	}
 
-	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"))
+	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
 	jobManager.Start()
 
 	exp := &ExpirationManager{

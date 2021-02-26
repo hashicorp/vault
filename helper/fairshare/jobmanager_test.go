@@ -43,7 +43,7 @@ func TestJobManager_NewJobManager(t *testing.T) {
 
 	l := newTestLogger("jobmanager-test")
 	for tcNum, tc := range testCases {
-		j := NewJobManager(tc.name, tc.numWorkers, l)
+		j := NewJobManager(tc.name, tc.numWorkers, l, nil)
 
 		if tc.name != "" && tc.name != j.name {
 			t.Errorf("tc %d: expected name %s, got %s", tcNum, tc.name, j.name)
@@ -68,7 +68,7 @@ func TestJobManager_NewJobManager(t *testing.T) {
 
 func TestJobManager_Start(t *testing.T) {
 	numJobs := 10
-	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"))
+	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"), nil)
 
 	var wg sync.WaitGroup
 	wg.Add(numJobs)
@@ -104,7 +104,7 @@ func TestJobManager_Start(t *testing.T) {
 
 func TestJobManager_StartAndPause(t *testing.T) {
 	numJobs := 10
-	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"))
+	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"), nil)
 
 	var wg sync.WaitGroup
 	wg.Add(numJobs)
@@ -168,7 +168,7 @@ func TestJobManager_StartAndPause(t *testing.T) {
 }
 
 func TestJobManager_Stop(t *testing.T) {
-	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"))
+	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
 	j.Start()
 
@@ -189,7 +189,7 @@ func TestJobManager_Stop(t *testing.T) {
 }
 
 func TestFairshare_StopMultiple(t *testing.T) {
-	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"))
+	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
 	j.Start()
 
@@ -261,7 +261,7 @@ func TestJobManager_AddJob(t *testing.T) {
 		},
 	}
 
-	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"))
+	j := NewJobManager("job-mgr-test", 3, newTestLogger("jobmanager-test"), nil)
 
 	expectedCount := make(map[string]int)
 	for _, tc := range testCases {
@@ -288,7 +288,7 @@ func TestJobManager_AddJob(t *testing.T) {
 
 func TestJobManager_GetPendingJobCount(t *testing.T) {
 	numJobs := 15
-	j := NewJobManager("test-job-mgr", 3, newTestLogger("jobmanager-test"))
+	j := NewJobManager("test-job-mgr", 3, newTestLogger("jobmanager-test"), nil)
 
 	for i := 0; i < numJobs; i++ {
 		job := newDefaultTestJob(t, fmt.Sprintf("job-%d", i))
@@ -302,7 +302,7 @@ func TestJobManager_GetPendingJobCount(t *testing.T) {
 }
 
 func TestJobManager_GetWorkQueueLengths(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 3, newTestLogger("jobmanager-test"))
+	j := NewJobManager("test-job-mgr", 3, newTestLogger("jobmanager-test"), nil)
 
 	expected := make(map[string]int)
 	for i := 0; i < 25; i++ {
@@ -325,7 +325,7 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 }
 
 func TestJobManager_removeLastQueueAccessed(t *testing.T) {
-	j := NewJobManager("job-mgr-test", 1, newTestLogger("jobmanager-test"))
+	j := NewJobManager("job-mgr-test", 1, newTestLogger("jobmanager-test"), nil)
 
 	j.addQueue("queue-0")
 	j.addQueue("queue-1")
@@ -444,7 +444,7 @@ func TestJobManager_getNextJob(t *testing.T) {
 	resultsCh := make(chan string)
 	defer close(resultsCh)
 
-	j := NewJobManager("test-job-mgr", numWorkers, newTestLogger("jobmanager-test"))
+	j := NewJobManager("test-job-mgr", numWorkers, newTestLogger("jobmanager-test"), nil)
 
 	doneCh := make(chan struct{})
 	var mu sync.Mutex
@@ -504,7 +504,7 @@ func TestJobManager_getNextJob(t *testing.T) {
 }
 
 func TestFairshare_nilLoggerJobManager(t *testing.T) {
-	j := NewJobManager("test-job-mgr", 1, nil)
+	j := NewJobManager("test-job-mgr", 1, nil, nil)
 	if j.logger == nil {
 		t.Error("logger not set up properly")
 	}
