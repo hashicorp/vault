@@ -1,3 +1,3 @@
 ```release-note:improvement
-agent: Route templating server through cache when enabled.
+agent: Route templating server through cache when persistent cahce is enabled.
 ```
