@@ -1771,3 +1771,30 @@ func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.Ga
 	}
 	return a.PartialMonthMetrics(ctx)
 }
+
+// partialMonthClientCount returns the number of clients used so far this month,
+// and a flag for whether the count is done being processed. If the count is
+// still being processed, do not use the count returned
+func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]interface{}, bool) {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+
+	if !a.enabled {
+		// nothing to count
+		return nil, true
+	}
+
+	// TODO check if still loading data in the background
+
+	entityCount := len(a.activeEntities)
+	var tokenCount int
+	for _, countByNS := range a.currentSegment.tokenCount.CountByNamespaceID {
+		tokenCount += int(countByNS)
+	}
+	clientCount := entityCount + tokenCount
+
+	responseData := make(map[string]interface{})
+	responseData["client_count"] = clientCount
+
+	return responseData, true
+}
