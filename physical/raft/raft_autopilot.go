@@ -240,6 +240,9 @@ var _ autopilot.ApplicationIntegration = (*Delegate)(nil)
 // application specific tasks performed.
 type Delegate struct {
 	*RaftBackend
+
+	// dl is a lock dedicated for guarding delegate's fields
+	dl               sync.RWMutex
 	inflightRemovals map[raft.ServerID]bool
 }
 
@@ -390,12 +393,12 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 	go func() {
 		success := false
-		d.l.Lock()
+		d.dl.Lock()
 		defer func() {
 			if success {
 				delete(d.inflightRemovals, server.ID)
 			}
-			d.l.Unlock()
+			d.dl.Unlock()
 		}()
 
 		_, ok := d.inflightRemovals[server.ID]
