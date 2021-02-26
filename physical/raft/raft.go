@@ -135,9 +135,9 @@ type RaftBackend struct {
 	// to see if the peers are "alive" using the heartbeat received from them.
 	followerStates *FollowerStates
 
-	// followerHeartbeatTrackerStopCh is used to terminate the goroutine that
-	// keeps track of follower heartbeats.
-	followerHeartbeatTrackerStopCh chan struct{}
+	// followerHeartbeatTicker is used to compute dead servers using follower
+	// state heartbeats.
+	followerHeartbeatTicker *time.Ticker
 
 	// disableAutopilot if set will not put autopilot implementation to use. The
 	// fallback will be to interact with the raft instance directly. This can only
@@ -399,17 +399,18 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	return &RaftBackend{
-		logger:       logger,
-		fsm:          fsm,
-		raftInitCh:   make(chan struct{}),
-		conf:         conf,
-		logStore:     log,
-		stableStore:  stable,
-		snapStore:    snap,
-		dataDir:      path,
-		localID:      localID,
-		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize: maxEntrySize,
+		logger:                  logger,
+		fsm:                     fsm,
+		raftInitCh:              make(chan struct{}),
+		conf:                    conf,
+		logStore:                log,
+		stableStore:             stable,
+		snapStore:               snap,
+		dataDir:                 path,
+		localID:                 localID,
+		permitPool:              physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:            maxEntrySize,
+		followerHeartbeatTicker: time.NewTicker(time.Second),
 	}, nil
 }
 

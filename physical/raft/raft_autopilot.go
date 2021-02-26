@@ -452,29 +452,22 @@ func autopilotStatusToStatus(status autopilot.ExecutionStatus) AutopilotExecutio
 }
 
 func (b *RaftBackend) startFollowerHeartbeatTracker() {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-b.followerHeartbeatTrackerStopCh:
-			return
-		case <-ticker.C:
-			b.l.RLock()
-			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
-				b.followerStates.l.RLock()
-				for _, state := range b.followerStates.followers {
-					if state.LastHeartbeat.IsZero() || state.IsDead.Load().(bool) {
-						continue
-					}
-					now := time.Now()
-					if now.After(state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)) {
-						state.IsDead.Store(true)
-					}
+	for _ = range b.followerHeartbeatTicker.C {
+		b.l.RLock()
+		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
+			b.followerStates.l.RLock()
+			for _, state := range b.followerStates.followers {
+				if state.LastHeartbeat.IsZero() || state.IsDead.Load().(bool) {
+					continue
 				}
-				b.followerStates.l.RUnlock()
+				now := time.Now()
+				if now.After(state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)) {
+					state.IsDead.Store(true)
+				}
 			}
-			b.l.RUnlock()
+			b.followerStates.l.RUnlock()
 		}
+		b.l.RUnlock()
 	}
 }
 
@@ -488,11 +481,7 @@ func (b *RaftBackend) StopAutopilot() {
 		return
 	}
 	b.autopilot.Stop()
-
-	if b.followerHeartbeatTrackerStopCh != nil {
-		close(b.followerHeartbeatTrackerStopCh)
-	}
-	b.followerHeartbeatTrackerStopCh = nil
+	b.followerHeartbeatTicker.Stop()
 }
 
 // AutopilotState represents the health information retrieved from autopilot.
@@ -679,6 +668,6 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 	b.autopilot.Start(ctx)
-	b.followerHeartbeatTrackerStopCh = make(chan struct{})
+	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 	go b.startFollowerHeartbeatTracker()
 }
