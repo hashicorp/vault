@@ -806,8 +806,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.raftNotifyCh = raftNotifyCh
 
 	if err := b.fsm.upgradeLocalNodeConfig(); err != nil {
-		// TODO: Should we swallow the error?
-		b.logger.Error("failed to upgrade fsm raft configuration")
+		b.logger.Error("failed to upgrade local node configuration")
 		return err
 	}
 

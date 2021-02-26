@@ -175,7 +175,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
-	autopilotConfig, err := c.autopilotConfiguration(ctx)
+	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
 	if err != nil {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
@@ -338,7 +338,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0, raftBackend.DesiredSuffrage())
+			followerStates.Update(server.NodeID, 0, 0, "voter")
 		}
 	}
 
@@ -708,6 +708,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft backend not in use")
 	}
 
+	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+		c.logger.Error("failed to set desired suffrage for this node", "error", err)
+		return false, nil
+	}
+
 	init, err := c.InitializedLocally(ctx)
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
@@ -723,7 +728,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	// Check on seal status and storage type before proceeding:
 	// If raft is used for storage, core needs to be sealed
 	if !isRaftHAOnly && !c.Sealed() {
-		c.logger.Error("node must be seal before joining")
+		c.logger.Error("node must be sealed before joining")
 		return false, errors.New("node must be sealed before joining")
 	}
 
@@ -964,11 +969,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
-						if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
-							// TODO: Should we swallow the error?
-							c.logger.Error("failed to set desired suffrage for this node", "error", err)
-							return err
-						}
 						return nil
 					}
 				}
@@ -1008,11 +1008,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		}
 	}
 
-	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
-		c.logger.Error("failed to set desired suffrage for this node", "error", err)
-		// TODO: Should we swallow the error?
-		return false, nil
-	}
 	return true, nil
 }
 
@@ -1119,7 +1114,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 	return nil
 }
 
-func (c *Core) autopilotConfiguration(ctx context.Context) (*raft.AutopilotConfig, error) {
+func (c *Core) loadAutopilotConfiguration(ctx context.Context) (*raft.AutopilotConfig, error) {
 	var autopilotConfig *raft.AutopilotConfig
 	entry, err := c.barrier.Get(ctx, raftAutopilotConfigurationStoragePath)
 	if err != nil {

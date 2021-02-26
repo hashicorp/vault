@@ -186,7 +186,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 				"server_stabilization_time": {
 					Type:        framework.TypeDurationSecond,
-					Description: "Minimum amount of time a server must be in a stable, healthy state before it can be added to the cluster as a voter.",
+					Description: "Minimum amount of time a server must be in a stable, healthy state before it can be added to the cluster.",
 				},
 			},
 
@@ -464,7 +464,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 		}
 
 		// Read autopilot configuration from storage
-		config, err := b.Core.autopilotConfiguration(ctx)
+		config, err := b.Core.loadAutopilotConfiguration(ctx)
 		if err != nil {
 			b.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 		}

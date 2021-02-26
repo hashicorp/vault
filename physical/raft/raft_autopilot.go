@@ -66,8 +66,8 @@ type AutopilotConfig struct {
 	MinQuorum uint `mapstructure:"min_quorum"`
 
 	// ServerStabilizationTime is the minimum amount of time a server must be in a
-	// stable, healthy state before it can be added to the cluster as a voter. Only
-	// applicable with Raft protocol version 3 or higher.
+	// stable, healthy state before it can be added to the cluster. Only applicable
+	// with Raft protocol version 3 or higher.
 	ServerStabilizationTime time.Duration `mapstructure:"-"`
 }
 
@@ -182,13 +182,8 @@ func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 	if !ok {
 		return
 	}
-	s.followers[nodeID] = &FollowerState{
-		IsDead:          true,
-		LastHeartbeat:   state.LastHeartbeat,
-		LastTerm:        state.LastTerm,
-		AppliedIndex:    state.AppliedIndex,
-		DesiredSuffrage: state.DesiredSuffrage,
-	}
+
+	state.IsDead = true
 }
 
 // Update the peer information in the follower states
@@ -332,10 +327,10 @@ func (d *Delegate) FetchServerStats(ctx context.Context, servers map[raft.Server
 // it is here that we let the autopilot library know of the same.
 func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	d.l.RLock()
+	defer d.l.RUnlock()
 	future := d.raft.GetConfiguration()
 	if err := future.Error(); err != nil {
 		d.logger.Error("failed to get raft configuration when computing known servers", "error", err)
-		d.l.RUnlock()
 		return nil
 	}
 
@@ -344,11 +339,9 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	for _, server := range servers {
 		serverIDs = append(serverIDs, string(server.ID))
 	}
-	followerStates := d.followerStates
-	d.l.RUnlock()
 
-	followerStates.l.RLock()
-	defer followerStates.l.RUnlock()
+	d.followerStates.l.RLock()
+	defer d.followerStates.l.RUnlock()
 
 	ret := make(map[raft.ServerID]*autopilot.Server)
 	for id, state := range d.followerStates.followers {
@@ -422,9 +415,8 @@ func (b *RaftBackend) SetAutopilotConfig(config *AutopilotConfig) {
 // AutopilotConfig returns the autopilot configuration in the backend.
 func (b *RaftBackend) AutopilotConfig() *AutopilotConfig {
 	b.l.RLock()
-	conf := b.autopilotConfig
-	b.l.RUnlock()
-	return conf.Clone()
+	defer b.l.RUnlock()
+	return b.autopilotConfig.Clone()
 }
 
 func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {

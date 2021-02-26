@@ -321,9 +321,10 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 			default:
 				lnConfig.DesiredSuffrage = "voter"
 			}
+			// Bring the intent to the fsm instance.
+			f.desiredSuffrage = lnConfig.DesiredSuffrage
+			break
 		}
-		// Bring the intent to the fsm instance.
-		f.desiredSuffrage = lnConfig.DesiredSuffrage
 	}
 
 	return f.persistDesiredSuffrage(lnConfig)
