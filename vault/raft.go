@@ -60,6 +60,9 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 	if raftBackend.Initialized() {
+		if c.disableAutopilot {
+			raftBackend.DisableAutopilot()
+		}
 		raftBackend.SetFollowerStates(c.raftFollowerStates)
 		return nil
 	}
@@ -122,24 +125,16 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
-	raftBackend.SetFollowerStates(c.raftFollowerStates)
-	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-
-	// Read autopilot configuration from storage
-	autopilotConfig, err := c.autopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-	}
-
 	if c.disableAutopilot {
 		raftBackend.DisableAutopilot()
 	}
+	raftBackend.SetFollowerStates(c.raftFollowerStates)
+	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
 	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      raftTLS,
 		ClusterListener: c.getClusterListener(),
 		StartAsLeader:   creating,
-		AutopilotConfig: autopilotConfig,
 	}); err != nil {
 		return err
 	}
@@ -180,17 +175,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
-	if !raftBackend.AutopilotDisabled() {
-		autopilotConfig, err := c.autopilotConfiguration(ctx)
-		if err != nil {
-			c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-		}
-		raftBackend.ReconcileAutopilotSettings(raft.SetupOpts{
-			AutopilotConfig: autopilotConfig,
-		})
-
-		raftBackend.StartAutopilot(c.activeContext)
+	autopilotConfig, err := c.autopilotConfiguration(ctx)
+	if err != nil {
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig)
 
 	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)

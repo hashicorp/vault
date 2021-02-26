@@ -620,9 +620,6 @@ type SetupOpts struct {
 	// RecoveryModeConfig is the configuration for the raft cluster in recovery
 	// mode.
 	RecoveryModeConfig *raft.Configuration
-
-	// AutopilotConfig is the configuration for the autopilot read from storage.
-	AutopilotConfig *AutopilotConfig
 }
 
 func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
@@ -807,7 +804,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
-	b.setupAutopilot(opts)
 
 	if err := b.fsm.upgradeLocalNodeConfig(); err != nil {
 		// TODO: Should we swallow the error?

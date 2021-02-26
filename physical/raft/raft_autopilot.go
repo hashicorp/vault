@@ -11,11 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -73,6 +74,9 @@ type AutopilotConfig struct {
 // Merge combines the supplied config with the receiver. Supplied ones take
 // priority.
 func (to *AutopilotConfig) Merge(from *AutopilotConfig) {
+	if from == nil {
+		return
+	}
 	if from.CleanupDeadServersValue != CleanupDeadServersUnset {
 		to.CleanupDeadServers = from.CleanupDeadServersValue.Value()
 	}
@@ -95,6 +99,9 @@ func (to *AutopilotConfig) Merge(from *AutopilotConfig) {
 
 // Clone returns a duplicate instance of AutopilotConfig with the exact same values.
 func (ac *AutopilotConfig) Clone() *AutopilotConfig {
+	if ac == nil {
+		return nil
+	}
 	return &AutopilotConfig{
 		CleanupDeadServers:             ac.CleanupDeadServers,
 		LastContactThreshold:           ac.LastContactThreshold,
@@ -438,21 +445,6 @@ func (b *RaftBackend) AutopilotDisabled() bool {
 	return disabled
 }
 
-// StartAutopilot puts autopilot subsystem to work. This should only be called
-// on the active node.
-func (b *RaftBackend) StartAutopilot(ctx context.Context) {
-	b.l.RLock()
-	defer b.l.RUnlock()
-
-	if b.autopilot == nil {
-		return
-	}
-
-	b.autopilot.Start(ctx)
-	b.followerHeartbeatTrackerStopCh = make(chan struct{})
-	go b.startFollowerHeartbeatTracker()
-}
-
 // AutopilotExecutionStatus represents the current status of the autopilot background go routines
 type AutopilotExecutionStatus string
 
@@ -694,7 +686,12 @@ func (b *RaftBackend) DisableAutopilot() {
 	b.l.Unlock()
 }
 
-func (b *RaftBackend) ReconcileAutopilotSettings(opts SetupOpts) {
+// SetupAutopilot instantiates autopilot and tells if its okay to start it.
+func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *AutopilotConfig) {
+	// TODO: Adding this lock is creating a dead lock. Figure it out.
+	//b.l.Lock()
+	//defer b.l.Unlock()
+
 	if b.disableAutopilot {
 		b.logger.Info("disabling autopilot")
 		return
@@ -709,17 +706,13 @@ func (b *RaftBackend) ReconcileAutopilotSettings(opts SetupOpts) {
 	// Start with a default config
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
-	// Check if the config was present in storage. If it was merge it on top of
-	// default configuration.
-	if opts.AutopilotConfig != nil {
-		b.autopilotConfig.Merge(opts.AutopilotConfig)
-		b.logger.Info("merged stored autopilot configuration with default configuration", "stored_config", b.autopilotConfig)
-	}
-}
+	// Merge the setting provided over the API
+	b.autopilotConfig.Merge(storageConfig)
 
-func (b *RaftBackend) setupAutopilot(opts SetupOpts) {
-	b.ReconcileAutopilotSettings(opts)
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
+	b.autopilot.Start(ctx)
+	b.followerHeartbeatTrackerStopCh = make(chan struct{})
+	go b.startFollowerHeartbeatTracker()
 }

@@ -23,6 +23,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 	cluster := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
+		// Not setting EnableAutopilot here.
 	})
 	defer cluster.Cleanup()
 
@@ -30,7 +31,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 
 	state, err := client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
-	require.EqualValues(t, "not-running", state.ExecutionStatus)
+	require.Nil(t, nil, state)
 }
 
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
@@ -45,12 +46,12 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	client := cluster.Cores[0].Client
 	state, err := client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
-	require.Equal(t, state.ExecutionStatus, api.AutopilotRunning)
-	require.Equal(t, state.Healthy, true)
+	require.Equal(t, api.AutopilotRunning, state.ExecutionStatus)
+	require.Equal(t, true, state.Healthy)
 	require.Len(t, state.Servers, 1)
-	require.Equal(t, state.Servers["core-0"].ID, "core-0")
-	require.Equal(t, state.Servers["core-0"].NodeStatus, "alive")
-	require.Equal(t, state.Servers["core-0"].Status, "leader")
+	require.Equal(t, "core-0", state.Servers["core-0"].ID)
+	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
+	require.Equal(t, "leader", state.Servers["core-0"].Status)
 
 	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
@@ -76,11 +77,11 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 
 		state, err = client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
-		require.Equal(t, state.Healthy, false)
+		require.Equal(t, false, state.Healthy)
 		require.Len(t, state.Servers, numServers)
-		require.Equal(t, state.Servers[nodeID].Healthy, false)
-		require.Equal(t, state.Servers[nodeID].NodeStatus, "alive")
-		require.Equal(t, state.Servers[nodeID].Status, "non-voter")
+		require.Equal(t, false, state.Servers[nodeID].Healthy)
+		require.Equal(t, "alive", state.Servers[nodeID].NodeStatus)
+		require.Equal(t, "non-voter", state.Servers[nodeID].Status)
 
 		// Wait till the stabilization period is over
 		stabilizationWaitDuration := time.Duration(float64(config.ServerStabilizationTime))
@@ -121,7 +122,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	joinAndStabilizeFunc(cluster.Cores[2], "core-2", 3)
 	state, err = client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
-	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
+	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
