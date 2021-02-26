@@ -212,6 +212,7 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Create a new keyring
 	k := NewKeyring()
 	k.masterKey = enc.MasterKey
+	k.rotationConfig = enc.RotationConfig
 	for _, key := range enc.Keys {
 		k.keys[key.Term] = key
 		if key.Term > k.activeTerm {
