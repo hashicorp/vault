@@ -13,7 +13,6 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/nomad/command/agent"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -72,7 +71,7 @@ func newAgentConfig(listeners []*configutil.Listener, enableCache, enablePersise
 	}
 
 	if enablePersisentCache {
-		agent.Config.Cache.Persist = &config.Persist{Type: "kubernetes"}
+		agentConfig.Cache.Persist = &config.Persist{Type: "kubernetes"}
 	}
 
 	return agentConfig
@@ -270,7 +269,7 @@ func TestCacheConfigNoPersistentCache(t *testing.T) {
 func TestCacheConfigNoListener(t *testing.T) {
 	listeners := []*configutil.Listener{}
 
-	agentConfig := newAgentConfig(listeners, true)
+	agentConfig := newAgentConfig(listeners, true, true)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
@@ -308,7 +307,7 @@ func TestCacheConfigRejectMTLS(t *testing.T) {
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, true)
+	agentConfig := newAgentConfig(listeners, true, true)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	_, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
