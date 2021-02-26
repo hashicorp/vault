@@ -334,10 +334,14 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 // yet, we still go ahead and store the intent in the fsm. During the next
 // update to the configuration, this intent will be persisted.
 func (f *FSM) recordSuffrage(desiredSuffrage string) error {
-	var lnConfig LocalNodeConfigValue
-	lnConfig.DesiredSuffrage = desiredSuffrage
+	if err := f.persistDesiredSuffrage(&LocalNodeConfigValue{
+		DesiredSuffrage: desiredSuffrage,
+	}); err != nil {
+		return err
+	}
+
 	f.desiredSuffrage = desiredSuffrage
-	return f.persistDesiredSuffrage(&lnConfig)
+	return nil
 }
 
 func (f *FSM) persistDesiredSuffrage(lnconfig *LocalNodeConfigValue) error {
