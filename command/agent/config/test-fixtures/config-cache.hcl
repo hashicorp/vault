@@ -26,7 +26,7 @@ cache {
 		path = "/vault/agent-cache/"
 		keep_after_import = true
 		exit_on_err = true
-		service_account_file = "/tmp/serviceaccount/token"
+		service_account_token_file = "/tmp/serviceaccount/token"
 	}
 }
 
