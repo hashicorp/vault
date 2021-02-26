@@ -1772,8 +1772,8 @@ func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.Ga
 	return a.PartialMonthMetrics(ctx)
 }
 
-// partialMonthClientCount returns the number of clients used so far this month
-// if activity log is not enabled, the response will be nil
+// partialMonthClientCount returns the number of clients used so far this month.
+// If activity log is not enabled, the response will be nil
 func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]interface{} {
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()

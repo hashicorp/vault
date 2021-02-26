@@ -47,7 +47,7 @@ func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handleMonthlyActivityCount,
-				Summary:  "Report the current client count metrics for the month, for this namespace and all child namespaces.",
+				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
 			},
 		},
 	}
