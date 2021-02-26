@@ -392,10 +392,10 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 // goroutine.
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 	go func() {
-		success := false
+		added := false
 		d.dl.Lock()
 		defer func() {
-			if success {
+			if added {
 				delete(d.inflightRemovals, server.ID)
 			}
 			d.dl.Unlock()
@@ -407,6 +407,7 @@ func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 			return
 		}
 
+		added = true
 		d.inflightRemovals[server.ID] = true
 
 		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
@@ -415,7 +416,6 @@ func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 			return
 		}
 
-		success = true
 		d.followerStates.Delete(string(server.ID))
 	}()
 }
