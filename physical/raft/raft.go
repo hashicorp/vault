@@ -903,21 +903,17 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	switch b.disableAutopilot {
-	case true:
+	if b.autopilot == nil {
 		if b.raft == nil {
 			return errors.New("raft storage is not initialized")
 		}
 		b.logger.Trace("removing server from raft", "id", peerID)
 		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
 		return future.Error()
-	default:
-		if b.autopilot == nil {
-			return errors.New("raft storage autopilot is not initialized")
-		}
-		b.logger.Trace("removing server from raft via autopilot", "id", peerID)
-		return b.autopilot.RemoveServer(raft.ServerID(peerID))
 	}
+
+	b.logger.Trace("removing server from raft via autopilot", "id", peerID)
+	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
@@ -958,27 +954,23 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	switch b.disableAutopilot {
-	case true:
+	if b.autopilot == nil {
 		if b.raft == nil {
 			return errors.New("raft storage is not initialized")
 		}
 		b.logger.Trace("adding server to raft", "id", peerID)
 		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
 		return future.Error()
-	default:
-		if b.autopilot == nil {
-			return errors.New("raft storage autopilot is not initialized")
-		}
-		b.logger.Trace("adding server to raft via autopilot", "id", peerID)
-		return b.autopilot.AddServer(&autopilot.Server{
-			ID:          raft.ServerID(peerID),
-			Name:        peerID,
-			Address:     raft.ServerAddress(clusterAddr),
-			RaftVersion: raft.ProtocolVersionMax,
-			NodeType:    autopilot.NodeVoter,
-		})
 	}
+
+	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+	return b.autopilot.AddServer(&autopilot.Server{
+		ID:          raft.ServerID(peerID),
+		Name:        peerID,
+		Address:     raft.ServerAddress(clusterAddr),
+		RaftVersion: raft.ProtocolVersionMax,
+		NodeType:    autopilot.NodeVoter,
+	})
 }
 
 // Peers returns all the servers present in the raft cluster
