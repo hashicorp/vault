@@ -9,11 +9,11 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"go.uber.org/atomic"
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/raft"
@@ -156,7 +156,7 @@ type FollowerState struct {
 	AppliedIndex    uint64
 	LastHeartbeat   time.Time
 	LastTerm        uint64
-	IsDead          atomic.Value
+	IsDead          *atomic.Bool
 	DesiredSuffrage string
 }
 
@@ -182,9 +182,8 @@ func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64,
 	state, ok := s.followers[nodeID]
 	if !ok {
 		state = &FollowerState{
-			IsDead: atomic.Value{},
+			IsDead: atomic.NewBool(false),
 		}
-		state.IsDead.Store(false)
 		s.followers[nodeID] = state
 	}
 
@@ -352,7 +351,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         d.autopilotServerExt(state.DesiredSuffrage),
 		}
 
-		switch state.IsDead.Load().(bool) {
+		switch state.IsDead.Load() {
 		case true:
 			d.logger.Debug("informing autopilot that the node left", "id", id)
 			server.NodeStatus = autopilot.NodeLeft
@@ -457,7 +456,7 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 			b.followerStates.l.RLock()
 			for _, state := range b.followerStates.followers {
-				if state.LastHeartbeat.IsZero() || state.IsDead.Load().(bool) {
+				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
 				}
 				now := time.Now()
@@ -643,9 +642,8 @@ func (b *RaftBackend) DisableAutopilot() {
 
 // SetupAutopilot instantiates autopilot and tells if its okay to start it.
 func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *AutopilotConfig) {
-	// TODO: Adding this lock is creating a dead lock. Figure it out.
-	//b.l.Lock()
-	//defer b.l.Unlock()
+	b.l.Lock()
+	defer b.l.Unlock()
 
 	if b.disableAutopilot {
 		b.logger.Info("disabling autopilot")
