@@ -5,12 +5,60 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func validateClientCounts(t *testing.T, resp *api.Secret, expectedEntities, expectedTokens int) {
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	if resp.Data == nil {
+		t.Fatal("no data")
+	}
+
+	expectedClients := expectedEntities + expectedTokens
+
+	entityCountJSON, ok := resp.Data["distinct_entities"]
+	if !ok {
+		t.Fatalf("no entity count: %v", resp.Data)
+	}
+	entityCount, err := entityCountJSON.(json.Number).Int64()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entityCount != int64(expectedEntities) {
+		t.Errorf("bad entity count. expected %v, got %v", expectedEntities, entityCount)
+	}
+
+	tokenCountJSON, ok := resp.Data["non_entity_tokens"]
+	if !ok {
+		t.Fatalf("no token count: %v", resp.Data)
+	}
+	tokenCount, err := tokenCountJSON.(json.Number).Int64()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tokenCount != int64(expectedTokens) {
+		t.Errorf("bad token count. expected %v, got %v", expectedTokens, tokenCount)
+	}
+
+	clientCountJSON, ok := resp.Data["clients"]
+	if !ok {
+		t.Fatalf("no client count: %v", resp.Data)
+	}
+	clientCount, err := clientCountJSON.(json.Number).Int64()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clientCount != int64(expectedClients) {
+		t.Errorf("bad client count. expected %v, got %v", expectedClients, clientCount)
+	}
+}
 
 func TestActivityLog_MonthlyActivityApi(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
@@ -36,23 +84,7 @@ func TestActivityLog_MonthlyActivityApi(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil {
-		t.Fatal("nil response")
-	}
-	if resp.Data == nil {
-		t.Fatal("no data")
-	}
-	clientCountJSON, ok := resp.Data["clients"]
-	if !ok {
-		t.Fatalf("no client count: %v", resp.Data)
-	}
-	clientCount, err := clientCountJSON.(json.Number).Int64()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if clientCount != 0 {
-		t.Errorf("bad client count. expected %v, got %v", 0, clientCount)
-	}
+	validateClientCounts(t, resp, 0, 0)
 
 	// inject some data and query the API
 	entities, tokens := core.InjectActivityLogDataThisMonth(t)
@@ -61,29 +93,12 @@ func TestActivityLog_MonthlyActivityApi(t *testing.T) {
 	for _, tokenCount := range tokens {
 		expectedTokens += int(tokenCount)
 	}
-	expectedClients := expectedEntities + expectedTokens
 
 	resp, err = client.Logical().Read("sys/internal/counters/activity/monthly")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil {
-		t.Error("nil response")
-	}
-	if resp.Data == nil {
-		t.Fatal("no data")
-	}
-	clientCountJSON, ok = resp.Data["clients"]
-	if !ok {
-		t.Fatalf("no client count: %v", resp.Data)
-	}
-	clientCount, err = clientCountJSON.(json.Number).Int64()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if clientCount != int64(expectedClients) {
-		t.Errorf("bad client count. expected %v, got %v", expectedClients, clientCount)
-	}
+	validateClientCounts(t, resp, expectedEntities, expectedTokens)
 
 	// we expect a 204 if activity log is disabled
 	core.GetActivityLog().SetEnable(false)

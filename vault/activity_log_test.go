@@ -2465,9 +2465,24 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		t.Fatal("no results to test")
 	}
 
+	entityCount, ok := results["distinct_entities"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if entityCount != partialMonthEntityCount {
+		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	}
+
+	tokenCount, ok := results["non_entity_tokens"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if tokenCount != partialMonthTokenCount {
+		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
+	}
 	clientCount, ok := results["clients"]
 	if !ok {
-		t.Fatalf("malformed results. got %v", clientCount)
+		t.Fatalf("malformed results. got %v", results)
 	}
 	if clientCount != expectedClientCount {
 		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
