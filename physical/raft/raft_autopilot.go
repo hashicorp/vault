@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -155,7 +156,7 @@ type FollowerState struct {
 	AppliedIndex    uint64
 	LastHeartbeat   time.Time
 	LastTerm        uint64
-	IsDead          bool
+	IsDead          atomic.Value
 	DesiredSuffrage string
 }
 
@@ -173,31 +174,24 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// markFollowerAsDead marks the node represented by the nodeID as dead. This
-// implies that Vault will indicate that the node "left" the cluster, the next
-// time autopilot asks for known servers. This function should be called with
-// the FollowerStates lock held.
-func (s *FollowerStates) markFollowerAsDead(nodeID string) {
-	state, ok := s.followers[nodeID]
-	if !ok {
-		return
-	}
-
-	state.IsDead = true
-}
-
 // Update the peer information in the follower states
 func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, desiredSuffrage string) {
-	state := &FollowerState{
-		AppliedIndex:    appliedIndex,
-		LastTerm:        term,
-		DesiredSuffrage: desiredSuffrage,
-		LastHeartbeat:   time.Now(),
+	s.l.Lock()
+	defer s.l.Unlock()
+
+	state, ok := s.followers[nodeID]
+	if !ok {
+		state = &FollowerState{
+			IsDead: atomic.Value{},
+		}
+		state.IsDead.Store(false)
+		s.followers[nodeID] = state
 	}
 
-	s.l.Lock()
-	s.followers[nodeID] = state
-	s.l.Unlock()
+	state.AppliedIndex = appliedIndex
+	state.LastTerm = term
+	state.DesiredSuffrage = desiredSuffrage
+	state.LastHeartbeat = time.Now()
 }
 
 // Clear wipes all the information regarding peers in the follower states.
@@ -358,7 +352,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         d.autopilotServerExt(state.DesiredSuffrage),
 		}
 
-		switch state.IsDead {
+		switch state.IsDead.Load().(bool) {
 		case true:
 			d.logger.Debug("informing autopilot that the node left", "id", id)
 			server.NodeStatus = autopilot.NodeLeft
@@ -465,39 +459,19 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		case <-b.followerHeartbeatTrackerStopCh:
 			return
 		case <-ticker.C:
-			markingCandidatePresent := false
 			b.l.RLock()
 			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				b.followerStates.l.RLock()
 				for _, state := range b.followerStates.followers {
-					if state.LastHeartbeat.IsZero() || state.IsDead {
+					if state.LastHeartbeat.IsZero() || state.IsDead.Load().(bool) {
 						continue
 					}
 					now := time.Now()
 					if now.After(state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)) {
-						markingCandidatePresent = true
+						state.IsDead.Store(true)
 					}
 				}
 				b.followerStates.l.RUnlock()
-
-				// If marking a node as dead, switch read with a write lock and
-				// check the conditions again.
-				if markingCandidatePresent {
-					b.followerStates.l.Lock()
-					for id, state := range b.followerStates.followers {
-						if state.LastHeartbeat.IsZero() || state.IsDead {
-							continue
-						}
-						now := time.Now()
-						threshold := state.LastHeartbeat.Add(b.autopilotConfig.DeadServerLastContactThreshold)
-						if now.After(threshold) {
-							b.logger.Info("marking node as dead", "last_heartbeat", state.LastHeartbeat.String(), "dead_server_last_contact_threshold", b.autopilotConfig.DeadServerLastContactThreshold, "now", now, "threshold", threshold)
-							b.followerStates.markFollowerAsDead(id)
-
-						}
-					}
-					b.followerStates.l.Unlock()
-				}
 			}
 			b.l.RUnlock()
 		}
