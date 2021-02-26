@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	identityWhitelistConfigPath = "config/tidy/identity-whitelist"
+	identityAccessListConfigStorage = "config/tidy/identity-whitelist"
 )
 
-func (b *backend) pathConfigTidyIdentityWhitelist() *framework.Path {
+func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 	return &framework.Path{
-		Pattern: fmt.Sprintf("%s$", identityWhitelistConfigPath),
+		Pattern: fmt.Sprintf("%s$", "config/tidy/identity-accesslist"),
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
@@ -25,33 +25,33 @@ expiration, before it is removed from the backend storage.`,
 			"disable_periodic_tidy": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'identity-whitelist/<instance_id>' entries.",
+				Description: "If set to 'true', disables the periodic tidying of the 'identity-accesslist/<instance_id>' entries.",
 			},
 		},
 
-		ExistenceCheck: b.pathConfigTidyIdentityWhitelistExistenceCheck,
+		ExistenceCheck: b.pathConfigTidyIdentityAccessListExistenceCheck,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyIdentityWhitelistRead,
+				Callback: b.pathConfigTidyIdentityAccessListRead,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback: b.pathConfigTidyIdentityWhitelistDelete,
+				Callback: b.pathConfigTidyIdentityAccessListDelete,
 			},
 		},
 
-		HelpSynopsis:    pathConfigTidyIdentityWhitelistHelpSyn,
-		HelpDescription: pathConfigTidyIdentityWhitelistHelpDesc,
+		HelpSynopsis:    pathConfigTidyIdentityAccessListHelpSyn,
+		HelpDescription: pathConfigTidyIdentityAccessListHelpDesc,
 	}
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigTidyIdentityAccessListExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return false, err
@@ -67,7 +67,7 @@ func (b *backend) lockedConfigTidyIdentities(ctx context.Context, s logical.Stor
 }
 
 func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
-	entry, err := s.Get(ctx, identityWhitelistConfigPath)
+	entry, err := s.Get(ctx, identityAccessListConfigStorage)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.S
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityAccessListCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -108,7 +108,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Contex
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
 
-	entry, err := logical.StorageEntryJSON(identityWhitelistConfigPath, configEntry)
+	entry, err := logical.StorageEntryJSON(identityAccessListConfigStorage, configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Contex
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityAccessListRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	clientConfig, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -137,11 +137,11 @@ func (b *backend) pathConfigTidyIdentityWhitelistRead(ctx context.Context, req *
 	}, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityAccessListDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(ctx, identityWhitelistConfigPath)
+	return nil, req.Storage.Delete(ctx, identityAccessListConfigStorage)
 }
 
 type tidyWhitelistIdentityConfig struct {
@@ -149,11 +149,11 @@ type tidyWhitelistIdentityConfig struct {
 	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
-const pathConfigTidyIdentityWhitelistHelpSyn = `
-Configures the periodic tidying operation of the whitelisted identity entries.
+const pathConfigTidyIdentityAccessListHelpSyn = `
+Configures the periodic tidying operation of the access list identity entries.
 `
-const pathConfigTidyIdentityWhitelistHelpDesc = `
-By default, the expired entries in the whitelist will be attempted to be removed
+const pathConfigTidyIdentityAccessListHelpDesc = `
+By default, the expired entries in the access list will be attempted to be removed
 periodically. This operation will look for expired items in the list and purges them.
 However, there is a safety buffer duration (defaults to 72h), purges the entries
 only if they have been persisting this duration, past its expiration time.

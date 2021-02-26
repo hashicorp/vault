@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -102,6 +102,45 @@ consumption:
 			if !closed {
 				cancelFunc()
 				closed = true
+			}
+		}
+	}
+}
+
+func TestCalculateBackoff(t *testing.T) {
+	tests := []struct {
+		previous time.Duration
+		max      time.Duration
+		expMin   time.Duration
+		expMax   time.Duration
+	}{
+		{
+			1000 * time.Millisecond,
+			60000 * time.Millisecond,
+			1500 * time.Millisecond,
+			2000 * time.Millisecond,
+		},
+		{
+			1000 * time.Millisecond,
+			5000 * time.Millisecond,
+			1500 * time.Millisecond,
+			2000 * time.Millisecond,
+		},
+		{
+			4000 * time.Millisecond,
+			5000 * time.Millisecond,
+			3750 * time.Millisecond,
+			5000 * time.Millisecond,
+		},
+	}
+
+	for _, test := range tests {
+		for i := 0; i < 100; i++ {
+			backoff := calculateBackoff(test.previous, test.max)
+
+			// Verify that the new backoff is 75-100% of 2*previous, but <= than the max
+			if backoff < test.expMin || backoff > test.expMax {
+				t.Fatalf("expected backoff in range %v to %v, got: %v", test.expMin, test.expMax, backoff)
 			}
 		}
 	}

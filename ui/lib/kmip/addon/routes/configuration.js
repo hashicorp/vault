@@ -1,7 +1,8 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import UnloadModel from 'vault/mixins/unload-model-route';
 
-export default Route.extend({
+export default Route.extend(UnloadModel, {
   store: service(),
   secretMountPath: service(),
   pathHelp: service(),

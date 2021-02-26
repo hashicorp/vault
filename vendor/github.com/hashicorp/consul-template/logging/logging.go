@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-syslog"
+	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/logutils"
 )
 
@@ -32,7 +32,7 @@ type Config struct {
 	Syslog         bool   `json:"syslog"`
 	SyslogFacility string `json:"syslog_facility"`
 	// SyslogName is the progname as it will appear in syslog output (if enabled).
-	SyslogName     string `json:"name"`
+	SyslogName string `json:"name"`
 
 	// Writer is the output where logs should go. If syslog is enabled, data will
 	// be written to writer in addition to syslog.
@@ -73,7 +73,6 @@ func Setup(config *Config) error {
 	}
 
 	log.SetOutput(logOutput)
-	log.SetOutput(new(logWriter))
 
 	return nil
 }
