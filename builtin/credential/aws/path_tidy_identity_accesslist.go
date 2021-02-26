@@ -13,9 +13,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) pathTidyIdentityWhitelist() *framework.Path {
+func (b *backend) pathTidyIdentityAccessList() *framework.Path {
 	return &framework.Path{
-		Pattern: "tidy/identity-whitelist$",
+		Pattern: "tidy/identity-accesslist$",
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
@@ -27,23 +27,23 @@ expiration, before it is removed from the backend storage.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathTidyIdentityWhitelistUpdate,
+				Callback: b.pathTidyIdentityAccessListUpdate,
 			},
 		},
 
-		HelpSynopsis:    pathTidyIdentityWhitelistSyn,
-		HelpDescription: pathTidyIdentityWhitelistDesc,
+		HelpSynopsis:    pathTidyIdentityAccessListSyn,
+		HelpDescription: pathTidyIdentityAccessListDesc,
 	}
 }
 
-// tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
-func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
+// tidyAccessListIdentity is used to delete entries in the access list that are expired.
+func (b *backend) tidyAccessListIdentity(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
 	// If we are a performance standby forward the request to the active node
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
 	}
 
-	if !atomic.CompareAndSwapUint32(b.tidyWhitelistCASGuard, 0, 1) {
+	if !atomic.CompareAndSwapUint32(b.tidyAccessListCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
 		return resp, nil
@@ -52,7 +52,7 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Reques
 	s := req.Storage
 
 	go func() {
-		defer atomic.StoreUint32(b.tidyWhitelistCASGuard, 0)
+		defer atomic.StoreUint32(b.tidyAccessListCASGuard, 0)
 
 		// Don't cancel when the original client request goes away
 		ctx = context.Background()
@@ -62,13 +62,13 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Reques
 		bufferDuration := time.Duration(safetyBuffer) * time.Second
 
 		doTidy := func() error {
-			identities, err := s.List(ctx, "whitelist/identity/")
+			identities, err := s.List(ctx, identityAccessListStorage)
 			if err != nil {
 				return err
 			}
 
 			for _, instanceID := range identities {
-				identityEntry, err := s.Get(ctx, "whitelist/identity/"+instanceID)
+				identityEntry, err := s.Get(ctx, identityAccessListStorage+instanceID)
 				if err != nil {
 					return errwrap.Wrapf(fmt.Sprintf("error fetching identity of instanceID %q: {{err}}", instanceID), err)
 				}
@@ -81,13 +81,13 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Reques
 					return fmt.Errorf("found identity entry for instanceID %q but actual identity is empty", instanceID)
 				}
 
-				var result whitelistIdentity
+				var result accessListIdentity
 				if err := identityEntry.DecodeJSON(&result); err != nil {
 					return err
 				}
 
 				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-					if err := s.Delete(ctx, "whitelist/identity/"+instanceID); err != nil {
+					if err := s.Delete(ctx, identityAccessListStorage+instanceID); err != nil {
 						return errwrap.Wrapf(fmt.Sprintf("error deleting identity of instanceID %q from storage: {{err}}", instanceID), err)
 					}
 				}
@@ -97,7 +97,7 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Reques
 		}
 
 		if err := doTidy(); err != nil {
-			logger.Error("error running whitelist tidy", "error", err)
+			logger.Error("error running access list tidy", "error", err)
 			return
 		}
 	}()
@@ -107,17 +107,17 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Reques
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-// pathTidyIdentityWhitelistUpdate is used to delete entries in the whitelist that are expired.
-func (b *backend) pathTidyIdentityWhitelistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.tidyWhitelistIdentity(ctx, req, data.Get("safety_buffer").(int))
+// pathTidyIdentityAccessListUpdate is used to delete entries in the access list that are expired.
+func (b *backend) pathTidyIdentityAccessListUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.tidyAccessListIdentity(ctx, req, data.Get("safety_buffer").(int))
 }
 
-const pathTidyIdentityWhitelistSyn = `
-Clean-up the whitelist instance identity entries.
+const pathTidyIdentityAccessListSyn = `
+Clean-up the access list instance identity entries.
 `
 
-const pathTidyIdentityWhitelistDesc = `
-When an instance identity is whitelisted, the expiration time of the whitelist
+const pathTidyIdentityAccessListDesc = `
+When an instance identity is in the access list, the expiration time of the access list
 entry is set based on the maximum 'max_ttl' value set on: the role, the role tag
 and the backend's mount.
 
