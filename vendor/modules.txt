@@ -562,7 +562,7 @@ github.com/hashicorp/vault-plugin-auth-kerberos
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.6.0
 github.com/hashicorp/vault-plugin-auth-oci
-# github.com/hashicorp/vault-plugin-database-couchbase v0.2.1
+# github.com/hashicorp/vault-plugin-database-couchbase v0.3.0
 github.com/hashicorp/vault-plugin-database-couchbase
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.1
 github.com/hashicorp/vault-plugin-database-elasticsearch
@@ -591,14 +591,14 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.6-0.20210201204049-4f0f91977798
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.4.0
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 github.com/hashicorp/vault-plugin-secrets-terraform
-# github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20210127185906-6b455835fa8c => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
 github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto

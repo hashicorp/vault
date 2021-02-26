@@ -13,9 +13,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) pathTidyRoletagBlacklist() *framework.Path {
+const (
+	denyListRoletagStorage = "blacklist/roletag/"
+)
+
+func (b *backend) pathTidyRoletagDenyList() *framework.Path {
 	return &framework.Path{
-		Pattern: "tidy/roletag-blacklist$",
+		Pattern: "tidy/roletag-denylist$",
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
@@ -27,23 +31,23 @@ expiration, before it is removed from the backend storage.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathTidyRoletagBlacklistUpdate,
+				Callback: b.pathTidyRoletagDenylistUpdate,
 			},
 		},
 
-		HelpSynopsis:    pathTidyRoletagBlacklistSyn,
-		HelpDescription: pathTidyRoletagBlacklistDesc,
+		HelpSynopsis:    pathTidyRoletagDenylistSyn,
+		HelpDescription: pathTidyRoletagDenylistDesc,
 	}
 }
 
-// tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
+// tidyDenyListRoleTag is used to clean-up the entries in the role tag deny list.
+func (b *backend) tidyDenyListRoleTag(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
 	// If we are a performance standby forward the request to the active node
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
 	}
 
-	if !atomic.CompareAndSwapUint32(b.tidyBlacklistCASGuard, 0, 1) {
+	if !atomic.CompareAndSwapUint32(b.tidyDenyListCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
 		return resp, nil
@@ -52,7 +56,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request
 	s := req.Storage
 
 	go func() {
-		defer atomic.StoreUint32(b.tidyBlacklistCASGuard, 0)
+		defer atomic.StoreUint32(b.tidyDenyListCASGuard, 0)
 
 		// Don't cancel when the original client request goes away
 		ctx = context.Background()
@@ -62,13 +66,13 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request
 		bufferDuration := time.Duration(safetyBuffer) * time.Second
 
 		doTidy := func() error {
-			tags, err := s.List(ctx, "blacklist/roletag/")
+			tags, err := s.List(ctx, denyListRoletagStorage)
 			if err != nil {
 				return err
 			}
 
 			for _, tag := range tags {
-				tagEntry, err := s.Get(ctx, "blacklist/roletag/"+tag)
+				tagEntry, err := s.Get(ctx, denyListRoletagStorage+tag)
 				if err != nil {
 					return errwrap.Wrapf(fmt.Sprintf("error fetching tag %q: {{err}}", tag), err)
 				}
@@ -87,7 +91,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request
 				}
 
 				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-					if err := s.Delete(ctx, "blacklist/roletag/"+tag); err != nil {
+					if err := s.Delete(ctx, denyListRoletagStorage+tag); err != nil {
 						return errwrap.Wrapf(fmt.Sprintf("error deleting tag %q from storage: {{err}}", tag), err)
 					}
 				}
@@ -97,7 +101,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request
 		}
 
 		if err := doTidy(); err != nil {
-			logger.Error("error running blacklist tidy", "error", err)
+			logger.Error("error running deny list tidy", "error", err)
 			return
 		}
 	}()
@@ -107,17 +111,17 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-// pathTidyRoletagBlacklistUpdate is used to clean-up the entries in the role tag blacklist.
-func (b *backend) pathTidyRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.tidyBlacklistRoleTag(ctx, req, data.Get("safety_buffer").(int))
+// pathTidyRoletagDenylistUpdate is used to clean-up the entries in the role tag deny list.
+func (b *backend) pathTidyRoletagDenylistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.tidyDenyListRoleTag(ctx, req, data.Get("safety_buffer").(int))
 }
 
-const pathTidyRoletagBlacklistSyn = `
-Clean-up the blacklist role tag entries.
+const pathTidyRoletagDenylistSyn = `
+Clean-up the deny list role tag entries.
 `
 
-const pathTidyRoletagBlacklistDesc = `
-When a role tag is blacklisted, the expiration time of the blacklist entry is
+const pathTidyRoletagDenylistDesc = `
+When a role tag is deny listed, the expiration time of the deny list entry is
 set based on the maximum 'max_ttl' value set on: the role, the role tag and the
 backend's mount.
 
