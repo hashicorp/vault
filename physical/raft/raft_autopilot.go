@@ -393,22 +393,25 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 	go func() {
 		added := false
-		d.dl.Lock()
 		defer func() {
 			if added {
+				d.dl.Lock()
 				delete(d.inflightRemovals, server.ID)
+				d.dl.Unlock()
 			}
-			d.dl.Unlock()
 		}()
 
+		d.dl.Lock()
 		_, ok := d.inflightRemovals[server.ID]
 		if ok {
 			d.logger.Info("removal of dead server is already initiated", "id", server.ID)
+			d.dl.Unlock()
 			return
 		}
 
 		added = true
 		d.inflightRemovals[server.ID] = true
+		d.dl.Unlock()
 
 		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
 		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
