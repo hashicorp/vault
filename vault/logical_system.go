@@ -4670,6 +4670,10 @@ This path responds to the following HTTP methods.
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
 	},
+	"activity-monthly": {
+		"Count of active clients so far this month.",
+		"Count of active clients so far this month.",
+	},
 	"activity-config": {
 		"Control the collection and reporting of client counts.",
 		"Control the collection and reporting of client counts.",

@@ -38,16 +38,15 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	}
 }
 
-// monthlyActivityPath is available in every namespace
-func (b *SystemBackend) monthlyActivityPath() *framework.Path {
+// monthlyActivityCountPath is available in every namespace
+func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 	return &framework.Path{
-		Pattern: "internal/counters/activity/monthly",
-		// TODO add the help stuff
+		Pattern:         "internal/counters/activity/monthly",
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.handleMonthlyActivityQuery,
+				Callback: b.handleMonthlyActivityCount,
 				Summary:  "Report the current client count metrics for the month, for this namespace and all child namespaces.",
 			},
 		},
@@ -58,6 +57,7 @@ func (b *SystemBackend) monthlyActivityPath() *framework.Path {
 func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return []*framework.Path{
 		b.activityQueryPath(),
+		b.monthlyActivityCountPath(),
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
@@ -136,15 +136,15 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}, nil
 }
 
-func (b *SystemBackend) handleMonthlyActivityQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	a := b.Core.activityLog
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	results, ok := a.partialMonthClientCount(ctx)
-	if !ok {
-		return logical.ErrorResponse("activity log still processing, try again later"), nil
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
+		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 	}
 
 	return &logical.Response{
