@@ -1,0 +1,30 @@
+---
+layout: docs
+page_title: Replication - Configuration
+sidebar_title: <code>replication</code>
+description: |-
+The replication stanza specifies various parameters for tuning replication related values.
+---
+
+# `replication` Stanza
+
+The `replication` stanza specifies various parameters for tuning replication related values.
+
+```hcl
+replication {
+  resolver_discover_servers = true
+  logshipper_buffer_length = 1000
+  logshipper_buffer_size = "5gb"
+}
+```
+
+## `replication` Parameters
+
+- `resolver_discover_servers` `(boolean: true)` - Indicates if the resolver should discover servers.
+- `logshipper_buffer_length` `(integer: 0)` - The maximum number of entries that the log shipper buffer can hold.
+- `logshipper_buffer_size` `(string: "")` - The maximum size that the log shipper buffer can be. This size can be
+  expressed as an integer, indicating the number of bytes, or as a capacity string. Capacity strings are a number,
+  followed by an optional space, followed by a suffix indicating the capacity. Valid suffixes are:
+  `kb, kib, mb, mib, gb, gib, tb, tib`, which correspond to kilobytes, kibibytes, megabytes, mebibytes, etc. Full
+  details on multiple-byte units in both powers of 2 and 10 can be found
+  [on Wikipedia](https://en.wikipedia.org/wiki/Byte#Multiple-byte_units). The suffixes are not case-sensitive.
