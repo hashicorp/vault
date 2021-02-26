@@ -240,6 +240,17 @@ var _ autopilot.ApplicationIntegration = (*Delegate)(nil)
 // application specific tasks performed.
 type Delegate struct {
 	*RaftBackend
+
+	// dl is a lock dedicated for guarding delegate's fields
+	dl               sync.RWMutex
+	inflightRemovals map[raft.ServerID]bool
+}
+
+func newDelegate(b *RaftBackend) *Delegate {
+	return &Delegate{
+		RaftBackend:      b,
+		inflightRemovals: make(map[raft.ServerID]bool),
+	}
 }
 
 // AutopilotConfig is called by the autopilot library to know the desired
@@ -381,11 +392,33 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 // goroutine.
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 	go func() {
+		added := false
+		defer func() {
+			if added {
+				d.dl.Lock()
+				delete(d.inflightRemovals, server.ID)
+				d.dl.Unlock()
+			}
+		}()
+
+		d.dl.Lock()
+		_, ok := d.inflightRemovals[server.ID]
+		if ok {
+			d.logger.Info("removal of dead server is already initiated", "id", server.ID)
+			d.dl.Unlock()
+			return
+		}
+
+		added = true
+		d.inflightRemovals[server.ID] = true
+		d.dl.Unlock()
+
 		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
 		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
 			d.logger.Error("failed to remove server", "server_id", server.ID, "server_address", server.Address, "server_name", server.Name, "error", future.Error())
 			return
 		}
+
 		d.followerStates.Delete(string(server.ID))
 	}()
 }
@@ -665,7 +698,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
-	b.autopilot = autopilot.New(b.raft, &Delegate{b}, autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
+	b.autopilot = autopilot.New(b.raft, newDelegate(b), autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 	b.autopilot.Start(ctx)
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 	go b.startFollowerHeartbeatTracker()
