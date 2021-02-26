@@ -326,15 +326,13 @@ func (coll *Collection) insert(ctx context.Context, documents []interface{},
 func (coll *Collection) InsertOne(ctx context.Context, document interface{},
 	opts ...*options.InsertOneOptions) (*InsertOneResult, error) {
 
-	imOpts := make([]*options.InsertManyOptions, len(opts))
-	for i, opt := range opts {
-		imo := options.InsertMany()
-		if opt.BypassDocumentValidation != nil && *opt.BypassDocumentValidation {
-			imo = imo.SetBypassDocumentValidation(*opt.BypassDocumentValidation)
-		}
-		imOpts[i] = imo
+	ioOpts := options.MergeInsertOneOptions(opts...)
+	imOpts := options.InsertMany()
+
+	if ioOpts.BypassDocumentValidation != nil && *ioOpts.BypassDocumentValidation {
+		imOpts.SetBypassDocumentValidation(*ioOpts.BypassDocumentValidation)
 	}
-	res, err := coll.insert(ctx, []interface{}{document}, imOpts...)
+	res, err := coll.insert(ctx, []interface{}{document}, imOpts)
 
 	rr, err := processWriteError(err)
 	if rr&rrOne == 0 {
@@ -1269,6 +1267,7 @@ func (coll *Collection) FindOne(ctx context.Context, filter interface{},
 			Hint:                opt.Hint,
 			Max:                 opt.Max,
 			MaxAwaitTime:        opt.MaxAwaitTime,
+			MaxTime:             opt.MaxTime,
 			Min:                 opt.Min,
 			NoCursorTimeout:     opt.NoCursorTimeout,
 			OplogReplay:         opt.OplogReplay,

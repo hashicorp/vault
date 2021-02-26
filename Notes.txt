@@ -1,0 +1,12 @@
+- Upgrade github.com/kubernetes/apimachinery in 
+vault-plugin-auth-kubernetes. This cannot be fixed in vault main and should
+
+https://github.com/etcd-io/etcd -- 
+fix should be verified by sec before upgraded, due to huge replace directive
+
+github.com/hashicorp/vault-plugin-auth-kubernetes -- 
+docker cli issue, needs to be fixed in this plugin itself
+
+github.com/mholt/archiver -- can't fix
+
+golang.org/x/tools -- "won't be able to fix + might not be worth fixing
