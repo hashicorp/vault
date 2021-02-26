@@ -603,6 +603,31 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "rotate/config$",
+			Fields: map[string]*framework.FieldSchema{
+				"enabled": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: strings.TrimSpace(sysHelp["rotation-enabled"][0]),
+				},
+				"max_operations": &framework.FieldSchema{
+					Type:        framework.TypeInt, //64?
+					Description: strings.TrimSpace(sysHelp["rotation-max-operations"][0]),
+				},
+				"interval": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Description: strings.TrimSpace(sysHelp["rotation-interval"][0]),
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.handleKeyRotationConfigRead,
+				logical.UpdateOperation: b.handleKeyRotationConfigUpdate,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["rotate-config"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["rotate-config"][1]),
+		},
+
+		{
 			Pattern: "rotate$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{

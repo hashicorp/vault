@@ -19,6 +19,8 @@ The Vault plugin system is documented on the [Vault documentation site](https://
 You will need to define a plugin directory using the `plugin_directory` configuration directive, then place the
 `vault-plugin-database-couchbase` executable generated above, into the directory.
 
+**Please note:** Versions v0.2.0 onwards of this plugin are incompatible with Vault versions before 1.6.0 due to an update of the database plugin interface.
+
 Sample commands for registering and starting to use the plugin:
 
 ```bash

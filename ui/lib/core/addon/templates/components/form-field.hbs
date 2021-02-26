@@ -183,6 +183,7 @@
         }} class="textarea"></textarea>
     {{else if (eq attr.options.editType "password")}}
       <Input
+        data-test-input={{attr.name}}
         @type="password"
         @value={{get model valuePath}}
         @name={{attr.name}}
@@ -206,6 +207,7 @@
         <p class="sub-text">{{attr.options.subText}}</p>
       {{/if}}
       <JsonEditor
+        data-test-input={{attr.name}}
         @value={{if
           (get model valuePath)
           (stringify (jsonify (get model valuePath)))

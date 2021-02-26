@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -594,5 +595,37 @@ func TestAESGCMBarrier_ReloadKeyring(t *testing.T) {
 	if len(b.cache) != 0 {
 		t.Fatal("failed to clear cache")
 	}
+}
 
+func TestBarrier_LegacyRotate(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b1, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	} // Initialize the barrier
+	key, _ := b1.GenerateKey(rand.Reader)
+	b1.Initialize(context.Background(), key, nil, rand.Reader)
+	err = b1.Unseal(context.Background(), key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	k1 := b1.keyring.TermKey(1)
+	k1.Encryptions = 0
+	k1.InstallTime = time.Now().Add(-24 * 366 * time.Hour)
+	b1.persistKeyring(context.Background(), b1.keyring)
+	b1.Seal()
+
+	err = b1.Unseal(context.Background(), key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	reason, err := b1.CheckBarrierAutoRotate(context.Background())
+	if err != nil || reason != legacyRotateReason {
+		t.Fail()
+	}
 }

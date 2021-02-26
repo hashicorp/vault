@@ -96,8 +96,8 @@ the given key will be used to encrypt the snapshot using AWS KMS.
 
 SECURITY:
 
-* Limited Unauthenticated License Read: We addressed a security vulnerability that allowed for the unauthenticated
-reading of Vault licenses from DR Secondaries. This vulnerability affects Vault and Vault Enterprise and is
+* Limited Unauthenticated License Metadata Read: We addressed a security vulnerability that allowed for the unauthenticated
+reading of Vault license metadata from DR Secondaries. This vulnerability affects Vault Enterprise and is
 fixed in 1.6.3 (CVE-2021-27668).
 
 CHANGES:
