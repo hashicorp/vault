@@ -55,6 +55,7 @@ elRplAzrMF4=
     await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
+    await settled();
     assert.ok(generatePage.hasCert, 'displays the cert');
     await settled();
     await generatePage.back();
