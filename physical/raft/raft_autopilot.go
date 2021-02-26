@@ -240,13 +240,13 @@ var _ autopilot.ApplicationIntegration = (*Delegate)(nil)
 // application specific tasks performed.
 type Delegate struct {
 	*RaftBackend
-	deadServerRemovals sync.Map
+	inflightRemovals map[raft.ServerID]bool
 }
 
 func newDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
-		RaftBackend:        b,
-		deadServerRemovals: sync.Map{},
+		RaftBackend:      b,
+		inflightRemovals: make(map[raft.ServerID]bool),
 	}
 }
 
@@ -389,12 +389,22 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 // goroutine.
 func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 	go func() {
-		if _, ok := d.deadServerRemovals.Load(server.ID); ok {
+		success := false
+		d.l.Lock()
+		defer func() {
+			if success {
+				delete(d.inflightRemovals, server.ID)
+			}
+			d.l.Unlock()
+		}()
+
+		_, ok := d.inflightRemovals[server.ID]
+		if ok {
 			d.logger.Info("removal of dead server is already initiated", "id", server.ID)
 			return
 		}
 
-		d.deadServerRemovals.Store(server.ID, true)
+		d.inflightRemovals[server.ID] = true
 
 		d.logger.Info("removing dead server from raft configuration", "id", server.ID)
 		if future := d.raft.RemoveServer(server.ID, 0, 0); future.Error() != nil {
@@ -402,8 +412,8 @@ func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 			return
 		}
 
+		success = true
 		d.followerStates.Delete(string(server.ID))
-		d.deadServerRemovals.Delete(server.ID)
 	}()
 }
 
