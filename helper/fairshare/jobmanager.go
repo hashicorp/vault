@@ -117,7 +117,6 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 	j.queues[queueID].PushBack(job)
 	j.totalJobs++
 
-	fmt.Println("adding Job ", j.metricSink)
 	if j.metricSink != nil {
 		j.metricSink.AddSampleWithLabels([]string{j.name, "job_manager", "queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
 		j.metricSink.AddSample([]string{j.name, "job_manager", "total_jobs"}, float32(j.totalJobs))
