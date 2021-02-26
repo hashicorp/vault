@@ -789,21 +789,13 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to open new bolt file: {{err}}", err))
 	}
 
-	// Handle local node config restore
-	switch lnConfig {
-	case nil:
-		// If it wasn't there. It is possible that the snapshot was taken before
-		// 1.7, where we did not have local node config. Perform the upgrade so we will have one now.
-		if err := f.upgradeLocalNodeConfig(); err != nil {
-			f.logger.Error("failed to upgrade local node config post snapshot restore", "error", err)
-			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to upgrade local node config post snapshot restore: {{err}}", err))
-		}
-	default:
-		// If there was a local node config before restore, persist that again on
-		// the new fsm.
+	// Handle local node config restore. lnConfig should not be nil here, but
+	// adding the nil check anyways for safety.
+	if lnConfig != nil {
+		// Persist the local node config on the restored fsm.
 		if err := f.persistDesiredSuffrage(lnConfig); err != nil {
-			f.logger.Error("failed to persist old local node config", "error", err)
-			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to persist old local node config: {{err}}", err))
+			f.logger.Error("failed to persist local node config from before the restore", "error", err)
+			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to persist local node config from before the restore: {{err}}", err))
 		}
 	}
 
