@@ -677,16 +677,17 @@ func (b *RaftBackend) DisableAutopilot() {
 // SetupAutopilot instantiates autopilot and tells if its okay to start it.
 func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *AutopilotConfig) {
 	b.l.Lock()
-	defer b.l.Unlock()
 
 	if b.disableAutopilot {
 		b.logger.Info("disabling autopilot")
+		b.l.Unlock()
 		return
 	}
 
 	if os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
 		b.logger.Info("disabling autopilot")
 		b.disableAutopilot = true
+		b.l.Unlock()
 		return
 	}
 
@@ -699,6 +700,8 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	// Create the autopilot instance
 	b.logger.Info("creating autopilot instance", "config", b.autopilotConfig)
 	b.autopilot = autopilot.New(b.raft, newDelegate(b), autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
+	b.l.Unlock()
+
 	b.autopilot.Start(ctx)
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 	go b.startFollowerHeartbeatTracker()
