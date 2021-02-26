@@ -145,11 +145,11 @@ func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 
 // FollowerState represents the information about peer that the leader tracks.
 type FollowerState struct {
-	AppliedIndex  uint64
-	LastHeartbeat time.Time
-	LastTerm      uint64
-	IsDead        bool
-	Suffrage      string
+	AppliedIndex    uint64
+	LastHeartbeat   time.Time
+	LastTerm        uint64
+	IsDead          bool
+	DesiredSuffrage string
 }
 
 // FollowerStates holds information about all the followers in the raft cluster
@@ -176,20 +176,21 @@ func (s *FollowerStates) markFollowerAsDead(nodeID string) {
 		return
 	}
 	s.followers[nodeID] = &FollowerState{
-		LastHeartbeat: state.LastHeartbeat,
-		LastTerm:      state.LastTerm,
-		AppliedIndex:  state.AppliedIndex,
-		IsDead:        true,
+		IsDead:          true,
+		LastHeartbeat:   state.LastHeartbeat,
+		LastTerm:        state.LastTerm,
+		AppliedIndex:    state.AppliedIndex,
+		DesiredSuffrage: state.DesiredSuffrage,
 	}
 }
 
 // Update the peer information in the follower states
-func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, suffrage string) {
+func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64, desiredSuffrage string) {
 	state := &FollowerState{
-		AppliedIndex:  appliedIndex,
-		LastTerm:      term,
-		Suffrage:      suffrage,
-		LastHeartbeat: time.Now(),
+		AppliedIndex:    appliedIndex,
+		LastTerm:        term,
+		DesiredSuffrage: desiredSuffrage,
+		LastHeartbeat:   time.Now(),
 	}
 
 	s.l.Lock()
@@ -354,7 +355,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			ID:          raft.ServerID(id),
 			Name:        id,
 			RaftVersion: raft.ProtocolVersionMax,
-			Ext:         d.autopilotServerExt(state.Suffrage),
+			Ext:         d.autopilotServerExt(state.DesiredSuffrage),
 		}
 
 		switch state.IsDead {

@@ -353,16 +353,16 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, err
 		}
 
-		var suffrage string
+		var desiredSuffrage string
 		switch nonVoter {
 		case true:
-			suffrage = "voter"
+			desiredSuffrage = "voter"
 		default:
-			suffrage = "non-voter"
+			desiredSuffrage = "non-voter"
 		}
 
 		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(serverID, 0, 0, suffrage)
+			b.Core.raftFollowerStates.Update(serverID, 0, 0, desiredSuffrage)
 		}
 
 		peers, err := raftBackend.Peers(ctx)
