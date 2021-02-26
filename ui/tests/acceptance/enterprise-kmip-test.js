@@ -1,4 +1,4 @@
-import { currentURL, currentRouteName, settled } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -12,10 +12,16 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 const uiConsole = create(consoleClass);
 
+const getRandomPort = () => {
+  let a = Math.floor(100000 + Math.random() * 900000);
+  a = String(a);
+  return a.substring(0, 4);
+};
+
 const mount = async (shouldConfig = true) => {
   const now = Date.now();
   let path = `kmip-${now}`;
-  let addr = `127.0.0.1:${now % 1000}`; // use random port
+  let addr = `127.0.0.1:${getRandomPort()}`; // use random port
   let commands = shouldConfig
     ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
@@ -99,6 +105,8 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
       `/vault/secrets/${path}/kmip/configure`,
       'configuration navigates to the configure page'
     );
+    let addr = `127.0.0.1:${getRandomPort()}`;
+    await fillIn('[data-test-string-list-input="0"]', addr);
 
     await scopesPage.submit();
     await settled();

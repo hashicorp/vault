@@ -163,10 +163,6 @@ func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *Expiration
 	}, nil
 }
 
-func (r *revocationJob) GetID() string {
-	return r.leaseID
-}
-
 func (r *revocationJob) Execute() error {
 	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", r.nsID}})
 	metrics.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{{"namespace", r.nsID}})

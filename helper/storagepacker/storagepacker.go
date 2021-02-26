@@ -41,7 +41,7 @@ func (s *StoragePacker) View() logical.Storage {
 }
 
 // GetBucket returns a bucket for a given key
-func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
+func (s *StoragePacker) GetBucket(ctx context.Context, key string) (*Bucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -51,7 +51,7 @@ func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 	defer lock.RUnlock()
 
 	// Read from storage
-	storageEntry, err := s.view.Get(context.Background(), key)
+	storageEntry, err := s.view.Get(ctx, key)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
 	}
@@ -126,8 +126,8 @@ func (s *StoragePacker) BucketKey(itemID string) string {
 }
 
 // DeleteItem removes the item from the respective bucket
-func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
-	return s.DeleteMultipleItems(context.Background(), nil, []string{itemID})
+func (s *StoragePacker) DeleteItem(ctx context.Context, itemID string) error {
+	return s.DeleteMultipleItems(ctx, nil, []string{itemID})
 }
 
 func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Logger, itemIDs []string) error {
@@ -171,7 +171,7 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 	idx := 0
 	for bucketKey, itemsToRemove := range byBucket {
 		// Read bucket from storage
-		storageEntry, err := s.view.Get(context.Background(), bucketKey)
+		storageEntry, err := s.view.Get(ctx, bucketKey)
 		if err != nil {
 			return errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
 		}
@@ -278,7 +278,7 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 	bucketKey := s.BucketKey(itemID)
 
 	// Fetch the bucket entry
-	bucket, err := s.GetBucket(bucketKey)
+	bucket, err := s.GetBucket(context.Background(), bucketKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 	}
@@ -297,7 +297,7 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores the given item in its respective bucket
-func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
+func (s *StoragePacker) PutItem(ctx context.Context, item *Item) error {
 	defer metrics.MeasureSince([]string{"storage_packer", "put_item"}, time.Now())
 
 	if item == nil {
@@ -323,7 +323,7 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 	defer lock.Unlock()
 
 	// Check if there is an existing bucket for a given key
-	storageEntry, err := s.view.Get(context.Background(), bucketKey)
+	storageEntry, err := s.view.Get(ctx, bucketKey)
 	if err != nil {
 		return errwrap.Wrapf("failed to read packed storage bucket entry: {{err}}", err)
 	}
@@ -354,7 +354,7 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 		}
 	}
 
-	return s.putBucket(context.Background(), bucket)
+	return s.putBucket(ctx, bucket)
 }
 
 // NewStoragePacker creates a new storage packer for a given view

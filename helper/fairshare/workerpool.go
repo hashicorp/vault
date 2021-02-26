@@ -12,7 +12,6 @@ import (
 
 // Job is an interface for jobs used with this job manager
 type Job interface {
-	GetID() string
 	Execute() error
 	OnFailure(err error)
 }
@@ -23,7 +22,9 @@ type worker struct {
 	jobCh  <-chan Job
 	quit   chan struct{}
 	logger log.Logger
-	wg     *sync.WaitGroup
+
+	// waitgroup for testing stop functionality
+	wg *sync.WaitGroup
 }
 
 // start starts the worker listening and working until the quit channel is closed
@@ -37,7 +38,6 @@ func (w *worker) start() {
 				w.wg.Done()
 				return
 			case job := <-w.jobCh:
-				w.logger.Trace("starting new job", "worker", w.name, "job_id", job.GetID())
 				err := job.Execute()
 				if err != nil {
 					job.OnFailure(err)
@@ -89,13 +89,11 @@ func (d *dispatcher) start() {
 	})
 }
 
-// stop stops the worker pool and waits for all workers to finish their jobs
+// stop stops the worker pool asynchronously
 func (d *dispatcher) stop() {
 	d.onceStop.Do(func() {
 		d.logger.Trace("terminating dispatcher")
 		close(d.quit)
-		d.logger.Trace("waiting for worker pool to stop...")
-		d.wg.Wait()
 	})
 }
 

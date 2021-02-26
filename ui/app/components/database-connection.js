@@ -8,7 +8,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 const getErrorMessage = errors => {
   let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
-  if (errors?.join(' ').indexOf('failed to verify')) {
+  if (errorMessage.indexOf('failed to verify') >= 0) {
     errorMessage =
       'There was a verification error for this connection. Check the Vault logs for more information.';
   }
@@ -19,12 +19,20 @@ export default class DatabaseConnectionEdit extends Component {
   @service store;
   @service router;
   @service flashMessages;
+  @service wizard;
 
   @tracked
   showPasswordField = false; // used for edit mode
 
   @tracked
   showSaveModal = false; // used for create mode
+
+  constructor() {
+    super(...arguments);
+    if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
+    }
+  }
 
   rotateCredentials(backend, name) {
     let adapter = this.store.adapterFor('database/connection');

@@ -3,7 +3,6 @@ package openldap
 import (
 	"context"
 	"fmt"
-	"path"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -19,7 +18,7 @@ const (
 func (b *backend) pathListStaticRoles() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: path.Join(staticRolePath, framework.OptionalParamRegex("prefix")),
+			Pattern: staticRolePath + "?$",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.pathStaticRoleList,

@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -8,6 +9,20 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
+  @service wizard;
+
+  constructor() {
+    super(...arguments);
+    console.log(this.wizard.featureState, 'featureSTate');
+    if (
+      this.wizard.featureState === 'displayConnection' ||
+      this.wizard.featureState === 'displayRoleDatabase'
+    ) {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
+    }
+  }
+
+  @tracked loading = false;
 
   get warningMessages() {
     let warnings = {};
@@ -55,25 +70,10 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   @action
-  handleCreateRole(evt) {
-    evt.preventDefault();
-    let roleSecret = this.args.model;
-    let secretId = roleSecret.name;
-    roleSecret.set('id', secretId);
-    let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
-    roleSecret.set('path', path);
-    roleSecret.save().then(() => {
-      try {
-        this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
-      } catch (e) {
-        console.debug(e);
-      }
-    });
-  }
-
-  @action
   handleCreateEditRole(evt) {
     evt.preventDefault();
+    this.loading = true;
+
     const mode = this.args.mode;
     let roleSecret = this.args.model;
     let secretId = roleSecret.name;
@@ -82,12 +82,21 @@ export default class DatabaseRoleEdit extends Component {
       let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
       roleSecret.set('path', path);
     }
-    roleSecret.save().then(() => {
-      try {
-        this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
-      } catch (e) {
-        console.debug(e);
-      }
-    });
+    roleSecret
+      .save()
+      .then(() => {
+        try {
+          this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+        } catch (e) {
+          console.debug(e);
+        }
+      })
+      .catch(e => {
+        const errorMessage = e.errors?.join('. ') || e.message;
+        this.flashMessages.danger(
+          errorMessage || 'Could not save the role. Please check Vault logs for more information.'
+        );
+        this.loading = false;
+      });
   }
 }
