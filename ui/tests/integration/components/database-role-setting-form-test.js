@@ -110,12 +110,12 @@ module('Integration | Component | database-role-setting-form', function(hooks) {
         .dom(`[data-test-input="${attr.name}"]`)
         .doesNotExist(`${attr.name} attribute does not exist for mongodb static role`);
     });
-
-    this.set('roleType', 'dynamic');
-    const dynamicFields = getFields(MONGODB_DYNAMIC_FIELDS);
     assert
       .dom('[data-test-statements-section]')
       .doesNotExist('Statements section is hidden for dynamic mongodb role');
+
+    this.set('roleType', 'dynamic');
+    const dynamicFields = getFields(MONGODB_DYNAMIC_FIELDS);
     dynamicFields.show.forEach(attr => {
       assert
         .dom(`[data-test-input="${attr.name}"]`)
