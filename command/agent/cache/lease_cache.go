@@ -299,6 +299,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		RequestPath: req.Request.URL.Path,
 	}
 
+	lastRenewed, err := http.ParseTime(resp.Response.Header.Get("Date"))
+	if err != nil {
+		c.logger.Error("failed to parse response header date", "error", err)
+		return nil, err
+	}
+	index.LastRenewed = lastRenewed
+
 	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
 	if err != nil {
 		c.logger.Error("failed to parse response as secret", "error", err)
@@ -334,7 +341,6 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	var renewCtxInfo *cachememdb.ContextInfo
-	var indexType string
 	switch {
 	case secret.LeaseID != "":
 		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -355,7 +361,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.Lease = secret.LeaseID
 		index.LeaseToken = req.Token
 
-		indexType = cacheboltdb.SecretLeaseType
+		index.Type = cacheboltdb.SecretLeaseType
 
 	case secret.Auth != nil:
 		c.logger.Debug("processing auth response", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -385,7 +391,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.Token = secret.Auth.ClientToken
 		index.TokenAccessor = secret.Auth.Accessor
 
-		indexType = cacheboltdb.AuthLeaseType
+		index.Type = cacheboltdb.AuthLeaseType
 
 	default:
 		// We shouldn't be hitting this, but will err on the side of caution and
@@ -428,7 +434,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	// Store the index in the cache
 	c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
-	err = c.Set(ctx, index, indexType)
+	err = c.Set(ctx, index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
 		return nil, err
@@ -502,6 +508,10 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			return
 		case <-watcher.RenewCh():
 			c.logger.Debug("secret renewed", "path", req.Request.URL.Path)
+			id := ctx.Value(contextIndexID).(string)
+			if err := c.updateLastRenewed(ctx, id, index, time.Now()); err != nil {
+				c.logger.Warn("not able to update lastRenewed time for cached index", "id", id)
+			}
 		case <-index.RenewCtxInfo.DoneCh:
 			// This case indicates the renewal process to shutdown and evict
 			// the cache entry. This is triggered when a specific secret
@@ -511,6 +521,22 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			return
 		}
 	}
+}
+
+func (c *LeaseCache) updateLastRenewed(ctx context.Context, id string, index *cachememdb.Index, t time.Time) error {
+	idLock := locksutil.LockForKey(c.idLocks, index.ID)
+	idLock.Lock()
+	defer idLock.Unlock()
+
+	index, err := c.db.Get(cachememdb.IndexNameID, id)
+	if err != nil {
+		return err
+	}
+	index.LastRenewed = t
+	if err := c.Set(ctx, index); err != nil {
+		return err
+	}
+	return nil
 }
 
 // computeIndexID results in a value that uniquely identifies a request
@@ -888,7 +914,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 // Set stores the index in the cachememdb, and also stores it in the persistent
 // cache (if enabled)
-func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index, indexType string) error {
+func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index) error {
 	if err := c.db.Set(index); err != nil {
 		return err
 	}
@@ -899,10 +925,10 @@ func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index, indexType
 			return err
 		}
 
-		if err := c.ps.Set(ctx, index.ID, b, indexType); err != nil {
+		if err := c.ps.Set(ctx, index.ID, b, index.Type); err != nil {
 			return err
 		}
-		c.logger.Trace("set entry in persistent storage", "type", indexType, "path", index.RequestPath, "id", index.ID)
+		c.logger.Trace("set entry in persistent storage", "type", index.Type, "path", index.RequestPath, "id", index.ID)
 	}
 
 	return nil
@@ -994,6 +1020,25 @@ func (c *LeaseCache) restoreLeases(leases [][]byte) error {
 		if err != nil {
 			return err
 		}
+
+		// Check if this lease has already expired
+		reader := bufio.NewReader(bytes.NewReader(newIndex.Response))
+		resp, err := http.ReadResponse(reader, nil)
+		if err != nil {
+			c.logger.Error("failed to deserialize response", "error", err)
+			return err
+		}
+		secret, err := api.ParseSecret(resp.Body)
+		if err != nil {
+			c.logger.Error("failed to parse response as secret", "error", err)
+			return err
+		}
+		elapsed := time.Now().Sub(newIndex.LastRenewed)
+		if int(elapsed.Seconds()) > secret.LeaseDuration {
+			c.logger.Trace("skipping restore: secret's elapsed time since renewal is greater than lease duration", "elapsed", elapsed, "lease duration", secret.LeaseDuration)
+			continue
+		}
+
 		if err := c.ReCreateLeaseRenewCtx(newIndex); err != nil {
 			return err
 		}
@@ -1173,6 +1218,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 		Token:       token,
 		Namespace:   namespace,
 		RequestPath: requestPath,
+		Type:        cacheboltdb.TokenType,
 	}
 
 	// Derive a context off of the lease cache's base context
@@ -1186,7 +1232,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 
 	// Store the index in the cache
 	c.logger.Debug("storing auto-auth token into the cache")
-	err = c.Set(c.baseCtxInfo.Ctx, index, cacheboltdb.TokenType)
+	err = c.Set(c.baseCtxInfo.Ctx, index)
 	if err != nil {
 		c.logger.Error("failed to cache the auto-auth token", "error", err)
 		return err
