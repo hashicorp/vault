@@ -189,17 +189,18 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				apiData: &framework.FieldData{
 					Schema: fields,
 					Raw: map[string]interface{}{
-						"common_name": "example.net",
-						"alt_names":   "EXAMPLE.COM",
+						"common_name": "Example.Net",
+						"alt_names":   "eXaMPLe.COM",
 						"ttl":         3600,
 					},
 				},
 				role: &roleEntry{
 					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
 					AllowBareDomains: true,
+					MaxTTL:           3600,
 				},
 			},
-			expected: []string{"example.net"},
+			expected: []string{"Example.Net", "eXaMPLe.COM"},
 		},
 	}
 
