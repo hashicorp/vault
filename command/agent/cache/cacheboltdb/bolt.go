@@ -24,8 +24,9 @@ const (
 	// DatabaseFileName - filename for the persistent cache file
 	DatabaseFileName = "vault-agent-cache.db"
 
-	// rootBucketName - naming the root bucket
-	rootBucketName = "root"
+	// metaBucketName - naming the meta bucket that holds the version and
+	// bootstrapping keys
+	metaBucketName = "meta"
 
 	// SecretLeaseType - Bucket/type for leases with secret info
 	SecretLeaseType = "secret-lease"
@@ -44,14 +45,13 @@ const (
 )
 
 // BoltStorage is a persistent cache using a bolt db. Items are organized with
-// the encryption key as the top-level bucket, and then leases and tokens are
-// stored in sub buckets.
+// the version and bootstrapping items in the "meta" bucket, and tokens, auth
+// leases, and secret leases in their own buckets.
 type BoltStorage struct {
-	db         *bolt.DB
-	rootBucket string
-	logger     hclog.Logger
-	wrapper    wrapping.Wrapper
-	aad        string
+	db      *bolt.DB
+	logger  hclog.Logger
+	wrapper wrapping.Wrapper
+	aad     string
 }
 
 // BoltStorageConfig is the collection of input parameters for setting up bolt
@@ -79,26 +79,25 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 		return nil, err
 	}
 	bs := &BoltStorage{
-		db:         db,
-		rootBucket: rootBucketName,
-		logger:     config.Logger,
-		wrapper:    config.Wrapper,
-		aad:        config.AAD,
+		db:      db,
+		logger:  config.Logger,
+		wrapper: config.Wrapper,
+		aad:     config.AAD,
 	}
 	return bs, nil
 }
 
 func createBoltSchema(tx *bolt.Tx) error {
-	// create the root bucket at the top level
-	root, err := tx.CreateBucketIfNotExists([]byte(rootBucketName))
+	// create the meta bucket at the top level
+	meta, err := tx.CreateBucketIfNotExists([]byte(metaBucketName))
 	if err != nil {
-		return fmt.Errorf("failed to create bucket %s: %w", rootBucketName, err)
+		return fmt.Errorf("failed to create bucket %s: %w", metaBucketName, err)
 	}
-	// check and set file version in the root bucket
-	version := root.Get([]byte(storageVersionKey))
+	// check and set file version in the meta bucket
+	version := meta.Get([]byte(storageVersionKey))
 	switch {
 	case version == nil:
-		err = root.Put([]byte(storageVersionKey), []byte(storageVersion))
+		err = meta.Put([]byte(storageVersionKey), []byte(storageVersion))
 		if err != nil {
 			return fmt.Errorf("failed to set storage version: %w", err)
 		}
@@ -106,24 +105,24 @@ func createBoltSchema(tx *bolt.Tx) error {
 		return fmt.Errorf("storage migration from %s to %s not implemented", string(version), storageVersion)
 	}
 
-	// create the sub-buckets off root for tokens and leases
-	_, err = root.CreateBucketIfNotExists([]byte(TokenType))
+	// create the buckets for tokens and leases
+	_, err = tx.CreateBucketIfNotExists([]byte(TokenType))
 	if err != nil {
-		return fmt.Errorf("failed to create token sub-bucket: %w", err)
+		return fmt.Errorf("failed to create token bucket: %w", err)
 	}
-	_, err = root.CreateBucketIfNotExists([]byte(AuthLeaseType))
+	_, err = tx.CreateBucketIfNotExists([]byte(AuthLeaseType))
 	if err != nil {
-		return fmt.Errorf("failed to create auth lease sub-bucket: %w", err)
+		return fmt.Errorf("failed to create auth lease bucket: %w", err)
 	}
-	_, err = root.CreateBucketIfNotExists([]byte(SecretLeaseType))
+	_, err = tx.CreateBucketIfNotExists([]byte(SecretLeaseType))
 	if err != nil {
-		return fmt.Errorf("failed to create secret lease sub-bucket: %w", err)
+		return fmt.Errorf("failed to create secret lease bucket: %w", err)
 	}
 
 	return nil
 }
 
-// Set an index in bolt storage
+// Set an index (token or lease) in bolt storage
 func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, indexType string) error {
 	blob, err := b.wrapper.Encrypt(ctx, plaintext, []byte(b.aad))
 	if err != nil {
@@ -136,18 +135,15 @@ func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, inde
 	}
 
 	return b.db.Update(func(tx *bolt.Tx) error {
-		top := tx.Bucket([]byte(b.rootBucket))
-		if top == nil {
-			return fmt.Errorf("bucket %q not found", b.rootBucket)
-		}
-		s := top.Bucket([]byte(indexType))
+		s := tx.Bucket([]byte(indexType))
 		if s == nil {
 			return fmt.Errorf("bucket %q not found", indexType)
 		}
-		// If this is an auto-auth token, also stash it in the root bucket for
+		// If this is an auto-auth token, also stash it in the meta bucket for
 		// easy retrieval upon restore
 		if indexType == TokenType {
-			if err := top.Put([]byte(AutoAuthToken), protoBlob); err != nil {
+			meta := tx.Bucket([]byte(metaBucketName))
+			if err := meta.Put([]byte(AutoAuthToken), protoBlob); err != nil {
 				return fmt.Errorf("failed to set latest auto-auth token: %w", err)
 			}
 		}
@@ -164,22 +160,18 @@ func getBucketIDs(b *bolt.Bucket) ([][]byte, error) {
 	return ids, err
 }
 
-// Delete an index by id from bolt storage
+// Delete an index (token or lease) by id from bolt storage
 func (b *BoltStorage) Delete(id string) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		top := tx.Bucket([]byte(b.rootBucket))
-		if top == nil {
-			return fmt.Errorf("bucket %q not found", b.rootBucket)
-		}
 		// Since Delete returns a nil error if the key doesn't exist, just call
-		// delete in all three sub-buckets without checking existence first
-		if err := top.Bucket([]byte(TokenType)).Delete([]byte(id)); err != nil {
+		// delete in all three index buckets without checking existence first
+		if err := tx.Bucket([]byte(TokenType)).Delete([]byte(id)); err != nil {
 			return fmt.Errorf("failed to delete %q from token bucket: %w", id, err)
 		}
-		if err := top.Bucket([]byte(AuthLeaseType)).Delete([]byte(id)); err != nil {
+		if err := tx.Bucket([]byte(AuthLeaseType)).Delete([]byte(id)); err != nil {
 			return fmt.Errorf("failed to delete %q from auth lease bucket: %w", id, err)
 		}
-		if err := top.Bucket([]byte(SecretLeaseType)).Delete([]byte(id)); err != nil {
+		if err := tx.Bucket([]byte(SecretLeaseType)).Delete([]byte(id)); err != nil {
 			return fmt.Errorf("failed to delete %q from secret lease bucket: %w", id, err)
 		}
 		b.logger.Trace("deleted index from bolt db", "id", id)
@@ -203,11 +195,7 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 	err := b.db.View(func(tx *bolt.Tx) error {
 		var errors *multierror.Error
 
-		top := tx.Bucket([]byte(b.rootBucket))
-		if top == nil {
-			return fmt.Errorf("bucket %q not found", b.rootBucket)
-		}
-		top.Bucket([]byte(indexType)).ForEach(func(id, ciphertext []byte) error {
+		tx.Bucket([]byte(indexType)).ForEach(func(id, ciphertext []byte) error {
 			plaintext, err := b.decrypt(ctx, ciphertext)
 			if err != nil {
 				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
@@ -229,11 +217,11 @@ func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 	var encryptedToken []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
-		top := tx.Bucket([]byte(b.rootBucket))
-		if top == nil {
-			return fmt.Errorf("bucket %q not found", b.rootBucket)
+		meta := tx.Bucket([]byte(metaBucketName))
+		if meta == nil {
+			return fmt.Errorf("bucket %q not found", metaBucketName)
 		}
-		encryptedToken = top.Get([]byte(AutoAuthToken))
+		encryptedToken = meta.Get([]byte(AutoAuthToken))
 		return nil
 	})
 	if err != nil {
@@ -257,9 +245,9 @@ func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
 	var token []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
-		keyBucket := tx.Bucket([]byte(rootBucketName))
+		keyBucket := tx.Bucket([]byte(metaBucketName))
 		if keyBucket == nil {
-			return fmt.Errorf("bucket %q not found", rootBucketName)
+			return fmt.Errorf("bucket %q not found", metaBucketName)
 		}
 		token = keyBucket.Get([]byte(RetrievalTokenMaterial))
 		return nil
@@ -274,9 +262,9 @@ func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
 // StoreRetrievalToken sets plaintext token material in the RetrievalTokenBucket
 func (b *BoltStorage) StoreRetrievalToken(token []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(rootBucketName))
+		bucket := tx.Bucket([]byte(metaBucketName))
 		if bucket == nil {
-			return fmt.Errorf("bucket %q not found", rootBucketName)
+			return fmt.Errorf("bucket %q not found", metaBucketName)
 		}
 		return bucket.Put([]byte(RetrievalTokenMaterial), token)
 	})
@@ -288,19 +276,15 @@ func (b *BoltStorage) Close() error {
 	return b.db.Close()
 }
 
-// Clear the boltdb by deleting all the root buckets and recreating the
-// schema/layout
+// Clear the boltdb by deleting all the token and lease buckets and recreating
+// the schema/layout
 func (b *BoltStorage) Clear() error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		err := tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
+		for _, name := range []string{AuthLeaseType, SecretLeaseType, TokenType} {
 			b.logger.Trace("deleting bolt bucket", "name", name)
-			if err := tx.DeleteBucket(name); err != nil {
+			if err := tx.DeleteBucket([]byte(name)); err != nil {
 				return err
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 		return createBoltSchema(tx)
 	})
