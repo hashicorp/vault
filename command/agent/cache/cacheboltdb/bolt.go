@@ -39,10 +39,6 @@ const (
 	// AutoAuthToken - key for the latest auto-auth token
 	AutoAuthToken = "auto-auth-token"
 
-	// RetrievalTokenBucket names the bucket that stores the retrieval material
-	// needed for unlocking (decrypting) the persisted tokens and leases
-	RetrievalTokenBucket = "retrieval-token"
-
 	// RetrievalTokenMaterial is the actual key or token in the key bucket
 	RetrievalTokenMaterial = "retrieval-token-material"
 )
@@ -122,12 +118,6 @@ func createBoltSchema(tx *bolt.Tx) error {
 	_, err = root.CreateBucketIfNotExists([]byte(SecretLeaseType))
 	if err != nil {
 		return fmt.Errorf("failed to create secret lease sub-bucket: %w", err)
-	}
-
-	// create the retrieval token bucket at the top level
-	_, err = tx.CreateBucketIfNotExists([]byte(RetrievalTokenBucket))
-	if err != nil {
-		return fmt.Errorf("failed to create key bucket: %w", err)
 	}
 
 	return nil
@@ -267,9 +257,9 @@ func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
 	var token []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
-		keyBucket := tx.Bucket([]byte(RetrievalTokenBucket))
+		keyBucket := tx.Bucket([]byte(rootBucketName))
 		if keyBucket == nil {
-			return fmt.Errorf("bucket %q not found", RetrievalTokenBucket)
+			return fmt.Errorf("bucket %q not found", rootBucketName)
 		}
 		token = keyBucket.Get([]byte(RetrievalTokenMaterial))
 		return nil
@@ -284,9 +274,9 @@ func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
 // StoreRetrievalToken sets plaintext token material in the RetrievalTokenBucket
 func (b *BoltStorage) StoreRetrievalToken(token []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(RetrievalTokenBucket))
+		bucket := tx.Bucket([]byte(rootBucketName))
 		if bucket == nil {
-			return fmt.Errorf("bucket %q not found", RetrievalTokenBucket)
+			return fmt.Errorf("bucket %q not found", rootBucketName)
 		}
 		return bucket.Put([]byte(RetrievalTokenMaterial), token)
 	})
