@@ -6,8 +6,10 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
@@ -34,14 +36,18 @@ type JobManager struct {
 	onceStart         sync.Once
 	onceStop          sync.Once
 	logger            log.Logger
-	wg                sync.WaitGroup
+	totalJobs         int
+	metricSink        *metricsutil.ClusterMetricSink
+
+	// waitgroup for testing stop functionality
+	wg sync.WaitGroup
 
 	// protects `queues`, `queuesIndex`, `lastQueueAccessed`
 	l sync.RWMutex
 }
 
 // NewJobManager creates a job manager, with an optional name
-func NewJobManager(name string, numWorkers int, l log.Logger) *JobManager {
+func NewJobManager(name string, numWorkers int, l log.Logger, metricSink *metricsutil.ClusterMetricSink) *JobManager {
 	if l == nil {
 		l = logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
 	}
@@ -66,6 +72,7 @@ func NewJobManager(name string, numWorkers int, l log.Logger) *JobManager {
 		newWork:           make(chan struct{}, 1),
 		workerPool:        wp,
 		logger:            l,
+		metricSink:        metricSink,
 	}
 
 	j.logger.Trace("created job manager", "name", name, "pool_size", numWorkers)
@@ -82,14 +89,12 @@ func (j *JobManager) Start() {
 	})
 }
 
-// Stop stops the job manager, and waits for the worker pool and
-// job manager to quit gracefully
+// Stop stops the job manager asynchronously
 func (j *JobManager) Stop() {
 	j.onceStop.Do(func() {
-		j.logger.Trace("terminating job manager and waiting...")
-		j.workerPool.stop()
+		j.logger.Trace("terminating job manager...")
 		close(j.quit)
-		j.wg.Wait()
+		j.workerPool.stop()
 	})
 }
 
@@ -110,6 +115,12 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 	}
 
 	j.queues[queueID].PushBack(job)
+	j.totalJobs++
+
+	if j.metricSink != nil {
+		j.metricSink.AddSampleWithLabels([]string{j.name, "job_manager", "queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
+		j.metricSink.AddSample([]string{j.name, "job_manager", "total_jobs"}, float32(j.totalJobs))
+	}
 }
 
 // GetCurrentJobCount returns the total number of pending jobs in the job manager
@@ -159,6 +170,13 @@ func (j *JobManager) getNextJob() Job {
 
 	jobElement := j.queues[queueID].Front()
 	out := j.queues[queueID].Remove(jobElement)
+
+	j.totalJobs--
+
+	if j.metricSink != nil {
+		j.metricSink.AddSampleWithLabels([]string{j.name, "job_manager", "queue_length"}, float32(j.queues[queueID].Len()), []metrics.Label{{"queue_id", queueID}})
+		j.metricSink.AddSample([]string{j.name, "job_manager", "total_jobs"}, float32(j.totalJobs))
+	}
 
 	if j.queues[queueID].Len() == 0 {
 		j.removeLastQueueAccessed()

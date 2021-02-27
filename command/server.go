@@ -942,6 +942,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
 		}
+		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
 	parsedConfig, err := c.parseConfig()

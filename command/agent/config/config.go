@@ -48,6 +48,8 @@ type Cache struct {
 	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
 	UseAutoAuthToken    bool        `hcl:"-"`
 	ForceAutoAuthToken  bool        `hcl:"-"`
+	EnforceConsistency  string      `hcl:"enforce_consistency"`
+	WhenInconsistent    string      `hcl:"when_inconsistent"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -62,12 +64,14 @@ type AutoAuth struct {
 
 // Method represents the configuration for the authentication backend
 type Method struct {
-	Type       string
-	MountPath  string        `hcl:"mount_path"`
-	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
-	WrapTTL    time.Duration `hcl:"-"`
-	Namespace  string        `hcl:"namespace"`
-	Config     map[string]interface{}
+	Type          string
+	MountPath     string        `hcl:"mount_path"`
+	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
+	WrapTTL       time.Duration `hcl:"-"`
+	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
+	MaxBackoff    time.Duration `hcl:"-"`
+	Namespace     string        `hcl:"namespace"`
+	Config        map[string]interface{}
 }
 
 // Sink defines a location to write the authenticated token
@@ -356,6 +360,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
 			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
 		}
+	}
+
+	if result.AutoAuth.Method.MaxBackoffRaw != nil {
+		var err error
+		if result.AutoAuth.Method.MaxBackoff, err = parseutil.ParseDurationSecond(result.AutoAuth.Method.MaxBackoffRaw); err != nil {
+			return err
+		}
+		result.AutoAuth.Method.MaxBackoffRaw = nil
 	}
 
 	return nil

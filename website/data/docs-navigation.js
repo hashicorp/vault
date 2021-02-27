@@ -33,13 +33,14 @@ export default [
       'response-wrapping',
       'policies',
       'password-policies',
+      'username-templating',
       'ha',
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
       'client-count',
-      'transform',
+      'transform'
     ],
   },
   {
@@ -261,6 +262,7 @@ export default [
           'dynamic-ssh-keys',
         ],
       },
+      'terraform',
       'totp',
       { category: 'transform', content: ['tokenization'] },
       'transit',

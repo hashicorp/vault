@@ -27,9 +27,9 @@ import (
 type ServerConfig struct {
 	Logger hclog.Logger
 	// Client        *api.Client
-	VaultConf     *config.Vault
+	AgentConfig *config.Config
+
 	ExitAfterAuth bool
-	TemplateRetry *config.TemplateRetry
 	Namespace     string
 
 	// LogLevel is needed to set the internal Consul Template Runner's log level
@@ -164,12 +164,12 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					},
 				}
 
-				if ts.config.TemplateRetry != nil && ts.config.TemplateRetry.Enabled {
+				if ts.config.AgentConfig.TemplateRetry != nil && ts.config.AgentConfig.TemplateRetry.Enabled {
 					ctv.Vault.Retry = &ctconfig.RetryConfig{
-						Attempts:   &ts.config.TemplateRetry.Attempts,
-						Backoff:    &ts.config.TemplateRetry.Backoff,
-						MaxBackoff: &ts.config.TemplateRetry.MaxBackoff,
-						Enabled:    &ts.config.TemplateRetry.Enabled,
+						Attempts:   &ts.config.AgentConfig.TemplateRetry.Attempts,
+						Backoff:    &ts.config.AgentConfig.TemplateRetry.Backoff,
+						MaxBackoff: &ts.config.AgentConfig.TemplateRetry.MaxBackoff,
+						Enabled:    &ts.config.AgentConfig.TemplateRetry.Enabled,
 					}
 				} else if ts.testingLimitRetry != 0 {
 					// If we're testing, limit retries to 3 attempts to avoid
@@ -239,7 +239,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// Always set these to ensure nothing is picked up from the environment
 	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
 	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.VaultConf.Address
+	conf.Vault.Address = &sc.AgentConfig.Vault.Address
 
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
@@ -255,16 +255,35 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
-	if strings.HasPrefix(sc.VaultConf.Address, "https") || sc.VaultConf.CACert != "" {
-		skipVerify := sc.VaultConf.TLSSkipVerify
+	// Use the cache if available or fallback to the Vault server values.
+	if sc.AgentConfig.Cache != nil && len(sc.AgentConfig.Listeners) != 0 {
+		scheme := "unix://"
+		if sc.AgentConfig.Listeners[0].Type == "tcp" {
+			scheme = "https://"
+			if sc.AgentConfig.Listeners[0].TLSDisable {
+				scheme = "http://"
+			}
+		}
+		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
+		conf.Vault.Address = &address
+
+		// Skip verification if its using the cache because they're part of the same agent.
+		if scheme == "https://" {
+			if sc.AgentConfig.Listeners[0].TLSRequireAndVerifyClientCert {
+				return nil, errors.New("template server cannot use local cache when mTLS is enabled")
+			}
+			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
+		}
+	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
+		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
 			Enabled: pointerutil.BoolPtr(true),
 			Verify:  &verify,
-			Cert:    &sc.VaultConf.ClientCert,
-			Key:     &sc.VaultConf.ClientKey,
-			CaCert:  &sc.VaultConf.CACert,
-			CaPath:  &sc.VaultConf.CAPath,
+			Cert:    &sc.AgentConfig.Vault.ClientCert,
+			Key:     &sc.AgentConfig.Vault.ClientKey,
+			CaCert:  &sc.AgentConfig.Vault.CACert,
+			CaPath:  &sc.AgentConfig.Vault.CAPath,
 		}
 	}
 

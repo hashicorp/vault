@@ -91,6 +91,35 @@ the given key will be used to encrypt the snapshot using AWS KMS.
 * ui: Fix expected response from feature-flags endpoint [[GH-10684](https://github.com/hashicorp/vault/pull/10684)]
 * ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
 
+## 1.6.3
+### February 25, 2021
+
+SECURITY:
+
+* Limited Unauthenticated License Metadata Read: We addressed a security vulnerability that allowed for the unauthenticated
+reading of Vault license metadata from DR Secondaries. This vulnerability affects Vault Enterprise and is
+fixed in 1.6.3 (CVE-2021-27668).
+
+CHANGES:
+
+* secrets/mongodbatlas: Move from whitelist to access list API [[GH-10966](https://github.com/hashicorp/vault/pull/10966)]
+
+IMPROVEMENTS:
+
+* ui: Clarify language on usage metrics page empty state [[GH-10951](https://github.com/hashicorp/vault/pull/10951)]
+
+BUG FIXES:
+
+* auth/kubernetes: Cancel API calls to TokenReview endpoint when request context
+is closed [[GH-10930](https://github.com/hashicorp/vault/pull/10930)]
+* core/identity: Fix deadlock in entity merge endpoint. [[GH-10877](https://github.com/hashicorp/vault/pull/10877)]
+* quotas: Fix duplicate quotas on performance standby nodes. [[GH-10855](https://github.com/hashicorp/vault/pull/10855)]
+* quotas/rate-limit: Fix quotas enforcing old rate limit quota paths [[GH-10689](https://github.com/hashicorp/vault/pull/10689)]
+* replication (enterprise): Don't write request count data on DR Secondaries.
+Fixes DR Secondaries becoming out of sync approximately every 30s. [[GH-10970](https://github.com/hashicorp/vault/pull/10970)]
+* secrets/azure (enterprise): Forward service principal credential creation to the
+primary cluster if called on a performance standby or performance secondary. [[GH-10902](https://github.com/hashicorp/vault/pull/10902)]
+
 ## 1.6.2
 ### January 29, 2021
 

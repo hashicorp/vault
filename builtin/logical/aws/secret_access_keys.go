@@ -7,13 +7,14 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const secretAccessKeyType = "access_keys"
@@ -210,7 +211,8 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
-	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
+	displayName, policyName string,
+	role *awsRoleEntry) (*logical.Response, error) {
 	iamClient, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -283,6 +285,26 @@ func (b *backend) secretAccessKeysCreate(
 		})
 		if err != nil {
 			return logical.ErrorResponse("Error adding user to group: %s", err), awsutil.CheckAWSError(err)
+		}
+	}
+
+	var tags []*iam.Tag
+	for key, value := range role.IAMTags {
+		// This assignment needs to be done in order to create unique addresses for
+		// these variables. Without doing so, all the tags will be copies of the last
+		// tag listed in the role.
+		k, v := key, value
+		tags = append(tags, &iam.Tag{Key: &k, Value: &v})
+	}
+
+	if len(tags) > 0 {
+		_, err = iamClient.TagUser(&iam.TagUserInput{
+			Tags:     tags,
+			UserName: &username,
+		})
+
+		if err != nil {
+			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}
 	}
 

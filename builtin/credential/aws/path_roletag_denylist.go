@@ -9,26 +9,26 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) pathRoletagBlacklist() *framework.Path {
+func (b *backend) pathRoletagDenyList() *framework.Path {
 	return &framework.Path{
-		Pattern: "roletag-blacklist/(?P<role_tag>.*)",
+		Pattern: "roletag-denylist/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
 			"role_tag": {
 				Type: framework.TypeString,
-				Description: `Role tag to be blacklisted. The tag can be supplied as-is. In order
+				Description: `Role tag to be deny listed. The tag can be supplied as-is. In order
 to avoid any encoding problems, it can be base64 encoded.`,
 			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathRoletagBlacklistUpdate,
+				Callback: b.pathRoletagDenyListUpdate,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathRoletagBlacklistRead,
+				Callback: b.pathRoletagDenyListRead,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback: b.pathRoletagBlacklistDelete,
+				Callback: b.pathRoletagDenyListDelete,
 			},
 		},
 
@@ -37,28 +37,28 @@ to avoid any encoding problems, it can be base64 encoded.`,
 	}
 }
 
-// Path to list all the blacklisted tags.
-func (b *backend) pathListRoletagBlacklist() *framework.Path {
+// Path to list all the deny listed tags.
+func (b *backend) pathListRoletagDenyList() *framework.Path {
 	return &framework.Path{
-		Pattern: "roletag-blacklist/?",
+		Pattern: "roletag-denylist/?",
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback: b.pathRoletagBlacklistsList,
+				Callback: b.pathRoletagDenyListsList,
 			},
 		},
 
-		HelpSynopsis:    pathListRoletagBlacklistHelpSyn,
-		HelpDescription: pathListRoletagBlacklistHelpDesc,
+		HelpSynopsis:    pathListRoletagDenyListHelpSyn,
+		HelpDescription: pathListRoletagDenyListHelpDesc,
 	}
 }
 
-// Lists all the blacklisted role tags.
-func (b *backend) pathRoletagBlacklistsList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.blacklistMutex.RLock()
-	defer b.blacklistMutex.RUnlock()
+// Lists all the deny listed role tags.
+func (b *backend) pathRoletagDenyListsList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.denyListMutex.RLock()
+	defer b.denyListMutex.RUnlock()
 
-	tags, err := req.Storage.List(ctx, "blacklist/roletag/")
+	tags, err := req.Storage.List(ctx, denyListRoletagStorage)
 	if err != nil {
 		return nil, err
 	}
@@ -77,17 +77,17 @@ func (b *backend) pathRoletagBlacklistsList(ctx context.Context, req *logical.Re
 	return logical.ListResponse(tags), nil
 }
 
-// Fetch an entry from the role tag blacklist for a given tag.
+// Fetch an entry from the role tag deny list for a given tag.
 // This method takes a role tag in its original form and not a base64 encoded form.
-func (b *backend) lockedBlacklistRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
-	b.blacklistMutex.RLock()
-	defer b.blacklistMutex.RUnlock()
+func (b *backend) lockedDenyLististRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+	b.denyListMutex.RLock()
+	defer b.denyListMutex.RUnlock()
 
-	return b.nonLockedBlacklistRoleTagEntry(ctx, s, tag)
+	return b.nonLockedDenyListRoleTagEntry(ctx, s, tag)
 }
 
-func (b *backend) nonLockedBlacklistRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
-	entry, err := s.Get(ctx, "blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)))
+func (b *backend) nonLockedDenyListRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+	entry, err := s.Get(ctx, denyListRoletagStorage+base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
 	}
@@ -102,28 +102,28 @@ func (b *backend) nonLockedBlacklistRoleTagEntry(ctx context.Context, s logical.
 	return &result, nil
 }
 
-// Deletes an entry from the role tag blacklist for a given tag.
-func (b *backend) pathRoletagBlacklistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.blacklistMutex.Lock()
-	defer b.blacklistMutex.Unlock()
+// Deletes an entry from the role tag deny list for a given tag.
+func (b *backend) pathRoletagDenyListDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.denyListMutex.Lock()
+	defer b.denyListMutex.Unlock()
 
 	tag := data.Get("role_tag").(string)
 	if tag == "" {
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	return nil, req.Storage.Delete(ctx, "blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)))
+	return nil, req.Storage.Delete(ctx, denyListRoletagStorage+base64.StdEncoding.EncodeToString([]byte(tag)))
 }
 
-// If the given role tag is blacklisted, returns the details of the blacklist entry.
+// If the given role tag is deny listed, returns the details of the deny list entry.
 // Returns 'nil' otherwise.
-func (b *backend) pathRoletagBlacklistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoletagDenyListRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	tag := data.Get("role_tag").(string)
 	if tag == "" {
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	entry, err := b.lockedBlacklistRoleTagEntry(ctx, req.Storage, tag)
+	entry, err := b.lockedDenyLististRoleTagEntry(ctx, req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +139,10 @@ func (b *backend) pathRoletagBlacklistRead(ctx context.Context, req *logical.Req
 	}, nil
 }
 
-// pathRoletagBlacklistUpdate is used to blacklist a given role tag.
-// Before a role tag is blacklisted, the correctness of the plaintext part
+// pathRoletagDenyListUpdate is used to deny list a given role tag.
+// Before a role tag is added to the deny list, the correctness of the plaintext part
 // in the role tag is verified using the associated HMAC.
-func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoletagDenyListUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// The role_tag value provided, optionally can be base64 encoded.
 	tagInput := data.Get("role_tag").(string)
 	if tagInput == "" {
@@ -179,11 +179,11 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("role entry not found"), nil
 	}
 
-	b.blacklistMutex.Lock()
-	defer b.blacklistMutex.Unlock()
+	b.denyListMutex.Lock()
+	defer b.denyListMutex.Unlock()
 
-	// Check if the role tag is already blacklisted. If yes, update it.
-	blEntry, err := b.nonLockedBlacklistRoleTagEntry(ctx, req.Storage, tag)
+	// Check if the role tag is already deny listed. If yes, update it.
+	blEntry, err := b.nonLockedDenyListRoleTagEntry(ctx, req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -193,11 +193,11 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 
 	currentTime := time.Now()
 
-	// Check if this is a creation of blacklist entry.
+	// Check if this is a creation of deny list entry.
 	if blEntry.CreationTime.IsZero() {
-		// Set the creation time for the blacklist entry.
+		// Set the creation time for the deny list entry.
 		// This should not be updated after setting it once.
-		// If blacklist operation is invoked more than once, only update the expiration time.
+		// If deny list operation is invoked more than once, only update the expiration time.
 		blEntry.CreationTime = currentTime
 	}
 
@@ -213,12 +213,12 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 
 	blEntry.ExpirationTime = currentTime.Add(maxDur)
 
-	entry, err := logical.StorageEntryJSON("blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)), blEntry)
+	entry, err := logical.StorageEntryJSON(denyListRoletagStorage+base64.StdEncoding.EncodeToString([]byte(tag)), blEntry)
 	if err != nil {
 		return nil, err
 	}
 
-	// Store the blacklist entry.
+	// Store the deny list entry.
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
@@ -236,25 +236,25 @@ Blacklist a previously created role tag.
 `
 
 const pathRoletagBlacklistDesc = `
-Blacklist a role tag so that it cannot be used by any EC2 instance to perform further
+Add a role tag to the deny list so that it cannot be used by any EC2 instance to perform further
 logins. This can be used if the role tag is suspected or believed to be possessed by
 an unintended party.
 
-By default, a cron task will periodically look for expired entries in the blacklist
+By default, a cron task will periodically look for expired entries in the deny list
 and deletes them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/roletags' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/roletags' endpoint.
 
 Also note that delete operation is supported on this endpoint to remove specific
-entries from the blacklist.
+entries from the deny list.
 `
 
-const pathListRoletagBlacklistHelpSyn = `
-Lists the blacklisted role tags.
+const pathListRoletagDenyListHelpSyn = `
+Lists the deny list role tags.
 `
 
-const pathListRoletagBlacklistHelpDesc = `
-Lists all the entries present in the blacklist. This will show both the valid
-entries and the expired entries in the blacklist. Use 'tidy/roletags' endpoint
-to clean-up the blacklist of role tags based on expiration time.
+const pathListRoletagDenyListHelpDesc = `
+Lists all the entries present in the deny list. This will show both the valid
+entries and the expired entries in the deny list. Use 'tidy/roletags' endpoint
+to clean-up the deny list of role tags based on expiration time.
 `

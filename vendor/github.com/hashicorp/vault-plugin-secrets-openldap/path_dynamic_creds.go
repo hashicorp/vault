@@ -68,7 +68,7 @@ func (b *backend) pathDynamicCredsRead(ctx context.Context, req *logical.Request
 		merr := multierror.Append(fmt.Errorf("failed to create user: %w", err))
 		_, err = b.executeLDIF(config.LDAP, dRole.RollbackLDIF, templateData, true)
 		if err != nil {
-			merr = multierror.Append(fmt.Errorf("failed to roll back user creation: %w", err))
+			merr = multierror.Append(merr, fmt.Errorf("failed to roll back user creation: %w", err))
 		}
 		return nil, merr
 	}
