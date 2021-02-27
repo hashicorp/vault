@@ -14,6 +14,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -32,7 +33,7 @@ type EtcdBackend struct {
 	lockTimeout    time.Duration
 	requestTimeout time.Duration
 
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 
 	etcd *clientv3.Client
 }
@@ -165,7 +166,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	return &EtcdBackend{
 		path:           path,
 		etcd:           etcd,
-		permitPool:     physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:     permits.NewInstrumentedPermitPool(physical.DefaultParallelOperations, "etcd"),
 		logger:         logger,
 		haEnabled:      haEnabledBool,
 		lockTimeout:    lock,

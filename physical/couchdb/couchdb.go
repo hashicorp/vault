@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -24,7 +25,7 @@ import (
 type CouchDBBackend struct {
 	logger     log.Logger
 	client     *couchDBClient
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // Verify CouchDBBackend satisfies the correct interfaces
@@ -192,7 +193,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "couchdb"),
 	}, nil
 }
 
@@ -272,7 +273,7 @@ func NewTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (
 	if err != nil {
 		return nil, err
 	}
-	backend.permitPool = physical.NewPermitPool(1)
+	backend.permitPool = permits.NewInstrumentedPermitPool(1, "couchdb", "transcational")
 
 	return &TransactionalCouchDBBackend{
 		CouchDBBackend: *backend,

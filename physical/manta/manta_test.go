@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/permits"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -54,7 +56,7 @@ func TestMantaBackend(t *testing.T) {
 		client:     client,
 		directory:  testHarnessBucket,
 		logger:     logger.Named("storage.mantabackend"),
-		permitPool: physical.NewPermitPool(128),
+		permitPool: permits.NewInstrumentedPermitPool(128, "manta"),
 	}
 
 	err = mb.client.Dir().Put(context.Background(), &storage.PutDirectoryInput{

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/permits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
@@ -44,7 +45,7 @@ type ConsulBackend struct {
 	client          *api.Client
 	path            string
 	kv              *api.KV
-	permitPool      *physical.PermitPool
+	permitPool      *permits.InstrumentedPermitPool
 	consistencyMode string
 
 	sessionTTL   string
@@ -184,7 +185,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		path:            path,
 		client:          client,
 		kv:              client.KV(),
-		permitPool:      physical.NewPermitPool(maxParInt),
+		permitPool:      permits.NewInstrumentedPermitPool(maxParInt, "consul"),
 		consistencyMode: consistencyMode,
 
 		sessionTTL:   sessionTTL,

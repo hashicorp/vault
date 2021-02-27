@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/helper/permits"
 	"io"
 	"net/http"
 	"os"
@@ -38,7 +39,7 @@ type S3Backend struct {
 	kmsKeyId   string
 	client     *s3.S3
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permits.InstrumentedPermitPool
 }
 
 // NewS3Backend constructs a S3 backend using a pre-existing
@@ -155,7 +156,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		path:       path,
 		kmsKeyId:   kmsKeyId,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permits.NewInstrumentedPermitPool(maxParInt, "s3"),
 	}
 	return s, nil
 }
