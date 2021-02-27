@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 // Index holds the response to be cached along with multiple other values that
@@ -61,6 +62,12 @@ type Index struct {
 
 	// RequestHeader is the header used in the request
 	RequestHeader http.Header
+
+	// LastRenewed is the timestamp of last renewal
+	LastRenewed time.Time
+
+	// Type is the index type (token, auth-lease, secret-lease)
+	Type string
 }
 
 type IndexName uint32
