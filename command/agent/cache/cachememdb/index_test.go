@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ func TestSerializeDeserialize(t *testing.T) {
 		RequestHeader: http.Header{
 			"X-Test": []string{"vault", "agent"},
 		},
+		LastRenewed: time.Now().UTC(),
 	}
 	indexBytes, err := testIndex.Serialize()
 	require.NoError(t, err)

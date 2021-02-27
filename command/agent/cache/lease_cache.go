@@ -297,14 +297,8 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		ID:          id,
 		Namespace:   namespace,
 		RequestPath: req.Request.URL.Path,
+		LastRenewed: time.Now().UTC(),
 	}
-
-	lastRenewed, err := http.ParseTime(resp.Response.Header.Get("Date"))
-	if err != nil {
-		c.logger.Error("failed to parse response header date", "error", err)
-		return nil, err
-	}
-	index.LastRenewed = lastRenewed
 
 	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
 	if err != nil {
@@ -508,9 +502,10 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			return
 		case <-watcher.RenewCh():
 			c.logger.Debug("secret renewed", "path", req.Request.URL.Path)
-			id := ctx.Value(contextIndexID).(string)
-			if err := c.updateLastRenewed(ctx, id, index, time.Now()); err != nil {
-				c.logger.Warn("not able to update lastRenewed time for cached index", "id", id)
+			if c.ps != nil {
+				if err := c.updateLastRenewed(ctx, index, time.Now().UTC()); err != nil {
+					c.logger.Warn("not able to update lastRenewed time for cached index", "id", index.ID)
+				}
 			}
 		case <-index.RenewCtxInfo.DoneCh:
 			// This case indicates the renewal process to shutdown and evict
@@ -523,17 +518,17 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 	}
 }
 
-func (c *LeaseCache) updateLastRenewed(ctx context.Context, id string, index *cachememdb.Index, t time.Time) error {
+func (c *LeaseCache) updateLastRenewed(ctx context.Context, index *cachememdb.Index, t time.Time) error {
 	idLock := locksutil.LockForKey(c.idLocks, index.ID)
 	idLock.Lock()
 	defer idLock.Unlock()
 
-	index, err := c.db.Get(cachememdb.IndexNameID, id)
+	getIndex, err := c.db.Get(cachememdb.IndexNameID, index.ID)
 	if err != nil {
 		return err
 	}
 	index.LastRenewed = t
-	if err := c.Set(ctx, index); err != nil {
+	if err := c.Set(ctx, getIndex); err != nil {
 		return err
 	}
 	return nil
@@ -1022,20 +1017,11 @@ func (c *LeaseCache) restoreLeases(leases [][]byte) error {
 		}
 
 		// Check if this lease has already expired
-		reader := bufio.NewReader(bytes.NewReader(newIndex.Response))
-		resp, err := http.ReadResponse(reader, nil)
+		expired, err := c.hasExpired(time.Now().UTC(), newIndex)
 		if err != nil {
-			c.logger.Error("failed to deserialize response", "error", err)
-			return err
+			c.logger.Warn("failed to check if lease is expired", "id", newIndex.ID, "error", err)
 		}
-		secret, err := api.ParseSecret(resp.Body)
-		if err != nil {
-			c.logger.Error("failed to parse response as secret", "error", err)
-			return err
-		}
-		elapsed := time.Now().Sub(newIndex.LastRenewed)
-		if int(elapsed.Seconds()) > secret.LeaseDuration {
-			c.logger.Trace("skipping restore: secret's elapsed time since renewal is greater than lease duration", "elapsed", elapsed, "lease duration", secret.LeaseDuration)
+		if expired {
 			continue
 		}
 
@@ -1277,4 +1263,31 @@ func parseCacheClearInput(req *cacheClearRequest) (*cacheClearInput, error) {
 	}
 
 	return in, nil
+}
+
+func (c *LeaseCache) hasExpired(currentTime time.Time, index *cachememdb.Index) (bool, error) {
+	reader := bufio.NewReader(bytes.NewReader(index.Response))
+	resp, err := http.ReadResponse(reader, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to deserialize response: %w", err)
+	}
+	secret, err := api.ParseSecret(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse response as secret: %w", err)
+	}
+
+	elapsed := currentTime.Sub(index.LastRenewed)
+	var leaseDuration int
+	switch index.Type {
+	case cacheboltdb.AuthLeaseType:
+		leaseDuration = secret.Auth.LeaseDuration
+	default:
+		leaseDuration = secret.LeaseDuration
+	}
+
+	if int(elapsed.Seconds()) > leaseDuration {
+		c.logger.Trace("secret has expired", "id", index.ID, "elapsed", elapsed, "lease duration", leaseDuration)
+		return true, nil
+	}
+	return false, nil
 }
