@@ -41,6 +41,12 @@ for 'client' tokens. Required for Consul pre-1.4.`,
 for Consul 1.4 or above, roles can be used for Consul 1.5 and above.`,
 			},
 
+			"roles": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `List of roles to attach to the token. Policies / roles required
+				for Consul 1.5 or above.`,
+			},
+
 			"local": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Indicates that the token should not be replicated globally 
@@ -126,6 +132,9 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 	if len(result.Policies) > 0 {
 		resp.Data["policies"] = result.Policies
 	}
+	if len(result.Roles) > 0 {
+		resp.Data["roles"] = result.Roles
+	}
 	return resp, nil
 }
 
@@ -134,14 +143,15 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	policy := d.Get("policy").(string)
 	name := d.Get("name").(string)
 	policies := d.Get("policies").([]string)
+	roles := d.Get("roles").([]string)
 	local := d.Get("local").(bool)
 
-	if len(policies) == 0 {
+	if len(policies) == 0 && len(roles) == 0 {
 		switch tokenType {
 		case "client":
 			if policy == "" {
 				return logical.ErrorResponse(
-					"Use either a policy document, or a list of policies, depending on your Consul version"), nil
+					"Use either a policy document, a list of policies, or a list of roles, depending on your Consul version"), nil
 			}
 		case "management":
 		default:
@@ -176,6 +186,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
 		Policy:    string(policyRaw),
 		Policies:  policies,
+		Roles:     roles,
 		TokenType: tokenType,
 		TTL:       ttl,
 		MaxTTL:    maxTTL,
@@ -203,6 +214,7 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 type roleConfig struct {
 	Policy    string        `json:"policy"`
 	Policies  []string      `json:"policies"`
+	Roles     []string      `json:"roles"`
 	TTL       time.Duration `json:"lease"`
 	MaxTTL    time.Duration `json:"max_ttl"`
 	TokenType string        `json:"token_type"`
