@@ -37,8 +37,8 @@ for 'client' tokens. Required for Consul pre-1.4.`,
 
 			"policies": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token. Required
-for Consul 1.4 or above.`,
+				Description: `List of policies to attach to the token. Policies required
+for Consul 1.4 or above, roles can be used for Consul 1.5 and above.`,
 			},
 
 			"local": &framework.FieldSchema{
