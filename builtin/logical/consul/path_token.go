@@ -105,16 +105,23 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Create an ACLToken for Consul 1.4 and above
 	policyLinks := []*api.ACLTokenPolicyLink{}
-
 	for _, policyName := range roleConfigData.Policies {
 		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
 			Name: policyName,
 		})
 	}
 
+	roleLink := []*api.ACLTokenRoleLink{}
+	for _, roleName := range roleConfigData.Roles {
+		roleLink = append(roleLink, &api.ACLTokenRoleLink{
+			Name: roleName,
+		})
+	}
+
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
 		Policies:    policyLinks,
+		Roles:       roleLink,
 		Local:       roleConfigData.Local,
 		Namespace:   roleConfigData.ConsulNamespace,
 		Partition:   roleConfigData.Partition,
