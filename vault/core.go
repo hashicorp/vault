@@ -2758,7 +2758,7 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 
 func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 	c.stateLock.RLock()
-	c.stateLock.RUnlock()
+	defer c.stateLock.RUnlock()
 	if c.isPrimary() {
 		reason, err := c.barrier.CheckBarrierAutoRotate(ctx)
 		if err != nil {
