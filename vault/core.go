@@ -1763,11 +1763,6 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 
 	c.logger.Info("marked as sealed")
 
-	// Give the barrier a chance to persist encryption counts
-	if c.autoRotateCancel != nil {
-		c.checkBarrierAutoRotate(c.activeContext)
-	}
-
 	// Clear forwarding clients
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
@@ -2762,6 +2757,8 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 }
 
 func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
 	if c.isPrimary() {
 		reason, err := c.barrier.CheckBarrierAutoRotate(ctx)
 		if err != nil {
