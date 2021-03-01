@@ -144,6 +144,7 @@ export default [
         content: ['replication-performance', 'replication-dr'],
       },
       'rotate',
+      'rotate-config',
       'seal',
       'seal-status',
       'sealwrap-rewrap',
