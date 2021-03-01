@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Track barrier encryption count and automatically rotate after a large number of operations or on a schedule
+```
