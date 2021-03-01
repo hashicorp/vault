@@ -522,7 +522,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 				}
 
 				testhelpers.EnsureStableActiveNode(t, cluster)
-				testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			}
 
 			if tCaseLocal.Rekey {
@@ -530,7 +530,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
 
 				testhelpers.EnsureStableActiveNode(t, cluster)
-				testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			}
 
 			if tCaseLocal.Rekey {
@@ -565,7 +565,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 
 			testhelpers.EnsureStableActiveNode(t, cluster)
-			testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+			testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 			// Write some data so we can make sure we can read it later. This is testing
 			// that we correctly reload the keyring
@@ -717,7 +717,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
 
 				testhelpers.EnsureStableActiveNode(t, cluster)
-				testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			}
 			if tCaseLocal.Rotate {
 				// Set the key clean up to 0 so it's cleaned immediately. This
@@ -739,7 +739,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 					// cluster back into a healthy state before moving forward.
 					testhelpers.WaitForNCoresSealed(t, cluster, 2)
 					testhelpers.EnsureCoresUnsealed(t, cluster)
-					testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+					testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 					active := testhelpers.DeriveActiveCore(t, cluster)
 					leaderClient = active.Client
@@ -783,7 +783,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			}
 
 			testhelpers.EnsureStableActiveNode(t, cluster)
-			testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+			testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			if tCaseLocal.Rekey {
 				// Restore snapshot, should fail.
 				req = leaderClient.NewRequest("POST", "/v1/sys/storage/raft/snapshot")
@@ -822,7 +822,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 			case false:
 				testhelpers.EnsureStableActiveNode(t, cluster)
-				testhelpers.WaitForActiveNodeAndPerfStandbys(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 				// Write some data so we can make sure we can read it later. This is testing
 				// that we correctly reload the keyring
