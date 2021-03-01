@@ -38,10 +38,26 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	}
 }
 
+// monthlyActivityCountPath is available in every namespace
+func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
+	return &framework.Path{
+		Pattern:         "internal/counters/activity/monthly",
+		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleMonthlyActivityCount,
+				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
+			},
+		},
+	}
+}
+
 // rootActivityPaths are available only in the root namespace
 func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return []*framework.Path{
 		b.activityQueryPath(),
+		b.monthlyActivityCountPath(),
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
@@ -113,6 +129,22 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	if results == nil {
 		resp204, err := logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 		return resp204, err
+	}
+
+	return &logical.Response{
+		Data: results,
+	}, nil
+}
+
+func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	a := b.Core.activityLog
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
+		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 	}
 
 	return &logical.Response{

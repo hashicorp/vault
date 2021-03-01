@@ -1771,3 +1771,29 @@ func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.Ga
 	}
 	return a.PartialMonthMetrics(ctx)
 }
+
+// partialMonthClientCount returns the number of clients used so far this month.
+// If activity log is not enabled, the response will be nil
+func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]interface{} {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+
+	if !a.enabled {
+		// nothing to count
+		return nil
+	}
+
+	entityCount := len(a.activeEntities)
+	var tokenCount int
+	for _, countByNS := range a.currentSegment.tokenCount.CountByNamespaceID {
+		tokenCount += int(countByNS)
+	}
+	clientCount := entityCount + tokenCount
+
+	responseData := make(map[string]interface{})
+	responseData["distinct_entities"] = entityCount
+	responseData["non_entity_tokens"] = tokenCount
+	responseData["clients"] = clientCount
+
+	return responseData
+}
