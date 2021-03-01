@@ -437,6 +437,10 @@ type IAMAPI interface {
 	ListGroupsForUserPages(*iam.ListGroupsForUserInput, func(*iam.ListGroupsForUserOutput, bool) bool) error
 	ListGroupsForUserPagesWithContext(aws.Context, *iam.ListGroupsForUserInput, func(*iam.ListGroupsForUserOutput, bool) bool, ...request.Option) error
 
+	ListInstanceProfileTags(*iam.ListInstanceProfileTagsInput) (*iam.ListInstanceProfileTagsOutput, error)
+	ListInstanceProfileTagsWithContext(aws.Context, *iam.ListInstanceProfileTagsInput, ...request.Option) (*iam.ListInstanceProfileTagsOutput, error)
+	ListInstanceProfileTagsRequest(*iam.ListInstanceProfileTagsInput) (*request.Request, *iam.ListInstanceProfileTagsOutput)
+
 	ListInstanceProfiles(*iam.ListInstanceProfilesInput) (*iam.ListInstanceProfilesOutput, error)
 	ListInstanceProfilesWithContext(aws.Context, *iam.ListInstanceProfilesInput, ...request.Option) (*iam.ListInstanceProfilesOutput, error)
 	ListInstanceProfilesRequest(*iam.ListInstanceProfilesInput) (*request.Request, *iam.ListInstanceProfilesOutput)
@@ -451,12 +455,20 @@ type IAMAPI interface {
 	ListInstanceProfilesForRolePages(*iam.ListInstanceProfilesForRoleInput, func(*iam.ListInstanceProfilesForRoleOutput, bool) bool) error
 	ListInstanceProfilesForRolePagesWithContext(aws.Context, *iam.ListInstanceProfilesForRoleInput, func(*iam.ListInstanceProfilesForRoleOutput, bool) bool, ...request.Option) error
 
+	ListMFADeviceTags(*iam.ListMFADeviceTagsInput) (*iam.ListMFADeviceTagsOutput, error)
+	ListMFADeviceTagsWithContext(aws.Context, *iam.ListMFADeviceTagsInput, ...request.Option) (*iam.ListMFADeviceTagsOutput, error)
+	ListMFADeviceTagsRequest(*iam.ListMFADeviceTagsInput) (*request.Request, *iam.ListMFADeviceTagsOutput)
+
 	ListMFADevices(*iam.ListMFADevicesInput) (*iam.ListMFADevicesOutput, error)
 	ListMFADevicesWithContext(aws.Context, *iam.ListMFADevicesInput, ...request.Option) (*iam.ListMFADevicesOutput, error)
 	ListMFADevicesRequest(*iam.ListMFADevicesInput) (*request.Request, *iam.ListMFADevicesOutput)
 
 	ListMFADevicesPages(*iam.ListMFADevicesInput, func(*iam.ListMFADevicesOutput, bool) bool) error
 	ListMFADevicesPagesWithContext(aws.Context, *iam.ListMFADevicesInput, func(*iam.ListMFADevicesOutput, bool) bool, ...request.Option) error
+
+	ListOpenIDConnectProviderTags(*iam.ListOpenIDConnectProviderTagsInput) (*iam.ListOpenIDConnectProviderTagsOutput, error)
+	ListOpenIDConnectProviderTagsWithContext(aws.Context, *iam.ListOpenIDConnectProviderTagsInput, ...request.Option) (*iam.ListOpenIDConnectProviderTagsOutput, error)
+	ListOpenIDConnectProviderTagsRequest(*iam.ListOpenIDConnectProviderTagsInput) (*request.Request, *iam.ListOpenIDConnectProviderTagsOutput)
 
 	ListOpenIDConnectProviders(*iam.ListOpenIDConnectProvidersInput) (*iam.ListOpenIDConnectProvidersOutput, error)
 	ListOpenIDConnectProvidersWithContext(aws.Context, *iam.ListOpenIDConnectProvidersInput, ...request.Option) (*iam.ListOpenIDConnectProvidersOutput, error)
@@ -472,6 +484,10 @@ type IAMAPI interface {
 	ListPoliciesGrantingServiceAccess(*iam.ListPoliciesGrantingServiceAccessInput) (*iam.ListPoliciesGrantingServiceAccessOutput, error)
 	ListPoliciesGrantingServiceAccessWithContext(aws.Context, *iam.ListPoliciesGrantingServiceAccessInput, ...request.Option) (*iam.ListPoliciesGrantingServiceAccessOutput, error)
 	ListPoliciesGrantingServiceAccessRequest(*iam.ListPoliciesGrantingServiceAccessInput) (*request.Request, *iam.ListPoliciesGrantingServiceAccessOutput)
+
+	ListPolicyTags(*iam.ListPolicyTagsInput) (*iam.ListPolicyTagsOutput, error)
+	ListPolicyTagsWithContext(aws.Context, *iam.ListPolicyTagsInput, ...request.Option) (*iam.ListPolicyTagsOutput, error)
+	ListPolicyTagsRequest(*iam.ListPolicyTagsInput) (*request.Request, *iam.ListPolicyTagsOutput)
 
 	ListPolicyVersions(*iam.ListPolicyVersionsInput) (*iam.ListPolicyVersionsOutput, error)
 	ListPolicyVersionsWithContext(aws.Context, *iam.ListPolicyVersionsInput, ...request.Option) (*iam.ListPolicyVersionsOutput, error)
@@ -498,6 +514,10 @@ type IAMAPI interface {
 	ListRolesPages(*iam.ListRolesInput, func(*iam.ListRolesOutput, bool) bool) error
 	ListRolesPagesWithContext(aws.Context, *iam.ListRolesInput, func(*iam.ListRolesOutput, bool) bool, ...request.Option) error
 
+	ListSAMLProviderTags(*iam.ListSAMLProviderTagsInput) (*iam.ListSAMLProviderTagsOutput, error)
+	ListSAMLProviderTagsWithContext(aws.Context, *iam.ListSAMLProviderTagsInput, ...request.Option) (*iam.ListSAMLProviderTagsOutput, error)
+	ListSAMLProviderTagsRequest(*iam.ListSAMLProviderTagsInput) (*request.Request, *iam.ListSAMLProviderTagsOutput)
+
 	ListSAMLProviders(*iam.ListSAMLProvidersInput) (*iam.ListSAMLProvidersOutput, error)
 	ListSAMLProvidersWithContext(aws.Context, *iam.ListSAMLProvidersInput, ...request.Option) (*iam.ListSAMLProvidersOutput, error)
 	ListSAMLProvidersRequest(*iam.ListSAMLProvidersInput) (*request.Request, *iam.ListSAMLProvidersOutput)
@@ -508,6 +528,10 @@ type IAMAPI interface {
 
 	ListSSHPublicKeysPages(*iam.ListSSHPublicKeysInput, func(*iam.ListSSHPublicKeysOutput, bool) bool) error
 	ListSSHPublicKeysPagesWithContext(aws.Context, *iam.ListSSHPublicKeysInput, func(*iam.ListSSHPublicKeysOutput, bool) bool, ...request.Option) error
+
+	ListServerCertificateTags(*iam.ListServerCertificateTagsInput) (*iam.ListServerCertificateTagsOutput, error)
+	ListServerCertificateTagsWithContext(aws.Context, *iam.ListServerCertificateTagsInput, ...request.Option) (*iam.ListServerCertificateTagsOutput, error)
+	ListServerCertificateTagsRequest(*iam.ListServerCertificateTagsInput) (*request.Request, *iam.ListServerCertificateTagsOutput)
 
 	ListServerCertificates(*iam.ListServerCertificatesInput) (*iam.ListServerCertificatesOutput, error)
 	ListServerCertificatesWithContext(aws.Context, *iam.ListServerCertificatesInput, ...request.Option) (*iam.ListServerCertificatesOutput, error)
@@ -614,17 +638,65 @@ type IAMAPI interface {
 	SimulatePrincipalPolicyPages(*iam.SimulatePrincipalPolicyInput, func(*iam.SimulatePolicyResponse, bool) bool) error
 	SimulatePrincipalPolicyPagesWithContext(aws.Context, *iam.SimulatePrincipalPolicyInput, func(*iam.SimulatePolicyResponse, bool) bool, ...request.Option) error
 
+	TagInstanceProfile(*iam.TagInstanceProfileInput) (*iam.TagInstanceProfileOutput, error)
+	TagInstanceProfileWithContext(aws.Context, *iam.TagInstanceProfileInput, ...request.Option) (*iam.TagInstanceProfileOutput, error)
+	TagInstanceProfileRequest(*iam.TagInstanceProfileInput) (*request.Request, *iam.TagInstanceProfileOutput)
+
+	TagMFADevice(*iam.TagMFADeviceInput) (*iam.TagMFADeviceOutput, error)
+	TagMFADeviceWithContext(aws.Context, *iam.TagMFADeviceInput, ...request.Option) (*iam.TagMFADeviceOutput, error)
+	TagMFADeviceRequest(*iam.TagMFADeviceInput) (*request.Request, *iam.TagMFADeviceOutput)
+
+	TagOpenIDConnectProvider(*iam.TagOpenIDConnectProviderInput) (*iam.TagOpenIDConnectProviderOutput, error)
+	TagOpenIDConnectProviderWithContext(aws.Context, *iam.TagOpenIDConnectProviderInput, ...request.Option) (*iam.TagOpenIDConnectProviderOutput, error)
+	TagOpenIDConnectProviderRequest(*iam.TagOpenIDConnectProviderInput) (*request.Request, *iam.TagOpenIDConnectProviderOutput)
+
+	TagPolicy(*iam.TagPolicyInput) (*iam.TagPolicyOutput, error)
+	TagPolicyWithContext(aws.Context, *iam.TagPolicyInput, ...request.Option) (*iam.TagPolicyOutput, error)
+	TagPolicyRequest(*iam.TagPolicyInput) (*request.Request, *iam.TagPolicyOutput)
+
 	TagRole(*iam.TagRoleInput) (*iam.TagRoleOutput, error)
 	TagRoleWithContext(aws.Context, *iam.TagRoleInput, ...request.Option) (*iam.TagRoleOutput, error)
 	TagRoleRequest(*iam.TagRoleInput) (*request.Request, *iam.TagRoleOutput)
+
+	TagSAMLProvider(*iam.TagSAMLProviderInput) (*iam.TagSAMLProviderOutput, error)
+	TagSAMLProviderWithContext(aws.Context, *iam.TagSAMLProviderInput, ...request.Option) (*iam.TagSAMLProviderOutput, error)
+	TagSAMLProviderRequest(*iam.TagSAMLProviderInput) (*request.Request, *iam.TagSAMLProviderOutput)
+
+	TagServerCertificate(*iam.TagServerCertificateInput) (*iam.TagServerCertificateOutput, error)
+	TagServerCertificateWithContext(aws.Context, *iam.TagServerCertificateInput, ...request.Option) (*iam.TagServerCertificateOutput, error)
+	TagServerCertificateRequest(*iam.TagServerCertificateInput) (*request.Request, *iam.TagServerCertificateOutput)
 
 	TagUser(*iam.TagUserInput) (*iam.TagUserOutput, error)
 	TagUserWithContext(aws.Context, *iam.TagUserInput, ...request.Option) (*iam.TagUserOutput, error)
 	TagUserRequest(*iam.TagUserInput) (*request.Request, *iam.TagUserOutput)
 
+	UntagInstanceProfile(*iam.UntagInstanceProfileInput) (*iam.UntagInstanceProfileOutput, error)
+	UntagInstanceProfileWithContext(aws.Context, *iam.UntagInstanceProfileInput, ...request.Option) (*iam.UntagInstanceProfileOutput, error)
+	UntagInstanceProfileRequest(*iam.UntagInstanceProfileInput) (*request.Request, *iam.UntagInstanceProfileOutput)
+
+	UntagMFADevice(*iam.UntagMFADeviceInput) (*iam.UntagMFADeviceOutput, error)
+	UntagMFADeviceWithContext(aws.Context, *iam.UntagMFADeviceInput, ...request.Option) (*iam.UntagMFADeviceOutput, error)
+	UntagMFADeviceRequest(*iam.UntagMFADeviceInput) (*request.Request, *iam.UntagMFADeviceOutput)
+
+	UntagOpenIDConnectProvider(*iam.UntagOpenIDConnectProviderInput) (*iam.UntagOpenIDConnectProviderOutput, error)
+	UntagOpenIDConnectProviderWithContext(aws.Context, *iam.UntagOpenIDConnectProviderInput, ...request.Option) (*iam.UntagOpenIDConnectProviderOutput, error)
+	UntagOpenIDConnectProviderRequest(*iam.UntagOpenIDConnectProviderInput) (*request.Request, *iam.UntagOpenIDConnectProviderOutput)
+
+	UntagPolicy(*iam.UntagPolicyInput) (*iam.UntagPolicyOutput, error)
+	UntagPolicyWithContext(aws.Context, *iam.UntagPolicyInput, ...request.Option) (*iam.UntagPolicyOutput, error)
+	UntagPolicyRequest(*iam.UntagPolicyInput) (*request.Request, *iam.UntagPolicyOutput)
+
 	UntagRole(*iam.UntagRoleInput) (*iam.UntagRoleOutput, error)
 	UntagRoleWithContext(aws.Context, *iam.UntagRoleInput, ...request.Option) (*iam.UntagRoleOutput, error)
 	UntagRoleRequest(*iam.UntagRoleInput) (*request.Request, *iam.UntagRoleOutput)
+
+	UntagSAMLProvider(*iam.UntagSAMLProviderInput) (*iam.UntagSAMLProviderOutput, error)
+	UntagSAMLProviderWithContext(aws.Context, *iam.UntagSAMLProviderInput, ...request.Option) (*iam.UntagSAMLProviderOutput, error)
+	UntagSAMLProviderRequest(*iam.UntagSAMLProviderInput) (*request.Request, *iam.UntagSAMLProviderOutput)
+
+	UntagServerCertificate(*iam.UntagServerCertificateInput) (*iam.UntagServerCertificateOutput, error)
+	UntagServerCertificateWithContext(aws.Context, *iam.UntagServerCertificateInput, ...request.Option) (*iam.UntagServerCertificateOutput, error)
+	UntagServerCertificateRequest(*iam.UntagServerCertificateInput) (*request.Request, *iam.UntagServerCertificateOutput)
 
 	UntagUser(*iam.UntagUserInput) (*iam.UntagUserOutput, error)
 	UntagUserWithContext(aws.Context, *iam.UntagUserInput, ...request.Option) (*iam.UntagUserOutput, error)

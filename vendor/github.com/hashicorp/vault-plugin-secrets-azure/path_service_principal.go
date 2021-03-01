@@ -46,9 +46,14 @@ func pathServicePrincipal(b *azureSecretBackend) *framework.Path {
 				Description: "Name of the Vault role",
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathSPRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathSPRead,
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
+			},
 		},
+
 		HelpSynopsis:    pathServicePrincipalHelpSyn,
 		HelpDescription: pathServicePrincipalHelpDesc,
 	}
