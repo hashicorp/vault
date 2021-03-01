@@ -3881,7 +3881,7 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 	b.Backend.Logger().Info("installed new encryption key")
 
 	// In HA mode, we need to an upgrade path for the standby instances
-	if b.Core.ha != nil {
+	if b.Core.ha != nil && b.Core.KeyRotateGracePeriod() > 0 {
 		// Create the upgrade path to the new term
 		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
 			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
