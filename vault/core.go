@@ -558,6 +558,8 @@ type Core struct {
 	// for standby instances before we delete the upgrade keys
 	keyRotateGracePeriod *int64
 
+	autoRotateCancel context.CancelFunc
+
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -1914,6 +1916,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.persistFeatureFlags(ctx); err != nil {
 			return err
 		}
+
+	}
+
+	if c.autoRotateCancel == nil {
+		var autoRotateCtx context.Context
+		autoRotateCtx, c.autoRotateCancel = context.WithCancel(c.activeContext)
+		go c.autoRotateBarrierLoop(autoRotateCtx)
 	}
 
 	if !c.IsDRSecondary() {
@@ -2142,6 +2151,11 @@ func (c *Core) preSeal() error {
 	}
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
+	}
+
+	if c.autoRotateCancel != nil {
+		c.autoRotateCancel()
+		c.autoRotateCancel = nil
 	}
 
 	preSealPhysical(c)
@@ -2736,6 +2750,52 @@ func (c *Core) KeyRotateGracePeriod() time.Duration {
 
 func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
+}
+
+// Periodically test whether to automatically rotate the barrier key
+func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
+	t := time.NewTicker(autoRotateCheckInterval)
+	for {
+		select {
+		case <-t.C:
+			c.checkBarrierAutoRotate(ctx)
+		case <-ctx.Done():
+			t.Stop()
+			return
+		}
+	}
+}
+
+func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.isPrimary() {
+		reason, err := c.barrier.CheckBarrierAutoRotate(ctx)
+		if err != nil {
+			lf := c.logger.Error
+			if strings.HasSuffix(err.Error(), "context canceled") {
+				lf = c.logger.Debug
+			}
+			lf("error in barrier auto rotation", "error", err)
+			return
+		}
+		if reason != "" {
+			// Time to rotate.  Invoke the rotation handler in order to both rotate and create
+			// the replication canary
+			c.logger.Info("automatic barrier key rotation triggered", "reason", reason)
+
+			_, err := c.systemBackend.handleRotate(ctx, nil, nil)
+			if err != nil {
+				c.logger.Error("error automatically rotating barrier key", "error", err)
+			} else {
+				metrics.IncrCounter(barrierRotationsMetric, 1)
+			}
+		}
+	}
+}
+
+func (c *Core) isPrimary() bool {
+	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
 }
 
 func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {

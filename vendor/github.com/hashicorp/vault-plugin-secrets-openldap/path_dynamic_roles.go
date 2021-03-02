@@ -19,7 +19,7 @@ const (
 	secretCredsType = "creds"
 
 	dynamicRolePath = "role/"
-	dynamicCredPath = "cred/"
+	dynamicCredPath = "creds/"
 )
 
 func (b *backend) pathDynamicRoles() []*framework.Path {

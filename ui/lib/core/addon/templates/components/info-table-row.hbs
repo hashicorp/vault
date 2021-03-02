@@ -29,7 +29,7 @@
         /> No
       {{/if}}
     {{else if (and (not value) (and alwaysRender defaultShown))}}
-      {{defaultShown}}
+      <span data-test-row-value="{{label}}">{{defaultShown}}</span>
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray
@@ -42,8 +42,6 @@
           @viewAll={{viewAll}}
           @wildcardLabel={{wildcardLabel}}
         />
-      {{else if isLink}}
-        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{value.[0]}} >{{value}}</LinkTo>
       {{else}}
         {{#if tooltipText}}
           <ToolTip

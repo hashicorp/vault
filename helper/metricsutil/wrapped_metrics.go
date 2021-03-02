@@ -52,6 +52,10 @@ var _ Metrics = &ClusterMetricSink{}
 // Convenience alias
 type Label = metrics.Label
 
+func (m *ClusterMetricSink) SetGauge(key []string, val float32) {
+	m.Sink.SetGaugeWithLabels(key, val, []Label{{"cluster", m.ClusterName.Load().(string)}})
+}
+
 func (m *ClusterMetricSink) SetGaugeWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.SetGaugeWithLabels(key, val,
 		append(labels, Label{"cluster", m.ClusterName.Load().(string)}))
@@ -60,6 +64,10 @@ func (m *ClusterMetricSink) SetGaugeWithLabels(key []string, val float32, labels
 func (m *ClusterMetricSink) IncrCounterWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.IncrCounterWithLabels(key, val,
 		append(labels, Label{"cluster", m.ClusterName.Load().(string)}))
+}
+
+func (m *ClusterMetricSink) AddSample(key []string, val float32) {
+	m.Sink.AddSampleWithLabels(key, val, []Label{{"cluster", m.ClusterName.Load().(string)}})
 }
 
 func (m *ClusterMetricSink) AddSampleWithLabels(key []string, val float32, labels []Label) {

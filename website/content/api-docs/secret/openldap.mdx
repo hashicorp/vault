@@ -296,7 +296,32 @@ entries. All LDIF entries are performed in order. If Vault encounters an error w
 as a base64 encoded string.
 
 `username_template` `(string)` - A template used to generate a dynamic username. This will be used to fill in the
-`.Username` field within the `creation_ldif` string. See appendix for available template functions.
+`.Username` field within the `creation_ldif` string.
+
+<details>
+<summary><b>Default Username Template</b></summary>
+
+```
+v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}
+```
+
+<details>
+<summary><b>Example Usernames:</b></summary>
+
+| Example       |                                            |
+| ------------- | ------------------------------------------ |
+| `DisplayName` | `token`                                    |
+| `RoleName`    | `myrolename`                               |
+| Username      | `v_token_myrolename_uszt1n4cyh_1614294836` |
+
+| Example       |                                                                      |
+| ------------- | -------------------------------------------------------------------- |
+| `DisplayName` | `amuchlonger_dispname`                                               |
+| `RoleName`    | `role-name-with-dashes`                                              |
+| Username      | `v_amuchlonger_dispname_role-name-with-dashes_s0t9xb0jsa_1614294836` |
+
+</details>
+</details>
 
 `default_ttl` `(string/int)` - Specifies the TTL for the leases associated with this role. Accepts time suffixed
 strings ("1h") or an integer number of seconds. Defaults to system/engine default TTL time. The
@@ -306,6 +331,10 @@ strings ("1h") or an integer number of seconds. Defaults to system/engine defaul
 strings ("1h") or an integer number of seconds. Defaults to system/mount default TTL time; this value is allowed to
 be less than the mount max TTL (or, if not set, the system max TTL), but it is not allowed to be longer. The
 [available units](https://golang.org/pkg/time/#ParseDuration) are: `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`.
+
+The `creation_ldif`, `deletion_ldif`, `rollback_ldif`, and `username_template` fields are all templated fields. See
+[Username Templating](/docs/concepts/username-templating) for details on how to use templating. Also see
+[Templates](#templates) for specifics on what data is available for each template.
 
 #### Sample Payload
 
