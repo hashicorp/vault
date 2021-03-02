@@ -452,7 +452,6 @@ func (b *RaftBackend) defaultAutopilotConfig() *AutopilotConfig {
 		LastContactThreshold:           10 * time.Second,
 		DeadServerLastContactThreshold: 24 * time.Hour,
 		MaxTrailingLogs:                1000,
-		MinQuorum:                      3,
 		ServerStabilizationTime:        10 * time.Second,
 	}
 }
