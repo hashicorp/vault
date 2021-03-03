@@ -6,10 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -30,6 +32,9 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
+	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -461,6 +466,8 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
+	var leaseCache *cache.LeaseCache
+	var previousToken string
 	// Parse agent listener configurations
 	if config.Cache != nil && len(config.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
@@ -479,7 +486,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
-		leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
 			Client:      client,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
@@ -488,6 +495,152 @@ func (c *AgentCommand) Run(args []string) int {
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
 			return 1
+		}
+
+		// Configure persistent storage and add to LeaseCache
+		if config.Cache.Persist != nil {
+			if config.Cache.Persist.Path == "" {
+				c.UI.Error("must specify persistent cache path")
+				return 1
+			}
+
+			// Set AAD based on key protection type
+			var aad string
+			switch config.Cache.Persist.Type {
+			case "kubernetes":
+				aad, err = getServiceAccountJWT(config.Cache.Persist.ServiceAccountTokenFile)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountTokenFile, err))
+					return 1
+				}
+			default:
+				c.UI.Error(fmt.Sprintf("persistent key protection type %q not supported", config.Cache.Persist.Type))
+				return 1
+			}
+
+			// Check if bolt file exists already
+			dbFileExists, err := cacheboltdb.DBFileExists(config.Cache.Persist.Path)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("failed to check if bolt file exists at path %s: %s", config.Cache.Persist.Path, err))
+				return 1
+			}
+			if dbFileExists {
+				// Open the bolt file, but wait to setup Encryption
+				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+					Path:   config.Cache.Persist.Path,
+					Logger: cacheLogger.Named("cacheboltdb"),
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					return 1
+				}
+
+				// Get the token from bolt for retrieving the encryption key,
+				// then setup encryption so that restore is possible
+				token, err := ps.GetRetrievalToken()
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error getting retrieval token from persistent cache: %v", err))
+				}
+
+				if err := ps.Close(); err != nil {
+					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
+				}
+
+				km, err := keymanager.NewPassthroughKeyManager(token)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
+					return 1
+				}
+
+				// Open the bolt file with the wrapper provided
+				ps, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+					Path:    config.Cache.Persist.Path,
+					Logger:  cacheLogger.Named("cacheboltdb"),
+					Wrapper: km.Wrapper(),
+					AAD:     aad,
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					return 1
+				}
+
+				// Restore anything in the persistent cache to the memory cache
+				if err := leaseCache.Restore(ctx, ps); err != nil {
+					c.UI.Error(fmt.Sprintf("Error restoring in-memory cache from persisted file: %v", err))
+					if config.Cache.Persist.ExitOnErr {
+						return 1
+					}
+				}
+				cacheLogger.Info("loaded memcache from persistent storage")
+
+				// Check for previous auto-auth token
+				oldTokenBytes, err := ps.GetAutoAuthToken(ctx)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error in fetching previous auto-auth token: %s", err))
+					if config.Cache.Persist.ExitOnErr {
+						return 1
+					}
+				}
+				if len(oldTokenBytes) > 0 {
+					oldToken, err := cachememdb.Deserialize(oldTokenBytes)
+					if err != nil {
+						c.UI.Error(fmt.Sprintf("Error in deserializing previous auto-auth token cache entry: %s", err))
+						if config.Cache.Persist.ExitOnErr {
+							return 1
+						}
+					}
+					previousToken = oldToken.Token
+				}
+
+				// If keep_after_import true, set persistent storage layer in
+				// leaseCache, else remove db file
+				if config.Cache.Persist.KeepAfterImport {
+					defer ps.Close()
+					leaseCache.SetPersistentStorage(ps)
+				} else {
+					if err := ps.Close(); err != nil {
+						c.UI.Warn(fmt.Sprintf("failed to close persistent cache file: %s", err))
+					}
+					dbFile := filepath.Join(config.Cache.Persist.Path, cacheboltdb.DatabaseFileName)
+					if err := os.Remove(dbFile); err != nil {
+						c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
+						if config.Cache.Persist.ExitOnErr {
+							return 1
+						}
+					}
+				}
+			} else {
+				km, err := keymanager.NewPassthroughKeyManager(nil)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
+					return 1
+				}
+				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+					Path:    config.Cache.Persist.Path,
+					Logger:  cacheLogger.Named("cacheboltdb"),
+					Wrapper: km.Wrapper(),
+					AAD:     aad,
+				})
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
+					return 1
+				}
+				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
+
+				// Stash the key material in bolt
+				token, err := km.RetrievalToken()
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
+					return 1
+				}
+				if err := ps.StoreRetrievalToken(token); err != nil {
+					c.UI.Error(fmt.Sprintf("Error setting key in persistent cache: %v", err))
+					return 1
+				}
+
+				defer ps.Close()
+				leaseCache.SetPersistentStorage(ps)
+			}
 		}
 
 		var inmemSink sink.Sink
@@ -585,6 +738,11 @@ func (c *AgentCommand) Run(args []string) int {
 			select {
 			case <-c.ShutdownCh:
 				c.UI.Output("==> Vault agent shutdown triggered")
+				// Let the lease cache know this is a shutdown; no need to evict
+				// everything
+				if leaseCache != nil {
+					leaseCache.SetShuttingDown(true)
+				}
 				return nil
 			case <-ctx.Done():
 				return nil
@@ -604,6 +762,7 @@ func (c *AgentCommand) Run(args []string) int {
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
+			Token:                        previousToken,
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
@@ -624,6 +783,11 @@ func (c *AgentCommand) Run(args []string) int {
 		g.Add(func() error {
 			return ah.Run(ctx, method)
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 		})
 
@@ -650,12 +814,22 @@ func (c *AgentCommand) Run(args []string) int {
 
 			return err
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 		})
 
 		g.Add(func() error {
 			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 			ts.Stop()
 		})
@@ -792,4 +966,17 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
+// the default service account file path in kubernetes.
+func getServiceAccountJWT(tokenFile string) (string, error) {
+	if len(tokenFile) == 0 {
+		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	}
+	token, err := ioutil.ReadFile(tokenFile)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(token)), nil
 }

@@ -21,6 +21,12 @@ auto_auth {
 
 cache {
 	use_auto_auth_token = true
+	persist "kubernetes" {
+		path = "/vault/agent-cache/"
+		keep_after_import = true
+		exit_on_err = true
+		service_account_token_file = "/tmp/serviceaccount/token"
+	}
 }
 
 listener {

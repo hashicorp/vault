@@ -66,6 +66,13 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
+			Persist: &Persist{
+				Type:                    "kubernetes",
+				Path:                    "/vault/agent-cache/",
+				KeepAfterImport:         true,
+				ExitOnErr:               true,
+				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
+			},
 		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
@@ -442,6 +449,52 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-cache-persist-false.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		Cache: &Cache{
+			Persist: &Persist{
+				Type:                    "kubernetes",
+				Path:                    "/vault/agent-cache/",
+				KeepAfterImport:         false,
+				ExitOnErr:               false,
+				ServiceAccountTokenFile: "",
+			},
+		},
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+		},
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_PersistMissingType(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/config-cache-persist-empty-type.hcl")
+	if err == nil || os.IsNotExist(err) {
+		t.Fatal("expected error or file is missing")
 	}
 }
 

@@ -50,6 +50,16 @@ type Cache struct {
 	ForceAutoAuthToken  bool        `hcl:"-"`
 	EnforceConsistency  string      `hcl:"enforce_consistency"`
 	WhenInconsistent    string      `hcl:"when_inconsistent"`
+	Persist             *Persist    `hcl:"persist"`
+}
+
+// Persist contains configuration needed for persistent caching
+type Persist struct {
+	Type                    string
+	Path                    string `hcl:"path"`
+	KeepAfterImport         bool   `hcl:"keep_after_import"`
+	ExitOnErr               bool   `hcl:"exit_on_err"`
+	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -309,8 +319,51 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 			}
 		}
 	}
-
 	result.Cache = &c
+
+	subs, ok := item.Val.(*ast.ObjectType)
+	if !ok {
+		return fmt.Errorf("could not parse %q as an object", name)
+	}
+	subList := subs.List
+	if err := parsePersist(result, subList); err != nil {
+		return fmt.Errorf("error parsing persist: %w", err)
+	}
+
+	return nil
+}
+
+func parsePersist(result *Config, list *ast.ObjectList) error {
+	name := "persist"
+
+	persistList := list.Filter(name)
+	if len(persistList.Items) == 0 {
+		return nil
+	}
+
+	if len(persistList.Items) > 1 {
+		return fmt.Errorf("only one %q block is required", name)
+	}
+
+	item := persistList.Items[0]
+
+	var p Persist
+	err := hcl.DecodeObject(&p, item.Val)
+	if err != nil {
+		return err
+	}
+
+	if p.Type == "" {
+		if len(item.Keys) == 1 {
+			p.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+		}
+		if p.Type == "" {
+			return errors.New("persist type must be specified")
+		}
+	}
+
+	result.Cache.Persist = &p
+
 	return nil
 }
 
