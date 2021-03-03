@@ -39,6 +39,13 @@ leader node.
 - `leader_client_key` `(string: "")` - Client key used to communicate with
   Raft's leader node.
 
+Additionally, the following options are allowed in Vault open-source, but
+relevant functionality is only supported in Vault Enterprise:
+
+- `non_voter` `(bool: false)` - Joins the node to the cluster in non-voter mode
+  which results in Vault's data being replicated to it, but does not contribute
+  to the quorum count.
+
 ### Sample Payload
 
 ```json
