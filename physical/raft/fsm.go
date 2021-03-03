@@ -38,10 +38,11 @@ const (
 
 var (
 	// dataBucketName is the value we use for the bucket
-	dataBucketName   = []byte("data")
-	configBucketName = []byte("config")
-	latestIndexKey   = []byte("latest_indexes")
-	latestConfigKey  = []byte("latest_config")
+	dataBucketName     = []byte("data")
+	configBucketName   = []byte("config")
+	latestIndexKey     = []byte("latest_indexes")
+	latestConfigKey    = []byte("latest_config")
+	localNodeConfigKey = []byte("local_node_config")
 )
 
 // Verify FSM satisfies the correct interfaces
@@ -86,10 +87,13 @@ type FSM struct {
 	restoreCb restoreCallback
 
 	chunker *raftchunking.ChunkingBatchingFSM
+
+	localID         string
+	desiredSuffrage string
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(path string, logger log.Logger) (*FSM, error) {
+func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
@@ -106,6 +110,11 @@ func NewFSM(path string, logger log.Logger) (*FSM, error) {
 		latestTerm:   latestTerm,
 		latestIndex:  latestIndex,
 		latestConfig: latestConfig,
+		// Assume that the default intent is to join as as voter. This will be updated
+		// when this node joins a cluster with a different suffrage, or during cluster
+		// setup if this is already part of a cluster with a desired suffrage.
+		desiredSuffrage: "voter",
+		localID:         localID,
 	}
 
 	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
@@ -241,6 +250,113 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 	}
 
 	return nil
+}
+
+func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
+	var configBytes []byte
+	if err := f.db.View(func(tx *bolt.Tx) error {
+		value := tx.Bucket(configBucketName).Get(localNodeConfigKey)
+		if value != nil {
+			configBytes = make([]byte, len(value))
+			copy(configBytes, value)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if configBytes == nil {
+		return nil, nil
+	}
+
+	var lnConfig LocalNodeConfigValue
+	if configBytes != nil {
+		err := proto.Unmarshal(configBytes, &lnConfig)
+		if err != nil {
+			return nil, err
+		}
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
+		return &lnConfig, nil
+	}
+
+	return nil, nil
+}
+
+func (f *FSM) upgradeLocalNodeConfig() error {
+	// Read the local node config
+	lnConfig, err := f.localNodeConfig()
+	if err != nil {
+		return err
+	}
+
+	// Entry is already present. Get the suffrage value.
+	if lnConfig != nil {
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
+		return nil
+	}
+
+	//
+	// This is the upgrade case where there is no entry
+	//
+
+	lnConfig = &LocalNodeConfigValue{}
+
+	// Refer to the persisted latest raft config
+	config := f.latestConfig.Load().(*ConfigurationValue)
+
+	// If there is no config, then this is a fresh node coming up. This could end up
+	// being a voter or non-voter. But by default assume that this is a voter. It
+	// will be changed if this node joins the cluster as a non-voter.
+	if config == nil {
+		lnConfig.DesiredSuffrage = f.desiredSuffrage
+		return f.persistDesiredSuffrage(lnConfig)
+	}
+
+	// Get the last known suffrage of the node and assume that it is the desired
+	// suffrage. There is no better alternative here.
+	for _, srv := range config.Servers {
+		if srv.Id == f.localID {
+			switch srv.Suffrage {
+			case int32(raft.Nonvoter):
+				lnConfig.DesiredSuffrage = "non-voter"
+			default:
+				lnConfig.DesiredSuffrage = "voter"
+			}
+			// Bring the intent to the fsm instance.
+			f.desiredSuffrage = lnConfig.DesiredSuffrage
+			break
+		}
+	}
+
+	return f.persistDesiredSuffrage(lnConfig)
+}
+
+// recordSuffrage is called when a node successfully joins the cluster. This
+// intent should land in the stored configuration. If the config isn't available
+// yet, we still go ahead and store the intent in the fsm. During the next
+// update to the configuration, this intent will be persisted.
+func (f *FSM) recordSuffrage(desiredSuffrage string) error {
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	if err := f.persistDesiredSuffrage(&LocalNodeConfigValue{
+		DesiredSuffrage: desiredSuffrage,
+	}); err != nil {
+		return err
+	}
+
+	f.desiredSuffrage = desiredSuffrage
+	return nil
+}
+
+func (f *FSM) persistDesiredSuffrage(lnconfig *LocalNodeConfigValue) error {
+	dsBytes, err := proto.Marshal(lnconfig)
+	if err != nil {
+		return err
+	}
+
+	return f.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket(configBucketName).Put(localNodeConfigKey, dsBytes)
+	})
 }
 
 func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
@@ -645,6 +761,12 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	f.l.Lock()
 	defer f.l.Unlock()
 
+	// Cache the local node config before closing the db file
+	lnConfig, err := f.localNodeConfig()
+	if err != nil {
+		return err
+	}
+
 	// Close the db file
 	if err := f.db.Close(); err != nil {
 		f.logger.Error("failed to close database file", "error", err)
@@ -669,6 +791,16 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	if err := f.openDBFile(dbPath); err != nil {
 		f.logger.Error("failed to open new database file", "error", err)
 		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to open new bolt file: {{err}}", err))
+	}
+
+	// Handle local node config restore. lnConfig should not be nil here, but
+	// adding the nil check anyways for safety.
+	if lnConfig != nil {
+		// Persist the local node config on the restored fsm.
+		if err := f.persistDesiredSuffrage(lnConfig); err != nil {
+			f.logger.Error("failed to persist local node config from before the restore", "error", err)
+			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to persist local node config from before the restore: {{err}}", err))
+		}
 	}
 
 	return retErr.ErrorOrNil()

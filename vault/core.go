@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -517,8 +519,8 @@ type Core struct {
 	// Stores request counters
 	counters counters
 
-	// Stores the raft applied index for standby nodes
-	raftFollowerStates *raftFollowerStates
+	// raftFollowerStates tracks information about all the raft follower nodes.
+	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
@@ -562,6 +564,9 @@ type Core struct {
 	numExpirationWorkers int
 
 	IndexHeaderHMACKey uberAtomic.Value
+
+	// disableAutopilot is used to disable the autopilot subsystem in raft storage
+	disableAutopilot bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -667,6 +672,9 @@ type CoreConfig struct {
 
 	// number of workers to use for lease revocation in the expiration manager
 	NumExpirationWorkers int
+
+	// DisableAutopilot is used to disable autopilot subsystem in raft storage
+	DisableAutopilot bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -813,6 +821,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activityLogConfig:        conf.ActivityLogConfig,
 		keyRotateGracePeriod:     new(int64),
 		numExpirationWorkers:     conf.NumExpirationWorkers,
+		raftFollowerStates:       raft.NewFollowerStates(),
+		disableAutopilot:         conf.DisableAutopilot,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)

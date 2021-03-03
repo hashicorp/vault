@@ -87,6 +87,8 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 
 	}
 
+	backend.DisableAutopilot()
+
 	return backend, raftDir
 }
 

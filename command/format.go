@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,10 +65,11 @@ type Formatter interface {
 }
 
 var Formatters = map[string]Formatter{
-	"json":  JsonFormatter{},
-	"table": TableFormatter{},
-	"yaml":  YamlFormatter{},
-	"yml":   YamlFormatter{},
+	"json":   JsonFormatter{},
+	"table":  TableFormatter{},
+	"yaml":   YamlFormatter{},
+	"yml":    YamlFormatter{},
+	"pretty": PrettyFormatter{},
 }
 
 func Format(ui cli.Ui) string {
@@ -113,6 +115,98 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 		ui.Output(strings.TrimSpace(string(b)))
 	}
 	return err
+}
+
+type PrettyFormatter struct{}
+
+func (p PrettyFormatter) Format(data interface{}) ([]byte, error) {
+	return nil, nil
+}
+
+func (p PrettyFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	switch data.(type) {
+	case *api.AutopilotState:
+		p.OutputAutopilotState(ui, data)
+	default:
+		return errors.New("cannot use the pretty formatter for this type")
+	}
+	return nil
+}
+
+func outputStringSlice(buffer *bytes.Buffer, indent string, values []string) {
+	for _, val := range values {
+		buffer.WriteString(fmt.Sprintf("%s%s\n", indent, val))
+	}
+}
+
+type mapOutput struct {
+	key   string
+	value string
+}
+
+func formatServer(srv *api.AutopilotServer) string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(fmt.Sprintf("   %s\n", srv.ID))
+	buffer.WriteString(fmt.Sprintf("      Name:            %s\n", srv.Name))
+	buffer.WriteString(fmt.Sprintf("      Address:         %s\n", srv.Address))
+	buffer.WriteString(fmt.Sprintf("      Status:          %s\n", srv.Status))
+	buffer.WriteString(fmt.Sprintf("      Node Status:     %s\n", srv.NodeStatus))
+	buffer.WriteString(fmt.Sprintf("      Healthy:         %t\n", srv.Healthy))
+	buffer.WriteString(fmt.Sprintf("      Last Contact:    %s\n", srv.LastContact))
+	buffer.WriteString(fmt.Sprintf("      Last Term:       %d\n", srv.LastTerm))
+	buffer.WriteString(fmt.Sprintf("      Last Index:      %d\n", srv.LastIndex))
+
+	if len(srv.Meta) > 0 {
+		buffer.WriteString(fmt.Sprintf("      Meta\n"))
+		var outputs []mapOutput
+		for k, v := range srv.Meta {
+			outputs = append(outputs, mapOutput{key: k, value: fmt.Sprintf("         %q: %q\n", k, v)})
+		}
+
+		sort.Slice(outputs, func(i, j int) bool {
+			return outputs[i].key < outputs[j].key
+		})
+
+		for _, output := range outputs {
+			buffer.WriteString(output.value)
+		}
+	}
+
+	return buffer.String()
+}
+
+func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
+	state := data.(*api.AutopilotState)
+
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))
+	buffer.WriteString(fmt.Sprintf("Failure Tolerance:            %d\n", state.FailureTolerance))
+	buffer.WriteString(fmt.Sprintf("Optimistic Failure Tolerance: %d\n", state.OptimisticFailureTolerance))
+	buffer.WriteString(fmt.Sprintf("Leader:                       %s\n", state.Leader))
+	buffer.WriteString("Voters:\n")
+	outputStringSlice(&buffer, "   ", state.Voters)
+
+	if len(state.NonVoters) > 0 {
+		buffer.WriteString("Non Voters:\n")
+		outputStringSlice(&buffer, "   ", state.NonVoters)
+	}
+
+	buffer.WriteString("Servers:\n")
+	var outputs []mapOutput
+	for id, srv := range state.Servers {
+		outputs = append(outputs, mapOutput{key: id, value: formatServer(srv)})
+	}
+
+	sort.Slice(outputs, func(i, j int) bool {
+		return outputs[i].key < outputs[j].key
+	})
+
+	for _, output := range outputs {
+		buffer.WriteString(output.value)
+	}
+
+	ui.Output(buffer.String())
 }
 
 // An output formatter for table output of an object
