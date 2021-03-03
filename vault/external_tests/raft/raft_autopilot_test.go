@@ -156,7 +156,6 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 		DeadServerLastContactThreshold: 24 * time.Hour,
 		LastContactThreshold:           10 * time.Second,
 		MaxTrailingLogs:                1000,
-		MinQuorum:                      3,
 		ServerStabilizationTime:        10 * time.Second,
 	}
 	configCheckFunc(config)
