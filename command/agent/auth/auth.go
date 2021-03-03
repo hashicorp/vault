@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"time"
@@ -362,5 +361,5 @@ func (b *agentBackoff) reset() {
 }
 
 func (b agentBackoff) String() string {
-	return fmt.Sprintf("%.2fs", b.current.Seconds())
+	return b.current.Truncate(10 * time.Millisecond).String()
 }
