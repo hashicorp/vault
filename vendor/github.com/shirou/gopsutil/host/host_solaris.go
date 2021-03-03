@@ -9,86 +9,19 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shirou/gopsutil/internal/common"
 )
 
-func Info() (*InfoStat, error) {
-	return InfoWithContext(context.Background())
-}
-
-func InfoWithContext(ctx context.Context) (*InfoStat, error) {
-	result := &InfoStat{
-		OS: runtime.GOOS,
-	}
-
-	hostname, err := os.Hostname()
+func HostIDWithContext(ctx context.Context) (string, error) {
+	platform, err := parseReleaseFile()
 	if err != nil {
-		return nil, err
-	}
-	result.Hostname = hostname
-
-	// Parse versions from output of `uname(1)`
-	uname, err := exec.LookPath("uname")
-	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	out, err := invoke.CommandWithContext(ctx, uname, "-srv")
-	if err != nil {
-		return nil, err
-	}
-
-	fields := strings.Fields(string(out))
-	if len(fields) >= 1 {
-		result.PlatformFamily = fields[0]
-	}
-	if len(fields) >= 2 {
-		result.KernelVersion = fields[1]
-	}
-	if len(fields) == 3 {
-		result.PlatformVersion = fields[2]
-	}
-
-	kernelArch, err := kernelArch()
-	if err == nil {
-		result.KernelArch = kernelArch
-	}
-
-	// Find distribution name from /etc/release
-	fh, err := os.Open("/etc/release")
-	if err != nil {
-		return nil, err
-	}
-	defer fh.Close()
-
-	sc := bufio.NewScanner(fh)
-	if sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		switch {
-		case strings.HasPrefix(line, "SmartOS"):
-			result.Platform = "SmartOS"
-		case strings.HasPrefix(line, "OpenIndiana"):
-			result.Platform = "OpenIndiana"
-		case strings.HasPrefix(line, "OmniOS"):
-			result.Platform = "OmniOS"
-		case strings.HasPrefix(line, "Open Storage"):
-			result.Platform = "NexentaStor"
-		case strings.HasPrefix(line, "Solaris"):
-			result.Platform = "Solaris"
-		case strings.HasPrefix(line, "Oracle Solaris"):
-			result.Platform = "Solaris"
-		default:
-			result.Platform = strings.Fields(line)[0]
-		}
-	}
-
-	switch result.Platform {
-	case "SmartOS":
+	if platform == "SmartOS" {
 		// If everything works, use the current zone ID as the HostID if present.
 		zonename, err := exec.LookPath("zonename")
 		if err == nil {
@@ -102,58 +35,44 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 					if line == "global" {
 						hostname, err := os.Hostname()
 						if err == nil {
-							result.HostID = hostname
+							return hostname, nil
 						}
 					} else {
-						result.HostID = strings.TrimSpace(line)
-						break
+						return strings.TrimSpace(line), nil
 					}
 				}
 			}
 		}
 	}
 
-	// If HostID is still empty, use hostid(1), which can lie to callers but at
+	// If HostID is still unknown, use hostid(1), which can lie to callers but at
 	// this point there are no hardware facilities available.  This behavior
 	// matches that of other supported OSes.
-	if result.HostID == "" {
-		hostID, err := exec.LookPath("hostid")
+	hostID, err := exec.LookPath("hostid")
+	if err == nil {
+		out, err := invoke.CommandWithContext(ctx, hostID)
 		if err == nil {
-			out, err := invoke.CommandWithContext(ctx, hostID)
-			if err == nil {
-				sc := bufio.NewScanner(bytes.NewReader(out))
-				for sc.Scan() {
-					line := sc.Text()
-					result.HostID = strings.TrimSpace(line)
-					break
-				}
+			sc := bufio.NewScanner(bytes.NewReader(out))
+			for sc.Scan() {
+				line := sc.Text()
+				return strings.TrimSpace(line), nil
 			}
 		}
 	}
 
-	// Find the boot time and calculate uptime relative to it
-	bootTime, err := BootTime()
-	if err != nil {
-		return nil, err
-	}
-	result.BootTime = bootTime
-	result.Uptime = uptimeSince(bootTime)
+	return "", nil
+}
 
-	// Count number of processes based on the number of entries in /proc
+// Count number of processes based on the number of entries in /proc
+func numProcs(ctx context.Context) (uint64, error) {
 	dirs, err := ioutil.ReadDir("/proc")
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	result.Procs = uint64(len(dirs))
-
-	return result, nil
+	return uint64(len(dirs)), nil
 }
 
 var kstatMatch = regexp.MustCompile(`([^\s]+)[\s]+([^\s]*)`)
-
-func BootTime() (uint64, error) {
-	return BootTimeWithContext(context.Background())
-}
 
 func BootTimeWithContext(ctx context.Context) (uint64, error) {
 	kstat, err := exec.LookPath("kstat")
@@ -174,80 +93,92 @@ func BootTimeWithContext(ctx context.Context) (uint64, error) {
 	return strconv.ParseUint(kstats[0][2], 10, 64)
 }
 
-func Uptime() (uint64, error) {
-	return UptimeWithContext(context.Background())
-}
-
 func UptimeWithContext(ctx context.Context) (uint64, error) {
 	bootTime, err := BootTime()
 	if err != nil {
 		return 0, err
 	}
-	return uptimeSince(bootTime), nil
-}
-
-func uptimeSince(since uint64) uint64 {
-	return uint64(time.Now().Unix()) - since
-}
-
-func Users() ([]UserStat, error) {
-	return UsersWithContext(context.Background())
+	return timeSince(bootTime), nil
 }
 
 func UsersWithContext(ctx context.Context) ([]UserStat, error) {
 	return []UserStat{}, common.ErrNotImplementedError
 }
 
-func SensorsTemperatures() ([]TemperatureStat, error) {
-	return SensorsTemperaturesWithContext(context.Background())
-}
-
 func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, error) {
 	return []TemperatureStat{}, common.ErrNotImplementedError
-}
-
-func Virtualization() (string, string, error) {
-	return VirtualizationWithContext(context.Background())
 }
 
 func VirtualizationWithContext(ctx context.Context) (string, string, error) {
 	return "", "", common.ErrNotImplementedError
 }
 
-func KernelVersion() (string, error) {
-	return KernelVersionWithContext(context.Background())
+// Find distribution name from /etc/release
+func parseReleaseFile() (string, error) {
+	b, err := ioutil.ReadFile("/etc/release")
+	if err != nil {
+		return "", err
+	}
+	s := string(b)
+	s = strings.TrimSpace(s)
+
+	var platform string
+
+	switch {
+	case strings.HasPrefix(s, "SmartOS"):
+		platform = "SmartOS"
+	case strings.HasPrefix(s, "OpenIndiana"):
+		platform = "OpenIndiana"
+	case strings.HasPrefix(s, "OmniOS"):
+		platform = "OmniOS"
+	case strings.HasPrefix(s, "Open Storage"):
+		platform = "NexentaStor"
+	case strings.HasPrefix(s, "Solaris"):
+		platform = "Solaris"
+	case strings.HasPrefix(s, "Oracle Solaris"):
+		platform = "Solaris"
+	default:
+		platform = strings.Fields(s)[0]
+	}
+
+	return platform, nil
 }
 
-func KernelVersionWithContext(ctx context.Context) (string, error) {
-	// Parse versions from output of `uname(1)`
+// parseUnameOutput returns platformFamily, kernelVersion and platformVersion
+func parseUnameOutput(ctx context.Context) (string, string, string, error) {
 	uname, err := exec.LookPath("uname")
-	if err != nil {
-		return "", err
-	}
-
-	out, err := invoke.CommandWithContext(ctx, uname, "-srv")
-	if err != nil {
-		return "", err
-	}
-
-	fields := strings.Fields(string(out))
-	if len(fields) >= 2 {
-		return fields[1], nil
-	}
-	return "", fmt.Errorf("could not get kernel version")
-}
-
-func PlatformInformation() (platform string, family string, version string, err error) {
-	return PlatformInformationWithContext(context.Background())
-}
-
-func PlatformInformationWithContext(ctx context.Context) (platform string, family string, version string, err error) {
-	/* This is not finished yet at all. Please contribute! */
-
-	version, err = KernelVersion()
 	if err != nil {
 		return "", "", "", err
 	}
 
-	return "solaris", "solaris", version, nil
+	out, err := invoke.CommandWithContext(ctx, uname, "-srv")
+	if err != nil {
+		return "", "", "", err
+	}
+
+	fields := strings.Fields(string(out))
+	if len(fields) < 3 {
+		return "", "", "", fmt.Errorf("malformed `uname` output")
+	}
+
+	return fields[0], fields[1], fields[2], nil
+}
+
+func KernelVersionWithContext(ctx context.Context) (string, error) {
+	_, kernelVersion, _, err := parseUnameOutput(ctx)
+	return kernelVersion, err
+}
+
+func PlatformInformationWithContext(ctx context.Context) (string, string, string, error) {
+	platform, err := parseReleaseFile()
+	if err != nil {
+		return "", "", "", err
+	}
+
+	platformFamily, _, platformVersion, err := parseUnameOutput(ctx)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return platform, platformFamily, platformVersion, nil
 }

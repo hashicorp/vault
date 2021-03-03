@@ -384,6 +384,8 @@ type Client struct {
 	wrappingLookupFunc WrappingLookupFunc
 	mfaCreds           []string
 	policyOverride     bool
+	requestCallbacks   []RequestCallback
+	responseCallbacks  []ResponseCallback
 }
 
 // NewClient returns a new client for the given configuration.
@@ -463,6 +465,28 @@ func NewClient(c *Config) (*Client, error) {
 	return client, nil
 }
 
+func (c *Client) CloneConfig() *Config {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	newConfig := DefaultConfig()
+	newConfig.Address = c.config.Address
+	newConfig.AgentAddress = c.config.AgentAddress
+	newConfig.MaxRetries = c.config.MaxRetries
+	newConfig.Timeout = c.config.Timeout
+	newConfig.Backoff = c.config.Backoff
+	newConfig.CheckRetry = c.config.CheckRetry
+	newConfig.Limiter = c.config.Limiter
+	newConfig.OutputCurlString = c.config.OutputCurlString
+	newConfig.SRVLookup = c.config.SRVLookup
+
+	// we specifically want a _copy_ of the client here, not a pointer to the original one
+	newClient := *c.config.HttpClient
+	newConfig.HttpClient = &newClient
+
+	return newConfig
+}
+
 // Sets the address of Vault in the client. The format of address should be
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.
@@ -475,6 +499,9 @@ func (c *Client) SetAddress(addr string) error {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
+	c.config.modifyLock.Lock()
+	c.config.Address = addr
+	c.config.modifyLock.Unlock()
 	c.addr = parsedAddr
 	return nil
 }
@@ -492,57 +519,111 @@ func (c *Client) Address() string {
 // rateLimit and burst are specified according to https://godoc.org/golang.org/x/time/rate#NewLimiter
 func (c *Client) SetLimiter(rateLimit float64, burst int) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.Limiter = rate.NewLimiter(rate.Limit(rateLimit), burst)
+}
+
+func (c *Client) Limiter() *rate.Limiter {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.Limiter
 }
 
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
 func (c *Client) SetMaxRetries(retries int) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.MaxRetries = retries
+}
+
+func (c *Client) MaxRetries() int {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.MaxRetries
+}
+
+func (c *Client) SetSRVLookup(srv bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.SRVLookup = srv
+}
+
+func (c *Client) SRVLookup() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.SRVLookup
 }
 
 // SetCheckRetry sets the CheckRetry function to be used for future requests.
 func (c *Client) SetCheckRetry(checkRetry retryablehttp.CheckRetry) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.CheckRetry = checkRetry
+}
+
+func (c *Client) CheckRetry() retryablehttp.CheckRetry {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CheckRetry
 }
 
 // SetClientTimeout sets the client request timeout
 func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.Timeout = timeout
 }
 
-func (c *Client) OutputCurlString() bool {
+func (c *Client) ClientTimeout() time.Duration {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
-	c.modifyLock.RUnlock()
+
+	return c.config.Timeout
+}
+
+func (c *Client) OutputCurlString() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 
 	return c.config.OutputCurlString
 }
 
 func (c *Client) SetOutputCurlString(curl bool) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.OutputCurlString = curl
 }
@@ -552,7 +633,6 @@ func (c *Client) SetOutputCurlString(curl bool) {
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
-
 	return c.wrappingLookupFunc
 }
 
@@ -561,7 +641,6 @@ func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.wrappingLookupFunc = lookupFunc
 }
 
@@ -570,7 +649,6 @@ func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 func (c *Client) SetMFACreds(creds []string) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.mfaCreds = creds
 }
 
@@ -595,7 +673,6 @@ func (c *Client) setNamespace(namespace string) {
 func (c *Client) Token() string {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
-
 	return c.token
 }
 
@@ -604,7 +681,6 @@ func (c *Client) Token() string {
 func (c *Client) SetToken(v string) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.token = v
 }
 
@@ -612,7 +688,6 @@ func (c *Client) SetToken(v string) {
 func (c *Client) ClearToken() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.token = ""
 }
 
@@ -655,9 +730,9 @@ func (c *Client) SetHeaders(headers http.Header) {
 // SetBackoff sets the backoff function to be used for future requests.
 func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.Backoff = backoff
 }
@@ -672,22 +747,30 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
 	c.modifyLock.RLock()
-	c.config.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
 	config := c.config
-	c.modifyLock.RUnlock()
+	config.modifyLock.RLock()
+	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:    config.Address,
-		HttpClient: config.HttpClient,
-		MaxRetries: config.MaxRetries,
-		Timeout:    config.Timeout,
-		Backoff:    config.Backoff,
-		CheckRetry: config.CheckRetry,
-		Limiter:    config.Limiter,
+		Address:          config.Address,
+		HttpClient:       config.HttpClient,
+		MaxRetries:       config.MaxRetries,
+		Timeout:          config.Timeout,
+		Backoff:          config.Backoff,
+		CheckRetry:       config.CheckRetry,
+		Limiter:          config.Limiter,
+		OutputCurlString: config.OutputCurlString,
+		AgentAddress:     config.AgentAddress,
+		SRVLookup:        config.SRVLookup,
 	}
-	config.modifyLock.RUnlock()
+	client, err := NewClient(newConfig)
+	if err != nil {
+		return nil, err
+	}
 
-	return NewClient(newConfig)
+	return client, nil
 }
 
 // SetPolicyOverride sets whether requests should be sent with the policy
@@ -696,7 +779,6 @@ func (c *Client) Clone() (*Client, error) {
 func (c *Client) SetPolicyOverride(override bool) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.policyOverride = override
 }
 
@@ -786,6 +868,10 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	c.modifyLock.RUnlock()
 
+	for _, cb := range c.requestCallbacks {
+		cb(r)
+	}
+
 	if limiter != nil {
 		limiter.Wait(ctx)
 	}
@@ -827,7 +913,7 @@ START:
 	}
 
 	if checkRetry == nil {
-		checkRetry = retryablehttp.DefaultRetryPolicy
+		checkRetry = DefaultRetryPolicy
 	}
 
 	client := &retryablehttp.Client{
@@ -888,9 +974,94 @@ START:
 		goto START
 	}
 
+	if result != nil {
+		for _, cb := range c.responseCallbacks {
+			cb(result)
+		}
+	}
 	if err := result.Error(); err != nil {
 		return result, err
 	}
 
 	return result, nil
+}
+
+type RequestCallback func(*Request)
+type ResponseCallback func(*Response)
+
+// WithRequestCallbacks makes a shallow clone of Client, modifies it to use
+// the given callbacks, and returns it.  Each of the callbacks will be invoked
+// on every outgoing request.  A client may be used to issue requests
+// concurrently; any locking needed by callbacks invoked concurrently is the
+// callback's responsibility.
+func (c *Client) WithRequestCallbacks(callbacks ...RequestCallback) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.requestCallbacks = callbacks
+	return &c2
+}
+
+// WithResponseCallbacks makes a shallow clone of Client, modifies it to use
+// the given callbacks, and returns it.  Each of the callbacks will be invoked
+// on every received response.  A client may be used to issue requests
+// concurrently; any locking needed by callbacks invoked concurrently is the
+// callback's responsibility.
+func (c *Client) WithResponseCallbacks(callbacks ...ResponseCallback) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.responseCallbacks = callbacks
+	return &c2
+}
+
+// RecordState returns a response callback that will record the state returned
+// by Vault in a response header.
+func RecordState(state *string) ResponseCallback {
+	return func(resp *Response) {
+		*state = resp.Header.Get("X-Vault-Index")
+	}
+}
+
+// RequireState returns a request callback that will add a request header to
+// specify the state we require of Vault. This state was obtained from a
+// response header seen previous, probably captured with RecordState.
+func RequireState(states ...string) RequestCallback {
+	return func(req *Request) {
+		for _, s := range states {
+			req.Headers.Add("X-Vault-Index", s)
+		}
+	}
+}
+
+// ForwardInconsistent returns a request callback that will add a request
+// header which says: if the state required isn't present on the node receiving
+// this request, forward it to the active node.  This should be used in
+// conjunction with RequireState.
+func ForwardInconsistent() RequestCallback {
+	return func(req *Request) {
+		req.Headers.Set("X-Vault-Inconsistent", "forward-active-node")
+	}
+}
+
+// ForwardAlways returns a request callback which adds a header telling any
+// performance standbys handling the request to forward it to the active node.
+// This feature must be enabled in Vault's configuration.
+func ForwardAlways() RequestCallback {
+	return func(req *Request) {
+		req.Headers.Set("X-Vault-Forward", "active-node")
+	}
+}
+
+// DefaultRetryPolicy is the default retry policy used by new Client objects.
+// It is the same as retryablehttp.DefaultRetryPolicy except that it also retries
+// 412 requests, which are returned by Vault when a X-Vault-Index header isn't
+// satisfied.
+func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	retry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	if err != nil || retry {
+		return retry, err
+	}
+	if resp != nil && resp.StatusCode == 412 {
+		return true, nil
+	}
+	return false, nil
 }

@@ -56,6 +56,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-prefix/*",
 		"leases/revoke-force/*",
 		"leases/lookup/*",
+		"storage/raft/snapshot-auto/config/*",
 	}
 
 	b := testSystemBackend(t)
@@ -712,6 +713,38 @@ func TestSystemBackend_remount_system(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != `cannot remount "sys/"` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_clean(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = "foo//bar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path 'foo//bar' does not match cleaned path 'foo/bar'` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_nonPrintable(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = "foo\nbar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path cannot contain non-printable characters` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -2011,6 +2044,50 @@ func TestSystemBackend_keyStatus(t *testing.T) {
 		"term": 1,
 	}
 	delete(resp.Data, "install_time")
+	delete(resp.Data, "encryptions")
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_rotateConfig(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "rotate/config")
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"max_operations": absoluteOperationMaximum,
+		"interval":       0,
+		"enabled":        true,
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "rotate/config")
+	req2.Data["max_operations"] = 2345678910
+	req2.Data["interval"] = "5432h0m0s"
+	req2.Data["enabled"] = false
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"max_operations": int64(2345678910),
+		"interval":       "5432h0m0s",
+		"enabled":        false,
+	}
+
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
@@ -2038,6 +2115,7 @@ func TestSystemBackend_rotate(t *testing.T) {
 		"term": 2,
 	}
 	delete(resp.Data, "install_time")
+	delete(resp.Data, "encryptions")
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}

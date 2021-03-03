@@ -6,11 +6,14 @@ import (
 	"errors"
 	"runtime"
 	"sort"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/internal/common"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 )
 
 var (
@@ -24,9 +27,11 @@ type Process struct {
 	name           string
 	status         string
 	parent         int32
+	parentMutex    *sync.RWMutex // for windows ppid cache
 	numCtxSwitches *NumCtxSwitchesStat
 	uids           []int32
 	gids           []int32
+	groups         []int32
 	numThreads     int32
 	memInfo        *MemoryInfoStat
 	sigInfo        *SignalInfoStat
@@ -149,21 +154,34 @@ func PidsWithContext(ctx context.Context) ([]int32, error) {
 	return pids, err
 }
 
+// Processes returns a slice of pointers to Process structs for all
+// currently running processes.
+func Processes() ([]*Process, error) {
+	return ProcessesWithContext(context.Background())
+}
+
 // NewProcess creates a new Process instance, it only stores the pid and
 // checks that the process exists. Other method on Process can be used
 // to get more information about the process. An error will be returned
 // if the process does not exist.
 func NewProcess(pid int32) (*Process, error) {
-	p := &Process{Pid: pid}
+	return NewProcessWithContext(context.Background(), pid)
+}
 
-	exists, err := PidExists(pid)
+func NewProcessWithContext(ctx context.Context, pid int32) (*Process, error) {
+	p := &Process{
+		Pid:         pid,
+		parentMutex: new(sync.RWMutex),
+	}
+
+	exists, err := PidExistsWithContext(ctx, pid)
 	if err != nil {
 		return p, err
 	}
 	if !exists {
 		return p, ErrorProcessNotRunning
 	}
-	p.CreateTime()
+	p.CreateTimeWithContext(ctx)
 	return p, nil
 }
 
@@ -191,7 +209,7 @@ func (p *Process) Percent(interval time.Duration) (float64, error) {
 }
 
 func (p *Process) PercentWithContext(ctx context.Context, interval time.Duration) (float64, error) {
-	cpuTimes, err := p.Times()
+	cpuTimes, err := p.TimesWithContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -200,8 +218,10 @@ func (p *Process) PercentWithContext(ctx context.Context, interval time.Duration
 	if interval > 0 {
 		p.lastCPUTimes = cpuTimes
 		p.lastCPUTime = now
-		time.Sleep(interval)
-		cpuTimes, err = p.Times()
+		if err := common.Sleep(ctx, interval); err != nil {
+			return 0, err
+		}
+		cpuTimes, err = p.TimesWithContext(ctx)
 		now = time.Now()
 		if err != nil {
 			return 0, err
@@ -233,7 +253,7 @@ func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	p2, err := NewProcess(p.Pid)
+	p2, err := NewProcessWithContext(ctx, p.Pid)
 	if err == ErrorProcessNotRunning {
 		return false, nil
 	}
@@ -273,13 +293,13 @@ func (p *Process) MemoryPercent() (float32, error) {
 }
 
 func (p *Process) MemoryPercentWithContext(ctx context.Context) (float32, error) {
-	machineMemory, err := mem.VirtualMemory()
+	machineMemory, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 	total := machineMemory.Total
 
-	processMemory, err := p.MemoryInfo()
+	processMemory, err := p.MemoryInfoWithContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -294,12 +314,12 @@ func (p *Process) CPUPercent() (float64, error) {
 }
 
 func (p *Process) CPUPercentWithContext(ctx context.Context) (float64, error) {
-	crt_time, err := p.CreateTime()
+	crt_time, err := p.createTimeWithContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	cput, err := p.Times()
+	cput, err := p.TimesWithContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -311,4 +331,214 @@ func (p *Process) CPUPercentWithContext(ctx context.Context) (float64, error) {
 	}
 
 	return 100 * cput.Total() / totalTime, nil
+}
+
+// Groups returns all group IDs(include supplementary groups) of the process as a slice of the int
+func (p *Process) Groups() ([]int32, error) {
+	return p.GroupsWithContext(context.Background())
+}
+
+// Ppid returns Parent Process ID of the process.
+func (p *Process) Ppid() (int32, error) {
+	return p.PpidWithContext(context.Background())
+}
+
+// Name returns name of the process.
+func (p *Process) Name() (string, error) {
+	return p.NameWithContext(context.Background())
+}
+
+// Exe returns executable path of the process.
+func (p *Process) Exe() (string, error) {
+	return p.ExeWithContext(context.Background())
+}
+
+// Cmdline returns the command line arguments of the process as a string with
+// each argument separated by 0x20 ascii character.
+func (p *Process) Cmdline() (string, error) {
+	return p.CmdlineWithContext(context.Background())
+}
+
+// CmdlineSlice returns the command line arguments of the process as a slice with each
+// element being an argument.
+func (p *Process) CmdlineSlice() ([]string, error) {
+	return p.CmdlineSliceWithContext(context.Background())
+}
+
+// Cwd returns current working directory of the process.
+func (p *Process) Cwd() (string, error) {
+	return p.CwdWithContext(context.Background())
+}
+
+// Parent returns parent Process of the process.
+func (p *Process) Parent() (*Process, error) {
+	return p.ParentWithContext(context.Background())
+}
+
+// Status returns the process status.
+// Return value could be one of these.
+// R: Running S: Sleep T: Stop I: Idle
+// Z: Zombie W: Wait L: Lock
+// The character is same within all supported platforms.
+func (p *Process) Status() (string, error) {
+	return p.StatusWithContext(context.Background())
+}
+
+// Foreground returns true if the process is in foreground, false otherwise.
+func (p *Process) Foreground() (bool, error) {
+	return p.ForegroundWithContext(context.Background())
+}
+
+// Uids returns user ids of the process as a slice of the int
+func (p *Process) Uids() ([]int32, error) {
+	return p.UidsWithContext(context.Background())
+}
+
+// Gids returns group ids of the process as a slice of the int
+func (p *Process) Gids() ([]int32, error) {
+	return p.GidsWithContext(context.Background())
+}
+
+// Terminal returns a terminal which is associated with the process.
+func (p *Process) Terminal() (string, error) {
+	return p.TerminalWithContext(context.Background())
+}
+
+// Nice returns a nice value (priority).
+func (p *Process) Nice() (int32, error) {
+	return p.NiceWithContext(context.Background())
+}
+
+// IOnice returns process I/O nice value (priority).
+func (p *Process) IOnice() (int32, error) {
+	return p.IOniceWithContext(context.Background())
+}
+
+// Rlimit returns Resource Limits.
+func (p *Process) Rlimit() ([]RlimitStat, error) {
+	return p.RlimitWithContext(context.Background())
+}
+
+// RlimitUsage returns Resource Limits.
+// If gatherUsed is true, the currently used value will be gathered and added
+// to the resulting RlimitStat.
+func (p *Process) RlimitUsage(gatherUsed bool) ([]RlimitStat, error) {
+	return p.RlimitUsageWithContext(context.Background(), gatherUsed)
+}
+
+// IOCounters returns IO Counters.
+func (p *Process) IOCounters() (*IOCountersStat, error) {
+	return p.IOCountersWithContext(context.Background())
+}
+
+// NumCtxSwitches returns the number of the context switches of the process.
+func (p *Process) NumCtxSwitches() (*NumCtxSwitchesStat, error) {
+	return p.NumCtxSwitchesWithContext(context.Background())
+}
+
+// NumFDs returns the number of File Descriptors used by the process.
+func (p *Process) NumFDs() (int32, error) {
+	return p.NumFDsWithContext(context.Background())
+}
+
+// NumThreads returns the number of threads used by the process.
+func (p *Process) NumThreads() (int32, error) {
+	return p.NumThreadsWithContext(context.Background())
+}
+
+func (p *Process) Threads() (map[int32]*cpu.TimesStat, error) {
+	return p.ThreadsWithContext(context.Background())
+}
+
+// Times returns CPU times of the process.
+func (p *Process) Times() (*cpu.TimesStat, error) {
+	return p.TimesWithContext(context.Background())
+}
+
+// CPUAffinity returns CPU affinity of the process.
+func (p *Process) CPUAffinity() ([]int32, error) {
+	return p.CPUAffinityWithContext(context.Background())
+}
+
+// MemoryInfo returns generic process memory information,
+// such as RSS and VMS.
+func (p *Process) MemoryInfo() (*MemoryInfoStat, error) {
+	return p.MemoryInfoWithContext(context.Background())
+}
+
+// MemoryInfoEx returns platform-specific process memory information.
+func (p *Process) MemoryInfoEx() (*MemoryInfoExStat, error) {
+	return p.MemoryInfoExWithContext(context.Background())
+}
+
+// PageFaultsInfo returns the process's page fault counters.
+func (p *Process) PageFaults() (*PageFaultsStat, error) {
+	return p.PageFaultsWithContext(context.Background())
+}
+
+// Children returns a slice of Process of the process.
+func (p *Process) Children() ([]*Process, error) {
+	return p.ChildrenWithContext(context.Background())
+}
+
+// OpenFiles returns a slice of OpenFilesStat opend by the process.
+// OpenFilesStat includes a file path and file descriptor.
+func (p *Process) OpenFiles() ([]OpenFilesStat, error) {
+	return p.OpenFilesWithContext(context.Background())
+}
+
+// Connections returns a slice of net.ConnectionStat used by the process.
+// This returns all kind of the connection. This means TCP, UDP or UNIX.
+func (p *Process) Connections() ([]net.ConnectionStat, error) {
+	return p.ConnectionsWithContext(context.Background())
+}
+
+// Connections returns a slice of net.ConnectionStat used by the process at most `max`.
+func (p *Process) ConnectionsMax(max int) ([]net.ConnectionStat, error) {
+	return p.ConnectionsMaxWithContext(context.Background(), max)
+}
+
+// NetIOCounters returns NetIOCounters of the process.
+func (p *Process) NetIOCounters(pernic bool) ([]net.IOCountersStat, error) {
+	return p.NetIOCountersWithContext(context.Background(), pernic)
+}
+
+// MemoryMaps get memory maps from /proc/(pid)/smaps
+func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
+	return p.MemoryMapsWithContext(context.Background(), grouped)
+}
+
+// Tgid returns thread group id of the process.
+func (p *Process) Tgid() (int32, error) {
+	return p.TgidWithContext(context.Background())
+}
+
+// SendSignal sends a unix.Signal to the process.
+func (p *Process) SendSignal(sig syscall.Signal) error {
+	return p.SendSignalWithContext(context.Background(), sig)
+}
+
+// Suspend sends SIGSTOP to the process.
+func (p *Process) Suspend() error {
+	return p.SuspendWithContext(context.Background())
+}
+
+// Resume sends SIGCONT to the process.
+func (p *Process) Resume() error {
+	return p.ResumeWithContext(context.Background())
+}
+
+// Terminate sends SIGTERM to the process.
+func (p *Process) Terminate() error {
+	return p.TerminateWithContext(context.Background())
+}
+
+// Kill sends SIGKILL to the process.
+func (p *Process) Kill() error {
+	return p.KillWithContext(context.Background())
+}
+
+// Username returns a username of the process.
+func (p *Process) Username() (string, error) {
+	return p.UsernameWithContext(context.Background())
 }

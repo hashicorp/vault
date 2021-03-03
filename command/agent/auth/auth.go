@@ -2,13 +2,20 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"math/rand"
 	"net/http"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+)
+
+const (
+	initialBackoff    = 1 * time.Second
+	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent
@@ -39,13 +46,14 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	DoneCh                       chan struct{}
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
+	token                        string
 	logger                       hclog.Logger
 	client                       *api.Client
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
+	maxBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
 }
@@ -54,21 +62,24 @@ type AuthHandlerConfig struct {
 	Logger                       hclog.Logger
 	Client                       *api.Client
 	WrapTTL                      time.Duration
+	MaxBackoff                   time.Duration
+	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
-		DoneCh: make(chan struct{}),
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
+		token:                        conf.Token,
 		logger:                       conf.Logger,
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
+		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 	}
@@ -83,16 +94,22 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if am == nil {
-		panic("nil auth method")
+		return errors.New("auth handler: nil auth method")
+	}
+
+	backoff := initialBackoff
+	maxBackoff := defaultMaxBackoff
+
+	if ah.maxBackoff > 0 {
+		maxBackoff = ah.maxBackoff
 	}
 
 	ah.logger.Info("starting auth handler")
 	defer func() {
 		am.Shutdown()
 		close(ah.OutputCh)
-		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
@@ -118,28 +135,23 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 	}
 
 	var watcher *api.LifetimeWatcher
+	first := true
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 
 		default:
 		}
 
-		// Create a fresh backoff value
-		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
-
-		ah.logger.Info("authenticating")
-
-		path, header, data, err := am.Authenticate(ctx, ah.client)
-		if err != nil {
-			ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
-			backoffOrQuit(ctx, backoff)
-			continue
-		}
+		backoff = calculateBackoff(backoff, maxBackoff)
 
 		var clientToUse *api.Client
+		var err error
+		var path string
+		var data map[string]interface{}
+		var header http.Header
 
 		switch am.(type) {
 		case AuthMethodWithClient:
@@ -151,6 +163,38 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 		default:
 			clientToUse = ah.client
+		}
+
+		var secret *api.Secret = new(api.Secret)
+		if first && ah.token != "" {
+			ah.logger.Debug("using preloaded token")
+
+			first = false
+			ah.logger.Debug("lookup-self with preloaded token")
+			clientToUse.SetToken(ah.token)
+
+			secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
+			if err != nil {
+				ah.logger.Error("could not look up token", "err", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+
+			duration, _ := secret.Data["ttl"].(json.Number).Int64()
+			secret.Auth = &api.SecretAuth{
+				ClientToken:   secret.Data["id"].(string),
+				LeaseDuration: int(duration),
+				Renewable:     secret.Data["renewable"].(bool),
+			}
+		} else {
+			ah.logger.Info("authenticating")
+
+			path, header, data, err = am.Authenticate(ctx, ah.client)
+			if err != nil {
+				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
 		}
 
 		if ah.wrapTTL > 0 {
@@ -171,12 +215,16 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 		}
 
-		secret, err := clientToUse.Logical().Write(path, data)
-		// Check errors/sanity
-		if err != nil {
-			ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
-			backoffOrQuit(ctx, backoff)
-			continue
+		// This should only happen if there's no preloaded token (regular auto-auth login)
+		//  or if a preloaded token has expired and is now switching to auto-auth.
+		if secret.Auth == nil {
+			secret, err = clientToUse.Logical().Write(path, data)
+			// Check errors/sanity
+			if err != nil {
+				ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
 		}
 
 		switch {
@@ -276,4 +324,17 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 		}
 	}
+}
+
+// calculateBackoff determines a new backoff duration that is roughly twice
+// the previous value, capped to a max value, with a measure of randomness.
+func calculateBackoff(previous, max time.Duration) time.Duration {
+	maxBackoff := 2 * previous
+	if maxBackoff > max {
+		maxBackoff = max
+	}
+
+	// Trim a random amount (0-25%) off the doubled duration
+	trim := rand.Int63n(int64(maxBackoff) / 4)
+	return maxBackoff - time.Duration(trim)
 }

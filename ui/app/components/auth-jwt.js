@@ -128,6 +128,18 @@ export default Component.extend({
     let { namespace, path, state, code } = JSON.parse(oidcState);
     this.getWindow().localStorage.removeItem('oidcState');
 
+    // The namespace can be either be passed as a query paramter, or be embedded
+    // in the state param in the format `<state_id>,ns=<namespace>`. So if
+    // `namespace` is empty, check for namespace in state as well.
+    if (namespace === '') {
+      let i = state.indexOf(',ns=');
+      if (i >= 0) {
+        // ",ns=" is 4 characters
+        namespace = state.substring(i + 4);
+        state = state.substring(0, i);
+      }
+    }
+
     // defer closing of the window, but continue executing the task
     later(() => {
       this.closeWindow(oidcWindow);

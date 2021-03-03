@@ -37,6 +37,7 @@ package push
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -55,6 +56,8 @@ const (
 	// mark the following label value as base64 encoded.
 	base64Suffix = "@base64"
 )
+
+var errJobEmpty = errors.New("job name is empty")
 
 // HTTPDoer is an interface for the one method of http.Client that is used by Pusher
 type HTTPDoer interface {
@@ -80,14 +83,17 @@ type Pusher struct {
 }
 
 // New creates a new Pusher to push to the provided URL with the provided job
-// name. You can use just host:port or ip:port as url, in which case “http://”
-// is added automatically. Alternatively, include the schema in the
-// URL. However, do not include the “/metrics/jobs/…” part.
+// name (which must not be empty). You can use just host:port or ip:port as url,
+// in which case “http://” is added automatically. Alternatively, include the
+// schema in the URL. However, do not include the “/metrics/jobs/…” part.
 func New(url, job string) *Pusher {
 	var (
 		reg = prometheus.NewRegistry()
 		err error
 	)
+	if job == "" {
+		err = errJobEmpty
+	}
 	if !strings.Contains(url, "://") {
 		url = "http://" + url
 	}
@@ -267,7 +273,7 @@ func (p *Pusher) push(method string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	// Pushgateway 0.10+ responds with StatusOK, earlier versions with StatusAccepted.
+	// Depending on version and configuration of the PGW, StatusOK or StatusAccepted may be returned.
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		body, _ := ioutil.ReadAll(resp.Body) // Ignore any further error as this is for an error message only.
 		return fmt.Errorf("unexpected status code %d while pushing to %s: %s", resp.StatusCode, p.fullURL(), body)
@@ -278,9 +284,11 @@ func (p *Pusher) push(method string) error {
 // fullURL assembles the URL used to push/delete metrics and returns it as a
 // string. The job name and any grouping label values containing a '/' will
 // trigger a base64 encoding of the affected component and proper suffixing of
-// the preceding component. If the component does not contain a '/' but other
-// special character, the usual url.QueryEscape is used for compatibility with
-// older versions of the Pushgateway and for better readability.
+// the preceding component. Similarly, an empty grouping label value will be
+// encoded as base64 just with a single `=` padding character (to avoid an empty
+// path component). If the component does not contain a '/' but other special
+// characters, the usual url.QueryEscape is used for compatibility with older
+// versions of the Pushgateway and for better readability.
 func (p *Pusher) fullURL() string {
 	urlComponents := []string{}
 	if encodedJob, base64 := encodeComponent(p.job); base64 {
@@ -299,9 +307,12 @@ func (p *Pusher) fullURL() string {
 }
 
 // encodeComponent encodes the provided string with base64.RawURLEncoding in
-// case it contains '/'. If not, it uses url.QueryEscape instead. It returns
-// true in the former case.
+// case it contains '/' and as "=" in case it is empty. If neither is the case,
+// it uses url.QueryEscape instead. It returns true in the former two cases.
 func encodeComponent(s string) (string, bool) {
+	if s == "" {
+		return "=", true
+	}
 	if strings.Contains(s, "/") {
 		return base64.RawURLEncoding.EncodeToString([]byte(s)), true
 	}

@@ -13,6 +13,6 @@ func IsProcessAlive(pid int) bool {
 func KillProcess(pid int) {
 	p, err := os.FindProcess(pid)
 	if err == nil {
-		_ = p.Kill()
+		p.Kill()
 	}
 }

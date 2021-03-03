@@ -143,11 +143,11 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 	}
 
 	passwordConf := passwordConf{
-		TTL:        ttl,
-		MaxTTL:     maxTTL,
-		Length:     length,
-		Formatter:  formatter,
-		PolicyName: passwordPolicy,
+		TTL:            ttl,
+		MaxTTL:         maxTTL,
+		Length:         length,
+		Formatter:      formatter,
+		PasswordPolicy: passwordPolicy,
 	}
 	err = passwordConf.validate()
 	if err != nil {

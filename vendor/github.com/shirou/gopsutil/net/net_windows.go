@@ -4,7 +4,6 @@ package net
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -323,7 +322,7 @@ func FilterCounters() ([]FilterStat, error) {
 }
 
 func FilterCountersWithContext(ctx context.Context) ([]FilterStat, error) {
-	return nil, errors.New("NetFilterCounters not implemented for windows")
+	return nil, common.ErrNotImplementedError
 }
 
 func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
@@ -344,7 +343,7 @@ func ProtoCounters(protocols []string) ([]ProtoCountersStat, error) {
 }
 
 func ProtoCountersWithContext(ctx context.Context, protocols []string) ([]ProtoCountersStat, error) {
-	return nil, errors.New("NetProtoCounters not implemented for windows")
+	return nil, common.ErrNotImplementedError
 }
 
 func getTableUintptr(family uint32, buf []byte) uintptr {
@@ -548,7 +547,7 @@ func getUDPConnections(family uint32) ([]ConnectionStat, error) {
 			mibs := (*mibUDPRowOwnerPid)(unsafe.Pointer(&buf[index]))
 			ns := mibs.convertToConnectionStat()
 			stats = append(stats, ns)
-		case kindUDP4.family:
+		case kindUDP6.family:
 			mibs := (*mibUDP6RowOwnerPid)(unsafe.Pointer(&buf[index]))
 			ns := mibs.convertToConnectionStat()
 			stats = append(stats, ns)

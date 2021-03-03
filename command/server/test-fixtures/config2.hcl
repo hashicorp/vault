@@ -39,6 +39,9 @@ entropy "seal" {
     mode = "augmentation"
 }
 
+sentinel {
+    additional_enabled_modules = []
+}
 kms "commastringpurpose" {
     purpose = "foo,bar"
 }

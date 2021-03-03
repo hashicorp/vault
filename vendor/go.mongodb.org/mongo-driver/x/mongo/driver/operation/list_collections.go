@@ -56,7 +56,7 @@ func (lc *ListCollections) Result(opts driver.CursorOptions) (*driver.ListCollec
 	return driver.NewListCollectionsBatchCursor(bc)
 }
 
-func (lc *ListCollections) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server) error {
+func (lc *ListCollections) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
 	var err error
 	lc.result, err = driver.NewCursorResponse(response, srvr, desc)
 	return err

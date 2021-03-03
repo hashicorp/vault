@@ -1,12 +1,11 @@
 <div class="selectable-card is-rounded secondaries">
   <div class="level">
-    <h3 class="card-title title is-5">Known Secondaries</h3>
+    <h3 class="card-title title is-5">{{replicationAttrs.secondaries.length}} Known Secondaries</h3>
     <ToolbarLink @params={{array "mode.secondaries" cluster.replicationMode}} data-test-manage-link>
-      Manage
+      View all
     </ToolbarLink>
   </div>
   <div class="secondaries-table">
-    {{!-- TODO remove this or when backend api changes are merged --}}
     {{#unless replicationAttrs.secondaries}}
       <EmptyState
         @title="No known {{cluster.replicationMode}} secondary clusters associated with this cluster"

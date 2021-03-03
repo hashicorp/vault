@@ -241,7 +241,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchEncryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchEncryptionResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	batchRewrapInput := make([]interface{}, len(batchEncryptionResponseItems))
 	for i, item := range batchEncryptionResponseItems {
@@ -274,7 +274,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchRewrapResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchRewrapResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	if len(batchRewrapResponseItems) != len(batchEncryptionResponseItems) {
 		t.Fatalf("bad: length of input and output or rewrap are not matching; expected: %d, actual: %d", len(batchEncryptionResponseItems), len(batchRewrapResponseItems))

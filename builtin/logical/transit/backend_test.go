@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	testPlaintext = "the quick brown fox"
+	testPlaintext = "The quick brown fox"
 )
 
 func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
@@ -930,12 +930,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
-	derBytesOld, err := p.DeriveKey(keyContext, 1, 0)
+	derBytesOld, err := p.GetKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesOld2, err := p.DeriveKey(keyContext, 1, 0)
+	derBytesOld2, err := p.GetKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,12 +949,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatal("expected no upgrade needed")
 	}
 
-	derBytesNew, err := p.DeriveKey(keyContext, 1, 64)
+	derBytesNew, err := p.GetKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesNew2, err := p.DeriveKey(keyContext, 1, 64)
+	derBytesNew2, err := p.GetKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -41,6 +41,15 @@ func testCore_NewTestCoreLicensing(t *testing.T, seal Seal, licensingConfig *Lic
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		c.Shutdown()
+	})
 	return c, conf
 }
 

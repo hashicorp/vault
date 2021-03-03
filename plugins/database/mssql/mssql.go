@@ -6,34 +6,37 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
-const msSQLTypeName = "mssql"
+const (
+	msSQLTypeName = "mssql"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 20) (.RoleName | truncate 20) (random 20) (unix_time) | truncate 128 }}`
+)
 
 var _ dbplugin.Database = &MSSQL{}
 
 // MSSQL is an implementation of Database interface
 type MSSQL struct {
 	*connutil.SQLConnectionProducer
-	credsutil.CredentialsProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
@@ -42,34 +45,20 @@ func new() *MSSQL {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = msSQLTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 20,
-		RoleNameLen:    20,
-		UsernameLen:    128,
-		Separator:      "-",
-	}
-
 	return &MSSQL{
 		SQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
 	}
-}
-
-// Run instantiates a MSSQL object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 // Type returns the TypeName for this backend
 func (m *MSSQL) Type() (string, error) {
 	return msSQLTypeName, nil
+}
+
+func (m *MSSQL) secretValues() map[string]string {
+	return map[string]string{
+		m.Password: "[password]",
+	}
 }
 
 func (m *MSSQL) getConnection(ctx context.Context) (*sql.DB, error) {
@@ -81,49 +70,66 @@ func (m *MSSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-// CreateUser generates the username/password on the underlying MSSQL secret backend as instructed by
-// the CreationStatement provided.
-func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	// Grab the lock
+func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	newConf, err := m.SQLConnectionProducer.Init(ctx, req.Config, req.VerifyConnection)
+	if err != nil {
+		return dbplugin.InitializeResponse{}, err
+	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	m.usernameProducer = up
+
+	_, err = m.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template - did you reference a field that isn't available? : %w", err)
+	}
+
+	resp := dbplugin.InitializeResponse{
+		Config: newConf,
+	}
+	return resp, nil
+}
+
+// NewUser generates the username/password on the underlying MSSQL secret backend as instructed by
+// the statements provided.
+func (m *MSSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	m.Lock()
 	defer m.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
+	if len(req.Statements.Commands) == 0 {
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err = m.GenerateUsername(usernameConfig)
+	username, err := m.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	password, err = m.GeneratePassword()
-	if err != nil {
-		return "", "", err
-	}
+	expirationStr := req.Expiration.Format("2006-01-02 15:04:05-0700")
 
-	expirationStr, err := m.GenerateExpiration(expiration)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 	defer tx.Rollback()
 
-	// Execute each query
-	for _, stmt := range statements.Creation {
+	for _, stmt := range req.Statements.Commands {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -132,50 +138,45 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 
 			m := map[string]string{
 				"name":       username,
-				"password":   password,
+				"password":   req.Password,
 				"expiration": expirationStr,
 			}
 
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return "", "", err
+				return dbplugin.NewUserResponse{}, err
 			}
 		}
 	}
 
-	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	return username, password, nil
+	resp := dbplugin.NewUserResponse{
+		Username: username,
+	}
+
+	return resp, nil
 }
 
-// RenewUser is not supported on MSSQL, so this is a no-op.
-func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
-	// NOOP
-	return nil
-}
-
-// RevokeUser attempts to drop the specified user. It will first attempt to disable login,
+// DeleteUser attempts to drop the specified user. It will first attempt to disable login,
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
-func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Revocation) == 0 {
-		return m.revokeUserDefault(ctx, username)
+func (m *MSSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
+	if len(req.Statements.Commands) == 0 {
+		err := m.revokeUserDefault(ctx, req.Username)
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
-	// Get connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return err
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
-	var result error
+	merr := &multierror.Error{}
 
 	// Execute each query
-	for _, stmt := range statements.Revocation {
+	for _, stmt := range req.Statements.Commands {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -183,15 +184,15 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			}
 
 			m := map[string]string{
-				"name": username,
+				"name": req.Username,
 			}
 			if err := dbtxn.ExecuteDBQuery(ctx, db, m, query); err != nil {
-				result = multierror.Append(result, err)
+				merr = multierror.Append(merr, err)
 			}
 		}
 	}
 
-	return result
+	return dbplugin.DeleteUserResponse{}, merr.ErrorOrNil()
 }
 
 func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
@@ -297,76 +298,28 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	return nil
 }
 
-func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	if len(m.Username) == 0 || len(m.Password) == 0 {
-		return nil, errors.New("username and password are required to rotate")
+func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
+	if req.Password == nil && req.Expiration == nil {
+		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
 	}
-
-	rotateStatents := statements
-	if len(rotateStatents) == 0 {
-		rotateStatents = []string{alterLoginSQL}
+	if req.Password != nil {
+		err := m.updateUserPass(ctx, req.Username, req.Password)
+		return dbplugin.UpdateUserResponse{}, err
 	}
-
-	db, err := m.getConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		tx.Rollback()
-	}()
-
-	password, err := m.GeneratePassword()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, stmt := range rotateStatents {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
-
-			m := map[string]string{
-				"username": m.Username,
-				"password": password,
-			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	if err := db.Close(); err != nil {
-		return nil, err
-	}
-
-	m.RawConfig["password"] = password
-	return m.RawConfig, nil
+	// Expiration is a no-op
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-func (m *MSSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	if len(statements.Rotation) == 0 {
-		statements.Rotation = []string{alterLoginSQL}
+func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
+	stmts := changePass.Statements.Commands
+	if len(stmts) == 0 {
+		stmts = []string{alterLoginSQL}
 	}
 
-	username = staticUser.Username
-	password = staticUser.Password
+	password := changePass.NewPassword
 
 	if username == "" || password == "" {
-		return "", "", errors.New("must provide both username and password")
+		return errors.New("must provide both username and password")
 	}
 
 	m.Lock()
@@ -374,7 +327,7 @@ func (m *MSSQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	var exists bool
@@ -382,16 +335,14 @@ func (m *MSSQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 	err = db.QueryRowContext(ctx, "SELECT 1 FROM master.sys.server_principals where name = N'$1'", username).Scan(&exists)
 
 	if err != nil && err != sql.ErrNoRows {
-		return "", "", err
+		return err
 	}
 
-	stmts := statements.Rotation
-
-	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", "", err
+		return err
 	}
+
 	defer func() {
 		_ = tx.Rollback()
 	}()
@@ -409,16 +360,16 @@ func (m *MSSQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 				"password": password,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return "", "", err
+				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return "", "", err
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return username, password, nil
+	return nil
 }
 
 const dropUserSQL = `

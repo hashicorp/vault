@@ -18,11 +18,13 @@ import (
 )
 
 const amzHeaderPrefix = "X-Amz-"
+
 var defaultAllowedSTSRequestHeaders = []string{
-	"X-Amz-Date",
-	"X-Amz-Credential",
-	"X-Amz-Security-Token",
 	"X-Amz-Algorithm",
+	"X-Amz-Content-Sha256",
+	"X-Amz-Credential",
+	"X-Amz-Date",
+	"X-Amz-Security-Token",
 	"X-Amz-Signature",
 	"X-Amz-SignedHeaders"}
 
@@ -46,15 +48,15 @@ type backend struct {
 	// Lock to make changes to role entries
 	roleMutex sync.Mutex
 
-	// Lock to make changes to the blacklist entries
-	blacklistMutex sync.RWMutex
+	// Lock to make changes to the deny list entries
+	denyListMutex sync.RWMutex
 
-	// Guards the blacklist/whitelist tidy functions
-	tidyBlacklistCASGuard *uint32
-	tidyWhitelistCASGuard *uint32
+	// Guards the deny list/access list tidy functions
+	tidyDenyListCASGuard   *uint32
+	tidyAccessListCASGuard *uint32
 
 	// Duration after which the periodic function of the backend needs to
-	// tidy the blacklist and whitelist entries.
+	// tidy the deny list and access list entries.
 	tidyCooldownPeriod time.Duration
 
 	// nextTidyTime holds the time at which the periodic func should initiate
@@ -99,19 +101,29 @@ type backend struct {
 	// upgradeCancelFunc is used to cancel the context used in the upgrade
 	// function
 	upgradeCancelFunc context.CancelFunc
+
+	// deprecatedTerms is used to downgrade preferred terminology (e.g. accesslist)
+	// to the legacy term. This allows for consolidated aliasing of the affected
+	// endpoints until the legacy terms are removed.
+	deprecatedTerms *strings.Replacer
 }
 
 func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod:    time.Hour,
-		EC2ClientsMap:         make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:         make(map[string]map[string]*iam.IAM),
-		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
-		tidyBlacklistCASGuard: new(uint32),
-		tidyWhitelistCASGuard: new(uint32),
-		roleCache:             cache.New(cache.NoExpiration, cache.NoExpiration),
+		tidyCooldownPeriod:     time.Hour,
+		EC2ClientsMap:          make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:          make(map[string]map[string]*iam.IAM),
+		iamUserIdToArnCache:    cache.New(7*24*time.Hour, 24*time.Hour),
+		tidyDenyListCASGuard:   new(uint32),
+		tidyAccessListCASGuard: new(uint32),
+		roleCache:              cache.New(cache.NoExpiration, cache.NoExpiration),
+
+		deprecatedTerms: strings.NewReplacer(
+			"accesslist", "whitelist",
+			"denylist", "blacklist",
+		),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -125,7 +137,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 				"login",
 			},
 			LocalStorage: []string{
-				"whitelist/identity/",
+				identityAccessListStorage,
 			},
 			SealWrapStorage: []string{
 				"config/client",
@@ -140,17 +152,37 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 			b.pathConfigClient(),
 			b.pathConfigCertificate(),
 			b.pathConfigIdentity(),
+			b.pathConfigRotateRoot(),
 			b.pathConfigSts(),
 			b.pathListSts(),
-			b.pathConfigTidyRoletagBlacklist(),
-			b.pathConfigTidyIdentityWhitelist(),
 			b.pathListCertificates(),
-			b.pathListRoletagBlacklist(),
-			b.pathRoletagBlacklist(),
-			b.pathTidyRoletagBlacklist(),
-			b.pathListIdentityWhitelist(),
-			b.pathIdentityWhitelist(),
-			b.pathTidyIdentityWhitelist(),
+
+			// The following pairs of functions are path aliases. The first is the
+			// primary endpoint, and the second is version using deprecated language,
+			// for backwards compatibility. The functionality is identical between the two.
+			b.pathConfigTidyRoletagDenyList(),
+			b.genDeprecatedPath(b.pathConfigTidyRoletagDenyList()),
+
+			b.pathConfigTidyIdentityAccessList(),
+			b.genDeprecatedPath(b.pathConfigTidyIdentityAccessList()),
+
+			b.pathListRoletagDenyList(),
+			b.genDeprecatedPath(b.pathListRoletagDenyList()),
+
+			b.pathRoletagDenyList(),
+			b.genDeprecatedPath(b.pathRoletagDenyList()),
+
+			b.pathTidyRoletagDenyList(),
+			b.genDeprecatedPath(b.pathTidyRoletagDenyList()),
+
+			b.pathListIdentityAccessList(),
+			b.genDeprecatedPath(b.pathListIdentityAccessList()),
+
+			b.pathIdentityAccessList(),
+			b.genDeprecatedPath(b.pathIdentityAccessList()),
+
+			b.pathTidyIdentityAccessList(),
+			b.genDeprecatedPath(b.pathTidyIdentityAccessList()),
 		},
 		Invalidate:     b.invalidate,
 		InitializeFunc: b.initialize,
@@ -167,16 +199,16 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 // Currently this will be triggered once in a minute by the RollbackManager.
 //
 // The tasks being done currently by this function are to cleanup the expired
-// entries of both blacklist role tags and whitelist identities. Tidying is done
+// entries of both deny list role tags and access list identities. Tidying is done
 // not once in a minute, but once in an hour, controlled by 'tidyCooldownPeriod'.
-// Tidying of blacklist and whitelist are by default enabled. This can be
+// Tidying of deny list and access list are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-			// safetyBuffer defaults to 180 days for roletag blacklist
+			// safetyBuffer defaults to 180 days for roletag deny list
 			safetyBuffer := 15552000
 			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 			if err != nil {
@@ -194,11 +226,11 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 			}
 			// tidy role tags if explicitly not disabled
 			if !skipBlacklistTidy {
-				b.tidyBlacklistRoleTag(ctx, req, safetyBuffer)
+				b.tidyDenyListRoleTag(ctx, req, safetyBuffer)
 			}
 		}
 
-		// We don't check for replication state for whitelist identities as
+		// We don't check for replication state for access list identities as
 		// these are locally stored
 
 		safety_buffer := 259200
@@ -218,7 +250,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		}
 		// tidy identities if explicitly not disabled
 		if !skipWhitelistTidy {
-			b.tidyWhitelistIdentity(ctx, req, safety_buffer)
+			b.tidyAccessListIdentity(ctx, req, safety_buffer)
 		}
 
 		// Update the time at which to run the tidy functions again.
@@ -307,6 +339,16 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	}
 }
 
+// genDeprecatedPath will return a deprecated version of a framework.Path. The will include
+// using deprecated terms in the path pattern, and marking the path as deprecated.
+func (b *backend) genDeprecatedPath(path *framework.Path) *framework.Path {
+	pathDeprecated := *path
+	pathDeprecated.Pattern = b.deprecatedTerms.Replace(path.Pattern)
+	pathDeprecated.Deprecated = true
+
+	return &pathDeprecated
+}
+
 // Adapted from https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/
 // the "Enumerating Regions and Endpoint Metadata" section
 func generatePartitionToRegionMap() map[string]*endpoints.Region {
@@ -317,10 +359,19 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 
 	for _, p := range partitions {
 		// For most partitions, it's fine to choose a single region randomly.
-		// However, for the "aws" partition, it's best to choose "us-east-1"
-		// because it is always enabled (and enabled for STS) by default.
+		// However, there are a few exceptions:
+		//
+		//   For "aws", choose "us-east-1" because it is always enabled (and
+		//   enabled for STS) by default.
+		//
+		//   For "aws-us-gov", choose "us-gov-west-1" because it is the only
+		//   valid region for IAM operations.
+		//   ref: https://github.com/aws/aws-sdk-go/blob/v1.34.25/aws/endpoints/defaults.go#L8176-L8194
 		for _, r := range p.Regions() {
 			if p.ID() == "aws" && r.ID() != "us-east-1" {
+				continue
+			}
+			if p.ID() == "aws-us-gov" && r.ID() != "us-gov-west-1" {
 				continue
 			}
 			partitionToRegion[p.ID()] = &r

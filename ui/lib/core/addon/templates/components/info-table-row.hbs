@@ -28,11 +28,38 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
+    {{else if (and (not value) (and alwaysRender defaultShown))}}
+      <span data-test-row-value="{{label}}">{{defaultShown}}</span>
     {{else}}
       {{#if (eq type 'array')}}
-        <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{if (gte value.length 10) (concat (take 5 value) ", and " (dec 5 value.length) " more.") value}}</code>
+        <InfoTableItemArray
+          @backend={{backend}}
+          @displayArray={{value}}
+          @isLink={{isLink}}
+          @label={{label}}
+          @modelType={{modelType}}
+          @queryParam={{queryParam}}
+          @viewAll={{viewAll}}
+          @wildcardLabel={{wildcardLabel}}
+        />
       {{else}}
-        <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{#if tooltipText}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="left"
+            as |T|>
+            <T.trigger @tabindex=false>
+              <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>  
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{tooltipText}}
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+          <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{/if}}
       {{/if}}
     {{/if}}
   </div>

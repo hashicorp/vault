@@ -100,6 +100,8 @@ type ServerCommand struct {
 	startedCh       chan (struct{}) // for tests
 	reloadedCh      chan (struct{}) // for tests
 
+	allLoggers []log.Logger
+
 	// new stuff
 	flagConfigs            []string
 	flagLogLevel           string
@@ -126,6 +128,7 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
+	flagDiagnose           string
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -209,6 +212,19 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		f.StringVar(&StringVar{
+			Name:    "diagnose",
+			Target:  &c.flagDiagnose,
+			Default: notSetValue,
+			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
+		})
+	} else {
+		// Ensure diagnose is *not* run when feature flag is off.
+		c.flagDiagnose = notSetValue
+	}
 
 	f = set.NewFlagSet("Dev Options")
 
@@ -378,6 +394,12 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
+func (c *ServerCommand) flushLog() {
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: c.logOutput,
+	}, c.gatedWriter)
+}
+
 func (c *ServerCommand) parseConfig() (*server.Config, error) {
 	// Load the configuration
 	var config *server.Config
@@ -426,6 +448,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
 	})
+
+	// Ensure logging is flushed if initialization fails
+	defer c.flushLog()
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -647,7 +672,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	if sealConfigError != nil {
-		init, err := core.Initialized(context.Background())
+		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -669,9 +694,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+	c.flushLog()
 
 	for {
 		select {
@@ -805,6 +828,49 @@ func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ..
 	q.t.Reset(100 * time.Millisecond)
 }
 
+func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, error) {
+	// Ensure that a backend is provided
+	if config.Storage == nil {
+		return nil, fmt.Errorf("A storage backend must be specified")
+	}
+
+	// Initialize the backend
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		return nil, fmt.Errorf("Unknown storage type %s", config.Storage.Type)
+	}
+
+	// Do any custom configuration needed per backend
+	switch config.Storage.Type {
+	case storageTypeConsul:
+		if config.ServiceRegistration == nil {
+			// If Consul is configured for storage and service registration is unconfigured,
+			// use Consul for service registration without requiring additional configuration.
+			// This maintains backward-compatibility.
+			config.ServiceRegistration = &server.ServiceRegistration{
+				Type:   "consul",
+				Config: config.Storage.Config,
+			}
+		}
+	case storageTypeRaft:
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+		if len(config.ClusterAddr) == 0 {
+			return nil, fmt.Errorf("Cluster address must be set when using raft storage")
+		}
+	}
+
+	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	c.allLoggers = append(c.allLoggers, namedStorageLogger)
+	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	if err != nil {
+		return nil, fmt.Errorf("Error initializing storage of type %s: %w", config.Storage.Type, err)
+	}
+
+	return backend, nil
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -836,6 +902,21 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if c.flagDiagnose != notSetValue {
+		if c.flagDev {
+			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
+			return 1
+		}
+		// TODO: add a file output flag to Diagnose
+		diagnose := &OperatorDiagnoseCommand{
+			BaseCommand: c.BaseCommand,
+			flagDebug:   false,
+			flagSkips:   []string{},
+			flagConfigs: c.flagConfigs,
+		}
+		diagnose.RunWithParsedFlags()
+	}
+
 	// Load the configuration
 	var config *server.Config
 	var err error
@@ -861,6 +942,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
 		}
+		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
 	parsedConfig, err := c.parseConfig()
@@ -908,7 +990,10 @@ func (c *ServerCommand) Run(args []string) int {
 		})
 	}
 
-	allLoggers := []log.Logger{c.logger}
+	// Ensure logging is flushed if initialization fails
+	defer c.flushLog()
+
+	c.allLoggers = []log.Logger{c.logger}
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -921,7 +1006,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
-	allLoggers = append(allLoggers, namedGRPCLogFaker)
+	c.allLoggers = append(c.allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
 		logger: namedGRPCLogFaker,
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
@@ -929,12 +1014,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if memProfilerEnabled {
 		c.startMemProfiler()
-	}
-
-	// Ensure that a backend is provided
-	if config.Storage == nil {
-		c.UI.Output("A storage backend must be specified")
-		return 1
 	}
 
 	if config.DefaultMaxRequestDuration != 0 {
@@ -978,44 +1057,15 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
-	// Initialize the backend
-	factory, exists := c.PhysicalBackends[config.Storage.Type]
-	if !exists {
-		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
-		return 1
-	}
-
-	// Do any custom configuration needed per backend
-	switch config.Storage.Type {
-	case storageTypeConsul:
-		if config.ServiceRegistration == nil {
-			// If Consul is configured for storage and service registration is unconfigured,
-			// use Consul for service registration without requiring additional configuration.
-			// This maintains backward-compatibility.
-			config.ServiceRegistration = &server.ServiceRegistration{
-				Type:   "consul",
-				Config: config.Storage.Config,
-			}
-		}
-	case storageTypeRaft:
-		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
-		}
-		if len(config.ClusterAddr) == 0 {
-			c.UI.Error("Cluster address must be set when using raft storage")
-			return 1
-		}
-	}
-
-	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
-	allLoggers = append(allLoggers, namedStorageLogger)
-	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	// Initialize the storage backend
+	backend, err := c.setupStorage(config)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
+		c.UI.Error(err.Error())
 		return 1
 	}
 
 	// Prevent server startup if migration is active
+	// TODO: how to incorporate this check into Diagnose?
 	if c.storageMigrationActive(backend) {
 		return 1
 	}
@@ -1030,7 +1080,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
-		allLoggers = append(allLoggers, namedSDLogger)
+		c.allLoggers = append(c.allLoggers, namedSDLogger)
 
 		// Since we haven't even begun starting Vault's core yet,
 		// we know that Vault is in its pre-running state.
@@ -1084,13 +1134,15 @@ func (c *ServerCommand) Run(args []string) int {
 
 			var seal vault.Seal
 			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-			allLoggers = append(allLoggers, sealLogger)
+			c.allLoggers = append(c.allLoggers, sealLogger)
 			defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("shamir"),
 				}),
 			})
-			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
+			var sealInfoKeys []string
+			var sealInfoMap = map[string]string{}
+			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -1106,11 +1158,17 @@ func (c *ServerCommand) Run(args []string) int {
 				})
 			}
 
+			var infoPrefix = ""
 			if configSeal.Disabled {
 				unwrapSeal = seal
+				infoPrefix = "Old "
 			} else {
 				barrierSeal = seal
 				barrierWrapper = wrapper
+			}
+			for _, k := range sealInfoKeys {
+				infoKeys = append(infoKeys, infoPrefix+k)
+				info[infoPrefix+k] = sealInfoMap[k]
 			}
 
 			// Ensure that the seal finalizer is called, even if using verify-only
@@ -1162,7 +1220,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableSealWrap:           config.DisableSealWrap,
 		DisablePerformanceStandby: config.DisablePerformanceStandby,
 		DisableIndexing:           config.DisableIndexing,
-		AllLoggers:                allLoggers,
+		AllLoggers:                c.allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
@@ -1219,7 +1277,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
-		allLoggers = append(allLoggers, namedHALogger)
+		c.allLoggers = append(c.allLoggers, namedHALogger)
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(
@@ -1560,7 +1618,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	if !core.IsInSealMigration() {
+	if !core.IsInSealMigrationMode() {
 		go func() {
 			for {
 				err := core.UnsealWithStoredKeys(context.Background())
@@ -1649,75 +1707,77 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		var qw *quiescenceSink
+		var qwo sync.Once
 		qw = &quiescenceSink{
 			t: time.AfterFunc(100*time.Millisecond, func() {
-				// Print the big dev mode warning!
-				c.UI.Warn(wrapAtLength(
-					"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
-						"in-memory and starts unsealed with a single unseal key. The root " +
-						"token is already authenticated to the CLI, so you can immediately " +
-						"begin using Vault."))
-				c.UI.Warn("")
-				c.UI.Warn("You may need to set the following environment variable:")
-				c.UI.Warn("")
+				qwo.Do(func() {
+					c.logger.DeregisterSink(qw)
 
-				endpointURL := "http://" + config.Listeners[0].Address
-				if runtime.GOOS == "windows" {
-					c.UI.Warn("PowerShell:")
-					c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
-					c.UI.Warn("cmd.exe:")
-					c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
-				} else {
-					c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
-				}
-
-				// Unseal key is not returned if stored shares is supported
-				if len(init.SecretShares) > 0 {
-					c.UI.Warn("")
+					// Print the big dev mode warning!
 					c.UI.Warn(wrapAtLength(
-						"The unseal key and root token are displayed below in case you want " +
-							"to seal/unseal the Vault or re-authenticate."))
+						"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
+							"in-memory and starts unsealed with a single unseal key. The root " +
+							"token is already authenticated to the CLI, so you can immediately " +
+							"begin using Vault."))
 					c.UI.Warn("")
-					c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
-				}
+					c.UI.Warn("You may need to set the following environment variable:")
+					c.UI.Warn("")
 
-				if len(init.RecoveryShares) > 0 {
-					c.UI.Warn("")
-					c.UI.Warn(wrapAtLength(
-						"The recovery key and root token are displayed below in case you want " +
-							"to seal/unseal the Vault or re-authenticate."))
-					c.UI.Warn("")
-					c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
-				}
-
-				c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
-
-				if len(plugins) > 0 {
-					c.UI.Warn("")
-					c.UI.Warn(wrapAtLength(
-						"The following dev plugins are registered in the catalog:"))
-					for _, p := range plugins {
-						c.UI.Warn(fmt.Sprintf("    - %s", p))
+					endpointURL := "http://" + config.Listeners[0].Address
+					if runtime.GOOS == "windows" {
+						c.UI.Warn("PowerShell:")
+						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+						c.UI.Warn("cmd.exe:")
+						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
+					} else {
+						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
 					}
-				}
 
-				if len(pluginsNotLoaded) > 0 {
+					// Unseal key is not returned if stored shares is supported
+					if len(init.SecretShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The unseal key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
+					}
+
+					if len(init.RecoveryShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The recovery key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+					}
+
+					c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+					if len(plugins) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins are registered in the catalog:"))
+						for _, p := range plugins {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
+					if len(pluginsNotLoaded) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
+						for _, p := range pluginsNotLoaded {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
 					c.UI.Warn("")
 					c.UI.Warn(wrapAtLength(
-						"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
-					for _, p := range pluginsNotLoaded {
-						c.UI.Warn(fmt.Sprintf("    - %s", p))
-					}
-				}
-
-				c.UI.Warn("")
-				c.UI.Warn(wrapAtLength(
-					"Development mode should NOT be used in production installations!"))
-				c.UI.Warn("")
-				c.logger.DeregisterSink(qw)
-
-			}),
-		}
+						"Development mode should NOT be used in production installations!"))
+					c.UI.Warn("")
+				})
+			})}
 		c.logger.RegisterSink(qw)
 	}
 
@@ -1774,7 +1834,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if sealConfigError != nil {
-		init, err := core.Initialized(context.Background())
+		init, err := core.InitializedLocally(context.Background())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -1804,9 +1864,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	// Release the log gate.
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+	c.flushLog()
 
 	// Write out the PID to the file now that server has successfully started
 	if err := c.storePidFile(config.PidFile); err != nil {
@@ -2212,9 +2270,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	// Release the log gate.
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logOutput,
-	}, c.gatedWriter)
+	c.flushLog()
 
 	// Wait for shutdown
 	shutdownTriggered := false
@@ -2449,9 +2505,7 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 			c.UI.Warn("\nWARNING! Unable to read storage migration status.")
 
 			// unexpected state, so stop buffering log messages
-			c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-				Output: c.logOutput,
-			}, c.gatedWriter)
+			c.flushLog()
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 

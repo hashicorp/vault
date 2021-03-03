@@ -8,10 +8,6 @@ package host
 import "C"
 import "context"
 
-func SensorsTemperatures() ([]TemperatureStat, error) {
-	return SensorsTemperaturesWithContext(context.Background())
-}
-
 func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, error) {
 	temperatureKeys := []string{
 		C.AMBIENT_AIR_0,

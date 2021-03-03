@@ -72,7 +72,7 @@ of ec2.`,
 				Description: `The nonce to be used for subsequent login requests when
 auth_type is ec2.  If this parameter is not specified at
 all and if reauthentication is allowed, then the backend will generate a random
-nonce, attaches it to the instance's identity-whitelist entry and returns the
+nonce, attaches it to the instance's identity access list entry and returns the
 nonce back as part of auth metadata.  This value should be used with further
 login requests, to establish client authenticity. Clients can choose to set a
 custom nonce if preferred, in which case, it is recommended that clients provide
@@ -211,9 +211,9 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 }
 
 // validateMetadata matches the given client nonce and pending time with the
-// one cached in the identity whitelist during the previous login. But, if
+// one cached in the identity access list during the previous login. But, if
 // reauthentication is disabled, login attempt is failed immediately.
-func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, roleEntry *awsRoleEntry) error {
+func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessListIdentity, roleEntry *awsRoleEntry) error {
 	// For sanity
 	if !storedIdentity.DisallowReauthentication && storedIdentity.ClientNonce == "" {
 		return fmt.Errorf("client nonce missing in stored identity")
@@ -243,7 +243,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	// pendingTime in the instance metadata, which sadly is only updated
 	// when an instance is stopped and started but *not* when the instance
 	// is rebooted. If reboot survivability is needed, either
-	// instrumentation to delete the instance ID from the whitelist is
+	// instrumentation to delete the instance ID from the access list is
 	// necessary, or the client must durably store the nonce.
 	//
 	// If the `allow_instance_migration` property of the registered role is
@@ -686,14 +686,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %v", validationError)), nil
 	}
 
-	// Get the entry from the identity whitelist, if there is one
-	storedIdentity, err := whitelistIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID)
+	// Get the entry from the identity access list, if there is one
+	storedIdentity, err := accessListIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID)
 	if err != nil {
 		return nil, err
 	}
 
 	// disallowReauthentication value that gets cached at the stored
-	// identity-whitelist entry is determined not just by the role entry.
+	// identity access list entry is determined not just by the role entry.
 	// If client explicitly sets nonce to be empty, it implies intent to
 	// disable reauthentication. Also, role tag can override the 'false'
 	// value with 'true' (the other way around is not allowed).
@@ -714,7 +714,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		if clientNonce == "" {
 			clientNonce = reauthenticationDisabledNonce
 
-			// Ensure that the intent lands in the whitelist
+			// Ensure that the intent lands in the access list
 			disallowReauthentication = true
 		}
 	}
@@ -735,7 +735,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		// to 'false', a role-tag login sets the value to 'true', then
 		// role gets updated to not use a role-tag, and a login attempt
 		// is made with role's value set to 'false'. Removing the entry
-		// from the identity-whitelist should be the only way to be
+		// from the identity access list should be the only way to be
 		// able to login from the instance again.
 		disallowReauthentication = disallowReauthentication || storedIdentity.DisallowReauthentication
 	}
@@ -753,7 +753,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// Load the current values for max TTL and policies from the role entry,
 	// before checking for overriding max TTL in the role tag.  The shortest
 	// max TTL is used to cap the token TTL; the longest max TTL is used to
-	// make the whitelist entry as long as possible as it controls for replay
+	// make the access list entry as long as possible as it controls for replay
 	// attacks.
 	shortestMaxTTL := b.System().MaxLeaseTTL()
 	longestMaxTTL := b.System().MaxLeaseTTL()
@@ -807,12 +807,12 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	// Save the login attempt in the identity whitelist
+	// Save the login attempt in the identity access list
 	currentTime := time.Now()
 	if storedIdentity == nil {
 		// Role, ClientNonce and CreationTime of the identity entry,
 		// once set, should never change.
-		storedIdentity = &whitelistIdentity{
+		storedIdentity = &accessListIdentity{
 			Role:         roleName,
 			ClientNonce:  clientNonce,
 			CreationTime: currentTime,
@@ -836,7 +836,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
 
-	if err = setWhitelistIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
+	if err = setAccessListIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -935,13 +935,13 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 		return nil, fmt.Errorf("role tag is being used by an unauthorized instance")
 	}
 
-	// Check if the role tag is blacklisted
-	blacklistEntry, err := b.lockedBlacklistRoleTagEntry(ctx, s, rTagValue)
+	// Check if the role tag is deny listed
+	denyListEntry, err := b.lockedDenyLististRoleTagEntry(ctx, s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
-	if blacklistEntry != nil {
-		return nil, fmt.Errorf("role tag is blacklisted")
+	if denyListEntry != nil {
+		return nil, fmt.Errorf("role tag is deny listed")
 	}
 
 	// Ensure that the policies on the RoleTag is a subset of policies on the role
@@ -1047,18 +1047,23 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, canonicalArn): // check 2 passed
 		default:
 			// check 3 is a bit more complex, so we do it last
+			// only try to look up full ARNs if there's a wildcard ARN in BoundIamPrincipalIDs.
+			if !hasWildcardBind(roleEntry.BoundIamPrincipalARNs) {
+				return nil, fmt.Errorf("role %q no longer bound to ARN %q", roleName, canonicalArn)
+			}
+
 			fullArn := b.getCachedUserId(clientUserId)
 			if fullArn == "" {
 				entity, err := parseIamArn(canonicalArn)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error parsing ARN %q: {{err}}", canonicalArn), err)
+					return nil, errwrap.Wrapf(fmt.Sprintf("error parsing ARN %q when updating login for role %q: {{err}}", canonicalArn, roleName), err)
 				}
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error looking up full ARN of entity %v: {{err}}", entity), err)
+					return nil, errwrap.Wrapf(fmt.Sprintf("error looking up full ARN of entity %v when updating login for role %q: {{err}}", entity, roleName), err)
 				}
 				if fullArn == "" {
-					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v", entity)
+					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v when updating login for role %q", entity, roleName)
 				}
 				if clientUserId != "" {
 					b.setCachedUserId(clientUserId, fullArn)
@@ -1072,7 +1077,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 				}
 			}
 			if !matchedWildcardBind {
-				return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
+				return nil, fmt.Errorf("role %q no longer bound to ARN %q", roleName, canonicalArn)
 			}
 		}
 	}
@@ -1103,12 +1108,12 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
 	}
 
-	storedIdentity, err := whitelistIdentityEntry(ctx, req.Storage, instanceID)
+	storedIdentity, err := accessListIdentityEntry(ctx, req.Storage, instanceID)
 	if err != nil {
 		return nil, err
 	}
 	if storedIdentity == nil {
-		return nil, fmt.Errorf("failed to verify the whitelist identity entry for instance ID: %q", instanceID)
+		return nil, fmt.Errorf("failed to verify the access list identity entry for instance ID: %q", instanceID)
 	}
 
 	// Ensure that role entry is not deleted
@@ -1150,8 +1155,8 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 
 	// Updating the expiration time is required for the tidy operation on the
-	// whitelist identity storage items
-	if err = setWhitelistIdentityEntry(ctx, req.Storage, instanceID, storedIdentity); err != nil {
+	// access list identity storage items
+	if err = setAccessListIdentityEntry(ctx, req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -1317,15 +1322,19 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		case strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, callerUniqueId): // check 1 passed
 		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, entity.canonicalArn()): // check 2 passed
 		default:
-			// evaluate check 3
+			// evaluate check 3 -- only try to look up full ARNs if there's a wildcard ARN in BoundIamPrincipalIDs.
+			if !hasWildcardBind(roleEntry.BoundIamPrincipalARNs) {
+				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
+			}
+
 			fullArn := b.getCachedUserId(callerUniqueId)
 			if fullArn == "" {
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("error looking up full ARN of entity %v: %v", entity, err)), nil
+					return logical.ErrorResponse("error looking up full ARN of entity %v when attempting login for role %q: %v", entity, roleName, err), nil
 				}
 				if fullArn == "" {
-					return logical.ErrorResponse(fmt.Sprintf("got empty string back when looking up full ARN of entity %v", entity)), nil
+					return logical.ErrorResponse("got empty string back when looking up full ARN of entity %v when attempting login for role %q", entity, roleName), nil
 				}
 				b.setCachedUserId(callerUniqueId, fullArn)
 			}
@@ -1337,7 +1346,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				}
 			}
 			if !matchedWildcardBind {
-				return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
 			}
 		}
 	}
@@ -1407,6 +1416,15 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	return &logical.Response{
 		Auth: auth,
 	}, nil
+}
+
+func hasWildcardBind(boundIamPrincipalARNs []string) bool {
+	for _, principalARN := range boundIamPrincipalARNs {
+		if strings.HasSuffix(principalARN, "*") {
+			return true
+		}
+	}
+	return false
 }
 
 // Validate that the iam_request_body passed is valid for the STS request
@@ -1800,11 +1818,11 @@ document and a client created nonce. This nonce should be unique and should be u
 the instance for all future logins, unless 'disallow_reauthentication' option on the
 registered role is enabled, in which case client nonce is optional.
 
-First login attempt, creates a whitelist entry in Vault associating the instance to the nonce
+First login attempt, creates a access list entry in Vault associating the instance to the nonce
 provided. All future logins will succeed only if the client nonce matches the nonce in the
-whitelisted entry.
+access list entry.
 
-By default, a cron task will periodically look for expired entries in the whitelist
+By default, a cron task will periodically look for expired entries in the access list
 and deletes them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/identities' endpoint.

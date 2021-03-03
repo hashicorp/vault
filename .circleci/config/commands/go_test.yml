@@ -6,20 +6,13 @@ parameters:
   log_dir:
     type: string
     default: "/tmp/testlogs"
-  cache_dir:
+  go_image:
     type: string
-    default: /tmp/go-cache
-  save_cache:
+    default: "circleci/golang:1.15.4-buster"
+  use_docker:
     type: boolean
     default: false
 steps:
-  - run:
-      name: Compute test cache key
-      command: |
-        TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
-  - restore_cache:
-      keys:
-        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -27,7 +20,7 @@ steps:
         set -x
 
         case "<< parameters.extra_flags >>" in
-        *-race*) VAULT_CI_GO_TEST_RACE=1;;
+        *-race*) export VAULT_CI_GO_TEST_RACE=1;;
         esac
 
         # Install CircleCI CLI
@@ -37,29 +30,75 @@ steps:
             -C /usr/local/bin \
             "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
 
-        # Split Go tests by prior test times
-        package_names=$(go list \
-            -tags "${GO_TAGS}" \
-            ./... \
-          | grep -v /integ \
-          | grep -v /vendor/ \
-          | sort \
-          | circleci tests split --split-by=timings --timings-type=classname)
+        USE_DOCKER=0
+        <<# parameters.use_docker >>
+        USE_DOCKER=1
+        <</ parameters.use_docker >>
 
-        # Install gotestsum
-        curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
-          | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+        # Split Go tests by prior test times.  If use_docker is true, only run
+        # tests that depend on docker, otherwise only those that don't.
+        if [ $USE_DOCKER == 1 ]; then
+          package_names=$(go list -test -json ./... |
+            jq -r 'select(.Deps != null) |
+              select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+              .ForTest | select(. != null)' |
+              sort -u | circleci tests split --split-by=timings --timings-type=classname)
+        else
+          package_names=$(go list -test -json ./... |
+            jq -r 'select(.Deps != null) |
+              select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+              .ForTest | select(. != null)' |
+              sort -u | circleci tests split --split-by=timings --timings-type=classname)
+        fi
 
-        # Run tests
+        # After running tests split step, we are now running the following steps
+        # in multiple different containers, each getting a different subset of
+        # the test packages in their package_names variable.  Each container
+        # has its own remote docker VM.
+
         make prep
         mkdir -p test-results/go-test
-        CGO_ENABLED= \
-          VAULT_ADDR= \
-          VAULT_TOKEN= \
-          VAULT_DEV_ROOT_TOKEN_ID= \
-          VAULT_ACC= \
-          GOCACHE=<< parameters.cache_dir >> \
-          VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
+
+        # Create a docker network for our testcontainer
+        if [ $USE_DOCKER == 1 ]; then
+          # Despite the fact that we're using a circleci image (thus getting the
+          # version they chose for the docker cli) and that we're specifying a
+          # docker version to use for the remote docker instances, we occasionally
+          # see "client version too new, max supported version 1.39" errors for
+          # reasons unclear.
+          export DOCKER_API_VERSION=1.39
+
+          export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+          if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+            TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+          fi
+
+          # Start a docker testcontainer to run the tests in
+          docker run -d -e TEST_DOCKER_NETWORK_ID \
+            -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
+            --network vaulttest --name \
+            testcontainer << parameters.go_image >> \
+            tail -f /dev/null
+
+          # Run tests
+          docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
+          docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+          docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+
+          docker exec -w /go/src/github.com/hashicorp/vault/ \
+            -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            testcontainer \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
+              -tags "${GO_TAGS}" \
+              -timeout=60m \
+              -parallel=20 \
+              << parameters.extra_flags >> \
+              ${package_names}
+        else
           gotestsum --format=short-verbose \
             --junitfile test-results/go-test/results.xml \
             --jsonfile test-results/go-test/results.json \
@@ -69,12 +108,13 @@ steps:
             -parallel=20 \
             << parameters.extra_flags >> \
             ${package_names}
+        fi
 
   - when:
-      condition: << parameters.save_cache >>
+      condition: << parameters.use_docker >>
       steps:
-        - save_cache:
+        - run:
+            name: Copy test results
             when: always
-            key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
-            paths:
-            - << parameters.cache_dir >>
+            command: |
+              docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .

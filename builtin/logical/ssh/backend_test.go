@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
 	"net"
 	"reflect"
 	"strconv"
@@ -17,13 +19,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
 
 const (
@@ -126,44 +125,39 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if tag == "" {
 		tag = dockerImageTagSupportsNoRSA1
 	}
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "linuxserver/openssh-server",
-		Tag:        tag,
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ContainerName: "openssh",
+		ImageRepo:     "linuxserver/openssh-server",
+		ImageTag:      tag,
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
 			"PUBLIC_KEY=" + testPublicKeyInstall,
 			"SUDO_ACCESS=true",
 			"USER_NAME=vaultssh",
 		},
-		ExposedPorts: []string{"2222/tcp"},
+		Ports: []string{"2222/tcp"},
 	})
 	if err != nil {
 		t.Fatalf("Could not start local ssh docker container: %s", err)
 	}
 
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		ipaddr, err := net.ResolveIPAddr("ip", host)
+		if err != nil {
+			return nil, err
+		}
+		sshAddress := fmt.Sprintf("%s:%d", ipaddr.String(), port)
 
-	sshAddress := fmt.Sprintf("127.0.0.1:%s", resource.GetPort("2222/tcp"))
+		signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
+		if err != nil {
+			return nil, err
+		}
 
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
 		// Install util-linux for non-busybox flock that supports timeout option
-		return testSSH(t, "vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
+		err = testSSH("vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
 			set -e; 
 			sudo ln -s /config /home/vaultssh
 			sudo apk add util-linux;
@@ -172,15 +166,19 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 			kill -HUP $(cat /config/sshd.pid)
 			echo "%s" | sudo tee /config/ssh_host_keys/trusted-user-ca-keys.pem
 		`, caPublicKeyPEM))
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to SSH docker container: %s", err)
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	return cleanup, sshAddress
+		return docker.NewServiceHostPort(ipaddr.String(), port), nil
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker ssh server: %s", err)
+	}
+	return svc.Cleanup, svc.Config.Address()
 }
 
-func testSSH(t *testing.T, user, host string, auth ssh.AuthMethod, command string) error {
+func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 	client, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{auth},
@@ -199,7 +197,7 @@ func testSSH(t *testing.T, user, host string, auth ssh.AuthMethod, command strin
 	defer session.Close()
 	err = session.Run(command)
 	if err != nil {
-		t.Logf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
+		return fmt.Errorf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
 	}
 	return err
 }
@@ -431,7 +429,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
+		"cidr_list":    host + "/32",
 		"port":         port,
 	}
 	data := map[string]interface{}{
@@ -537,7 +535,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 	testOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
-		"cidr_list":    testCIDRList,
+		"cidr_list":    host + "/32",
 		"port":         port,
 	}
 	data := map[string]interface{}{
@@ -854,7 +852,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 						return err
 					}
 
-					err = testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
 					if expectError && err == nil {
 						return fmt.Errorf("expected error but got none")
 					}
@@ -978,7 +976,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 						return err
 					}
 
-					err = testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
 					if err != nil {
 						return err
 					}
@@ -1645,7 +1643,7 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 				if err != nil {
 					return fmt.Errorf("generated key is invalid")
 				}
-				if err := testSSH(t, data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
+				if err := testSSH(data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
 					return fmt.Errorf("unable to SSH with new key (%s): %w", d.Key, err)
 				}
 			} else {

@@ -1,0 +1,13 @@
+```changelog:change
+aws/auth: AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
+have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
+updated to`/auth/aws/identity-accesslist`). The legacy endpoint names have not been removed
+but are considered **deprecated**. The old and new endpoints are essentially aliases, sharing
+the same underlying data. The complete list of endpoint changes is available in the
+[AWS Auth API docs](https://www.vaultproject.io/api-docs/auth/aws).
+```
+
+```changelog:deprecation
+aws/auth: AWS Auth endpoints that use the "whitelist" and "blacklist" terms have been deprecated.
+Refer to the CHANGES section for addition details.
+```

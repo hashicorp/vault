@@ -2,10 +2,9 @@
 // `path` is also the primaryId
 // https://www.vaultproject.io/docs/concepts/policies.html#capabilities
 
-import { computed } from '@ember/object';
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 
-const { attr } = DS;
+import { computed } from '@ember/object';
 
 const SUDO_PATHS = [
   'sys/seal',
@@ -21,8 +20,8 @@ export { SUDO_PATHS, SUDO_PATH_PREFIXES };
 
 const computedCapability = function(capability) {
   return computed('path', 'capabilities', 'capabilities.[]', function() {
-    const capabilities = this.get('capabilities');
-    const path = this.get('path');
+    const capabilities = this.capabilities;
+    const path = this.path;
     if (!capabilities) {
       return false;
     }
@@ -40,7 +39,7 @@ const computedCapability = function(capability) {
   });
 };
 
-export default DS.Model.extend({
+export default Model.extend({
   path: attr('string'),
   capabilities: attr('array'),
   canSudo: computedCapability('sudo'),

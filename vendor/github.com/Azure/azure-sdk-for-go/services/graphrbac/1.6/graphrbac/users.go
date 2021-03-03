@@ -37,7 +37,8 @@ func NewUsersClient(tenantID string) UsersClient {
 	return NewUsersClientWithBaseURI(DefaultBaseURI, tenantID)
 }
 
-// NewUsersClientWithBaseURI creates an instance of the UsersClient client.
+// NewUsersClientWithBaseURI creates an instance of the UsersClient client using a custom endpoint.  Use this when
+// interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewUsersClientWithBaseURI(baseURI string, tenantID string) UsersClient {
 	return UsersClient{NewWithBaseURI(baseURI, tenantID)}
 }
@@ -112,8 +113,7 @@ func (client UsersClient) CreatePreparer(ctx context.Context, parameters UserCre
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) CreateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateResponder handles the response to the Create request. The method always
@@ -121,7 +121,6 @@ func (client UsersClient) CreateSender(req *http.Request) (*http.Response, error
 func (client UsersClient) CreateResponder(resp *http.Response) (result User, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -187,8 +186,7 @@ func (client UsersClient) DeletePreparer(ctx context.Context, upnOrObjectID stri
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -196,7 +194,6 @@ func (client UsersClient) DeleteSender(req *http.Request) (*http.Response, error
 func (client UsersClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -261,8 +258,7 @@ func (client UsersClient) GetPreparer(ctx context.Context, upnOrObjectID string)
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) GetSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -270,7 +266,6 @@ func (client UsersClient) GetSender(req *http.Request) (*http.Response, error) {
 func (client UsersClient) GetResponder(resp *http.Response) (result User, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -345,8 +340,7 @@ func (client UsersClient) GetMemberGroupsPreparer(ctx context.Context, objectID 
 // GetMemberGroupsSender sends the GetMemberGroups request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) GetMemberGroupsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetMemberGroupsResponder handles the response to the GetMemberGroups request. The method always
@@ -354,7 +348,6 @@ func (client UsersClient) GetMemberGroupsSender(req *http.Request) (*http.Respon
 func (client UsersClient) GetMemberGroupsResponder(resp *http.Response) (result UserGetMemberGroupsResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -365,7 +358,8 @@ func (client UsersClient) GetMemberGroupsResponder(resp *http.Response) (result 
 // List gets list of users for the current tenant.
 // Parameters:
 // filter - the filter to apply to the operation.
-func (client UsersClient) List(ctx context.Context, filter string) (result UserListResultPage, err error) {
+// expand - the expand value for the operation result.
+func (client UsersClient) List(ctx context.Context, filter string, expand string) (result UserListResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.List")
 		defer func() {
@@ -382,7 +376,7 @@ func (client UsersClient) List(ctx context.Context, filter string) (result UserL
 		}
 		return client.ListNext(ctx, *lastResult.OdataNextLink)
 	}
-	req, err := client.ListPreparer(ctx, filter)
+	req, err := client.ListPreparer(ctx, filter, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "List", nil, "Failure preparing request")
 		return
@@ -404,7 +398,7 @@ func (client UsersClient) List(ctx context.Context, filter string) (result UserL
 }
 
 // ListPreparer prepares the List request.
-func (client UsersClient) ListPreparer(ctx context.Context, filter string) (*http.Request, error) {
+func (client UsersClient) ListPreparer(ctx context.Context, filter string, expand string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"tenantID": autorest.Encode("path", client.TenantID),
 	}
@@ -415,6 +409,9 @@ func (client UsersClient) ListPreparer(ctx context.Context, filter string) (*htt
 	}
 	if len(filter) > 0 {
 		queryParameters["$filter"] = autorest.Encode("query", filter)
+	}
+	if len(expand) > 0 {
+		queryParameters["$expand"] = autorest.Encode("query", expand)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -428,8 +425,7 @@ func (client UsersClient) ListPreparer(ctx context.Context, filter string) (*htt
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) ListSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -437,7 +433,6 @@ func (client UsersClient) ListSender(req *http.Request) (*http.Response, error) 
 func (client UsersClient) ListResponder(resp *http.Response) (result UserListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -446,7 +441,7 @@ func (client UsersClient) ListResponder(resp *http.Response) (result UserListRes
 }
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client UsersClient) ListComplete(ctx context.Context, filter string) (result UserListResultIterator, err error) {
+func (client UsersClient) ListComplete(ctx context.Context, filter string, expand string) (result UserListResultIterator, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.List")
 		defer func() {
@@ -457,7 +452,7 @@ func (client UsersClient) ListComplete(ctx context.Context, filter string) (resu
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.page, err = client.List(ctx, filter)
+	result.page, err = client.List(ctx, filter, expand)
 	return
 }
 
@@ -519,8 +514,7 @@ func (client UsersClient) ListNextPreparer(ctx context.Context, nextLink string)
 // ListNextSender sends the ListNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) ListNextSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListNextResponder handles the response to the ListNext request. The method always
@@ -528,7 +522,6 @@ func (client UsersClient) ListNextSender(req *http.Request) (*http.Response, err
 func (client UsersClient) ListNextResponder(resp *http.Response) (result UserListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -597,8 +590,7 @@ func (client UsersClient) UpdatePreparer(ctx context.Context, upnOrObjectID stri
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) UpdateSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // UpdateResponder handles the response to the Update request. The method always
@@ -606,7 +598,6 @@ func (client UsersClient) UpdateSender(req *http.Request) (*http.Response, error
 func (client UsersClient) UpdateResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp

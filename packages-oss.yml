@@ -13,13 +13,14 @@
 # config contains packagespec config for this repo.
 config:
   # product-repo is important to CI providers.
-  product-repo:          git@github.com:hashicorp/vault.git
-  release-repo:          git@github.com:hashicorp/vault-release.git
+  product-repo:          https://github.com/hashicorp/vault.git
+  release-repo:          https://github.com/hashicorp/vault-release.git
   # product-id is used by external systems to identify this product.
   # It can be any unique name, but a golang import path is ideal.
   product-id:            github.com/hashicorp/vault
   circleci-project-slug: gh/hashicorp/vault
   circleci-host:         circleci.com
+  on-publish:            create-github-release
 
 # inputs are a set of environment variables that may affect the set of bytes produced
 # for a given package. Note that a package is a zip file containing the binary, so
@@ -37,7 +38,7 @@ inputs:
     PRODUCT_VERSION: 0.0.0-snapshot
 
     # GO_VERSION is the version of the Go toolchain to use to compile this package.
-    GO_VERSION: 1.14.7
+    GO_VERSION: 1.15.7
 
     # YARN_VERSION is the version of Yarn to install for the UI layer.
     YARN_VERSION: 1.19.1-1
@@ -101,7 +102,6 @@ build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/has
 # The fully expanded set of packages are written to packages.lock. That file
 # is a useful data source for building CI/CD pipelines.
 packages:
-  - inputs: { GOOS: darwin, GOARCH: 386 }
   - inputs: { GOOS: darwin, GOARCH: amd64 }
   - inputs: { GOOS: freebsd, GOARCH: 386 }
   - inputs: { GOOS: freebsd, GOARCH: amd64 }
@@ -133,16 +133,6 @@ meta:
     # with the CI system's naming conventions.
     BUILD_JOB_NAME: >-
       {{.GOOS}}_{{.GOARCH}}_package
-
-    # POST_PROCESSORS names post processors we may apply to packages
-    # later. It is a space separated list of words, with each word
-    # naming a post-processor to run. These post-processors are not run
-    # during a build, and the code to run them is not contained in this repo.
-    # These post processors are run in the order they are specified in.
-    POST_PROCESSORS: '
-      {{- if and (eq .GOOS "darwin") (eq .GOARCH "amd64")}}apple-notarize {{end -}}
-      {{- if and (eq .GOOS "windows") (eq .GOARCH "amd64")}}microsoft-notarize {{end -}}
-      av-scan'
 
     # BUNDLE_NAME is used in archive filenames, as well as by downstream processes.
     BUNDLE_NAME: "vault_{{.PRODUCT_VERSION}}"

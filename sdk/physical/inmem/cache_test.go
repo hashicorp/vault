@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -16,7 +17,8 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
 	cache.SetEnabled(true)
 	physical.ExerciseBackend(t, cache)
 	physical.ExerciseBackend_ListPrefix(t, cache)
@@ -29,7 +31,7 @@ func TestCache_Purge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
 	cache.SetEnabled(true)
 
 	ent := &physical.Entry{
@@ -76,7 +78,7 @@ func TestCache_Disable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
 
 	disabledTests := func() {
 		ent := &physical.Entry{
@@ -276,7 +278,7 @@ func TestCache_Refresh(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
 	cache.SetEnabled(true)
 
 	ent := &physical.Entry{

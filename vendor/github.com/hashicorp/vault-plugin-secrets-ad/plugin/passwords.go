@@ -27,8 +27,8 @@ func GeneratePassword(ctx context.Context, passConf passwordConf, generator pass
 		return "", err
 	}
 
-	if passConf.PolicyName != "" {
-		return generator.GeneratePasswordFromPolicy(ctx, passConf.PolicyName)
+	if passConf.PasswordPolicy != "" {
+		return generator.GeneratePasswordFromPolicy(ctx, passConf.PasswordPolicy)
 	}
 	return generateDeprecatedPassword(passConf.Formatter, passConf.Length)
 }

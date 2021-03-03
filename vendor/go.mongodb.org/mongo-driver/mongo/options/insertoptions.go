@@ -6,24 +6,28 @@
 
 package options
 
-// InsertOneOptions represents all possible options to the InsertOne() function.
+// InsertOneOptions represents options that can be used to configure an InsertOne operation.
 type InsertOneOptions struct {
-	BypassDocumentValidation *bool // If true, allows the write to opt-out of document level validation
+	// If true, writes executed as part of the operation will opt out of document-level validation on the server. This
+	// option is valid for MongoDB versions >= 3.2 and is ignored for previous server versions. The default value is
+	// false. See https://docs.mongodb.com/manual/core/schema-validation/ for more information about document
+	// validation.
+	BypassDocumentValidation *bool
 }
 
-// InsertOne returns a pointer to a new InsertOneOptions
+// InsertOne creates a new InsertOneOptions instance.
 func InsertOne() *InsertOneOptions {
 	return &InsertOneOptions{}
 }
 
-// SetBypassDocumentValidation allows the write to opt-out of document level validation.
-// Valid for server versions >= 3.2. For servers < 3.2, this option is ignored.
+// SetBypassDocumentValidation sets the value for the BypassDocumentValidation field.
 func (ioo *InsertOneOptions) SetBypassDocumentValidation(b bool) *InsertOneOptions {
 	ioo.BypassDocumentValidation = &b
 	return ioo
 }
 
-// MergeInsertOneOptions combines the argued InsertOneOptions into a single InsertOneOptions in a last-one-wins fashion
+// MergeInsertOneOptions combines the given InsertOneOptions instances into a single InsertOneOptions in a last-one-wins
+// fashion.
 func MergeInsertOneOptions(opts ...*InsertOneOptions) *InsertOneOptions {
 	ioOpts := InsertOne()
 	for _, ioo := range opts {
@@ -38,34 +42,39 @@ func MergeInsertOneOptions(opts ...*InsertOneOptions) *InsertOneOptions {
 	return ioOpts
 }
 
-// InsertManyOptions represents all possible options to the InsertMany() function.
+// InsertManyOptions represents options that can be used to configure an InsertMany operation.
 type InsertManyOptions struct {
-	BypassDocumentValidation *bool // If true, allows the write to opt-out of document level validation
-	Ordered                  *bool // If true, when an insert fails, return without performing the remaining inserts. Defaults to true.
+	// If true, writes executed as part of the operation will opt out of document-level validation on the server. This
+	// option is valid for MongoDB versions >= 3.2 and is ignored for previous server versions. The default value is
+	// false. See https://docs.mongodb.com/manual/core/schema-validation/ for more information about document
+	// validation.
+	BypassDocumentValidation *bool
+
+	// If true, no writes will be executed after one fails. The default value is true.
+	Ordered *bool
 }
 
-// InsertMany returns a pointer to a new InsertManyOptions
+// InsertMany creates a new InsertManyOptions instance.
 func InsertMany() *InsertManyOptions {
 	return &InsertManyOptions{
 		Ordered: &DefaultOrdered,
 	}
 }
 
-// SetBypassDocumentValidation allows the write to opt-out of document level validation.
-// Valid for server versions >= 3.2. For servers < 3.2, this option is ignored.
+// SetBypassDocumentValidation sets the value for the BypassDocumentValidation field.
 func (imo *InsertManyOptions) SetBypassDocumentValidation(b bool) *InsertManyOptions {
 	imo.BypassDocumentValidation = &b
 	return imo
 }
 
-// SetOrdered configures the ordered option. If true, when a write fails, the function will return without attempting
-// remaining writes. Defaults to true.
+// SetOrdered sets the value for the Ordered field.
 func (imo *InsertManyOptions) SetOrdered(b bool) *InsertManyOptions {
 	imo.Ordered = &b
 	return imo
 }
 
-// MergeInsertManyOptions combines the argued InsertManyOptions into a single InsertManyOptions in a last-one-wins fashion
+// MergeInsertManyOptions combines the given InsertManyOptions instances into a single InsertManyOptions in a last one
+// wins fashion.
 func MergeInsertManyOptions(opts ...*InsertManyOptions) *InsertManyOptions {
 	imOpts := InsertMany()
 	for _, imo := range opts {

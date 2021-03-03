@@ -8,16 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
-
-	"github.com/gocql/gocql"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+
+	"github.com/gocql/gocql"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/mitchellh/mapstructure"
 )
 
 // cassandraConnectionProducer implements ConnectionProducer and provides an
@@ -52,20 +51,15 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	_, err := c.Init(ctx, conf, verifyConnection)
-	return err
-}
-
-func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) error {
 	c.Lock()
 	defer c.Unlock()
 
-	c.rawConfig = conf
+	c.rawConfig = req.Config
 
-	err := mapstructure.WeakDecode(conf, c)
+	err := mapstructure.WeakDecode(req.Config, c)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if c.ConnectTimeoutRaw == nil {
@@ -73,7 +67,7 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return nil, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return fmt.Errorf("invalid connect_timeout: %w", err)
 	}
 
 	if c.SocketKeepAliveRaw == nil {
@@ -81,16 +75,16 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	}
 	c.socketKeepAlive, err = parseutil.ParseDurationSecond(c.SocketKeepAliveRaw)
 	if err != nil {
-		return nil, errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
+		return fmt.Errorf("invalid socket_keep_alive: %w", err)
 	}
 
 	switch {
 	case len(c.Hosts) == 0:
-		return nil, fmt.Errorf("hosts cannot be empty")
+		return fmt.Errorf("hosts cannot be empty")
 	case len(c.Username) == 0:
-		return nil, fmt.Errorf("username cannot be empty")
+		return fmt.Errorf("username cannot be empty")
 	case len(c.Password) == 0:
-		return nil, fmt.Errorf("password cannot be empty")
+		return fmt.Errorf("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -99,11 +93,11 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	case len(c.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
 		if err != nil {
-			return nil, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return nil, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return fmt.Errorf("error marshaling PEM information: %w", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -113,11 +107,11 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	case len(c.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
 		if err != nil {
-			return nil, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return fmt.Errorf("error parsing the given PEM information: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return nil, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return fmt.Errorf("error marshaling PEM information: %w", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -129,13 +123,13 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	// and the connection can be established at a later time.
 	c.Initialized = true
 
-	if verifyConnection {
+	if req.VerifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return fmt.Errorf("error verifying connection: %w", err)
 		}
 	}
 
-	return conf, nil
+	return nil
 }
 
 func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
@@ -160,7 +154,6 @@ func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface
 }
 
 func (c *cassandraConnectionProducer) Close() error {
-	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
 
@@ -210,12 +203,12 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
+				return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
 			if err != nil || tlsConfig == nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
+				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%w", tlsConfig, err)
 			}
 			tlsConfig.InsecureSkipVerify = c.InsecureTLS
 
@@ -243,10 +236,9 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
+		return nil, fmt.Errorf("error creating session: %w", err)
 	}
 
-	// Set consistency
 	if c.Consistency != "" {
 		consistencyValue, err := gocql.ParseConsistencyWrapper(c.Consistency)
 		if err != nil {
@@ -257,7 +249,6 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 		session.SetConsistency(consistencyValue)
 	}
 
-	// Verify the info
 	if !c.SkipVerification {
 		err = session.Query(`LIST ALL`).WithContext(ctx).Exec()
 		if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
@@ -267,31 +258,21 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 			if rowNum < 1 {
 				session.Close()
-				return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+				return nil, fmt.Errorf("error validating connection info: No role create permissions found, previous error: %w", err)
 			}
 		} else if err != nil {
 			session.Close()
-			return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
+			return nil, fmt.Errorf("error validating connection info: %w", err)
 		}
 	}
 
 	return session, nil
 }
 
-func (c *cassandraConnectionProducer) secretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *cassandraConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
 		c.Password:  "[password]",
 		c.PemBundle: "[pem_bundle]",
 		c.PemJSON:   "[pem_json]",
 	}
-}
-
-// SetCredentials uses provided information to set/create a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
-func (c *cassandraConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	return "", "", dbutil.Unimplemented()
 }

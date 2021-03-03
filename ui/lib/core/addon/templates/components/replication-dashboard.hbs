@@ -39,9 +39,9 @@
       {{yield (hash
         card=(component componentToRender replicationDetails=replicationDetails)
       )}}
-      {{#if (not isSecondary)}}
+      {{#unless isSecondary}}
         {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
-      {{/if}}
+      {{/unless}}
     </div>
   {{/if}}
   {{#if isSyncing}}

@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
+	"github.com/hashicorp/vault/command/agent/winsvc"
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -42,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
 	"github.com/posener/complete"
 )
 
@@ -368,9 +370,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Check if a default namespace has been set
 		mountPath := config.AutoAuth.Method.MountPath
-		if config.AutoAuth.Method.Namespace != "" {
-			namespace = config.AutoAuth.Method.Namespace
-			mountPath = path.Join(namespace, mountPath)
+		if cns := config.AutoAuth.Method.Namespace; cns != "" {
+			namespace = cns
+			// Only set this value if the env var is empty, otherwise we end up with a nested namespace
+			if ens := os.Getenv(api.EnvVaultNamespace); ens == "" {
+				mountPath = path.Join(cns, mountPath)
+			}
 		}
 
 		authConfig := &auth.AuthConfig{
@@ -411,6 +416,30 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
+	enforceConsistency := cache.EnforceConsistencyNever
+	whenInconsistent := cache.WhenInconsistentFail
+	if config.Cache != nil {
+		switch config.Cache.EnforceConsistency {
+		case "always":
+			enforceConsistency = cache.EnforceConsistencyAlways
+		case "never", "":
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown cache setting for enforce_consistency: %q", config.Cache.EnforceConsistency))
+			return 1
+		}
+
+		switch config.Cache.WhenInconsistent {
+		case "retry":
+			whenInconsistent = cache.WhenInconsistentRetry
+		case "forward":
+			whenInconsistent = cache.WhenInconsistentForward
+		case "fail", "":
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown cache setting for when_inconsistent: %q", config.Cache.WhenInconsistent))
+			return 1
+		}
+	}
+
 	// Warn if cache _and_ cert auto-auth is enabled but certificates were not
 	// provided in the auto_auth.method["cert"].config stanza.
 	if config.Cache != nil && (config.AutoAuth != nil && config.AutoAuth.Method != nil && config.AutoAuth.Method.Type == "cert") {
@@ -432,20 +461,16 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
-	// Inform any tests that the server is ready
-	select {
-	case c.startedCh <- struct{}{}:
-	default:
-	}
-
 	// Parse agent listener configurations
 	if config.Cache != nil && len(config.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client: client,
-			Logger: cacheLogger.Named("apiproxy"),
+			Client:                 client,
+			Logger:                 cacheLogger.Named("apiproxy"),
+			EnforceConsistency:     enforceConsistency,
+			WhenInconsistentAction: whenInconsistent,
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -542,11 +567,33 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
+	// Inform any tests that the server is ready
+	select {
+	case c.startedCh <- struct{}{}:
+	default:
+	}
+
 	// Listen for signals
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	var g run.Group
+
+	// This run group watches for signal termination
+	g.Add(func() error {
+		for {
+			select {
+			case <-c.ShutdownCh:
+				c.UI.Output("==> Vault agent shutdown triggered")
+				return nil
+			case <-ctx.Done():
+				return nil
+			case <-winsvc.ShutdownChannel():
+				return nil
+			}
+		}
+	}, func(error) {})
+
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -554,31 +601,65 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       c.client,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 		})
-		ahDoneCh = ah.DoneCh
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
 			ExitAfterAuth: exitAfterAuth,
 		})
-		ssDoneCh = ss.DoneCh
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
-			VaultConf:     config.Vault,
+			AgentConfig:   config,
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
-		tsDoneCh = ts.DoneCh
 
-		go ah.Run(ctx, method)
-		go ss.Run(ctx, ah.OutputCh, sinks)
-		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+		g.Add(func() error {
+			return ah.Run(ctx, method)
+		}, func(error) {
+			cancelFunc()
+		})
+
+		g.Add(func() error {
+			err := ss.Run(ctx, ah.OutputCh, sinks)
+			c.logger.Info("sinks finished, exiting")
+
+			// Start goroutine to drain from ah.OutputCh from this point onward
+			// to prevent ah.Run from being blocked.
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ah.OutputCh:
+					}
+				}
+			}()
+
+			// Wait until templates are rendered
+			if len(config.Templates) > 0 {
+				<-ts.DoneCh
+			}
+
+			return err
+		}, func(error) {
+			cancelFunc()
+		})
+
+		g.Add(func() error {
+			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+		}, func(error) {
+			cancelFunc()
+			ts.Stop()
+		})
+
 	}
 
 	// Server configuration output
@@ -609,27 +690,10 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	select {
-	case <-ssDoneCh:
-		// This will happen if we exit-on-auth
-		c.logger.Info("sinks finished, exiting")
-		// allow any templates to be rendered
-		if tsDoneCh != nil {
-			<-tsDoneCh
-		}
-	case <-c.ShutdownCh:
-		c.UI.Output("==> Vault agent shutdown triggered")
-		cancelFunc()
-		if ahDoneCh != nil {
-			<-ahDoneCh
-		}
-		if ssDoneCh != nil {
-			<-ssDoneCh
-		}
-
-		if tsDoneCh != nil {
-			<-tsDoneCh
-		}
+	if err := g.Run(); err != nil {
+		c.logger.Error("runtime error encountered", "error", err)
+		c.UI.Error("Error encountered during run, refer to logs for more details.")
+		return 1
 	}
 
 	return 0

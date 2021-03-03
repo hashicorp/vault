@@ -19,7 +19,7 @@ import (
 // A map type allows us to distinguish between empty and missing values.
 type batchRequestHMACItem map[string]string
 
-// BatchResponseItem represents a response item for batch processing
+// batchResponseHMACItem represents a response item for batch processing
 type batchResponseHMACItem struct {
 	// HMAC for the input present in the corresponding batch request item
 	HMAC string `json:"hmac,omitempty" mapstructure:"hmac"`

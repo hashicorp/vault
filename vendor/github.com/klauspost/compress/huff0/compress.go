@@ -80,12 +80,18 @@ func compress(in []byte, s *Scratch, compressor func(src []byte) ([]byte, error)
 
 	if s.Reuse == ReusePolicyPrefer && canReuse {
 		keepTable := s.cTable
+<<<<<<< HEAD
 		keepTL := s.actualTableLog
 		s.cTable = s.prevTable
 		s.actualTableLog = s.prevTableLog
 		s.Out, err = compressor(in)
 		s.cTable = keepTable
 		s.actualTableLog = keepTL
+=======
+		s.cTable = s.prevTable
+		s.Out, err = compressor(in)
+		s.cTable = keepTable
+>>>>>>> upstream/master
 		if err == nil && len(s.Out) < wantSize {
 			s.OutData = s.Out
 			return s.Out, true, nil
@@ -95,6 +101,10 @@ func compress(in []byte, s *Scratch, compressor func(src []byte) ([]byte, error)
 	}
 
 	// Calculate new table.
+<<<<<<< HEAD
+=======
+	s.optimalTableLog()
+>>>>>>> upstream/master
 	err = s.buildCTable()
 	if err != nil {
 		return nil, false, err
@@ -111,6 +121,7 @@ func compress(in []byte, s *Scratch, compressor func(src []byte) ([]byte, error)
 		if oldSize <= hSize+newSize || hSize+12 >= wantSize {
 			// Retain cTable even if we re-use.
 			keepTable := s.cTable
+<<<<<<< HEAD
 			keepTL := s.actualTableLog
 
 			s.cTable = s.prevTable
@@ -120,6 +131,11 @@ func compress(in []byte, s *Scratch, compressor func(src []byte) ([]byte, error)
 			// Restore ctable.
 			s.cTable = keepTable
 			s.actualTableLog = keepTL
+=======
+			s.cTable = s.prevTable
+			s.Out, err = compressor(in)
+			s.cTable = keepTable
+>>>>>>> upstream/master
 			if err != nil {
 				return nil, false, err
 			}
@@ -150,7 +166,11 @@ func compress(in []byte, s *Scratch, compressor func(src []byte) ([]byte, error)
 		return nil, false, ErrIncompressible
 	}
 	// Move current table into previous.
+<<<<<<< HEAD
 	s.prevTable, s.prevTableLog, s.cTable = s.cTable, s.actualTableLog, s.prevTable[:0]
+=======
+	s.prevTable, s.cTable = s.cTable, s.prevTable[:0]
+>>>>>>> upstream/master
 	s.OutData = s.Out[len(s.OutTable):]
 	return s.Out, false, nil
 }
@@ -325,6 +345,7 @@ func (s *Scratch) canUseTable(c cTable) bool {
 	return true
 }
 
+<<<<<<< HEAD
 func (s *Scratch) validateTable(c cTable) bool {
 	if len(c) < int(s.symbolLen) {
 		return false
@@ -345,6 +366,11 @@ func (s *Scratch) validateTable(c cTable) bool {
 // minTableLog provides the minimum logSize to safely represent a distribution.
 func (s *Scratch) minTableLog() uint8 {
 	minBitsSrc := highBit32(uint32(s.br.remain())) + 1
+=======
+// minTableLog provides the minimum logSize to safely represent a distribution.
+func (s *Scratch) minTableLog() uint8 {
+	minBitsSrc := highBit32(uint32(s.br.remain()-1)) + 1
+>>>>>>> upstream/master
 	minBitsSymbols := highBit32(uint32(s.symbolLen-1)) + 2
 	if minBitsSrc < minBitsSymbols {
 		return uint8(minBitsSrc)
@@ -356,7 +382,11 @@ func (s *Scratch) minTableLog() uint8 {
 func (s *Scratch) optimalTableLog() {
 	tableLog := s.TableLog
 	minBits := s.minTableLog()
+<<<<<<< HEAD
 	maxBitsSrc := uint8(highBit32(uint32(s.br.remain()-1))) - 1
+=======
+	maxBitsSrc := uint8(highBit32(uint32(s.br.remain()-1))) - 2
+>>>>>>> upstream/master
 	if maxBitsSrc < tableLog {
 		// Accuracy can be reduced
 		tableLog = maxBitsSrc
@@ -383,7 +413,10 @@ type cTableEntry struct {
 const huffNodesMask = huffNodesLen - 1
 
 func (s *Scratch) buildCTable() error {
+<<<<<<< HEAD
 	s.optimalTableLog()
+=======
+>>>>>>> upstream/master
 	s.huffSort()
 	if cap(s.cTable) < maxSymbolValue+1 {
 		s.cTable = make([]cTableEntry, s.symbolLen, maxSymbolValue+1)

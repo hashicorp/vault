@@ -9,7 +9,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -319,28 +320,27 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	}
 
 	// Get the Database object
-	db, err := b.GetConnection(ctx, s, input.Role.DBName)
+	dbi, err := b.GetConnection(ctx, s, input.Role.DBName)
 	if err != nil {
 		return output, err
 	}
 
-	db.RLock()
-	defer db.RUnlock()
+	dbi.RLock()
+	defer dbi.RUnlock()
 
 	// Use password from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
 	newPassword := input.Password
 	if newPassword == "" {
-		// Generate a new password
-		newPassword, err = db.GenerateCredentials(ctx)
+		newPassword, err = dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
 		if err != nil {
 			return output, err
 		}
 	}
 	output.Password = newPassword
 
-	config := dbplugin.StaticUserConfig{
+	config := v4.StaticUserConfig{
 		Username: input.Role.StaticAccount.Username,
 		Password: newPassword,
 	}
@@ -358,21 +358,26 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 
-	_, password, err := db.SetCredentials(ctx, input.Role.Statements, config)
-	if err != nil {
-		b.CloseIfShutdown(db, err)
-		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
+	updateReq := v5.UpdateUserRequest{
+		Username: input.Role.StaticAccount.Username,
+		Password: &v5.ChangePassword{
+			NewPassword: newPassword,
+			Statements: v5.Statements{
+				Commands: input.Role.Statements.Rotation,
+			},
+		},
 	}
-
-	if newPassword != password {
-		return output, errors.New("mismatch passwords returned")
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
+	if err != nil {
+		b.CloseIfShutdown(dbi, err)
+		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
 	}
 
 	// Store updated role information
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
-	input.Role.StaticAccount.Password = password
+	input.Role.StaticAccount.Password = newPassword
 	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
@@ -393,7 +398,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
 }
 
-// initQueue preforms the necessary checks and initializations needed to preform
+// initQueue preforms the necessary checks and initializations needed to perform
 // automatic credential rotation for roles associated with static accounts. This
 // method verifies if a queue is needed (primary server or local mount), and if
 // so initializes the queue and launches a go-routine to periodically invoke a

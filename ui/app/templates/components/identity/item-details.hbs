@@ -12,10 +12,10 @@
       {{/if}}
     </AlertBanner>
   {{/if}}
-  {{info-table-row label="Name" value=model.name data-test-identity-item-name=true}}
-  {{info-table-row label="Type" value=model.type }}
-  {{info-table-row label="ID" value=model.id }}
-  {{#info-table-row label="Merged Ids" value=model.mergedEntityIds }}
+  <InfoTableRow @label="Name" @value={{model.name}} @data-test-identity-item-name={{true}} />
+  <InfoTableRow @label="Type" @value={{model.type}} />
+  <InfoTableRow @label="ID" @value={{model.id}} />
+  <InfoTableRow @label="Merged Ids" @value={{model.mergedEntityIds}}>
     <div>
       {{#each model.mergedEntityIds as |id|}}
         <div>
@@ -23,15 +23,15 @@
         </div>
       {{/each}}
     </div>
-  {{/info-table-row}}
-  {{#info-table-row label="Created" value=model.creationTime}}
+  </InfoTableRow>
+  <InfoTableRow @label="Created" @value={{model.creationTime}}>
     <time datetime={{model.creationTime}} title={{model.creationTime}}>
-      {{date-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
+      {{date-format model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
-  {{/info-table-row}}
-  {{#info-table-row label="Last Updated" value=model.lastUpdateTime}}
+  </InfoTableRow>
+  <InfoTableRow @label="Last Updated" @value={{model.lastUpdateTime}}>
     <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
-      {{date-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
+      {{date-format model.lastUpdateTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
-  {{/info-table-row}}
+  </InfoTableRow>
 </div>

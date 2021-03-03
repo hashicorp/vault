@@ -199,6 +199,9 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 
 	p, err := r.GetIamPolicy(ctx, apiHandle)
 	if err != nil {
+		if isGoogleAccountNotFoundErr(err) || isGoogleAccountUnauthorizedErr(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -222,8 +225,10 @@ func (b *backend) deleteServiceAccount(ctx context.Context, iamAdmin *iam.Servic
 	}
 
 	_, err := iamAdmin.Projects.ServiceAccounts.Delete(account.ResourceName()).Do()
-	if err != nil && !isGoogleAccountNotFoundErr(err) {
-		return errwrap.Wrapf("unable to delete service account: {{err}}", err)
+	if err != nil {
+		if !isGoogleAccountNotFoundErr(err) && !isGoogleAccountUnauthorizedErr(err) {
+			return errwrap.Wrapf("unable to delete service account: {{err}}", err)
+		}
 	}
 	return nil
 }
@@ -285,6 +290,10 @@ func isGoogleAccountNotFoundErr(err error) bool {
 	return isGoogleApiErrorWithCodes(err, 404)
 }
 
+func isGoogleAccountUnauthorizedErr(err error) bool {
+	return isGoogleApiErrorWithCodes(err, 403)
+}
+
 func isGoogleAccountKeyNotFoundErr(err error) bool {
 	return isGoogleApiErrorWithCodes(err, 403, 404)
 }
@@ -293,10 +302,12 @@ func isGoogleApiErrorWithCodes(err error, validErrCodes ...int) bool {
 	if err == nil {
 		return false
 	}
-	gErr, ok := err.(*googleapi.Error)
+	ok := errwrap.ContainsType(err, new(googleapi.Error))
 	if !ok {
 		return false
 	}
+
+	gErr := errwrap.GetType(err, new(googleapi.Error)).(*googleapi.Error)
 
 	for _, code := range validErrCodes {
 		if gErr.Code == code {

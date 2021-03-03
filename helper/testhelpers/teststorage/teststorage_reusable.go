@@ -164,7 +164,7 @@ func makeRaftDir(t testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("raft dir: %s", raftDir)
+	//t.Logf("raft dir: %s", raftDir)
 	return raftDir
 }
 

@@ -6,6 +6,9 @@ jobs:
   - build-go-dev:
       requires:
         - pre-flight-checks
+  - go-mod-vendor:
+      requires:
+        - pre-flight-checks
   - test-ui:
       requires:
         - install-ui-dependencies
@@ -20,10 +23,22 @@ jobs:
           ignore: /pull\/[0-9]+/
   - test-go:
       requires:
-        - build-go-dev
+        - pre-flight-checks
+  - test-go-remote-docker:
+      requires:
+        - pre-flight-checks
   - test-go-race:
       requires:
-        - build-go-dev
+        - pre-flight-checks
+      filters:
+        branches:
+          # UI and Docs-only branches should skip go tests
+          ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
+  - test-go-race-remote-docker:
+      requires:
+        - pre-flight-checks
       filters:
         branches:
           # UI and Docs-only branches should skip go tests

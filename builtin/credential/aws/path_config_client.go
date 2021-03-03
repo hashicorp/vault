@@ -58,11 +58,13 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
+
 			"allowed_sts_header_values": {
 				Type:        framework.TypeCommaStringSlice,
 				Default:     nil,
 				Description: "List of additional headers that are allowed to be in AWS STS request headers",
 			},
+
 			"max_retries": {
 				Type:        framework.TypeInt,
 				Default:     aws.UseServiceDefaultRetries,
@@ -299,7 +301,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	// This allows calling this endpoint multiple times to provide the values.
 	// Hence, the readers of this endpoint should do the validation on
 	// the validation of keys before using them.
-	entry, err := logical.StorageEntryJSON("config/client", configEntry)
+	entry, err := b.configClientToEntry(configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +321,17 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	return nil, nil
 }
 
+// configClientToEntry allows the client config code to encapsulate its
+// knowledge about where its config is stored. It also provides a way
+// for other endpoints to update the config properly.
+func (b *backend) configClientToEntry(conf *clientConfig) (*logical.StorageEntry, error) {
+	entry, err := logical.StorageEntryJSON("config/client", conf)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
@@ -336,7 +349,7 @@ type clientConfig struct {
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
-		if 	strings.HasPrefix(h, amzHeaderPrefix) &&
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
 			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)

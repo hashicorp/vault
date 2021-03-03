@@ -338,10 +338,24 @@ func (b *blockEnc) encodeLits(raw bool) error {
 	if len(b.literals) >= 1024 {
 		// Use 4 Streams.
 		out, reUsed, err = huff0.Compress4X(b.literals, b.litEnc)
+<<<<<<< HEAD
+=======
+		if len(out) > len(b.literals)-len(b.literals)>>4 {
+			// Bail out of compression is too little.
+			err = huff0.ErrIncompressible
+		}
+>>>>>>> upstream/master
 	} else if len(b.literals) > 32 {
 		// Use 1 stream
 		single = true
 		out, reUsed, err = huff0.Compress1X(b.literals, b.litEnc)
+<<<<<<< HEAD
+=======
+		if len(out) > len(b.literals)-len(b.literals)>>4 {
+			// Bail out of compression is too little.
+			err = huff0.ErrIncompressible
+		}
+>>>>>>> upstream/master
 	} else {
 		err = huff0.ErrIncompressible
 	}

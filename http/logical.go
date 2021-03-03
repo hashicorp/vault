@@ -112,13 +112,17 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			// and an incorrect content-type).
 			head, err := bufferedBody.Peek(512)
 			if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
-				return nil, nil, http.StatusBadRequest, err
+				status := http.StatusBadRequest
+				logical.AdjustErrorStatusCode(&status, err)
+				return nil, nil, status, fmt.Errorf("error reading data")
 			}
 
 			if isForm(head, r.Header.Get("Content-Type")) {
 				formData, err := parseFormRequest(r)
 				if err != nil {
-					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data: %w", err)
+					status := http.StatusBadRequest
+					logical.AdjustErrorStatusCode(&status, err)
+					return nil, nil, status, fmt.Errorf("error parsing form data")
 				}
 
 				data = formData
@@ -129,7 +133,9 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 					err = nil
 				}
 				if err != nil {
-					return nil, nil, http.StatusBadRequest, err
+					status := http.StatusBadRequest
+					logical.AdjustErrorStatusCode(&status, err)
+					return nil, nil, status, fmt.Errorf("error parsing JSON")
 				}
 			}
 		}
@@ -213,6 +219,12 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
+
+	rawRequired := r.Header.Values(VaultIndexHeaderName)
+	if len(rawRequired) != 0 && core.MissingRequiredState(rawRequired) {
+		return nil, nil, http.StatusPreconditionFailed, fmt.Errorf("required index state not present")
+	}
+
 	req, err = requestAuth(core, r, req)
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
@@ -447,13 +459,13 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		default:
 			// Build and return the proper response if everything is fine.
-			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
+			respondLogical(core, w, r, req, resp, injectDataIntoTopLevel)
 			return
 		}
 	})
 }
 
-func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response, injectDataIntoTopLevel bool) {
+func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response, injectDataIntoTopLevel bool) {
 	var httpResp *logical.HTTPResponse
 	var ret interface{}
 
@@ -502,6 +514,8 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 			ret = injector
 		}
 	}
+
+	adjustResponse(core, w, req)
 
 	// Respond
 	respondOk(w, ret)

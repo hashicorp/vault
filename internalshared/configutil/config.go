@@ -214,6 +214,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
 			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
 			"stackdriver_debug_logs":                 c.Telemetry.StackdriverDebugLogs,
+			"lease_metrics_epsilon":                  c.Telemetry.LeaseMetricsEpsilon,
+			"num_lease_metrics_buckets":              c.Telemetry.NumLeaseMetricsTimeBuckets,
+			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

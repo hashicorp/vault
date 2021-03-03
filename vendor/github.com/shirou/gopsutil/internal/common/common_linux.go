@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -110,9 +111,24 @@ func Virtualization() (string, string, error) {
 	return VirtualizationWithContext(context.Background())
 }
 
+// required variables for concurrency safe virtualization caching
+var (
+	cachedVirtMap   map[string]string
+	cachedVirtMutex sync.RWMutex
+	cachedVirtOnce  sync.Once
+)
+
 func VirtualizationWithContext(ctx context.Context) (string, string, error) {
-	var system string
-	var role string
+	var system, role string
+
+	// if cached already, return from cache
+	cachedVirtMutex.RLock() // unlock won't be deferred so concurrent reads don't wait for long
+	if cachedVirtMap != nil {
+		cachedSystem, cachedRole := cachedVirtMap["system"], cachedVirtMap["role"]
+		cachedVirtMutex.RUnlock()
+		return cachedSystem, cachedRole, nil
+	}
+	cachedVirtMutex.RUnlock()
 
 	filename := HostProc("xen")
 	if PathExists(filename) {
@@ -231,6 +247,17 @@ func VirtualizationWithContext(ctx context.Context) (string, string, error) {
 			role = "host"
 		}
 	}
+
+	// before returning for the first time, cache the system and role
+	cachedVirtOnce.Do(func() {
+		cachedVirtMutex.Lock()
+		defer cachedVirtMutex.Unlock()
+		cachedVirtMap = map[string]string{
+			"system": system,
+			"role":   role,
+		}
+	})
+
 	return system, role, nil
 }
 

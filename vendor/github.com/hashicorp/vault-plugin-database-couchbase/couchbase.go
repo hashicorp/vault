@@ -3,21 +3,25 @@ package couchbase
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/couchbase/gocb/v2"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
 const (
 	couchbaseTypeName        = "couchbase"
 	defaultCouchbaseUserRole = `{"Roles": [{"role":"ro_admin"}]}`
+	defaultTimeout           = 20000 * time.Millisecond
+
+	defaultUserNameTemplate = `V_{{.DisplayName | uppercase | truncate 64}}_{{.RoleName | uppercase | truncate 64}}_{{random 20 | uppercase}}_{{unix_time}}`
 )
 
 var (
@@ -29,6 +33,8 @@ var (
 type CouchbaseDB struct {
 	*couchbaseDBConnectionProducer
 	credsutil.CredentialsProducer
+
+	usernameProducer template.StringTemplate
 }
 
 // Type that combines the Couchbase Roles and Groups representing specific account permissions. Used to pass roles and or
@@ -50,73 +56,81 @@ func new() *CouchbaseDB {
 	connProducer := &couchbaseDBConnectionProducer{}
 	connProducer.Type = couchbaseTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 50,
-		RoleNameLen:    50,
-		UsernameLen:    50,
-		Separator:      "-",
-	}
-
 	db := &CouchbaseDB{
 		couchbaseDBConnectionProducer: connProducer,
-		CredentialsProducer:           credsProducer,
 	}
 
 	return db
 }
 
-// Run instantiates a CouchbaseDB object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
+func (c *CouchbaseDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
 	if err != nil {
-		return err
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
 	}
 
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
-}
-
-func (c *CouchbaseDB) Type() (string, error) {
-	return couchbaseTypeName, nil
-}
-
-func computeTimeout(ctx context.Context) (timeout time.Duration) {
-	deadline, ok := ctx.Deadline()
-	if ok {
-		return time.Until(deadline)
-	}
-	return 5 * time.Second
-}
-func (c *CouchbaseDB) getConnection(ctx context.Context) (*gocb.Cluster, error) {
-	db, err := c.Connection(ctx)
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
 	if err != nil {
-		return nil, err
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
 	}
-	return db.(*gocb.Cluster), nil
+	c.usernameProducer = up
+
+	err = c.couchbaseDBConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
+	if err != nil {
+		return dbplugin.InitializeResponse{}, err
+	}
+	resp := dbplugin.InitializeResponse{
+		Config: req.Config,
+	}
+	return resp, nil
 }
 
-// SetCredentials uses provided information to set/create a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
-func (c *CouchbaseDB) SetCredentials(ctx context.Context, _ dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	username = staticUser.Username
-	password = staticUser.Password
-	if username == "" || password == "" {
-		return "", "", errors.New("must provide both username and password")
-	}
-
+func (c *CouchbaseDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()
 
-	// Get the connection
+	username, err := c.usernameProducer.Generate(req.UsernameConfig)
+	if err != nil {
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
+	}
+	username = strings.ToUpper(username)
+
 	db, err := c.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to get connection: %w", err)
+	}
+
+	err = newUser(ctx, db, username, req)
+	if err != nil {
+		return dbplugin.NewUserResponse{}, err
+	}
+
+	resp := dbplugin.NewUserResponse{
+		Username: username,
+	}
+
+	return resp, nil
+}
+
+func (c *CouchbaseDB) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
+	if req.Password != nil {
+		err := c.changeUserPassword(ctx, req.Username, req.Password.NewPassword)
+		return dbplugin.UpdateUserResponse{}, err
+	}
+	return dbplugin.UpdateUserResponse{}, nil
+}
+
+func (c *CouchbaseDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	db, err := c.getConnection(ctx)
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to make connection: %w", err)
 	}
 
 	// Close the database connection to ensure no new connections come in
@@ -128,80 +142,31 @@ func (c *CouchbaseDB) SetCredentials(ctx context.Context, _ dbplugin.Statements,
 	}()
 
 	// Get the UserManager
-
 	mgr := db.Users()
 
-	// Get the User and error out if it does not exist.
-
-	userOpts, err := mgr.GetUser(username, nil)
-	if err != nil {
-		return "", "", err
-	}
-
-	user := gocb.User{
-		Username:    username,
-		Password:    password,
-		Roles:       userOpts.Roles,
-		Groups:      userOpts.Groups,
-		DisplayName: userOpts.DisplayName,
-	}
-
-	err = mgr.UpsertUser(user,
-		&gocb.UpsertUserOptions{
-			Timeout:    computeTimeout(ctx),
-			DomainName: string(userOpts.Domain),
-		})
+	err = mgr.DropUser(req.Username, nil)
 
 	if err != nil {
-		return "", "", err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
-	return username, password, nil
+	return dbplugin.DeleteUserResponse{}, nil
 }
 
-func (c *CouchbaseDB) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, _ time.Time) (username string, password string, err error) {
-	// Grab the lock
-	c.Lock()
-	defer c.Unlock()
-
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Creation) == 0 {
-		statements.Creation = append(statements.Creation, defaultCouchbaseUserRole)
+func newUser(ctx context.Context, db *gocb.Cluster, username string, req dbplugin.NewUserRequest) error {
+	statements := removeEmpty(req.Statements.Commands)
+	if len(statements) == 0 {
+		statements = append(statements, defaultCouchbaseUserRole)
 	}
 
-	jsonRoleAndGroupData := []byte(statements.Creation[0])
+	jsonRoleAndGroupData := []byte(statements[0])
 
 	var rag RolesAndGroups
 
-	err = json.Unmarshal(jsonRoleAndGroupData, &rag)
+	err := json.Unmarshal(jsonRoleAndGroupData, &rag)
 	if err != nil {
-		return "", "", errwrap.Wrapf("error unmarshaling roles and groups creation statement JSON: {{err}}", err)
+		return errwrap.Wrapf("error unmarshalling roles and groups creation statement JSON: {{err}}", err)
 	}
-
-	username, err = c.GenerateUsername(usernameConfig)
-	if err != nil {
-		return "", "", err
-	}
-
-	password, err = c.GeneratePassword()
-	if err != nil {
-		return "", "", err
-	}
-
-	// Get the connection
-	db, err := c.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Close the database connection to ensure no new connections come in
-	defer func() {
-		if err := c.close(); err != nil {
-			logger := hclog.New(&hclog.LoggerOptions{})
-			logger.Error("defer close failed", "error", err)
-		}
-	}()
 
 	// Get the UserManager
 
@@ -209,8 +174,8 @@ func (c *CouchbaseDB) CreateUser(ctx context.Context, statements dbplugin.Statem
 
 	user := gocb.User{
 		Username:    username,
-		DisplayName: usernameConfig.DisplayName,
-		Password:    password,
+		DisplayName: req.UsernameConfig.DisplayName,
+		Password:    req.Password,
 		Roles:       rag.Roles,
 		Groups:      rag.Groups,
 	}
@@ -221,21 +186,13 @@ func (c *CouchbaseDB) CreateUser(ctx context.Context, statements dbplugin.Statem
 			DomainName: "local",
 		})
 	if err != nil {
-		return "", "", err
+		return err
 	}
-
-	return username, password, nil
-}
-
-// RenewUser is not supported by Couchbase, so this is a no-op.
-func (p *CouchbaseDB) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
-	// NOOP
 
 	return nil
 }
 
-func (c *CouchbaseDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	// Grab the lock
+func (c *CouchbaseDB) changeUserPassword(ctx context.Context, username, password string) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -254,72 +211,55 @@ func (c *CouchbaseDB) RevokeUser(ctx context.Context, statements dbplugin.Statem
 
 	// Get the UserManager
 	mgr := db.Users()
-
-	err = mgr.DropUser(username, nil)
+	user, err := mgr.GetUser(username, nil)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to retrieve user %s: %w", username, err)
 	}
+	user.User.Password = password
 
-	return nil
-}
-
-func (c *CouchbaseDB) RotateRootCredentials(ctx context.Context, _ []string) (map[string]interface{}, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	if len(c.Username) == 0 || len(c.Password) == 0 {
-		return nil, errors.New("username and password are required to rotate")
-	}
-
-	password, err := c.GeneratePassword()
-	if err != nil {
-		return nil, err
-	}
-
-	db, err := c.getConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Close the database connection to ensure no new connections come in
-	defer func() {
-		if err := c.close(); err != nil {
-			logger := hclog.New(&hclog.LoggerOptions{})
-			logger.Error("defer close failed", "error", err)
-		}
-	}()
-
-	// Get the UserManager
-
-	mgr := db.Users()
-
-	// Get the User
-
-	userOpts, err := mgr.GetUser(c.Username, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	user := gocb.User{
-		Username:    c.Username,
-		Password:    password,
-		Roles:       userOpts.Roles,
-		Groups:      userOpts.Groups,
-		DisplayName: userOpts.DisplayName,
-	}
-
-	err = mgr.UpsertUser(user,
+	err = mgr.UpsertUser(user.User,
 		&gocb.UpsertUserOptions{
 			Timeout:    computeTimeout(ctx),
-			DomainName: string(userOpts.Domain),
+			DomainName: "local",
 		})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	c.rawConfig["password"] = password
+	return nil
+}
 
-	return c.rawConfig, nil
+func removeEmpty(strs []string) []string {
+	var newStrs []string
+	for _, str := range strs {
+		str = strings.TrimSpace(str)
+		if str == "" {
+			continue
+		}
+		newStrs = append(newStrs, str)
+	}
+
+	return newStrs
+}
+
+func computeTimeout(ctx context.Context) (timeout time.Duration) {
+	deadline, ok := ctx.Deadline()
+	if ok {
+		return time.Until(deadline)
+	}
+	return defaultTimeout
+}
+
+func (c *CouchbaseDB) getConnection(ctx context.Context) (*gocb.Cluster, error) {
+	db, err := c.Connection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return db.(*gocb.Cluster), nil
+}
+
+func (c *CouchbaseDB) Type() (string, error) {
+	return couchbaseTypeName, nil
 }

@@ -126,6 +126,7 @@ func TestLoadConfigFile(t *testing.T) {
 				Config: map[string]interface{}{
 					"role": "foobar",
 				},
+				MaxBackoff: 0,
 			},
 			Sinks: []*Sink{
 				{
@@ -138,11 +139,11 @@ func TestLoadConfigFile(t *testing.T) {
 					},
 				},
 				{
-					Type:    "file",
-					WrapTTL: 5 * time.Minute,
-					DHType:  "curve25519",
-					DHPath:  "/tmp/file-foo-dhpath2",
-					AAD:     "aad",
+					Type:      "file",
+					WrapTTL:   5 * time.Minute,
+					DHType:    "curve25519",
+					DHPath:    "/tmp/file-foo-dhpath2",
+					AAD:       "aad",
 					DeriveKey: true,
 					Config: map[string]interface{}{
 						"path": "/tmp/file-bar",
@@ -178,9 +179,10 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
-				Type:      "aws",
-				MountPath: "auth/aws",
-				WrapTTL:   5 * time.Minute,
+				Type:       "aws",
+				MountPath:  "auth/aws",
+				WrapTTL:    5 * time.Minute,
+				MaxBackoff: 2 * time.Minute,
 				Config: map[string]interface{}{
 					"role": "foobar",
 				},
@@ -640,5 +642,132 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 				t.Fatal(diff)
 			}
 		})
+	}
+}
+
+func TestLoadConfigFile_Vault_Retry(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-vault-retry.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+		},
+		TemplateRetry: &TemplateRetry{
+			Enabled:       true,
+			Attempts:      5,
+			BackoffRaw:    nil,
+			Backoff:       100 * time.Millisecond,
+			MaxBackoffRaw: nil,
+			MaxBackoff:    400 * time.Millisecond,
+		},
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-vault-retry-empty.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+		},
+		TemplateRetry: &TemplateRetry{
+			Enabled:       false,
+			Attempts:      ctconfig.DefaultRetryAttempts,
+			BackoffRaw:    nil,
+			Backoff:       ctconfig.DefaultRetryBackoff,
+			MaxBackoffRaw: nil,
+			MaxBackoff:    ctconfig.DefaultRetryMaxBackoff,
+		},
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-consistency.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "",
+		},
+		Cache: &Cache{
+			EnforceConsistency: "always",
+			WhenInconsistent:   "retry",
+		},
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }

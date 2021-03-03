@@ -158,8 +158,8 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	return c.db, nil
 }
 
-func (c *mySQLConnectionProducer) SecretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *mySQLConnectionProducer) SecretValues() map[string]string {
+	return map[string]string{
 		c.Password: "[password]",
 	}
 }

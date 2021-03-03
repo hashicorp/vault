@@ -270,6 +270,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.entConfig = c.entConfig.Merge(c2.entConfig)
+
 	return result
 }
 
@@ -773,6 +775,11 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"type": c.ServiceRegistration.Type,
 		}
 		result["service_registration"] = sanitizedServiceRegistration
+	}
+
+	entConfigResult := c.entConfig.Sanitized()
+	for k, v := range entConfigResult {
+		result[k] = v
 	}
 
 	return result

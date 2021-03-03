@@ -43,6 +43,7 @@ func (*InsertOneModel) writeModel() {}
 type DeleteOneModel struct {
 	Filter    interface{}
 	Collation *options.Collation
+	Hint      interface{}
 }
 
 // NewDeleteOneModel creates a new DeleteOneModel.
@@ -65,12 +66,23 @@ func (dom *DeleteOneModel) SetCollation(collation *options.Collation) *DeleteOne
 	return dom
 }
 
+// SetHint specifies the index to use for the operation. This should either be the index name as a string or the index
+// specification as a document. This option is only valid for MongoDB versions >= 4.4. Server versions >= 3.4 will
+// return an error if this option is specified. For server versions < 3.4, the driver will return a client-side error if
+// this option is specified. The driver will return an error if this option is specified during an unacknowledged write
+// operation. The default value is nil, which means that no hint will be sent.
+func (dom *DeleteOneModel) SetHint(hint interface{}) *DeleteOneModel {
+	dom.Hint = hint
+	return dom
+}
+
 func (*DeleteOneModel) writeModel() {}
 
 // DeleteManyModel is used to delete multiple documents in a BulkWrite operation.
 type DeleteManyModel struct {
 	Filter    interface{}
 	Collation *options.Collation
+	Hint      interface{}
 }
 
 // NewDeleteManyModel creates a new DeleteManyModel.
@@ -92,6 +104,16 @@ func (dmm *DeleteManyModel) SetCollation(collation *options.Collation) *DeleteMa
 	return dmm
 }
 
+// SetHint specifies the index to use for the operation. This should either be the index name as a string or the index
+// specification as a document. This option is only valid for MongoDB versions >= 4.4. Server versions >= 3.4 will
+// return an error if this option is specified. For server versions < 3.4, the driver will return a client-side error if
+// this option is specified. The driver will return an error if this option is specified during an unacknowledged write
+// operation. The default value is nil, which means that no hint will be sent.
+func (dmm *DeleteManyModel) SetHint(hint interface{}) *DeleteManyModel {
+	dmm.Hint = hint
+	return dmm
+}
+
 func (*DeleteManyModel) writeModel() {}
 
 // ReplaceOneModel is used to replace at most one document in a BulkWrite operation.
@@ -100,11 +122,22 @@ type ReplaceOneModel struct {
 	Upsert      *bool
 	Filter      interface{}
 	Replacement interface{}
+	Hint        interface{}
 }
 
 // NewReplaceOneModel creates a new ReplaceOneModel.
 func NewReplaceOneModel() *ReplaceOneModel {
 	return &ReplaceOneModel{}
+}
+
+// SetHint specifies the index to use for the operation. This should either be the index name as a string or the index
+// specification as a document. This option is only valid for MongoDB versions >= 4.2. Server versions >= 3.4 will
+// return an error if this option is specified. For server versions < 3.4, the driver will return a client-side error if
+// this option is specified. The driver will return an error if this option is specified during an unacknowledged write
+// operation. The default value is nil, which means that no hint will be sent.
+func (rom *ReplaceOneModel) SetHint(hint interface{}) *ReplaceOneModel {
+	rom.Hint = hint
+	return rom
 }
 
 // SetFilter specifies a filter to use to select the document to replace. The filter must be a document containing query
@@ -146,11 +179,22 @@ type UpdateOneModel struct {
 	Filter       interface{}
 	Update       interface{}
 	ArrayFilters *options.ArrayFilters
+	Hint         interface{}
 }
 
 // NewUpdateOneModel creates a new UpdateOneModel.
 func NewUpdateOneModel() *UpdateOneModel {
 	return &UpdateOneModel{}
+}
+
+// SetHint specifies the index to use for the operation. This should either be the index name as a string or the index
+// specification as a document. This option is only valid for MongoDB versions >= 4.2. Server versions >= 3.4 will
+// return an error if this option is specified. For server versions < 3.4, the driver will return a client-side error if
+// this option is specified. The driver will return an error if this option is specified during an unacknowledged write
+// operation. The default value is nil, which means that no hint will be sent.
+func (uom *UpdateOneModel) SetHint(hint interface{}) *UpdateOneModel {
+	uom.Hint = hint
+	return uom
 }
 
 // SetFilter specifies a filter to use to select the document to update. The filter must be a document containing query
@@ -199,11 +243,22 @@ type UpdateManyModel struct {
 	Filter       interface{}
 	Update       interface{}
 	ArrayFilters *options.ArrayFilters
+	Hint         interface{}
 }
 
 // NewUpdateManyModel creates a new UpdateManyModel.
 func NewUpdateManyModel() *UpdateManyModel {
 	return &UpdateManyModel{}
+}
+
+// SetHint specifies the index to use for the operation. This should either be the index name as a string or the index
+// specification as a document. This option is only valid for MongoDB versions >= 4.2. Server versions >= 3.4 will
+// return an error if this option is specified. For server versions < 3.4, the driver will return a client-side error if
+// this option is specified. The driver will return an error if this option is specified during an unacknowledged write
+// operation. The default value is nil, which means that no hint will be sent.
+func (umm *UpdateManyModel) SetHint(hint interface{}) *UpdateManyModel {
+	umm.Hint = hint
+	return umm
 }
 
 // SetFilter specifies a filter to use to select documents to update. The filter must be a document containing query

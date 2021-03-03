@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/couchbase/gocb/v2"
 	"github.com/hashicorp/errwrap"
@@ -34,8 +33,8 @@ type couchbaseDBConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *couchbaseDBConnectionProducer) secretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *couchbaseDBConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
 		c.Password: "[password]",
 		c.Username: "[username]",
 	}
@@ -99,7 +98,7 @@ func (c *couchbaseDBConnectionProducer) Initialize(ctx context.Context, config m
 	_, err := c.Init(ctx, config, verifyConnection)
 	return err
 }
-func (c *couchbaseDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
+func (c *couchbaseDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	// This is intentionally not grabbing the lock since the calling functions (e.g. CreateUser)
 	// are claiming it. (The locking patterns could be refactored to be more consistent/clear.)
 
@@ -147,12 +146,12 @@ func (c *couchbaseDBConnectionProducer) Connection(_ context.Context) (interface
 	if c.BucketName != "" {
 		bucket := c.cluster.Bucket(c.BucketName)
 		// We wait until the bucket is definitely connected and setup.
-		err = bucket.WaitUntilReady(5*time.Second, nil)
+		err = bucket.WaitUntilReady(computeTimeout(ctx), nil)
 		if err != nil {
 			return nil, errwrap.Wrapf("error in Connection waiting for bucket: {{err}}", err)
 		}
 	} else {
-		err = c.cluster.WaitUntilReady(5*time.Second, nil)
+		err = c.cluster.WaitUntilReady(computeTimeout(ctx), nil)
 
 		if err != nil {
 			return nil, errwrap.Wrapf("error in Connection waiting for cluster: {{err}}", err)

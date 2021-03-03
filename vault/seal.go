@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -401,6 +402,36 @@ func (s *SealConfig) Clone() *SealConfig {
 	return ret
 }
 
+type ErrEncrypt struct {
+	Err error
+}
+
+var _ error = &ErrEncrypt{}
+
+func (e *ErrEncrypt) Error() string {
+	return e.Err.Error()
+}
+
+func (e *ErrEncrypt) Is(target error) bool {
+	_, ok := target.(*ErrEncrypt)
+	return ok || errors.Is(e.Err, target)
+}
+
+type ErrDecrypt struct {
+	Err error
+}
+
+var _ error = &ErrDecrypt{}
+
+func (e *ErrDecrypt) Error() string {
+	return e.Err.Error()
+}
+
+func (e *ErrDecrypt) Is(target error) bool {
+	_, ok := target.(*ErrDecrypt)
+	return ok || errors.Is(e.Err, target)
+}
+
 func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte) error {
 	if keys == nil {
 		return fmt.Errorf("keys were nil")
@@ -417,7 +448,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 	// Encrypt and marshal the keys
 	blobInfo, err := encryptor.Encrypt(ctx, buf, nil)
 	if err != nil {
-		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
+		return &ErrEncrypt{Err: errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)}
 	}
 
 	value, err := proto.Marshal(blobInfo)
@@ -457,7 +488,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 
 	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
+		return nil, &ErrDecrypt{Err: errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)}
 	}
 
 	// Decode the barrier entry

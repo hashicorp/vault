@@ -2,58 +2,16 @@ package mysql
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
-
-func prepareTestContainer(t *testing.T) (func(), string) {
-	if os.Getenv("MYSQL_URL") != "" {
-		return func() {}, os.Getenv("MYSQL_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("mysql", "5.7", []string{"MYSQL_ROOT_PASSWORD=secret"})
-	if err != nil {
-		t.Fatalf("Could not start local MySQL docker container: %s", err)
-	}
-
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL := fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("mysql", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to MySQL docker container: %s", err)
-	}
-
-	return cleanup, retURL
-}
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -104,7 +62,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -130,7 +88,7 @@ func TestBackend_basicHostRevoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -156,7 +114,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -187,7 +145,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connData := map[string]interface{}{

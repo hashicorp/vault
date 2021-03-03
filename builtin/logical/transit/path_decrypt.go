@@ -11,6 +11,16 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type DecryptBatchResponseItem struct {
+	// Plaintext for the ciphertext present in the corresponding batch
+	// request item
+	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
+
+	// Error, if set represents a failure encountered while encrypting a
+	// corresponding batch request item
+	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+}
+
 func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
@@ -78,7 +88,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	for i, item := range batchInputItems {

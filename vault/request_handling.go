@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	replTimeout = 10 * time.Second
+	replTimeout = 1 * time.Second
 )
 
 var (
@@ -123,7 +123,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
-		return nil, nil, nil, nil, fmt.Errorf("missing client token")
+		return nil, nil, nil, nil, &logical.StatusBadRequest{Err: "missing client token"}
 	}
 
 	if c.tokenStore == nil {
@@ -443,15 +443,22 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	err = waitForReplicationState(ctx, c, req)
+	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
 	}
 
 	if !hasNamespaces(c) && ns.Path != "" {
 		return nil, logical.CodedError(403, "namespaces feature not enabled")
 	}
 
+	var walState = &logical.WALState{}
+	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
 	if c.router.LoginPath(ctx, req.Path) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
@@ -557,6 +564,26 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 				return nil, ErrInternalError
 			}
 		}
+	}
+
+	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
+		walState.ClusterID = c.clusterID.Load()
+		if walState.LocalIndex == 0 {
+			if c.perfStandby {
+				walState.LocalIndex = LastRemoteWAL(c)
+			} else {
+				walState.LocalIndex = LastWAL(c)
+			}
+		}
+		if walState.ReplicatedIndex == 0 {
+			if c.perfStandby {
+				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+			} else {
+				walState.ReplicatedIndex = LastRemoteWAL(c)
+			}
+		}
+
+		req.SetResponseState(walState)
 	}
 
 	return
@@ -717,7 +744,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
-		c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+		c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 		retErr = multierror.Append(retErr, quotaErr)
 		return nil, auth, retErr
 	}
@@ -861,19 +888,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			}
 			leaseGenerated = true
 			resp.Secret.LeaseID = leaseID
-
-			// Get the actual time of the lease
-			le, err := c.expiration.FetchLeaseTimes(ctx, leaseID)
-			if err != nil {
-				c.logger.Error("failed to fetch updated lease time", "request_path", req.Path, "error", err)
-				retErr = multierror.Append(retErr, ErrInternalError)
-				return nil, auth, retErr
-			}
-			// We round here because the clock will have already started
-			// ticking, so we'll end up always returning 299 instead of 300 or
-			// 26399 instead of 26400, say, even if it's just a few
-			// microseconds. This provides a nicer UX.
-			resp.Secret.TTL = le.ExpireTime.Sub(time.Now()).Round(time.Second)
 
 			// Count the lease creation
 			ttl_label := metricsutil.TTLBucket(resp.Secret.TTL)
@@ -1128,7 +1142,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		})
 
 		if quotaErr != nil {
-			c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+			c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 			retErr = multierror.Append(retErr, quotaErr)
 			return
 		}
@@ -1317,6 +1331,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		Policies:       auth.TokenPolicies,
 		NamespaceID:    ns.ID,
 		ExplicitMaxTTL: auth.ExplicitMaxTTL,
+		Period:         auth.Period,
 		Type:           auth.TokenType,
 	}
 

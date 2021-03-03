@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin "google.golang.org/api/admin/directory/v1"
@@ -46,7 +47,7 @@ type GSuiteProviderConfig struct {
 }
 
 // Initialize initializes the GSuiteProvider by validating and creating configuration.
-func (g *GSuiteProvider) Initialize(jc *jwtConfig) error {
+func (g *GSuiteProvider) Initialize(ctx context.Context, jc *jwtConfig) error {
 	// Decode the provider config
 	var config GSuiteProviderConfig
 	if err := mapstructure.Decode(jc.ProviderConfig, &config); err != nil {
@@ -60,10 +61,10 @@ func (g *GSuiteProvider) Initialize(jc *jwtConfig) error {
 	}
 	config.serviceAccountKeyJSON = keyJSON
 
-	return g.initialize(config)
+	return g.initialize(ctx, config)
 }
 
-func (g *GSuiteProvider) initialize(config GSuiteProviderConfig) error {
+func (g *GSuiteProvider) initialize(ctx context.Context, config GSuiteProviderConfig) error {
 	var err error
 
 	// Validate configuration
@@ -88,6 +89,13 @@ func (g *GSuiteProvider) initialize(config GSuiteProviderConfig) error {
 	// Set the subject to impersonate and config
 	g.jwtConfig.Subject = config.AdminImpersonateEmail
 	g.config = config
+
+	// Create a new admin service for requests to Google admin APIs
+	g.adminSvc, err = admin.NewService(ctx, option.WithHTTPClient(g.jwtConfig.Client(ctx)))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -97,7 +105,7 @@ func (g *GSuiteProvider) SensitiveKeys() []string {
 }
 
 // FetchGroups fetches and returns groups from G Suite.
-func (g *GSuiteProvider) FetchGroups(b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
+func (g *GSuiteProvider) FetchGroups(ctx context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole, _ oauth2.TokenSource) (interface{}, error) {
 	if !g.config.FetchGroups {
 		return nil, nil
 	}
@@ -107,15 +115,9 @@ func (g *GSuiteProvider) FetchGroups(b *jwtAuthBackend, allClaims map[string]int
 		return nil, err
 	}
 
-	// Set context and create a new admin service for requests to Google admin APIs
-	g.adminSvc, err = admin.NewService(b.providerCtx, option.WithHTTPClient(g.jwtConfig.Client(b.providerCtx)))
-	if err != nil {
-		return nil, err
-	}
-
 	// Get the G Suite groups
 	userGroupsMap := make(map[string]bool)
-	if err := g.search(b.providerCtx, userGroupsMap, userName, g.config.GroupsRecurseMaxDepth); err != nil {
+	if err := g.search(ctx, userGroupsMap, userName, g.config.GroupsRecurseMaxDepth); err != nil {
 		return nil, err
 	}
 
@@ -157,7 +159,7 @@ func (g *GSuiteProvider) search(ctx context.Context, visited map[string]bool, us
 }
 
 // FetchUserInfo fetches additional user information from G Suite using custom schemas.
-func (g *GSuiteProvider) FetchUserInfo(b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) error {
+func (g *GSuiteProvider) FetchUserInfo(ctx context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) error {
 	if !g.config.FetchUserInfo || g.config.UserCustomSchemas == "" {
 		if g.config.UserCustomSchemas != "" {
 			b.Logger().Warn(fmt.Sprintf("must set 'fetch_user_info=true' to fetch 'user_custom_schemas': %s", g.config.UserCustomSchemas))
@@ -171,13 +173,7 @@ func (g *GSuiteProvider) FetchUserInfo(b *jwtAuthBackend, allClaims map[string]i
 		return err
 	}
 
-	// Set context and create a new admin service for requests to Google admin APIs
-	g.adminSvc, err = admin.NewService(b.providerCtx, option.WithHTTPClient(g.jwtConfig.Client(b.providerCtx)))
-	if err != nil {
-		return err
-	}
-
-	return g.fillCustomSchemas(b.providerCtx, userName, allClaims)
+	return g.fillCustomSchemas(ctx, userName, allClaims)
 }
 
 // fillCustomSchemas fetches G Suite user information associated with the custom schemas

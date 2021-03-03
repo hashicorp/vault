@@ -1,8 +1,8 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
-import DS from 'ember-data';
 
 /**
  * @module GeneratedItem
@@ -24,7 +24,7 @@ export default Component.extend({
   itemType: null,
   flashMessages: service(),
   router: service(),
-  props: computed(function() {
+  props: computed('model', function() {
     return this.model.serialize();
   }),
   saveModel: task(function*() {
@@ -33,7 +33,7 @@ export default Component.extend({
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
-      if (err instanceof DS.AdapterError === false) {
+      if (err instanceof AdapterError === false) {
         throw err;
       }
       return;

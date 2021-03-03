@@ -298,7 +298,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 						if err != nil {
 							return nil, errwrap.Wrapf(fmt.Sprintf("invalid version %q: {{err}}", k), err)
 						}
-						derived, err := p.DeriveKey(context, ver, 32)
+						derived, err := p.GetKey(context, ver, 32)
 						if err != nil {
 							return nil, fmt.Errorf("failed to derive key to return public component")
 						}

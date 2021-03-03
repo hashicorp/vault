@@ -18,37 +18,37 @@ type passwordConf struct {
 	MaxTTL int `json:"max_ttl"`
 
 	// Mutually exclusive with Length and Formatter
-	PolicyName string `json:"password_policy"`
+	PasswordPolicy string `json:"password_policy"`
 
-	// Length of the password to generate. Mutually exclusive with PolicyName.
+	// Length of the password to generate. Mutually exclusive with PasswordPolicy.
 	// Deprecated
 	Length int `json:"length"`
 
 	// Formatter describes how to format a password. This allows for prefixes and suffixes on the password.
-	// Mutually exclusive with PolicyName.
+	// Mutually exclusive with PasswordPolicy.
 	// Deprecated
 	Formatter string `json:"formatter"`
 }
 
 func (c passwordConf) Map() map[string]interface{} {
 	return map[string]interface{}{
-		"ttl":         c.TTL,
-		"max_ttl":     c.MaxTTL,
-		"length":      c.Length,
-		"formatter":   c.Formatter,
-		"policy_name": c.PolicyName,
+		"ttl":             c.TTL,
+		"max_ttl":         c.MaxTTL,
+		"length":          c.Length,
+		"formatter":       c.Formatter,
+		"password_policy": c.PasswordPolicy,
 	}
 }
 
 // validate returns an error if the configuration is invalid/unable to process for whatever reason.
 func (c passwordConf) validate() error {
-	if c.PolicyName != "" &&
+	if c.PasswordPolicy != "" &&
 		(c.Length != 0 || c.Formatter != "") {
 		return fmt.Errorf("cannot set password_policy and either length or formatter")
 	}
 
-	// Don't validate the length and formatter fields if a policy is set
-	if c.PolicyName != "" {
+	// Don't PasswordPolicy the length and formatter fields if a policy is set
+	if c.PasswordPolicy != "" {
 		return nil
 	}
 

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, find } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | replication-action-generate-token', function(hooks) {
@@ -11,11 +11,7 @@ module('Integration | Component | replication-action-generate-token', function(h
       <div id="modal-wormhole"></div>
       {{replication-action-generate-token}}
     `);
-    assert.equal(find('h4.title').textContent.trim(), 'Generate operation token', 'renders default title');
-    assert.equal(
-      find('[data-test-replication-action-trigger]').textContent.trim(),
-      'Generate token',
-      'renders default CTA'
-    );
+    assert.dom('h4.title').hasText('Generate operation token', 'renders default title');
+    assert.dom('[data-test-replication-action-trigger]').hasText('Generate token', 'renders default CTA');
   });
 });

@@ -1,34 +1,16 @@
-import TransformBase from './transform-edit-base';
-import { inject as service } from '@ember/service';
-
-const addToList = (list, itemToAdd) => {
-  if (!list || !Array.isArray(list)) return list;
-  list.push(itemToAdd);
-  return list.uniq();
-};
-
-const removeFromList = (list, itemToRemove) => {
-  if (!list) return list;
-  const index = list.indexOf(itemToRemove);
-  if (index < 0) return list;
-  const newList = list.removeAt(index, 1);
-  return newList.uniq();
-};
+import TransformBase, { addToList, removeFromList } from './transform-edit-base';
 
 export default TransformBase.extend({
-  store: service(),
-  flashMessages: service(),
-
   initialTransformations: null,
 
   init() {
     this._super(...arguments);
-    this.set('initialTransformations', this.get('model.transformations'));
+    this.set('initialTransformations', this.model.transformations);
   },
 
   handleUpdateTransformations(updateTransformations, roleId, type = 'update') {
     if (!updateTransformations) return;
-    const backend = this.get('model.backend');
+    const backend = this.model.backend;
     const promises = updateTransformations.map(transform => {
       return this.store
         .queryRecord('transform', {
@@ -48,20 +30,14 @@ export default TransformBase.extend({
             allowed_roles: roles,
           });
 
-          return transformation
-            .save()
-            .then(() => {
-              return 'Successfully saved';
-            })
-            .catch(e => {
-              return { errorStatus: e.httpStatus, ...transform };
-            });
+          return transformation.save().catch(e => {
+            return { errorStatus: e.httpStatus, ...transform };
+          });
         });
     });
 
     Promise.all(promises).then(res => {
       let hasError = res.find(r => !!r.errorStatus);
-
       if (hasError) {
         let errorAdding = res.find(r => r.errorStatus === 403 && r.action === 'ADD');
         let errorRemoving = res.find(r => r.errorStatus === 403 && r.action === 'REMOVE');
@@ -81,7 +57,7 @@ export default TransformBase.extend({
           message =
             'This role was edited to remove transformations, but this role was not removed from those transformations’ allowed_roles due to a lack of permissions.';
         }
-        this.get('flashMessages').stickyInfo(message);
+        this.flashMessages.stickyInfo(message);
       }
     });
   },
@@ -91,11 +67,11 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const roleId = this.get('model.id');
-        const newModelTransformations = this.get('model.transformations');
+        const roleId = this.model.id;
+        const newModelTransformations = this.model.transformations;
 
         if (!this.initialTransformations) {
-          this.handleUpdatedTransformations(
+          this.handleUpdateTransformations(
             newModelTransformations.map(t => ({
               id: t,
               action: 'ADD',
@@ -125,6 +101,17 @@ export default TransformBase.extend({
           .filter(t => !!t);
         this.handleUpdateTransformations(updateTransformations, roleId);
       });
+    },
+
+    delete() {
+      const roleId = this.model?.id;
+      const roleTransformations = this.model?.transformations || [];
+      const updateTransformations = roleTransformations.map(t => ({
+        id: t,
+        action: 'REMOVE',
+      }));
+      this.handleUpdateTransformations(updateTransformations, roleId);
+      this.applyDelete();
     },
   },
 });

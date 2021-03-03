@@ -3,8 +3,8 @@
   shape of data at a specific path to hydrate a model with attrs it
   has less (or no) information about.
 */
+import Model from '@ember-data/model';
 import Service from '@ember/service';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { assign } from '@ember/polyfills';
@@ -23,6 +23,7 @@ export function sanitizePath(path) {
 
 export default Service.extend({
   attrs: null,
+  dynamicApiPath: '',
   ajax(url, options = {}) {
     let appAdapter = getOwner(this).lookup(`adapter:application`);
     let { data } = options;
@@ -49,7 +50,7 @@ export default Service.extend({
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       debug(`Creating new Model for ${modelType}`);
-      newModel = DS.Model.extend({});
+      newModel = Model.extend({});
     }
 
     // we don't have an apiPath for dynamic secrets
@@ -226,11 +227,16 @@ export default Service.extend({
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(id, isList) {
+      urlForItem(id, isList, dynamicApiPath) {
         const itemType = getPath.path.slice(1);
         let url;
         id = encodePath(id);
-
+        // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
+        // overwrite apiPath if dynamicApiPath exist.
+        // dynamicApiPath comes from the model->adapter
+        if (dynamicApiPath) {
+          apiPath = dynamicApiPath;
+        }
         // isList indicates whether we are viewing the list page
         // of a top-level item such as userpass
         if (isList) {

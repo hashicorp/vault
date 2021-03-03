@@ -473,10 +473,13 @@ func (r *Raft) startStopReplication() {
 		if server.ID == r.localID {
 			continue
 		}
+
 		inConfig[server.ID] = true
-		if _, ok := r.leaderState.replState[server.ID]; !ok {
+
+		s, ok := r.leaderState.replState[server.ID]
+		if !ok {
 			r.logger.Info("added peer, starting replication", "peer", server.ID)
-			s := &followerReplication{
+			s = &followerReplication{
 				peer:                server,
 				commitment:          r.leaderState.commitment,
 				stopCh:              make(chan uint64, 1),
@@ -489,10 +492,14 @@ func (r *Raft) startStopReplication() {
 				notifyCh:            make(chan struct{}, 1),
 				stepDown:            r.leaderState.stepDown,
 			}
+
 			r.leaderState.replState[server.ID] = s
 			r.goFunc(func() { r.replicate(s) })
 			asyncNotifyCh(s.triggerCh)
 			r.observe(PeerObservation{Peer: server, Removed: false})
+		} else if ok && s.peer.Address != server.Address {
+			r.logger.Info("updating peer", "peer", server.ID)
+			s.peer = server
 		}
 	}
 
@@ -508,6 +515,9 @@ func (r *Raft) startStopReplication() {
 		delete(r.leaderState.replState, serverID)
 		r.observe(PeerObservation{Peer: repl.peer, Removed: true})
 	}
+
+	// Update peers metric
+	metrics.SetGauge([]string{"raft", "peers"}, float32(len(r.configurations.latest.Servers)))
 }
 
 // configurationChangeChIfStable returns r.configurationChangeCh if it's safe

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -13,8 +14,11 @@ import (
 	"testing"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/fairshare"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -36,6 +40,186 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
 	c, _, _ := TestCoreUnsealedBackend(t, backend)
 	return c, c.expiration
+}
+
+func TestExpiration_Metrics(t *testing.T) {
+	var err error
+
+	testCore := TestCore(t)
+	testCore.baseLogger = logger
+	testCore.logger = logger.Named("core")
+	testCoreUnsealed(t, testCore)
+
+	exp := testCore.expiration
+
+	if err := exp.Restore(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set up a count function to calculate number of leases
+	count := 0
+	countFunc := func(leaseID string) {
+		count++
+	}
+
+	// Scan the storage with the count func set
+	if err = logical.ScanView(namespace.RootContext(nil), exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that there are no leases to begin with
+	if count != 0 {
+		t.Fatalf("bad: lease count; expected:0 actual:%d", count)
+	}
+
+	for i := 0; i < 50; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		otherNS := &namespace.Namespace{
+			ID:   "nsid",
+			Path: "foo/bar",
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		exp.pendingLock.Unlock()
+	}
+
+	for i := 50; i < 250; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(2 * time.Hour),
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		exp.pendingLock.Unlock()
+	}
+
+	count = 0
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	var conf metricsutil.TelemetryConstConfig = metricsutil.TelemetryConstConfig{
+		LeaseMetricsEpsilon:         time.Hour,
+		NumLeaseMetricsTimeBuckets:  2,
+		LeaseMetricsNameSpaceLabels: true,
+	}
+
+	flattenedResults, err := exp.leaseAggregationMetrics(context.Background(), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flattenedResults == nil {
+		t.Fatal("lease aggregation returns nil metrics")
+	}
+
+	labelOneHour := metrics.Label{"expiring", time.Now().Add(time.Hour).Round(time.Hour).String()}
+	labelTwoHours := metrics.Label{"expiring", time.Now().Add(2 * time.Hour).Round(time.Hour).String()}
+	nsLabel := metrics.Label{"namespace", "root"}
+	nsLabelNonRoot := metrics.Label{"namespace", "nsid"}
+
+	foundLabelOne := false
+	foundLabelTwo := false
+	foundLabelThree := false
+
+	for _, labelVal := range flattenedResults {
+		retNsLabel := labelVal.Labels[1]
+		retTimeLabel := labelVal.Labels[0]
+		if nsLabel == retNsLabel {
+			if labelVal.Value == 50 {
+				if retTimeLabel == labelOneHour {
+					foundLabelOne = true
+				}
+			}
+			if labelVal.Value == 200 {
+				if retTimeLabel == labelTwoHours {
+					foundLabelTwo = true
+				}
+			}
+		} else if retNsLabel == nsLabelNonRoot {
+			if labelVal.Value == 50 {
+				if retTimeLabel == labelOneHour {
+					foundLabelThree = true
+				}
+			}
+		}
+	}
+
+	if !foundLabelOne || !foundLabelTwo || !foundLabelThree {
+		t.Errorf("One of the labels is missing")
+	}
+
+	// test the same leases while ignoring namespaces so the 2 different namespaces get aggregated
+	conf = metricsutil.TelemetryConstConfig{
+		LeaseMetricsEpsilon:         time.Hour,
+		NumLeaseMetricsTimeBuckets:  2,
+		LeaseMetricsNameSpaceLabels: false,
+	}
+
+	flattenedResults, err = exp.leaseAggregationMetrics(context.Background(), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flattenedResults == nil {
+		t.Fatal("lease aggregation returns nil metrics")
+	}
+
+	foundLabelOne = false
+	foundLabelTwo = false
+
+	for _, labelVal := range flattenedResults {
+		if len(labelVal.Labels) != 1 {
+			t.Errorf("Namespace label is returned when explicitly not requested.")
+		}
+		retTimeLabel := labelVal.Labels[0]
+		if labelVal.Value == 100 {
+			if retTimeLabel == labelOneHour {
+				foundLabelOne = true
+			}
+		}
+		if labelVal.Value == 200 {
+			if retTimeLabel == labelTwoHours {
+				foundLabelTwo = true
+			}
+		}
+	}
+	if !foundLabelOne || !foundLabelTwo {
+		t.Errorf("One of the labels is missing")
+	}
+
 }
 
 func TestExpiration_Tidy(t *testing.T) {
@@ -496,8 +680,95 @@ func TestExpiration_Register(t *testing.T) {
 	}
 }
 
+func TestExpiration_Register_BatchToken(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{
+		RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+			resp := &logical.Response{Secret: req.Secret}
+			resp.Secret.TTL = time.Hour
+			return resp, nil
+		},
+	}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	te := &logical.TokenEntry{
+		Type:         logical.TokenTypeBatch,
+		TTL:          1 * time.Second,
+		NamespaceID:  "root",
+		CreationTime: time.Now().Unix(),
+	}
+
+	err = exp.tokenStore.create(context.Background(), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: te.ID,
+	}
+	req.SetTokenEntry(te)
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Hour,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	leaseID, err := exp.Register(namespace.RootContext(nil), req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	_, err = exp.Renew(namespace.RootContext(nil), leaseID, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	start := time.Now()
+	reqID := 0
+	for {
+		if time.Now().Sub(start) > 10*time.Second {
+			t.Fatal("didn't revoke lease")
+		}
+		req = nil
+
+		noop.Lock()
+		if len(noop.Requests) > reqID {
+			req = noop.Requests[reqID]
+			reqID++
+		}
+		noop.Unlock()
+		if req == nil || req.Operation == logical.RenewOperation {
+			time.Sleep(5 * time.Millisecond)
+			continue
+		}
+		if req.Operation != logical.RevokeOperation {
+			t.Fatalf("Bad: %v", req)
+		}
+
+		break
+	}
+}
+
 func TestExpiration_RegisterAuth(t *testing.T) {
 	exp := mockExpiration(t)
+
 	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1485,7 +1756,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		ClientToken: root.ID,
 		Path:        "foo/bar",
 		IssueTime:   time.Now(),
-		ExpireTime:  time.Now(),
+		ExpireTime:  time.Now().Add(time.Minute),
 		namespace:   namespace.RootNamespace,
 	}
 
@@ -1495,7 +1766,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	if err := exp.createIndexByToken(namespace.RootContext(nil), le, le.ClientToken); err != nil {
 		t.Fatalf("error creating secondary index: %v", err)
 	}
-	exp.updatePending(le, le.Secret.LeaseTotal())
+	exp.updatePending(le)
 
 	indexEntry, err := exp.indexByToken(namespace.RootContext(nil), le)
 	if err != nil {
@@ -1593,7 +1864,9 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 }
 
-func TestExpiration_revokeEntry_rejected(t *testing.T) {
+func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
+	t.Helper()
+
 	core, _, _ := TestCoreUnsealed(t)
 	exp := core.expiration
 
@@ -1660,7 +1933,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = core.setupExpiration(expireLeaseStrategyRevoke)
+	err = core.setupExpiration(e)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1683,6 +1956,14 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 	if le != nil {
 		t.Fatal("lease entry not nil")
 	}
+}
+
+func TestExpiration_revokeEntry_rejected_revoke(t *testing.T) {
+	revokeEntryRejectedCore(t, expireLeaseStrategyRevoke)
+}
+
+func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
+	revokeEntryRejectedCore(t, expireLeaseStrategyFairsharing)
 }
 
 func TestExpiration_renewAuthEntry(t *testing.T) {
@@ -2177,6 +2458,36 @@ func TestExpiration_CachedPolicyIsShared(t *testing.T) {
 	for i := 1; i < len(ptrs); i++ {
 		if ptrs[i-1] != ptrs[i] {
 			t.Errorf("Mismatched pointers: %v and %v", ptrs[i-1], ptrs[i])
+		}
+	}
+}
+
+func TestExpiration_FairsharingEnvVar(t *testing.T) {
+	testCases := []struct {
+		set      string
+		expected int
+	}{
+		{
+			set:      "15",
+			expected: 15,
+		},
+		{
+			set:      "0",
+			expected: numExpirationWorkersTest,
+		},
+		{
+			set:      "10001",
+			expected: numExpirationWorkersTest,
+		},
+	}
+
+	defer os.Unsetenv(fairshareWorkersOverrideVar)
+	for _, tc := range testCases {
+		os.Setenv(fairshareWorkersOverrideVar, tc.set)
+		exp := mockExpiration(t)
+
+		if fairshare.GetNumWorkers(exp.jobManager) != tc.expected {
+			t.Errorf("bad worker pool size. expected %d, got %d", tc.expected, fairshare.GetNumWorkers(exp.jobManager))
 		}
 	}
 }

@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
 
 const (
@@ -32,60 +30,45 @@ const (
 	roleName = "web"
 )
 
-func prepareRabbitMQTestContainer(t *testing.T) (func(), string, int) {
+func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 	if os.Getenv(envRabbitMQConnectionURI) != "" {
-		return func() {}, os.Getenv(envRabbitMQConnectionURI), 0
+		return func() {}, os.Getenv(envRabbitMQConnectionURI)
 	}
 
-	pool, err := dockertest.NewPool("")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "rabbitmq",
+		ImageTag:      "3-management",
+		ContainerName: "rabbitmq",
+		Ports:         []string{"15672/tcp"},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("could not start docker rabbitmq: %s", err)
 	}
 
-	runOpts := &dockertest.RunOptions{
-		Repository: "rabbitmq",
-		Tag:        "3-management",
-	}
-	resource, err := pool.RunWithOptions(runOpts)
-	if err != nil {
-		t.Fatalf("Could not start local rabbitmq docker container: %s", err)
-	}
-
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	port, _ := strconv.Atoi(resource.GetPort("15672/tcp"))
-	address := fmt.Sprintf("http://127.0.0.1:%d", port)
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		rmqc, err := rabbithole.NewClient(address, "guest", "guest")
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		connURL := fmt.Sprintf("http://%s:%d", host, port)
+		rmqc, err := rabbithole.NewClient(connURL, "guest", "guest")
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		_, err = rmqc.Overview()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to rabbitmq docker container: %s", err)
+		return docker.NewServiceURLParse(connURL)
+	})
+	if err != nil {
+		t.Fatalf("could not start docker rabbitmq: %s", err)
 	}
-	return cleanup, address, port
+	return svc.Cleanup, svc.Config.URL().String()
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -101,13 +84,9 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_returnsErrs(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -134,13 +113,9 @@ func TestBackend_returnsErrs(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -169,7 +144,7 @@ func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", passGen)
 	b, _ := Factory(context.Background(), backendConfig)
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{

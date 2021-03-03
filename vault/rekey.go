@@ -949,14 +949,18 @@ func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 
 	// Clear any progress or config
 	if recovery {
-		c.recoveryRekeyConfig.VerificationProgress = nil
-		if nonceErr == nil {
-			c.recoveryRekeyConfig.VerificationNonce = nonce
+		if c.recoveryRekeyConfig != nil {
+			c.recoveryRekeyConfig.VerificationProgress = nil
+			if nonceErr == nil {
+				c.recoveryRekeyConfig.VerificationNonce = nonce
+			}
 		}
 	} else {
-		c.barrierRekeyConfig.VerificationProgress = nil
-		if nonceErr == nil {
-			c.barrierRekeyConfig.VerificationNonce = nonce
+		if c.barrierRekeyConfig != nil {
+			c.barrierRekeyConfig.VerificationProgress = nil
+			if nonceErr == nil {
+				c.barrierRekeyConfig.VerificationNonce = nonce
+			}
 		}
 	}
 

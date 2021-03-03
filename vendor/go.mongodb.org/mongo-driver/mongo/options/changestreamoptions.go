@@ -7,76 +7,98 @@
 package options
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// ChangeStreamOptions represents all possible options to a change stream
+// ChangeStreamOptions represents options that can be used to configure a Watch operation.
 type ChangeStreamOptions struct {
-	BatchSize            *int32               // The number of documents to return per batch
-	Collation            *Collation           // Specifies a collation
-	FullDocument         *FullDocument        // When set to ‘updateLookup’, the change notification for partial updates will include both a delta describing the changes to the document, as well as a copy of the entire document that was changed from some time after the change occurred.
-	MaxAwaitTime         *time.Duration       // The maximum amount of time for the server to wait on new documents to satisfy a change stream query
-	ResumeAfter          interface{}          // Specifies the logical starting point for the new change stream
-	StartAtOperationTime *primitive.Timestamp // Ensures that a change stream will only provide changes that occurred after a timestamp.
-	StartAfter           interface{}          // Specifies a resume token. The started change stream will return the first notification after the token.
+	// The maximum number of documents to be included in each batch returned by the server.
+	BatchSize *int32
+
+	// Specifies a collation to use for string comparisons during the operation. This option is only valid for MongoDB
+	// versions >= 3.4. For previous server versions, the driver will return an error if this option is used. The
+	// default value is nil, which means the default collation of the collection will be used.
+	Collation *Collation
+
+	// Specifies whether the updated document should be returned in change notifications for update operations along
+	// with the deltas describing the changes made to the document. The default is options.Default, which means that
+	// the updated document will not be included in the change notification.
+	FullDocument *FullDocument
+
+	// The maximum amount of time that the server should wait for new documents to satisfy a tailable cursor query.
+	MaxAwaitTime *time.Duration
+
+	// A document specifying the logical starting point for the change stream. Only changes corresponding to an oplog
+	// entry immediately after the resume token will be returned. If this is specified, StartAtOperationTime and
+	// StartAfter must not be set.
+	ResumeAfter interface{}
+
+	// If specified, the change stream will only return changes that occurred at or after the given timestamp. This
+	// option is only valid for MongoDB versions >= 4.0. If this is specified, ResumeAfter and StartAfter must not be
+	// set.
+	StartAtOperationTime *primitive.Timestamp
+
+	// A document specifying the logical starting point for the change stream. This is similar to the ResumeAfter
+	// option, but allows a resume token from an "invalidate" notification to be used. This allows a change stream on a
+	// collection to be resumed after the collection has been dropped and recreated or renamed. Only changes
+	// corresponding to an oplog entry immediately after the specified token will be returned. If this is specified,
+	// ResumeAfter and StartAtOperationTime must not be set. This option is only valid for MongoDB versions >= 4.1.1.
+	StartAfter interface{}
 }
 
-// ChangeStream returns a pointer to a new ChangeStreamOptions
+// ChangeStream creates a new ChangeStreamOptions instance.
 func ChangeStream() *ChangeStreamOptions {
 	cso := &ChangeStreamOptions{}
 	cso.SetFullDocument(Default)
 	return cso
 }
 
-// SetBatchSize specifies the number of documents to return per batch
+// SetBatchSize sets the value for the BatchSize field.
 func (cso *ChangeStreamOptions) SetBatchSize(i int32) *ChangeStreamOptions {
 	cso.BatchSize = &i
 	return cso
 }
 
-// SetCollation specifies a collation
+// SetCollation sets the value for the Collation field.
 func (cso *ChangeStreamOptions) SetCollation(c Collation) *ChangeStreamOptions {
 	cso.Collation = &c
 	return cso
 }
 
-// SetFullDocument specifies the fullDocument option.
-// When set to ‘updateLookup’, the change notification for partial updates will
-// include both a delta describing the changes to the document, as well as a
-// copy of the entire document that was changed from some time after the change
-// occurred.
+// SetFullDocument sets the value for the FullDocument field.
 func (cso *ChangeStreamOptions) SetFullDocument(fd FullDocument) *ChangeStreamOptions {
 	cso.FullDocument = &fd
 	return cso
 }
 
-// SetMaxAwaitTime specifies the maximum amount of time for the server to wait on new documents to satisfy a change stream query
+// SetMaxAwaitTime sets the value for the MaxAwaitTime field.
 func (cso *ChangeStreamOptions) SetMaxAwaitTime(d time.Duration) *ChangeStreamOptions {
 	cso.MaxAwaitTime = &d
 	return cso
 }
 
-// SetResumeAfter specifies the logical starting point for the new change stream
+// SetResumeAfter sets the value for the ResumeAfter field.
 func (cso *ChangeStreamOptions) SetResumeAfter(rt interface{}) *ChangeStreamOptions {
 	cso.ResumeAfter = rt
 	return cso
 }
 
-// SetStartAtOperationTime ensures that a change stream will only provide changes that occurred after a specified timestamp.
+// SetStartAtOperationTime sets the value for the StartAtOperationTime field.
 func (cso *ChangeStreamOptions) SetStartAtOperationTime(t *primitive.Timestamp) *ChangeStreamOptions {
 	cso.StartAtOperationTime = t
 	return cso
 }
 
-// SetStartAfter specifies a resume token. The resulting change stream will return the first notification after the token.
-// Cannot be used in conjunction with ResumeAfter.
+// SetStartAfter sets the value for the StartAfter field.
 func (cso *ChangeStreamOptions) SetStartAfter(sa interface{}) *ChangeStreamOptions {
 	cso.StartAfter = sa
 	return cso
 }
 
-// MergeChangeStreamOptions combines the argued ChangeStreamOptions into a single ChangeStreamOptions in a last-one-wins fashion
+// MergeChangeStreamOptions combines the given ChangeStreamOptions instances into a single ChangeStreamOptions in a
+// last-one-wins fashion.
 func MergeChangeStreamOptions(opts ...*ChangeStreamOptions) *ChangeStreamOptions {
 	csOpts := ChangeStream()
 	for _, cso := range opts {

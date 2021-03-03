@@ -6,39 +6,62 @@
 
 package options
 
-// ReplaceOptions represents all possible options to the ReplaceOne() function.
+// ReplaceOptions represents options that can be used to configure a ReplaceOne operation.
 type ReplaceOptions struct {
-	BypassDocumentValidation *bool      // If true, allows the write to opt-out of document level validation
-	Collation                *Collation // Specifies a collation
-	Upsert                   *bool      // When true, creates a new document if no document matches the query
+	// If true, writes executed as part of the operation will opt out of document-level validation on the server. This
+	// option is valid for MongoDB versions >= 3.2 and is ignored for previous server versions. The default value is
+	// false. See https://docs.mongodb.com/manual/core/schema-validation/ for more information about document
+	// validation.
+	BypassDocumentValidation *bool
+
+	// Specifies a collation to use for string comparisons during the operation. This option is only valid for MongoDB
+	// versions >= 3.4. For previous server versions, the driver will return an error if this option is used. The
+	// default value is nil, which means the default collation of the collection will be used.
+	Collation *Collation
+
+	// The index to use for the operation. This should either be the index name as a string or the index specification
+	// as a document. This option is only valid for MongoDB versions >= 4.2. Server versions >= 3.4 will return an error
+	// if this option is specified. For server versions < 3.4, the driver will return a client-side error if this option
+	// is specified. The driver will return an error if this option is specified during an unacknowledged write
+	// operation. The default value is nil, which means that no hint will be sent.
+	Hint interface{}
+
+	// If true, a new document will be inserted if the filter does not match any documents in the collection. The
+	// default value is false.
+	Upsert *bool
 }
 
-// Replace returns a pointer to a new ReplaceOptions
+// Replace creates a new ReplaceOptions instance.
 func Replace() *ReplaceOptions {
 	return &ReplaceOptions{}
 }
 
-// SetBypassDocumentValidation allows the write to opt-out of document level validation.
-// Valid for server versions >= 3.2. For servers < 3.2, this option is ignored.
+// SetBypassDocumentValidation sets the value for the BypassDocumentValidation field.
 func (ro *ReplaceOptions) SetBypassDocumentValidation(b bool) *ReplaceOptions {
 	ro.BypassDocumentValidation = &b
 	return ro
 }
 
-// SetCollation specifies a collation.
-// Valid for servers >= 3.4
+// SetCollation sets the value for the Collation field.
 func (ro *ReplaceOptions) SetCollation(c *Collation) *ReplaceOptions {
 	ro.Collation = c
 	return ro
 }
 
-// SetUpsert allows the creation of a new document if not document matches the query
+// SetHint sets the value for the Hint field.
+func (ro *ReplaceOptions) SetHint(h interface{}) *ReplaceOptions {
+	ro.Hint = h
+	return ro
+}
+
+// SetUpsert sets the value for the Upsert field.
 func (ro *ReplaceOptions) SetUpsert(b bool) *ReplaceOptions {
 	ro.Upsert = &b
 	return ro
 }
 
-// MergeReplaceOptions combines the argued ReplaceOptions into a single ReplaceOptions in a last-one-wins fashion
+// MergeReplaceOptions combines the given ReplaceOptions instances into a single ReplaceOptions in a last-one-wins
+// fashion.
 func MergeReplaceOptions(opts ...*ReplaceOptions) *ReplaceOptions {
 	rOpts := Replace()
 	for _, ro := range opts {
@@ -50,6 +73,9 @@ func MergeReplaceOptions(opts ...*ReplaceOptions) *ReplaceOptions {
 		}
 		if ro.Collation != nil {
 			rOpts.Collation = ro.Collation
+		}
+		if ro.Hint != nil {
+			rOpts.Hint = ro.Hint
 		}
 		if ro.Upsert != nil {
 			rOpts.Upsert = ro.Upsert
