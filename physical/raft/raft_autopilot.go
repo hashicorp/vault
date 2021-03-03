@@ -606,7 +606,7 @@ func stringIDs(ids []raft.ServerID) []string {
 	return out
 }
 
-func autopilotToAPIState(state *autopilot.State) *AutopilotState {
+func autopilotToAPIState(state *autopilot.State) (*AutopilotState, error) {
 	out := &AutopilotState{
 		Healthy:          state.Healthy,
 		FailureTolerance: state.FailureTolerance,
@@ -619,9 +619,11 @@ func autopilotToAPIState(state *autopilot.State) *AutopilotState {
 		out.Servers[string(id)] = autopilotToAPIServer(srv)
 	}
 
-	autopilotToAPIStateEnterprise(state, out)
+	if err := autopilotToAPIStateEnterprise(state, out); err != nil {
+		return out, err
+	}
 
-	return out
+	return out, nil
 }
 
 func autopilotToAPIServer(srv *autopilot.ServerState) *AutopilotServer {
@@ -663,7 +665,10 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 		return nil, nil
 	}
 
-	state := autopilotToAPIState(apState)
+	state, err := autopilotToAPIState(apState)
+	if err != nil {
+		return nil, err
+	}
 
 	apStatus, _ := b.autopilot.IsRunning()
 	state.ExecutionStatus = autopilotStatusToStatus(apStatus)
