@@ -970,6 +970,22 @@ func Test_hasExpired(t *testing.T) {
 
 }
 
+func TestLeaseCache_hasExpired_wrong_type(t *testing.T) {
+	index := &cachememdb.Index{
+		Type: cacheboltdb.TokenType,
+		Response: []byte(`HTTP/0.0 200 OK
+Content-Type: application/json
+Date: Tue, 02 Mar 2021 17:54:16 GMT
+
+{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+	}
+
+	lc := testNewLeaseCache(t, nil)
+	expired, err := lc.hasExpired(time.Now().UTC(), index)
+	assert.False(t, expired)
+	assert.EqualError(t, err, `index type "token" unexpected in expiration check`)
+}
+
 func TestLeaseCacheRestore_expired(t *testing.T) {
 	// Emulate 2 responses from the api proxy, both expired
 	responses := []*SendResponse{

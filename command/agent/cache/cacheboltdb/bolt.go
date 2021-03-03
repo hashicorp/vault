@@ -3,10 +3,8 @@ package cacheboltdb
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -302,17 +300,4 @@ func DBFileExists(path string) (bool, error) {
 	default:
 		return false, fmt.Errorf("failed to check if bolt file exists at path %s: %w", path, err)
 	}
-}
-
-// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
-// the default service account file path in kubernetes.
-func GetServiceAccountJWT(tokenFile string) (string, error) {
-	if len(tokenFile) == 0 {
-		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	}
-	token, err := ioutil.ReadFile(tokenFile)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(token)), nil
 }

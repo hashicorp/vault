@@ -1025,7 +1025,7 @@ func (c *LeaseCache) restoreLeases(leases [][]byte) error {
 			continue
 		}
 
-		if err := c.ReCreateLeaseRenewCtx(newIndex); err != nil {
+		if err := c.restoreLeaseRenewCtx(newIndex); err != nil {
 			return err
 		}
 		if err := c.db.Set(newIndex); err != nil {
@@ -1036,9 +1036,9 @@ func (c *LeaseCache) restoreLeases(leases [][]byte) error {
 	return nil
 }
 
-// ReCreateLeaseRenewCtx re-creates a RenewCtx for an index object and starts
+// restoreLeaseRenewCtx re-creates a RenewCtx for an index object and starts
 // the watcher go routine
-func (c *LeaseCache) ReCreateLeaseRenewCtx(index *cachememdb.Index) error {
+func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 	if index.Response == nil {
 		return fmt.Errorf("cached response was nil for %s", index.ID)
 	}
@@ -1281,8 +1281,10 @@ func (c *LeaseCache) hasExpired(currentTime time.Time, index *cachememdb.Index) 
 	switch index.Type {
 	case cacheboltdb.AuthLeaseType:
 		leaseDuration = secret.Auth.LeaseDuration
-	default:
+	case cacheboltdb.SecretLeaseType:
 		leaseDuration = secret.LeaseDuration
+	default:
+		return false, fmt.Errorf("index type %q unexpected in expiration check", index.Type)
 	}
 
 	if int(elapsed.Seconds()) > leaseDuration {

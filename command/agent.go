@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -507,7 +508,7 @@ func (c *AgentCommand) Run(args []string) int {
 			var aad string
 			switch config.Cache.Persist.Type {
 			case "kubernetes":
-				aad, err = cacheboltdb.GetServiceAccountJWT(config.Cache.Persist.ServiceAccountTokenFile)
+				aad, err = getServiceAccountJWT(config.Cache.Persist.ServiceAccountTokenFile)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountTokenFile, err))
 					return 1
@@ -965,4 +966,17 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
+// the default service account file path in kubernetes.
+func getServiceAccountJWT(tokenFile string) (string, error) {
+	if len(tokenFile) == 0 {
+		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	}
+	token, err := ioutil.ReadFile(tokenFile)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(token)), nil
 }
