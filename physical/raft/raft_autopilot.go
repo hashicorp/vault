@@ -484,7 +484,11 @@ func autopilotStatusToStatus(status autopilot.ExecutionStatus) AutopilotExecutio
 }
 
 func (b *RaftBackend) startFollowerHeartbeatTracker() {
-	for _ = range b.followerHeartbeatTicker.C {
+	b.l.RLock()
+	tickerCh := b.followerHeartbeatTicker.C
+	b.l.RUnlock()
+
+	for _ = range tickerCh {
 		b.l.RLock()
 		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 			b.followerStates.l.RLock()
@@ -696,12 +700,12 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	// Create the autopilot instance
 	b.autopilot = autopilot.New(b.raft, newDelegate(b), autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
 	b.followerStates = followerStates
+	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 
 	b.l.Unlock()
 
 	b.logger.Info("starting autopilot", "config", b.autopilotConfig)
 	b.autopilot.Start(ctx)
 
-	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 	go b.startFollowerHeartbeatTracker()
 }
