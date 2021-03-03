@@ -59,13 +59,6 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	if raftBackend == nil {
 		return nil
 	}
-	if raftBackend.Initialized() {
-		if c.disableAutopilot {
-			raftBackend.DisableAutopilot()
-		}
-		raftBackend.SetFollowerStates(c.raftFollowerStates)
-		return nil
-	}
 
 	// Retrieve the raft TLS information
 	raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
@@ -125,10 +118,6 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
-	if c.disableAutopilot {
-		raftBackend.DisableAutopilot()
-	}
-	raftBackend.SetFollowerStates(c.raftFollowerStates)
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
 	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
@@ -179,7 +168,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if err != nil {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig)
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, c.disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)
