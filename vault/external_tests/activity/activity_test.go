@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -61,8 +60,6 @@ func validateClientCounts(t *testing.T, resp *api.Secret, expectedEntities, expe
 }
 
 func TestActivityLog_MonthlyActivityApi(t *testing.T) {
-	timeutil.SkipAtEndOfMonth(t)
-
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
