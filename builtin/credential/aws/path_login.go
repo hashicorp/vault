@@ -272,10 +272,6 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	if err = validateLoginIamRequestUrl(method, parsedUrl); err != nil {
 		return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 	}
-	if parsedUrl.RawQuery != "" && method != http.MethodGet {
-		// Should be no query parameters
-		return "", nil, nil, logical.ErrorResponse(logical.ErrInvalidRequest.Error()), nil
-	}
 	bodyB64 := data.Get("iam_request_body").(string)
 	if bodyB64 == "" && method != http.MethodGet {
 		return "", nil, nil, logical.ErrorResponse("missing iam_request_body which is required for POST requests"), nil
@@ -1552,8 +1548,15 @@ func validateLoginIamRequestUrl(method string, parsedUrl *url.URL) error {
 		if actions[0] != "GetCallerIdentity" {
 			return fmt.Errorf("unexpected action parameter, %s", actions[0])
 		}
+		return nil
+	case http.MethodPost:
+		if parsedUrl.RawQuery != "" {
+			return logical.ErrInvalidRequest
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported method, %s", method)
 	}
-	return nil
 }
 
 // Validate that the iam_request_body passed is valid for the STS request
