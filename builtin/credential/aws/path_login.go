@@ -269,6 +269,9 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	if err != nil {
 		return "", nil, nil, logical.ErrorResponse("error parsing iam_request_url"), nil
 	}
+	if err = validateLoginIamRequestUrl(method, parsedUrl); err != nil {
+		return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+	}
 	if parsedUrl.RawQuery != "" && method != http.MethodGet {
 		// Should be no query parameters
 		return "", nil, nil, logical.ErrorResponse(logical.ErrInvalidRequest.Error()), nil
@@ -1535,6 +1538,24 @@ func hasWildcardBind(boundIamPrincipalARNs []string) bool {
 	return false
 }
 
+// Validate that the iam_request_url passed is valid for the STS request
+func validateLoginIamRequestUrl(method string, parsedUrl *url.URL) error {
+	switch method {
+	case http.MethodGet:
+		actions := map[string][]string(parsedUrl.Query())["Action"]
+		if len(actions) == 0 {
+			return fmt.Errorf("no action found in request")
+		}
+		if len(actions) != 1 {
+			return fmt.Errorf("found multiple actions")
+		}
+		if actions[0] != "GetCallerIdentity" {
+			return fmt.Errorf("unexpected action parameter, %s", actions[0])
+		}
+	}
+	return nil
+}
+
 // Validate that the iam_request_body passed is valid for the STS request
 func validateLoginIamRequestBody(body string) error {
 	qs, err := url.ParseQuery(body)
@@ -1629,7 +1650,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	return &entity, nil
 }
 
-func validateVaultHeaderValue(method string, headers http.Header, parsed *url.URL, requiredHeaderValue string) error {
+func validateVaultHeaderValue(method string, headers http.Header, parsedUrl *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
 	for k, v := range headers {
 		if strings.EqualFold(iamServerIdHeader, k) {
@@ -1664,17 +1685,7 @@ func validateVaultHeaderValue(method string, headers http.Header, parsed *url.UR
 		}
 		return fmt.Errorf("missing Authorization header")
 	case http.MethodGet:
-		actions := map[string][]string(parsed.Query())["Action"]
-		if len(actions) == 0 {
-			return fmt.Errorf("no action found in request")
-		}
-		if len(actions) != 1 {
-			return fmt.Errorf("found multiple actions")
-		}
-		if actions[0] != "GetCallerIdentity" {
-			return fmt.Errorf("unexpected action parameter, %s", actions[0])
-		}
-		return ensureHeaderIsSigned(parsed.Query().Get("X-Amz-SignedHeaders"), iamServerIdHeader)
+		return ensureHeaderIsSigned(parsedUrl.Query().Get("X-Amz-SignedHeaders"), iamServerIdHeader)
 	default:
 		return fmt.Errorf("unsupported method, %s", method)
 	}

@@ -161,7 +161,7 @@ func TestBackend_validateVaultGetRequestValues(t *testing.T) {
 	getQueryNoAction := url.Values(map[string][]string{
 		"X-Amz-Algorithm":     {"AWS4-HMAC-SHA256"},
 		"X-Amz-Credential":    {"AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request"},
-		"X-Amz-SignedHeaders": {"host"},
+		"X-Amz-SignedHeaders": {"host;x-vault-aws-iam-server-id"},
 		"X-Amz-Signature":     {"5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 		"X-Amz-User-Agent":    {"aws-sdk-go-v2/1.2.0 os/linux lang/go/1.16 md/GOOS/linux md/GOARCH/amd64"},
 		"Version":             {"2011-06-15"},
@@ -169,7 +169,7 @@ func TestBackend_validateVaultGetRequestValues(t *testing.T) {
 	getQueryInvalidAction := url.Values(map[string][]string{
 		"X-Amz-Algorithm":     {"AWS4-HMAC-SHA256"},
 		"X-Amz-Credential":    {"AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request"},
-		"X-Amz-SignedHeaders": {"host"},
+		"X-Amz-SignedHeaders": {"host;x-vault-aws-iam-server-id"},
 		"X-Amz-Signature":     {"5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 		"X-Amz-User-Agent":    {"aws-sdk-go-v2/1.2.0 os/linux lang/go/1.16 md/GOOS/linux md/GOARCH/amd64"},
 		"Action":              {"GetSessionToken"},
@@ -207,14 +207,19 @@ func TestBackend_validateVaultGetRequestValues(t *testing.T) {
 		t.Error("validated GET request with unsigned Vault header")
 	}
 
-	err = validateVaultHeaderValue(http.MethodGet, getHeadersValid, noActionGetRequestURL, canaryHeaderValue)
+	err = validateLoginIamRequestUrl(http.MethodGet, noActionGetRequestURL)
 	if err == nil {
 		t.Error("validated GET request with no Action parameter")
 	}
 
-	err = validateVaultHeaderValue(http.MethodGet, getHeadersValid, invalidActionGetRequestURL, canaryHeaderValue)
+	err = validateLoginIamRequestUrl(http.MethodGet, invalidActionGetRequestURL)
 	if err == nil {
 		t.Error("validated GET request with an invalid Action parameter")
+	}
+
+	err = validateLoginIamRequestUrl(http.MethodGet, validGetRequestURL)
+	if err != nil {
+		t.Errorf("did NOT validate valid GET request: %v", err)
 	}
 
 	err = validateVaultHeaderValue(http.MethodGet, getHeadersValid, validGetRequestURL, canaryHeaderValue)
