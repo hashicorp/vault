@@ -43,12 +43,12 @@ $ vault operator init \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 ```
 
-Initialize Auto Unseal, but encrypt the recovery keys with pgp keys:
+Initialize Auto Unseal with a non-default threshold and number of recovery keys, and encrypt the recovery keys with pgp keys:
 
 ```shell-session
 $ vault operator init \
-    -recovery-shares=1 \
-    -recovery-threshold=1 \
+    -recovery-shares=7 \
+    -recovery-threshold=4 \
     -recovery-pgp-keys="keybase:grahamhashicorp"
 ```
 
@@ -113,13 +113,13 @@ flags](/docs/commands) included on all commands.
 ### HSM and KMS Options
 
 - `-recovery-pgp-keys` `(string: "...")` - Behaves like `-pgp-keys`, but for the
-  recovery key shares. This is only used in HSM mode.
+  recovery key shares. This is only used with Auto Unseal seals (HSM, KMS and Transit seals).
 
 - `-recovery-shares` `(int: 5)` - Number of key shares to split the recovery key
-  into. This is only used in HSM mode.
+  into. This is only used Auto Unseal seals (HSM, KMS and Transit seals).
 
 - `-recovery-threshold` `(int: 3)` - Number of key shares required to
-  reconstruct the recovery key. This is only used in HSM mode.
+  reconstruct the recovery key. This is only used Auto Unseal seals (HSM, KMS and Transit seals).
 
 - `-stored-shares` `(int: 0)` - Number of unseal keys to store on an HSM. This
   must be equal to `-key-shares`.
