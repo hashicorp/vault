@@ -1,0 +1,74 @@
+run:
+  timeout: 5m
+  deadline: 10m
+
+linters-settings:
+  govet:
+    check-shadowing: false
+  golint:
+    min-confidence: 0
+  gocyclo:
+    min-complexity: 99
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  misspell:
+    locale: US
+  goimports:
+    local-prefixes: github.com/Shopify/sarama
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - wrapperFunc
+      - ifElseChain
+  funlen:
+    lines: 300
+    statements: 300
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    # - dupl
+    - errcheck
+    - funlen
+    # - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    # - golint
+    - gosec
+    # - gosimple
+    - govet
+    # - ineffassign
+    - interfacer
+    # - misspell
+    # - nakedret
+    # - scopelint
+    # - staticcheck
+    - structcheck
+    # - stylecheck
+    - typecheck
+    - unconvert
+    - unused
+    - varcheck
+    - whitespace
+    # - goconst
+    # - gochecknoinits
+
+issues:
+  exclude:
+    - consider giving a name to these results
+    - include an explanation for nolint directive
