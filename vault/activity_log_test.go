@@ -2422,15 +2422,12 @@ func TestActivityLog_Deletion(t *testing.T) {
 }
 
 func TestActivityLog_partialMonthClientCount(t *testing.T) {
-	timeutil.SkipAtEndOfMonth(t)
-
 	ctx := context.Background()
-	now := time.Now().UTC()
-	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(time.Now().UTC()), true, true)
 
 	a.SetEnable(true)
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(ctx, &wg, now)
+	err := a.refreshFromStoredLog(ctx, &wg)
 	if err != nil {
 		t.Fatalf("error loading clients: %v", err)
 	}
