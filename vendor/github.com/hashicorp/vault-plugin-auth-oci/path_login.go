@@ -179,7 +179,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		},
 		DisplayName: roleName,
 		Alias: &logical.Alias{
-			Name: "name",
+			Name: roleName,
 		},
 	}
 

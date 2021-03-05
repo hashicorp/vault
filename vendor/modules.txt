@@ -23,7 +23,7 @@ cloud.google.com/go/storage
 code.cloudfoundry.org/gofileutils/fileutils
 # github.com/Azure/azure-pipeline-go v0.2.3
 github.com/Azure/azure-pipeline-go/pipeline
-# github.com/Azure/azure-sdk-for-go v44.0.0+incompatible
+# github.com/Azure/azure-sdk-for-go v51.1.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
@@ -37,25 +37,27 @@ github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/Azure/go-autorest v14.2.0+incompatible
 github.com/Azure/go-autorest
-# github.com/Azure/go-autorest/autorest v0.11.10
+# github.com/Azure/go-autorest/autorest v0.11.17
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/azure
-# github.com/Azure/go-autorest/autorest/adal v0.9.5
+# github.com/Azure/go-autorest/autorest/adal v0.9.11
 github.com/Azure/go-autorest/autorest/adal
-# github.com/Azure/go-autorest/autorest/azure/auth v0.5.0
+# github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 github.com/Azure/go-autorest/autorest/azure/auth
-# github.com/Azure/go-autorest/autorest/azure/cli v0.4.0
+# github.com/Azure/go-autorest/autorest/azure/cli v0.4.2
 github.com/Azure/go-autorest/autorest/azure/cli
 # github.com/Azure/go-autorest/autorest/date v0.3.0
 github.com/Azure/go-autorest/autorest/date
 # github.com/Azure/go-autorest/autorest/to v0.4.0
 github.com/Azure/go-autorest/autorest/to
-# github.com/Azure/go-autorest/autorest/validation v0.3.0
+# github.com/Azure/go-autorest/autorest/validation v0.3.1
 github.com/Azure/go-autorest/autorest/validation
 # github.com/Azure/go-autorest/logger v0.2.0
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
+# github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c
+github.com/Azure/go-ntlmssp
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/DataDog/datadog-go v3.2.0+incompatible
@@ -273,7 +275,7 @@ github.com/denverdino/aliyungo/util
 github.com/dgrijalva/jwt-go/v4
 # github.com/digitalocean/godo v1.7.5
 github.com/digitalocean/godo
-# github.com/dimchansky/utfbom v1.1.0
+# github.com/dimchansky/utfbom v1.1.1
 github.com/dimchansky/utfbom
 # github.com/docker/distribution v2.7.1+incompatible
 github.com/docker/distribution/digestset
@@ -338,11 +340,11 @@ github.com/gammazero/deque
 github.com/gammazero/workerpool
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 github.com/ghodss/yaml
-# github.com/go-asn1-ber/asn1-ber v1.4.1
+# github.com/go-asn1-ber/asn1-ber v1.5.1
 github.com/go-asn1-ber/asn1-ber
 # github.com/go-errors/errors v1.0.1
 github.com/go-errors/errors
-# github.com/go-ldap/ldap/v3 v3.1.10
+# github.com/go-ldap/ldap/v3 v3.2.4
 github.com/go-ldap/ldap/v3
 # github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3
 github.com/go-ldap/ldif
@@ -449,7 +451,7 @@ github.com/hashicorp/consul/api
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 github.com/hashicorp/go-bindata
-# github.com/hashicorp/go-cleanhttp v0.5.1
+# github.com/hashicorp/go-cleanhttp v0.5.2
 github.com/hashicorp/go-cleanhttp
 # github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 github.com/hashicorp/go-discover
@@ -470,7 +472,7 @@ github.com/hashicorp/go-discover/provider/triton
 github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.6.0
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.14.1
+# github.com/hashicorp/go-hclog v0.15.0
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
 github.com/hashicorp/go-immutable-radix
@@ -544,59 +546,59 @@ github.com/hashicorp/raft-autopilot
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.9.5
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.8.0
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.6.0
+# github.com/hashicorp/vault-plugin-auth-azure v0.7.2
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.7.0
+# github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-cf v0.7.0
+# github.com/hashicorp/vault-plugin-auth-cf v0.8.0
 github.com/hashicorp/vault-plugin-auth-cf
 github.com/hashicorp/vault-plugin-auth-cf/models
 github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
+# github.com/hashicorp/vault-plugin-auth-gcp v0.9.0
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20210212182451-0d0819f8e5e3
+# github.com/hashicorp/vault-plugin-auth-jwt v0.9.0
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
+# github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
 github.com/hashicorp/vault-plugin-auth-kerberos
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-oci v0.6.0
+# github.com/hashicorp/vault-plugin-auth-oci v0.7.0
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-couchbase v0.3.0
 github.com/hashicorp/vault-plugin-database-couchbase
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.1
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.7.0
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.3.0
 github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-database-snowflake v0.1.1
 github.com/hashicorp/vault-plugin-database-snowflake
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
-# github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
+# github.com/hashicorp/vault-plugin-secrets-ad v0.9.0
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
+# github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.8.1
+# github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20210121193032-bb12fd5092bd
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
+# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
+# github.com/hashicorp/vault-plugin-secrets-kv v0.8.0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.3.0
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.4.0
 github.com/hashicorp/vault-plugin-secrets-openldap
@@ -1062,7 +1064,7 @@ go.etcd.io/etcd/raft/quorum
 go.etcd.io/etcd/raft/raftpb
 go.etcd.io/etcd/raft/tracker
 go.etcd.io/etcd/version
-# go.mongodb.org/atlas v0.5.0
+# go.mongodb.org/atlas v0.7.1
 go.mongodb.org/atlas/mongodbatlas
 # go.mongodb.org/mongo-driver v1.4.6
 go.mongodb.org/mongo-driver/bson
