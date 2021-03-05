@@ -15,9 +15,9 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/oauth2"
 )
 
@@ -100,9 +100,6 @@ func newAzureProvider(config *azureConfig) (*azureProvider, error) {
 		SupportedSigningAlgs: []string{oidc.RS256},
 	}
 	oidcVerifier := oidc.NewVerifier(discoveryInfo.Issuer, remoteKeySet, verifierConfig)
-
-	// Ping the metadata service (if available)
-	go pingMetadataService()
 
 	return &azureProvider{
 		settings:     settings,
@@ -244,21 +241,4 @@ func getAzureSettings(config *azureConfig) (*azureSettings, error) {
 	}
 
 	return settings, nil
-}
-
-// This is simply to ping the Azure metadata service, if it is running
-// in Azure
-func pingMetadataService() {
-	client := cleanhttp.DefaultClient()
-	client.Timeout = 5 * time.Second
-	req, _ := http.NewRequest("GET", "http://169.254.169.254/metadata/instance", nil)
-	req.Header.Add("Metadata", "True")
-	req.Header.Set("User-Agent", userAgent())
-
-	q := req.URL.Query()
-	q.Add("format", "json")
-	q.Add("api-version", "2017-04-02")
-	req.URL.RawQuery = q.Encode()
-
-	client.Do(req)
 }

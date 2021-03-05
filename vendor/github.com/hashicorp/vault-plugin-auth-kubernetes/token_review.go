@@ -2,6 +2,7 @@ package kubeauth
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -28,7 +29,7 @@ type tokenReviewResult struct {
 
 // This exists so we can use a mock TokenReview when running tests
 type tokenReviewer interface {
-	Review(string, []string) (*tokenReviewResult, error)
+	Review(context.Context, string, []string) (*tokenReviewResult, error)
 }
 
 type tokenReviewFactory func(*kubeConfig) tokenReviewer
@@ -44,7 +45,7 @@ func tokenReviewAPIFactory(config *kubeConfig) tokenReviewer {
 	}
 }
 
-func (t *tokenReviewAPI) Review(jwt string, aud []string) (*tokenReviewResult, error) {
+func (t *tokenReviewAPI) Review(ctx context.Context, jwt string, aud []string) (*tokenReviewResult, error) {
 
 	client := cleanhttp.DefaultClient()
 
@@ -75,7 +76,7 @@ func (t *tokenReviewAPI) Review(jwt string, aud []string) (*tokenReviewResult, e
 
 	// Build the request to the token review API
 	url := fmt.Sprintf("%s/apis/authentication.k8s.io/v1/tokenreviews", strings.TrimSuffix(t.config.Host, "/"))
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(trJSON))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(trJSON))
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,11 @@ func mockTokenReviewFactory(name, namespace, UID string) tokenReviewFactory {
 	}
 }
 
-func (t *mockTokenReview) Review(jwt string, aud []string) (*tokenReviewResult, error) {
+func (t *mockTokenReview) Review(ctx context.Context, cjwt string, aud []string) (*tokenReviewResult, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	return &tokenReviewResult{
 		Name:      t.saName,
 		Namespace: t.saNamespace,

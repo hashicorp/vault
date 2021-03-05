@@ -1,3 +1,17 @@
+// Copyright 2021 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mongodbatlas
 
 import (
@@ -12,7 +26,7 @@ const (
 
 // CloudProviderSnapshotRestoreJobsService is an interface for interfacing with the CloudProviderSnapshotRestoreJobs
 // endpoints of the MongoDB Atlas API.
-// See more: https://docs.atlas.mongodb.com/reference/api/cloudProviderSnapshotRestoreJobs/
+// See more: https://docs.atlas.mongodb.com/reference/api/cloud-provider-snapshot-restore-jobs/
 type CloudProviderSnapshotRestoreJobsService interface {
 	List(context.Context, *SnapshotReqPathParameters, *ListOptions) (*CloudProviderSnapshotRestoreJobs, *Response, error)
 	Get(context.Context, *SnapshotReqPathParameters) (*CloudProviderSnapshotRestoreJob, *Response, error)
@@ -28,22 +42,23 @@ var _ CloudProviderSnapshotRestoreJobsService = &CloudProviderSnapshotRestoreJob
 
 // CloudProviderSnapshotRestoreJob represents the structure of a cloudProviderSnapshotRestoreJob.
 type CloudProviderSnapshotRestoreJob struct {
-	ID                    string   `json:"id,omitempty"`                    // The unique identifier of the restore job.
-	SnapshotID            string   `json:"snapshotId,omitempty"`            // Unique identifier of the snapshot to restore.
-	DeliveryType          string   `json:"deliveryType,omitempty"`          // Type of restore job to create. Possible values are: automated or download or pointInTime
-	DeliveryURL           []string `json:"deliveryUrl,omitempty"`           // One or more URLs for the compressed snapshot files for manual download. Only visible if deliveryType is download.
-	TargetClusterName     string   `json:"targetClusterName,omitempty"`     // Name of the target Atlas cluster to which the restore job restores the snapshot. Only required if deliveryType is automated.
-	TargetGroupID         string   `json:"targetGroupId,omitempty"`         // Unique ID of the target Atlas project for the specified targetClusterName. Only required if deliveryType is automated.
-	Cancelled             bool     `json:"cancelled,omitempty"`             // Indicates whether the restore job was canceled.
-	CreatedAt             string   `json:"createdAt,omitempty"`             // UTC ISO 8601 formatted point in time when Atlas created the restore job.
-	Expired               bool     `json:"expired,omitempty"`               // Indicates whether the restore job expired.
-	ExpiresAt             string   `json:"expiresAt,omitempty"`             // UTC ISO 8601 formatted point in time when the restore job expires.
-	FinishedAt            string   `json:"finishedAt,omitempty"`            // UTC ISO 8601 formatted point in time when the restore job completed.
-	Links                 []*Link  `json:"links,omitempty"`                 // One or more links to sub-resources and/or related resources. The relations between URLs are explained in the Web Linking Specification.
-	Timestamp             string   `json:"timestamp,omitempty"`             // Timestamp in ISO 8601 date and time format in UTC when the snapshot associated to snapshotId was taken.
-	OplogTs               int64    `json:"oplogTs,omitempty"`               //nolint:stylecheck // not changing this // Timestamp in the number of seconds that have elapsed since the UNIX epoch from which to you want to restore this snapshot. This is the first part of an Oplog timestamp.
-	OplogInc              int64    `json:"oplogInc,omitempty"`              // Oplog operation number from which to you want to restore this snapshot. This is the second part of an Oplog timestamp.
-	PointInTimeUTCSeconds int64    `json:"pointInTimeUTCSeconds,omitempty"` // Timestamp in the number of seconds that have elapsed since the UNIX epoch from which you want to restore this snapshot.
+	ID                    string       `json:"id,omitempty"`                    // The unique identifier of the restore job.
+	SnapshotID            string       `json:"snapshotId,omitempty"`            // Unique identifier of the snapshot to restore.
+	Components            []*Component `json:"components,omitempty"`            // Collection of clusters to be downloaded. Atlas returns this parameter when restoring a sharded cluster and "deliveryType" : "download".
+	DeliveryType          string       `json:"deliveryType,omitempty"`          // Type of restore job to create. Possible values are: automated or download or pointInTime
+	DeliveryURL           []string     `json:"deliveryUrl,omitempty"`           // One or more URLs for the compressed snapshot files for manual download. Only visible if deliveryType is download.
+	TargetClusterName     string       `json:"targetClusterName,omitempty"`     // Name of the target Atlas cluster to which the restore job restores the snapshot. Only required if deliveryType is automated.
+	TargetGroupID         string       `json:"targetGroupId,omitempty"`         // Unique ID of the target Atlas project for the specified targetClusterName. Only required if deliveryType is automated.
+	Cancelled             bool         `json:"cancelled,omitempty"`             // Indicates whether the restore job was canceled.
+	CreatedAt             string       `json:"createdAt,omitempty"`             // UTC ISO 8601 formatted point in time when Atlas created the restore job.
+	Expired               bool         `json:"expired,omitempty"`               // Indicates whether the restore job expired.
+	ExpiresAt             string       `json:"expiresAt,omitempty"`             // UTC ISO 8601 formatted point in time when the restore job expires.
+	FinishedAt            string       `json:"finishedAt,omitempty"`            // UTC ISO 8601 formatted point in time when the restore job completed.
+	Links                 []*Link      `json:"links,omitempty"`                 // One or more links to sub-resources and/or related resources. The relations between URLs are explained in the Web Linking Specification.
+	Timestamp             string       `json:"timestamp,omitempty"`             // Timestamp in ISO 8601 date and time format in UTC when the snapshot associated to snapshotId was taken.
+	OplogTs               int64        `json:"oplogTs,omitempty"`               //nolint:stylecheck // not changing this // Timestamp in the number of seconds that have elapsed since the UNIX epoch from which to you want to restore this snapshot. This is the first part of an Oplog timestamp.
+	OplogInc              int64        `json:"oplogInc,omitempty"`              // Oplog operation number from which to you want to restore this snapshot. This is the second part of an Oplog timestamp.
+	PointInTimeUTCSeconds int64        `json:"pointInTimeUTCSeconds,omitempty"` // Timestamp in the number of seconds that have elapsed since the UNIX epoch from which you want to restore this snapshot.
 }
 
 // CloudProviderSnapshotRestoreJobs represents an array of cloudProviderSnapshotRestoreJob
@@ -51,6 +66,11 @@ type CloudProviderSnapshotRestoreJobs struct {
 	Links      []*Link                            `json:"links"`
 	Results    []*CloudProviderSnapshotRestoreJob `json:"results"`
 	TotalCount int                                `json:"totalCount"`
+}
+
+type Component struct {
+	DownloadURL    string `json:"downloadUrl"`    // URL from which the snapshot of the components.replicaSetName should be downloaded. Atlas returns null for this parameter if the download URL has expired, has been used, or hasn't been created.
+	ReplicaSetName string `json:"replicaSetName"` // Name of the shard or config server included in the snapshot.
 }
 
 // List gets all cloud provider snapshot restore jobs for the specified cluster.
