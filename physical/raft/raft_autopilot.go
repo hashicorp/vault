@@ -187,6 +187,7 @@ func (s *FollowerStates) Update(nodeID string, appliedIndex uint64, term uint64,
 		s.followers[nodeID] = state
 	}
 
+	state.IsDead.Store(false)
 	state.AppliedIndex = appliedIndex
 	state.LastTerm = term
 	state.DesiredSuffrage = desiredSuffrage
