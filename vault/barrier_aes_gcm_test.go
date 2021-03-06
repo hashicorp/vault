@@ -84,9 +84,7 @@ func TestAESGCMBarrier_MissingRotateConfig(t *testing.T) {
 	b.ReloadKeyring(context.Background())
 
 	// At this point, the rotation config should match the default
-	rc := b.keyring.rotationConfig
-
-	if !rc.Equals(defaultRotationConfig) {
+	if !defaultRotationConfig.Equals(b.keyring.rotationConfig) {
 		t.Fatalf("expected empty rotation config to recover as default config")
 	}
 }
