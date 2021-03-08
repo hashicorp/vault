@@ -204,6 +204,7 @@ func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler
 
 func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup ClusterSetupMutator) (*vault.CoreConfig, *vault.TestClusterOptions) {
 	var localConf vault.CoreConfig
+	localConf.DisableAutopilot = true
 	if conf != nil {
 		localConf = *conf
 	}
