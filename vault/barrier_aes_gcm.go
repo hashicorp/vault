@@ -92,7 +92,7 @@ func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
 	if b.keyring == nil {
 		return kc, errors.New("keyring not yet present")
 	}
-	return b.keyring.rotationConfig.Clone(), nil
+	return b.keyring.rotationConfig, nil
 }
 
 func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig KeyRotationConfig) error {
@@ -1146,6 +1146,7 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context) (string, err
 
 			rc, err := b.RotationConfig()
 			if err != nil {
+				b.l.RUnlock()
 				return "", err
 			}
 
@@ -1155,9 +1156,9 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context) (string, err
 				switch {
 				case activeKey.Encryptions == 0 && !activeKey.InstallTime.IsZero() && time.Since(activeKey.InstallTime) > oneYear:
 					reason = legacyRotateReason
-				case ops > rc.MaxOperations:
+				case ops > b.keyring.rotationConfig.MaxOperations:
 					reason = "reached max operations"
-				case rc.Interval > 0 && time.Since(activeKey.InstallTime) > rc.Interval:
+				case b.keyring.rotationConfig.Interval > 0 && time.Since(activeKey.InstallTime) > b.keyring.rotationConfig.Interval:
 					reason = "rotation interval reached"
 				}
 			}

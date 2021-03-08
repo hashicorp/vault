@@ -61,34 +61,6 @@ func TestAESGCMBarrier_Rotate(t *testing.T) {
 	testBarrier_Rotate(t, b)
 }
 
-func TestAESGCMBarrier_MissingRotateConfig(t *testing.T) {
-	inm, err := inmem.NewInmem(nil, logger)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	b, err := NewAESGCMBarrier(inm)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Initialize and unseal
-	key, _ := b.GenerateKey(rand.Reader)
-	b.Initialize(context.Background(), key, nil, rand.Reader)
-	b.Unseal(context.Background(), key)
-
-	// Write a keyring which lacks rotation config settings
-	oldKeyring := b.keyring.Clone()
-	oldKeyring.rotationConfig = KeyRotationConfig{}
-	b.persistKeyring(context.Background(), oldKeyring)
-
-	b.ReloadKeyring(context.Background())
-
-	// At this point, the rotation config should match the default
-	if !defaultRotationConfig.Equals(b.keyring.rotationConfig) {
-		t.Fatalf("expected empty rotation config to recover as default config")
-	}
-}
-
 func TestAESGCMBarrier_Upgrade(t *testing.T) {
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {

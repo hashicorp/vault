@@ -213,7 +213,6 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	k := NewKeyring()
 	k.masterKey = enc.MasterKey
 	k.rotationConfig = enc.RotationConfig
-	k.rotationConfig.Sanitize()
 	for _, key := range enc.Keys {
 		k.keys[key.Term] = key
 		if key.Term > k.activeTerm {
@@ -239,17 +238,6 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	for _, key := range k.keys {
 		memzero(key.Value)
 	}
-}
-
-func (c KeyRotationConfig) Clone() KeyRotationConfig {
-	clone := KeyRotationConfig{
-		MaxOperations: c.MaxOperations,
-		Interval:      c.Interval,
-		Disabled:      c.Disabled,
-	}
-
-	clone.Sanitize()
-	return clone
 }
 
 func (c *KeyRotationConfig) Sanitize() {
