@@ -11,8 +11,8 @@ require (
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.6.0
 	github.com/Azure/azure-storage-blob-go v0.11.0
-	github.com/Azure/go-autorest/autorest v0.11.10
-	github.com/Azure/go-autorest/autorest/adal v0.9.5
+	github.com/Azure/go-autorest/autorest v0.11.17
+	github.com/Azure/go-autorest/autorest/adal v0.9.11
 	github.com/Microsoft/hcsshim v0.8.14 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
@@ -45,7 +45,7 @@ require (
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
-	github.com/go-ldap/ldap/v3 v3.1.10
+	github.com/go-ldap/ldap/v3 v3.2.4
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
@@ -57,10 +57,10 @@ require (
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
-	github.com/hashicorp/go-cleanhttp v0.5.1
+	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.6.0
-	github.com/hashicorp/go-hclog v0.14.1
+	github.com/hashicorp/go-hclog v0.15.0
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
@@ -78,27 +78,27 @@ require (
 	github.com/hashicorp/raft-autopilot v0.1.2
 	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/serf v0.9.5 // indirect
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.7.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.6.0
-	github.com/hashicorp/vault-plugin-auth-centrify v0.7.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.7.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20210212182451-0d0819f8e5e3
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.6.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.8.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.7.2
+	github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.8.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.9.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.9.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.7.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.3.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.6.1
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.2.1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.7.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.3.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.1.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.7.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.8.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20210121193032-bb12fd5092bd
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.7.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.7.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.2.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.3.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
@@ -156,7 +156,6 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
 	go.uber.org/atomic v1.6.0
-	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

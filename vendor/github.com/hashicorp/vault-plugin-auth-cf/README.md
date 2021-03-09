@@ -22,7 +22,7 @@ them to gain unintended access to Vault.
 
 For this reason, we recommend that if you choose this auth method, you **carefully guard access to
 the private key** for your instance identity CA certificate. In CredHub, it can be obtained through the 
-following call: `$ credhub get -n /cf/diego-instance-identity-root-ca`. 
+following call: `$ credhub get -n /cf/diego-instance-identity-root-ca`. If in your CF deployment you can't find `diego-instance-identity-root-ca` it was probably renamed to `diego-instance-identity-ca`.
 
 Take extra steps to limit access to that path in CredHub, whether it be through use of CredHub's ACL system, 
 or through carefully limiting the users who can access CredHub.
@@ -268,6 +268,7 @@ $ cf orgs
 $ cf org-users my-example-org
 $ cf set-org-role vault my-example-org OrgManager
 ```
+As an alternative to username/password authentication, you could use a service account (i.e. Client Credentials) to authenticate with - this is the prefered authentication method for systems in production. You can learn more here - [How to create Client Credentials in Cloud Foundry](https://docs.cloudfoundry.org/uaa/uaa-user-management.html)
 
 Since the PCF API tends to use a self-signed certificate, you'll also need to configure
 Vault to trust that certificate. You can obtain its API certificate via:
@@ -279,6 +280,41 @@ openssl s_client -showcerts -connect pcf.lagunaniguel.cf-app.com:443
 You'll see a certificate outputted as part of the response, which should be broken
 out into a separate well-formatted file like the `ca.crt` above, and used for the
 `cf_api_trusted_certificates` field.
+
+### Using mTLS with the CF API
+The CloudFoundry API is able to perform mutual TLS authentication with other components on the same internal network. In 
+a CloudFoundry deployment powered by [`cf-deployment`](https://github.com/cloudfoundry/cf-deployment), the default address for this is:
+
+```
+https://cloud-controller-ng.service.cf.internal:9023
+```
+
+`cloud-controller-ng.service.cf.internal` is also available over HTTPS on port 9024, but does not enforce mTLS. Using 
+this port when configuring the plugin for mTLS will work, but will not have any effect.
+    
+To perform mutual TLS, Vault will need to have access to a certificate and key pair signed by a CA that the CF API trusts. 
+In `cf-deployment`, this is the CA named `service_cf_internal_ca`. The certificate's involved both need to have Subject 
+Alternative Name's set, or else Golang will emit an error:
+
+```
+x509: certificate relies on legacy Common Name field, use SANs or temporarily enable Common Name matching with GODEBUG=x509ignoreCN=0
+```
+
+To mTLS with the CF API in the Vault plugin, provide the `cf_api_mutual_tls_certificate` and `cf_api_mutual_tls_key` parameters. 
+These are taken as paths to the files on disk, e.g.
+
+```
+$ vault write auth/cf/config \
+      identity_ca_certificates=@ca.crt \
+      cf_api_addr=https://cloud-controller-ng.service.cf.internal:9023 \
+      cf_username=vault \
+      cf_password=pa55word \
+      cf_api_trusted_certificates=@cfapi.crt \
+      cf_api_mutual_tls_certificate=@cloud-controller-mtls.crt \
+      cf_api_mutual_tls_key=@cloud-controller-mtls.key
+```
+
+
 
 ## Downloading the Plugin
 
@@ -295,7 +331,7 @@ First, enable the CF auth engine.
 $ vault auth enable cf
 ```
 
-Next, configure the plugin. In the `config` call below, `certificates` is intended to be the instance
+Next, configure the plugin. In the `config` call below, `identity_ca_certificates` is intended to be the instance
 identity CA certificate you pulled above.
 
 ```
@@ -306,6 +342,19 @@ $ vault write auth/cf/config \
       cf_password=pa55word \
       cf_api_trusted_certificates=@cfapi.crt
 ```
+
+Or
+
+```
+$ vault write auth/cf/config \
+      identity_ca_certificates=@ca.crt \
+      cf_api_addr=https://api.sys.lagunaniguel.cf-app.com \
+      cf_client_id=vault_client_id \
+      cf_client_secret=<CLIENT_SECRET> \
+      cf_api_trusted_certificates=@cfapi.crt
+```
+
+if using client credentials.
 
 Then, add a role that will be used to grant specific Vault policies to those logging in with it. When a constraint like
 `bound_application_ids` is added, then the application ID on the cert used for logging in _must_ be one of the role's
@@ -402,7 +451,7 @@ It can be used as a standalone tool for generating a signature like so:
 ```
 export CF_INSTANCE_CERT=path/to/instance.crt
 export CF_INSTANCE_KEY=path/to/instance.key
-export SIGNING_TIME=$(date -u)
+export SIGNING_TIME=$(date -u) 
 export ROLE='test-role'
 generate-signature
 ```
@@ -422,6 +471,10 @@ vault write auth/vault-plugin-auth-cf/login \
 ```
 If the tool is being run in a Cloud Foundry environment already containing the `CF_INSTANCE_CERT` and `CF_INSTANCE_KEY`, those
 variables obviously won't need to be manually set before the tool is used and can just be pulled as they are.
+
+On Linux (tested on Ubuntu 18.04) you might need to use:
+  - `date -u +'%a %b %d %H:%M:%S %Z %Y'` instead of `date -u` for SIGNING_TIME environment variable.
+  - `generate-signature 2>&1 | cut -d' ' -f 3` instead of `generate-signature` command.
 
 ## Developing
 
@@ -589,7 +642,7 @@ export MOCK_CF_SERVER_ADDR='something' # ex. http://127.0.0.1:32937
 vault auth enable vault-plugin-auth-cf
 
 vault write auth/vault-plugin-auth-cf/config \
-    certificates=@$CF_HOME/testdata/fake-certificates/ca.crt \
+    identity_ca_certificates=@$CF_HOME/testdata/fake-certificates/ca.crt \
     cf_api_addr=$MOCK_CF_SERVER_ADDR \
     cf_username=username \
     cf_password=password
@@ -611,7 +664,7 @@ export SIGNING_TIME=$(date -u)
 export ROLE='test-role'
 vault write auth/vault-plugin-auth-cf/login \
     role=$ROLE \
-    certificate=@$CF_INSTANCE_CERT \
+    identity_ca_certificates=@$CF_INSTANCE_CERT \
     signing_time="$SIGNING_TIME" \
     signature=$(generate-signature)
     

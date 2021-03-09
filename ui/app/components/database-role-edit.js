@@ -13,7 +13,6 @@ export default class DatabaseRoleEdit extends Component {
 
   constructor() {
     super(...arguments);
-    console.log(this.wizard.featureState, 'featureSTate');
     if (
       this.wizard.featureState === 'displayConnection' ||
       this.wizard.featureState === 'displayRoleDatabase'

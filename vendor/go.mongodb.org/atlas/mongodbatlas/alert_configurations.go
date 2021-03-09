@@ -1,3 +1,17 @@
+// Copyright 2021 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mongodbatlas
 
 import (
@@ -8,9 +22,9 @@ import (
 
 const alertConfigurationPath = "groups/%s/alertConfigs"
 
-// AlertConfigurationsService is an interface of the Alert Configuration
-// endpoints of the MongoDB Atlas API.
-// See more: hhttps://docs.atlas.mongodb.com/reference/api/alert-configurations
+// AlertConfigurationsService provides access to the alert configuration related functions in the Atlas API.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/alert-configurations
 type AlertConfigurationsService interface {
 	Create(context.Context, string, *AlertConfiguration) (*AlertConfiguration, *Response, error)
 	EnableAnAlertConfig(context.Context, string, string, *bool) (*AlertConfiguration, *Response, error)
@@ -69,7 +83,7 @@ type Matcher struct {
 type MetricThreshold struct {
 	MetricName string  `json:"metricName,omitempty"` // Name of the metric to check.
 	Operator   string  `json:"operator,omitempty"`   // Operator to apply when checking the current metric value against the threshold value.
-	Threshold  float64 `json:"threshold,omitempty"`  // Threshold value outside of which an alert will be triggered.
+	Threshold  float64 `json:"threshold"`            // Threshold value outside of which an alert will be triggered.
 	Units      string  `json:"units,omitempty"`      // The units for the threshold value.
 	Mode       string  `json:"mode,omitempty"`       // This must be set to AVERAGE. Atlas computes the current metric value as an average.
 }
