@@ -1,5 +1,5 @@
 import { currentURL, visit as _visit, settled } from '@ember/test-helpers';
-import { module, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import auth from 'vault/tests/pages/auth';
@@ -43,7 +43,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     // to the auth page resulting in no redirect_to query param being set
     localStorage.clear();
   });
-  skip('redirect to a route after authentication', async function(assert) {
+  test('redirect to a route after authentication', async function(assert) {
     let url = '/vault/secrets/secret/create';
     await visit(url);
     assert.ok(
@@ -56,13 +56,13 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     assert.equal(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
-  skip('redirect from root does not include redirect_to', async function(assert) {
+  test('redirect from root does not include redirect_to', async function(assert) {
     let url = '/';
     await visit(url);
     assert.ok(currentURL().indexOf('redirect_to') < 0, 'there is no redirect_to query param');
   });
 
-  skip('redirect to a route after authentication with a query param', async function(assert) {
+  test('redirect to a route after authentication with a query param', async function(assert) {
     let url = '/vault/secrets/secret/create?initialKey=hello';
     await visit(url);
     assert.ok(
@@ -74,7 +74,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     assert.equal(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
-  skip('redirect to logout with wrapped token authenticates you', async function(assert) {
+  test('redirect to logout with wrapped token authenticates you', async function(assert) {
     let wrappedToken = await setupWrapping();
     let url = '/vault/secrets/cubbyhole/create';
 
