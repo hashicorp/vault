@@ -1,4 +1,4 @@
-import { settled, currentURL, currentRouteName, visit } from '@ember/test-helpers';
+import { settled, currentURL, currentRouteName, visit, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -160,7 +160,9 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await settled();
     await visit(`/vault/access/control-groups/${accessor}`);
     await settled();
-    await controlGroupComponent.authorize();
+    await click('[data-test-authorize-button]');
+    // replaced the page object with actual dom click because we were getting inconsistent errors with it not showing
+    // await controlGroupComponent.authorize();
     await settled();
     assert.equal(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
     await settled();
