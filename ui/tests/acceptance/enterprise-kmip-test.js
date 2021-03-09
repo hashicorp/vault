@@ -26,6 +26,7 @@ const mount = async (shouldConfig = true) => {
     ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
   await uiConsole.runCommands(commands);
+  await settled();
   let res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error mounting secrets engine: ${res}`);
@@ -107,7 +108,6 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     );
     let addr = `127.0.0.1:${getRandomPort()}`;
     await fillIn('[data-test-string-list-input="0"]', addr);
-
     await scopesPage.submit();
     await settled();
     assert.equal(

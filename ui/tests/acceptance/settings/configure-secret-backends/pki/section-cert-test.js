@@ -104,7 +104,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   });
 
   test('cert config: sign intermediate and set signed intermediate', async function(assert) {
-    // TODO confirmed worked, issue with timing.
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
@@ -131,6 +130,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.submit();
     await settled();
-    assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');
+    assert.dom('[data-test-ca-download-link]').exists({ count: 3 });
   });
 });
