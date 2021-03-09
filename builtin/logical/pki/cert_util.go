@@ -180,7 +180,7 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // If one does not pass, it is returned in the string argument.
 func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
-		sanitizedName := strings.ToLower(name)
+		sanitizedName := name
 		emailDomain := sanitizedName
 		isEmail := false
 		isWildcard := false
@@ -326,22 +326,18 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 					}
 				}
 
-				// Convert the allowed domain name to lower case for comparison
-				// The sanitized name should already be in lower case
-				currDomain = strings.ToLower(currDomain)
-
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if data.role.AllowBareDomains &&
-					(sanitizedName == currDomain ||
-						(isEmail && emailDomain == currDomain)) {
+					(strings.EqualFold(sanitizedName, currDomain) ||
+						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
 					valid = true
 					break
 				}
 
 				if data.role.AllowSubdomains {
 					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
-						(isWildcard && sanitizedName == currDomain) {
+						(isWildcard && strings.EqualFold(sanitizedName, currDomain)) {
 						valid = true
 						break
 					}
