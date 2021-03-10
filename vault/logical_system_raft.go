@@ -418,14 +418,12 @@ func (b *SystemBackend) handleStorageRaftAutopilotState() framework.OperationFun
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"execution_status":             state.ExecutionStatus,
-				"healthy":                      state.Healthy,
-				"failure_tolerance":            state.FailureTolerance,
-				"optimistic_failure_tolerance": state.OptimisticFailureTolerance,
-				"servers":                      state.Servers,
-				"leader":                       state.Leader,
-				"voters":                       state.Voters,
-				"non_voters":                   state.NonVoters,
+				"healthy":           state.Healthy,
+				"failure_tolerance": state.FailureTolerance,
+				"servers":           state.Servers,
+				"leader":            state.Leader,
+				"voters":            state.Voters,
+				"non_voters":        state.NonVoters,
 			},
 		}, nil
 	}

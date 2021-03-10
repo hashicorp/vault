@@ -464,26 +464,6 @@ func (b *RaftBackend) AutopilotDisabled() bool {
 	return disabled
 }
 
-// AutopilotExecutionStatus represents the current status of the autopilot background go routines
-type AutopilotExecutionStatus string
-
-const (
-	AutopilotNotRunning   AutopilotExecutionStatus = "not-running"
-	AutopilotRunning      AutopilotExecutionStatus = "running"
-	AutopilotShuttingDown AutopilotExecutionStatus = "shutting-down"
-)
-
-func autopilotStatusToStatus(status autopilot.ExecutionStatus) AutopilotExecutionStatus {
-	switch status {
-	case autopilot.Running:
-		return AutopilotRunning
-	case autopilot.ShuttingDown:
-		return AutopilotShuttingDown
-	default:
-		return AutopilotNotRunning
-	}
-}
-
 func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	b.l.RLock()
 	tickerCh := b.followerHeartbeatTicker.C
@@ -523,10 +503,8 @@ func (b *RaftBackend) StopAutopilot() {
 
 // AutopilotState represents the health information retrieved from autopilot.
 type AutopilotState struct {
-	ExecutionStatus            AutopilotExecutionStatus `json:"execution_status"`
-	Healthy                    bool                     `json:"healthy"`
-	FailureTolerance           int                      `json:"failure_tolerance"`
-	OptimisticFailureTolerance int                      `json:"optimistic_failure_tolerance"`
+	Healthy          bool `json:"healthy"`
+	FailureTolerance int  `json:"failure_tolerance"`
 
 	Servers   map[string]*AutopilotServer `json:"servers"`
 	Leader    string                      `json:"leader"`
@@ -620,10 +598,6 @@ func autopilotToAPIState(state *autopilot.State) (*AutopilotState, error) {
 		out.Servers[string(id)] = autopilotToAPIServer(srv)
 	}
 
-	if err := autopilotToAPIStateEnterprise(state, out); err != nil {
-		return out, err
-	}
-
 	return out, nil
 }
 
@@ -666,15 +640,7 @@ func (b *RaftBackend) GetAutopilotServerState(ctx context.Context) (*AutopilotSt
 		return nil, nil
 	}
 
-	state, err := autopilotToAPIState(apState)
-	if err != nil {
-		return nil, err
-	}
-
-	apStatus, _ := b.autopilot.IsRunning()
-	state.ExecutionStatus = autopilotStatusToStatus(apStatus)
-
-	return state, nil
+	return autopilotToAPIState(apState)
 }
 
 func (b *RaftBackend) DisableAutopilot() {
