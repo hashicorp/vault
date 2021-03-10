@@ -24,12 +24,6 @@ func autopilotToAPIServerEnterprise(_ *autopilot.ServerState, _ *AutopilotServer
 	// noop in oss
 }
 
-func autopilotToAPIStateEnterprise(state *autopilot.State, apiState *AutopilotState) error {
-	// Both are same in OSS
-	apiState.OptimisticFailureTolerance = state.FailureTolerance
-	return nil
-}
-
 func (d *Delegate) autopilotConfigExt() interface{} {
 	return nil
 }
