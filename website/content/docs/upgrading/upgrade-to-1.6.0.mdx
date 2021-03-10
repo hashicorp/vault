@@ -29,7 +29,7 @@ particular note:
 The Transform Secrets Engine (Enterprise only) will automatically upgrade the
 storage of its configuration in order to accommodate the new transformation
 type oriented configuration API. Secondaries will receive the
-modifications via replication.
+modifications via replication.  
 
 ## Database Engine Interface Upgrade
 
@@ -42,3 +42,10 @@ the new interface so no user actions are needed. Vault will continue to recogniz
 database plugins but the old interface should be considered deprecated and may be removed in a
 future release. See our [upgrade guide for custom databases](/docs/secrets/databases/custom) for
 more information on upgrading custom database plugins.
+
+## Known Issues
+
+Due to the known issues, we recommend skipping 1.6.0 and upgrading directly to 1.6.4.
+
+@include 'transform-upgrade.mdx'
+
