@@ -182,7 +182,6 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))
 	buffer.WriteString(fmt.Sprintf("Failure Tolerance:            %d\n", state.FailureTolerance))
-	buffer.WriteString(fmt.Sprintf("Optimistic Failure Tolerance: %d\n", state.OptimisticFailureTolerance))
 	buffer.WriteString(fmt.Sprintf("Leader:                       %s\n", state.Leader))
 	buffer.WriteString("Voters:\n")
 	outputStringSlice(&buffer, "   ", state.Voters)
