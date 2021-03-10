@@ -46,7 +46,6 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	client := cluster.Cores[0].Client
 	state, err := client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
-	require.Equal(t, api.AutopilotRunning, state.ExecutionStatus)
 	require.Equal(t, true, state.Healthy)
 	require.Len(t, state.Servers, 1)
 	require.Equal(t, "core-0", state.Servers["core-0"].ID)
