@@ -130,6 +130,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.submit();
     await settled();
-    assert.dom('[data-test-ca-download-link]').exists({ count: 3 });
+    assert.dom('[data-test-go-replace-ca]').exists();
   });
 });
