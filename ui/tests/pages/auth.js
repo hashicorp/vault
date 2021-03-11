@@ -13,9 +13,9 @@ export default create({
     await this.visit({ with: 'token' });
     await settled();
     if (token) {
-      return this.tokenInput(token).submit();
+      return await this.tokenInput(token).submit();
     }
 
-    return this.tokenInput('root').submit();
+    return await this.tokenInput('root').submit();
   },
 });
