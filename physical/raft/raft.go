@@ -1312,9 +1312,8 @@ func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
 
 func (b *RaftBackend) DesiredSuffrage() string {
 	b.l.RLock()
-	desiredSuffrage := b.fsm.desiredSuffrage
-	b.l.RUnlock()
-	return desiredSuffrage
+	defer b.l.RUnlock()
+	return b.fsm.DesiredSuffrage()
 }
 
 // RaftLock implements the physical Lock interface and enables HA for this
