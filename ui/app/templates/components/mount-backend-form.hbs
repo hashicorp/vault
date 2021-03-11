@@ -36,14 +36,11 @@
       <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
-        <h3 class="title box-radio-header">
-          {{capitalize category}}
-        </h3>
-        <div class="box-radio-container">
+        <BoxRadioSet @title={{capitalize category}}>
           {{#each (filter-by "category" category mountTypes) as |type|}}
             <BoxRadio
               @displayName={{type.displayName}}
-              @type={{type.type}}
+              @key={{type.type}}
               @glyph={{or type.glyph type.type}}
               @groupValue={{mountModel.type}}
               @groupName="mount-type"
@@ -58,7 +55,7 @@
               }}
             />
           {{/each}}
-        </div>
+        </BoxRadioSet>
       {{/each}}
     {{/if}}
   </div>
