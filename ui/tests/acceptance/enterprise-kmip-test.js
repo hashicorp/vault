@@ -107,6 +107,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
       'configuration navigates to the configure page'
     );
     let addr = `127.0.0.1:${getRandomPort()}`;
+
     await fillIn('[data-test-string-list-input="0"]', addr);
     await scopesPage.submit();
     await settled();
