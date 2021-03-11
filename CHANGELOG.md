@@ -12,6 +12,7 @@ FEATURES:
 * **Aerospike Storage Backend**: Add support for using Aerospike as a storage backend [[GH-10131](https://github.com/hashicorp/vault/pull/10131)]
 * agent: Support for persisting the agent cache to disk [[GH-10938](https://github.com/hashicorp/vault/pull/10938)]
 * auth/jwt: Adds `max_age` role parameter and `auth_time` claim validation. [[GH-10919](https://github.com/hashicorp/vault/pull/10919)]
+* core (enterprise): X-Vault-Index and related headers can be used by clients to manage eventual consistency. 
 * kmip (enterprise): Use entropy augmentation to generate kmip certificates
 * sdk: Private key generation in the certutil package now allows custom io.Readers to be used. [[GH-10653](https://github.com/hashicorp/vault/pull/10653)]
 * secrets/aws: add IAM tagging support for iam_user roles [[GH-10953](https://github.com/hashicorp/vault/pull/10953)]
