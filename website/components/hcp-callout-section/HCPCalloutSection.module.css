@@ -39,10 +39,10 @@
         margin-bottom: 8px;
       }
       & .chin {
-        color: var(--gray-4);
+        color: var(--gray-3);
       }
       & .description {
-        color: var(--gray-4);
+        color: var(--gray-3);
         margin-top: 28px;
         margin-bottom: 0;
 
