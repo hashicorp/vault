@@ -38,7 +38,7 @@ module('Acceptance | userpass secret backend', function(hooks) {
     // enable the first userpass method with one username
     await visit(`/vault/settings/auth/enable`);
     await settled();
-    await click('[data-test-mount-type="userpass"]');
+    await click('[data-test-box-radio-input="userpass"]');
     await settled();
     await click('[data-test-mount-next]');
     await settled();
