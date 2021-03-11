@@ -27,7 +27,7 @@ module('Integration | Component | box-radio', function(hooks) {
 
     assert.dom(this.element).hasText('An Option', 'shows the display name of the option');
     assert.dom('.tooltip').doesNotExist('tooltip does not exist when disabled is false');
-    await click('[data-test-mount-key="aws"]');
+    await click('[data-test-mount-type-radio]');
     assert.ok(spy.calledWith('aws'), 'calls the radio change function when option clicked');
   });
 
