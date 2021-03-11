@@ -39,6 +39,7 @@
 <div
   class="box-radio {{if (eq @groupValue @key) 'is-selected'}}"
   data-test-mount-type-radio
+  data-test-mount-type={{@type}}
   tabindex="0"
   {{on 'click' (fn this.handleBoxClick @key)}}
   {{on 'keydown' (fn this.handleKeydown @key)}}
