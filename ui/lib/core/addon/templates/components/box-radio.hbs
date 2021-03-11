@@ -31,7 +31,7 @@
     </T.trigger>
     <T.content @class="tool-tip">
       <div class="box">
-        {{@tooltipMessage}}
+        {{or @tooltipMessage this.defaultTooltipMessage}}
       </div>
     </T.content>
   </ToolTip>
