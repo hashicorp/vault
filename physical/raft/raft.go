@@ -1311,8 +1311,6 @@ func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
 }
 
 func (b *RaftBackend) DesiredSuffrage() string {
-	b.l.RLock()
-	defer b.l.RUnlock()
 	return b.fsm.DesiredSuffrage()
 }
 
