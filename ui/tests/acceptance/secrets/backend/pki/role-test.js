@@ -1,5 +1,5 @@
 import { currentRouteName, settled, click } from '@ember/test-helpers';
-import { module, test, skip } from 'qunit';
+import { module, skip, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';

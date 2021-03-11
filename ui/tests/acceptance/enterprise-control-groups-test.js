@@ -198,7 +198,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     }
   };
 
-  test('it allows the full flow to work with a saved token', async function(assert) {
+  skip('it allows the full flow to work with a saved token', async function(assert) {
     await workflow(assert, this, true);
     await settled();
   });
