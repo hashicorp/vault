@@ -23,6 +23,7 @@ import (
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -540,8 +541,12 @@ func (c *LeaseCache) updateLastRenewed(ctx context.Context, index *cachememdb.In
 func computeIndexID(req *SendRequest) (string, error) {
 	var b bytes.Buffer
 
+	cloned := req.Request.Clone(context.Background())
+	cloned.Header.Del(vaulthttp.VaultIndexHeaderName)
+	cloned.Header.Del(vaulthttp.VaultForwardHeaderName)
+	cloned.Header.Del(vaulthttp.VaultInconsistentHeaderName)
 	// Serialize the request
-	if err := req.Request.Write(&b); err != nil {
+	if err := cloned.Write(&b); err != nil {
 		return "", fmt.Errorf("failed to serialize request: %v", err)
 	}
 
