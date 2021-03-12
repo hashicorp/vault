@@ -127,11 +127,15 @@ export default ApplicationAdapter.extend({
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
     const db = snapshot.attr('database');
-    await this._updateAllowedRoles(store, {
-      role: id,
-      backend,
-      db: db[0],
-    });
+    try {
+      await this._updateAllowedRoles(store, {
+        role: id,
+        backend,
+        db: db[0],
+      });
+    } catch (e) {
+      throw new Error('Could not update allowed roles for selected database. Check Vault logs for details');
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE

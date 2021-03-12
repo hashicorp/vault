@@ -2525,52 +2525,82 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 		Data: map[string]interface{}{
 			"term":         info.Term,
 			"install_time": info.InstallTime.Format(time.RFC3339Nano),
+			"encryptions":  info.Encryptions,
 		},
 	}
 	return resp, nil
 }
 
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"max_operations": rotConfig.MaxOperations,
+			"enabled":        !rotConfig.Disabled,
+		},
+	}
+	if rotConfig.Interval > 0 {
+		resp.Data["interval"] = rotConfig.Interval.String()
+	} else {
+		resp.Data["interval"] = 0
+	}
+	return resp, nil
+}
+
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+	maxOps, ok, err := data.GetOkErr("max_operations")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.MaxOperations = int64(maxOps.(int))
+	}
+	interval, ok, err := data.GetOkErr("interval")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.Interval = time.Second * time.Duration(interval.(int))
+	}
+
+	enabled, ok, err := data.GetOkErr("enabled")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.Disabled = !enabled.(bool)
+	}
+	// Store the rotation config
+	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // handleRotate is used to trigger a key rotation
-func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRotate(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
 
-	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
-	if err != nil {
-		b.Backend.Logger().Error("failed to create new encryption key", "error", err)
+	if err := b.rotateBarrierKey(ctx); err != nil {
+		b.Backend.Logger().Error("error handling key rotation", "error", err)
 		return handleError(err)
 	}
-	b.Backend.Logger().Info("installed new encryption key")
-
-	// In HA mode, we need to an upgrade path for the standby instances
-	if b.Core.ha != nil {
-		// Create the upgrade path to the new term
-		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
-			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
-		}
-
-		// Schedule the destroy of the upgrade path
-		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
-			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
-			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
-				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
-			}
-		})
-	}
-
-	// Write to the canary path, which will force a synchronous truing during
-	// replication
-	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   coreKeyringCanaryPath,
-		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
-	}); err != nil {
-		b.Core.logger.Error("error saving keyring canary", "error", err)
-		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
-	}
-
 	return nil, nil
 }
 
@@ -3842,6 +3872,44 @@ func (b *SystemBackend) verifyDROperationTokenOnSecondary(f framework.OperationF
 	return f
 }
 
+func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
+	// Rotate to the new term
+	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to create new encryption key"), err)
+	}
+	b.Backend.Logger().Info("installed new encryption key")
+
+	// In HA mode, we need to an upgrade path for the standby instances
+	if b.Core.ha != nil && b.Core.KeyRotateGracePeriod() > 0 {
+		// Create the upgrade path to the new term
+		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
+			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
+		}
+
+		// Schedule the destroy of the upgrade path
+		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
+			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
+				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
+			}
+		})
+	}
+
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
+	}); err != nil {
+		b.Core.logger.Error("error saving keyring canary", "error", err)
+		return errwrap.Wrap(errors.New("failed to save keyring canary"), err)
+	}
+
+	return nil
+
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4339,6 +4407,25 @@ Enable a new audit backend or disable an existing backend.
 		`,
 	},
 
+	"rotate-config": {
+		"Configures settings related to the backend encryption key management.",
+		`
+		Configures settings related to the automatic rotation of the backend encryption key.
+		`,
+	},
+
+	"rotation-enabled": {
+		"Whether automatic rotation is enabled.",
+		"",
+	},
+	"rotation-max-operations": {
+		"The number of encryption operations performed before the barrier key is automatically rotated.",
+		"",
+	},
+	"rotation-interval": {
+		"How long after installation of an active key term that the key will be automatically rotated.",
+		"",
+	},
 	"rotate": {
 		"Rotates the backend encryption key used to persist data.",
 		`
@@ -4582,6 +4669,10 @@ This path responds to the following HTTP methods.
 	"activity-query": {
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
+	},
+	"activity-monthly": {
+		"Count of active clients so far this month.",
+		"Count of active clients so far this month.",
 	},
 	"activity-config": {
 		"Control the collection and reporting of client counts.",

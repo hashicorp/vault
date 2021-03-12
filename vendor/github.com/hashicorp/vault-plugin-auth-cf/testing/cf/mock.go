@@ -1,6 +1,8 @@
 package cf
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,10 +15,16 @@ const (
 	AuthUsername = "username"
 	AuthPassword = "password"
 
+	AuthClientID     = "ClientID"
+	AuthClientSecret = "ClientSecret"
+
 	FoundServiceGUID = "1bf2e7f6-2d1d-41ec-501c-c70"
 	FoundAppGUID     = "2d3e834a-3a25-4591-974c-fa5626d5d0a1"
 	FoundOrgGUID     = "34a878d0-c2f9-4521-ba73-a9f664e82c7bf"
 	FoundSpaceGUID   = "3d2eba6b-ef19-44d5-91dd-1975b0db5cc9"
+	FoundAppName     = "name-2401"
+	FoundSpaceName   = "cfdev-space"
+	FoundOrgName     = "system"
 
 	UnfoundServiceGUID = "service-id-unfound"
 	UnfoundAppGUID     = "app-id-unfound"
@@ -29,7 +37,7 @@ var (
 	logger        = hclog.Default()
 )
 
-func MockServer(loud bool) *httptest.Server {
+func MockServer(loud bool, casToTrust []string) *httptest.Server {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		if loud {
@@ -87,6 +95,16 @@ func MockServer(loud bool) *httptest.Server {
 		}
 	}))
 	testServerUrl = testServer.URL
+
+	if len(casToTrust) > 0 {
+		clientCACertPool := x509.NewCertPool()
+		for _, ca := range casToTrust {
+			clientCACertPool.AppendCertsFromPEM([]byte(ca))
+		}
+		testServer.TLS = &tls.Config{}
+		testServer.TLS.ClientCAs = clientCACertPool
+	}
+
 	return testServer
 }
 

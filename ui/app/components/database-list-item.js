@@ -52,7 +52,7 @@ export default class DatabaseListItem extends Component {
     adapter
       .rotateRootCredentials(backend, id)
       .then(() => {
-        this.flashMessages.success(`Success: ${id} connection was reset`);
+        this.flashMessages.success(`Success: ${id} connection was rotated`);
       })
       .catch(e => {
         this.flashMessages.danger(e.errors);
