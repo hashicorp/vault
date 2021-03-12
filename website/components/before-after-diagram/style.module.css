@@ -151,7 +151,7 @@
   background-image: linear-gradient(
     90deg,
     var(--gray-6-transparent) 0%,
-    var(--gray-6) 100%
+    var(--gray-5) 100%
   );
   composes: lineSegment;
   right: calc(50% + 20px);
@@ -161,7 +161,7 @@
     background-image: linear-gradient(
       180deg,
       var(--gray-6-transparent) 0%,
-      var(--gray-6) 100%
+      var(--gray-5) 100%
     );
     height: 245px;
     right: auto;
@@ -173,7 +173,7 @@
 .lineSegmentTwo {
   background-image: linear-gradient(
     90deg,
-    var(--gray-6) 0%,
+    var(--gray-5) 0%,
     var(--product-color) 100%
   );
   composes: lineSegment;
@@ -183,7 +183,7 @@
   @media (max-width: 767px) {
     background-image: linear-gradient(
       180deg,
-      var(--gray-6) 0%,
+      var(--gray-5) 0%,
       var(--product-color) 100%
     );
     height: calc(100% + 375px);
@@ -253,7 +253,7 @@
 /* Content container */
 
 .contentContainer {
-  border: 1px solid var(--gray-6);
+  border: 1px solid var(--gray-5);
   flex-grow: 1;
   padding: 24px 32px 20px;
   position: relative;
@@ -282,7 +282,7 @@
 
   &::before {
     border-color: rgba(229, 230, 235, 0);
-    border-bottom-color: var(--gray-6);
+    border-bottom-color: var(--gray-5);
     border-width: 18px;
     margin-left: -18px;
   }
@@ -309,7 +309,7 @@
 /* Content headline */
 
 .contentHeadline {
-  border-bottom: 1px solid var(--gray-6);
+  border-bottom: 1px solid var(--gray-5);
   color: var(--black);
   composes: g-type-display-3 from global;
   margin: 0 0 24px;
