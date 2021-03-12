@@ -1,5 +1,5 @@
 import { currentURL, visit as _visit, settled } from '@ember/test-helpers';
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import auth from 'vault/tests/pages/auth';
@@ -79,7 +79,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     assert.equal(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
-  skip('redirect to logout with wrapped token authenticates you', async function(assert) {
+  test('redirect to logout with wrapped token authenticates you', async function(assert) {
     let wrappedToken = await setupWrapping();
     let url = '/vault/secrets/cubbyhole/create';
 
