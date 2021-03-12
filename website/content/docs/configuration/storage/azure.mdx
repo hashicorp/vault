@@ -17,8 +17,10 @@ currently includes the general purpose "Storage V2" type with _Standard_ perform
 (Premium will not work), as well as Premium "Block Blob Storage"
 ([limited region availability](https://azure.microsoft.com/en-us/global-infrastructure/services/?products=storage&regions=all)).
 
-- **No High Availability** – the Azure storage backend does not support high
-  availability.
+- **High Availability** – the Azure storage backend supports high
+  availability. Because the Azure storage backend uses the system
+  time on the Vault node to acquire sessions, clock skew across Vault servers
+  can cause lock contention.
 
 - **Community Supported** – the Azure storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
@@ -58,7 +60,15 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.
 
+### High Availability Parameters
+
+- `ha_enabled` `(string: "false")` - Specifies if high availability mode is
+  enabled. This is a boolean value, but it is specified as a string like "true"
+  or "false".
+
 ## `azure` Examples
+
+### Custom Max Parallel
 
 This example shows configuring the Azure storage backend with a custom number of
 maximum parallel connections.
@@ -71,6 +81,23 @@ storage "azure" {
   max_parallel = 512
 }
 ```
+
+### High Availability
+
+This example shows configuring the Azure storage backend with high availability
+enabled.
+
+```hcl
+api_addr = "https://vault-leader.my-company.internal"
+
+storage "azure" {
+  accountName  = "my-storage-account"
+  accountKey   = "abcd1234"
+  container    = "container-efgh5678"
+  ha_enabled    = "true"
+}
+```
+
 
 [azure-storage]: https://azure.microsoft.com/en-us/services/storage/
 [azure-environment]: https://godoc.org/github.com/Azure/go-autorest/autorest/azure#pkg-variables
