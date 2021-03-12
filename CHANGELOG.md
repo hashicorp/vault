@@ -10,6 +10,10 @@ CHANGES:
 FEATURES:
 
 * **Aerospike Storage Backend**: Add support for using Aerospike as a storage backend [[GH-10131](https://github.com/hashicorp/vault/pull/10131)]
+* **Autopilot for Integrated Storage:** A set of features has been added to allow for automatic operator-friendly management of Vault servers. This is only applicable when integrated storage is in use.
+  - **Dead Server Cleanup:** Dead servers will periodically be cleaned up and removed from the Raft peer set, to prevent them from interfering with the quorum size and leader elections.
+  - **Server Health Checking:** An API has been added to track the state of servers, including their health.
+  - **New Server Stabilization:** When a new server is added to the cluster, there will be a waiting period where it must be healthy and stable for a certain amount of time before being promoted to a full, voting member.
 * agent: Support for persisting the agent cache to disk [[GH-10938](https://github.com/hashicorp/vault/pull/10938)]
 * auth/jwt: Adds `max_age` role parameter and `auth_time` claim validation. [[GH-10919](https://github.com/hashicorp/vault/pull/10919)]
 * core (enterprise): X-Vault-Index and related headers can be used by clients to manage eventual consistency. 
