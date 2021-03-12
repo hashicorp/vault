@@ -206,7 +206,6 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
   });
 
   test('it allows the full flow to work without a saved token', async function(assert) {
-    // ARG TODO cannot figure out why this specific test is flaky fails on workflow authorize button click
     await workflow(assert, this);
     await settled();
   });
