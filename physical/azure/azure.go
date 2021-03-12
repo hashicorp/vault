@@ -32,6 +32,7 @@ const (
 // within an Azure blob container.
 type AzureBackend struct {
 	container  *azblob.ContainerURL
+	haEnabled  bool
 	logger     log.Logger
 	permitPool *physical.PermitPool
 }
@@ -165,6 +166,20 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	// HA configuration
+	haEnabled := false
+	haEnabledStr := os.Getenv("AZURE_STORAGE_HA_ENABLED")
+	if haEnabledStr == "" {
+		haEnabledStr = conf["ha_enabled"]
+	}
+	if haEnabledStr != "" {
+		var err error
+		haEnabled, err = strconv.ParseBool(haEnabledStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+		}
+	}
+
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
 	if ok {
@@ -173,6 +188,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
+			logger.Debug("ha_enabled set", "ha_enabled", haEnabled)
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
@@ -180,6 +196,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	a := &AzureBackend{
 		container:  &containerURL,
 		logger:     logger,
+		haEnabled:  haEnabled,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return a, nil
