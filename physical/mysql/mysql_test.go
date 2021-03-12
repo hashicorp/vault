@@ -88,6 +88,7 @@ func TestMySQLBackend(t *testing.T) {
 		"username":                     username,
 		"password":                     password,
 		"plaintext_connection_allowed": "true",
+		"max_connection_lifetime":      "1",
 	}, logger)
 
 	if err != nil {
