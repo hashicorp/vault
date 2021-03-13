@@ -281,7 +281,17 @@ func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
 	return nil, nil
 }
 
+func (f *FSM) DesiredSuffrage() string {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.desiredSuffrage
+}
+
 func (f *FSM) upgradeLocalNodeConfig() error {
+	f.l.Lock()
+	defer f.l.Unlock()
+
 	// Read the local node config
 	lnConfig, err := f.localNodeConfig()
 	if err != nil {
@@ -307,6 +317,7 @@ func (f *FSM) upgradeLocalNodeConfig() error {
 	// being a voter or non-voter. But by default assume that this is a voter. It
 	// will be changed if this node joins the cluster as a non-voter.
 	if config == nil {
+		f.desiredSuffrage = "voter"
 		lnConfig.DesiredSuffrage = f.desiredSuffrage
 		return f.persistDesiredSuffrage(lnConfig)
 	}
