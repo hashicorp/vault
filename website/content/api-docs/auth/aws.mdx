@@ -15,6 +15,10 @@ This documentation assumes the AWS method is mounted at the `/auth/aws`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
+~> **Vault 1.7** deprecated several AWS Auth URLs. The full
+[list of affected endpoints](#deprecations-effective-in-vault-1-7) and their
+replacements is provided at the end of this document.
+
 ## Configure Client
 
 Configures the credentials required to perform API calls to AWS as well as
@@ -508,13 +512,13 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
-## Configure Identity Whitelist Tidy Operation
+## Configure Identity Access List Tidy Operation
 
-Configures the periodic tidying operation of the whitelisted identity entries.
+Configures the periodic tidying operation of the access listed identity entries.
 
 | Method | Path                                       |
 | :----- | :----------------------------------------- |
-| `POST` | `/auth/aws/config/tidy/identity-whitelist` |
+| `POST` | `/auth/aws/config/tidy/identity-accesslist` |
 
 ### Parameters
 
@@ -522,7 +526,7 @@ Configures the periodic tidying operation of the whitelisted identity entries.
   passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 - `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
-  periodic tidying of the `identity-whitelist/<instance_id>` entries.
+  periodic tidying of the `identity-accesslist/<instance_id>` entries.
 
 ### Sample Payload
 
@@ -539,23 +543,23 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-accesslist
 ```
 
-## Read Identity Whitelist Tidy Settings
+## Read Identity Access List Tidy Settings
 
-Returns the previously configured periodic whitelist tidying settings.
+Returns the previously configured periodic access list tidying settings.
 
 | Method | Path                                       |
 | :----- | :----------------------------------------- |
-| `GET`  | `/auth/aws/config/tidy/identity-whitelist` |
+| `GET`  | `/auth/aws/config/tidy/identity-accesslist` |
 
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-accesslist
 ```
 
 ### Sample Response
@@ -569,13 +573,13 @@ $ curl \
 }
 ```
 
-## Delete Identity Whitelist Tidy Settings
+## Delete Identity Access List Tidy Settings
 
-Deletes the previously configured periodic whitelist tidying settings.
+Deletes the previously configured periodic access list tidying settings.
 
 | Method   | Path                                       |
 | :------- | :----------------------------------------- |
-| `DELETE` | `/auth/aws/config/tidy/identity-whitelist` |
+| `DELETE` | `/auth/aws/config/tidy/identity-accesslist` |
 
 ### Sample Request
 
@@ -583,16 +587,16 @@ Deletes the previously configured periodic whitelist tidying settings.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-accesslist
 ```
 
-## Configure Role Tag Blacklist Tidy Operation
+## Configure Role Tag Deny List Tidy Operation
 
-Configures the periodic tidying operation of the blacklisted role tag entries.
+Configures the periodic tidying operation of the deny listed role tag entries.
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
-| `POST` | `/auth/aws/config/tidy/roletag-blacklist` |
+| `POST` | `/auth/aws/config/tidy/roletag-denylist` |
 
 ### Parameters
 
@@ -600,7 +604,7 @@ Configures the periodic tidying operation of the blacklisted role tag entries.
   passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 - `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
-  periodic tidying of the `roletag-blacklist/<instance_id>` entries.
+  periodic tidying of the `roletag-denylist/<instance_id>` entries.
 
 ### Sample Payload
 
@@ -617,23 +621,23 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
-## Read Role Tag Blacklist Tidy Settings
+## Read Role Tag Deny List Tidy Settings
 
-Returns the previously configured periodic blacklist tidying settings.
+Returns the previously configured periodic deny list tidying settings.
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
-| `GET`  | `/auth/aws/config/tidy/roletag-blacklist` |
+| `GET`  | `/auth/aws/config/tidy/roletag-denylist` |
 
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
 ### Sample Response
@@ -647,13 +651,13 @@ $ curl \
 }
 ```
 
-## Delete Role Tag Blacklist Tidy Settings
+## Delete Role Tag Deny List Tidy Settings
 
-Deletes the previously configured periodic blacklist tidying settings.
+Deletes the previously configured periodic deny list tidying settings.
 
 | Method   | Path                                      |
 | :------- | :---------------------------------------- |
-| `DELETE` | `/auth/aws/config/tidy/roletag-blacklist` |
+| `DELETE` | `/auth/aws/config/tidy/roletag-denylist` |
 
 ### Sample Request
 
@@ -661,7 +665,7 @@ Deletes the previously configured periodic blacklist tidying settings.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
 ## Create Role
@@ -810,8 +814,8 @@ list in order to satisfy that constraint.
   `disallow_reauthentication`.
 - `disallow_reauthentication` `(bool: false)` - If set, only allows a single
   token to be granted per instance ID. In order to perform a fresh login, the
-  entry in whitelist for the instance ID needs to be cleared using
-  `auth/aws/identity-whitelist/<instance_id>` endpoint. Defaults to 'false'.
+  entry in the access list for the instance ID needs to be cleared using
+  `auth/aws/identity-accesslist/<instance_id>` endpoint. Defaults to 'false'.
   This only applies to authentications via the ec2 auth method. This is mutually
   exclusive with `allow_instance_migration`.
 
@@ -963,7 +967,7 @@ given instance can be allowed to gain in a worst-case scenario.
   Mutually exclusive with `disallow_reauthentication`.
 - `disallow_reauthentication` `(bool: false)` - If set, only allows a single
   token to be granted per instance ID. This can be cleared with the
-  auth/aws/identity-whitelist endpoint. Defaults to 'false'. Mutually exclusive
+  auth/aws/identity-accesslist endpoint. Defaults to 'false'. Mutually exclusive
   with `allow_instance_migration`.
 
 ### Sample Payload
@@ -1030,7 +1034,7 @@ along with its RSA digest can be supplied to this endpoint.
 - `nonce` `(string: "")` - The nonce to be used for subsequent login requests.
   If this parameter is not specified at all and if reauthentication is allowed,
   then the method will generate a random nonce, attaches it to the instance's
-  identity-whitelist entry and returns the nonce back as part of auth metadata.
+  identity-accesslist entry and returns the nonce back as part of auth metadata.
   This value should be used with further login requests, to establish client
   authenticity. Clients can choose to set a custom nonce if preferred, in which
   case, it is recommended that clients provide a strong nonce. If a nonce is
@@ -1097,21 +1101,21 @@ $ curl \
 }
 ```
 
-## Place Role Tags in Blacklist
+## Place Role Tags in Deny List
 
-Places a valid role tag in a blacklist. This ensures that the role tag
+Places a valid role tag in a deny list. This ensures that the role tag
 cannot be used by any instance to perform a login operation again. Note
 that if the role tag was previously used to perform a successful login,
-placing the tag in the blacklist does not invalidate the already issued
+placing the tag in the deny list does not invalidate the already issued
 token.
 
 | Method | Path                                    |
 | :----- | :-------------------------------------- |
-| `POST` | `/auth/aws/roletag-blacklist/:role_tag` |
+| `POST` | `/auth/aws/roletag-denylist/:role_tag` |
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. This is the `tag_value` returned when the role tag is
+- `role_tag` `(string: <required>)` - Role tag to be deny listed. This is the `tag_value` returned when the role tag is
   created. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
@@ -1121,20 +1125,20 @@ token.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
+    http://127.0.0.1:8200/v1/auth/aws/roletag-denylist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
-### Read Role Tag Blacklist Information
+### Read Role Tag Deny List Information
 
-Returns the blacklist entry of a previously blacklisted role tag.
+Returns the deny list entry of a previously deny listed role tag.
 
 | Method | Path                                    |
 | :----- | :-------------------------------------- |
-| `GET`  | `/auth/aws/roletag-blacklist/:role_tag` |
+| `GET`  | `/auth/aws/roletag-denylist/:role_tag` |
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
+- `role_tag` `(string: <required>)` - Role tag to be deny listed. The tag can be
   supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
@@ -1143,7 +1147,7 @@ Returns the blacklist entry of a previously blacklisted role tag.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
+    http://127.0.0.1:8200/v1/auth/aws/roletag-denylist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
 ### Sample Response
@@ -1157,13 +1161,13 @@ $ curl \
 }
 ```
 
-## List Blacklist Tags
+## List Deny List Tags
 
-Lists all the role tags that are blacklisted.
+Lists all the role tags that are deny listed.
 
 | Method | Path                          |
 | :----- | :---------------------------- |
-| `LIST` | `/auth/aws/roletag-blacklist` |
+| `LIST` | `/auth/aws/roletag-denylist` |
 
 ### Sample Request
 
@@ -1171,7 +1175,7 @@ Lists all the role tags that are blacklisted.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/roletag-denylist
 ```
 
 ### Sample Response
@@ -1186,17 +1190,17 @@ $ curl \
 }
 ```
 
-## Delete Blacklist Tags
+## Delete Deny List Tags
 
-Deletes a blacklisted role tag.
+Deletes a deny listed role tag.
 
 | Method   | Path                                    |
 | :------- | :-------------------------------------- |
-| `DELETE` | `/auth/aws/roletag-blacklist/:role_tag` |
+| `DELETE` | `/auth/aws/roletag-denylist/:role_tag` |
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
+- `role_tag` `(string: <required>)` - Role tag to be deny listed. The tag can be
   supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
@@ -1206,17 +1210,17 @@ Deletes a blacklisted role tag.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
+    http://127.0.0.1:8200/v1/auth/aws/roletag-denylist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
-## Tidy Blacklist Tags
+## Tidy Deny List Tags
 
-Cleans up the entries in the blacklist based on expiration time on the entry and
+Cleans up the entries in the deny listed based on expiration time on the entry and
 `safety_buffer`.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
-| `POST` | `/auth/aws/tidy/roletag-blacklist` |
+| `POST` | `/auth/aws/tidy/roletag-denylist` |
 
 ### Parameters
 
@@ -1230,22 +1234,22 @@ Cleans up the entries in the blacklist based on expiration time on the entry and
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    http://127.0.0.1:8200/v1/auth/aws/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/tidy/roletag-denylist
 ```
 
-### Read Identity Whitelist Information
+### Read Identity Access List Information
 
-Returns an entry in the whitelist. An entry will be created/updated by every
+Returns an entry in the identity access list. An entry will be created/updated by every
 successful login.
 
 | Method | Path                                        |
 | :----- | :------------------------------------------ |
-| `GET`  | `/auth/aws/identity-whitelist/:instance_id` |
+| `GET`  | `/auth/aws/identity-accesslist/:instance_id` |
 
 ### Parameters
 
 - `instance_id` `(string: <required>)` - EC2 instance ID. A successful login
-  operation from an EC2 instance gets cached in this whitelist, keyed off of
+  operation from an EC2 instance gets cached in th access list, keyed off of
   instance ID.
 
 ### Sample Request
@@ -1253,7 +1257,7 @@ successful login.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist/i-aab47d37
+    http://127.0.0.1:8200/v1/auth/aws/identity-accesslist/i-aab47d37
 ```
 
 ### Sample Response
@@ -1270,13 +1274,13 @@ $ curl \
 }
 ```
 
-## List Identity Whitelist Entries
+## List Identity Access List Entries
 
-Lists all the instance IDs that are in the whitelist of successful logins.
+Lists all the instance IDs that are in the access list of successful logins.
 
 | Method | Path                           |
 | :----- | :----------------------------- |
-| `LIST` | `/auth/aws/identity-whitelist` |
+| `LIST` | `/auth/aws/identity-accesslist` |
 
 ### Sample Request
 
@@ -1284,7 +1288,7 @@ Lists all the instance IDs that are in the whitelist of successful logins.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/identity-accesslist
 ```
 
 ### Sample Response
@@ -1297,18 +1301,18 @@ $ curl \
 }
 ```
 
-## Delete Identity Whitelist Entries
+## Delete Identity Access List Entries
 
 Deletes a cache of the successful login from an instance.
 
 | Method   | Path                                        |
 | :------- | :------------------------------------------ |
-| `DELETE` | `/auth/aws/identity-whitelist/:instance_id` |
+| `DELETE` | `/auth/aws/identity-accesslist/:instance_id` |
 
 ### Parameters
 
 - `instance_id` `(string: <required>)` - EC2 instance ID. A successful login
-  operation from an EC2 instance gets cached in this whitelist, keyed off of
+  operation from an EC2 instance gets cached in this access list, keyed off of
   instance ID.
 
 ### Sample Request
@@ -1317,17 +1321,17 @@ Deletes a cache of the successful login from an instance.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist/i-aab47d37
+    http://127.0.0.1:8200/v1/auth/aws/identity-accesslist/i-aab47d37
 ```
 
-## Tidy Identity Whitelist Entries
+## Tidy Identity Access List Entries
 
-Cleans up the entries in the whitelist based on expiration time and
+Cleans up the entries in the access list based on expiration time and
 `safety_buffer`.
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
-| `POST` | `/auth/aws/tidy/identity-whitelist` |
+| `POST` | `/auth/aws/tidy/identity-accesslist` |
 
 ### Parameters
 
@@ -1341,5 +1345,20 @@ Cleans up the entries in the whitelist based on expiration time and
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    http://127.0.0.1:8200/v1/auth/aws/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/tidy/identity-accesslist
 ```
+
+## Deprecations effective in Vault 1.7
+
+Vault 1.7 introduced new URLs for a number of AWS Auth APIs. The previous
+URLs are deprecated. The affected APIs include:
+
+| Current                                     | Deprecated in 1.7                          |
+| :------------------------------------------ | :----------------------------------------- |
+| `/auth/aws/roletag-denylist`                | `/auth/aws/roletag-blacklist`              |
+| `/auth/aws/identity-accesslist`             | `/auth/aws/identity-whitelist`             |
+| `/auth/aws/tidy/identity-accesslist`        | `/auth/aws/tidy/identity-whitelist`        |
+| `/auth/aws/tidy/roletag-denylist`           | `/auth/aws/tidy/roletag-blacklist`         |
+| `/auth/aws/config/tidy/identity-accesslist` | `/auth/aws/config/tidy/identity-whitelist` |
+| `/auth/aws/config/tidy/roletag-denylist`    | `/auth/aws/config/tidy/roletag-blacklist`  |
+
