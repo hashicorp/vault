@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/cache/keymanager"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/assert"
@@ -103,6 +104,23 @@ func TestCache_ComputeIndexID(t *testing.T) {
 				Request: &http.Request{
 					URL: &url.URL{
 						Path: "test",
+					},
+				},
+			},
+			"7b5db388f211fd9edca8c6c254831fb01ad4e6fe624dbb62711f256b5e803717",
+			false,
+		},
+		{
+			"ignore consistency headers",
+			&SendRequest{
+				Request: &http.Request{
+					URL: &url.URL{
+						Path: "test",
+					},
+					Header: http.Header{
+						vaulthttp.VaultIndexHeaderName:        []string{"foo"},
+						vaulthttp.VaultInconsistentHeaderName: []string{"foo"},
+						vaulthttp.VaultForwardHeaderName:      []string{"foo"},
 					},
 				},
 			},
