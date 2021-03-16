@@ -1362,22 +1362,32 @@ func TestAgent_Template_Retry(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
+	intRef := func(i int) *int {
+		return &i
+	}
 	// start test cases here
 	testCases := map[string]struct {
-		retries     int
+		retries     *int
 		expectError bool
 	}{
-		"default": {
-			// Not specifying retries means you keep the default of 12
-			retries:     -1,
-			expectError: false,
+		"none": {
+			retries:     intRef(-1),
+			expectError: true,
 		},
 		"one": {
-			retries:     1,
+			retries:     intRef(1),
 			expectError: true,
 		},
 		"two": {
-			retries:     2,
+			retries:     intRef(2),
+			expectError: false,
+		},
+		"missing": {
+			retries:     nil,
+			expectError: false,
+		},
+		"default": {
+			retries:     intRef(0),
 			expectError: false,
 		},
 	}
@@ -1428,8 +1438,8 @@ auto_auth {
 %s
 `
 			var retryConf string
-			if tc.retries >= 0 {
-				retryConf = fmt.Sprintf("retry { num_retries = %d }", tc.retries)
+			if tc.retries != nil {
+				retryConf = fmt.Sprintf("retry { num_retries = %d }", *tc.retries)
 			}
 
 			config := fmt.Sprintf(configPat, serverClient.Address(), retryConf, roleIDPath, secretIDPath, templateConfig)

@@ -233,8 +233,11 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	if v.Retry == nil {
 		v.Retry = &Retry{}
 	}
-	if v.Retry.NumRetries < 1 {
+	switch v.Retry.NumRetries {
+	case 0:
 		v.Retry.NumRetries = ctconfig.DefaultRetryAttempts
+	case -1:
+		v.Retry.NumRetries = 0
 	}
 
 	return nil

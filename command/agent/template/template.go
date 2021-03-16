@@ -282,8 +282,10 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 			CaPath:  &sc.AgentConfig.Vault.CAPath,
 		}
 	}
+	enabled := attempts > 0
 	conf.Vault.Retry = &ctconfig.RetryConfig{
 		Attempts: &attempts,
+		Enabled:  &enabled,
 	}
 
 	conf.Finalize()
