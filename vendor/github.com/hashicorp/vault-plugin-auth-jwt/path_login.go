@@ -92,12 +92,22 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("error configuring token validator: %s", err.Error()), nil
 	}
 
+	// Validate JWT supported algorithms if they've been provided. Otherwise,
+	// ensure that the signing algorithm is a member of the supported set.
+	signingAlgorithms := toAlg(config.JWTSupportedAlgs)
+	if len(signingAlgorithms) == 0 {
+		signingAlgorithms = []jwt.Alg{
+			jwt.RS256, jwt.RS384, jwt.RS512, jwt.ES256, jwt.ES384,
+			jwt.ES512, jwt.PS256, jwt.PS384, jwt.PS512, jwt.EdDSA,
+		}
+	}
+
 	// Set expected claims values to assert on the JWT
 	expected := jwt.Expected{
 		Issuer:            config.BoundIssuer,
 		Subject:           role.BoundSubject,
 		Audiences:         role.BoundAudiences,
-		SigningAlgorithms: toAlg(config.JWTSupportedAlgs),
+		SigningAlgorithms: signingAlgorithms,
 		NotBeforeLeeway:   role.NotBeforeLeeway,
 		ExpirationLeeway:  role.ExpirationLeeway,
 		ClockSkewLeeway:   role.ClockSkewLeeway,
