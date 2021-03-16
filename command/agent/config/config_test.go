@@ -731,14 +731,9 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
-		},
-		TemplateRetry: &TemplateRetry{
-			Enabled:       true,
-			Attempts:      5,
-			BackoffRaw:    nil,
-			Backoff:       100 * time.Millisecond,
-			MaxBackoffRaw: nil,
-			MaxBackoff:    400 * time.Millisecond,
+			Retry: &Retry{
+				NumRetries: 5,
+			},
 		},
 	}
 
@@ -780,14 +775,9 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
-		},
-		TemplateRetry: &TemplateRetry{
-			Enabled:       false,
-			Attempts:      ctconfig.DefaultRetryAttempts,
-			BackoffRaw:    nil,
-			Backoff:       ctconfig.DefaultRetryBackoff,
-			MaxBackoffRaw: nil,
-			MaxBackoff:    ctconfig.DefaultRetryMaxBackoff,
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
 		},
 	}
 

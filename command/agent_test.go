@@ -501,12 +501,6 @@ auto_auth {
             secret_id_file_path = "%s"
         }
     }
-
-    sink "file" {
-        config = {
-            path = "%s"
-        }
-    }
 }
 
 cache {
@@ -1233,4 +1227,287 @@ func makeTempFile(t *testing.T, name, contents string) string {
 	f.WriteString(contents)
 	f.Close()
 	return path
+}
+
+// handler makes 500 errors happen for reads on /v1/secret.
+// Definitely not thread-safe, do not use t.Parallel with this.
+type handler struct {
+	props     *vault.HandlerProperties
+	failCount int
+	t         *testing.T
+}
+
+func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	if req.Method == "GET" && strings.HasPrefix(req.URL.Path, "/v1/secret") {
+		if h.failCount > 0 {
+			h.failCount--
+			h.t.Logf("%s failing GET request on %s, failures left: %d", time.Now(), req.URL.Path, h.failCount)
+			resp.WriteHeader(500)
+			return
+		}
+		h.t.Logf("passing GET request on %s", req.URL.Path)
+	}
+	vaulthttp.Handler(h.props).ServeHTTP(resp, req)
+}
+
+func TestAgent_Template_Retry(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	var h handler
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores: 1,
+			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.t = t
+				return &h
+			},
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// give test-role permissions to read the kv secret
+	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
+	req.BodyBytes = []byte(`{
+	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "token_ttl": "5m",
+		"token_policies":"default,myapp-read",
+		"policies":"default,myapp-read"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// setup the kv secrets
+	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	req.BodyBytes = []byte(`{
+	"options": {"version": "2"}
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate a secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "bar",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate another secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "barstuff",
+      "password": "zap",
+			"cert": "something"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+
+	// start test cases here
+	testCases := map[string]struct {
+		retries     int
+		expectError bool
+	}{
+		"default": {
+			// Not specifying retries means you keep the default of 12
+			retries:     -1,
+			expectError: false,
+		},
+		"one": {
+			retries:     1,
+			expectError: true,
+		},
+		"two": {
+			retries:     2,
+			expectError: false,
+		},
+	}
+
+	for tcname, tc := range testCases {
+		t.Run(tcname, func(t *testing.T) {
+			// We fail the first 6 times.  The consul-template code creates
+			// a Vault client with MaxRetries=2, so for every consul-template
+			// retry configured, it will in practice make up to 3 requests.
+			// Thus if consul-template is configured with "one" retry, it will
+			// fail given our failCount, but if configured with "two" retries,
+			// they will consume our 6th failure, and on the "third (from its
+			// perspective) attempt, it will succeed.
+			h.failCount = 6
+
+			// create temp dir for this test run
+			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// make some template files
+			templatePath := filepath.Join(tmpDir, "render_0.tmpl")
+			if err := ioutil.WriteFile(templatePath, []byte(templateContents(0)), 0600); err != nil {
+				t.Fatal(err)
+			}
+			templateConfig := fmt.Sprintf(templateConfigString, templatePath, tmpDir, "render_0.json")
+
+			// Create a config file
+			configPat := `
+vault {
+  address = "%s"
+  %s
+  tls_skip_verify = true
+}
+
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+			remove_secret_id_file_after_reading = false
+        }
+    }
+}
+
+%s
+`
+			var retryConf string
+			if tc.retries >= 0 {
+				retryConf = fmt.Sprintf("retry { num_retries = %d }", tc.retries)
+			}
+
+			config := fmt.Sprintf(configPat, serverClient.Address(), retryConf, roleIDPath, secretIDPath, templateConfig)
+			configPath := makeTempFile(t, "config.hcl", config)
+			defer os.Remove(configPath)
+
+			// Start the agent
+			_, cmd := testAgentCommand(t, logger)
+			cmd.client = serverClient
+			cmd.startedCh = make(chan struct{})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			var code int
+			go func() {
+				code = cmd.Run([]string{"-config", configPath})
+				wg.Done()
+			}()
+
+			select {
+			case <-cmd.startedCh:
+			case <-time.After(5 * time.Second):
+				t.Errorf("timeout")
+			}
+
+			verify := func() error {
+				t.Helper()
+				// We need to poll for a bit to give Agent time to render the
+				// templates. Without this this, the test will attempt to read
+				// the temp dir before Agent has had time to render and will
+				// likely fail the test
+				tick := time.Tick(1 * time.Second)
+				timeout := time.After(10 * time.Second)
+				var err error
+				for {
+					select {
+					case <-timeout:
+						return fmt.Errorf("timed out waiting for templates to render, last error: %v", err)
+					case <-tick:
+					}
+					// Check for files rendered in the directory and break
+					// early for shutdown if we do have all the files
+					// rendered
+
+					//----------------------------------------------------
+					// Perform the tests
+					//----------------------------------------------------
+
+					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
+						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
+						continue
+					}
+
+					fileName := filepath.Join(tmpDir, "render_0.json")
+					var c []byte
+					c, err = ioutil.ReadFile(fileName)
+					if err != nil {
+						continue
+					}
+					if string(c) != templateRendered(0) {
+						err = fmt.Errorf("expected='%s', got='%s'", templateRendered(0), string(c))
+						continue
+					}
+					return nil
+				}
+			}
+
+			err = verify()
+			close(cmd.ShutdownCh)
+			wg.Wait()
+
+			switch {
+			case (code != 0 || err != nil) && tc.expectError:
+			case code == 0 && err == nil && !tc.expectError:
+			default:
+				t.Fatalf("%s expectError=%v error=%v code=%d", tcname, tc.expectError, err, code)
+			}
+
+		})
+	}
 }
