@@ -1,5 +1,5 @@
-import { currentRouteName, settled, click } from '@ember/test-helpers';
-import { module, skip, test } from 'qunit';
+import { currentRouteName, settled, visit } from '@ember/test-helpers';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';
@@ -14,9 +14,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     return authPage.login();
   });
 
-  skip('it creates a role and redirects', async function(assert) {
-    // UPGRADE TODO: Getting error:
-    // Promise rejected before "it creates a role and redirects meep": Assertion Failed: You cannot use the same root element (#ember-testing) multiple times in an Ember.Application
+  test('it creates a role and redirects', async function(assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();
@@ -25,9 +23,9 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await editPage.createRole('role', 'example.com');
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    assert.dom('[data-test-edit-link]').exists('shows the edit button');
-    assert.dom('[data-test-credentials-link]').exists('shows the generate button');
-    assert.dom('[data-test-sign-link]').exists('shows the sign button');
+    assert.dom('[data-test-edit-link="true"]').exists('shows the edit button');
+    assert.dom('[data-test-credentials-link="true"]').exists('shows the generate button');
+    assert.dom('[data-test-sign-link="true"]').exists('shows the sign button');
 
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
@@ -41,7 +39,8 @@ module('Acceptance | secrets/pki/create', function(hooks) {
 
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
-    await click('[data-test-sign-link]');
+    await visit(`/vault/secrets/${path}/credentials/role?action=sign`);
+
     await settled();
     assert.equal(
       currentRouteName(),
