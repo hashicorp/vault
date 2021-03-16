@@ -40,8 +40,6 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await showPage.visit({ backend: path, id: 'role' });
     await settled();
     await visit(`/vault/secrets/${path}/credentials/role?action=sign`);
-    // forcing the navigation because problems with the button selector not populating fast enough
-    // await click('[data-test-sign-link="true"]');
 
     await settled();
     assert.equal(

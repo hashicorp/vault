@@ -15,8 +15,6 @@ export default {
     let count = this.logOutputItems.length;
     let outputItemText = this.logOutputItems.objectAt(count - 1).text;
     return outputItemText;
-    // remove the direct return as this seems to help the race condition that's happening and causing occasional test failures
-    // return this.logOutputItems.objectAt(count - 1).text;
   }),
   logTextItems: collection('[data-test-component="console/log-text"]', {
     text: text(),

@@ -24,6 +24,9 @@ const wrappedAuth = async () => {
   await settled();
   // because of flaky test, trying to capture the token using a dom selector instead of the page object
   let token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;
+  if (token.includes('Error')) {
+    throw new Error(`Error mounting secrets engine: ${token}`);
+  }
   return token;
 };
 
