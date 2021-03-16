@@ -607,7 +607,7 @@ github.com/hashicorp/vault-plugin-secrets-openldap/client
 github.com/hashicorp/vault-plugin-secrets-terraform
 # github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20210309002801-2219a68a28d3 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20210316200930-da292e5ced95 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
 github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto
