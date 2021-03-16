@@ -10,7 +10,7 @@
  *   <BoxRadio ... />
  * </BoxRadioSet>
  * ```
- * @param {string} [title] - Optional text that is the heading for the section
+ * @param {string} title - Text that is the heading for the section and aria-label
  */
 
 import Component from '@glimmer/component';

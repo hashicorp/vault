@@ -7,24 +7,23 @@
       <div
         class="box-radio is-disabled"
         data-test-mount-type={{@key}}
-        tabindex="0"
       >
-        <Icon
-          @glyph={{@glyph}}
-          @size="xl"
-          class="has-text-grey-light"
-        />
-        <label for={{@key}}>{{@displayName}}</label>
+        <label for={{@key}}>
+          <Icon
+            @glyph={{@glyph}}
+            @size="xl"
+            class="has-text-grey-light"
+          />
+          <span>{{@displayName}}</span>
+        </label>
         <input
           type="radio"
           disabled
           id={{@key}}
           name={{@groupName}}
           value={{@key}}
-          tabindex="-1"
           aria-checked={{eq @groupValue @key}}
           checked={{eq @groupValue @key}}
-          {{on 'click' this.handleRadioChange}}
         />
         <span class="radio-indicator"></span>
       </div>
@@ -40,16 +39,15 @@
   class="box-radio {{if (eq @groupValue @key) 'is-selected'}}"
   data-test-mount-type-radio
   data-test-mount-type={{@type}}
-  tabindex="0"
-  {{on 'click' (fn this.handleBoxClick @key)}}
-  {{on 'keydown' (fn this.handleKeydown @key)}}
 >
-  <Icon
-    @glyph={{@glyph}}
-    @size="xl"
-    class="has-text-grey-light"
-  />
-  <label for={{@key}}>{{@displayName}}</label>
+  <label for={{@key}}>
+    <Icon
+      @glyph={{@glyph}}
+      @size="xl"
+      class="has-text-grey-light"
+    />
+    <span>{{@displayName}}</span>
+  </label>
   <input
     type="radio"
     id={{@key}}
@@ -61,6 +59,5 @@
     data-test-box-radio-input={{@key}}
     {{on 'click' this.handleRadioChange}}
   />
-  <span class="radio-indicator"></span>
 </div>
 {{/if}}

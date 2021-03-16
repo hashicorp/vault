@@ -30,18 +30,6 @@ class BoxRadio extends Component {
     const value = e.target.value;
     this.args.onRadioChange(value);
   }
-
-  @action
-  handleBoxClick(val) {
-    this.args.onRadioChange(val);
-  }
-
-  @action
-  handleKeydown(val, evt) {
-    if (evt.key === ' ' || evt.key === 'Enter') {
-      this.args.onRadioChange(val);
-    }
-  }
 }
 
 export default setComponentTemplate(layout, BoxRadio);
