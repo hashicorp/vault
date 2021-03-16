@@ -20,13 +20,15 @@ const visit = async url => {
 const consoleComponent = create(consoleClass);
 
 const wrappedAuth = async () => {
-  await consoleComponent.runCommands(`write -field=token auth/token/create policies=default -wrap-ttl=3m`);
+  await consoleComponent.runCommands(`write -field=token auth/token/create policies=default -wrap-ttl=5m`);
   await settled();
   let res = consoleComponent.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error mounting secrets engine: ${res}`);
   }
-  return res;
+  // because of flaky test, trying to capture the token using a dom selector instead of the page object
+  let token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;
+  return token;
 };
 
 const setupWrapping = async () => {
@@ -82,7 +84,6 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
   test('redirect to logout with wrapped token authenticates you', async function(assert) {
     let wrappedToken = await setupWrapping();
     let url = '/vault/secrets/cubbyhole/create';
-
     await auth.logout({
       redirect_to: url,
       wrapped_token: wrappedToken,
