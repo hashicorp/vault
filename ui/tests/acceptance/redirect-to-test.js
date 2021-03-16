@@ -80,11 +80,11 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
   test('redirect to logout with wrapped token authenticates you', async function(assert) {
     let wrappedToken = await setupWrapping();
     let url = '/vault/secrets/cubbyhole/create';
+
     await auth.logout({
       redirect_to: url,
       wrapped_token: wrappedToken,
     });
-
     await settled();
     assert.equal(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
