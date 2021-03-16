@@ -82,6 +82,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			TLSSkipVerify:    true,
 			ClientCert:       "config_client_cert",
 			ClientKey:        "config_client_key",
+			Retry: &Retry{
+				NumRetries: 12,
+			},
 		},
 	}
 
