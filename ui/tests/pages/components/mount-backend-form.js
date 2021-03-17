@@ -13,7 +13,7 @@ export default {
   toggleOptions: clickable('[data-test-toggle-group="Method Options"]'),
   pathValue: value('[data-test-input="path"]'),
   types: collection({
-    itemScope: '[data-test-mount-type-radio] input[type="radio"]',
+    itemScope: '[data-test-box-radio-input]',
 
     item: {
       select: clickable(),
@@ -22,6 +22,7 @@ export default {
   }),
   type: fillable('[name="mount-type"]'),
   async selectType(type) {
+    console.log(this.types().filterBy('id', type));
     return this.types()
       .filterBy('id', type)[0]
       .select();
