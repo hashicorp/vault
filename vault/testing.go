@@ -1081,6 +1081,9 @@ type TestClusterOptions struct {
 
 	// ClusterLayers are used to override the default cluster connection layer
 	ClusterLayers cluster.NetworkLayerSet
+	// InmemClusterLayers is a shorthand way of asking for ClusterLayers to be
+	// built using the inmem implementation.
+	InmemClusterLayers bool
 
 	// RaftAddressProvider is used to set the raft ServerAddressProvider on
 	// each core.
@@ -1560,6 +1563,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 	testCluster.pubKey = pubKey
 	testCluster.priKey = priKey
+
+	if opts.InmemClusterLayers {
+		if opts.ClusterLayers != nil {
+			t.Fatalf("cannot specify ClusterLayers when InmemClusterLayers is true")
+		}
+		inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", numCores, testCluster.Logger.Named("inmem-cluster"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		opts.ClusterLayers = inmemCluster
+	}
 
 	// Create cores
 	testCluster.cleanupFuncs = []func(){}
