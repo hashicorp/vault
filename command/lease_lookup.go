@@ -92,7 +92,7 @@ func (c *LeaseLookupCommand) Run(args []string) int {
 
 	secret, err := client.Sys().Lookup(leaseID)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error renewing %s: %s", leaseID, err))
+		c.UI.Error(fmt.Sprintf("error looking up lease id %s: %s", leaseID, err))
 		return 2
 	}
 
