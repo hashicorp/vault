@@ -857,7 +857,11 @@ func (m *ExpirationManager) Revoke(ctx context.Context, leaseID string) error {
 // it triggers a return of a 202.
 func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "lazy-revoke"}, time.Now())
+	return m.lazyRevokeInternal(ctx, leaseID)
+}
 
+// Mark a lease as expiring immediately
+func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID string) error {
 	leaseLock := m.lockForLeaseID(leaseID)
 	leaseLock.Lock()
 	defer leaseLock.Unlock()
@@ -887,10 +891,15 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 
-	// Acquire lease for this lock
-	leaseLock := m.lockForLeaseID(leaseID)
-	leaseLock.Lock()
-	defer leaseLock.Unlock()
+	if !skipToken {
+		// Acquire lease for this lock
+		// If skipToken is true, then we're being called via RevokeByToken, so
+		// probably (always?) the lock is already held, and if we re-acquire it
+		// we get deadlock.
+		leaseLock := m.lockForLeaseID(leaseID)
+		leaseLock.Lock()
+		defer leaseLock.Unlock()
+	}
 
 	// Load the entry
 	le, err := m.loadEntry(ctx, leaseID)
@@ -972,7 +981,8 @@ func (m *ExpirationManager) RevokePrefix(ctx context.Context, prefix string, syn
 // RevokeByToken is used to revoke all the secrets issued with a given token.
 // This is done by using the secondary index. It also removes the lease entry
 // for the token itself. As a result it should *ONLY* ever be called from the
-// token store's revokeSalted function.
+// token store's revokeInternal function.
+// (NB: it's called by token tidy as well.)
 func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
@@ -990,30 +1000,11 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
 	}
 
-	// Revoke all the keys
+	// Revoke all the keys by marking them expired
 	for _, leaseID := range existing {
-		// Lock the child lease... save up all the unlocks for the end
-		// of the function.
-		leaseLock := m.lockForLeaseID(leaseID)
-		leaseLock.Lock()
-		defer leaseLock.Unlock()
-
-		// Load the entry
-		le, err := m.loadEntry(ctx, leaseID)
+		err := m.lazyRevokeInternal(ctx, leaseID)
 		if err != nil {
 			return err
-		}
-
-		// If there's a lease, set expiration to now, persist, and call
-		// updatePending to hand off revocation to the expiration manager's pending
-		// timer map
-		if le != nil {
-			le.ExpireTime = time.Now()
-
-			if err := m.persistEntry(ctx, le); err != nil {
-				return err
-			}
-			m.updatePending(le)
 		}
 	}
 
