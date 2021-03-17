@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/hashicorp/vault/api"
@@ -16,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/vault"
 	"github.com/kr/pretty"
@@ -214,57 +211,6 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	configCheckFunc(config)
 }
 
-func TestRaft_SnapshotDelay(t *testing.T) {
-	t.Parallel()
-
-	metricsConf := metrics.DefaultConfig("vault")
-	inmem := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-	metrics.NewGlobal(metricsConf, inmem)
-
-	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
-	opts.SetupFunc = nil
-	opts.Logger = logging.NewVaultLogger(hclog.Trace).Named(t.Name())
-	opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
-		config := map[string]interface{}{
-			"snapshot_threshold":     "50",
-			"trailing_logs":          "100",
-			"performance_multiplier": "1",
-		}
-		if coreIdx == 2 {
-			config["snapshot_delay"] = time.Duration(5 * time.Second).String()
-		}
-		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
-	}
-
-	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
-
-	// At this point we have all nodes up and running and in sync.  Let's take
-	// one down so that once we write a bunch of data, it'll need a snapshot
-	// to come back in sync after we bring it back up.
-
-	testhelpers.EnsureCoreSealed(t, cluster.Cores[2])
-
-	dumpmetrics := func() {
-		data := inmem.Data()
-		latest := data[len(data)-1]
-		for key, val := range latest.Samples {
-			if strings.HasPrefix(key, "vault.raft.replication") && !strings.Contains(key, "core-0") && !strings.Contains(key, ";") {
-				t.Log(key, val)
-			}
-		}
-	}
-
-	dumpmetrics()
-
-	time.Sleep(5 * time.Second)
-	testhelpers.EnsureCoreUnsealed(t, cluster, cluster.Cores[2])
-	time.Sleep(15 * time.Second)
-	dumpmetrics()
-}
-
 // TestRaft_Autopilot_Stabilization_Delay verifies that if a node takes a long
 // time to become ready, it doesn't get promoted to voter until then.
 func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
@@ -279,7 +225,6 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 			"snapshot_threshold":           "50",
 			"trailing_logs":                "100",
 			"autopilot_reconcile_interval": "1s",
-			"performance_multiplier":       "1",
 		}
 		if coreIdx == 2 {
 			config["snapshot_delay"] = timeToHealthyCore2.String()
