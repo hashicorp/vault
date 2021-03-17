@@ -1517,7 +1517,7 @@ path "/secret/*" {
 	roleID := resp.Data["role_id"].(string)
 	roleIDFile := makeTempFile(t, "role_id.txt", roleID+"\n")
 
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 auto_auth {
     method "approle" {
         mount_path = "auth/approle"
@@ -1528,10 +1528,13 @@ auto_auth {
         }
     }
 }
-`, roleIDFile, secretIDFile), func() {
-			_ = os.Remove(roleIDFile)
-			_ = os.Remove(secretIDFile)
-		}
+`, roleIDFile, secretIDFile)
+
+	cleanup := func() {
+		_ = os.Remove(roleIDFile)
+		_ = os.Remove(secretIDFile)
+	}
+	return config, cleanup
 }
 
 func TestAgent_Cache_Retry(t *testing.T) {
