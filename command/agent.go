@@ -728,9 +728,8 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Inform any tests that the server is ready
-	select {
-	case c.startedCh <- struct{}{}:
-	default:
+	if c.startedCh != nil {
+		close(c.startedCh)
 	}
 
 	// Listen for signals

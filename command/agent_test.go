@@ -1392,7 +1392,6 @@ vault {
 
 			// Start the agent
 			_, cmd := testAgentCommand(t, logger)
-			cmd.client = serverClient
 			cmd.startedCh = make(chan struct{})
 
 			wg := &sync.WaitGroup{}
@@ -1533,4 +1532,158 @@ auto_auth {
 			_ = os.Remove(roleIDFile)
 			_ = os.Remove(secretIDFile)
 		}
+}
+
+func TestAgent_Cache_Retry(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	var h handler
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores: 1,
+			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.t = t
+				return &h
+			},
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
+		"bar": "baz",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	intRef := func(i int) *int {
+		return &i
+	}
+	// start test cases here
+	testCases := map[string]struct {
+		retries     *int
+		expectError bool
+	}{
+		"none": {
+			retries:     intRef(-1),
+			expectError: true,
+		},
+		"one": {
+			retries:     intRef(1),
+			expectError: true,
+		},
+		"two": {
+			retries:     intRef(2),
+			expectError: false,
+		},
+		"missing": {
+			retries:     nil,
+			expectError: false,
+		},
+		"default": {
+			retries:     intRef(0),
+			expectError: false,
+		},
+	}
+
+	for tcname, tc := range testCases {
+		t.Run(tcname, func(t *testing.T) {
+			h.failCount = 2
+
+			cacheConfig := fmt.Sprintf(`
+cache {
+}
+`)
+			listenAddr := "127.0.0.1:18123"
+			listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+			var retryConf string
+			if tc.retries != nil {
+				retryConf = fmt.Sprintf("retry { num_retries = %d }", *tc.retries)
+			}
+
+			config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  %s
+  tls_skip_verify = true
+}
+%s
+%s
+`, serverClient.Address(), retryConf, cacheConfig, listenConfig)
+
+			configPath := makeTempFile(t, "config.hcl", config)
+			defer os.Remove(configPath)
+
+			// Start the agent
+			_, cmd := testAgentCommand(t, logger)
+			cmd.startedCh = make(chan struct{})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			go func() {
+				cmd.Run([]string{"-config", configPath})
+				wg.Done()
+			}()
+
+			select {
+			case <-cmd.startedCh:
+			case <-time.After(5 * time.Second):
+				t.Errorf("timeout")
+			}
+
+			client, err := api.NewClient(api.DefaultConfig())
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.SetToken(serverClient.Token())
+			client.SetMaxRetries(0)
+			err = client.SetAddress("http://" + listenAddr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			secret, err := client.Logical().Read("secret/foo")
+			switch {
+			case (err != nil || secret == nil) && tc.expectError:
+			case (err == nil || secret != nil) && !tc.expectError:
+			default:
+				t.Fatalf("%s expectError=%v error=%v secret=%v", tcname, tc.expectError, err, secret)
+			}
+			if secret != nil && secret.Data["foo"] != nil {
+				val := secret.Data["foo"].(map[string]interface{})
+				if !reflect.DeepEqual(val, map[string]interface{}{"bar": "baz"}) {
+					t.Fatalf("expected key 'foo' to yield bar=baz, got: %v", val)
+				}
+			}
+			time.Sleep(time.Second)
+
+			close(cmd.ShutdownCh)
+			wg.Wait()
+		})
+	}
 }
