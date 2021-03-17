@@ -22,7 +22,6 @@ export default {
   }),
   type: fillable('[name="mount-type"]'),
   async selectType(type) {
-    console.log(this.types().filterBy('id', type));
     return this.types()
       .filterBy('id', type)[0]
       .select();
