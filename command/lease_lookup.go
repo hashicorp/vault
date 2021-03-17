@@ -23,7 +23,7 @@ func (c *LeaseLookupCommand) Help() string {
 	helpText := `
 Usage: vault lease lookup ID
 
-  Look the lease information of a secret.
+  Lookup the lease information of a secret.
 
 	Every secret in Vault has a lease associated with it. Users can look up
 	information on the lease by referencing the lease ID.
