@@ -225,8 +225,13 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	if err := b.validatePath(entry.Key); err != nil {
 		return err
 	}
-
 	path, key := b.expandPath(entry.Key)
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
 	// Make the parent tree
 	if err := os.MkdirAll(path, 0700); err != nil {
@@ -247,12 +252,6 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	}
 	if f == nil {
 		return errors.New("could not successfully get a file handle")
-	}
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
 	}
 
 	enc := json.NewEncoder(f)

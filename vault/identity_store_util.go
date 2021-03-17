@@ -89,7 +89,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("groups collected", "num_existing", len(existing))
 
 	for _, key := range existing {
-		bucket, err := i.groupPacker.GetBucket(groupBucketsPrefix + key)
+		bucket, err := i.groupPacker.GetBucket(ctx, groupBucketsPrefix+key)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				}
 				continue
 			}
-			nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
+			nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
 			// Ensure that there are no groups with duplicate names
 			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
@@ -212,7 +212,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						return
 					}
 
-					bucket, err := i.entityPacker.GetBucket(storagepacker.StoragePackerBucketsPrefix + key)
+					bucket, err := i.entityPacker.GetBucket(ctx, storagepacker.StoragePackerBucketsPrefix+key)
 					if err != nil {
 						errs <- err
 						continue
@@ -292,7 +292,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					}
 					continue
 				}
-				nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
+				nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
 				// Ensure that there are no entities with duplicate names
 				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
@@ -1437,7 +1437,7 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 			Message: groupAsAny,
 		}
 
-		sent, err := sendGroupUpgrade(i, group)
+		sent, err := sendGroupUpgrade(ctx, i, group)
 		if err != nil {
 			return err
 		}

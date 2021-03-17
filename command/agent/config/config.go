@@ -48,6 +48,18 @@ type Cache struct {
 	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
 	UseAutoAuthToken    bool        `hcl:"-"`
 	ForceAutoAuthToken  bool        `hcl:"-"`
+	EnforceConsistency  string      `hcl:"enforce_consistency"`
+	WhenInconsistent    string      `hcl:"when_inconsistent"`
+	Persist             *Persist    `hcl:"persist"`
+}
+
+// Persist contains configuration needed for persistent caching
+type Persist struct {
+	Type                    string
+	Path                    string `hcl:"path"`
+	KeepAfterImport         bool   `hcl:"keep_after_import"`
+	ExitOnErr               bool   `hcl:"exit_on_err"`
+	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -62,12 +74,14 @@ type AutoAuth struct {
 
 // Method represents the configuration for the authentication backend
 type Method struct {
-	Type       string
-	MountPath  string        `hcl:"mount_path"`
-	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
-	WrapTTL    time.Duration `hcl:"-"`
-	Namespace  string        `hcl:"namespace"`
-	Config     map[string]interface{}
+	Type          string
+	MountPath     string        `hcl:"mount_path"`
+	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
+	WrapTTL       time.Duration `hcl:"-"`
+	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
+	MaxBackoff    time.Duration `hcl:"-"`
+	Namespace     string        `hcl:"namespace"`
+	Config        map[string]interface{}
 }
 
 // Sink defines a location to write the authenticated token
@@ -305,8 +319,51 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 			}
 		}
 	}
-
 	result.Cache = &c
+
+	subs, ok := item.Val.(*ast.ObjectType)
+	if !ok {
+		return fmt.Errorf("could not parse %q as an object", name)
+	}
+	subList := subs.List
+	if err := parsePersist(result, subList); err != nil {
+		return fmt.Errorf("error parsing persist: %w", err)
+	}
+
+	return nil
+}
+
+func parsePersist(result *Config, list *ast.ObjectList) error {
+	name := "persist"
+
+	persistList := list.Filter(name)
+	if len(persistList.Items) == 0 {
+		return nil
+	}
+
+	if len(persistList.Items) > 1 {
+		return fmt.Errorf("only one %q block is required", name)
+	}
+
+	item := persistList.Items[0]
+
+	var p Persist
+	err := hcl.DecodeObject(&p, item.Val)
+	if err != nil {
+		return err
+	}
+
+	if p.Type == "" {
+		if len(item.Keys) == 1 {
+			p.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+		}
+		if p.Type == "" {
+			return errors.New("persist type must be specified")
+		}
+	}
+
+	result.Cache.Persist = &p
+
 	return nil
 }
 
@@ -356,6 +413,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
 			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
 		}
+	}
+
+	if result.AutoAuth.Method.MaxBackoffRaw != nil {
+		var err error
+		if result.AutoAuth.Method.MaxBackoff, err = parseutil.ParseDurationSecond(result.AutoAuth.Method.MaxBackoffRaw); err != nil {
+			return err
+		}
+		result.AutoAuth.Method.MaxBackoffRaw = nil
 	}
 
 	return nil

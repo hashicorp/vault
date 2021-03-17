@@ -257,6 +257,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			location := "path"
 			required := true
 
+			if field == nil {
+				continue
+			}
+
 			if field.Query {
 				location = "query"
 				required = false

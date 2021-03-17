@@ -65,7 +65,8 @@ export default Model.extend({
     helpText: "Username to use when one isn't specified",
   }),
   allowedUsers: attr('string', {
-    helpText: 'Create a whitelist of users that can use this key (e.g. `admin, dev`, use `*` to allow all.)',
+    helpText:
+      'Create a list of users who are allowed to use this key (e.g. `admin, dev`, or use `*` to allow all.)',
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:

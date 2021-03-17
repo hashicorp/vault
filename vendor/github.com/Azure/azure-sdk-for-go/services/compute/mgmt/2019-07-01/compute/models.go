@@ -31,1329 +31,6 @@ import (
 // The package's fully qualified name.
 const fqdn = "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute"
 
-// AccessLevel enumerates the values for access level.
-type AccessLevel string
-
-const (
-	// None ...
-	None AccessLevel = "None"
-	// Read ...
-	Read AccessLevel = "Read"
-	// Write ...
-	Write AccessLevel = "Write"
-)
-
-// PossibleAccessLevelValues returns an array of possible values for the AccessLevel const type.
-func PossibleAccessLevelValues() []AccessLevel {
-	return []AccessLevel{None, Read, Write}
-}
-
-// AggregatedReplicationState enumerates the values for aggregated replication state.
-type AggregatedReplicationState string
-
-const (
-	// Completed ...
-	Completed AggregatedReplicationState = "Completed"
-	// Failed ...
-	Failed AggregatedReplicationState = "Failed"
-	// InProgress ...
-	InProgress AggregatedReplicationState = "InProgress"
-	// Unknown ...
-	Unknown AggregatedReplicationState = "Unknown"
-)
-
-// PossibleAggregatedReplicationStateValues returns an array of possible values for the AggregatedReplicationState const type.
-func PossibleAggregatedReplicationStateValues() []AggregatedReplicationState {
-	return []AggregatedReplicationState{Completed, Failed, InProgress, Unknown}
-}
-
-// AvailabilitySetSkuTypes enumerates the values for availability set sku types.
-type AvailabilitySetSkuTypes string
-
-const (
-	// Aligned ...
-	Aligned AvailabilitySetSkuTypes = "Aligned"
-	// Classic ...
-	Classic AvailabilitySetSkuTypes = "Classic"
-)
-
-// PossibleAvailabilitySetSkuTypesValues returns an array of possible values for the AvailabilitySetSkuTypes const type.
-func PossibleAvailabilitySetSkuTypesValues() []AvailabilitySetSkuTypes {
-	return []AvailabilitySetSkuTypes{Aligned, Classic}
-}
-
-// CachingTypes enumerates the values for caching types.
-type CachingTypes string
-
-const (
-	// CachingTypesNone ...
-	CachingTypesNone CachingTypes = "None"
-	// CachingTypesReadOnly ...
-	CachingTypesReadOnly CachingTypes = "ReadOnly"
-	// CachingTypesReadWrite ...
-	CachingTypesReadWrite CachingTypes = "ReadWrite"
-)
-
-// PossibleCachingTypesValues returns an array of possible values for the CachingTypes const type.
-func PossibleCachingTypesValues() []CachingTypes {
-	return []CachingTypes{CachingTypesNone, CachingTypesReadOnly, CachingTypesReadWrite}
-}
-
-// ComponentNames enumerates the values for component names.
-type ComponentNames string
-
-const (
-	// MicrosoftWindowsShellSetup ...
-	MicrosoftWindowsShellSetup ComponentNames = "Microsoft-Windows-Shell-Setup"
-)
-
-// PossibleComponentNamesValues returns an array of possible values for the ComponentNames const type.
-func PossibleComponentNamesValues() []ComponentNames {
-	return []ComponentNames{MicrosoftWindowsShellSetup}
-}
-
-// ContainerServiceOrchestratorTypes enumerates the values for container service orchestrator types.
-type ContainerServiceOrchestratorTypes string
-
-const (
-	// Custom ...
-	Custom ContainerServiceOrchestratorTypes = "Custom"
-	// DCOS ...
-	DCOS ContainerServiceOrchestratorTypes = "DCOS"
-	// Kubernetes ...
-	Kubernetes ContainerServiceOrchestratorTypes = "Kubernetes"
-	// Swarm ...
-	Swarm ContainerServiceOrchestratorTypes = "Swarm"
-)
-
-// PossibleContainerServiceOrchestratorTypesValues returns an array of possible values for the ContainerServiceOrchestratorTypes const type.
-func PossibleContainerServiceOrchestratorTypesValues() []ContainerServiceOrchestratorTypes {
-	return []ContainerServiceOrchestratorTypes{Custom, DCOS, Kubernetes, Swarm}
-}
-
-// ContainerServiceVMSizeTypes enumerates the values for container service vm size types.
-type ContainerServiceVMSizeTypes string
-
-const (
-	// StandardA0 ...
-	StandardA0 ContainerServiceVMSizeTypes = "Standard_A0"
-	// StandardA1 ...
-	StandardA1 ContainerServiceVMSizeTypes = "Standard_A1"
-	// StandardA10 ...
-	StandardA10 ContainerServiceVMSizeTypes = "Standard_A10"
-	// StandardA11 ...
-	StandardA11 ContainerServiceVMSizeTypes = "Standard_A11"
-	// StandardA2 ...
-	StandardA2 ContainerServiceVMSizeTypes = "Standard_A2"
-	// StandardA3 ...
-	StandardA3 ContainerServiceVMSizeTypes = "Standard_A3"
-	// StandardA4 ...
-	StandardA4 ContainerServiceVMSizeTypes = "Standard_A4"
-	// StandardA5 ...
-	StandardA5 ContainerServiceVMSizeTypes = "Standard_A5"
-	// StandardA6 ...
-	StandardA6 ContainerServiceVMSizeTypes = "Standard_A6"
-	// StandardA7 ...
-	StandardA7 ContainerServiceVMSizeTypes = "Standard_A7"
-	// StandardA8 ...
-	StandardA8 ContainerServiceVMSizeTypes = "Standard_A8"
-	// StandardA9 ...
-	StandardA9 ContainerServiceVMSizeTypes = "Standard_A9"
-	// StandardD1 ...
-	StandardD1 ContainerServiceVMSizeTypes = "Standard_D1"
-	// StandardD11 ...
-	StandardD11 ContainerServiceVMSizeTypes = "Standard_D11"
-	// StandardD11V2 ...
-	StandardD11V2 ContainerServiceVMSizeTypes = "Standard_D11_v2"
-	// StandardD12 ...
-	StandardD12 ContainerServiceVMSizeTypes = "Standard_D12"
-	// StandardD12V2 ...
-	StandardD12V2 ContainerServiceVMSizeTypes = "Standard_D12_v2"
-	// StandardD13 ...
-	StandardD13 ContainerServiceVMSizeTypes = "Standard_D13"
-	// StandardD13V2 ...
-	StandardD13V2 ContainerServiceVMSizeTypes = "Standard_D13_v2"
-	// StandardD14 ...
-	StandardD14 ContainerServiceVMSizeTypes = "Standard_D14"
-	// StandardD14V2 ...
-	StandardD14V2 ContainerServiceVMSizeTypes = "Standard_D14_v2"
-	// StandardD1V2 ...
-	StandardD1V2 ContainerServiceVMSizeTypes = "Standard_D1_v2"
-	// StandardD2 ...
-	StandardD2 ContainerServiceVMSizeTypes = "Standard_D2"
-	// StandardD2V2 ...
-	StandardD2V2 ContainerServiceVMSizeTypes = "Standard_D2_v2"
-	// StandardD3 ...
-	StandardD3 ContainerServiceVMSizeTypes = "Standard_D3"
-	// StandardD3V2 ...
-	StandardD3V2 ContainerServiceVMSizeTypes = "Standard_D3_v2"
-	// StandardD4 ...
-	StandardD4 ContainerServiceVMSizeTypes = "Standard_D4"
-	// StandardD4V2 ...
-	StandardD4V2 ContainerServiceVMSizeTypes = "Standard_D4_v2"
-	// StandardD5V2 ...
-	StandardD5V2 ContainerServiceVMSizeTypes = "Standard_D5_v2"
-	// StandardDS1 ...
-	StandardDS1 ContainerServiceVMSizeTypes = "Standard_DS1"
-	// StandardDS11 ...
-	StandardDS11 ContainerServiceVMSizeTypes = "Standard_DS11"
-	// StandardDS12 ...
-	StandardDS12 ContainerServiceVMSizeTypes = "Standard_DS12"
-	// StandardDS13 ...
-	StandardDS13 ContainerServiceVMSizeTypes = "Standard_DS13"
-	// StandardDS14 ...
-	StandardDS14 ContainerServiceVMSizeTypes = "Standard_DS14"
-	// StandardDS2 ...
-	StandardDS2 ContainerServiceVMSizeTypes = "Standard_DS2"
-	// StandardDS3 ...
-	StandardDS3 ContainerServiceVMSizeTypes = "Standard_DS3"
-	// StandardDS4 ...
-	StandardDS4 ContainerServiceVMSizeTypes = "Standard_DS4"
-	// StandardG1 ...
-	StandardG1 ContainerServiceVMSizeTypes = "Standard_G1"
-	// StandardG2 ...
-	StandardG2 ContainerServiceVMSizeTypes = "Standard_G2"
-	// StandardG3 ...
-	StandardG3 ContainerServiceVMSizeTypes = "Standard_G3"
-	// StandardG4 ...
-	StandardG4 ContainerServiceVMSizeTypes = "Standard_G4"
-	// StandardG5 ...
-	StandardG5 ContainerServiceVMSizeTypes = "Standard_G5"
-	// StandardGS1 ...
-	StandardGS1 ContainerServiceVMSizeTypes = "Standard_GS1"
-	// StandardGS2 ...
-	StandardGS2 ContainerServiceVMSizeTypes = "Standard_GS2"
-	// StandardGS3 ...
-	StandardGS3 ContainerServiceVMSizeTypes = "Standard_GS3"
-	// StandardGS4 ...
-	StandardGS4 ContainerServiceVMSizeTypes = "Standard_GS4"
-	// StandardGS5 ...
-	StandardGS5 ContainerServiceVMSizeTypes = "Standard_GS5"
-)
-
-// PossibleContainerServiceVMSizeTypesValues returns an array of possible values for the ContainerServiceVMSizeTypes const type.
-func PossibleContainerServiceVMSizeTypesValues() []ContainerServiceVMSizeTypes {
-	return []ContainerServiceVMSizeTypes{StandardA0, StandardA1, StandardA10, StandardA11, StandardA2, StandardA3, StandardA4, StandardA5, StandardA6, StandardA7, StandardA8, StandardA9, StandardD1, StandardD11, StandardD11V2, StandardD12, StandardD12V2, StandardD13, StandardD13V2, StandardD14, StandardD14V2, StandardD1V2, StandardD2, StandardD2V2, StandardD3, StandardD3V2, StandardD4, StandardD4V2, StandardD5V2, StandardDS1, StandardDS11, StandardDS12, StandardDS13, StandardDS14, StandardDS2, StandardDS3, StandardDS4, StandardG1, StandardG2, StandardG3, StandardG4, StandardG5, StandardGS1, StandardGS2, StandardGS3, StandardGS4, StandardGS5}
-}
-
-// DedicatedHostLicenseTypes enumerates the values for dedicated host license types.
-type DedicatedHostLicenseTypes string
-
-const (
-	// DedicatedHostLicenseTypesNone ...
-	DedicatedHostLicenseTypesNone DedicatedHostLicenseTypes = "None"
-	// DedicatedHostLicenseTypesWindowsServerHybrid ...
-	DedicatedHostLicenseTypesWindowsServerHybrid DedicatedHostLicenseTypes = "Windows_Server_Hybrid"
-	// DedicatedHostLicenseTypesWindowsServerPerpetual ...
-	DedicatedHostLicenseTypesWindowsServerPerpetual DedicatedHostLicenseTypes = "Windows_Server_Perpetual"
-)
-
-// PossibleDedicatedHostLicenseTypesValues returns an array of possible values for the DedicatedHostLicenseTypes const type.
-func PossibleDedicatedHostLicenseTypesValues() []DedicatedHostLicenseTypes {
-	return []DedicatedHostLicenseTypes{DedicatedHostLicenseTypesNone, DedicatedHostLicenseTypesWindowsServerHybrid, DedicatedHostLicenseTypesWindowsServerPerpetual}
-}
-
-// DiffDiskOptions enumerates the values for diff disk options.
-type DiffDiskOptions string
-
-const (
-	// Local ...
-	Local DiffDiskOptions = "Local"
-)
-
-// PossibleDiffDiskOptionsValues returns an array of possible values for the DiffDiskOptions const type.
-func PossibleDiffDiskOptionsValues() []DiffDiskOptions {
-	return []DiffDiskOptions{Local}
-}
-
-// DiskCreateOption enumerates the values for disk create option.
-type DiskCreateOption string
-
-const (
-	// Attach Disk will be attached to a VM.
-	Attach DiskCreateOption = "Attach"
-	// Copy Create a new disk or snapshot by copying from a disk or snapshot specified by the given
-	// sourceResourceId.
-	Copy DiskCreateOption = "Copy"
-	// Empty Create an empty data disk of a size given by diskSizeGB.
-	Empty DiskCreateOption = "Empty"
-	// FromImage Create a new disk from a platform image specified by the given imageReference.
-	FromImage DiskCreateOption = "FromImage"
-	// Import Create a disk by importing from a blob specified by a sourceUri in a storage account specified by
-	// storageAccountId.
-	Import DiskCreateOption = "Import"
-	// Restore Create a new disk by copying from a backup recovery point.
-	Restore DiskCreateOption = "Restore"
-	// Upload Create a new disk by obtaining a write token and using it to directly upload the contents of the
-	// disk.
-	Upload DiskCreateOption = "Upload"
-)
-
-// PossibleDiskCreateOptionValues returns an array of possible values for the DiskCreateOption const type.
-func PossibleDiskCreateOptionValues() []DiskCreateOption {
-	return []DiskCreateOption{Attach, Copy, Empty, FromImage, Import, Restore, Upload}
-}
-
-// DiskCreateOptionTypes enumerates the values for disk create option types.
-type DiskCreateOptionTypes string
-
-const (
-	// DiskCreateOptionTypesAttach ...
-	DiskCreateOptionTypesAttach DiskCreateOptionTypes = "Attach"
-	// DiskCreateOptionTypesEmpty ...
-	DiskCreateOptionTypesEmpty DiskCreateOptionTypes = "Empty"
-	// DiskCreateOptionTypesFromImage ...
-	DiskCreateOptionTypesFromImage DiskCreateOptionTypes = "FromImage"
-)
-
-// PossibleDiskCreateOptionTypesValues returns an array of possible values for the DiskCreateOptionTypes const type.
-func PossibleDiskCreateOptionTypesValues() []DiskCreateOptionTypes {
-	return []DiskCreateOptionTypes{DiskCreateOptionTypesAttach, DiskCreateOptionTypesEmpty, DiskCreateOptionTypesFromImage}
-}
-
-// DiskEncryptionSetIdentityType enumerates the values for disk encryption set identity type.
-type DiskEncryptionSetIdentityType string
-
-const (
-	// SystemAssigned ...
-	SystemAssigned DiskEncryptionSetIdentityType = "SystemAssigned"
-)
-
-// PossibleDiskEncryptionSetIdentityTypeValues returns an array of possible values for the DiskEncryptionSetIdentityType const type.
-func PossibleDiskEncryptionSetIdentityTypeValues() []DiskEncryptionSetIdentityType {
-	return []DiskEncryptionSetIdentityType{SystemAssigned}
-}
-
-// DiskState enumerates the values for disk state.
-type DiskState string
-
-const (
-	// ActiveSAS The disk currently has an Active SAS Uri associated with it.
-	ActiveSAS DiskState = "ActiveSAS"
-	// ActiveUpload A disk is created for upload and a write token has been issued for uploading to it.
-	ActiveUpload DiskState = "ActiveUpload"
-	// Attached The disk is currently mounted to a running VM.
-	Attached DiskState = "Attached"
-	// ReadyToUpload A disk is ready to be created by upload by requesting a write token.
-	ReadyToUpload DiskState = "ReadyToUpload"
-	// Reserved The disk is mounted to a stopped-deallocated VM
-	Reserved DiskState = "Reserved"
-	// Unattached The disk is not being used and can be attached to a VM.
-	Unattached DiskState = "Unattached"
-)
-
-// PossibleDiskStateValues returns an array of possible values for the DiskState const type.
-func PossibleDiskStateValues() []DiskState {
-	return []DiskState{ActiveSAS, ActiveUpload, Attached, ReadyToUpload, Reserved, Unattached}
-}
-
-// DiskStorageAccountTypes enumerates the values for disk storage account types.
-type DiskStorageAccountTypes string
-
-const (
-	// PremiumLRS Premium SSD locally redundant storage. Best for production and performance sensitive
-	// workloads.
-	PremiumLRS DiskStorageAccountTypes = "Premium_LRS"
-	// StandardLRS Standard HDD locally redundant storage. Best for backup, non-critical, and infrequent
-	// access.
-	StandardLRS DiskStorageAccountTypes = "Standard_LRS"
-	// StandardSSDLRS Standard SSD locally redundant storage. Best for web servers, lightly used enterprise
-	// applications and dev/test.
-	StandardSSDLRS DiskStorageAccountTypes = "StandardSSD_LRS"
-	// UltraSSDLRS Ultra SSD locally redundant storage. Best for IO-intensive workloads such as SAP HANA, top
-	// tier databases (for example, SQL, Oracle), and other transaction-heavy workloads.
-	UltraSSDLRS DiskStorageAccountTypes = "UltraSSD_LRS"
-)
-
-// PossibleDiskStorageAccountTypesValues returns an array of possible values for the DiskStorageAccountTypes const type.
-func PossibleDiskStorageAccountTypesValues() []DiskStorageAccountTypes {
-	return []DiskStorageAccountTypes{PremiumLRS, StandardLRS, StandardSSDLRS, UltraSSDLRS}
-}
-
-// EncryptionType enumerates the values for encryption type.
-type EncryptionType string
-
-const (
-	// EncryptionAtRestWithCustomerKey Disk is encrypted with Customer managed key at rest.
-	EncryptionAtRestWithCustomerKey EncryptionType = "EncryptionAtRestWithCustomerKey"
-	// EncryptionAtRestWithPlatformKey Disk is encrypted with XStore managed key at rest. It is the default
-	// encryption type.
-	EncryptionAtRestWithPlatformKey EncryptionType = "EncryptionAtRestWithPlatformKey"
-)
-
-// PossibleEncryptionTypeValues returns an array of possible values for the EncryptionType const type.
-func PossibleEncryptionTypeValues() []EncryptionType {
-	return []EncryptionType{EncryptionAtRestWithCustomerKey, EncryptionAtRestWithPlatformKey}
-}
-
-// HostCaching enumerates the values for host caching.
-type HostCaching string
-
-const (
-	// HostCachingNone ...
-	HostCachingNone HostCaching = "None"
-	// HostCachingReadOnly ...
-	HostCachingReadOnly HostCaching = "ReadOnly"
-	// HostCachingReadWrite ...
-	HostCachingReadWrite HostCaching = "ReadWrite"
-)
-
-// PossibleHostCachingValues returns an array of possible values for the HostCaching const type.
-func PossibleHostCachingValues() []HostCaching {
-	return []HostCaching{HostCachingNone, HostCachingReadOnly, HostCachingReadWrite}
-}
-
-// HyperVGeneration enumerates the values for hyper v generation.
-type HyperVGeneration string
-
-const (
-	// V1 ...
-	V1 HyperVGeneration = "V1"
-	// V2 ...
-	V2 HyperVGeneration = "V2"
-)
-
-// PossibleHyperVGenerationValues returns an array of possible values for the HyperVGeneration const type.
-func PossibleHyperVGenerationValues() []HyperVGeneration {
-	return []HyperVGeneration{V1, V2}
-}
-
-// HyperVGenerationType enumerates the values for hyper v generation type.
-type HyperVGenerationType string
-
-const (
-	// HyperVGenerationTypeV1 ...
-	HyperVGenerationTypeV1 HyperVGenerationType = "V1"
-	// HyperVGenerationTypeV2 ...
-	HyperVGenerationTypeV2 HyperVGenerationType = "V2"
-)
-
-// PossibleHyperVGenerationTypeValues returns an array of possible values for the HyperVGenerationType const type.
-func PossibleHyperVGenerationTypeValues() []HyperVGenerationType {
-	return []HyperVGenerationType{HyperVGenerationTypeV1, HyperVGenerationTypeV2}
-}
-
-// HyperVGenerationTypes enumerates the values for hyper v generation types.
-type HyperVGenerationTypes string
-
-const (
-	// HyperVGenerationTypesV1 ...
-	HyperVGenerationTypesV1 HyperVGenerationTypes = "V1"
-	// HyperVGenerationTypesV2 ...
-	HyperVGenerationTypesV2 HyperVGenerationTypes = "V2"
-)
-
-// PossibleHyperVGenerationTypesValues returns an array of possible values for the HyperVGenerationTypes const type.
-func PossibleHyperVGenerationTypesValues() []HyperVGenerationTypes {
-	return []HyperVGenerationTypes{HyperVGenerationTypesV1, HyperVGenerationTypesV2}
-}
-
-// InstanceViewTypes enumerates the values for instance view types.
-type InstanceViewTypes string
-
-const (
-	// InstanceView ...
-	InstanceView InstanceViewTypes = "instanceView"
-)
-
-// PossibleInstanceViewTypesValues returns an array of possible values for the InstanceViewTypes const type.
-func PossibleInstanceViewTypesValues() []InstanceViewTypes {
-	return []InstanceViewTypes{InstanceView}
-}
-
-// IntervalInMins enumerates the values for interval in mins.
-type IntervalInMins string
-
-const (
-	// FiveMins ...
-	FiveMins IntervalInMins = "FiveMins"
-	// SixtyMins ...
-	SixtyMins IntervalInMins = "SixtyMins"
-	// ThirtyMins ...
-	ThirtyMins IntervalInMins = "ThirtyMins"
-	// ThreeMins ...
-	ThreeMins IntervalInMins = "ThreeMins"
-)
-
-// PossibleIntervalInMinsValues returns an array of possible values for the IntervalInMins const type.
-func PossibleIntervalInMinsValues() []IntervalInMins {
-	return []IntervalInMins{FiveMins, SixtyMins, ThirtyMins, ThreeMins}
-}
-
-// IPVersion enumerates the values for ip version.
-type IPVersion string
-
-const (
-	// IPv4 ...
-	IPv4 IPVersion = "IPv4"
-	// IPv6 ...
-	IPv6 IPVersion = "IPv6"
-)
-
-// PossibleIPVersionValues returns an array of possible values for the IPVersion const type.
-func PossibleIPVersionValues() []IPVersion {
-	return []IPVersion{IPv4, IPv6}
-}
-
-// MaintenanceOperationResultCodeTypes enumerates the values for maintenance operation result code types.
-type MaintenanceOperationResultCodeTypes string
-
-const (
-	// MaintenanceOperationResultCodeTypesMaintenanceAborted ...
-	MaintenanceOperationResultCodeTypesMaintenanceAborted MaintenanceOperationResultCodeTypes = "MaintenanceAborted"
-	// MaintenanceOperationResultCodeTypesMaintenanceCompleted ...
-	MaintenanceOperationResultCodeTypesMaintenanceCompleted MaintenanceOperationResultCodeTypes = "MaintenanceCompleted"
-	// MaintenanceOperationResultCodeTypesNone ...
-	MaintenanceOperationResultCodeTypesNone MaintenanceOperationResultCodeTypes = "None"
-	// MaintenanceOperationResultCodeTypesRetryLater ...
-	MaintenanceOperationResultCodeTypesRetryLater MaintenanceOperationResultCodeTypes = "RetryLater"
-)
-
-// PossibleMaintenanceOperationResultCodeTypesValues returns an array of possible values for the MaintenanceOperationResultCodeTypes const type.
-func PossibleMaintenanceOperationResultCodeTypesValues() []MaintenanceOperationResultCodeTypes {
-	return []MaintenanceOperationResultCodeTypes{MaintenanceOperationResultCodeTypesMaintenanceAborted, MaintenanceOperationResultCodeTypesMaintenanceCompleted, MaintenanceOperationResultCodeTypesNone, MaintenanceOperationResultCodeTypesRetryLater}
-}
-
-// OperatingSystemStateTypes enumerates the values for operating system state types.
-type OperatingSystemStateTypes string
-
-const (
-	// Generalized Generalized image. Needs to be provisioned during deployment time.
-	Generalized OperatingSystemStateTypes = "Generalized"
-	// Specialized Specialized image. Contains already provisioned OS Disk.
-	Specialized OperatingSystemStateTypes = "Specialized"
-)
-
-// PossibleOperatingSystemStateTypesValues returns an array of possible values for the OperatingSystemStateTypes const type.
-func PossibleOperatingSystemStateTypesValues() []OperatingSystemStateTypes {
-	return []OperatingSystemStateTypes{Generalized, Specialized}
-}
-
-// OperatingSystemTypes enumerates the values for operating system types.
-type OperatingSystemTypes string
-
-const (
-	// Linux ...
-	Linux OperatingSystemTypes = "Linux"
-	// Windows ...
-	Windows OperatingSystemTypes = "Windows"
-)
-
-// PossibleOperatingSystemTypesValues returns an array of possible values for the OperatingSystemTypes const type.
-func PossibleOperatingSystemTypesValues() []OperatingSystemTypes {
-	return []OperatingSystemTypes{Linux, Windows}
-}
-
-// PassNames enumerates the values for pass names.
-type PassNames string
-
-const (
-	// OobeSystem ...
-	OobeSystem PassNames = "OobeSystem"
-)
-
-// PossiblePassNamesValues returns an array of possible values for the PassNames const type.
-func PossiblePassNamesValues() []PassNames {
-	return []PassNames{OobeSystem}
-}
-
-// ProtocolTypes enumerates the values for protocol types.
-type ProtocolTypes string
-
-const (
-	// HTTP ...
-	HTTP ProtocolTypes = "Http"
-	// HTTPS ...
-	HTTPS ProtocolTypes = "Https"
-)
-
-// PossibleProtocolTypesValues returns an array of possible values for the ProtocolTypes const type.
-func PossibleProtocolTypesValues() []ProtocolTypes {
-	return []ProtocolTypes{HTTP, HTTPS}
-}
-
-// ProvisioningState enumerates the values for provisioning state.
-type ProvisioningState string
-
-const (
-	// ProvisioningStateCreating ...
-	ProvisioningStateCreating ProvisioningState = "Creating"
-	// ProvisioningStateDeleting ...
-	ProvisioningStateDeleting ProvisioningState = "Deleting"
-	// ProvisioningStateFailed ...
-	ProvisioningStateFailed ProvisioningState = "Failed"
-	// ProvisioningStateMigrating ...
-	ProvisioningStateMigrating ProvisioningState = "Migrating"
-	// ProvisioningStateSucceeded ...
-	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
-	// ProvisioningStateUpdating ...
-	ProvisioningStateUpdating ProvisioningState = "Updating"
-)
-
-// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
-func PossibleProvisioningStateValues() []ProvisioningState {
-	return []ProvisioningState{ProvisioningStateCreating, ProvisioningStateDeleting, ProvisioningStateFailed, ProvisioningStateMigrating, ProvisioningStateSucceeded, ProvisioningStateUpdating}
-}
-
-// ProvisioningState1 enumerates the values for provisioning state 1.
-type ProvisioningState1 string
-
-const (
-	// ProvisioningState1Creating ...
-	ProvisioningState1Creating ProvisioningState1 = "Creating"
-	// ProvisioningState1Deleting ...
-	ProvisioningState1Deleting ProvisioningState1 = "Deleting"
-	// ProvisioningState1Failed ...
-	ProvisioningState1Failed ProvisioningState1 = "Failed"
-	// ProvisioningState1Migrating ...
-	ProvisioningState1Migrating ProvisioningState1 = "Migrating"
-	// ProvisioningState1Succeeded ...
-	ProvisioningState1Succeeded ProvisioningState1 = "Succeeded"
-	// ProvisioningState1Updating ...
-	ProvisioningState1Updating ProvisioningState1 = "Updating"
-)
-
-// PossibleProvisioningState1Values returns an array of possible values for the ProvisioningState1 const type.
-func PossibleProvisioningState1Values() []ProvisioningState1 {
-	return []ProvisioningState1{ProvisioningState1Creating, ProvisioningState1Deleting, ProvisioningState1Failed, ProvisioningState1Migrating, ProvisioningState1Succeeded, ProvisioningState1Updating}
-}
-
-// ProvisioningState2 enumerates the values for provisioning state 2.
-type ProvisioningState2 string
-
-const (
-	// ProvisioningState2Creating ...
-	ProvisioningState2Creating ProvisioningState2 = "Creating"
-	// ProvisioningState2Deleting ...
-	ProvisioningState2Deleting ProvisioningState2 = "Deleting"
-	// ProvisioningState2Failed ...
-	ProvisioningState2Failed ProvisioningState2 = "Failed"
-	// ProvisioningState2Migrating ...
-	ProvisioningState2Migrating ProvisioningState2 = "Migrating"
-	// ProvisioningState2Succeeded ...
-	ProvisioningState2Succeeded ProvisioningState2 = "Succeeded"
-	// ProvisioningState2Updating ...
-	ProvisioningState2Updating ProvisioningState2 = "Updating"
-)
-
-// PossibleProvisioningState2Values returns an array of possible values for the ProvisioningState2 const type.
-func PossibleProvisioningState2Values() []ProvisioningState2 {
-	return []ProvisioningState2{ProvisioningState2Creating, ProvisioningState2Deleting, ProvisioningState2Failed, ProvisioningState2Migrating, ProvisioningState2Succeeded, ProvisioningState2Updating}
-}
-
-// ProvisioningState3 enumerates the values for provisioning state 3.
-type ProvisioningState3 string
-
-const (
-	// ProvisioningState3Creating ...
-	ProvisioningState3Creating ProvisioningState3 = "Creating"
-	// ProvisioningState3Deleting ...
-	ProvisioningState3Deleting ProvisioningState3 = "Deleting"
-	// ProvisioningState3Failed ...
-	ProvisioningState3Failed ProvisioningState3 = "Failed"
-	// ProvisioningState3Migrating ...
-	ProvisioningState3Migrating ProvisioningState3 = "Migrating"
-	// ProvisioningState3Succeeded ...
-	ProvisioningState3Succeeded ProvisioningState3 = "Succeeded"
-	// ProvisioningState3Updating ...
-	ProvisioningState3Updating ProvisioningState3 = "Updating"
-)
-
-// PossibleProvisioningState3Values returns an array of possible values for the ProvisioningState3 const type.
-func PossibleProvisioningState3Values() []ProvisioningState3 {
-	return []ProvisioningState3{ProvisioningState3Creating, ProvisioningState3Deleting, ProvisioningState3Failed, ProvisioningState3Migrating, ProvisioningState3Succeeded, ProvisioningState3Updating}
-}
-
-// ProximityPlacementGroupType enumerates the values for proximity placement group type.
-type ProximityPlacementGroupType string
-
-const (
-	// Standard ...
-	Standard ProximityPlacementGroupType = "Standard"
-	// Ultra ...
-	Ultra ProximityPlacementGroupType = "Ultra"
-)
-
-// PossibleProximityPlacementGroupTypeValues returns an array of possible values for the ProximityPlacementGroupType const type.
-func PossibleProximityPlacementGroupTypeValues() []ProximityPlacementGroupType {
-	return []ProximityPlacementGroupType{Standard, Ultra}
-}
-
-// ReplicationState enumerates the values for replication state.
-type ReplicationState string
-
-const (
-	// ReplicationStateCompleted ...
-	ReplicationStateCompleted ReplicationState = "Completed"
-	// ReplicationStateFailed ...
-	ReplicationStateFailed ReplicationState = "Failed"
-	// ReplicationStateReplicating ...
-	ReplicationStateReplicating ReplicationState = "Replicating"
-	// ReplicationStateUnknown ...
-	ReplicationStateUnknown ReplicationState = "Unknown"
-)
-
-// PossibleReplicationStateValues returns an array of possible values for the ReplicationState const type.
-func PossibleReplicationStateValues() []ReplicationState {
-	return []ReplicationState{ReplicationStateCompleted, ReplicationStateFailed, ReplicationStateReplicating, ReplicationStateUnknown}
-}
-
-// ReplicationStatusTypes enumerates the values for replication status types.
-type ReplicationStatusTypes string
-
-const (
-	// ReplicationStatusTypesReplicationStatus ...
-	ReplicationStatusTypesReplicationStatus ReplicationStatusTypes = "ReplicationStatus"
-)
-
-// PossibleReplicationStatusTypesValues returns an array of possible values for the ReplicationStatusTypes const type.
-func PossibleReplicationStatusTypesValues() []ReplicationStatusTypes {
-	return []ReplicationStatusTypes{ReplicationStatusTypesReplicationStatus}
-}
-
-// ResourceIdentityType enumerates the values for resource identity type.
-type ResourceIdentityType string
-
-const (
-	// ResourceIdentityTypeNone ...
-	ResourceIdentityTypeNone ResourceIdentityType = "None"
-	// ResourceIdentityTypeSystemAssigned ...
-	ResourceIdentityTypeSystemAssigned ResourceIdentityType = "SystemAssigned"
-	// ResourceIdentityTypeSystemAssignedUserAssigned ...
-	ResourceIdentityTypeSystemAssignedUserAssigned ResourceIdentityType = "SystemAssigned, UserAssigned"
-	// ResourceIdentityTypeUserAssigned ...
-	ResourceIdentityTypeUserAssigned ResourceIdentityType = "UserAssigned"
-)
-
-// PossibleResourceIdentityTypeValues returns an array of possible values for the ResourceIdentityType const type.
-func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
-	return []ResourceIdentityType{ResourceIdentityTypeNone, ResourceIdentityTypeSystemAssigned, ResourceIdentityTypeSystemAssignedUserAssigned, ResourceIdentityTypeUserAssigned}
-}
-
-// ResourceSkuCapacityScaleType enumerates the values for resource sku capacity scale type.
-type ResourceSkuCapacityScaleType string
-
-const (
-	// ResourceSkuCapacityScaleTypeAutomatic ...
-	ResourceSkuCapacityScaleTypeAutomatic ResourceSkuCapacityScaleType = "Automatic"
-	// ResourceSkuCapacityScaleTypeManual ...
-	ResourceSkuCapacityScaleTypeManual ResourceSkuCapacityScaleType = "Manual"
-	// ResourceSkuCapacityScaleTypeNone ...
-	ResourceSkuCapacityScaleTypeNone ResourceSkuCapacityScaleType = "None"
-)
-
-// PossibleResourceSkuCapacityScaleTypeValues returns an array of possible values for the ResourceSkuCapacityScaleType const type.
-func PossibleResourceSkuCapacityScaleTypeValues() []ResourceSkuCapacityScaleType {
-	return []ResourceSkuCapacityScaleType{ResourceSkuCapacityScaleTypeAutomatic, ResourceSkuCapacityScaleTypeManual, ResourceSkuCapacityScaleTypeNone}
-}
-
-// ResourceSkuRestrictionsReasonCode enumerates the values for resource sku restrictions reason code.
-type ResourceSkuRestrictionsReasonCode string
-
-const (
-	// NotAvailableForSubscription ...
-	NotAvailableForSubscription ResourceSkuRestrictionsReasonCode = "NotAvailableForSubscription"
-	// QuotaID ...
-	QuotaID ResourceSkuRestrictionsReasonCode = "QuotaId"
-)
-
-// PossibleResourceSkuRestrictionsReasonCodeValues returns an array of possible values for the ResourceSkuRestrictionsReasonCode const type.
-func PossibleResourceSkuRestrictionsReasonCodeValues() []ResourceSkuRestrictionsReasonCode {
-	return []ResourceSkuRestrictionsReasonCode{NotAvailableForSubscription, QuotaID}
-}
-
-// ResourceSkuRestrictionsType enumerates the values for resource sku restrictions type.
-type ResourceSkuRestrictionsType string
-
-const (
-	// Location ...
-	Location ResourceSkuRestrictionsType = "Location"
-	// Zone ...
-	Zone ResourceSkuRestrictionsType = "Zone"
-)
-
-// PossibleResourceSkuRestrictionsTypeValues returns an array of possible values for the ResourceSkuRestrictionsType const type.
-func PossibleResourceSkuRestrictionsTypeValues() []ResourceSkuRestrictionsType {
-	return []ResourceSkuRestrictionsType{Location, Zone}
-}
-
-// RollingUpgradeActionType enumerates the values for rolling upgrade action type.
-type RollingUpgradeActionType string
-
-const (
-	// Cancel ...
-	Cancel RollingUpgradeActionType = "Cancel"
-	// Start ...
-	Start RollingUpgradeActionType = "Start"
-)
-
-// PossibleRollingUpgradeActionTypeValues returns an array of possible values for the RollingUpgradeActionType const type.
-func PossibleRollingUpgradeActionTypeValues() []RollingUpgradeActionType {
-	return []RollingUpgradeActionType{Cancel, Start}
-}
-
-// RollingUpgradeStatusCode enumerates the values for rolling upgrade status code.
-type RollingUpgradeStatusCode string
-
-const (
-	// RollingUpgradeStatusCodeCancelled ...
-	RollingUpgradeStatusCodeCancelled RollingUpgradeStatusCode = "Cancelled"
-	// RollingUpgradeStatusCodeCompleted ...
-	RollingUpgradeStatusCodeCompleted RollingUpgradeStatusCode = "Completed"
-	// RollingUpgradeStatusCodeFaulted ...
-	RollingUpgradeStatusCodeFaulted RollingUpgradeStatusCode = "Faulted"
-	// RollingUpgradeStatusCodeRollingForward ...
-	RollingUpgradeStatusCodeRollingForward RollingUpgradeStatusCode = "RollingForward"
-)
-
-// PossibleRollingUpgradeStatusCodeValues returns an array of possible values for the RollingUpgradeStatusCode const type.
-func PossibleRollingUpgradeStatusCodeValues() []RollingUpgradeStatusCode {
-	return []RollingUpgradeStatusCode{RollingUpgradeStatusCodeCancelled, RollingUpgradeStatusCodeCompleted, RollingUpgradeStatusCodeFaulted, RollingUpgradeStatusCodeRollingForward}
-}
-
-// SettingNames enumerates the values for setting names.
-type SettingNames string
-
-const (
-	// AutoLogon ...
-	AutoLogon SettingNames = "AutoLogon"
-	// FirstLogonCommands ...
-	FirstLogonCommands SettingNames = "FirstLogonCommands"
-)
-
-// PossibleSettingNamesValues returns an array of possible values for the SettingNames const type.
-func PossibleSettingNamesValues() []SettingNames {
-	return []SettingNames{AutoLogon, FirstLogonCommands}
-}
-
-// SnapshotStorageAccountTypes enumerates the values for snapshot storage account types.
-type SnapshotStorageAccountTypes string
-
-const (
-	// SnapshotStorageAccountTypesPremiumLRS Premium SSD locally redundant storage
-	SnapshotStorageAccountTypesPremiumLRS SnapshotStorageAccountTypes = "Premium_LRS"
-	// SnapshotStorageAccountTypesStandardLRS Standard HDD locally redundant storage
-	SnapshotStorageAccountTypesStandardLRS SnapshotStorageAccountTypes = "Standard_LRS"
-	// SnapshotStorageAccountTypesStandardZRS Standard zone redundant storage
-	SnapshotStorageAccountTypesStandardZRS SnapshotStorageAccountTypes = "Standard_ZRS"
-)
-
-// PossibleSnapshotStorageAccountTypesValues returns an array of possible values for the SnapshotStorageAccountTypes const type.
-func PossibleSnapshotStorageAccountTypesValues() []SnapshotStorageAccountTypes {
-	return []SnapshotStorageAccountTypes{SnapshotStorageAccountTypesPremiumLRS, SnapshotStorageAccountTypesStandardLRS, SnapshotStorageAccountTypesStandardZRS}
-}
-
-// StatusLevelTypes enumerates the values for status level types.
-type StatusLevelTypes string
-
-const (
-	// Error ...
-	Error StatusLevelTypes = "Error"
-	// Info ...
-	Info StatusLevelTypes = "Info"
-	// Warning ...
-	Warning StatusLevelTypes = "Warning"
-)
-
-// PossibleStatusLevelTypesValues returns an array of possible values for the StatusLevelTypes const type.
-func PossibleStatusLevelTypesValues() []StatusLevelTypes {
-	return []StatusLevelTypes{Error, Info, Warning}
-}
-
-// StorageAccountType enumerates the values for storage account type.
-type StorageAccountType string
-
-const (
-	// StorageAccountTypeStandardLRS ...
-	StorageAccountTypeStandardLRS StorageAccountType = "Standard_LRS"
-	// StorageAccountTypeStandardZRS ...
-	StorageAccountTypeStandardZRS StorageAccountType = "Standard_ZRS"
-)
-
-// PossibleStorageAccountTypeValues returns an array of possible values for the StorageAccountType const type.
-func PossibleStorageAccountTypeValues() []StorageAccountType {
-	return []StorageAccountType{StorageAccountTypeStandardLRS, StorageAccountTypeStandardZRS}
-}
-
-// StorageAccountTypes enumerates the values for storage account types.
-type StorageAccountTypes string
-
-const (
-	// StorageAccountTypesPremiumLRS ...
-	StorageAccountTypesPremiumLRS StorageAccountTypes = "Premium_LRS"
-	// StorageAccountTypesStandardLRS ...
-	StorageAccountTypesStandardLRS StorageAccountTypes = "Standard_LRS"
-	// StorageAccountTypesStandardSSDLRS ...
-	StorageAccountTypesStandardSSDLRS StorageAccountTypes = "StandardSSD_LRS"
-	// StorageAccountTypesUltraSSDLRS ...
-	StorageAccountTypesUltraSSDLRS StorageAccountTypes = "UltraSSD_LRS"
-)
-
-// PossibleStorageAccountTypesValues returns an array of possible values for the StorageAccountTypes const type.
-func PossibleStorageAccountTypesValues() []StorageAccountTypes {
-	return []StorageAccountTypes{StorageAccountTypesPremiumLRS, StorageAccountTypesStandardLRS, StorageAccountTypesStandardSSDLRS, StorageAccountTypesUltraSSDLRS}
-}
-
-// UpgradeMode enumerates the values for upgrade mode.
-type UpgradeMode string
-
-const (
-	// Automatic ...
-	Automatic UpgradeMode = "Automatic"
-	// Manual ...
-	Manual UpgradeMode = "Manual"
-	// Rolling ...
-	Rolling UpgradeMode = "Rolling"
-)
-
-// PossibleUpgradeModeValues returns an array of possible values for the UpgradeMode const type.
-func PossibleUpgradeModeValues() []UpgradeMode {
-	return []UpgradeMode{Automatic, Manual, Rolling}
-}
-
-// UpgradeOperationInvoker enumerates the values for upgrade operation invoker.
-type UpgradeOperationInvoker string
-
-const (
-	// UpgradeOperationInvokerPlatform ...
-	UpgradeOperationInvokerPlatform UpgradeOperationInvoker = "Platform"
-	// UpgradeOperationInvokerUnknown ...
-	UpgradeOperationInvokerUnknown UpgradeOperationInvoker = "Unknown"
-	// UpgradeOperationInvokerUser ...
-	UpgradeOperationInvokerUser UpgradeOperationInvoker = "User"
-)
-
-// PossibleUpgradeOperationInvokerValues returns an array of possible values for the UpgradeOperationInvoker const type.
-func PossibleUpgradeOperationInvokerValues() []UpgradeOperationInvoker {
-	return []UpgradeOperationInvoker{UpgradeOperationInvokerPlatform, UpgradeOperationInvokerUnknown, UpgradeOperationInvokerUser}
-}
-
-// UpgradeState enumerates the values for upgrade state.
-type UpgradeState string
-
-const (
-	// UpgradeStateCancelled ...
-	UpgradeStateCancelled UpgradeState = "Cancelled"
-	// UpgradeStateCompleted ...
-	UpgradeStateCompleted UpgradeState = "Completed"
-	// UpgradeStateFaulted ...
-	UpgradeStateFaulted UpgradeState = "Faulted"
-	// UpgradeStateRollingForward ...
-	UpgradeStateRollingForward UpgradeState = "RollingForward"
-)
-
-// PossibleUpgradeStateValues returns an array of possible values for the UpgradeState const type.
-func PossibleUpgradeStateValues() []UpgradeState {
-	return []UpgradeState{UpgradeStateCancelled, UpgradeStateCompleted, UpgradeStateFaulted, UpgradeStateRollingForward}
-}
-
-// VirtualMachineEvictionPolicyTypes enumerates the values for virtual machine eviction policy types.
-type VirtualMachineEvictionPolicyTypes string
-
-const (
-	// Deallocate ...
-	Deallocate VirtualMachineEvictionPolicyTypes = "Deallocate"
-	// Delete ...
-	Delete VirtualMachineEvictionPolicyTypes = "Delete"
-)
-
-// PossibleVirtualMachineEvictionPolicyTypesValues returns an array of possible values for the VirtualMachineEvictionPolicyTypes const type.
-func PossibleVirtualMachineEvictionPolicyTypesValues() []VirtualMachineEvictionPolicyTypes {
-	return []VirtualMachineEvictionPolicyTypes{Deallocate, Delete}
-}
-
-// VirtualMachinePriorityTypes enumerates the values for virtual machine priority types.
-type VirtualMachinePriorityTypes string
-
-const (
-	// Low ...
-	Low VirtualMachinePriorityTypes = "Low"
-	// Regular ...
-	Regular VirtualMachinePriorityTypes = "Regular"
-	// Spot ...
-	Spot VirtualMachinePriorityTypes = "Spot"
-)
-
-// PossibleVirtualMachinePriorityTypesValues returns an array of possible values for the VirtualMachinePriorityTypes const type.
-func PossibleVirtualMachinePriorityTypesValues() []VirtualMachinePriorityTypes {
-	return []VirtualMachinePriorityTypes{Low, Regular, Spot}
-}
-
-// VirtualMachineScaleSetScaleInRules enumerates the values for virtual machine scale set scale in rules.
-type VirtualMachineScaleSetScaleInRules string
-
-const (
-	// Default ...
-	Default VirtualMachineScaleSetScaleInRules = "Default"
-	// NewestVM ...
-	NewestVM VirtualMachineScaleSetScaleInRules = "NewestVM"
-	// OldestVM ...
-	OldestVM VirtualMachineScaleSetScaleInRules = "OldestVM"
-)
-
-// PossibleVirtualMachineScaleSetScaleInRulesValues returns an array of possible values for the VirtualMachineScaleSetScaleInRules const type.
-func PossibleVirtualMachineScaleSetScaleInRulesValues() []VirtualMachineScaleSetScaleInRules {
-	return []VirtualMachineScaleSetScaleInRules{Default, NewestVM, OldestVM}
-}
-
-// VirtualMachineScaleSetSkuScaleType enumerates the values for virtual machine scale set sku scale type.
-type VirtualMachineScaleSetSkuScaleType string
-
-const (
-	// VirtualMachineScaleSetSkuScaleTypeAutomatic ...
-	VirtualMachineScaleSetSkuScaleTypeAutomatic VirtualMachineScaleSetSkuScaleType = "Automatic"
-	// VirtualMachineScaleSetSkuScaleTypeNone ...
-	VirtualMachineScaleSetSkuScaleTypeNone VirtualMachineScaleSetSkuScaleType = "None"
-)
-
-// PossibleVirtualMachineScaleSetSkuScaleTypeValues returns an array of possible values for the VirtualMachineScaleSetSkuScaleType const type.
-func PossibleVirtualMachineScaleSetSkuScaleTypeValues() []VirtualMachineScaleSetSkuScaleType {
-	return []VirtualMachineScaleSetSkuScaleType{VirtualMachineScaleSetSkuScaleTypeAutomatic, VirtualMachineScaleSetSkuScaleTypeNone}
-}
-
-// VirtualMachineSizeTypes enumerates the values for virtual machine size types.
-type VirtualMachineSizeTypes string
-
-const (
-	// VirtualMachineSizeTypesBasicA0 ...
-	VirtualMachineSizeTypesBasicA0 VirtualMachineSizeTypes = "Basic_A0"
-	// VirtualMachineSizeTypesBasicA1 ...
-	VirtualMachineSizeTypesBasicA1 VirtualMachineSizeTypes = "Basic_A1"
-	// VirtualMachineSizeTypesBasicA2 ...
-	VirtualMachineSizeTypesBasicA2 VirtualMachineSizeTypes = "Basic_A2"
-	// VirtualMachineSizeTypesBasicA3 ...
-	VirtualMachineSizeTypesBasicA3 VirtualMachineSizeTypes = "Basic_A3"
-	// VirtualMachineSizeTypesBasicA4 ...
-	VirtualMachineSizeTypesBasicA4 VirtualMachineSizeTypes = "Basic_A4"
-	// VirtualMachineSizeTypesStandardA0 ...
-	VirtualMachineSizeTypesStandardA0 VirtualMachineSizeTypes = "Standard_A0"
-	// VirtualMachineSizeTypesStandardA1 ...
-	VirtualMachineSizeTypesStandardA1 VirtualMachineSizeTypes = "Standard_A1"
-	// VirtualMachineSizeTypesStandardA10 ...
-	VirtualMachineSizeTypesStandardA10 VirtualMachineSizeTypes = "Standard_A10"
-	// VirtualMachineSizeTypesStandardA11 ...
-	VirtualMachineSizeTypesStandardA11 VirtualMachineSizeTypes = "Standard_A11"
-	// VirtualMachineSizeTypesStandardA1V2 ...
-	VirtualMachineSizeTypesStandardA1V2 VirtualMachineSizeTypes = "Standard_A1_v2"
-	// VirtualMachineSizeTypesStandardA2 ...
-	VirtualMachineSizeTypesStandardA2 VirtualMachineSizeTypes = "Standard_A2"
-	// VirtualMachineSizeTypesStandardA2mV2 ...
-	VirtualMachineSizeTypesStandardA2mV2 VirtualMachineSizeTypes = "Standard_A2m_v2"
-	// VirtualMachineSizeTypesStandardA2V2 ...
-	VirtualMachineSizeTypesStandardA2V2 VirtualMachineSizeTypes = "Standard_A2_v2"
-	// VirtualMachineSizeTypesStandardA3 ...
-	VirtualMachineSizeTypesStandardA3 VirtualMachineSizeTypes = "Standard_A3"
-	// VirtualMachineSizeTypesStandardA4 ...
-	VirtualMachineSizeTypesStandardA4 VirtualMachineSizeTypes = "Standard_A4"
-	// VirtualMachineSizeTypesStandardA4mV2 ...
-	VirtualMachineSizeTypesStandardA4mV2 VirtualMachineSizeTypes = "Standard_A4m_v2"
-	// VirtualMachineSizeTypesStandardA4V2 ...
-	VirtualMachineSizeTypesStandardA4V2 VirtualMachineSizeTypes = "Standard_A4_v2"
-	// VirtualMachineSizeTypesStandardA5 ...
-	VirtualMachineSizeTypesStandardA5 VirtualMachineSizeTypes = "Standard_A5"
-	// VirtualMachineSizeTypesStandardA6 ...
-	VirtualMachineSizeTypesStandardA6 VirtualMachineSizeTypes = "Standard_A6"
-	// VirtualMachineSizeTypesStandardA7 ...
-	VirtualMachineSizeTypesStandardA7 VirtualMachineSizeTypes = "Standard_A7"
-	// VirtualMachineSizeTypesStandardA8 ...
-	VirtualMachineSizeTypesStandardA8 VirtualMachineSizeTypes = "Standard_A8"
-	// VirtualMachineSizeTypesStandardA8mV2 ...
-	VirtualMachineSizeTypesStandardA8mV2 VirtualMachineSizeTypes = "Standard_A8m_v2"
-	// VirtualMachineSizeTypesStandardA8V2 ...
-	VirtualMachineSizeTypesStandardA8V2 VirtualMachineSizeTypes = "Standard_A8_v2"
-	// VirtualMachineSizeTypesStandardA9 ...
-	VirtualMachineSizeTypesStandardA9 VirtualMachineSizeTypes = "Standard_A9"
-	// VirtualMachineSizeTypesStandardB1ms ...
-	VirtualMachineSizeTypesStandardB1ms VirtualMachineSizeTypes = "Standard_B1ms"
-	// VirtualMachineSizeTypesStandardB1s ...
-	VirtualMachineSizeTypesStandardB1s VirtualMachineSizeTypes = "Standard_B1s"
-	// VirtualMachineSizeTypesStandardB2ms ...
-	VirtualMachineSizeTypesStandardB2ms VirtualMachineSizeTypes = "Standard_B2ms"
-	// VirtualMachineSizeTypesStandardB2s ...
-	VirtualMachineSizeTypesStandardB2s VirtualMachineSizeTypes = "Standard_B2s"
-	// VirtualMachineSizeTypesStandardB4ms ...
-	VirtualMachineSizeTypesStandardB4ms VirtualMachineSizeTypes = "Standard_B4ms"
-	// VirtualMachineSizeTypesStandardB8ms ...
-	VirtualMachineSizeTypesStandardB8ms VirtualMachineSizeTypes = "Standard_B8ms"
-	// VirtualMachineSizeTypesStandardD1 ...
-	VirtualMachineSizeTypesStandardD1 VirtualMachineSizeTypes = "Standard_D1"
-	// VirtualMachineSizeTypesStandardD11 ...
-	VirtualMachineSizeTypesStandardD11 VirtualMachineSizeTypes = "Standard_D11"
-	// VirtualMachineSizeTypesStandardD11V2 ...
-	VirtualMachineSizeTypesStandardD11V2 VirtualMachineSizeTypes = "Standard_D11_v2"
-	// VirtualMachineSizeTypesStandardD12 ...
-	VirtualMachineSizeTypesStandardD12 VirtualMachineSizeTypes = "Standard_D12"
-	// VirtualMachineSizeTypesStandardD12V2 ...
-	VirtualMachineSizeTypesStandardD12V2 VirtualMachineSizeTypes = "Standard_D12_v2"
-	// VirtualMachineSizeTypesStandardD13 ...
-	VirtualMachineSizeTypesStandardD13 VirtualMachineSizeTypes = "Standard_D13"
-	// VirtualMachineSizeTypesStandardD13V2 ...
-	VirtualMachineSizeTypesStandardD13V2 VirtualMachineSizeTypes = "Standard_D13_v2"
-	// VirtualMachineSizeTypesStandardD14 ...
-	VirtualMachineSizeTypesStandardD14 VirtualMachineSizeTypes = "Standard_D14"
-	// VirtualMachineSizeTypesStandardD14V2 ...
-	VirtualMachineSizeTypesStandardD14V2 VirtualMachineSizeTypes = "Standard_D14_v2"
-	// VirtualMachineSizeTypesStandardD15V2 ...
-	VirtualMachineSizeTypesStandardD15V2 VirtualMachineSizeTypes = "Standard_D15_v2"
-	// VirtualMachineSizeTypesStandardD16sV3 ...
-	VirtualMachineSizeTypesStandardD16sV3 VirtualMachineSizeTypes = "Standard_D16s_v3"
-	// VirtualMachineSizeTypesStandardD16V3 ...
-	VirtualMachineSizeTypesStandardD16V3 VirtualMachineSizeTypes = "Standard_D16_v3"
-	// VirtualMachineSizeTypesStandardD1V2 ...
-	VirtualMachineSizeTypesStandardD1V2 VirtualMachineSizeTypes = "Standard_D1_v2"
-	// VirtualMachineSizeTypesStandardD2 ...
-	VirtualMachineSizeTypesStandardD2 VirtualMachineSizeTypes = "Standard_D2"
-	// VirtualMachineSizeTypesStandardD2sV3 ...
-	VirtualMachineSizeTypesStandardD2sV3 VirtualMachineSizeTypes = "Standard_D2s_v3"
-	// VirtualMachineSizeTypesStandardD2V2 ...
-	VirtualMachineSizeTypesStandardD2V2 VirtualMachineSizeTypes = "Standard_D2_v2"
-	// VirtualMachineSizeTypesStandardD2V3 ...
-	VirtualMachineSizeTypesStandardD2V3 VirtualMachineSizeTypes = "Standard_D2_v3"
-	// VirtualMachineSizeTypesStandardD3 ...
-	VirtualMachineSizeTypesStandardD3 VirtualMachineSizeTypes = "Standard_D3"
-	// VirtualMachineSizeTypesStandardD32sV3 ...
-	VirtualMachineSizeTypesStandardD32sV3 VirtualMachineSizeTypes = "Standard_D32s_v3"
-	// VirtualMachineSizeTypesStandardD32V3 ...
-	VirtualMachineSizeTypesStandardD32V3 VirtualMachineSizeTypes = "Standard_D32_v3"
-	// VirtualMachineSizeTypesStandardD3V2 ...
-	VirtualMachineSizeTypesStandardD3V2 VirtualMachineSizeTypes = "Standard_D3_v2"
-	// VirtualMachineSizeTypesStandardD4 ...
-	VirtualMachineSizeTypesStandardD4 VirtualMachineSizeTypes = "Standard_D4"
-	// VirtualMachineSizeTypesStandardD4sV3 ...
-	VirtualMachineSizeTypesStandardD4sV3 VirtualMachineSizeTypes = "Standard_D4s_v3"
-	// VirtualMachineSizeTypesStandardD4V2 ...
-	VirtualMachineSizeTypesStandardD4V2 VirtualMachineSizeTypes = "Standard_D4_v2"
-	// VirtualMachineSizeTypesStandardD4V3 ...
-	VirtualMachineSizeTypesStandardD4V3 VirtualMachineSizeTypes = "Standard_D4_v3"
-	// VirtualMachineSizeTypesStandardD5V2 ...
-	VirtualMachineSizeTypesStandardD5V2 VirtualMachineSizeTypes = "Standard_D5_v2"
-	// VirtualMachineSizeTypesStandardD64sV3 ...
-	VirtualMachineSizeTypesStandardD64sV3 VirtualMachineSizeTypes = "Standard_D64s_v3"
-	// VirtualMachineSizeTypesStandardD64V3 ...
-	VirtualMachineSizeTypesStandardD64V3 VirtualMachineSizeTypes = "Standard_D64_v3"
-	// VirtualMachineSizeTypesStandardD8sV3 ...
-	VirtualMachineSizeTypesStandardD8sV3 VirtualMachineSizeTypes = "Standard_D8s_v3"
-	// VirtualMachineSizeTypesStandardD8V3 ...
-	VirtualMachineSizeTypesStandardD8V3 VirtualMachineSizeTypes = "Standard_D8_v3"
-	// VirtualMachineSizeTypesStandardDS1 ...
-	VirtualMachineSizeTypesStandardDS1 VirtualMachineSizeTypes = "Standard_DS1"
-	// VirtualMachineSizeTypesStandardDS11 ...
-	VirtualMachineSizeTypesStandardDS11 VirtualMachineSizeTypes = "Standard_DS11"
-	// VirtualMachineSizeTypesStandardDS11V2 ...
-	VirtualMachineSizeTypesStandardDS11V2 VirtualMachineSizeTypes = "Standard_DS11_v2"
-	// VirtualMachineSizeTypesStandardDS12 ...
-	VirtualMachineSizeTypesStandardDS12 VirtualMachineSizeTypes = "Standard_DS12"
-	// VirtualMachineSizeTypesStandardDS12V2 ...
-	VirtualMachineSizeTypesStandardDS12V2 VirtualMachineSizeTypes = "Standard_DS12_v2"
-	// VirtualMachineSizeTypesStandardDS13 ...
-	VirtualMachineSizeTypesStandardDS13 VirtualMachineSizeTypes = "Standard_DS13"
-	// VirtualMachineSizeTypesStandardDS132V2 ...
-	VirtualMachineSizeTypesStandardDS132V2 VirtualMachineSizeTypes = "Standard_DS13-2_v2"
-	// VirtualMachineSizeTypesStandardDS134V2 ...
-	VirtualMachineSizeTypesStandardDS134V2 VirtualMachineSizeTypes = "Standard_DS13-4_v2"
-	// VirtualMachineSizeTypesStandardDS13V2 ...
-	VirtualMachineSizeTypesStandardDS13V2 VirtualMachineSizeTypes = "Standard_DS13_v2"
-	// VirtualMachineSizeTypesStandardDS14 ...
-	VirtualMachineSizeTypesStandardDS14 VirtualMachineSizeTypes = "Standard_DS14"
-	// VirtualMachineSizeTypesStandardDS144V2 ...
-	VirtualMachineSizeTypesStandardDS144V2 VirtualMachineSizeTypes = "Standard_DS14-4_v2"
-	// VirtualMachineSizeTypesStandardDS148V2 ...
-	VirtualMachineSizeTypesStandardDS148V2 VirtualMachineSizeTypes = "Standard_DS14-8_v2"
-	// VirtualMachineSizeTypesStandardDS14V2 ...
-	VirtualMachineSizeTypesStandardDS14V2 VirtualMachineSizeTypes = "Standard_DS14_v2"
-	// VirtualMachineSizeTypesStandardDS15V2 ...
-	VirtualMachineSizeTypesStandardDS15V2 VirtualMachineSizeTypes = "Standard_DS15_v2"
-	// VirtualMachineSizeTypesStandardDS1V2 ...
-	VirtualMachineSizeTypesStandardDS1V2 VirtualMachineSizeTypes = "Standard_DS1_v2"
-	// VirtualMachineSizeTypesStandardDS2 ...
-	VirtualMachineSizeTypesStandardDS2 VirtualMachineSizeTypes = "Standard_DS2"
-	// VirtualMachineSizeTypesStandardDS2V2 ...
-	VirtualMachineSizeTypesStandardDS2V2 VirtualMachineSizeTypes = "Standard_DS2_v2"
-	// VirtualMachineSizeTypesStandardDS3 ...
-	VirtualMachineSizeTypesStandardDS3 VirtualMachineSizeTypes = "Standard_DS3"
-	// VirtualMachineSizeTypesStandardDS3V2 ...
-	VirtualMachineSizeTypesStandardDS3V2 VirtualMachineSizeTypes = "Standard_DS3_v2"
-	// VirtualMachineSizeTypesStandardDS4 ...
-	VirtualMachineSizeTypesStandardDS4 VirtualMachineSizeTypes = "Standard_DS4"
-	// VirtualMachineSizeTypesStandardDS4V2 ...
-	VirtualMachineSizeTypesStandardDS4V2 VirtualMachineSizeTypes = "Standard_DS4_v2"
-	// VirtualMachineSizeTypesStandardDS5V2 ...
-	VirtualMachineSizeTypesStandardDS5V2 VirtualMachineSizeTypes = "Standard_DS5_v2"
-	// VirtualMachineSizeTypesStandardE16sV3 ...
-	VirtualMachineSizeTypesStandardE16sV3 VirtualMachineSizeTypes = "Standard_E16s_v3"
-	// VirtualMachineSizeTypesStandardE16V3 ...
-	VirtualMachineSizeTypesStandardE16V3 VirtualMachineSizeTypes = "Standard_E16_v3"
-	// VirtualMachineSizeTypesStandardE2sV3 ...
-	VirtualMachineSizeTypesStandardE2sV3 VirtualMachineSizeTypes = "Standard_E2s_v3"
-	// VirtualMachineSizeTypesStandardE2V3 ...
-	VirtualMachineSizeTypesStandardE2V3 VirtualMachineSizeTypes = "Standard_E2_v3"
-	// VirtualMachineSizeTypesStandardE3216V3 ...
-	VirtualMachineSizeTypesStandardE3216V3 VirtualMachineSizeTypes = "Standard_E32-16_v3"
-	// VirtualMachineSizeTypesStandardE328sV3 ...
-	VirtualMachineSizeTypesStandardE328sV3 VirtualMachineSizeTypes = "Standard_E32-8s_v3"
-	// VirtualMachineSizeTypesStandardE32sV3 ...
-	VirtualMachineSizeTypesStandardE32sV3 VirtualMachineSizeTypes = "Standard_E32s_v3"
-	// VirtualMachineSizeTypesStandardE32V3 ...
-	VirtualMachineSizeTypesStandardE32V3 VirtualMachineSizeTypes = "Standard_E32_v3"
-	// VirtualMachineSizeTypesStandardE4sV3 ...
-	VirtualMachineSizeTypesStandardE4sV3 VirtualMachineSizeTypes = "Standard_E4s_v3"
-	// VirtualMachineSizeTypesStandardE4V3 ...
-	VirtualMachineSizeTypesStandardE4V3 VirtualMachineSizeTypes = "Standard_E4_v3"
-	// VirtualMachineSizeTypesStandardE6416sV3 ...
-	VirtualMachineSizeTypesStandardE6416sV3 VirtualMachineSizeTypes = "Standard_E64-16s_v3"
-	// VirtualMachineSizeTypesStandardE6432sV3 ...
-	VirtualMachineSizeTypesStandardE6432sV3 VirtualMachineSizeTypes = "Standard_E64-32s_v3"
-	// VirtualMachineSizeTypesStandardE64sV3 ...
-	VirtualMachineSizeTypesStandardE64sV3 VirtualMachineSizeTypes = "Standard_E64s_v3"
-	// VirtualMachineSizeTypesStandardE64V3 ...
-	VirtualMachineSizeTypesStandardE64V3 VirtualMachineSizeTypes = "Standard_E64_v3"
-	// VirtualMachineSizeTypesStandardE8sV3 ...
-	VirtualMachineSizeTypesStandardE8sV3 VirtualMachineSizeTypes = "Standard_E8s_v3"
-	// VirtualMachineSizeTypesStandardE8V3 ...
-	VirtualMachineSizeTypesStandardE8V3 VirtualMachineSizeTypes = "Standard_E8_v3"
-	// VirtualMachineSizeTypesStandardF1 ...
-	VirtualMachineSizeTypesStandardF1 VirtualMachineSizeTypes = "Standard_F1"
-	// VirtualMachineSizeTypesStandardF16 ...
-	VirtualMachineSizeTypesStandardF16 VirtualMachineSizeTypes = "Standard_F16"
-	// VirtualMachineSizeTypesStandardF16s ...
-	VirtualMachineSizeTypesStandardF16s VirtualMachineSizeTypes = "Standard_F16s"
-	// VirtualMachineSizeTypesStandardF16sV2 ...
-	VirtualMachineSizeTypesStandardF16sV2 VirtualMachineSizeTypes = "Standard_F16s_v2"
-	// VirtualMachineSizeTypesStandardF1s ...
-	VirtualMachineSizeTypesStandardF1s VirtualMachineSizeTypes = "Standard_F1s"
-	// VirtualMachineSizeTypesStandardF2 ...
-	VirtualMachineSizeTypesStandardF2 VirtualMachineSizeTypes = "Standard_F2"
-	// VirtualMachineSizeTypesStandardF2s ...
-	VirtualMachineSizeTypesStandardF2s VirtualMachineSizeTypes = "Standard_F2s"
-	// VirtualMachineSizeTypesStandardF2sV2 ...
-	VirtualMachineSizeTypesStandardF2sV2 VirtualMachineSizeTypes = "Standard_F2s_v2"
-	// VirtualMachineSizeTypesStandardF32sV2 ...
-	VirtualMachineSizeTypesStandardF32sV2 VirtualMachineSizeTypes = "Standard_F32s_v2"
-	// VirtualMachineSizeTypesStandardF4 ...
-	VirtualMachineSizeTypesStandardF4 VirtualMachineSizeTypes = "Standard_F4"
-	// VirtualMachineSizeTypesStandardF4s ...
-	VirtualMachineSizeTypesStandardF4s VirtualMachineSizeTypes = "Standard_F4s"
-	// VirtualMachineSizeTypesStandardF4sV2 ...
-	VirtualMachineSizeTypesStandardF4sV2 VirtualMachineSizeTypes = "Standard_F4s_v2"
-	// VirtualMachineSizeTypesStandardF64sV2 ...
-	VirtualMachineSizeTypesStandardF64sV2 VirtualMachineSizeTypes = "Standard_F64s_v2"
-	// VirtualMachineSizeTypesStandardF72sV2 ...
-	VirtualMachineSizeTypesStandardF72sV2 VirtualMachineSizeTypes = "Standard_F72s_v2"
-	// VirtualMachineSizeTypesStandardF8 ...
-	VirtualMachineSizeTypesStandardF8 VirtualMachineSizeTypes = "Standard_F8"
-	// VirtualMachineSizeTypesStandardF8s ...
-	VirtualMachineSizeTypesStandardF8s VirtualMachineSizeTypes = "Standard_F8s"
-	// VirtualMachineSizeTypesStandardF8sV2 ...
-	VirtualMachineSizeTypesStandardF8sV2 VirtualMachineSizeTypes = "Standard_F8s_v2"
-	// VirtualMachineSizeTypesStandardG1 ...
-	VirtualMachineSizeTypesStandardG1 VirtualMachineSizeTypes = "Standard_G1"
-	// VirtualMachineSizeTypesStandardG2 ...
-	VirtualMachineSizeTypesStandardG2 VirtualMachineSizeTypes = "Standard_G2"
-	// VirtualMachineSizeTypesStandardG3 ...
-	VirtualMachineSizeTypesStandardG3 VirtualMachineSizeTypes = "Standard_G3"
-	// VirtualMachineSizeTypesStandardG4 ...
-	VirtualMachineSizeTypesStandardG4 VirtualMachineSizeTypes = "Standard_G4"
-	// VirtualMachineSizeTypesStandardG5 ...
-	VirtualMachineSizeTypesStandardG5 VirtualMachineSizeTypes = "Standard_G5"
-	// VirtualMachineSizeTypesStandardGS1 ...
-	VirtualMachineSizeTypesStandardGS1 VirtualMachineSizeTypes = "Standard_GS1"
-	// VirtualMachineSizeTypesStandardGS2 ...
-	VirtualMachineSizeTypesStandardGS2 VirtualMachineSizeTypes = "Standard_GS2"
-	// VirtualMachineSizeTypesStandardGS3 ...
-	VirtualMachineSizeTypesStandardGS3 VirtualMachineSizeTypes = "Standard_GS3"
-	// VirtualMachineSizeTypesStandardGS4 ...
-	VirtualMachineSizeTypesStandardGS4 VirtualMachineSizeTypes = "Standard_GS4"
-	// VirtualMachineSizeTypesStandardGS44 ...
-	VirtualMachineSizeTypesStandardGS44 VirtualMachineSizeTypes = "Standard_GS4-4"
-	// VirtualMachineSizeTypesStandardGS48 ...
-	VirtualMachineSizeTypesStandardGS48 VirtualMachineSizeTypes = "Standard_GS4-8"
-	// VirtualMachineSizeTypesStandardGS5 ...
-	VirtualMachineSizeTypesStandardGS5 VirtualMachineSizeTypes = "Standard_GS5"
-	// VirtualMachineSizeTypesStandardGS516 ...
-	VirtualMachineSizeTypesStandardGS516 VirtualMachineSizeTypes = "Standard_GS5-16"
-	// VirtualMachineSizeTypesStandardGS58 ...
-	VirtualMachineSizeTypesStandardGS58 VirtualMachineSizeTypes = "Standard_GS5-8"
-	// VirtualMachineSizeTypesStandardH16 ...
-	VirtualMachineSizeTypesStandardH16 VirtualMachineSizeTypes = "Standard_H16"
-	// VirtualMachineSizeTypesStandardH16m ...
-	VirtualMachineSizeTypesStandardH16m VirtualMachineSizeTypes = "Standard_H16m"
-	// VirtualMachineSizeTypesStandardH16mr ...
-	VirtualMachineSizeTypesStandardH16mr VirtualMachineSizeTypes = "Standard_H16mr"
-	// VirtualMachineSizeTypesStandardH16r ...
-	VirtualMachineSizeTypesStandardH16r VirtualMachineSizeTypes = "Standard_H16r"
-	// VirtualMachineSizeTypesStandardH8 ...
-	VirtualMachineSizeTypesStandardH8 VirtualMachineSizeTypes = "Standard_H8"
-	// VirtualMachineSizeTypesStandardH8m ...
-	VirtualMachineSizeTypesStandardH8m VirtualMachineSizeTypes = "Standard_H8m"
-	// VirtualMachineSizeTypesStandardL16s ...
-	VirtualMachineSizeTypesStandardL16s VirtualMachineSizeTypes = "Standard_L16s"
-	// VirtualMachineSizeTypesStandardL32s ...
-	VirtualMachineSizeTypesStandardL32s VirtualMachineSizeTypes = "Standard_L32s"
-	// VirtualMachineSizeTypesStandardL4s ...
-	VirtualMachineSizeTypesStandardL4s VirtualMachineSizeTypes = "Standard_L4s"
-	// VirtualMachineSizeTypesStandardL8s ...
-	VirtualMachineSizeTypesStandardL8s VirtualMachineSizeTypes = "Standard_L8s"
-	// VirtualMachineSizeTypesStandardM12832ms ...
-	VirtualMachineSizeTypesStandardM12832ms VirtualMachineSizeTypes = "Standard_M128-32ms"
-	// VirtualMachineSizeTypesStandardM12864ms ...
-	VirtualMachineSizeTypesStandardM12864ms VirtualMachineSizeTypes = "Standard_M128-64ms"
-	// VirtualMachineSizeTypesStandardM128ms ...
-	VirtualMachineSizeTypesStandardM128ms VirtualMachineSizeTypes = "Standard_M128ms"
-	// VirtualMachineSizeTypesStandardM128s ...
-	VirtualMachineSizeTypesStandardM128s VirtualMachineSizeTypes = "Standard_M128s"
-	// VirtualMachineSizeTypesStandardM6416ms ...
-	VirtualMachineSizeTypesStandardM6416ms VirtualMachineSizeTypes = "Standard_M64-16ms"
-	// VirtualMachineSizeTypesStandardM6432ms ...
-	VirtualMachineSizeTypesStandardM6432ms VirtualMachineSizeTypes = "Standard_M64-32ms"
-	// VirtualMachineSizeTypesStandardM64ms ...
-	VirtualMachineSizeTypesStandardM64ms VirtualMachineSizeTypes = "Standard_M64ms"
-	// VirtualMachineSizeTypesStandardM64s ...
-	VirtualMachineSizeTypesStandardM64s VirtualMachineSizeTypes = "Standard_M64s"
-	// VirtualMachineSizeTypesStandardNC12 ...
-	VirtualMachineSizeTypesStandardNC12 VirtualMachineSizeTypes = "Standard_NC12"
-	// VirtualMachineSizeTypesStandardNC12sV2 ...
-	VirtualMachineSizeTypesStandardNC12sV2 VirtualMachineSizeTypes = "Standard_NC12s_v2"
-	// VirtualMachineSizeTypesStandardNC12sV3 ...
-	VirtualMachineSizeTypesStandardNC12sV3 VirtualMachineSizeTypes = "Standard_NC12s_v3"
-	// VirtualMachineSizeTypesStandardNC24 ...
-	VirtualMachineSizeTypesStandardNC24 VirtualMachineSizeTypes = "Standard_NC24"
-	// VirtualMachineSizeTypesStandardNC24r ...
-	VirtualMachineSizeTypesStandardNC24r VirtualMachineSizeTypes = "Standard_NC24r"
-	// VirtualMachineSizeTypesStandardNC24rsV2 ...
-	VirtualMachineSizeTypesStandardNC24rsV2 VirtualMachineSizeTypes = "Standard_NC24rs_v2"
-	// VirtualMachineSizeTypesStandardNC24rsV3 ...
-	VirtualMachineSizeTypesStandardNC24rsV3 VirtualMachineSizeTypes = "Standard_NC24rs_v3"
-	// VirtualMachineSizeTypesStandardNC24sV2 ...
-	VirtualMachineSizeTypesStandardNC24sV2 VirtualMachineSizeTypes = "Standard_NC24s_v2"
-	// VirtualMachineSizeTypesStandardNC24sV3 ...
-	VirtualMachineSizeTypesStandardNC24sV3 VirtualMachineSizeTypes = "Standard_NC24s_v3"
-	// VirtualMachineSizeTypesStandardNC6 ...
-	VirtualMachineSizeTypesStandardNC6 VirtualMachineSizeTypes = "Standard_NC6"
-	// VirtualMachineSizeTypesStandardNC6sV2 ...
-	VirtualMachineSizeTypesStandardNC6sV2 VirtualMachineSizeTypes = "Standard_NC6s_v2"
-	// VirtualMachineSizeTypesStandardNC6sV3 ...
-	VirtualMachineSizeTypesStandardNC6sV3 VirtualMachineSizeTypes = "Standard_NC6s_v3"
-	// VirtualMachineSizeTypesStandardND12s ...
-	VirtualMachineSizeTypesStandardND12s VirtualMachineSizeTypes = "Standard_ND12s"
-	// VirtualMachineSizeTypesStandardND24rs ...
-	VirtualMachineSizeTypesStandardND24rs VirtualMachineSizeTypes = "Standard_ND24rs"
-	// VirtualMachineSizeTypesStandardND24s ...
-	VirtualMachineSizeTypesStandardND24s VirtualMachineSizeTypes = "Standard_ND24s"
-	// VirtualMachineSizeTypesStandardND6s ...
-	VirtualMachineSizeTypesStandardND6s VirtualMachineSizeTypes = "Standard_ND6s"
-	// VirtualMachineSizeTypesStandardNV12 ...
-	VirtualMachineSizeTypesStandardNV12 VirtualMachineSizeTypes = "Standard_NV12"
-	// VirtualMachineSizeTypesStandardNV24 ...
-	VirtualMachineSizeTypesStandardNV24 VirtualMachineSizeTypes = "Standard_NV24"
-	// VirtualMachineSizeTypesStandardNV6 ...
-	VirtualMachineSizeTypesStandardNV6 VirtualMachineSizeTypes = "Standard_NV6"
-)
-
-// PossibleVirtualMachineSizeTypesValues returns an array of possible values for the VirtualMachineSizeTypes const type.
-func PossibleVirtualMachineSizeTypesValues() []VirtualMachineSizeTypes {
-	return []VirtualMachineSizeTypes{VirtualMachineSizeTypesBasicA0, VirtualMachineSizeTypesBasicA1, VirtualMachineSizeTypesBasicA2, VirtualMachineSizeTypesBasicA3, VirtualMachineSizeTypesBasicA4, VirtualMachineSizeTypesStandardA0, VirtualMachineSizeTypesStandardA1, VirtualMachineSizeTypesStandardA10, VirtualMachineSizeTypesStandardA11, VirtualMachineSizeTypesStandardA1V2, VirtualMachineSizeTypesStandardA2, VirtualMachineSizeTypesStandardA2mV2, VirtualMachineSizeTypesStandardA2V2, VirtualMachineSizeTypesStandardA3, VirtualMachineSizeTypesStandardA4, VirtualMachineSizeTypesStandardA4mV2, VirtualMachineSizeTypesStandardA4V2, VirtualMachineSizeTypesStandardA5, VirtualMachineSizeTypesStandardA6, VirtualMachineSizeTypesStandardA7, VirtualMachineSizeTypesStandardA8, VirtualMachineSizeTypesStandardA8mV2, VirtualMachineSizeTypesStandardA8V2, VirtualMachineSizeTypesStandardA9, VirtualMachineSizeTypesStandardB1ms, VirtualMachineSizeTypesStandardB1s, VirtualMachineSizeTypesStandardB2ms, VirtualMachineSizeTypesStandardB2s, VirtualMachineSizeTypesStandardB4ms, VirtualMachineSizeTypesStandardB8ms, VirtualMachineSizeTypesStandardD1, VirtualMachineSizeTypesStandardD11, VirtualMachineSizeTypesStandardD11V2, VirtualMachineSizeTypesStandardD12, VirtualMachineSizeTypesStandardD12V2, VirtualMachineSizeTypesStandardD13, VirtualMachineSizeTypesStandardD13V2, VirtualMachineSizeTypesStandardD14, VirtualMachineSizeTypesStandardD14V2, VirtualMachineSizeTypesStandardD15V2, VirtualMachineSizeTypesStandardD16sV3, VirtualMachineSizeTypesStandardD16V3, VirtualMachineSizeTypesStandardD1V2, VirtualMachineSizeTypesStandardD2, VirtualMachineSizeTypesStandardD2sV3, VirtualMachineSizeTypesStandardD2V2, VirtualMachineSizeTypesStandardD2V3, VirtualMachineSizeTypesStandardD3, VirtualMachineSizeTypesStandardD32sV3, VirtualMachineSizeTypesStandardD32V3, VirtualMachineSizeTypesStandardD3V2, VirtualMachineSizeTypesStandardD4, VirtualMachineSizeTypesStandardD4sV3, VirtualMachineSizeTypesStandardD4V2, VirtualMachineSizeTypesStandardD4V3, VirtualMachineSizeTypesStandardD5V2, VirtualMachineSizeTypesStandardD64sV3, VirtualMachineSizeTypesStandardD64V3, VirtualMachineSizeTypesStandardD8sV3, VirtualMachineSizeTypesStandardD8V3, VirtualMachineSizeTypesStandardDS1, VirtualMachineSizeTypesStandardDS11, VirtualMachineSizeTypesStandardDS11V2, VirtualMachineSizeTypesStandardDS12, VirtualMachineSizeTypesStandardDS12V2, VirtualMachineSizeTypesStandardDS13, VirtualMachineSizeTypesStandardDS132V2, VirtualMachineSizeTypesStandardDS134V2, VirtualMachineSizeTypesStandardDS13V2, VirtualMachineSizeTypesStandardDS14, VirtualMachineSizeTypesStandardDS144V2, VirtualMachineSizeTypesStandardDS148V2, VirtualMachineSizeTypesStandardDS14V2, VirtualMachineSizeTypesStandardDS15V2, VirtualMachineSizeTypesStandardDS1V2, VirtualMachineSizeTypesStandardDS2, VirtualMachineSizeTypesStandardDS2V2, VirtualMachineSizeTypesStandardDS3, VirtualMachineSizeTypesStandardDS3V2, VirtualMachineSizeTypesStandardDS4, VirtualMachineSizeTypesStandardDS4V2, VirtualMachineSizeTypesStandardDS5V2, VirtualMachineSizeTypesStandardE16sV3, VirtualMachineSizeTypesStandardE16V3, VirtualMachineSizeTypesStandardE2sV3, VirtualMachineSizeTypesStandardE2V3, VirtualMachineSizeTypesStandardE3216V3, VirtualMachineSizeTypesStandardE328sV3, VirtualMachineSizeTypesStandardE32sV3, VirtualMachineSizeTypesStandardE32V3, VirtualMachineSizeTypesStandardE4sV3, VirtualMachineSizeTypesStandardE4V3, VirtualMachineSizeTypesStandardE6416sV3, VirtualMachineSizeTypesStandardE6432sV3, VirtualMachineSizeTypesStandardE64sV3, VirtualMachineSizeTypesStandardE64V3, VirtualMachineSizeTypesStandardE8sV3, VirtualMachineSizeTypesStandardE8V3, VirtualMachineSizeTypesStandardF1, VirtualMachineSizeTypesStandardF16, VirtualMachineSizeTypesStandardF16s, VirtualMachineSizeTypesStandardF16sV2, VirtualMachineSizeTypesStandardF1s, VirtualMachineSizeTypesStandardF2, VirtualMachineSizeTypesStandardF2s, VirtualMachineSizeTypesStandardF2sV2, VirtualMachineSizeTypesStandardF32sV2, VirtualMachineSizeTypesStandardF4, VirtualMachineSizeTypesStandardF4s, VirtualMachineSizeTypesStandardF4sV2, VirtualMachineSizeTypesStandardF64sV2, VirtualMachineSizeTypesStandardF72sV2, VirtualMachineSizeTypesStandardF8, VirtualMachineSizeTypesStandardF8s, VirtualMachineSizeTypesStandardF8sV2, VirtualMachineSizeTypesStandardG1, VirtualMachineSizeTypesStandardG2, VirtualMachineSizeTypesStandardG3, VirtualMachineSizeTypesStandardG4, VirtualMachineSizeTypesStandardG5, VirtualMachineSizeTypesStandardGS1, VirtualMachineSizeTypesStandardGS2, VirtualMachineSizeTypesStandardGS3, VirtualMachineSizeTypesStandardGS4, VirtualMachineSizeTypesStandardGS44, VirtualMachineSizeTypesStandardGS48, VirtualMachineSizeTypesStandardGS5, VirtualMachineSizeTypesStandardGS516, VirtualMachineSizeTypesStandardGS58, VirtualMachineSizeTypesStandardH16, VirtualMachineSizeTypesStandardH16m, VirtualMachineSizeTypesStandardH16mr, VirtualMachineSizeTypesStandardH16r, VirtualMachineSizeTypesStandardH8, VirtualMachineSizeTypesStandardH8m, VirtualMachineSizeTypesStandardL16s, VirtualMachineSizeTypesStandardL32s, VirtualMachineSizeTypesStandardL4s, VirtualMachineSizeTypesStandardL8s, VirtualMachineSizeTypesStandardM12832ms, VirtualMachineSizeTypesStandardM12864ms, VirtualMachineSizeTypesStandardM128ms, VirtualMachineSizeTypesStandardM128s, VirtualMachineSizeTypesStandardM6416ms, VirtualMachineSizeTypesStandardM6432ms, VirtualMachineSizeTypesStandardM64ms, VirtualMachineSizeTypesStandardM64s, VirtualMachineSizeTypesStandardNC12, VirtualMachineSizeTypesStandardNC12sV2, VirtualMachineSizeTypesStandardNC12sV3, VirtualMachineSizeTypesStandardNC24, VirtualMachineSizeTypesStandardNC24r, VirtualMachineSizeTypesStandardNC24rsV2, VirtualMachineSizeTypesStandardNC24rsV3, VirtualMachineSizeTypesStandardNC24sV2, VirtualMachineSizeTypesStandardNC24sV3, VirtualMachineSizeTypesStandardNC6, VirtualMachineSizeTypesStandardNC6sV2, VirtualMachineSizeTypesStandardNC6sV3, VirtualMachineSizeTypesStandardND12s, VirtualMachineSizeTypesStandardND24rs, VirtualMachineSizeTypesStandardND24s, VirtualMachineSizeTypesStandardND6s, VirtualMachineSizeTypesStandardNV12, VirtualMachineSizeTypesStandardNV24, VirtualMachineSizeTypesStandardNV6}
-}
-
 // AccessURI a disk access SAS uri.
 type AccessURI struct {
 	autorest.Response `json:"-"`
@@ -1635,10 +312,15 @@ func (aslr AvailabilitySetListResult) IsEmpty() bool {
 	return aslr.Value == nil || len(*aslr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (aslr AvailabilitySetListResult) hasNextLink() bool {
+	return aslr.NextLink != nil && len(*aslr.NextLink) != 0
+}
+
 // availabilitySetListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (aslr AvailabilitySetListResult) availabilitySetListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if aslr.NextLink == nil || len(to.String(aslr.NextLink)) < 1 {
+	if !aslr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -1666,11 +348,16 @@ func (page *AvailabilitySetListResultPage) NextWithContext(ctx context.Context) 
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.aslr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.aslr)
+		if err != nil {
+			return err
+		}
+		page.aslr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.aslr = next
 	return nil
 }
 
@@ -1700,8 +387,11 @@ func (page AvailabilitySetListResultPage) Values() []AvailabilitySet {
 }
 
 // Creates a new instance of the AvailabilitySetListResultPage type.
-func NewAvailabilitySetListResultPage(getNextPage func(context.Context, AvailabilitySetListResult) (AvailabilitySetListResult, error)) AvailabilitySetListResultPage {
-	return AvailabilitySetListResultPage{fn: getNextPage}
+func NewAvailabilitySetListResultPage(cur AvailabilitySetListResult, getNextPage func(context.Context, AvailabilitySetListResult) (AvailabilitySetListResult, error)) AvailabilitySetListResultPage {
+	return AvailabilitySetListResultPage{
+		fn:   getNextPage,
+		aslr: cur,
+	}
 }
 
 // AvailabilitySetProperties the instance view of a resource.
@@ -1716,6 +406,24 @@ type AvailabilitySetProperties struct {
 	ProximityPlacementGroup *SubResource `json:"proximityPlacementGroup,omitempty"`
 	// Statuses - READ-ONLY; The resource status information.
 	Statuses *[]InstanceViewStatus `json:"statuses,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for AvailabilitySetProperties.
+func (asp AvailabilitySetProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if asp.PlatformUpdateDomainCount != nil {
+		objectMap["platformUpdateDomainCount"] = asp.PlatformUpdateDomainCount
+	}
+	if asp.PlatformFaultDomainCount != nil {
+		objectMap["platformFaultDomainCount"] = asp.PlatformFaultDomainCount
+	}
+	if asp.VirtualMachines != nil {
+		objectMap["virtualMachines"] = asp.VirtualMachines
+	}
+	if asp.ProximityPlacementGroup != nil {
+		objectMap["proximityPlacementGroup"] = asp.ProximityPlacementGroup
+	}
+	return json.Marshal(objectMap)
 }
 
 // AvailabilitySetUpdate specifies information about the availability set that the virtual machine should
@@ -1931,6 +639,24 @@ type ContainerServiceAgentPoolProfile struct {
 	Fqdn *string `json:"fqdn,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ContainerServiceAgentPoolProfile.
+func (csapp ContainerServiceAgentPoolProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if csapp.Name != nil {
+		objectMap["name"] = csapp.Name
+	}
+	if csapp.Count != nil {
+		objectMap["count"] = csapp.Count
+	}
+	if csapp.VMSize != "" {
+		objectMap["vmSize"] = csapp.VMSize
+	}
+	if csapp.DNSPrefix != nil {
+		objectMap["dnsPrefix"] = csapp.DNSPrefix
+	}
+	return json.Marshal(objectMap)
+}
+
 // ContainerServiceCustomProfile properties to configure a custom container service cluster.
 type ContainerServiceCustomProfile struct {
 	// Orchestrator - The name of the custom orchestrator to use.
@@ -2028,10 +754,15 @@ func (cslr ContainerServiceListResult) IsEmpty() bool {
 	return cslr.Value == nil || len(*cslr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (cslr ContainerServiceListResult) hasNextLink() bool {
+	return cslr.NextLink != nil && len(*cslr.NextLink) != 0
+}
+
 // containerServiceListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (cslr ContainerServiceListResult) containerServiceListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if cslr.NextLink == nil || len(to.String(cslr.NextLink)) < 1 {
+	if !cslr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -2059,11 +790,16 @@ func (page *ContainerServiceListResultPage) NextWithContext(ctx context.Context)
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.cslr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.cslr)
+		if err != nil {
+			return err
+		}
+		page.cslr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.cslr = next
 	return nil
 }
 
@@ -2093,8 +829,11 @@ func (page ContainerServiceListResultPage) Values() []ContainerService {
 }
 
 // Creates a new instance of the ContainerServiceListResultPage type.
-func NewContainerServiceListResultPage(getNextPage func(context.Context, ContainerServiceListResult) (ContainerServiceListResult, error)) ContainerServiceListResultPage {
-	return ContainerServiceListResultPage{fn: getNextPage}
+func NewContainerServiceListResultPage(cur ContainerServiceListResult, getNextPage func(context.Context, ContainerServiceListResult) (ContainerServiceListResult, error)) ContainerServiceListResultPage {
+	return ContainerServiceListResultPage{
+		fn:   getNextPage,
+		cslr: cur,
+	}
 }
 
 // ContainerServiceMasterProfile profile for the container service master.
@@ -2105,6 +844,18 @@ type ContainerServiceMasterProfile struct {
 	DNSPrefix *string `json:"dnsPrefix,omitempty"`
 	// Fqdn - READ-ONLY; FQDN for the master.
 	Fqdn *string `json:"fqdn,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ContainerServiceMasterProfile.
+func (csmp ContainerServiceMasterProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if csmp.Count != nil {
+		objectMap["count"] = csmp.Count
+	}
+	if csmp.DNSPrefix != nil {
+		objectMap["dnsPrefix"] = csmp.DNSPrefix
+	}
+	return json.Marshal(objectMap)
 }
 
 // ContainerServiceOrchestratorProfile profile for the container service orchestrator.
@@ -2135,56 +886,52 @@ type ContainerServiceProperties struct {
 	DiagnosticsProfile *ContainerServiceDiagnosticsProfile `json:"diagnosticsProfile,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ContainerServiceProperties.
+func (csp ContainerServiceProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if csp.OrchestratorProfile != nil {
+		objectMap["orchestratorProfile"] = csp.OrchestratorProfile
+	}
+	if csp.CustomProfile != nil {
+		objectMap["customProfile"] = csp.CustomProfile
+	}
+	if csp.ServicePrincipalProfile != nil {
+		objectMap["servicePrincipalProfile"] = csp.ServicePrincipalProfile
+	}
+	if csp.MasterProfile != nil {
+		objectMap["masterProfile"] = csp.MasterProfile
+	}
+	if csp.AgentPoolProfiles != nil {
+		objectMap["agentPoolProfiles"] = csp.AgentPoolProfiles
+	}
+	if csp.WindowsProfile != nil {
+		objectMap["windowsProfile"] = csp.WindowsProfile
+	}
+	if csp.LinuxProfile != nil {
+		objectMap["linuxProfile"] = csp.LinuxProfile
+	}
+	if csp.DiagnosticsProfile != nil {
+		objectMap["diagnosticsProfile"] = csp.DiagnosticsProfile
+	}
+	return json.Marshal(objectMap)
+}
+
 // ContainerServicesCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type ContainerServicesCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *ContainerServicesCreateOrUpdateFuture) Result(client ContainerServicesClient) (cs ContainerService, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ContainerServicesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.ContainerServicesCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if cs.Response.Response, err = future.GetResult(sender); err == nil && cs.Response.Response.StatusCode != http.StatusNoContent {
-		cs, err = client.CreateOrUpdateResponder(cs.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.ContainerServicesCreateOrUpdateFuture", "Result", cs.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ContainerServicesClient) (ContainerService, error)
 }
 
 // ContainerServicesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type ContainerServicesDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *ContainerServicesDeleteFuture) Result(client ContainerServicesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ContainerServicesDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.ContainerServicesDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ContainerServicesClient) (autorest.Response, error)
 }
 
 // ContainerServiceServicePrincipalProfile information about a service principal identity for the cluster
@@ -2216,6 +963,15 @@ type ContainerServiceVMDiagnostics struct {
 	StorageURI *string `json:"storageUri,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ContainerServiceVMDiagnostics.
+func (csvd ContainerServiceVMDiagnostics) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if csvd.Enabled != nil {
+		objectMap["enabled"] = csvd.Enabled
+	}
+	return json.Marshal(objectMap)
+}
+
 // ContainerServiceWindowsProfile profile for Windows VMs in the container service cluster.
 type ContainerServiceWindowsProfile struct {
 	// AdminUsername - The administrator username to use for Windows VMs.
@@ -2240,6 +996,30 @@ type CreationData struct {
 	SourceUniqueID *string `json:"sourceUniqueId,omitempty"`
 	// UploadSizeBytes - If createOption is Upload, this is the size of the contents of the upload including the VHD footer. This value should be between 20972032 (20 MiB + 512 bytes for the VHD footer) and 35183298347520 bytes (32 TiB + 512 bytes for the VHD footer).
 	UploadSizeBytes *int64 `json:"uploadSizeBytes,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for CreationData.
+func (cd CreationData) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if cd.CreateOption != "" {
+		objectMap["createOption"] = cd.CreateOption
+	}
+	if cd.StorageAccountID != nil {
+		objectMap["storageAccountId"] = cd.StorageAccountID
+	}
+	if cd.ImageReference != nil {
+		objectMap["imageReference"] = cd.ImageReference
+	}
+	if cd.SourceURI != nil {
+		objectMap["sourceUri"] = cd.SourceURI
+	}
+	if cd.SourceResourceID != nil {
+		objectMap["sourceResourceId"] = cd.SourceResourceID
+	}
+	if cd.UploadSizeBytes != nil {
+		objectMap["uploadSizeBytes"] = cd.UploadSizeBytes
+	}
+	return json.Marshal(objectMap)
 }
 
 // DataDisk describes a data disk.
@@ -2268,6 +1048,42 @@ type DataDisk struct {
 	DiskIOPSReadWrite *int64 `json:"diskIOPSReadWrite,omitempty"`
 	// DiskMBpsReadWrite - READ-ONLY; Specifies the bandwidth in MB per second for the managed disk when StorageAccountType is UltraSSD_LRS. Returned only for VirtualMachine ScaleSet VM disks. Can be updated only via updates to the VirtualMachine Scale Set.
 	DiskMBpsReadWrite *int64 `json:"diskMBpsReadWrite,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DataDisk.
+func (dd DataDisk) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dd.Lun != nil {
+		objectMap["lun"] = dd.Lun
+	}
+	if dd.Name != nil {
+		objectMap["name"] = dd.Name
+	}
+	if dd.Vhd != nil {
+		objectMap["vhd"] = dd.Vhd
+	}
+	if dd.Image != nil {
+		objectMap["image"] = dd.Image
+	}
+	if dd.Caching != "" {
+		objectMap["caching"] = dd.Caching
+	}
+	if dd.WriteAcceleratorEnabled != nil {
+		objectMap["writeAcceleratorEnabled"] = dd.WriteAcceleratorEnabled
+	}
+	if dd.CreateOption != "" {
+		objectMap["createOption"] = dd.CreateOption
+	}
+	if dd.DiskSizeGB != nil {
+		objectMap["diskSizeGB"] = dd.DiskSizeGB
+	}
+	if dd.ManagedDisk != nil {
+		objectMap["managedDisk"] = dd.ManagedDisk
+	}
+	if dd.ToBeDetached != nil {
+		objectMap["toBeDetached"] = dd.ToBeDetached
+	}
+	return json.Marshal(objectMap)
 }
 
 // DataDiskImage contains the data disk images information.
@@ -2598,10 +1414,15 @@ func (dhglr DedicatedHostGroupListResult) IsEmpty() bool {
 	return dhglr.Value == nil || len(*dhglr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (dhglr DedicatedHostGroupListResult) hasNextLink() bool {
+	return dhglr.NextLink != nil && len(*dhglr.NextLink) != 0
+}
+
 // dedicatedHostGroupListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (dhglr DedicatedHostGroupListResult) dedicatedHostGroupListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if dhglr.NextLink == nil || len(to.String(dhglr.NextLink)) < 1 {
+	if !dhglr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -2629,11 +1450,16 @@ func (page *DedicatedHostGroupListResultPage) NextWithContext(ctx context.Contex
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.dhglr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.dhglr)
+		if err != nil {
+			return err
+		}
+		page.dhglr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.dhglr = next
 	return nil
 }
 
@@ -2663,8 +1489,11 @@ func (page DedicatedHostGroupListResultPage) Values() []DedicatedHostGroup {
 }
 
 // Creates a new instance of the DedicatedHostGroupListResultPage type.
-func NewDedicatedHostGroupListResultPage(getNextPage func(context.Context, DedicatedHostGroupListResult) (DedicatedHostGroupListResult, error)) DedicatedHostGroupListResultPage {
-	return DedicatedHostGroupListResultPage{fn: getNextPage}
+func NewDedicatedHostGroupListResultPage(cur DedicatedHostGroupListResult, getNextPage func(context.Context, DedicatedHostGroupListResult) (DedicatedHostGroupListResult, error)) DedicatedHostGroupListResultPage {
+	return DedicatedHostGroupListResultPage{
+		fn:    getNextPage,
+		dhglr: cur,
+	}
 }
 
 // DedicatedHostGroupProperties dedicated Host Group Properties.
@@ -2673,6 +1502,15 @@ type DedicatedHostGroupProperties struct {
 	PlatformFaultDomainCount *int32 `json:"platformFaultDomainCount,omitempty"`
 	// Hosts - READ-ONLY; A list of references to all dedicated hosts in the dedicated host group.
 	Hosts *[]SubResourceReadOnly `json:"hosts,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DedicatedHostGroupProperties.
+func (dhgp DedicatedHostGroupProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dhgp.PlatformFaultDomainCount != nil {
+		objectMap["platformFaultDomainCount"] = dhgp.PlatformFaultDomainCount
+	}
+	return json.Marshal(objectMap)
 }
 
 // DedicatedHostGroupUpdate specifies information about the dedicated host group that the dedicated host
@@ -2752,6 +1590,18 @@ type DedicatedHostInstanceView struct {
 	Statuses *[]InstanceViewStatus `json:"statuses,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for DedicatedHostInstanceView.
+func (dhiv DedicatedHostInstanceView) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dhiv.AvailableCapacity != nil {
+		objectMap["availableCapacity"] = dhiv.AvailableCapacity
+	}
+	if dhiv.Statuses != nil {
+		objectMap["statuses"] = dhiv.Statuses
+	}
+	return json.Marshal(objectMap)
+}
+
 // DedicatedHostListResult the list dedicated host operation response.
 type DedicatedHostListResult struct {
 	autorest.Response `json:"-"`
@@ -2829,10 +1679,15 @@ func (dhlr DedicatedHostListResult) IsEmpty() bool {
 	return dhlr.Value == nil || len(*dhlr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (dhlr DedicatedHostListResult) hasNextLink() bool {
+	return dhlr.NextLink != nil && len(*dhlr.NextLink) != 0
+}
+
 // dedicatedHostListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (dhlr DedicatedHostListResult) dedicatedHostListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if dhlr.NextLink == nil || len(to.String(dhlr.NextLink)) < 1 {
+	if !dhlr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -2860,11 +1715,16 @@ func (page *DedicatedHostListResultPage) NextWithContext(ctx context.Context) (e
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.dhlr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.dhlr)
+		if err != nil {
+			return err
+		}
+		page.dhlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.dhlr = next
 	return nil
 }
 
@@ -2894,8 +1754,11 @@ func (page DedicatedHostListResultPage) Values() []DedicatedHost {
 }
 
 // Creates a new instance of the DedicatedHostListResultPage type.
-func NewDedicatedHostListResultPage(getNextPage func(context.Context, DedicatedHostListResult) (DedicatedHostListResult, error)) DedicatedHostListResultPage {
-	return DedicatedHostListResultPage{fn: getNextPage}
+func NewDedicatedHostListResultPage(cur DedicatedHostListResult, getNextPage func(context.Context, DedicatedHostListResult) (DedicatedHostListResult, error)) DedicatedHostListResultPage {
+	return DedicatedHostListResultPage{
+		fn:   getNextPage,
+		dhlr: cur,
+	}
 }
 
 // DedicatedHostProperties properties of the dedicated host.
@@ -2918,85 +1781,46 @@ type DedicatedHostProperties struct {
 	InstanceView *DedicatedHostInstanceView `json:"instanceView,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for DedicatedHostProperties.
+func (dhp DedicatedHostProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dhp.PlatformFaultDomain != nil {
+		objectMap["platformFaultDomain"] = dhp.PlatformFaultDomain
+	}
+	if dhp.AutoReplaceOnFailure != nil {
+		objectMap["autoReplaceOnFailure"] = dhp.AutoReplaceOnFailure
+	}
+	if dhp.LicenseType != "" {
+		objectMap["licenseType"] = dhp.LicenseType
+	}
+	return json.Marshal(objectMap)
+}
+
 // DedicatedHostsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type DedicatedHostsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DedicatedHostsCreateOrUpdateFuture) Result(client DedicatedHostsClient) (dh DedicatedHost, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DedicatedHostsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DedicatedHostsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if dh.Response.Response, err = future.GetResult(sender); err == nil && dh.Response.Response.StatusCode != http.StatusNoContent {
-		dh, err = client.CreateOrUpdateResponder(dh.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DedicatedHostsCreateOrUpdateFuture", "Result", dh.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DedicatedHostsClient) (DedicatedHost, error)
 }
 
 // DedicatedHostsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type DedicatedHostsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DedicatedHostsDeleteFuture) Result(client DedicatedHostsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DedicatedHostsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DedicatedHostsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DedicatedHostsClient) (autorest.Response, error)
 }
 
 // DedicatedHostsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type DedicatedHostsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DedicatedHostsUpdateFuture) Result(client DedicatedHostsClient) (dh DedicatedHost, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DedicatedHostsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DedicatedHostsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if dh.Response.Response, err = future.GetResult(sender); err == nil && dh.Response.Response.StatusCode != http.StatusNoContent {
-		dh, err = client.UpdateResponder(dh.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DedicatedHostsUpdateFuture", "Result", dh.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DedicatedHostsClient) (DedicatedHost, error)
 }
 
 // DedicatedHostUpdate specifies information about the dedicated host. Only tags, autoReplaceOnFailure and
@@ -3400,10 +2224,15 @@ func (desl DiskEncryptionSetList) IsEmpty() bool {
 	return desl.Value == nil || len(*desl.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (desl DiskEncryptionSetList) hasNextLink() bool {
+	return desl.NextLink != nil && len(*desl.NextLink) != 0
+}
+
 // diskEncryptionSetListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (desl DiskEncryptionSetList) diskEncryptionSetListPreparer(ctx context.Context) (*http.Request, error) {
-	if desl.NextLink == nil || len(to.String(desl.NextLink)) < 1 {
+	if !desl.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -3431,11 +2260,16 @@ func (page *DiskEncryptionSetListPage) NextWithContext(ctx context.Context) (err
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.desl)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.desl)
+		if err != nil {
+			return err
+		}
+		page.desl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.desl = next
 	return nil
 }
 
@@ -3465,8 +2299,11 @@ func (page DiskEncryptionSetListPage) Values() []DiskEncryptionSet {
 }
 
 // Creates a new instance of the DiskEncryptionSetListPage type.
-func NewDiskEncryptionSetListPage(getNextPage func(context.Context, DiskEncryptionSetList) (DiskEncryptionSetList, error)) DiskEncryptionSetListPage {
-	return DiskEncryptionSetListPage{fn: getNextPage}
+func NewDiskEncryptionSetListPage(cur DiskEncryptionSetList, getNextPage func(context.Context, DiskEncryptionSetList) (DiskEncryptionSetList, error)) DiskEncryptionSetListPage {
+	return DiskEncryptionSetListPage{
+		fn:   getNextPage,
+		desl: cur,
+	}
 }
 
 // DiskEncryptionSetParameters describes the parameter of customer managed disk encryption set resource id
@@ -3480,82 +2317,28 @@ type DiskEncryptionSetParameters struct {
 // DiskEncryptionSetsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type DiskEncryptionSetsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DiskEncryptionSetsCreateOrUpdateFuture) Result(client DiskEncryptionSetsClient) (desVar DiskEncryptionSet, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DiskEncryptionSetsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if desVar.Response.Response, err = future.GetResult(sender); err == nil && desVar.Response.Response.StatusCode != http.StatusNoContent {
-		desVar, err = client.CreateOrUpdateResponder(desVar.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsCreateOrUpdateFuture", "Result", desVar.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DiskEncryptionSetsClient) (DiskEncryptionSet, error)
 }
 
 // DiskEncryptionSetsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type DiskEncryptionSetsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DiskEncryptionSetsDeleteFuture) Result(client DiskEncryptionSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DiskEncryptionSetsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DiskEncryptionSetsClient) (autorest.Response, error)
 }
 
 // DiskEncryptionSetsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type DiskEncryptionSetsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DiskEncryptionSetsUpdateFuture) Result(client DiskEncryptionSetsClient) (desVar DiskEncryptionSet, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DiskEncryptionSetsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if desVar.Response.Response, err = future.GetResult(sender); err == nil && desVar.Response.Response.StatusCode != http.StatusNoContent {
-		desVar, err = client.UpdateResponder(desVar.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DiskEncryptionSetsUpdateFuture", "Result", desVar.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DiskEncryptionSetsClient) (DiskEncryptionSet, error)
 }
 
 // DiskEncryptionSettings describes a Encryption Settings for a Disk
@@ -3712,10 +2495,15 @@ func (dl DiskList) IsEmpty() bool {
 	return dl.Value == nil || len(*dl.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (dl DiskList) hasNextLink() bool {
+	return dl.NextLink != nil && len(*dl.NextLink) != 0
+}
+
 // diskListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (dl DiskList) diskListPreparer(ctx context.Context) (*http.Request, error) {
-	if dl.NextLink == nil || len(to.String(dl.NextLink)) < 1 {
+	if !dl.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -3743,11 +2531,16 @@ func (page *DiskListPage) NextWithContext(ctx context.Context) (err error) {
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.dl)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.dl)
+		if err != nil {
+			return err
+		}
+		page.dl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.dl = next
 	return nil
 }
 
@@ -3777,8 +2570,11 @@ func (page DiskListPage) Values() []Disk {
 }
 
 // Creates a new instance of the DiskListPage type.
-func NewDiskListPage(getNextPage func(context.Context, DiskList) (DiskList, error)) DiskListPage {
-	return DiskListPage{fn: getNextPage}
+func NewDiskListPage(cur DiskList, getNextPage func(context.Context, DiskList) (DiskList, error)) DiskListPage {
+	return DiskListPage{
+		fn: getNextPage,
+		dl: cur,
+	}
 }
 
 // DiskProperties disk resource properties.
@@ -3811,84 +2607,60 @@ type DiskProperties struct {
 	Encryption *Encryption `json:"encryption,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for DiskProperties.
+func (dp DiskProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dp.OsType != "" {
+		objectMap["osType"] = dp.OsType
+	}
+	if dp.HyperVGeneration != "" {
+		objectMap["hyperVGeneration"] = dp.HyperVGeneration
+	}
+	if dp.CreationData != nil {
+		objectMap["creationData"] = dp.CreationData
+	}
+	if dp.DiskSizeGB != nil {
+		objectMap["diskSizeGB"] = dp.DiskSizeGB
+	}
+	if dp.EncryptionSettingsCollection != nil {
+		objectMap["encryptionSettingsCollection"] = dp.EncryptionSettingsCollection
+	}
+	if dp.DiskIOPSReadWrite != nil {
+		objectMap["diskIOPSReadWrite"] = dp.DiskIOPSReadWrite
+	}
+	if dp.DiskMBpsReadWrite != nil {
+		objectMap["diskMBpsReadWrite"] = dp.DiskMBpsReadWrite
+	}
+	if dp.Encryption != nil {
+		objectMap["encryption"] = dp.Encryption
+	}
+	return json.Marshal(objectMap)
+}
+
 // DisksCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type DisksCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DisksCreateOrUpdateFuture) Result(client DisksClient) (d Disk, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DisksCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DisksCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if d.Response.Response, err = future.GetResult(sender); err == nil && d.Response.Response.StatusCode != http.StatusNoContent {
-		d, err = client.CreateOrUpdateResponder(d.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DisksCreateOrUpdateFuture", "Result", d.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DisksClient) (Disk, error)
 }
 
 // DisksDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
 type DisksDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DisksDeleteFuture) Result(client DisksClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DisksDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DisksDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DisksClient) (autorest.Response, error)
 }
 
 // DisksGrantAccessFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type DisksGrantAccessFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DisksGrantAccessFuture) Result(client DisksClient) (au AccessURI, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DisksGrantAccessFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DisksGrantAccessFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if au.Response.Response, err = future.GetResult(sender); err == nil && au.Response.Response.StatusCode != http.StatusNoContent {
-		au, err = client.GrantAccessResponder(au.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DisksGrantAccessFuture", "Result", au.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DisksClient) (AccessURI, error)
 }
 
 // DiskSku the disks sku name. Can be Standard_LRS, Premium_LRS, StandardSSD_LRS, or UltraSSD_LRS.
@@ -3899,55 +2671,30 @@ type DiskSku struct {
 	Tier *string `json:"tier,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for DiskSku.
+func (ds DiskSku) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ds.Name != "" {
+		objectMap["name"] = ds.Name
+	}
+	return json.Marshal(objectMap)
+}
+
 // DisksRevokeAccessFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type DisksRevokeAccessFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DisksRevokeAccessFuture) Result(client DisksClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DisksRevokeAccessFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DisksRevokeAccessFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DisksClient) (autorest.Response, error)
 }
 
 // DisksUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
 type DisksUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *DisksUpdateFuture) Result(client DisksClient) (d Disk, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.DisksUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.DisksUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if d.Response.Response, err = future.GetResult(sender); err == nil && d.Response.Response.StatusCode != http.StatusNoContent {
-		d, err = client.UpdateResponder(d.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.DisksUpdateFuture", "Result", d.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(DisksClient) (Disk, error)
 }
 
 // DiskUpdate disk update resource.
@@ -4050,6 +2797,15 @@ type EncryptionSetIdentity struct {
 	TenantID *string `json:"tenantId,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for EncryptionSetIdentity.
+func (esi EncryptionSetIdentity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if esi.Type != "" {
+		objectMap["type"] = esi.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // EncryptionSetProperties ...
 type EncryptionSetProperties struct {
 	// ActiveKey - The key vault key which is currently used by this disk encryption set.
@@ -4058,6 +2814,15 @@ type EncryptionSetProperties struct {
 	PreviousKeys *[]KeyVaultAndKeyReference `json:"previousKeys,omitempty"`
 	// ProvisioningState - READ-ONLY; The disk encryption set provisioning state.
 	ProvisioningState *string `json:"provisioningState,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for EncryptionSetProperties.
+func (esp EncryptionSetProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if esp.ActiveKey != nil {
+		objectMap["activeKey"] = esp.ActiveKey
+	}
+	return json.Marshal(objectMap)
 }
 
 // EncryptionSettingsCollection encryption settings for disk or snapshot
@@ -4081,82 +2846,28 @@ type EncryptionSettingsElement struct {
 // GalleriesCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type GalleriesCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleriesCreateOrUpdateFuture) Result(client GalleriesClient) (g Gallery, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleriesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleriesCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if g.Response.Response, err = future.GetResult(sender); err == nil && g.Response.Response.StatusCode != http.StatusNoContent {
-		g, err = client.CreateOrUpdateResponder(g.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleriesCreateOrUpdateFuture", "Result", g.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleriesClient) (Gallery, error)
 }
 
 // GalleriesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type GalleriesDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleriesDeleteFuture) Result(client GalleriesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleriesDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleriesDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleriesClient) (autorest.Response, error)
 }
 
 // GalleriesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type GalleriesUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleriesUpdateFuture) Result(client GalleriesClient) (g Gallery, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleriesUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleriesUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if g.Response.Response, err = future.GetResult(sender); err == nil && g.Response.Response.StatusCode != http.StatusNoContent {
-		g, err = client.UpdateResponder(g.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleriesUpdateFuture", "Result", g.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleriesClient) (Gallery, error)
 }
 
 // Gallery specifies information about the Shared Image Gallery that you want to create or update.
@@ -4437,10 +3148,15 @@ func (gal GalleryApplicationList) IsEmpty() bool {
 	return gal.Value == nil || len(*gal.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (gal GalleryApplicationList) hasNextLink() bool {
+	return gal.NextLink != nil && len(*gal.NextLink) != 0
+}
+
 // galleryApplicationListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (gal GalleryApplicationList) galleryApplicationListPreparer(ctx context.Context) (*http.Request, error) {
-	if gal.NextLink == nil || len(to.String(gal.NextLink)) < 1 {
+	if !gal.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -4468,11 +3184,16 @@ func (page *GalleryApplicationListPage) NextWithContext(ctx context.Context) (er
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.gal)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.gal)
+		if err != nil {
+			return err
+		}
+		page.gal = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.gal = next
 	return nil
 }
 
@@ -4502,8 +3223,11 @@ func (page GalleryApplicationListPage) Values() []GalleryApplication {
 }
 
 // Creates a new instance of the GalleryApplicationListPage type.
-func NewGalleryApplicationListPage(getNextPage func(context.Context, GalleryApplicationList) (GalleryApplicationList, error)) GalleryApplicationListPage {
-	return GalleryApplicationListPage{fn: getNextPage}
+func NewGalleryApplicationListPage(cur GalleryApplicationList, getNextPage func(context.Context, GalleryApplicationList) (GalleryApplicationList, error)) GalleryApplicationListPage {
+	return GalleryApplicationListPage{
+		fn:  getNextPage,
+		gal: cur,
+	}
 }
 
 // GalleryApplicationProperties describes the properties of a gallery Application Definition.
@@ -4525,82 +3249,28 @@ type GalleryApplicationProperties struct {
 // GalleryApplicationsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryApplicationsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryApplicationsCreateOrUpdateFuture) Result(client GalleryApplicationsClient) (ga GalleryApplication, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if ga.Response.Response, err = future.GetResult(sender); err == nil && ga.Response.Response.StatusCode != http.StatusNoContent {
-		ga, err = client.CreateOrUpdateResponder(ga.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsCreateOrUpdateFuture", "Result", ga.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryApplicationsClient) (GalleryApplication, error)
 }
 
 // GalleryApplicationsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryApplicationsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryApplicationsDeleteFuture) Result(client GalleryApplicationsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryApplicationsClient) (autorest.Response, error)
 }
 
 // GalleryApplicationsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryApplicationsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryApplicationsUpdateFuture) Result(client GalleryApplicationsClient) (ga GalleryApplication, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if ga.Response.Response, err = future.GetResult(sender); err == nil && ga.Response.Response.StatusCode != http.StatusNoContent {
-		ga, err = client.UpdateResponder(ga.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryApplicationsUpdateFuture", "Result", ga.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryApplicationsClient) (GalleryApplication, error)
 }
 
 // GalleryApplicationUpdate specifies information about the gallery Application Definition that you want to
@@ -4835,10 +3505,15 @@ func (gavl GalleryApplicationVersionList) IsEmpty() bool {
 	return gavl.Value == nil || len(*gavl.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (gavl GalleryApplicationVersionList) hasNextLink() bool {
+	return gavl.NextLink != nil && len(*gavl.NextLink) != 0
+}
+
 // galleryApplicationVersionListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (gavl GalleryApplicationVersionList) galleryApplicationVersionListPreparer(ctx context.Context) (*http.Request, error) {
-	if gavl.NextLink == nil || len(to.String(gavl.NextLink)) < 1 {
+	if !gavl.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -4866,11 +3541,16 @@ func (page *GalleryApplicationVersionListPage) NextWithContext(ctx context.Conte
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.gavl)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.gavl)
+		if err != nil {
+			return err
+		}
+		page.gavl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.gavl = next
 	return nil
 }
 
@@ -4900,8 +3580,11 @@ func (page GalleryApplicationVersionListPage) Values() []GalleryApplicationVersi
 }
 
 // Creates a new instance of the GalleryApplicationVersionListPage type.
-func NewGalleryApplicationVersionListPage(getNextPage func(context.Context, GalleryApplicationVersionList) (GalleryApplicationVersionList, error)) GalleryApplicationVersionListPage {
-	return GalleryApplicationVersionListPage{fn: getNextPage}
+func NewGalleryApplicationVersionListPage(cur GalleryApplicationVersionList, getNextPage func(context.Context, GalleryApplicationVersionList) (GalleryApplicationVersionList, error)) GalleryApplicationVersionListPage {
+	return GalleryApplicationVersionListPage{
+		fn:   getNextPage,
+		gavl: cur,
+	}
 }
 
 // GalleryApplicationVersionProperties describes the properties of a gallery Image Version.
@@ -4911,6 +3594,15 @@ type GalleryApplicationVersionProperties struct {
 	ProvisioningState ProvisioningState1 `json:"provisioningState,omitempty"`
 	// ReplicationStatus - READ-ONLY
 	ReplicationStatus *ReplicationStatus `json:"replicationStatus,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryApplicationVersionProperties.
+func (gavp GalleryApplicationVersionProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gavp.PublishingProfile != nil {
+		objectMap["publishingProfile"] = gavp.PublishingProfile
+	}
+	return json.Marshal(objectMap)
 }
 
 // GalleryApplicationVersionPublishingProfile the publishing profile of a gallery Image Version.
@@ -4934,85 +3626,61 @@ type GalleryApplicationVersionPublishingProfile struct {
 	StorageAccountType StorageAccountType `json:"storageAccountType,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GalleryApplicationVersionPublishingProfile.
+func (gavpp GalleryApplicationVersionPublishingProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gavpp.Source != nil {
+		objectMap["source"] = gavpp.Source
+	}
+	if gavpp.ContentType != nil {
+		objectMap["contentType"] = gavpp.ContentType
+	}
+	if gavpp.EnableHealthCheck != nil {
+		objectMap["enableHealthCheck"] = gavpp.EnableHealthCheck
+	}
+	if gavpp.TargetRegions != nil {
+		objectMap["targetRegions"] = gavpp.TargetRegions
+	}
+	if gavpp.ReplicaCount != nil {
+		objectMap["replicaCount"] = gavpp.ReplicaCount
+	}
+	if gavpp.ExcludeFromLatest != nil {
+		objectMap["excludeFromLatest"] = gavpp.ExcludeFromLatest
+	}
+	if gavpp.EndOfLifeDate != nil {
+		objectMap["endOfLifeDate"] = gavpp.EndOfLifeDate
+	}
+	if gavpp.StorageAccountType != "" {
+		objectMap["storageAccountType"] = gavpp.StorageAccountType
+	}
+	return json.Marshal(objectMap)
+}
+
 // GalleryApplicationVersionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results
 // of a long-running operation.
 type GalleryApplicationVersionsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryApplicationVersionsCreateOrUpdateFuture) Result(client GalleryApplicationVersionsClient) (gav GalleryApplicationVersion, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationVersionsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if gav.Response.Response, err = future.GetResult(sender); err == nil && gav.Response.Response.StatusCode != http.StatusNoContent {
-		gav, err = client.CreateOrUpdateResponder(gav.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsCreateOrUpdateFuture", "Result", gav.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryApplicationVersionsClient) (GalleryApplicationVersion, error)
 }
 
 // GalleryApplicationVersionsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryApplicationVersionsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryApplicationVersionsDeleteFuture) Result(client GalleryApplicationVersionsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationVersionsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryApplicationVersionsClient) (autorest.Response, error)
 }
 
 // GalleryApplicationVersionsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryApplicationVersionsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryApplicationVersionsUpdateFuture) Result(client GalleryApplicationVersionsClient) (gav GalleryApplicationVersion, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryApplicationVersionsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if gav.Response.Response, err = future.GetResult(sender); err == nil && gav.Response.Response.StatusCode != http.StatusNoContent {
-		gav, err = client.UpdateResponder(gav.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryApplicationVersionsUpdateFuture", "Result", gav.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryApplicationVersionsClient) (GalleryApplicationVersion, error)
 }
 
 // GalleryApplicationVersionUpdate specifies information about the gallery Application Version that you
@@ -5084,6 +3752,27 @@ type GalleryArtifactPublishingProfileBase struct {
 	StorageAccountType StorageAccountType `json:"storageAccountType,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GalleryArtifactPublishingProfileBase.
+func (gappb GalleryArtifactPublishingProfileBase) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gappb.TargetRegions != nil {
+		objectMap["targetRegions"] = gappb.TargetRegions
+	}
+	if gappb.ReplicaCount != nil {
+		objectMap["replicaCount"] = gappb.ReplicaCount
+	}
+	if gappb.ExcludeFromLatest != nil {
+		objectMap["excludeFromLatest"] = gappb.ExcludeFromLatest
+	}
+	if gappb.EndOfLifeDate != nil {
+		objectMap["endOfLifeDate"] = gappb.EndOfLifeDate
+	}
+	if gappb.StorageAccountType != "" {
+		objectMap["storageAccountType"] = gappb.StorageAccountType
+	}
+	return json.Marshal(objectMap)
+}
+
 // GalleryArtifactSource the source image from which the Image Version is going to be created.
 type GalleryArtifactSource struct {
 	ManagedImage *ManagedArtifact `json:"managedImage,omitempty"`
@@ -5106,6 +3795,21 @@ type GalleryDataDiskImage struct {
 	Source      *GalleryArtifactVersionSource `json:"source,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GalleryDataDiskImage.
+func (gddi GalleryDataDiskImage) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gddi.Lun != nil {
+		objectMap["lun"] = gddi.Lun
+	}
+	if gddi.HostCaching != "" {
+		objectMap["hostCaching"] = gddi.HostCaching
+	}
+	if gddi.Source != nil {
+		objectMap["source"] = gddi.Source
+	}
+	return json.Marshal(objectMap)
+}
+
 // GalleryDiskImage this is the disk image base class.
 type GalleryDiskImage struct {
 	// SizeInGB - READ-ONLY; This property indicates the size of the VHD to be created.
@@ -5113,6 +3817,18 @@ type GalleryDiskImage struct {
 	// HostCaching - The host caching of the disk. Valid values are 'None', 'ReadOnly', and 'ReadWrite'. Possible values include: 'HostCachingNone', 'HostCachingReadOnly', 'HostCachingReadWrite'
 	HostCaching HostCaching                   `json:"hostCaching,omitempty"`
 	Source      *GalleryArtifactVersionSource `json:"source,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryDiskImage.
+func (gdi GalleryDiskImage) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gdi.HostCaching != "" {
+		objectMap["hostCaching"] = gdi.HostCaching
+	}
+	if gdi.Source != nil {
+		objectMap["source"] = gdi.Source
+	}
+	return json.Marshal(objectMap)
 }
 
 // GalleryIdentifier describes the gallery unique name.
@@ -5308,10 +4024,15 @@ func (gil GalleryImageList) IsEmpty() bool {
 	return gil.Value == nil || len(*gil.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (gil GalleryImageList) hasNextLink() bool {
+	return gil.NextLink != nil && len(*gil.NextLink) != 0
+}
+
 // galleryImageListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (gil GalleryImageList) galleryImageListPreparer(ctx context.Context) (*http.Request, error) {
-	if gil.NextLink == nil || len(to.String(gil.NextLink)) < 1 {
+	if !gil.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -5339,11 +4060,16 @@ func (page *GalleryImageListPage) NextWithContext(ctx context.Context) (err erro
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.gil)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.gil)
+		if err != nil {
+			return err
+		}
+		page.gil = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.gil = next
 	return nil
 }
 
@@ -5373,8 +4099,11 @@ func (page GalleryImageListPage) Values() []GalleryImage {
 }
 
 // Creates a new instance of the GalleryImageListPage type.
-func NewGalleryImageListPage(getNextPage func(context.Context, GalleryImageList) (GalleryImageList, error)) GalleryImageListPage {
-	return GalleryImageListPage{fn: getNextPage}
+func NewGalleryImageListPage(cur GalleryImageList, getNextPage func(context.Context, GalleryImageList) (GalleryImageList, error)) GalleryImageListPage {
+	return GalleryImageListPage{
+		fn:  getNextPage,
+		gil: cur,
+	}
 }
 
 // GalleryImageProperties describes the properties of a gallery Image Definition.
@@ -5403,85 +4132,73 @@ type GalleryImageProperties struct {
 	ProvisioningState ProvisioningState2 `json:"provisioningState,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GalleryImageProperties.
+func (gip GalleryImageProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gip.Description != nil {
+		objectMap["description"] = gip.Description
+	}
+	if gip.Eula != nil {
+		objectMap["eula"] = gip.Eula
+	}
+	if gip.PrivacyStatementURI != nil {
+		objectMap["privacyStatementUri"] = gip.PrivacyStatementURI
+	}
+	if gip.ReleaseNoteURI != nil {
+		objectMap["releaseNoteUri"] = gip.ReleaseNoteURI
+	}
+	if gip.OsType != "" {
+		objectMap["osType"] = gip.OsType
+	}
+	if gip.OsState != "" {
+		objectMap["osState"] = gip.OsState
+	}
+	if gip.HyperVGeneration != "" {
+		objectMap["hyperVGeneration"] = gip.HyperVGeneration
+	}
+	if gip.EndOfLifeDate != nil {
+		objectMap["endOfLifeDate"] = gip.EndOfLifeDate
+	}
+	if gip.Identifier != nil {
+		objectMap["identifier"] = gip.Identifier
+	}
+	if gip.Recommended != nil {
+		objectMap["recommended"] = gip.Recommended
+	}
+	if gip.Disallowed != nil {
+		objectMap["disallowed"] = gip.Disallowed
+	}
+	if gip.PurchasePlan != nil {
+		objectMap["purchasePlan"] = gip.PurchasePlan
+	}
+	return json.Marshal(objectMap)
+}
+
 // GalleryImagesCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryImagesCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryImagesCreateOrUpdateFuture) Result(client GalleryImagesClient) (gi GalleryImage, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryImagesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryImagesCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if gi.Response.Response, err = future.GetResult(sender); err == nil && gi.Response.Response.StatusCode != http.StatusNoContent {
-		gi, err = client.CreateOrUpdateResponder(gi.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryImagesCreateOrUpdateFuture", "Result", gi.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryImagesClient) (GalleryImage, error)
 }
 
 // GalleryImagesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type GalleryImagesDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryImagesDeleteFuture) Result(client GalleryImagesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryImagesDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryImagesDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryImagesClient) (autorest.Response, error)
 }
 
 // GalleryImagesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type GalleryImagesUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryImagesUpdateFuture) Result(client GalleryImagesClient) (gi GalleryImage, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryImagesUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryImagesUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if gi.Response.Response, err = future.GetResult(sender); err == nil && gi.Response.Response.StatusCode != http.StatusNoContent {
-		gi, err = client.UpdateResponder(gi.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryImagesUpdateFuture", "Result", gi.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryImagesClient) (GalleryImage, error)
 }
 
 // GalleryImageUpdate specifies information about the gallery Image Definition that you want to update.
@@ -5714,10 +4431,15 @@ func (givl GalleryImageVersionList) IsEmpty() bool {
 	return givl.Value == nil || len(*givl.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (givl GalleryImageVersionList) hasNextLink() bool {
+	return givl.NextLink != nil && len(*givl.NextLink) != 0
+}
+
 // galleryImageVersionListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (givl GalleryImageVersionList) galleryImageVersionListPreparer(ctx context.Context) (*http.Request, error) {
-	if givl.NextLink == nil || len(to.String(givl.NextLink)) < 1 {
+	if !givl.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -5745,11 +4467,16 @@ func (page *GalleryImageVersionListPage) NextWithContext(ctx context.Context) (e
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.givl)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.givl)
+		if err != nil {
+			return err
+		}
+		page.givl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.givl = next
 	return nil
 }
 
@@ -5779,8 +4506,11 @@ func (page GalleryImageVersionListPage) Values() []GalleryImageVersion {
 }
 
 // Creates a new instance of the GalleryImageVersionListPage type.
-func NewGalleryImageVersionListPage(getNextPage func(context.Context, GalleryImageVersionList) (GalleryImageVersionList, error)) GalleryImageVersionListPage {
-	return GalleryImageVersionListPage{fn: getNextPage}
+func NewGalleryImageVersionListPage(cur GalleryImageVersionList, getNextPage func(context.Context, GalleryImageVersionList) (GalleryImageVersionList, error)) GalleryImageVersionListPage {
+	return GalleryImageVersionListPage{
+		fn:   getNextPage,
+		givl: cur,
+	}
 }
 
 // GalleryImageVersionProperties describes the properties of a gallery Image Version.
@@ -5791,6 +4521,18 @@ type GalleryImageVersionProperties struct {
 	StorageProfile    *GalleryImageVersionStorageProfile `json:"storageProfile,omitempty"`
 	// ReplicationStatus - READ-ONLY
 	ReplicationStatus *ReplicationStatus `json:"replicationStatus,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryImageVersionProperties.
+func (givp GalleryImageVersionProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if givp.PublishingProfile != nil {
+		objectMap["publishingProfile"] = givp.PublishingProfile
+	}
+	if givp.StorageProfile != nil {
+		objectMap["storageProfile"] = givp.StorageProfile
+	}
+	return json.Marshal(objectMap)
 }
 
 // GalleryImageVersionPublishingProfile the publishing profile of a gallery Image Version.
@@ -5809,56 +4551,43 @@ type GalleryImageVersionPublishingProfile struct {
 	StorageAccountType StorageAccountType `json:"storageAccountType,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GalleryImageVersionPublishingProfile.
+func (givpp GalleryImageVersionPublishingProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if givpp.TargetRegions != nil {
+		objectMap["targetRegions"] = givpp.TargetRegions
+	}
+	if givpp.ReplicaCount != nil {
+		objectMap["replicaCount"] = givpp.ReplicaCount
+	}
+	if givpp.ExcludeFromLatest != nil {
+		objectMap["excludeFromLatest"] = givpp.ExcludeFromLatest
+	}
+	if givpp.EndOfLifeDate != nil {
+		objectMap["endOfLifeDate"] = givpp.EndOfLifeDate
+	}
+	if givpp.StorageAccountType != "" {
+		objectMap["storageAccountType"] = givpp.StorageAccountType
+	}
+	return json.Marshal(objectMap)
+}
+
 // GalleryImageVersionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryImageVersionsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryImageVersionsCreateOrUpdateFuture) Result(client GalleryImageVersionsClient) (giv GalleryImageVersion, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryImageVersionsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if giv.Response.Response, err = future.GetResult(sender); err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
-		giv, err = client.CreateOrUpdateResponder(giv.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsCreateOrUpdateFuture", "Result", giv.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryImageVersionsClient) (GalleryImageVersion, error)
 }
 
 // GalleryImageVersionsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryImageVersionsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryImageVersionsDeleteFuture) Result(client GalleryImageVersionsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryImageVersionsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryImageVersionsClient) (autorest.Response, error)
 }
 
 // GalleryImageVersionStorageProfile this is the storage profile of a Gallery Image Version.
@@ -5872,30 +4601,10 @@ type GalleryImageVersionStorageProfile struct {
 // GalleryImageVersionsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type GalleryImageVersionsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *GalleryImageVersionsUpdateFuture) Result(client GalleryImageVersionsClient) (giv GalleryImageVersion, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.GalleryImageVersionsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if giv.Response.Response, err = future.GetResult(sender); err == nil && giv.Response.Response.StatusCode != http.StatusNoContent {
-		giv, err = client.UpdateResponder(giv.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.GalleryImageVersionsUpdateFuture", "Result", giv.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GalleryImageVersionsClient) (GalleryImageVersion, error)
 }
 
 // GalleryImageVersionUpdate specifies information about the gallery Image Version that you want to update.
@@ -6027,10 +4736,15 @@ func (gl GalleryList) IsEmpty() bool {
 	return gl.Value == nil || len(*gl.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (gl GalleryList) hasNextLink() bool {
+	return gl.NextLink != nil && len(*gl.NextLink) != 0
+}
+
 // galleryListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (gl GalleryList) galleryListPreparer(ctx context.Context) (*http.Request, error) {
-	if gl.NextLink == nil || len(to.String(gl.NextLink)) < 1 {
+	if !gl.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -6058,11 +4772,16 @@ func (page *GalleryListPage) NextWithContext(ctx context.Context) (err error) {
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.gl)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.gl)
+		if err != nil {
+			return err
+		}
+		page.gl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.gl = next
 	return nil
 }
 
@@ -6092,8 +4811,11 @@ func (page GalleryListPage) Values() []Gallery {
 }
 
 // Creates a new instance of the GalleryListPage type.
-func NewGalleryListPage(getNextPage func(context.Context, GalleryList) (GalleryList, error)) GalleryListPage {
-	return GalleryListPage{fn: getNextPage}
+func NewGalleryListPage(cur GalleryList, getNextPage func(context.Context, GalleryList) (GalleryList, error)) GalleryListPage {
+	return GalleryListPage{
+		fn: getNextPage,
+		gl: cur,
+	}
 }
 
 // GalleryOSDiskImage this is the OS disk image.
@@ -6105,6 +4827,18 @@ type GalleryOSDiskImage struct {
 	Source      *GalleryArtifactVersionSource `json:"source,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GalleryOSDiskImage.
+func (godi GalleryOSDiskImage) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if godi.HostCaching != "" {
+		objectMap["hostCaching"] = godi.HostCaching
+	}
+	if godi.Source != nil {
+		objectMap["source"] = godi.Source
+	}
+	return json.Marshal(objectMap)
+}
+
 // GalleryProperties describes the properties of a Shared Image Gallery.
 type GalleryProperties struct {
 	// Description - The description of this Shared Image Gallery resource. This property is updatable.
@@ -6112,6 +4846,18 @@ type GalleryProperties struct {
 	Identifier  *GalleryIdentifier `json:"identifier,omitempty"`
 	// ProvisioningState - READ-ONLY; The provisioning state, which only appears in the response. Possible values include: 'ProvisioningStateCreating', 'ProvisioningStateUpdating', 'ProvisioningStateFailed', 'ProvisioningStateSucceeded', 'ProvisioningStateDeleting', 'ProvisioningStateMigrating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for GalleryProperties.
+func (gp GalleryProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gp.Description != nil {
+		objectMap["description"] = gp.Description
+	}
+	if gp.Identifier != nil {
+		objectMap["identifier"] = gp.Identifier
+	}
+	return json.Marshal(objectMap)
 }
 
 // GalleryUpdate specifies information about the Shared Image Gallery that you want to update.
@@ -6405,10 +5151,15 @@ func (ilr ImageListResult) IsEmpty() bool {
 	return ilr.Value == nil || len(*ilr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (ilr ImageListResult) hasNextLink() bool {
+	return ilr.NextLink != nil && len(*ilr.NextLink) != 0
+}
+
 // imageListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (ilr ImageListResult) imageListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if ilr.NextLink == nil || len(to.String(ilr.NextLink)) < 1 {
+	if !ilr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -6436,11 +5187,16 @@ func (page *ImageListResultPage) NextWithContext(ctx context.Context) (err error
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.ilr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.ilr)
+		if err != nil {
+			return err
+		}
+		page.ilr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.ilr = next
 	return nil
 }
 
@@ -6470,8 +5226,11 @@ func (page ImageListResultPage) Values() []Image {
 }
 
 // Creates a new instance of the ImageListResultPage type.
-func NewImageListResultPage(getNextPage func(context.Context, ImageListResult) (ImageListResult, error)) ImageListResultPage {
-	return ImageListResultPage{fn: getNextPage}
+func NewImageListResultPage(cur ImageListResult, getNextPage func(context.Context, ImageListResult) (ImageListResult, error)) ImageListResultPage {
+	return ImageListResultPage{
+		fn:  getNextPage,
+		ilr: cur,
+	}
 }
 
 // ImageOSDisk describes an Operating System disk.
@@ -6508,6 +5267,21 @@ type ImageProperties struct {
 	HyperVGeneration HyperVGenerationTypes `json:"hyperVGeneration,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ImageProperties.
+func (IP ImageProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if IP.SourceVirtualMachine != nil {
+		objectMap["sourceVirtualMachine"] = IP.SourceVirtualMachine
+	}
+	if IP.StorageProfile != nil {
+		objectMap["storageProfile"] = IP.StorageProfile
+	}
+	if IP.HyperVGeneration != "" {
+		objectMap["hyperVGeneration"] = IP.HyperVGeneration
+	}
+	return json.Marshal(objectMap)
+}
+
 // ImagePurchasePlan describes the gallery Image Definition purchase plan. This is used by marketplace
 // images.
 type ImagePurchasePlan struct {
@@ -6538,55 +5312,42 @@ type ImageReference struct {
 	ID *string `json:"id,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ImageReference.
+func (ir ImageReference) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ir.Publisher != nil {
+		objectMap["publisher"] = ir.Publisher
+	}
+	if ir.Offer != nil {
+		objectMap["offer"] = ir.Offer
+	}
+	if ir.Sku != nil {
+		objectMap["sku"] = ir.Sku
+	}
+	if ir.Version != nil {
+		objectMap["version"] = ir.Version
+	}
+	if ir.ID != nil {
+		objectMap["id"] = ir.ID
+	}
+	return json.Marshal(objectMap)
+}
+
 // ImagesCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type ImagesCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *ImagesCreateOrUpdateFuture) Result(client ImagesClient) (i Image, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ImagesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.ImagesCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if i.Response.Response, err = future.GetResult(sender); err == nil && i.Response.Response.StatusCode != http.StatusNoContent {
-		i, err = client.CreateOrUpdateResponder(i.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.ImagesCreateOrUpdateFuture", "Result", i.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ImagesClient) (Image, error)
 }
 
 // ImagesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
 type ImagesDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *ImagesDeleteFuture) Result(client ImagesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ImagesDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.ImagesDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ImagesClient) (autorest.Response, error)
 }
 
 // ImageStorageProfile describes a storage profile.
@@ -6601,30 +5362,10 @@ type ImageStorageProfile struct {
 
 // ImagesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
 type ImagesUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *ImagesUpdateFuture) Result(client ImagesClient) (i Image, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.ImagesUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.ImagesUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if i.Response.Response, err = future.GetResult(sender); err == nil && i.Response.Response.StatusCode != http.StatusNoContent {
-		i, err = client.UpdateResponder(i.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.ImagesUpdateFuture", "Result", i.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ImagesClient) (Image, error)
 }
 
 // ImageUpdate the source user image virtual hard disk. Only tags may be updated.
@@ -6825,10 +5566,15 @@ func (lur ListUsagesResult) IsEmpty() bool {
 	return lur.Value == nil || len(*lur.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (lur ListUsagesResult) hasNextLink() bool {
+	return lur.NextLink != nil && len(*lur.NextLink) != 0
+}
+
 // listUsagesResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (lur ListUsagesResult) listUsagesResultPreparer(ctx context.Context) (*http.Request, error) {
-	if lur.NextLink == nil || len(to.String(lur.NextLink)) < 1 {
+	if !lur.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -6856,11 +5602,16 @@ func (page *ListUsagesResultPage) NextWithContext(ctx context.Context) (err erro
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.lur)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.lur)
+		if err != nil {
+			return err
+		}
+		page.lur = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.lur = next
 	return nil
 }
 
@@ -6890,8 +5641,11 @@ func (page ListUsagesResultPage) Values() []Usage {
 }
 
 // Creates a new instance of the ListUsagesResultPage type.
-func NewListUsagesResultPage(getNextPage func(context.Context, ListUsagesResult) (ListUsagesResult, error)) ListUsagesResultPage {
-	return ListUsagesResultPage{fn: getNextPage}
+func NewListUsagesResultPage(cur ListUsagesResult, getNextPage func(context.Context, ListUsagesResult) (ListUsagesResult, error)) ListUsagesResultPage {
+	return ListUsagesResultPage{
+		fn:  getNextPage,
+		lur: cur,
+	}
 }
 
 // ListVirtualMachineExtensionImage ...
@@ -6909,59 +5663,19 @@ type ListVirtualMachineImageResource struct {
 // LogAnalyticsExportRequestRateByIntervalFuture an abstraction for monitoring and retrieving the results
 // of a long-running operation.
 type LogAnalyticsExportRequestRateByIntervalFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *LogAnalyticsExportRequestRateByIntervalFuture) Result(client LogAnalyticsClient) (laor LogAnalyticsOperationResult, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.LogAnalyticsExportRequestRateByIntervalFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if laor.Response.Response, err = future.GetResult(sender); err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
-		laor, err = client.ExportRequestRateByIntervalResponder(laor.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportRequestRateByIntervalFuture", "Result", laor.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(LogAnalyticsClient) (LogAnalyticsOperationResult, error)
 }
 
 // LogAnalyticsExportThrottledRequestsFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type LogAnalyticsExportThrottledRequestsFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *LogAnalyticsExportThrottledRequestsFuture) Result(client LogAnalyticsClient) (laor LogAnalyticsOperationResult, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.LogAnalyticsExportThrottledRequestsFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if laor.Response.Response, err = future.GetResult(sender); err == nil && laor.Response.Response.StatusCode != http.StatusNoContent {
-		laor, err = client.ExportThrottledRequestsResponder(laor.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.LogAnalyticsExportThrottledRequestsFuture", "Result", laor.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(LogAnalyticsClient) (LogAnalyticsOperationResult, error)
 }
 
 // LogAnalyticsInputBase api input base class for LogAnalytics Api.
@@ -7422,10 +6136,15 @@ func (ppglr ProximityPlacementGroupListResult) IsEmpty() bool {
 	return ppglr.Value == nil || len(*ppglr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (ppglr ProximityPlacementGroupListResult) hasNextLink() bool {
+	return ppglr.NextLink != nil && len(*ppglr.NextLink) != 0
+}
+
 // proximityPlacementGroupListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (ppglr ProximityPlacementGroupListResult) proximityPlacementGroupListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if ppglr.NextLink == nil || len(to.String(ppglr.NextLink)) < 1 {
+	if !ppglr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -7453,11 +6172,16 @@ func (page *ProximityPlacementGroupListResultPage) NextWithContext(ctx context.C
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.ppglr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.ppglr)
+		if err != nil {
+			return err
+		}
+		page.ppglr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.ppglr = next
 	return nil
 }
 
@@ -7487,8 +6211,11 @@ func (page ProximityPlacementGroupListResultPage) Values() []ProximityPlacementG
 }
 
 // Creates a new instance of the ProximityPlacementGroupListResultPage type.
-func NewProximityPlacementGroupListResultPage(getNextPage func(context.Context, ProximityPlacementGroupListResult) (ProximityPlacementGroupListResult, error)) ProximityPlacementGroupListResultPage {
-	return ProximityPlacementGroupListResultPage{fn: getNextPage}
+func NewProximityPlacementGroupListResultPage(cur ProximityPlacementGroupListResult, getNextPage func(context.Context, ProximityPlacementGroupListResult) (ProximityPlacementGroupListResult, error)) ProximityPlacementGroupListResultPage {
+	return ProximityPlacementGroupListResultPage{
+		fn:    getNextPage,
+		ppglr: cur,
+	}
 }
 
 // ProximityPlacementGroupProperties describes the properties of a Proximity Placement Group.
@@ -7503,6 +6230,18 @@ type ProximityPlacementGroupProperties struct {
 	AvailabilitySets *[]SubResourceWithColocationStatus `json:"availabilitySets,omitempty"`
 	// ColocationStatus - Describes colocation status of the Proximity Placement Group.
 	ColocationStatus *InstanceViewStatus `json:"colocationStatus,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ProximityPlacementGroupProperties.
+func (ppgp ProximityPlacementGroupProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ppgp.ProximityPlacementGroupType != "" {
+		objectMap["proximityPlacementGroupType"] = ppgp.ProximityPlacementGroupType
+	}
+	if ppgp.ColocationStatus != nil {
+		objectMap["colocationStatus"] = ppgp.ColocationStatus
+	}
+	return json.Marshal(objectMap)
 }
 
 // ProximityPlacementGroupUpdate specifies information about the proximity placement group.
@@ -7785,10 +6524,15 @@ func (rsr ResourceSkusResult) IsEmpty() bool {
 	return rsr.Value == nil || len(*rsr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (rsr ResourceSkusResult) hasNextLink() bool {
+	return rsr.NextLink != nil && len(*rsr.NextLink) != 0
+}
+
 // resourceSkusResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (rsr ResourceSkusResult) resourceSkusResultPreparer(ctx context.Context) (*http.Request, error) {
-	if rsr.NextLink == nil || len(to.String(rsr.NextLink)) < 1 {
+	if !rsr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -7816,11 +6560,16 @@ func (page *ResourceSkusResultPage) NextWithContext(ctx context.Context) (err er
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.rsr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.rsr)
+		if err != nil {
+			return err
+		}
+		page.rsr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.rsr = next
 	return nil
 }
 
@@ -7850,8 +6599,11 @@ func (page ResourceSkusResultPage) Values() []ResourceSku {
 }
 
 // Creates a new instance of the ResourceSkusResultPage type.
-func NewResourceSkusResultPage(getNextPage func(context.Context, ResourceSkusResult) (ResourceSkusResult, error)) ResourceSkusResultPage {
-	return ResourceSkusResultPage{fn: getNextPage}
+func NewResourceSkusResultPage(cur ResourceSkusResult, getNextPage func(context.Context, ResourceSkusResult) (ResourceSkusResult, error)) ResourceSkusResultPage {
+	return ResourceSkusResultPage{
+		fn:  getNextPage,
+		rsr: cur,
+	}
 }
 
 // ResourceSkuZoneDetails describes The zonal capabilities of a SKU.
@@ -8149,10 +6901,15 @@ func (rclr RunCommandListResult) IsEmpty() bool {
 	return rclr.Value == nil || len(*rclr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (rclr RunCommandListResult) hasNextLink() bool {
+	return rclr.NextLink != nil && len(*rclr.NextLink) != 0
+}
+
 // runCommandListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (rclr RunCommandListResult) runCommandListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if rclr.NextLink == nil || len(to.String(rclr.NextLink)) < 1 {
+	if !rclr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -8180,11 +6937,16 @@ func (page *RunCommandListResultPage) NextWithContext(ctx context.Context) (err 
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.rclr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.rclr)
+		if err != nil {
+			return err
+		}
+		page.rclr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.rclr = next
 	return nil
 }
 
@@ -8214,8 +6976,11 @@ func (page RunCommandListResultPage) Values() []RunCommandDocumentBase {
 }
 
 // Creates a new instance of the RunCommandListResultPage type.
-func NewRunCommandListResultPage(getNextPage func(context.Context, RunCommandListResult) (RunCommandListResult, error)) RunCommandListResultPage {
-	return RunCommandListResultPage{fn: getNextPage}
+func NewRunCommandListResultPage(cur RunCommandListResult, getNextPage func(context.Context, RunCommandListResult) (RunCommandListResult, error)) RunCommandListResultPage {
+	return RunCommandListResultPage{
+		fn:   getNextPage,
+		rclr: cur,
+	}
 }
 
 // RunCommandParameterDefinition describes the properties of a run command parameter.
@@ -8462,10 +7227,15 @@ func (sl SnapshotList) IsEmpty() bool {
 	return sl.Value == nil || len(*sl.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (sl SnapshotList) hasNextLink() bool {
+	return sl.NextLink != nil && len(*sl.NextLink) != 0
+}
+
 // snapshotListPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (sl SnapshotList) snapshotListPreparer(ctx context.Context) (*http.Request, error) {
-	if sl.NextLink == nil || len(to.String(sl.NextLink)) < 1 {
+	if !sl.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -8493,11 +7263,16 @@ func (page *SnapshotListPage) NextWithContext(ctx context.Context) (err error) {
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.sl)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.sl)
+		if err != nil {
+			return err
+		}
+		page.sl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.sl = next
 	return nil
 }
 
@@ -8527,8 +7302,11 @@ func (page SnapshotListPage) Values() []Snapshot {
 }
 
 // Creates a new instance of the SnapshotListPage type.
-func NewSnapshotListPage(getNextPage func(context.Context, SnapshotList) (SnapshotList, error)) SnapshotListPage {
-	return SnapshotListPage{fn: getNextPage}
+func NewSnapshotListPage(cur SnapshotList, getNextPage func(context.Context, SnapshotList) (SnapshotList, error)) SnapshotListPage {
+	return SnapshotListPage{
+		fn: getNextPage,
+		sl: cur,
+	}
 }
 
 // SnapshotProperties snapshot resource properties.
@@ -8557,85 +7335,58 @@ type SnapshotProperties struct {
 	Encryption *Encryption `json:"encryption,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for SnapshotProperties.
+func (sp SnapshotProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sp.OsType != "" {
+		objectMap["osType"] = sp.OsType
+	}
+	if sp.HyperVGeneration != "" {
+		objectMap["hyperVGeneration"] = sp.HyperVGeneration
+	}
+	if sp.CreationData != nil {
+		objectMap["creationData"] = sp.CreationData
+	}
+	if sp.DiskSizeGB != nil {
+		objectMap["diskSizeGB"] = sp.DiskSizeGB
+	}
+	if sp.EncryptionSettingsCollection != nil {
+		objectMap["encryptionSettingsCollection"] = sp.EncryptionSettingsCollection
+	}
+	if sp.Incremental != nil {
+		objectMap["incremental"] = sp.Incremental
+	}
+	if sp.Encryption != nil {
+		objectMap["encryption"] = sp.Encryption
+	}
+	return json.Marshal(objectMap)
+}
+
 // SnapshotsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type SnapshotsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *SnapshotsCreateOrUpdateFuture) Result(client SnapshotsClient) (s Snapshot, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
-		s, err = client.CreateOrUpdateResponder(s.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.SnapshotsCreateOrUpdateFuture", "Result", s.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SnapshotsClient) (Snapshot, error)
 }
 
 // SnapshotsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type SnapshotsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *SnapshotsDeleteFuture) Result(client SnapshotsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SnapshotsClient) (autorest.Response, error)
 }
 
 // SnapshotsGrantAccessFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type SnapshotsGrantAccessFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *SnapshotsGrantAccessFuture) Result(client SnapshotsClient) (au AccessURI, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsGrantAccessFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsGrantAccessFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if au.Response.Response, err = future.GetResult(sender); err == nil && au.Response.Response.StatusCode != http.StatusNoContent {
-		au, err = client.GrantAccessResponder(au.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.SnapshotsGrantAccessFuture", "Result", au.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SnapshotsClient) (AccessURI, error)
 }
 
 // SnapshotSku the snapshots sku name. Can be Standard_LRS, Premium_LRS, or Standard_ZRS.
@@ -8646,56 +7397,31 @@ type SnapshotSku struct {
 	Tier *string `json:"tier,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for SnapshotSku.
+func (ss SnapshotSku) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ss.Name != "" {
+		objectMap["name"] = ss.Name
+	}
+	return json.Marshal(objectMap)
+}
+
 // SnapshotsRevokeAccessFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type SnapshotsRevokeAccessFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *SnapshotsRevokeAccessFuture) Result(client SnapshotsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsRevokeAccessFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsRevokeAccessFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SnapshotsClient) (autorest.Response, error)
 }
 
 // SnapshotsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type SnapshotsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *SnapshotsUpdateFuture) Result(client SnapshotsClient) (s Snapshot, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
-		s, err = client.UpdateResponder(s.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.SnapshotsUpdateFuture", "Result", s.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SnapshotsClient) (Snapshot, error)
 }
 
 // SnapshotUpdate snapshot update resource.
@@ -9162,6 +7888,15 @@ type VirtualMachineCaptureResult struct {
 	ID *string `json:"id,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for VirtualMachineCaptureResult.
+func (vmcr VirtualMachineCaptureResult) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmcr.ID != nil {
+		objectMap["id"] = vmcr.ID
+	}
+	return json.Marshal(objectMap)
+}
+
 // VirtualMachineExtension describes a Virtual Machine Extension.
 type VirtualMachineExtension struct {
 	autorest.Response                  `json:"-"`
@@ -9422,56 +8157,52 @@ type VirtualMachineExtensionProperties struct {
 	InstanceView *VirtualMachineExtensionInstanceView `json:"instanceView,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for VirtualMachineExtensionProperties.
+func (vmep VirtualMachineExtensionProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmep.ForceUpdateTag != nil {
+		objectMap["forceUpdateTag"] = vmep.ForceUpdateTag
+	}
+	if vmep.Publisher != nil {
+		objectMap["publisher"] = vmep.Publisher
+	}
+	if vmep.Type != nil {
+		objectMap["type"] = vmep.Type
+	}
+	if vmep.TypeHandlerVersion != nil {
+		objectMap["typeHandlerVersion"] = vmep.TypeHandlerVersion
+	}
+	if vmep.AutoUpgradeMinorVersion != nil {
+		objectMap["autoUpgradeMinorVersion"] = vmep.AutoUpgradeMinorVersion
+	}
+	if vmep.Settings != nil {
+		objectMap["settings"] = vmep.Settings
+	}
+	if vmep.ProtectedSettings != nil {
+		objectMap["protectedSettings"] = vmep.ProtectedSettings
+	}
+	if vmep.InstanceView != nil {
+		objectMap["instanceView"] = vmep.InstanceView
+	}
+	return json.Marshal(objectMap)
+}
+
 // VirtualMachineExtensionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of
 // a long-running operation.
 type VirtualMachineExtensionsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineExtensionsCreateOrUpdateFuture) Result(client VirtualMachineExtensionsClient) (vme VirtualMachineExtension, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineExtensionsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vme.Response.Response, err = future.GetResult(sender); err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
-		vme, err = client.CreateOrUpdateResponder(vme.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsCreateOrUpdateFuture", "Result", vme.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineExtensionsClient) (VirtualMachineExtension, error)
 }
 
 // VirtualMachineExtensionsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineExtensionsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineExtensionsDeleteFuture) Result(client VirtualMachineExtensionsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineExtensionsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineExtensionsClient) (autorest.Response, error)
 }
 
 // VirtualMachineExtensionsListResult the List Extension operation response
@@ -9484,30 +8215,10 @@ type VirtualMachineExtensionsListResult struct {
 // VirtualMachineExtensionsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineExtensionsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineExtensionsUpdateFuture) Result(client VirtualMachineExtensionsClient) (vme VirtualMachineExtension, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineExtensionsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vme.Response.Response, err = future.GetResult(sender); err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
-		vme, err = client.UpdateResponder(vme.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsUpdateFuture", "Result", vme.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineExtensionsClient) (VirtualMachineExtension, error)
 }
 
 // VirtualMachineExtensionUpdate describes a Virtual Machine Extension.
@@ -9861,10 +8572,15 @@ func (vmlr VirtualMachineListResult) IsEmpty() bool {
 	return vmlr.Value == nil || len(*vmlr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmlr VirtualMachineListResult) hasNextLink() bool {
+	return vmlr.NextLink != nil && len(*vmlr.NextLink) != 0
+}
+
 // virtualMachineListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmlr VirtualMachineListResult) virtualMachineListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if vmlr.NextLink == nil || len(to.String(vmlr.NextLink)) < 1 {
+	if !vmlr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -9892,11 +8608,16 @@ func (page *VirtualMachineListResultPage) NextWithContext(ctx context.Context) (
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmlr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmlr)
+		if err != nil {
+			return err
+		}
+		page.vmlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmlr = next
 	return nil
 }
 
@@ -9926,8 +8647,11 @@ func (page VirtualMachineListResultPage) Values() []VirtualMachine {
 }
 
 // Creates a new instance of the VirtualMachineListResultPage type.
-func NewVirtualMachineListResultPage(getNextPage func(context.Context, VirtualMachineListResult) (VirtualMachineListResult, error)) VirtualMachineListResultPage {
-	return VirtualMachineListResultPage{fn: getNextPage}
+func NewVirtualMachineListResultPage(cur VirtualMachineListResult, getNextPage func(context.Context, VirtualMachineListResult) (VirtualMachineListResult, error)) VirtualMachineListResultPage {
+	return VirtualMachineListResultPage{
+		fn:   getNextPage,
+		vmlr: cur,
+	}
 }
 
 // VirtualMachineProperties describes the properties of a Virtual Machine.
@@ -9966,6 +8690,54 @@ type VirtualMachineProperties struct {
 	LicenseType *string `json:"licenseType,omitempty"`
 	// VMID - READ-ONLY; Specifies the VM unique ID which is a 128-bits identifier that is encoded and stored in all Azure IaaS VMs SMBIOS and can be read using platform BIOS commands.
 	VMID *string `json:"vmId,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VirtualMachineProperties.
+func (vmp VirtualMachineProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmp.HardwareProfile != nil {
+		objectMap["hardwareProfile"] = vmp.HardwareProfile
+	}
+	if vmp.StorageProfile != nil {
+		objectMap["storageProfile"] = vmp.StorageProfile
+	}
+	if vmp.AdditionalCapabilities != nil {
+		objectMap["additionalCapabilities"] = vmp.AdditionalCapabilities
+	}
+	if vmp.OsProfile != nil {
+		objectMap["osProfile"] = vmp.OsProfile
+	}
+	if vmp.NetworkProfile != nil {
+		objectMap["networkProfile"] = vmp.NetworkProfile
+	}
+	if vmp.DiagnosticsProfile != nil {
+		objectMap["diagnosticsProfile"] = vmp.DiagnosticsProfile
+	}
+	if vmp.AvailabilitySet != nil {
+		objectMap["availabilitySet"] = vmp.AvailabilitySet
+	}
+	if vmp.VirtualMachineScaleSet != nil {
+		objectMap["virtualMachineScaleSet"] = vmp.VirtualMachineScaleSet
+	}
+	if vmp.ProximityPlacementGroup != nil {
+		objectMap["proximityPlacementGroup"] = vmp.ProximityPlacementGroup
+	}
+	if vmp.Priority != "" {
+		objectMap["priority"] = vmp.Priority
+	}
+	if vmp.EvictionPolicy != "" {
+		objectMap["evictionPolicy"] = vmp.EvictionPolicy
+	}
+	if vmp.BillingProfile != nil {
+		objectMap["billingProfile"] = vmp.BillingProfile
+	}
+	if vmp.Host != nil {
+		objectMap["host"] = vmp.Host
+	}
+	if vmp.LicenseType != nil {
+		objectMap["licenseType"] = vmp.LicenseType
+	}
+	return json.Marshal(objectMap)
 }
 
 // VirtualMachineReimageParameters parameters for Reimaging Virtual Machine. NOTE: Virtual Machine OS disk
@@ -10306,10 +9078,15 @@ func (vmsselr VirtualMachineScaleSetExtensionListResult) IsEmpty() bool {
 	return vmsselr.Value == nil || len(*vmsselr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmsselr VirtualMachineScaleSetExtensionListResult) hasNextLink() bool {
+	return vmsselr.NextLink != nil && len(*vmsselr.NextLink) != 0
+}
+
 // virtualMachineScaleSetExtensionListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmsselr VirtualMachineScaleSetExtensionListResult) virtualMachineScaleSetExtensionListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if vmsselr.NextLink == nil || len(to.String(vmsselr.NextLink)) < 1 {
+	if !vmsselr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -10337,11 +9114,16 @@ func (page *VirtualMachineScaleSetExtensionListResultPage) NextWithContext(ctx c
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmsselr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmsselr)
+		if err != nil {
+			return err
+		}
+		page.vmsselr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmsselr = next
 	return nil
 }
 
@@ -10371,8 +9153,11 @@ func (page VirtualMachineScaleSetExtensionListResultPage) Values() []VirtualMach
 }
 
 // Creates a new instance of the VirtualMachineScaleSetExtensionListResultPage type.
-func NewVirtualMachineScaleSetExtensionListResultPage(getNextPage func(context.Context, VirtualMachineScaleSetExtensionListResult) (VirtualMachineScaleSetExtensionListResult, error)) VirtualMachineScaleSetExtensionListResultPage {
-	return VirtualMachineScaleSetExtensionListResultPage{fn: getNextPage}
+func NewVirtualMachineScaleSetExtensionListResultPage(cur VirtualMachineScaleSetExtensionListResult, getNextPage func(context.Context, VirtualMachineScaleSetExtensionListResult) (VirtualMachineScaleSetExtensionListResult, error)) VirtualMachineScaleSetExtensionListResultPage {
+	return VirtualMachineScaleSetExtensionListResultPage{
+		fn:      getNextPage,
+		vmsselr: cur,
+	}
 }
 
 // VirtualMachineScaleSetExtensionProfile describes a virtual machine scale set extension profile.
@@ -10404,85 +9189,61 @@ type VirtualMachineScaleSetExtensionProperties struct {
 	ProvisionAfterExtensions *[]string `json:"provisionAfterExtensions,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for VirtualMachineScaleSetExtensionProperties.
+func (vmssep VirtualMachineScaleSetExtensionProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmssep.ForceUpdateTag != nil {
+		objectMap["forceUpdateTag"] = vmssep.ForceUpdateTag
+	}
+	if vmssep.Publisher != nil {
+		objectMap["publisher"] = vmssep.Publisher
+	}
+	if vmssep.Type != nil {
+		objectMap["type"] = vmssep.Type
+	}
+	if vmssep.TypeHandlerVersion != nil {
+		objectMap["typeHandlerVersion"] = vmssep.TypeHandlerVersion
+	}
+	if vmssep.AutoUpgradeMinorVersion != nil {
+		objectMap["autoUpgradeMinorVersion"] = vmssep.AutoUpgradeMinorVersion
+	}
+	if vmssep.Settings != nil {
+		objectMap["settings"] = vmssep.Settings
+	}
+	if vmssep.ProtectedSettings != nil {
+		objectMap["protectedSettings"] = vmssep.ProtectedSettings
+	}
+	if vmssep.ProvisionAfterExtensions != nil {
+		objectMap["provisionAfterExtensions"] = vmssep.ProvisionAfterExtensions
+	}
+	return json.Marshal(objectMap)
+}
+
 // VirtualMachineScaleSetExtensionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the
 // results of a long-running operation.
 type VirtualMachineScaleSetExtensionsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetExtensionsCreateOrUpdateFuture) Result(client VirtualMachineScaleSetExtensionsClient) (vmsse VirtualMachineScaleSetExtension, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetExtensionsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vmsse.Response.Response, err = future.GetResult(sender); err == nil && vmsse.Response.Response.StatusCode != http.StatusNoContent {
-		vmsse, err = client.CreateOrUpdateResponder(vmsse.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsCreateOrUpdateFuture", "Result", vmsse.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetExtensionsClient) (VirtualMachineScaleSetExtension, error)
 }
 
 // VirtualMachineScaleSetExtensionsDeleteFuture an abstraction for monitoring and retrieving the results of
 // a long-running operation.
 type VirtualMachineScaleSetExtensionsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetExtensionsDeleteFuture) Result(client VirtualMachineScaleSetExtensionsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetExtensionsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetExtensionsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetExtensionsUpdateFuture an abstraction for monitoring and retrieving the results of
 // a long-running operation.
 type VirtualMachineScaleSetExtensionsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetExtensionsUpdateFuture) Result(client VirtualMachineScaleSetExtensionsClient) (vmsse VirtualMachineScaleSetExtension, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetExtensionsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vmsse.Response.Response, err = future.GetResult(sender); err == nil && vmsse.Response.Response.StatusCode != http.StatusNoContent {
-		vmsse, err = client.UpdateResponder(vmsse.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsUpdateFuture", "Result", vmsse.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetExtensionsClient) (VirtualMachineScaleSetExtension, error)
 }
 
 // VirtualMachineScaleSetExtensionUpdate describes a Virtual Machine Scale Set Extension.
@@ -10597,6 +9358,15 @@ type VirtualMachineScaleSetInstanceView struct {
 	Extensions *[]VirtualMachineScaleSetVMExtensionsSummary `json:"extensions,omitempty"`
 	// Statuses - The resource status information.
 	Statuses *[]InstanceViewStatus `json:"statuses,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VirtualMachineScaleSetInstanceView.
+func (vmssiv VirtualMachineScaleSetInstanceView) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmssiv.Statuses != nil {
+		objectMap["statuses"] = vmssiv.Statuses
+	}
+	return json.Marshal(objectMap)
 }
 
 // VirtualMachineScaleSetInstanceViewStatusesSummary instance view statuses summary for virtual machines of
@@ -10781,10 +9551,15 @@ func (vmsslouh VirtualMachineScaleSetListOSUpgradeHistory) IsEmpty() bool {
 	return vmsslouh.Value == nil || len(*vmsslouh.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmsslouh VirtualMachineScaleSetListOSUpgradeHistory) hasNextLink() bool {
+	return vmsslouh.NextLink != nil && len(*vmsslouh.NextLink) != 0
+}
+
 // virtualMachineScaleSetListOSUpgradeHistoryPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmsslouh VirtualMachineScaleSetListOSUpgradeHistory) virtualMachineScaleSetListOSUpgradeHistoryPreparer(ctx context.Context) (*http.Request, error) {
-	if vmsslouh.NextLink == nil || len(to.String(vmsslouh.NextLink)) < 1 {
+	if !vmsslouh.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -10813,11 +9588,16 @@ func (page *VirtualMachineScaleSetListOSUpgradeHistoryPage) NextWithContext(ctx 
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmsslouh)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmsslouh)
+		if err != nil {
+			return err
+		}
+		page.vmsslouh = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmsslouh = next
 	return nil
 }
 
@@ -10847,8 +9627,11 @@ func (page VirtualMachineScaleSetListOSUpgradeHistoryPage) Values() []UpgradeOpe
 }
 
 // Creates a new instance of the VirtualMachineScaleSetListOSUpgradeHistoryPage type.
-func NewVirtualMachineScaleSetListOSUpgradeHistoryPage(getNextPage func(context.Context, VirtualMachineScaleSetListOSUpgradeHistory) (VirtualMachineScaleSetListOSUpgradeHistory, error)) VirtualMachineScaleSetListOSUpgradeHistoryPage {
-	return VirtualMachineScaleSetListOSUpgradeHistoryPage{fn: getNextPage}
+func NewVirtualMachineScaleSetListOSUpgradeHistoryPage(cur VirtualMachineScaleSetListOSUpgradeHistory, getNextPage func(context.Context, VirtualMachineScaleSetListOSUpgradeHistory) (VirtualMachineScaleSetListOSUpgradeHistory, error)) VirtualMachineScaleSetListOSUpgradeHistoryPage {
+	return VirtualMachineScaleSetListOSUpgradeHistoryPage{
+		fn:       getNextPage,
+		vmsslouh: cur,
+	}
 }
 
 // VirtualMachineScaleSetListResult the List Virtual Machine operation response.
@@ -10929,10 +9712,15 @@ func (vmsslr VirtualMachineScaleSetListResult) IsEmpty() bool {
 	return vmsslr.Value == nil || len(*vmsslr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmsslr VirtualMachineScaleSetListResult) hasNextLink() bool {
+	return vmsslr.NextLink != nil && len(*vmsslr.NextLink) != 0
+}
+
 // virtualMachineScaleSetListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmsslr VirtualMachineScaleSetListResult) virtualMachineScaleSetListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if vmsslr.NextLink == nil || len(to.String(vmsslr.NextLink)) < 1 {
+	if !vmsslr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -10960,11 +9748,16 @@ func (page *VirtualMachineScaleSetListResultPage) NextWithContext(ctx context.Co
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmsslr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmsslr)
+		if err != nil {
+			return err
+		}
+		page.vmsslr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmsslr = next
 	return nil
 }
 
@@ -10994,8 +9787,11 @@ func (page VirtualMachineScaleSetListResultPage) Values() []VirtualMachineScaleS
 }
 
 // Creates a new instance of the VirtualMachineScaleSetListResultPage type.
-func NewVirtualMachineScaleSetListResultPage(getNextPage func(context.Context, VirtualMachineScaleSetListResult) (VirtualMachineScaleSetListResult, error)) VirtualMachineScaleSetListResultPage {
-	return VirtualMachineScaleSetListResultPage{fn: getNextPage}
+func NewVirtualMachineScaleSetListResultPage(cur VirtualMachineScaleSetListResult, getNextPage func(context.Context, VirtualMachineScaleSetListResult) (VirtualMachineScaleSetListResult, error)) VirtualMachineScaleSetListResultPage {
+	return VirtualMachineScaleSetListResultPage{
+		fn:     getNextPage,
+		vmsslr: cur,
+	}
 }
 
 // VirtualMachineScaleSetListSkusResult the Virtual Machine Scale Set List Skus operation response.
@@ -11076,10 +9872,15 @@ func (vmsslsr VirtualMachineScaleSetListSkusResult) IsEmpty() bool {
 	return vmsslsr.Value == nil || len(*vmsslsr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmsslsr VirtualMachineScaleSetListSkusResult) hasNextLink() bool {
+	return vmsslsr.NextLink != nil && len(*vmsslsr.NextLink) != 0
+}
+
 // virtualMachineScaleSetListSkusResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmsslsr VirtualMachineScaleSetListSkusResult) virtualMachineScaleSetListSkusResultPreparer(ctx context.Context) (*http.Request, error) {
-	if vmsslsr.NextLink == nil || len(to.String(vmsslsr.NextLink)) < 1 {
+	if !vmsslsr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -11107,11 +9908,16 @@ func (page *VirtualMachineScaleSetListSkusResultPage) NextWithContext(ctx contex
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmsslsr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmsslsr)
+		if err != nil {
+			return err
+		}
+		page.vmsslsr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmsslsr = next
 	return nil
 }
 
@@ -11141,8 +9947,11 @@ func (page VirtualMachineScaleSetListSkusResultPage) Values() []VirtualMachineSc
 }
 
 // Creates a new instance of the VirtualMachineScaleSetListSkusResultPage type.
-func NewVirtualMachineScaleSetListSkusResultPage(getNextPage func(context.Context, VirtualMachineScaleSetListSkusResult) (VirtualMachineScaleSetListSkusResult, error)) VirtualMachineScaleSetListSkusResultPage {
-	return VirtualMachineScaleSetListSkusResultPage{fn: getNextPage}
+func NewVirtualMachineScaleSetListSkusResultPage(cur VirtualMachineScaleSetListSkusResult, getNextPage func(context.Context, VirtualMachineScaleSetListSkusResult) (VirtualMachineScaleSetListSkusResult, error)) VirtualMachineScaleSetListSkusResultPage {
+	return VirtualMachineScaleSetListSkusResultPage{
+		fn:      getNextPage,
+		vmsslsr: cur,
+	}
 }
 
 // VirtualMachineScaleSetListWithLinkResult the List Virtual Machine operation response.
@@ -11223,10 +10032,15 @@ func (vmsslwlr VirtualMachineScaleSetListWithLinkResult) IsEmpty() bool {
 	return vmsslwlr.Value == nil || len(*vmsslwlr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmsslwlr VirtualMachineScaleSetListWithLinkResult) hasNextLink() bool {
+	return vmsslwlr.NextLink != nil && len(*vmsslwlr.NextLink) != 0
+}
+
 // virtualMachineScaleSetListWithLinkResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmsslwlr VirtualMachineScaleSetListWithLinkResult) virtualMachineScaleSetListWithLinkResultPreparer(ctx context.Context) (*http.Request, error) {
-	if vmsslwlr.NextLink == nil || len(to.String(vmsslwlr.NextLink)) < 1 {
+	if !vmsslwlr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -11254,11 +10068,16 @@ func (page *VirtualMachineScaleSetListWithLinkResultPage) NextWithContext(ctx co
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmsslwlr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmsslwlr)
+		if err != nil {
+			return err
+		}
+		page.vmsslwlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmsslwlr = next
 	return nil
 }
 
@@ -11288,8 +10107,11 @@ func (page VirtualMachineScaleSetListWithLinkResultPage) Values() []VirtualMachi
 }
 
 // Creates a new instance of the VirtualMachineScaleSetListWithLinkResultPage type.
-func NewVirtualMachineScaleSetListWithLinkResultPage(getNextPage func(context.Context, VirtualMachineScaleSetListWithLinkResult) (VirtualMachineScaleSetListWithLinkResult, error)) VirtualMachineScaleSetListWithLinkResultPage {
-	return VirtualMachineScaleSetListWithLinkResultPage{fn: getNextPage}
+func NewVirtualMachineScaleSetListWithLinkResultPage(cur VirtualMachineScaleSetListWithLinkResult, getNextPage func(context.Context, VirtualMachineScaleSetListWithLinkResult) (VirtualMachineScaleSetListWithLinkResult, error)) VirtualMachineScaleSetListWithLinkResultPage {
+	return VirtualMachineScaleSetListWithLinkResultPage{
+		fn:       getNextPage,
+		vmsslwlr: cur,
+	}
 }
 
 // VirtualMachineScaleSetManagedDiskParameters describes the parameters of a ScaleSet managed disk.
@@ -11471,6 +10293,45 @@ type VirtualMachineScaleSetProperties struct {
 	ScaleInPolicy *ScaleInPolicy `json:"scaleInPolicy,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for VirtualMachineScaleSetProperties.
+func (vmssp VirtualMachineScaleSetProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmssp.UpgradePolicy != nil {
+		objectMap["upgradePolicy"] = vmssp.UpgradePolicy
+	}
+	if vmssp.AutomaticRepairsPolicy != nil {
+		objectMap["automaticRepairsPolicy"] = vmssp.AutomaticRepairsPolicy
+	}
+	if vmssp.VirtualMachineProfile != nil {
+		objectMap["virtualMachineProfile"] = vmssp.VirtualMachineProfile
+	}
+	if vmssp.Overprovision != nil {
+		objectMap["overprovision"] = vmssp.Overprovision
+	}
+	if vmssp.DoNotRunExtensionsOnOverprovisionedVMs != nil {
+		objectMap["doNotRunExtensionsOnOverprovisionedVMs"] = vmssp.DoNotRunExtensionsOnOverprovisionedVMs
+	}
+	if vmssp.SinglePlacementGroup != nil {
+		objectMap["singlePlacementGroup"] = vmssp.SinglePlacementGroup
+	}
+	if vmssp.ZoneBalance != nil {
+		objectMap["zoneBalance"] = vmssp.ZoneBalance
+	}
+	if vmssp.PlatformFaultDomainCount != nil {
+		objectMap["platformFaultDomainCount"] = vmssp.PlatformFaultDomainCount
+	}
+	if vmssp.ProximityPlacementGroup != nil {
+		objectMap["proximityPlacementGroup"] = vmssp.ProximityPlacementGroup
+	}
+	if vmssp.AdditionalCapabilities != nil {
+		objectMap["additionalCapabilities"] = vmssp.AdditionalCapabilities
+	}
+	if vmssp.ScaleInPolicy != nil {
+		objectMap["scaleInPolicy"] = vmssp.ScaleInPolicy
+	}
+	return json.Marshal(objectMap)
+}
+
 // VirtualMachineScaleSetPublicIPAddressConfiguration describes a virtual machines scale set IP
 // Configuration's PublicIPAddress configuration
 type VirtualMachineScaleSetPublicIPAddressConfiguration struct {
@@ -11557,168 +10418,64 @@ type VirtualMachineScaleSetReimageParameters struct {
 // VirtualMachineScaleSetRollingUpgradesCancelFuture an abstraction for monitoring and retrieving the
 // results of a long-running operation.
 type VirtualMachineScaleSetRollingUpgradesCancelFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetRollingUpgradesCancelFuture) Result(client VirtualMachineScaleSetRollingUpgradesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetRollingUpgradesCancelFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetRollingUpgradesCancelFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetRollingUpgradesClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetRollingUpgradesStartExtensionUpgradeFuture an abstraction for monitoring and
 // retrieving the results of a long-running operation.
 type VirtualMachineScaleSetRollingUpgradesStartExtensionUpgradeFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetRollingUpgradesStartExtensionUpgradeFuture) Result(client VirtualMachineScaleSetRollingUpgradesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetRollingUpgradesStartExtensionUpgradeFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetRollingUpgradesStartExtensionUpgradeFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetRollingUpgradesClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetRollingUpgradesStartOSUpgradeFuture an abstraction for monitoring and retrieving
 // the results of a long-running operation.
 type VirtualMachineScaleSetRollingUpgradesStartOSUpgradeFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetRollingUpgradesStartOSUpgradeFuture) Result(client VirtualMachineScaleSetRollingUpgradesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetRollingUpgradesStartOSUpgradeFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetRollingUpgradesStartOSUpgradeFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetRollingUpgradesClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of
 // a long-running operation.
 type VirtualMachineScaleSetsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsCreateOrUpdateFuture) Result(client VirtualMachineScaleSetsClient) (vmss VirtualMachineScaleSet, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vmss.Response.Response, err = future.GetResult(sender); err == nil && vmss.Response.Response.StatusCode != http.StatusNoContent {
-		vmss, err = client.CreateOrUpdateResponder(vmss.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsCreateOrUpdateFuture", "Result", vmss.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (VirtualMachineScaleSet, error)
 }
 
 // VirtualMachineScaleSetsDeallocateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsDeallocateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsDeallocateFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsDeallocateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsDeallocateFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsDeleteFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsDeleteInstancesFuture an abstraction for monitoring and retrieving the results of
 // a long-running operation.
 type VirtualMachineScaleSetsDeleteInstancesFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsDeleteInstancesFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsDeleteInstancesFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsDeleteInstancesFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetSku describes an available virtual machine scale set sku.
@@ -11746,162 +10503,64 @@ type VirtualMachineScaleSetSkuCapacity struct {
 // VirtualMachineScaleSetsPerformMaintenanceFuture an abstraction for monitoring and retrieving the results
 // of a long-running operation.
 type VirtualMachineScaleSetsPerformMaintenanceFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsPerformMaintenanceFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsPerformMaintenanceFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsPerformMaintenanceFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsPowerOffFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsPowerOffFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsPowerOffFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsPowerOffFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsPowerOffFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsRedeployFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsRedeployFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsRedeployFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsRedeployFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsRedeployFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsReimageAllFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsReimageAllFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsReimageAllFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsReimageAllFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsReimageAllFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsReimageFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsReimageFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsReimageFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsReimageFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsReimageFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsRestartFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsRestartFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsRestartFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsRestartFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsRestartFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetsStartFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsStartFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsStartFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsStartFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsStartFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetStorageProfile describes a virtual machine scale set storage profile.
@@ -11917,53 +10576,19 @@ type VirtualMachineScaleSetStorageProfile struct {
 // VirtualMachineScaleSetsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsUpdateFuture) Result(client VirtualMachineScaleSetsClient) (vmss VirtualMachineScaleSet, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vmss.Response.Response, err = future.GetResult(sender); err == nil && vmss.Response.Response.StatusCode != http.StatusNoContent {
-		vmss, err = client.UpdateResponder(vmss.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsUpdateFuture", "Result", vmss.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (VirtualMachineScaleSet, error)
 }
 
 // VirtualMachineScaleSetsUpdateInstancesFuture an abstraction for monitoring and retrieving the results of
 // a long-running operation.
 type VirtualMachineScaleSetsUpdateInstancesFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetsUpdateInstancesFuture) Result(client VirtualMachineScaleSetsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetsUpdateInstancesFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetsUpdateInstancesFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetUpdate describes a Virtual Machine Scale Set.
@@ -12546,53 +11171,19 @@ func (vmssv *VirtualMachineScaleSetVM) UnmarshalJSON(body []byte) error {
 // VirtualMachineScaleSetVMExtensionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the
 // results of a long-running operation.
 type VirtualMachineScaleSetVMExtensionsCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMExtensionsCreateOrUpdateFuture) Result(client VirtualMachineScaleSetVMExtensionsClient) (vme VirtualMachineExtension, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMExtensionsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMExtensionsCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vme.Response.Response, err = future.GetResult(sender); err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
-		vme, err = client.CreateOrUpdateResponder(vme.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMExtensionsCreateOrUpdateFuture", "Result", vme.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMExtensionsClient) (VirtualMachineExtension, error)
 }
 
 // VirtualMachineScaleSetVMExtensionsDeleteFuture an abstraction for monitoring and retrieving the results
 // of a long-running operation.
 type VirtualMachineScaleSetVMExtensionsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMExtensionsDeleteFuture) Result(client VirtualMachineScaleSetVMExtensionsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMExtensionsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMExtensionsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMExtensionsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMExtensionsSummary extensions summary for virtual machines of a virtual machine
@@ -12607,30 +11198,10 @@ type VirtualMachineScaleSetVMExtensionsSummary struct {
 // VirtualMachineScaleSetVMExtensionsUpdateFuture an abstraction for monitoring and retrieving the results
 // of a long-running operation.
 type VirtualMachineScaleSetVMExtensionsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMExtensionsUpdateFuture) Result(client VirtualMachineScaleSetVMExtensionsClient) (vme VirtualMachineExtension, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMExtensionsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMExtensionsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vme.Response.Response, err = future.GetResult(sender); err == nil && vme.Response.Response.StatusCode != http.StatusNoContent {
-		vme, err = client.UpdateResponder(vme.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMExtensionsUpdateFuture", "Result", vme.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMExtensionsClient) (VirtualMachineExtension, error)
 }
 
 // VirtualMachineScaleSetVMInstanceIDs specifies a list of virtual machine instance IDs from the VM scale
@@ -12672,6 +11243,42 @@ type VirtualMachineScaleSetVMInstanceView struct {
 	Statuses *[]InstanceViewStatus `json:"statuses,omitempty"`
 	// PlacementGroupID - The placement group in which the VM is running. If the VM is deallocated it will not have a placementGroupId.
 	PlacementGroupID *string `json:"placementGroupId,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VirtualMachineScaleSetVMInstanceView.
+func (vmssviv VirtualMachineScaleSetVMInstanceView) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmssviv.PlatformUpdateDomain != nil {
+		objectMap["platformUpdateDomain"] = vmssviv.PlatformUpdateDomain
+	}
+	if vmssviv.PlatformFaultDomain != nil {
+		objectMap["platformFaultDomain"] = vmssviv.PlatformFaultDomain
+	}
+	if vmssviv.RdpThumbPrint != nil {
+		objectMap["rdpThumbPrint"] = vmssviv.RdpThumbPrint
+	}
+	if vmssviv.VMAgent != nil {
+		objectMap["vmAgent"] = vmssviv.VMAgent
+	}
+	if vmssviv.MaintenanceRedeployStatus != nil {
+		objectMap["maintenanceRedeployStatus"] = vmssviv.MaintenanceRedeployStatus
+	}
+	if vmssviv.Disks != nil {
+		objectMap["disks"] = vmssviv.Disks
+	}
+	if vmssviv.Extensions != nil {
+		objectMap["extensions"] = vmssviv.Extensions
+	}
+	if vmssviv.BootDiagnostics != nil {
+		objectMap["bootDiagnostics"] = vmssviv.BootDiagnostics
+	}
+	if vmssviv.Statuses != nil {
+		objectMap["statuses"] = vmssviv.Statuses
+	}
+	if vmssviv.PlacementGroupID != nil {
+		objectMap["placementGroupId"] = vmssviv.PlacementGroupID
+	}
+	return json.Marshal(objectMap)
 }
 
 // VirtualMachineScaleSetVMListResult the List Virtual Machine Scale Set VMs operation response.
@@ -12752,10 +11359,15 @@ func (vmssvlr VirtualMachineScaleSetVMListResult) IsEmpty() bool {
 	return vmssvlr.Value == nil || len(*vmssvlr.Value) == 0
 }
 
+// hasNextLink returns true if the NextLink is not empty.
+func (vmssvlr VirtualMachineScaleSetVMListResult) hasNextLink() bool {
+	return vmssvlr.NextLink != nil && len(*vmssvlr.NextLink) != 0
+}
+
 // virtualMachineScaleSetVMListResultPreparer prepares a request to retrieve the next set of results.
 // It returns nil if no more results exist.
 func (vmssvlr VirtualMachineScaleSetVMListResult) virtualMachineScaleSetVMListResultPreparer(ctx context.Context) (*http.Request, error) {
-	if vmssvlr.NextLink == nil || len(to.String(vmssvlr.NextLink)) < 1 {
+	if !vmssvlr.hasNextLink() {
 		return nil, nil
 	}
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
@@ -12783,11 +11395,16 @@ func (page *VirtualMachineScaleSetVMListResultPage) NextWithContext(ctx context.
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	next, err := page.fn(ctx, page.vmssvlr)
-	if err != nil {
-		return err
+	for {
+		next, err := page.fn(ctx, page.vmssvlr)
+		if err != nil {
+			return err
+		}
+		page.vmssvlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
 	}
-	page.vmssvlr = next
 	return nil
 }
 
@@ -12817,8 +11434,11 @@ func (page VirtualMachineScaleSetVMListResultPage) Values() []VirtualMachineScal
 }
 
 // Creates a new instance of the VirtualMachineScaleSetVMListResultPage type.
-func NewVirtualMachineScaleSetVMListResultPage(getNextPage func(context.Context, VirtualMachineScaleSetVMListResult) (VirtualMachineScaleSetVMListResult, error)) VirtualMachineScaleSetVMListResultPage {
-	return VirtualMachineScaleSetVMListResultPage{fn: getNextPage}
+func NewVirtualMachineScaleSetVMListResultPage(cur VirtualMachineScaleSetVMListResult, getNextPage func(context.Context, VirtualMachineScaleSetVMListResult) (VirtualMachineScaleSetVMListResult, error)) VirtualMachineScaleSetVMListResultPage {
+	return VirtualMachineScaleSetVMListResultPage{
+		fn:      getNextPage,
+		vmssvlr: cur,
+	}
 }
 
 // VirtualMachineScaleSetVMNetworkProfileConfiguration describes a virtual machine scale set VM network
@@ -12887,6 +11507,42 @@ type VirtualMachineScaleSetVMProperties struct {
 	ProtectionPolicy *VirtualMachineScaleSetVMProtectionPolicy `json:"protectionPolicy,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for VirtualMachineScaleSetVMProperties.
+func (vmssvp VirtualMachineScaleSetVMProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vmssvp.HardwareProfile != nil {
+		objectMap["hardwareProfile"] = vmssvp.HardwareProfile
+	}
+	if vmssvp.StorageProfile != nil {
+		objectMap["storageProfile"] = vmssvp.StorageProfile
+	}
+	if vmssvp.AdditionalCapabilities != nil {
+		objectMap["additionalCapabilities"] = vmssvp.AdditionalCapabilities
+	}
+	if vmssvp.OsProfile != nil {
+		objectMap["osProfile"] = vmssvp.OsProfile
+	}
+	if vmssvp.NetworkProfile != nil {
+		objectMap["networkProfile"] = vmssvp.NetworkProfile
+	}
+	if vmssvp.NetworkProfileConfiguration != nil {
+		objectMap["networkProfileConfiguration"] = vmssvp.NetworkProfileConfiguration
+	}
+	if vmssvp.DiagnosticsProfile != nil {
+		objectMap["diagnosticsProfile"] = vmssvp.DiagnosticsProfile
+	}
+	if vmssvp.AvailabilitySet != nil {
+		objectMap["availabilitySet"] = vmssvp.AvailabilitySet
+	}
+	if vmssvp.LicenseType != nil {
+		objectMap["licenseType"] = vmssvp.LicenseType
+	}
+	if vmssvp.ProtectionPolicy != nil {
+		objectMap["protectionPolicy"] = vmssvp.ProtectionPolicy
+	}
+	return json.Marshal(objectMap)
+}
+
 // VirtualMachineScaleSetVMProtectionPolicy the protection policy of a virtual machine scale set VM.
 type VirtualMachineScaleSetVMProtectionPolicy struct {
 	// ProtectFromScaleIn - Indicates that the virtual machine scale set VM shouldn't be considered for deletion during a scale-in operation.
@@ -12904,393 +11560,145 @@ type VirtualMachineScaleSetVMReimageParameters struct {
 // VirtualMachineScaleSetVMsDeallocateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsDeallocateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsDeallocateFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsDeallocateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsDeallocateFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsDeleteFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsDeleteFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsPerformMaintenanceFuture an abstraction for monitoring and retrieving the
 // results of a long-running operation.
 type VirtualMachineScaleSetVMsPerformMaintenanceFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsPerformMaintenanceFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsPerformMaintenanceFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsPerformMaintenanceFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsPowerOffFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsPowerOffFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsPowerOffFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsPowerOffFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsPowerOffFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsRedeployFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsRedeployFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsRedeployFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsRedeployFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsRedeployFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsReimageAllFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsReimageAllFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsReimageAllFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsReimageAllFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsReimageAllFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsReimageFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsReimageFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsReimageFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsReimageFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsReimageFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsRestartFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsRestartFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsRestartFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsRestartFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsRestartFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsRunCommandFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsRunCommandFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsRunCommandFuture) Result(client VirtualMachineScaleSetVMsClient) (rcr RunCommandResult, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsRunCommandFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsRunCommandFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if rcr.Response.Response, err = future.GetResult(sender); err == nil && rcr.Response.Response.StatusCode != http.StatusNoContent {
-		rcr, err = client.RunCommandResponder(rcr.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsRunCommandFuture", "Result", rcr.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (RunCommandResult, error)
 }
 
 // VirtualMachineScaleSetVMsStartFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsStartFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsStartFuture) Result(client VirtualMachineScaleSetVMsClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsStartFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsStartFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (autorest.Response, error)
 }
 
 // VirtualMachineScaleSetVMsUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachineScaleSetVMsUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachineScaleSetVMsUpdateFuture) Result(client VirtualMachineScaleSetVMsClient) (vmssv VirtualMachineScaleSetVM, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachineScaleSetVMsUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vmssv.Response.Response, err = future.GetResult(sender); err == nil && vmssv.Response.Response.StatusCode != http.StatusNoContent {
-		vmssv, err = client.UpdateResponder(vmssv.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsUpdateFuture", "Result", vmssv.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachineScaleSetVMsClient) (VirtualMachineScaleSetVM, error)
 }
 
 // VirtualMachinesCaptureFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesCaptureFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesCaptureFuture) Result(client VirtualMachinesClient) (vmcr VirtualMachineCaptureResult, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesCaptureFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesCaptureFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if vmcr.Response.Response, err = future.GetResult(sender); err == nil && vmcr.Response.Response.StatusCode != http.StatusNoContent {
-		vmcr, err = client.CaptureResponder(vmcr.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachinesCaptureFuture", "Result", vmcr.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (VirtualMachineCaptureResult, error)
 }
 
 // VirtualMachinesConvertToManagedDisksFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachinesConvertToManagedDisksFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesConvertToManagedDisksFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesConvertToManagedDisksFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesConvertToManagedDisksFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachinesCreateOrUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesCreateOrUpdateFuture) Result(client VirtualMachinesClient) (VM VirtualMachine, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesCreateOrUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if VM.Response.Response, err = future.GetResult(sender); err == nil && VM.Response.Response.StatusCode != http.StatusNoContent {
-		VM, err = client.CreateOrUpdateResponder(VM.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachinesCreateOrUpdateFuture", "Result", VM.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (VirtualMachine, error)
 }
 
 // VirtualMachinesDeallocateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachinesDeallocateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesDeallocateFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesDeallocateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesDeallocateFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesDeleteFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesDeleteFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesDeleteFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesDeleteFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachineSize describes the properties of a VM size.
@@ -13319,191 +11727,73 @@ type VirtualMachineSizeListResult struct {
 // VirtualMachinesPerformMaintenanceFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachinesPerformMaintenanceFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesPerformMaintenanceFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesPerformMaintenanceFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesPerformMaintenanceFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesPowerOffFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesPowerOffFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesPowerOffFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesPowerOffFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesPowerOffFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesReapplyFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesReapplyFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesReapplyFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesReapplyFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesReapplyFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesRedeployFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesRedeployFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesRedeployFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesRedeployFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesRedeployFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesReimageFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesReimageFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesReimageFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesReimageFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesReimageFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesRestartFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesRestartFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesRestartFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesRestartFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesRestartFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachinesRunCommandFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type VirtualMachinesRunCommandFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesRunCommandFuture) Result(client VirtualMachinesClient) (rcr RunCommandResult, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesRunCommandFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesRunCommandFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if rcr.Response.Response, err = future.GetResult(sender); err == nil && rcr.Response.Response.StatusCode != http.StatusNoContent {
-		rcr, err = client.RunCommandResponder(rcr.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachinesRunCommandFuture", "Result", rcr.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (RunCommandResult, error)
 }
 
 // VirtualMachinesStartFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesStartFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesStartFuture) Result(client VirtualMachinesClient) (ar autorest.Response, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesStartFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesStartFuture")
-		return
-	}
-	ar.Response = future.Response()
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (autorest.Response, error)
 }
 
 // VirtualMachineStatusCodeCount the status code and count of the virtual machine scale set instance view
@@ -13518,30 +11808,10 @@ type VirtualMachineStatusCodeCount struct {
 // VirtualMachinesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type VirtualMachinesUpdateFuture struct {
-	azure.Future
-}
-
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *VirtualMachinesUpdateFuture) Result(client VirtualMachinesClient) (VM VirtualMachine, err error) {
-	var done bool
-	done, err = future.DoneWithContext(context.Background(), client)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesUpdateFuture", "Result", future.Response(), "Polling failure")
-		return
-	}
-	if !done {
-		err = azure.NewAsyncOpIncompleteError("compute.VirtualMachinesUpdateFuture")
-		return
-	}
-	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if VM.Response.Response, err = future.GetResult(sender); err == nil && VM.Response.Response.StatusCode != http.StatusNoContent {
-		VM, err = client.UpdateResponder(VM.Response.Response)
-		if err != nil {
-			err = autorest.NewErrorWithError(err, "compute.VirtualMachinesUpdateFuture", "Result", VM.Response.Response, "Failure responding to request")
-		}
-	}
-	return
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VirtualMachinesClient) (VirtualMachine, error)
 }
 
 // VirtualMachineUpdate describes a Virtual Machine Update.
