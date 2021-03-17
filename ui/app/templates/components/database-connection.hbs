@@ -60,7 +60,7 @@
         @secret=''
         @mode="create"
         @type="add"
-        @queryParams={{query-params initialKey=(or filter baseKey.id) itemType="role"}}
+        @queryParams={{query-params initialKey=@model.name itemType="role"}}
         @data-test-secret-create=true
       >
         Add role
