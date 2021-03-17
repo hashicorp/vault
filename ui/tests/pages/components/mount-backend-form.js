@@ -12,19 +12,13 @@ export default {
   path: fillable('[data-test-input="path"]'),
   toggleOptions: clickable('[data-test-toggle-group="Method Options"]'),
   pathValue: value('[data-test-input="path"]'),
-  types: collection({
-    itemScope: '[data-test-box-radio-input]',
-
-    item: {
-      select: clickable(),
-      id: attribute('id'),
-    },
+  types: collection('[data-test-box-radio-input]', {
+    select: clickable(),
+    id: attribute('id'),
   }),
   type: fillable('[name="mount-type"]'),
-  async selectType(type) {
-    return this.types()
-      .filterBy('id', type)[0]
-      .select();
+  selectType(type) {
+    return this.types.filterBy('id', type)[0].select();
   },
   async mount(type, path) {
     await this.selectType(type);
