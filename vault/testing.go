@@ -1564,7 +1564,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.pubKey = pubKey
 	testCluster.priKey = priKey
 
-	if opts.InmemClusterLayers {
+	if opts != nil && opts.InmemClusterLayers {
 		if opts.ClusterLayers != nil {
 			t.Fatalf("cannot specify ClusterLayers when InmemClusterLayers is true")
 		}
