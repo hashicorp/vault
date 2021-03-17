@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -14,8 +13,6 @@ var _ cli.CommandAutocomplete = (*LeaseLookupCommand)(nil)
 
 type LeaseLookupCommand struct {
 	*BaseCommand
-
-	flagIncrement time.Duration
 }
 
 func (c *LeaseLookupCommand) Synopsis() string {
@@ -26,22 +23,14 @@ func (c *LeaseLookupCommand) Help() string {
 	helpText := `
 Usage: vault lease lookup ID
 
-  Renews the lease on a secret, extending the time that it can be used before
-  it is revoked by Vault.
+  Look the lease information of a secret.
 
-  Every secret in Vault has a lease associated with it. If the owner of the
-  secret wants to use it longer than the lease, then it must be renewed.
-  Renewing the lease does not change the contents of the secret. The ID is the
-  full path lease ID.
+	Every secret in Vault has a lease associated with it. Users can look up
+	information on the lease by referencing the lease ID.
 
-  Renew a secret:
+  Lookup lease of a secret:
 
-      $ vault lease renew database/creds/readonly/2f6a614c...
-
-  Lease renewal will fail if the secret is not renewable, the secret has already
-  been revoked, or if the secret has already reached its maximum TTL.
-
-  For a full list of examples, please see the documentation.
+      $ vault lease lookup database/creds/readonly/2f6a614c...
 
 ` + c.Flags().Help()
 
