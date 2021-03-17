@@ -893,9 +893,10 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	if !skipToken {
 		// Acquire lease for this lock
-		// If skipToken is true, then we're being called via RevokeByToken, so
-		// probably (always?) the lock is already held, and if we re-acquire it
-		// we get deadlock.
+		// If skipToken is true, then we're either being (1) called via RevokeByToken, so
+		// probably the lock is already held, and if we re-acquire we get deadlock, or
+		// (2) called by tidy, in which case the lock is not held.
+		// Is it worth separating those cases out, or is (2) OK to proceed unlocked?
 		leaseLock := m.lockForLeaseID(leaseID)
 		leaseLock.Lock()
 		defer leaseLock.Unlock()
