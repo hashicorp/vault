@@ -670,13 +670,20 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	b.autopilotConfig.Merge(storageConfig)
 
 	// Create the autopilot instance
-	b.autopilot = autopilot.New(b.raft, newDelegate(b), autopilot.WithLogger(b.logger), autopilot.WithPromoter(b.autopilotPromoter()))
+	options := []autopilot.Option{
+		autopilot.WithLogger(b.logger),
+		autopilot.WithPromoter(b.autopilotPromoter()),
+	}
+	if b.autopilotReconcileInterval != 0 {
+		options = append(options, autopilot.WithReconcileInterval(b.autopilotReconcileInterval))
+	}
+	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 
 	b.l.Unlock()
 
-	b.logger.Info("starting autopilot", "config", b.autopilotConfig)
+	b.logger.Info("starting autopilot", "config", b.autopilotConfig, "reconcile_interval", b.autopilotReconcileInterval)
 	b.autopilot.Start(ctx)
 
 	go b.startFollowerHeartbeatTracker()

@@ -2,21 +2,23 @@ package rafttests
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/kr/pretty"
-
+	"github.com/hashicorp/go-hclog"
 	autopilot "github.com/hashicorp/raft-autopilot"
-
-	"github.com/stretchr/testify/require"
-
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/vault"
+	"github.com/kr/pretty"
+	testingintf "github.com/mitchellh/go-testing-interface"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRaft_Autopilot_Disable(t *testing.T) {
@@ -207,4 +209,134 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	cluster.UnsealCore(t, leaderCore)
 	vault.TestWaitActive(t, leaderCore.Core)
 	configCheckFunc(config)
+}
+
+// TestRaft_Autopilot_Stabilization_Delay verifies that if a node takes a long
+// time to become ready, it doesn't get promoted to voter until then.
+func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
+	conf.DisableAutopilot = false
+	opts.InmemClusterLayers = true
+	opts.KeepStandbysSealed = true
+	opts.SetupFunc = nil
+	timeToHealthyCore2 := 5 * time.Second
+	opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+		config := map[string]interface{}{
+			"snapshot_threshold":           "50",
+			"trailing_logs":                "100",
+			"autopilot_reconcile_interval": "1s",
+		}
+		if coreIdx == 2 {
+			config["snapshot_delay"] = timeToHealthyCore2.String()
+		}
+		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
+	}
+
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	// Check that autopilot execution state is running
+	client := cluster.Cores[0].Client
+	state, err := client.Sys().RaftAutopilotState()
+	require.NotNil(t, state)
+	require.NoError(t, err)
+	require.Equal(t, true, state.Healthy)
+	require.Len(t, state.Servers, 1)
+	require.Equal(t, "core-0", state.Servers["core-0"].ID)
+	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
+	require.Equal(t, "leader", state.Servers["core-0"].Status)
+
+	_, err = client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
+		"server_stabilization_time": "3s",
+	})
+	require.NoError(t, err)
+
+	config, err := client.Sys().RaftAutopilotConfiguration()
+	require.NoError(t, err)
+
+	// Wait for 110% of the stabilization time to add nodes
+	stabilizationKickOffWaitDuration := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
+	time.Sleep(stabilizationKickOffWaitDuration)
+
+	cli := cluster.Cores[0].Client
+	// Write more keys than snapshot_threshold
+	for i := 0; i < 250; i++ {
+		_, err := cli.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			"test": "data",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	joinFunc := func(core *vault.TestClusterCore) {
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
+			{
+				LeaderAPIAddr: client.Address(),
+				TLSConfig:     cluster.Cores[0].TLSConfig,
+				Retry:         true,
+			},
+		}, false)
+		require.NoError(t, err)
+		time.Sleep(1 * time.Second)
+		cluster.UnsealCore(t, core)
+	}
+
+	checkState := func(nodeID string, numServers int, allHealthy bool, healthy bool, suffrage string) {
+		state, err = client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+		require.Equal(t, allHealthy, state.Healthy)
+		require.Len(t, state.Servers, numServers)
+		require.Equal(t, healthy, state.Servers[nodeID].Healthy)
+		require.Equal(t, "alive", state.Servers[nodeID].NodeStatus)
+		require.Equal(t, suffrage, state.Servers[nodeID].Status)
+	}
+
+	joinFunc(cluster.Cores[1])
+	checkState("core-1", 2, false, false, "non-voter")
+
+	core2shouldBeHealthyAt := time.Now().Add(timeToHealthyCore2)
+	joinFunc(cluster.Cores[2])
+	checkState("core-2", 3, false, false, "non-voter")
+
+	stabilizationWaitDuration := time.Duration(1.25 * float64(config.ServerStabilizationTime))
+	deadline := time.Now().Add(stabilizationWaitDuration)
+	var core1healthy, core2healthy bool
+	for time.Now().Before(deadline) {
+		state, err := client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+		core1healthy = state.Servers["core-1"].Healthy
+		core2healthy = state.Servers["core-2"].Healthy
+		time.Sleep(1 * time.Second)
+	}
+	if !core1healthy || core2healthy {
+		t.Fatalf("expected health: core1=true and core2=false, got: core=%v, core2=%v", core1healthy, core2healthy)
+	}
+
+	time.Sleep(2 * time.Second) // wait for reconciliation
+	state, err = client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.Equal(t, []string{"core-0", "core-1"}, state.Voters)
+
+	for time.Now().Before(core2shouldBeHealthyAt) {
+		state, err := client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+		core2healthy = state.Servers["core-2"].Healthy
+		time.Sleep(1 * time.Second)
+		t.Log(core2healthy)
+	}
+
+	deadline = time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		state, err = client.Sys().RaftAutopilotState()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strutil.EquivalentSlices(state.Voters, []string{"core-0", "core-1", "core-2"}) {
+			break
+		}
+	}
+	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
 }

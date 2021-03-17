@@ -5,29 +5,24 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	vaultcluster "github.com/hashicorp/vault/vault/cluster"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -55,20 +50,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	var opts = vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	}
-	opts.Logger = logging.NewVaultLogger(hclog.Trace).Named(t.Name())
-
-	if ropts.InmemCluster {
-		inmemCluster, err := vaultcluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
-			Mutex: &sync.Mutex{},
-			Level: hclog.Trace,
-			Name:  "inmem-cluster",
-		}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		opts.ClusterLayers = inmemCluster
-	}
-
+	opts.InmemClusterLayers = ropts.InmemCluster
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 
