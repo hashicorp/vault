@@ -188,6 +188,21 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
 	}
 
+	if result.Vault == nil {
+		result.Vault = &Vault{}
+	}
+
+	// Set defaults
+	if result.Vault.Retry == nil {
+		result.Vault.Retry = &Retry{}
+	}
+	switch result.Vault.Retry.NumRetries {
+	case 0:
+		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
+	case -1:
+		result.Vault.Retry.NumRetries = 0
+	}
+
 	return result, nil
 }
 
@@ -227,17 +242,6 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 
 	if err := parseRetry(result, subs.List); err != nil {
 		return errwrap.Wrapf("error parsing 'retry': {{err}}", err)
-	}
-
-	// Set defaults
-	if v.Retry == nil {
-		v.Retry = &Retry{}
-	}
-	switch v.Retry.NumRetries {
-	case 0:
-		v.Retry.NumRetries = ctconfig.DefaultRetryAttempts
-	case -1:
-		v.Retry.NumRetries = 0
 	}
 
 	return nil
