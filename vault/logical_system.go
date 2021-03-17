@@ -2584,7 +2584,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 
 	// Reject out of range settings
 	if rotConfig.Interval < minimumRotationInterval {
-		return logical.ErrorResponse("interval must be greater than %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
+		return logical.ErrorResponse("interval must be greater or equal to %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
 	}
 
 	if rotConfig.MaxOperations < absoluteOperationMinimum || rotConfig.MaxOperations > absoluteOperationMaximum {
