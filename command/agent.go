@@ -414,7 +414,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
-	// We do this after autoauth has been configured, because we don't want to
+	// We do this after auto-auth has been configured, because we don't want to
 	// confuse the issue of retries for auth failures which have their own
 	// config and are handled a bit differently.
 	if os.Getenv(api.EnvVaultMaxRetries) == "" {
