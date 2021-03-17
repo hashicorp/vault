@@ -71,7 +71,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
   });
 
-  test('Connection create and edit form happy path works as expected', async function(assert) {
+  test('Connection create and edit form happy path works as expected connection-happy', async function(assert) {
     const backend = await mount();
     const connectionDetails = {
       plugin: 'mongodb-database-plugin',
@@ -132,6 +132,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
     assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
     // assert password is hidden
+    assert.dom('[data-test-input="password"]').doesNotExist('Password field is not shown on edit');
     findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify({ wtimeout: 5000 }));
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
@@ -139,6 +140,11 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert
       .dom(`[data-test-row-value="Write concern"]`)
       .hasText('{ "wtimeout": 5000 }', 'Write concern is now showing on the table');
+    await connectionPage.delete();
+    assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
+    assert
+      .dom('[data-test-empty-state-title')
+      .hasText('No connections in this backend', 'No connections listed because it was deleted');
   });
 
   test('buttons show up for managing connection', async function(assert) {
