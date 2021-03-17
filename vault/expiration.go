@@ -97,6 +97,9 @@ type ExpirationManager struct {
 	leaseCount  int
 	pendingLock sync.RWMutex
 
+	// A sync.Lock for every active leaseID
+	lockPerLease sync.Map
+
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
 	// unbounded growth.
@@ -354,6 +357,8 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		nonexpiring: sync.Map{},
 		leaseCount:  0,
 		tidyLock:    new(int32),
+
+		lockPerLease: sync.Map{},
 
 		uniquePolicies:      make(map[string][]string),
 		emptyUniquePolicies: time.NewTicker(7 * 24 * time.Hour),
@@ -853,6 +858,10 @@ func (m *ExpirationManager) Revoke(ctx context.Context, leaseID string) error {
 func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "lazy-revoke"}, time.Now())
 
+	leaseLock := m.lockForLeaseID(leaseID)
+	leaseLock.Lock()
+	defer leaseLock.Unlock()
+
 	// Load the entry
 	le, err := m.loadEntry(ctx, leaseID)
 	if err != nil {
@@ -865,16 +874,10 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 	}
 
 	le.ExpireTime = time.Now()
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return err
-		}
-
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	if err := m.persistEntry(ctx, le); err != nil {
+		return err
 	}
+	m.updatePending(le)
 
 	return nil
 }
@@ -883,6 +886,11 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 // during revocation and still remove entries/index/lease timers
 func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
+
+	// Acquire lease for this lock
+	leaseLock := m.lockForLeaseID(leaseID)
+	leaseLock.Lock()
+	defer leaseLock.Unlock()
 
 	// Load the entry
 	le, err := m.loadEntry(ctx, leaseID)
@@ -912,6 +920,8 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	if err := m.deleteEntry(ctx, le); err != nil {
 		return err
 	}
+
+	m.deleteLockForLease(leaseID)
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
@@ -982,6 +992,12 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 
 	// Revoke all the keys
 	for _, leaseID := range existing {
+		// Lock the child lease... save up all the unlocks for the end
+		// of the function.
+		leaseLock := m.lockForLeaseID(leaseID)
+		leaseLock.Lock()
+		defer leaseLock.Unlock()
+
 		// Load the entry
 		le, err := m.loadEntry(ctx, leaseID)
 		if err != nil {
@@ -994,16 +1010,10 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 		if le != nil {
 			le.ExpireTime = time.Now()
 
-			{
-				m.pendingLock.Lock()
-				if err := m.persistEntry(ctx, le); err != nil {
-					m.pendingLock.Unlock()
-					return err
-				}
-
-				m.updatePendingInternal(le)
-				m.pendingLock.Unlock()
+			if err := m.persistEntry(ctx, le); err != nil {
+				return err
 			}
+			m.updatePending(le)
 		}
 	}
 
@@ -1070,6 +1080,7 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
+		// No need to acquire per-lease lock here, one of these two will do it.
 		switch {
 		case sync:
 			if err := m.revokeCommon(ctx, leaseID, force, false); err != nil {
@@ -1089,6 +1100,11 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 // and a renew interval. The increment may be ignored.
 func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew"}, time.Now())
+
+	// Acquire lock for this lease
+	leaseLock := m.lockForLeaseID(leaseID)
+	leaseLock.Lock()
+	defer leaseLock.Unlock()
 
 	// Load the entry
 	le, err := m.loadEntry(ctx, leaseID)
@@ -1182,17 +1198,12 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		}
 	}
 
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return nil, err
-		}
-
-		// Update the expiration time
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	if err := m.persistEntry(ctx, le); err != nil {
+		return nil, err
 	}
+
+	// Update the expiration time
+	m.updatePending(le)
 
 	// Return the response
 	return resp, nil
@@ -1231,6 +1242,11 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	if ns.ID != namespace.RootNamespaceID {
 		leaseID = fmt.Sprintf("%s.%s", leaseID, ns.ID)
 	}
+
+	// Acquire lock for this lease
+	leaseLock := m.lockForLeaseID(leaseID)
+	leaseLock.Lock()
+	defer leaseLock.Unlock()
 
 	// Load the entry
 	le, err := m.loadEntry(ctx, leaseID)
@@ -1297,17 +1313,10 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	le.ExpireTime = resp.Auth.ExpirationTime()
 	le.LastRenewalTime = time.Now()
 
-	{
-		m.pendingLock.Lock()
-		if err := m.persistEntry(ctx, le); err != nil {
-			m.pendingLock.Unlock()
-			return nil, err
-		}
-
-		// Update the expiration time
-		m.updatePendingInternal(le)
-		m.pendingLock.Unlock()
+	if err := m.persistEntry(ctx, le); err != nil {
+		return nil, err
 	}
+	m.updatePending(le)
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1385,6 +1394,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 			if err := m.removeIndexByToken(ctx, le); err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
 			}
+
+			m.deleteLockForLease(leaseID)
 		}
 	}()
 
@@ -1402,6 +1413,14 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 			le.ExpireTime = tokenLeaseTimes.ExpireTime
 		}
 	}
+
+	// Acquire the lock here so persistEntry and updatePending are atomic,
+	// although it is *very unlikely* that anybody could grab the lease ID
+	// before this function returns. (They could find it in an index, or
+	// find it in a list.)
+	leaseLock := m.lockForLeaseID(leaseID)
+	leaseLock.Lock()
+	defer leaseLock.Unlock()
 
 	// Encode the entry
 	if err := m.persistEntry(ctx, le); err != nil {
@@ -1495,6 +1514,10 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		namespace:   tokenNS,
 		Version:     1,
 	}
+
+	leaseLock := m.lockForLeaseID(leaseID)
+	leaseLock.Lock()
+	defer leaseLock.Unlock()
 
 	// Encode the entry
 	if err := m.persistEntry(ctx, &le); err != nil {
@@ -1632,6 +1655,30 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 		m.uniquePolicies = make(map[string][]string)
 		m.pendingLock.Unlock()
 	}
+}
+
+// Placing a lock in pendingMap means that we need to work very hard on reload
+// to only create one lock.  Instead, we'll create locks on-demand in an atomic fashion.
+//
+// Acquiring a lock from a leaseEntry is a bad idea because it could change
+// between loading and acquirung the lock. So we only provide an ID-based map, and the
+// locking discipline should be:
+//    1. Lock lease
+//    2. Load, or attempt to load, leaseEntry
+//    3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
+//    4. Unlock lease
+//
+// The lock must be removed from the map when the lease is deleted, or is
+// found to not exist in storage. loadEntry does this whenever it returns
+// nil, but we should also do it in revokeCommon().
+func (m *ExpirationManager) lockForLeaseID(id string) *sync.Mutex {
+	mutex := &sync.Mutex{}
+	lock, _ := m.lockPerLease.LoadOrStore(id, mutex)
+	return lock.(*sync.Mutex)
+}
+
+func (m *ExpirationManager) deleteLockForLease(id string) {
+	m.lockPerLease.Delete(id)
 }
 
 // updatePending is used to update a pending invocation for a lease
@@ -1815,7 +1862,16 @@ func (m *ExpirationManager) loadEntry(ctx context.Context, leaseID string) (*lea
 	} else {
 		ctx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	}
-	return m.loadEntryInternal(ctx, leaseID, restoreMode, true)
+
+	//
+	// If a lease entry is nil, proactively delete the lease lock, in case we
+	// created one erroneously.
+	leaseEntry, err := m.loadEntryInternal(ctx, leaseID, restoreMode, true)
+	if err != nil && leaseEntry == nil {
+		m.deleteLockForLease(leaseID)
+	}
+	return leaseEntry, err
+
 }
 
 // loadEntryInternal is used when you need to load an entry but also need to
