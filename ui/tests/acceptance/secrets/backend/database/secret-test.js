@@ -71,7 +71,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
   });
 
-  test('Connection create and edit form happy path works as expected connection-happy', async function(assert) {
+  test('Connection create and edit form happy path works as expected', async function(assert) {
     const backend = await mount();
     const connectionDetails = {
       plugin: 'mongodb-database-plugin',
