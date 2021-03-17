@@ -1250,6 +1250,8 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	vaulthttp.Handler(h.props).ServeHTTP(resp, req)
 }
 
+// TestAgent_Template_Retry verifies that the template server retries requests
+// based on retry configuration.
 func TestAgent_Template_Retry(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
@@ -1285,74 +1287,28 @@ func TestAgent_Template_Retry(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	// Enable the approle auth method
-	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
-	req.BodyBytes = []byte(`{
-		"type": "approle"
-	}`)
-	request(t, serverClient, req, 204)
+	methodConf, cleanup := prepAgentApproleKV(t, serverClient)
+	defer cleanup()
 
-	// give test-role permissions to read the kv secret
-	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
-	req.BodyBytes = []byte(`{
-	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
-	}`)
-	request(t, serverClient, req, 204)
+	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
+		Options: map[string]string{
+			"version": "2",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	// Create a named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
-	req.BodyBytes = []byte(`{
-	  "token_ttl": "5m",
-		"token_policies":"default,myapp-read",
-		"policies":"default,myapp-read"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Fetch the RoleID of the named role
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
-	roleID := data["role_id"].(string)
-
-	// Get a SecretID issued against the named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
-	secretID := data["secret_id"].(string)
-
-	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
-
-	// setup the kv secrets
-	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
-	req.BodyBytes = []byte(`{
-	"options": {"version": "2"}
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate a secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "bar",
-      "password": "zap"
-    }
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate another secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "barstuff",
-      "password": "zap",
-			"cert": "something"
-    }
-	}`)
-	request(t, serverClient, req, 200)
+	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]interface{}{
+		"data": map[string]interface{}{
+			"username": "barstuff",
+			"password": "zap",
+			"cert":     "something",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
@@ -1416,33 +1372,21 @@ func TestAgent_Template_Retry(t *testing.T) {
 			}
 			templateConfig := fmt.Sprintf(templateConfigString, templatePath, tmpDir, "render_0.json")
 
-			// Create a config file
-			configPat := `
-vault {
-  address = "%s"
-  %s
-  tls_skip_verify = true
-}
-
-auto_auth {
-    method "approle" {
-        mount_path = "auth/approle"
-        config = {
-            role_id_file_path = "%s"
-            secret_id_file_path = "%s"
-			remove_secret_id_file_after_reading = false
-        }
-    }
-}
-
-%s
-`
 			var retryConf string
 			if tc.retries != nil {
 				retryConf = fmt.Sprintf("retry { num_retries = %d }", *tc.retries)
 			}
 
-			config := fmt.Sprintf(configPat, serverClient.Address(), retryConf, roleIDPath, secretIDPath, templateConfig)
+			config := fmt.Sprintf(`
+%s
+vault {
+  address = "%s"
+  %s
+  tls_skip_verify = true
+}
+%s
+`, methodConf, serverClient.Address(), retryConf, templateConfig)
+
 			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
@@ -1520,4 +1464,73 @@ auto_auth {
 
 		})
 	}
+}
+
+// prepAgentApproleKV configures a Vault instance for approle authentication,
+// such that the resulting token will have global permissions across /kv
+// and /secret mounts.  Returns the auto_auth config stanza to setup an Agent
+// to connect using approle.
+func prepAgentApproleKV(t *testing.T, client *api.Client) (string, func()) {
+	t.Helper()
+
+	policyAutoAuthAppRole := `
+path "/kv/*" {
+	capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "/secret/*" {
+	capabilities = ["create", "read", "update", "delete", "list"]
+}
+`
+	// Add an kv-admin policy
+	if err := client.Sys().PutPolicy("test-autoauth", policyAutoAuthAppRole); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable approle
+	err := client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
+		Type: "approle",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
+		"bind_secret_id": "true",
+		"token_ttl":      "3s",
+		"token_max_ttl":  "10s",
+		"policies":       []string{"test-autoauth"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secretID := resp.Data["secret_id"].(string)
+	secretIDFile := makeTempFile(t, "secret_id.txt", secretID+"\n")
+
+	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	roleID := resp.Data["role_id"].(string)
+	roleIDFile := makeTempFile(t, "role_id.txt", roleID+"\n")
+
+	return fmt.Sprintf(`
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+			remove_secret_id_file_after_reading = false
+        }
+    }
+}
+`, roleIDFile, secretIDFile), func() {
+			_ = os.Remove(roleIDFile)
+			_ = os.Remove(secretIDFile)
+		}
 }
