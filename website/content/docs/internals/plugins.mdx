@@ -88,12 +88,24 @@ it instead becomes visible to backends and can be executed by them. For more
 information on the plugin catalog please see the [Plugin Catalog API
 docs](/api/system/plugins-catalog).
 
-An example plugin submission looks like:
+An example of plugin registration in current versions of Vault:
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    secret \                  # type
+    myplugin-database-plugin
+
+Success! Registered plugin: myplugin-database-plugin
+```
+
+Vault versions prior to v0.10.4 lacked the `vault plugin` operator and the 
+registration step for them is:
 
 ```shell-session
 $ vault write sys/plugins/catalog/database/myplugin-database-plugin \
-    sha256=<expected SHA256 Hex value of the plugin binary> \
-    command="myplugin"
+     sha256=<SHA256 Hex value of the plugin binary> \
+     command="myplugin"
+
 Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 ```
 
