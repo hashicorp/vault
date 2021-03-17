@@ -14,4 +14,5 @@ export default create({
   save: clickable('[data-test-secret-save=""]'),
   enable: clickable('[data-test-enable-connection=""]'),
   edit: clickable('[data-test-edit-link="true"]'),
+  delete: clickable('[data-test-database-connection-delete]'),
 });
