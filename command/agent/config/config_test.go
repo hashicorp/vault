@@ -161,6 +161,11 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
 	}
 
 	if diff := deep.Equal(config, expected); diff != nil {
@@ -206,6 +211,11 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 				},
 			},
 		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
 	}
 
 	if diff := deep.Equal(config, expected); diff != nil {
@@ -229,6 +239,11 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
 				},
+			},
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
 			},
 		},
 	}
@@ -319,6 +334,11 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
 	}
 
 	config.Listeners[0].RawConfig = nil
@@ -358,6 +378,11 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			UseAutoAuthTokenRaw: "force",
 			ForceAutoAuthToken:  true,
 		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
 	}
 
 	config.Listeners[0].RawConfig = nil
@@ -396,6 +421,11 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: "true",
 			ForceAutoAuthToken:  false,
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
 		},
 	}
 
@@ -447,6 +477,11 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			UseAutoAuthTokenRaw: "false",
 			ForceAutoAuthToken:  false,
 		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
 	}
 
 	config.Listeners[0].RawConfig = nil
@@ -479,6 +514,11 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
 				},
+			},
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
 			},
 		},
 	}
@@ -596,6 +636,11 @@ func TestLoadConfigFile_Template(t *testing.T) {
 						},
 					},
 				},
+				Vault: &Vault{
+					Retry: &Retry{
+						NumRetries: 12,
+					},
+				},
 				Templates: tc.expectedTemplates,
 			}
 
@@ -692,6 +737,11 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					Sinks: nil,
 				},
 				Templates: tc.expectedTemplates,
+				Vault: &Vault{
+					Retry: &Retry{
+						NumRetries: 12,
+					},
+				},
 			}
 
 			if diff := deep.Equal(config, expected); diff != nil {
@@ -809,6 +859,11 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 		Cache: &Cache{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
 		},
 	}
 
