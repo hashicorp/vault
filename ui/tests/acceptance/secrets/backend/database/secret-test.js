@@ -71,7 +71,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
   });
 
-  test('Connection create and edit form happy path works as expected', async function(assert) {
+  test('Can create and delete a connection', async function(assert) {
     const backend = await mount();
     const connectionDetails = {
       plugin: 'mongodb-database-plugin',
@@ -127,11 +127,60 @@ module('Acceptance | secrets/database/*', function(hooks) {
         assert.dom(`[data-test-row-value="${label}"]`).hasText(value);
       }
     });
+    await connectionPage.delete();
+    assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
+    assert
+      .dom('[data-test-empty-state-title')
+      .hasText('No connections in this backend', 'No connections listed because it was deleted');
+  });
+
+  test('Connection edit form happy path works as expected', async function(assert) {
+    await mount();
+    const connectionDetails = {
+      plugin: 'mongodb-database-plugin',
+      id: 'horses-db',
+      fields: [
+        { label: 'Connection Name', name: 'name', value: 'horses-db' },
+        { label: 'Connection url', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
+        { label: 'Username', name: 'username', value: 'user', hideOnShow: true },
+        { label: 'Password', name: 'password', password: 'so-secure', hideOnShow: true },
+        { label: 'Write concern', name: 'write_concern' },
+      ],
+    };
+    await connectionPage.createLink();
+    await connectionPage.dbPlugin(connectionDetails.plugin);
+    connectionDetails.fields.forEach(async ({ name, value }) => {
+      assert
+        .dom(`[data-test-input="${name}"]`)
+        .exists(`Field ${name} exists for ${connectionDetails.plugin}`);
+      if (value) {
+        await fillIn(`[data-test-input="${name}"]`, value);
+      }
+    });
+    // uncheck verify for the save step to work
+    await connectionPage.toggleVerify();
+    await connectionPage.save();
+    assert
+      .dom('[data-test-modal-title]')
+      .hasText('Rotate your root credentials?', 'Modal appears asking to ');
+    await connectionPage.enable();
+    connectionDetails.fields.forEach(({ label, name, value, hideOnShow }) => {
+      if (hideOnShow) {
+        assert
+          .dom(`[data-test-row-value="${label}"]`)
+          .doesNotExist(`Does not show ${name} value on show page for ${connectionDetails.plugin}`);
+      } else if (!value) {
+        assert.dom(`[data-test-row-value="${label}"]`).hasText('Default');
+      } else {
+        assert.dom(`[data-test-row-value="${label}"]`).hasText(value);
+      }
+    });
     // go back and edit write_concern
     await connectionPage.edit();
     assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
     assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
     // assert password is hidden
+    assert.dom('[data-test-input="password"]').doesNotExist('Password field is not shown on edit');
     findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify({ wtimeout: 5000 }));
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
