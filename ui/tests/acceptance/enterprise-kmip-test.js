@@ -26,6 +26,7 @@ const mount = async (shouldConfig = true) => {
     ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
   await uiConsole.runCommands(commands);
+  await settled();
   let res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error mounting secrets engine: ${res}`);
