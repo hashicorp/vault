@@ -1,0 +1,3 @@
+```changelog:enhancement
+agent: Revert template-retry feature, replace with a vault.retry stanza that applies both to templating and proxied requests.
+```
