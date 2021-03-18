@@ -54,6 +54,7 @@ type sshRole struct {
 	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
 	AllowedUserKeyLengths  map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
 	AlgorithmSigner        string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
+	AllowedPublicKeys      []string          `mapstructure:"allowed_public_keys" json:"allowed_public_keys"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -342,6 +343,13 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Signing Algorithm",
 				},
 			},
+			"allowed_public_keys": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `
+				When supplied, this value specifies the list of public keys with corresponding certificates
+				that this role is allowed to sign.
+				`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -389,6 +397,9 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	port := d.Get("port").(int)
+	if port == 0 {
+		port = 22
+	}
 	if port == 0 {
 		port = 22
 	}
@@ -514,6 +525,11 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *framework.FieldData) (*sshRole, *logical.Response) {
 	ttl := time.Duration(data.Get("ttl").(int)) * time.Second
 	maxTTL := time.Duration(data.Get("max_ttl").(int)) * time.Second
+	var allowedPublicKeys []string
+	allowedPublicKeysRaw, ok := data.GetOk("allowed_public_keys")
+	if ok {
+		allowedPublicKeys = allowedPublicKeysRaw.([]string)
+	}
 	role := &sshRole{
 		AllowedCriticalOptions: data.Get("allowed_critical_options").(string),
 		AllowedExtensions:      data.Get("allowed_extensions").(string),
@@ -529,6 +545,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		KeyIDFormat:            data.Get("key_id_format").(string),
 		KeyType:                KeyTypeCA,
 		AlgorithmSigner:        signer,
+		AllowedPublicKeys:      allowedPublicKeys,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -621,6 +638,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_extensions":       role.DefaultExtensions,
 			"allowed_user_key_lengths": role.AllowedUserKeyLengths,
 			"algorithm_signer":         role.AlgorithmSigner,
+			"allowed_public_keys":      role.AllowedPublicKeys,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{

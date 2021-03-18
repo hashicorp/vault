@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"net"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"golang.org/x/crypto/ssh"
 
