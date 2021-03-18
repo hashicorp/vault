@@ -188,6 +188,14 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert
       .dom(`[data-test-row-value="Write concern"]`)
       .hasText('{ "wtimeout": 5000 }', 'Write concern is now showing on the table');
+    // click "Add Role"
+    await click('[data-test-secret-create="true"]');
+    await settled();
+    assert.equal(
+      searchSelectComponent.selectedOptions[0].text,
+      connectionDetails.id,
+      'Database connection is pre-selected on the form'
+    );
   });
 
   test('buttons show up for managing connection', async function(assert) {
