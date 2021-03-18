@@ -14,7 +14,7 @@ The `/sys/rotate` endpoint is used to configure automatic key rotation.
 This endpoint configures the automatic rotation of the backend encryption key.  By
 default, the key is rotated after just under 4 billion encryptions, to satisfy the 
 recommendation of [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
-One can configure rotations after fewer encryptions or on a time based schedule.
+One can configure rotations after fewer encryptions or on a time based schedule.  
 
 ## Create or Update the Auto Rotation Configuration
 
@@ -25,10 +25,11 @@ One can configure rotations after fewer encryptions or on a time based schedule.
 ### Parameters
 
 - `max_operations` `(int: 3865470566)` - Specify the limit of encryptions after which
-  the key will be automatically rotated.  The number cannot be higher than
-  the default. Specifing 0 resets max_operations to the default.
+  the key will be automatically rotated.  The number must be between 1,000,000 and the
+  default.
 - `interval` `(string: "") - If set, the age of the active key at which an
-  automatic rotation is triggered.  Specified as a Go duration string (e.g. 4320h)
+  automatic rotation is triggered.  Specified as a Go duration string (e.g.
+  4320h), the value must be at least 24 hours.
 - `enabled` `(bool: true)` - If set to false, automatic rotations will not
   be performed.  Tracking of encryption counts will continue.
 

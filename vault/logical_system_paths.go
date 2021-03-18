@@ -618,9 +618,16 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 					Description: strings.TrimSpace(sysHelp["rotation-interval"][0]),
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.handleKeyRotationConfigRead,
-				logical.UpdateOperation: b.handleKeyRotationConfigUpdate,
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleKeyRotationConfigRead,
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.handleKeyRotationConfigUpdate,
+					ForwardPerformanceSecondary: true,
+					ForwardPerformanceStandby:   true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rotate-config"][0]),
