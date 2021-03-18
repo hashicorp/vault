@@ -400,9 +400,6 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if port == 0 {
 		port = 22
 	}
-	if port == 0 {
-		port = 22
-	}
 
 	keyType := d.Get("key_type").(string)
 	if keyType == "" {
