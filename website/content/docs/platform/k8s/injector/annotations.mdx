@@ -144,7 +144,10 @@ them, optional commands to run, etc.
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
 
 - `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable
-  [caching](/docs/agent/caching). Defaults to `false`.
+  [caching](/docs/agent/caching). In Vault 1.7+ this annotation will also enable 
+  a Vault persistent cache. This persistent cache will be shared between the init 
+  and sidecar container to reuse tokens and leases retrieved by the init container. 
+  Defaults to `false`. 
 
 - `vault.hashicorp.com/agent-cache-use-auto-auth-token` - configures Vault Agent cache
   to authenticate on behalf of the requester. Set to `force` to enable. Disabled
@@ -163,8 +166,18 @@ Vault annotations change how the Vault Agent containers communicate with Vault. 
 example, Vault's address, TLS certificates to use, client parameters such as timeouts,
 etc.
 
-- `vault.hashicorp.com/auth-path` - configures the auth path for the Kubernetes
+- `vault.hashicorp.com/auth-config` - configures additional parameters for the configured 
+  authentication method. The name of the config is any unique string after 
+  `vault.hashicorp.com/auth-config-`, such as `vault.hashicorp.com/auth-config-role-id-file-path`. 
+  This annotation can be reused multiple times to configure multiple settings for the authentication
+  method. Some authentication methods may require additional secrets and should be mounted via the 
+  `vault.hashicorp.com/agent-extra-secret` annotation.
+
+- `vault.hashicorp.com/auth-path` - configures the authentication path for the Kubernetes
   auth method. Defaults to `auth/kubernetes`.
+
+- `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
+  Defaults to `kubernetes`.
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
@@ -193,6 +206,9 @@ etc.
 
 - `vault.hashicorp.com/namespace` - configures the Vault Enterprise namespace to
   be used when requesting secrets from Vault.
+
+- `vault.hashicorp.com/proxy-address` - configures the HTTP proxy to use when connecting 
+  to a Vault server.
 
 - `vault.hashicorp.com/role` - configures the Vault role used by the Vault Agent
   auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.
