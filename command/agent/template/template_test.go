@@ -454,6 +454,9 @@ func TestServerRun(t *testing.T) {
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
 						Address: ts.URL,
+						Retry: &config.Retry{
+							NumRetries: 3,
+						},
 					},
 				},
 				LogLevel:      hclog.Trace,
@@ -466,7 +469,6 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
-			server.testingLimitRetry = 3
 
 			errCh := make(chan error)
 			go func() {

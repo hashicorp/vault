@@ -234,13 +234,6 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	// create an empty Vault configuration if none was loaded from file. The
-	// follow-up setStringFlag calls will populate with defaults if otherwise
-	// omitted
-	if config.Vault == nil {
-		config.Vault = new(agentConfig.Vault)
-	}
-
 	exitAfterAuth := config.ExitAfterAuth
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == "exit-after-auth" {
@@ -419,6 +412,13 @@ func (c *AgentCommand) Run(args []string) int {
 			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
 			return 1
 		}
+	}
+
+	// We do this after auto-auth has been configured, because we don't want to
+	// confuse the issue of retries for auth failures which have their own
+	// config and are handled a bit differently.
+	if os.Getenv(api.EnvVaultMaxRetries) == "" {
+		client.SetMaxRetries(config.Vault.Retry.NumRetries)
 	}
 
 	enforceConsistency := cache.EnforceConsistencyNever
@@ -721,9 +721,8 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Inform any tests that the server is ready
-	select {
-	case c.startedCh <- struct{}{}:
-	default:
+	if c.startedCh != nil {
+		close(c.startedCh)
 	}
 
 	// Listen for signals
