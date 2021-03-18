@@ -50,6 +50,7 @@ export default [
         category: 'listener',
         content: ['tcp'],
       },
+      'replication',
       {
         category: 'seal',
         content: [
@@ -61,6 +62,11 @@ export default [
           'pkcs11',
           'transit',
         ],
+      },
+      'sentinel',
+      {
+        category: 'service-registration',
+        content: ['consul', 'kubernetes'],
       },
       {
         category: 'storage',
@@ -88,11 +94,6 @@ export default [
           'swift',
           'zookeeper',
         ],
-      },
-      'sentinel',
-      {
-        category: 'service-registration',
-        content: ['consul', 'kubernetes'],
       },
       'telemetry',
       'ui',
