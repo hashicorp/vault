@@ -28,8 +28,8 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
-    {{else if (and alwaysRender defaultShown)}}
-      {{defaultShown}}
+    {{else if (and (not value) (and alwaysRender defaultShown))}}
+      <span data-test-row-value="{{label}}">{{defaultShown}}</span>
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray

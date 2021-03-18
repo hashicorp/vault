@@ -166,9 +166,9 @@ auth_type is ec2.`,
 				Type:    framework.TypeBool,
 				Default: false,
 				Description: `If set, only allows a single token to be granted per
-        instance ID. In order to perform a fresh login, the entry in whitelist
+        instance ID. In order to perform a fresh login, the entry in the access list
         for the instance ID needs to be cleared using
-        'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. This is only
+        'auth/aws-ec2/identity-accesslist/<instance_id>' endpoint. This is only
         applicable when auth_type is ec2.`,
 			},
 		},

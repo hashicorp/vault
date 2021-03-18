@@ -26,6 +26,9 @@ export default class GenerateCredentialsDatabase extends Component {
   roleName = null;
   @tracked roleType = '';
   @tracked model = null;
+  @tracked errorMessage = '';
+  @tracked errorHttpStatus = '';
+  @tracked errorTitle = 'Something went wrong';
 
   constructor() {
     super(...arguments);
@@ -34,19 +37,24 @@ export default class GenerateCredentialsDatabase extends Component {
 
   @task(function*() {
     let { roleName, backendPath } = this.args;
-    let errors = [];
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
         backend: backendPath,
         secret: roleName,
         roleType: 'static',
       });
-      // if successful will return result
       this.model = newModel;
       this.roleType = 'static';
       return;
     } catch (error) {
-      errors.push(error.errors);
+      this.errorHttpStatus = error.httpStatus; // set default http
+      this.errorMessage = `We ran into a problem and could not continue: ${error.errors[0]}`;
+      if (error.httpStatus === 403) {
+        // 403 is forbidden
+        this.errorTitle = 'You are not authorized';
+        this.errorMessage =
+          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
+      }
     }
     try {
       let newModel = yield this.store.queryRecord('database/credential', {
@@ -58,7 +66,19 @@ export default class GenerateCredentialsDatabase extends Component {
       this.roleType = 'dynamic';
       return;
     } catch (error) {
-      errors.push(error.errors);
+      if (error.httpStatus === 403) {
+        // 403 is forbidden
+        this.errorHttpStatus = error.httpStatus; // override default httpStatus which could be 400 which always happens on either dynamic or static depending on which kind of role you're querying
+        this.errorTitle = 'You are not authorized';
+        this.errorMessage =
+          "Role wasn't found or you do not have permissions. Ask your administrator if you think you should have access.";
+      }
+      if (error.httpStatus == 500) {
+        // internal server error happens when empty creation statement on dynamic role creation only
+        this.errorHttpStatus = error.httpStatus;
+        this.errorTitle = 'Internal Error';
+        this.errorMessage = error.errors[0];
+      }
     }
     this.roleType = 'noRoleFound';
   })

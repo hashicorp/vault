@@ -63,11 +63,12 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const id = snapshot.id;
-    return this.ajax(this.urlFor('database', id), 'DELETE');
+    const backend = snapshot.attr('backend');
+    return this.ajax(this.urlFor(backend, id), 'DELETE');
   },
 
   rotateRootCredentials(backend, id) {
-    return this.ajax(this.urlFor('database', id, 'ROTATE'), 'POST');
+    return this.ajax(this.urlFor(backend, id, 'ROTATE'), 'POST');
   },
 
   resetConnection(backend, id) {

@@ -286,6 +286,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
 				BaseCommand: getBaseCommand(),
@@ -356,6 +361,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator raft": func() (cli.Command, error) {
 			return &OperatorRaftCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot state": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotStateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

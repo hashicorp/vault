@@ -457,6 +457,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return nil, logical.CodedError(403, "namespaces feature not enabled")
 	}
 
+	var walState = &logical.WALState{}
+	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
 	if c.router.LoginPath(ctx, req.Path) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
@@ -562,6 +564,26 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 				return nil, ErrInternalError
 			}
 		}
+	}
+
+	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
+		walState.ClusterID = c.clusterID.Load()
+		if walState.LocalIndex == 0 {
+			if c.perfStandby {
+				walState.LocalIndex = LastRemoteWAL(c)
+			} else {
+				walState.LocalIndex = LastWAL(c)
+			}
+		}
+		if walState.ReplicatedIndex == 0 {
+			if c.perfStandby {
+				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+			} else {
+				walState.ReplicatedIndex = LastRemoteWAL(c)
+			}
+		}
+
+		req.SetResponseState(walState)
 	}
 
 	return

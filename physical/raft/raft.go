@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -120,6 +121,32 @@ type RaftBackend struct {
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
+
+	// autopilot is the instance of raft-autopilot library implementation of the
+	// autopilot features. This will be instantiated in both leader and followers.
+	// However, only active node will have a "running" autopilot.
+	autopilot *autopilot.Autopilot
+
+	// autopilotConfig represents the configuration required to instantiate autopilot.
+	autopilotConfig *AutopilotConfig
+
+	// followerStates represents the information about all the peers of the raft
+	// leader. This is used to track some state of the peers and as well as used
+	// to see if the peers are "alive" using the heartbeat received from them.
+	followerStates *FollowerStates
+
+	// followerHeartbeatTicker is used to compute dead servers using follower
+	// state heartbeats.
+	followerHeartbeatTicker *time.Ticker
+
+	// disableAutopilot if set will not put autopilot implementation to use. The
+	// fallback will be to interact with the raft instance directly. This can only
+	// be set during startup via the environment variable
+	// VAULT_RAFT_AUTOPILOT_DISABLE during startup and can't be updated once the
+	// node is up and running.
+	disableAutopilot bool
+
+	autopilotReconcileInterval time.Duration
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -247,7 +274,6 @@ func EnsurePath(path string, dir bool) error {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-
 	path := os.Getenv(EnvVaultRaftPath)
 	if path == "" {
 		pathFromConfig, ok := conf["path"]
@@ -257,10 +283,62 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		path = pathFromConfig
 	}
 
+	var localID string
+	{
+		// Determine the local node ID from the environment.
+		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
+			localID = raftNodeID
+		}
+
+		// If not set in the environment check the configuration file.
+		if len(localID) == 0 {
+			localID = conf["node_id"]
+		}
+
+		// If not set in the config check the "node-id" file.
+		if len(localID) == 0 {
+			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
+			switch {
+			case err == nil:
+				if len(localIDRaw) > 0 {
+					localID = string(localIDRaw)
+				}
+			case os.IsNotExist(err):
+			default:
+				return nil, err
+			}
+		}
+
+		// If all of the above fails generate a UUID and persist it to the
+		// "node-id" file.
+		if len(localID) == 0 {
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				return nil, err
+			}
+
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+				return nil, err
+			}
+
+			localID = id
+		}
+	}
+
 	// Create the FSM.
-	fsm, err := NewFSM(path, logger.Named("fsm"))
+	fsm, err := NewFSM(path, localID, logger.Named("fsm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
+	}
+
+	if delayRaw, ok := conf["apply_delay"]; ok {
+		delay, err := time.ParseDuration(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
+		}
+		fsm.applyCallback = func() {
+			time.Sleep(delay)
+		}
 	}
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
@@ -309,49 +387,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
 		}
-		snap = newSnapshotStoreDelay(snap, delay)
-	}
-
-	var localID string
-	{
-		// Determine the local node ID from the environment.
-		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
-			localID = raftNodeID
-		}
-
-		// If not set in the environment check the configuration file.
-		if len(localID) == 0 {
-			localID = conf["node_id"]
-		}
-
-		// If not set in the config check the "node-id" file.
-		if len(localID) == 0 {
-			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
-			switch {
-			case err == nil:
-				if len(localIDRaw) > 0 {
-					localID = string(localIDRaw)
-				}
-			case os.IsNotExist(err):
-			default:
-				return nil, err
-			}
-		}
-
-		// If all of the above fails generate a UUID and persist it to the
-		// "node-id" file.
-		if len(localID) == 0 {
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, err
-			}
-
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
-				return nil, err
-			}
-
-			localID = id
-		}
+		snap = newSnapshotStoreDelay(snap, delay, logger)
 	}
 
 	maxEntrySize := defaultMaxEntrySize
@@ -364,27 +400,40 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize = uint64(i)
 	}
 
+	var reconcileInterval time.Duration
+	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
+		}
+		reconcileInterval = interval
+	}
+
 	return &RaftBackend{
-		logger:       logger,
-		fsm:          fsm,
-		raftInitCh:   make(chan struct{}),
-		conf:         conf,
-		logStore:     log,
-		stableStore:  stable,
-		snapStore:    snap,
-		dataDir:      path,
-		localID:      localID,
-		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize: maxEntrySize,
+		logger:                     logger,
+		fsm:                        fsm,
+		raftInitCh:                 make(chan struct{}),
+		conf:                       conf,
+		logStore:                   log,
+		stableStore:                stable,
+		snapStore:                  snap,
+		dataDir:                    path,
+		localID:                    localID,
+		permitPool:                 physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:               maxEntrySize,
+		followerHeartbeatTicker:    time.NewTicker(time.Second),
+		autopilotReconcileInterval: reconcileInterval,
 	}, nil
 }
 
 type snapshotStoreDelay struct {
+	logger  log.Logger
 	wrapped raft.SnapshotStore
 	delay   time.Duration
 }
 
 func (s snapshotStoreDelay) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+	s.logger.Trace("delaying before creating snapshot", "delay", s.delay)
 	time.Sleep(s.delay)
 	return s.wrapped.Create(version, index, term, configuration, configurationIndex, trans)
 }
@@ -399,8 +448,9 @@ func (s snapshotStoreDelay) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 
 var _ raft.SnapshotStore = &snapshotStoreDelay{}
 
-func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration) *snapshotStoreDelay {
+func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration, logger log.Logger) *snapshotStoreDelay {
 	return &snapshotStoreDelay{
+		logger:  logger,
 		wrapped: snap,
 		delay:   delay,
 	}
@@ -631,6 +681,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
+	raftConfig.SnapshotInterval = 5 * time.Second
 	if err := b.applyConfigSettings(raftConfig); err != nil {
 		return err
 	}
@@ -739,6 +790,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	b.logger.Info("creating Raft", "config", fmt.Sprintf("%#v", raftConfig))
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
@@ -770,6 +822,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
+
+	if err := b.fsm.upgradeLocalNodeConfig(); err != nil {
+		b.logger.Error("failed to upgrade local node configuration")
+		return err
+	}
 
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
@@ -842,19 +899,42 @@ func (b *RaftBackend) AppliedIndex() uint64 {
 	return indexState.Index
 }
 
+// Term returns the raft term of this node.
+func (b *RaftBackend) Term() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.fsm == nil {
+		return 0
+	}
+
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Term
+}
+
 // RemovePeer removes the given peer ID from the raft cluster. If the node is
 // ourselves we will give up leadership.
 func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
-		return errors.New("raft storage is not initialized")
+	if b.disableAutopilot {
+		if b.raft == nil {
+			return errors.New("raft storage is not initialized")
+		}
+		b.logger.Trace("removing server from raft", "id", peerID)
+		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+		return future.Error()
 	}
 
-	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+	if b.autopilot == nil {
+		return errors.New("raft storage autopilot is not initialized")
+	}
 
-	return future.Error()
+	b.logger.Trace("removing server from raft via autopilot", "id", peerID)
+	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
@@ -895,14 +975,27 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
-		return errors.New("raft storage is not initialized")
+	if b.disableAutopilot {
+		if b.raft == nil {
+			return errors.New("raft storage is not initialized")
+		}
+		b.logger.Trace("adding server to raft", "id", peerID)
+		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
+		return future.Error()
 	}
 
-	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
+	if b.autopilot == nil {
+		return errors.New("raft storage autopilot is not initialized")
+	}
 
-	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
-	return future.Error()
+	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+	return b.autopilot.AddServer(&autopilot.Server{
+		ID:          raft.ServerID(peerID),
+		Name:        peerID,
+		Address:     raft.ServerAddress(clusterAddr),
+		RaftVersion: raft.ProtocolVersionMax,
+		NodeType:    autopilot.NodeVoter,
+	})
 }
 
 // Peers returns all the servers present in the raft cluster
@@ -911,7 +1004,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return nil, errors.New("raft storage backend is not initialized")
+		return nil, errors.New("raft storage is not initialized")
 	}
 
 	future := b.raft.GetConfiguration()
@@ -947,7 +1040,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return errors.New("raft storage backend is sealed")
+		return errors.New("raft storage is sealed")
 	}
 
 	// If we have access to the seal create a sealer object
@@ -972,7 +1065,7 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 
 	var metadata raft.SnapshotMeta
 	if b.raft == nil {
-		return nil, nil, metadata, errors.New("raft storage backend is sealed")
+		return nil, nil, metadata, errors.New("raft storage is sealed")
 	}
 
 	// If we have access to the seal create a sealer object
@@ -1140,7 +1233,7 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 // persisted to the local FSM. Caller should hold the backend's read lock.
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
-		return errors.New("raft storage backend is not initialized")
+		return errors.New("raft storage is not initialized")
 	}
 
 	commandBytes, err := proto.Marshal(command)
@@ -1210,6 +1303,32 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 		value: []byte(value),
 		b:     b,
 	}, nil
+}
+
+// SetDesiredSuffrage sets a field in the fsm indicating the suffrage intent for
+// this node.
+func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	var desiredSuffrage string
+	switch nonVoter {
+	case true:
+		desiredSuffrage = "non-voter"
+	default:
+		desiredSuffrage = "voter"
+	}
+
+	err := b.fsm.recordSuffrage(desiredSuffrage)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *RaftBackend) DesiredSuffrage() string {
+	return b.fsm.DesiredSuffrage()
 }
 
 // RaftLock implements the physical Lock interface and enables HA for this
@@ -1317,8 +1436,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			return nil, nil
 		}
 	}
-
-	return nil, nil
 }
 
 // Unlock gives up leadership.

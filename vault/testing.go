@@ -1070,7 +1070,7 @@ type TestClusterOptions struct {
 	// core in cluster will have 0, second 1, etc.
 	// If the backend is shared across the cluster (i.e. is not Raft) then it
 	// should return nil when coreIdx != 0.
-	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger) *PhysicalBackendBundle
+	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger, conf map[string]interface{}) *PhysicalBackendBundle
 	// FirstCoreNumber is used to assign a unique number to each core within
 	// a multi-cluster setup.
 	FirstCoreNumber   int
@@ -1081,6 +1081,9 @@ type TestClusterOptions struct {
 
 	// ClusterLayers are used to override the default cluster connection layer
 	ClusterLayers cluster.NetworkLayerSet
+	// InmemClusterLayers is a shorthand way of asking for ClusterLayers to be
+	// built using the inmem implementation.
+	InmemClusterLayers bool
 
 	// RaftAddressProvider is used to set the raft ServerAddressProvider on
 	// each core.
@@ -1091,6 +1094,8 @@ type TestClusterOptions struct {
 	RaftAddressProvider raftlib.ServerAddressProvider
 
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
+
+	PhysicalFactoryConfig map[string]interface{}
 }
 
 var DefaultNumCores = 3
@@ -1456,6 +1461,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.SecureRandomReader = base.SecureRandomReader
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
+		coreConfig.DisableAutopilot = base.DisableAutopilot
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1557,6 +1563,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 	testCluster.pubKey = pubKey
 	testCluster.priKey = priKey
+
+	if opts != nil && opts.InmemClusterLayers {
+		if opts.ClusterLayers != nil {
+			t.Fatalf("cannot specify ClusterLayers when InmemClusterLayers is true")
+		}
+		inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", numCores, testCluster.Logger.Named("inmem-cluster"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		opts.ClusterLayers = inmemCluster
+	}
 
 	// Create cores
 	testCluster.cleanupFuncs = []func(){}
@@ -1763,7 +1780,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
 	if opts != nil && opts.PhysicalFactory != nil {
-		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger)
+		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, opts.PhysicalFactoryConfig)
 		switch {
 		case physBundle == nil && coreConfig.Physical != nil:
 		case physBundle == nil && coreConfig.Physical == nil:
@@ -1795,6 +1812,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
+		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
 	}
 
 	switch {

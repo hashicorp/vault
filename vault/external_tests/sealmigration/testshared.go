@@ -4,19 +4,20 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/seal"
+	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
-	"testing"
-	"time"
 )
 
 const (
@@ -206,6 +207,7 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 		UnwrapSealFunc:        sealFunc,
 	}
 	storage.Setup(&conf, &opts)
+	conf.DisableAutopilot = true
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer func() {
@@ -267,7 +269,9 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int, tss *sealhelper.TransitSealServer, rootToken string, recoveryKeys [][]byte) func() vault.Seal {
 	var baseClusterPort = basePort + 10
 
-	var conf = vault.CoreConfig{}
+	var conf = vault.CoreConfig{
+		DisableAutopilot: true,
+	}
 	var opts = vault.TestClusterOptions{
 		Logger:                logger.Named("migrateFromShamirToTransit"),
 		HandlerFunc:           http.Handler,
@@ -561,7 +565,9 @@ func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.Reu
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
+	var conf = vault.CoreConfig{
+		DisableAutopilot: true,
+	}
 	var opts = vault.TestClusterOptions{
 		Logger:                logger.Named("initializeShamir"),
 		HandlerFunc:           http.Handler,
@@ -612,7 +618,9 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
+	var conf = vault.CoreConfig{
+		DisableAutopilot: true,
+	}
 	var opts = vault.TestClusterOptions{
 		Logger:                logger.Named("runShamir"),
 		HandlerFunc:           http.Handler,
@@ -681,7 +689,9 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
+	var conf = vault.CoreConfig{
+		DisableAutopilot: true,
+	}
 	var opts = vault.TestClusterOptions{
 		Logger:                logger.Named("initializeTransit"),
 		HandlerFunc:           http.Handler,
@@ -734,7 +744,9 @@ func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.Reusable
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{}
+	var conf = vault.CoreConfig{
+		DisableAutopilot: true,
+	}
 	var opts = vault.TestClusterOptions{
 		Logger:                logger.Named("runTransit"),
 		HandlerFunc:           http.Handler,

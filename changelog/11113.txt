@@ -1,0 +1,3 @@
+```changelog:enhancement
+agent: Add a vault.retry stanza that allows specifying number of retries on failure; this applies both to templating and proxied requests.
+```

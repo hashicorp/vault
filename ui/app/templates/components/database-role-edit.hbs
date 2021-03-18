@@ -18,6 +18,19 @@
 {{#if (eq @mode 'show')}}
   <Toolbar>
     <ToolbarActions>
+      {{#if @model.canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action 'delete'}}
+        @confirmTitle="Delete role?"
+        @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
+        @confirmButtonText="Delete"
+        data-test-database-role-delete
+      >
+        Delete role
+      </ConfirmAction>
+      <div class="toolbar-separator" />
+      {{/if}}
       {{#if @model.canGenerateCredentials}}
       <button 
         type="button"
@@ -27,18 +40,6 @@
       >
         Generate credentials
       </button>
-      {{/if}}
-      {{#if @model.canDelete}}
-      <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @onConfirmAction={{action 'delete'}}
-        @confirmTitle="Delete role?"
-        @confirmMessage="This role will be permanently deleted. You will need to re-create it to use it again."
-        @confirmButtonText="Delete"
-        data-test-database-role-delete
-      >
-        Delete role
-      </ConfirmAction>
       {{/if}}
       {{#if @model.canEditRole}}
       <ToolbarSecretLink
@@ -53,7 +54,7 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  {{#each @model.fieldAttrs as |attr|}}
+  {{#each @model.showFields as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
@@ -68,6 +69,7 @@
           @defaultShown={{attr.options.defaultShown}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{or (get @model attr.name) defaultDisplay}}
+          @isLink={{eq attr.name 'database'}}
         />
       {{/if}}
     {{/let}}
@@ -103,10 +105,14 @@
               <button
                 data-test-secret-save
                 type="submit"
-                {{!-- disabled={{this.missingFields}} // TODO validation --}}
-                class="button is-primary"
+                disabled={{this.loading}}
+                class="button is-primary {{if this.loading 'is-loading'}}"
               >
-                Save
+                {{#if (eq @mode 'create')}}
+                  Create role
+                {{else}}
+                  Save
+                {{/if}}
               </button>
             {{else}}
               <ToolTip @horizontalPosition="left" as |T|>

@@ -11,10 +11,11 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201022214319-d87657199d4b
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/sirupsen/logrus v1.6.0 // indirect
+	github.com/stretchr/testify v1.5.1
 )
