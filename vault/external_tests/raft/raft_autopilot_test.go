@@ -340,3 +340,54 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	}
 	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
 }
+
+func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
+	cluster := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		EnableAutopilot:      true,
+		DisableFollowerJoins: true,
+	})
+	defer cluster.Cleanup()
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	// Create a very large stabilization time so we can test the state between
+	// joining and promotions
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
+		"server_stabilization_time": "1h",
+	})
+	require.NoError(t, err)
+
+	joinFunc := func(core *vault.TestClusterCore) {
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
+			{
+				LeaderAPIAddr: client.Address(),
+				TLSConfig:     cluster.Cores[0].TLSConfig,
+				Retry:         true,
+			},
+		}, false)
+		require.NoError(t, err)
+		time.Sleep(1 * time.Second)
+		cluster.UnsealCore(t, core)
+	}
+
+	joinFunc(cluster.Cores[1])
+	joinFunc(cluster.Cores[2])
+
+	// Make sure all nodes have an equivalent configuration
+	core0Peers, err := cluster.Cores[0].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core1Peers, err := cluster.Cores[1].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core2Peers, err := cluster.Cores[2].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	require.Equal(t, core0Peers, core1Peers)
+	require.Equal(t, core1Peers, core2Peers)
+}
