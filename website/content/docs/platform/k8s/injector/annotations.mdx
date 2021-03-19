@@ -171,13 +171,15 @@ etc.
   `vault.hashicorp.com/auth-config-`, such as `vault.hashicorp.com/auth-config-role-id-file-path`. 
   This annotation can be reused multiple times to configure multiple settings for the authentication
   method. Some authentication methods may require additional secrets and should be mounted via the 
-  `vault.hashicorp.com/agent-extra-secret` annotation.
+  `vault.hashicorp.com/agent-extra-secret` annotation. For a list of valid authentication configurations, 
+  see the Vault Agent [auto-auth documentation](/docs/agent/autoauth/methods).
 
 - `vault.hashicorp.com/auth-path` - configures the authentication path for the Kubernetes
   auth method. Defaults to `auth/kubernetes`.
 
 - `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
-  Defaults to `kubernetes`.
+  Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent 
+  [auto-auth documentation](/docs/agent/autoauth/methods).
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
