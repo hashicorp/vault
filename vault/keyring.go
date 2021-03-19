@@ -253,8 +253,11 @@ func (c KeyRotationConfig) Clone() KeyRotationConfig {
 }
 
 func (c *KeyRotationConfig) Sanitize() {
-	if c.MaxOperations == 0 || c.MaxOperations > absoluteOperationMaximum || c.MaxOperations < absoluteOperationMinimum {
+	if c.MaxOperations == 0 || c.MaxOperations > absoluteOperationMaximum {
 		c.MaxOperations = absoluteOperationMaximum
+	}
+	if c.MaxOperations < absoluteOperationMinimum {
+		c.MaxOperations = absoluteOperationMinimum
 	}
 	if c.Interval > 0 && c.Interval < minimumRotationInterval {
 		c.Interval = minimumRotationInterval
