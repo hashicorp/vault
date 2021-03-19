@@ -5,6 +5,7 @@
       attr.options.editType
       (array
         "boolean"
+        "optionalText"
         "searchSelect"
         "mountAccessor"
         "kv"
@@ -37,6 +38,11 @@
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }} data-test-input={{attr.name}}>
+        {{#unless attr.options.defaultValue}}
+          <option value="">
+            Select one
+          </option>
+        {{/unless}}
         {{#each (path-or-array attr.options.possibleValues model) as |val|}}
           <option selected={{eq (get model valuePath) (or val.value val)}} value={{or val.value val}}>
             {{or val.displayName val}}
@@ -93,6 +99,7 @@
     onChange=(action "setAndBroadcast" valuePath)
   }}
 {{else if (eq attr.options.editType "kv")}}
+{{!-- KV Object Editor --}}
   {{kv-object-editor
     value=(get model valuePath)
     onChange=(action "setAndBroadcast" valuePath)
@@ -101,6 +108,7 @@
     helpText=attr.options.helpText
   }}
 {{else if (eq attr.options.editType "file")}}
+{{!-- File Input --}}
   {{text-file
     index=""
     helpText=attr.options.helpText
@@ -110,14 +118,47 @@
     label=labelString
   }}
 {{else if (eq attr.options.editType "ttl")}}
-  <TtlPicker2
-    @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
-    @label={{labelString}}
-    @helperTextDisabled="Vault will use the default lease duration"
-    @helperTextEnabled="Lease will expire after"
-    @description={{attr.helpText}}
-    @initialValue={{or (get model valuePath) attr.options.setDefault}}
-  />
+  {{!-- TTL Picker --}}
+  <div class="field">
+    <TtlPicker2
+      @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
+      @label={{labelString}}
+      @helperTextDisabled="Vault will use the default lease duration"
+      @helperTextEnabled="Lease will expire after"
+      @description={{attr.helpText}}
+      @initialValue={{or (get model valuePath) attr.options.setDefault}}
+    />
+  </div>
+{{else if (eq attr.options.editType "optionalText")}}
+  {{!-- Togglable Text Input --}}
+  <Toggle
+    @name="show-{{attr.name}}"
+    @status="success"
+    @size="small"
+    @onChange={{action 'toggleShow' attr.name}}
+    @checked={{showInput}}
+    data-test-toggle={{attr.name}}
+  >
+    <span class="ttl-picker-label is-large">{{labelString}}</span><br/>
+    <div class="description has-text-grey">
+      <span>{{attr.options.subText}}</span>
+    </div>
+    {{#if showInput}}
+      <input
+        data-test-input={{attr.name}}
+        id={{attr.name}}
+        autocomplete="off"
+        spellcheck="false"
+        value={{or (get model valuePath)
+        attr.options.defaultValue}}
+        onChange={{action
+          (action "setAndBroadcast" valuePath)
+          value="target.value"
+        }}
+        class="input"
+        maxLength={{attr.options.characterLimit}} />
+    {{/if}}
+  </Toggle>
 {{else if (eq attr.options.editType "stringArray")}}
   {{string-list
     data-test-input=attr.name
@@ -128,17 +169,30 @@
     onChange=(action (action "setAndBroadcast" valuePath))
   }}
 {{else if (eq attr.options.sensitive true)}}
+{{!-- Masked Input --}}
   <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
     @onChange={{action (action "setAndBroadcast" valuePath)}} @maskWhileTyping={{if (eq attr.name "bindpass") true}}/>
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}
+    {{!-- Text area --}}
       <textarea data-test-input={{attr.name}} id={{attr.name}}
         value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }} class="textarea"></textarea>
+    {{else if (eq attr.options.editType "password")}}
+      <Input
+        data-test-input={{attr.name}}
+        @type="password"
+        @value={{get model valuePath}}
+        @name={{attr.name}}
+        class="input"
+        {{!-- Prevents browsers from auto-filling --}}
+        @autocomplete="new-password"
+        @spellcheck="false" />
     {{else if (eq attr.options.editType "json")}}
+      {{!-- JSON Editor --}}
       <label for="{{attr.name}}" class="is-label">
         {{labelString}}
         {{#if attr.options.helpText}}
@@ -149,15 +203,25 @@
           {{/info-tooltip}}
         {{/if}}
       </label>
-      {{json-editor
-        value=(if
-          (get model valuePath) (stringify (jsonify (get model valuePath)))
-        )
-        valueUpdated=(action "codemirrorUpdated" attr.name "string")
-      }}
+      {{#if attr.options.subText}}
+        <p class="sub-text">{{attr.options.subText}}</p>
+      {{/if}}
+      <JsonEditor
+        data-test-input={{attr.name}}
+        @value={{if
+          (get model valuePath)
+          (stringify (jsonify (get model valuePath)))
+          attr.options.defaultValue
+        }}
+        @valueUpdated={{action "codemirrorUpdated" attr.name "string"}}
+        @options={{hash
+          theme=(or attr.options.theme 'hashi')
+        }}
+      />
     {{else}}
+      {{!-- Regular Text Input --}}
       <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
+        value={{or (get model valuePath) attr.options.defaultValue}} onChange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }} class="input" maxLength={{attr.options.characterLimit}} />

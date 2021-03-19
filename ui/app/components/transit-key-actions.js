@@ -65,9 +65,12 @@ export default Component.extend(TRANSIT_PARAMS, {
   onRefresh() {},
   init() {
     this._super(...arguments);
+    // TODO figure out why get is needed here Ember Upgrade
+    // eslint-disable-next-line ember/no-get
     if (get(this, 'selectedAction')) {
       return;
     }
+    // eslint-disable-next-line ember/no-get
     set(this, 'selectedAction', get(this, 'key.supportedActions.firstObject'));
     assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
   },
@@ -75,14 +78,14 @@ export default Component.extend(TRANSIT_PARAMS, {
   didReceiveAttrs() {
     this._super(...arguments);
     this.checkAction();
-    if (get(this, 'selectedAction') === 'export') {
+    if (this.selectedAction === 'export') {
       this.setExportKeyDefaults();
     }
   },
 
   setExportKeyDefaults() {
-    const exportKeyType = get(this, 'key.exportKeyTypes.firstObject');
-    const exportKeyVersion = get(this, 'key.validKeyVersions.lastObject');
+    const exportKeyType = this.key.exportKeyTypes.firstObject;
+    const exportKeyVersion = this.key.validKeyVersions.lastObject;
     this.setProperties({
       exportKeyType,
       exportKeyVersion,
@@ -90,12 +93,12 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   keyIsRSA: computed('key.type', function() {
-    let type = get(this, 'key.type');
+    let type = this.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
 
   getModelInfo() {
-    const model = get(this, 'key') || get(this, 'backend');
+    const model = this.key || this.backend;
     if (!model) {
       return null;
     }
@@ -109,8 +112,8 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   checkAction() {
-    const currentAction = get(this, 'selectedAction');
-    const oldAction = get(this, 'oldSelectedAction');
+    const currentAction = this.selectedAction;
+    const oldAction = this.oldSelectedAction;
 
     this.resetParams(oldAction, currentAction);
     set(this, 'oldSelectedAction', currentAction);
@@ -124,7 +127,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       // don't save values from datakey
       oldAction === 'datakey' ||
       // can rewrap signatures — using that as a ciphertext later would be problematic
-      (oldAction === 'rewrap' && !get(this, 'key.supportsEncryption'));
+      (oldAction === 'rewrap' && !this.key.supportsEncryption);
 
     if (!clearWithoutCheck && action) {
       paramsToKeep = PARAMS_FOR_ACTION[action];
@@ -152,7 +155,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   triggerSuccessMessage(action) {
     const message = SUCCESS_MESSAGE_FOR_ACTION[action];
     if (!message) return;
-    this.get('flashMessages').success(message);
+    this.flashMessages.success(message);
   },
 
   handleSuccess(resp, options, action) {
@@ -170,13 +173,13 @@ export default Component.extend(TRANSIT_PARAMS, {
     this.toggleProperty('isModalActive');
     this.setProperties(props);
     if (action === 'rotate') {
-      this.get('onRefresh')();
+      this.onRefresh();
     }
     this.triggerSuccessMessage(action);
   },
 
   compactData(data) {
-    let type = get(this, 'key.type');
+    let type = this.key.type;
     let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {
@@ -196,7 +199,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     },
 
     onClear() {
-      this.resetParams(null, get(this, 'selectedAction'));
+      this.resetParams(null, this.selectedAction);
     },
 
     clearParams(params) {
@@ -206,14 +209,14 @@ export default Component.extend(TRANSIT_PARAMS, {
 
     toggleModal(successMessage) {
       if (!!successMessage && typeof successMessage === 'string') {
-        this.get('flashMessages').success(successMessage);
+        this.flashMessages.success(successMessage);
       }
       this.toggleProperty('isModalActive');
     },
 
     doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
-      const action = this.get('selectedAction');
+      const action = this.selectedAction;
       const { encodedBase64, ...formData } = data || {};
       if (!encodedBase64) {
         if (action === 'encrypt' && !!formData.plaintext) {
@@ -228,7 +231,7 @@ export default Component.extend(TRANSIT_PARAMS, {
         errors: null,
         result: null,
       });
-      this.get('store')
+      this.store
         .adapterFor('transit-key')
         .keyAction(action, { backend, id, payload }, options)
         .then(

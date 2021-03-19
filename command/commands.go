@@ -41,6 +41,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
+	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
@@ -132,6 +133,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"aerospike":              physAerospike.NewAerospikeBackend,
 		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
@@ -284,6 +286,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
 				BaseCommand: getBaseCommand(),
@@ -357,6 +364,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot state": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotStateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator raft list-peers": func() (cli.Command, error) {
 			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),
@@ -404,6 +426,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator step-down": func() (cli.Command, error) {
 			return &OperatorStepDownCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator usage": func() (cli.Command, error) {
+			return &OperatorUsageCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -678,6 +705,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
+	}
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		Commands["operator diagnose"] = func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		}
 	}
 }
 

@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/gocql/gocql"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
 func PrepareTestContainer(t *testing.T, version string) (func(), string) {

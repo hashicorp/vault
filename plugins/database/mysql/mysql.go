@@ -8,11 +8,10 @@ import (
 	"strings"
 
 	stdmysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/errwrap"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
 const (
@@ -26,26 +25,27 @@ const (
 	`
 
 	mySQLTypeName = "mysql"
-)
 
-var (
-	MetadataLen       int = 10
-	LegacyMetadataLen int = 4
-	UsernameLen       int = 32
-	LegacyUsernameLen int = 16
+	DefaultUserNameTemplate       = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 10) (.RoleName | truncate 10) (random 20) (unix_time) | truncate 32 }}`
+	DefaultLegacyUserNameTemplate = `{{ printf "v-%s-%s-%s" (.RoleName | truncate 4) (random 20) | truncate 16 }}`
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
 	*mySQLConnectionProducer
-	legacy bool
+
+	usernameProducer        template.StringTemplate
+	defaultUsernameTemplate string
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(legacy bool) func() (interface{}, error) {
+func New(defaultUsernameTemplate string) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		db := new(legacy)
+		if defaultUsernameTemplate == "" {
+			return nil, fmt.Errorf("missing default username template")
+		}
+		db := newMySQL(defaultUsernameTemplate)
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
@@ -53,12 +53,12 @@ func New(legacy bool) func() (interface{}, error) {
 	}
 }
 
-func new(legacy bool) *MySQL {
+func newMySQL(defaultUsernameTemplate string) *MySQL {
 	connProducer := &mySQLConnectionProducer{}
 
 	return &MySQL{
 		mySQLConnectionProducer: connProducer,
-		legacy:                  legacy,
+		defaultUsernameTemplate: defaultUsernameTemplate,
 	}
 }
 
@@ -76,13 +76,36 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (m *MySQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
-	err := m.mySQLConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
+
+	if usernameTemplate == "" {
+		usernameTemplate = m.defaultUsernameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+
+	m.usernameProducer = up
+
+	_, err = m.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	err = m.mySQLConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
+	if err != nil {
+		return dbplugin.InitializeResponse{}, err
+	}
+
 	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
+
 	return resp, nil
 }
 
@@ -91,7 +114,7 @@ func (m *MySQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplu
 		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err := m.generateUsername(req)
+	username, err := m.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
@@ -115,31 +138,6 @@ func (m *MySQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplu
 		Username: username,
 	}
 	return resp, nil
-}
-
-func (m *MySQL) generateUsername(req dbplugin.NewUserRequest) (string, error) {
-	var dispNameLen, roleNameLen, maxLen int
-
-	if m.legacy {
-		dispNameLen = LegacyUsernameLen
-		roleNameLen = LegacyMetadataLen
-		maxLen = LegacyUsernameLen
-	} else {
-		dispNameLen = UsernameLen
-		roleNameLen = MetadataLen
-		maxLen = UsernameLen
-	}
-
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, dispNameLen),
-		credsutil.RoleName(req.UsernameConfig.RoleName, roleNameLen),
-		credsutil.MaxLength(maxLen),
-	)
-	if err != nil {
-		return "", errwrap.Wrapf("error generating username: {{err}}", err)
-	}
-
-	return username, nil
 }
 
 func (m *MySQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {

@@ -1,11 +1,10 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
-import DS from 'ember-data';
 import KeyMixin from 'vault/mixins/key-mixin';
-const { attr } = DS;
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-export default DS.Model.extend(KeyMixin, {
+export default Model.extend(KeyMixin, {
   failedServerRead: attr('boolean'),
   auth: attr('string'),
   lease_duration: attr('number'),
@@ -14,18 +13,18 @@ export default DS.Model.extend(KeyMixin, {
 
   secretData: attr('object'),
   secretKeyAndValue: computed('secretData', function() {
-    const data = this.get('secretData');
+    const data = this.secretData;
     return Object.keys(data).map(key => {
       return { key, value: data[key] };
     });
   }),
 
   dataAsJSONString: computed('secretData', function() {
-    return JSON.stringify(this.get('secretData'), null, 2);
+    return JSON.stringify(this.secretData, null, 2);
   }),
 
   isAdvancedFormat: computed('secretData', function() {
-    const data = this.get('secretData');
+    const data = this.secretData;
     return data && Object.keys(data).some(key => typeof data[key] !== 'string');
   }),
 

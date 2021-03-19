@@ -1,10 +1,22 @@
 import SectionHeader from '@hashicorp/react-section-header'
 import Button from '@hashicorp/react-button'
-import TextAndContent from '@hashicorp/react-text-and-content'
-import BeforeAfterDiagram from '../../../components/before-after-diagram'
-import UseCaseCtaSection from '../../../components/use-case-cta-section'
+import TextSplits from '@hashicorp/react-text-splits'
+import BeforeAfterDiagram from 'components/before-after-diagram'
+import UseCaseCtaSection from 'components/use-case-cta-section'
+//  Imports below are used in getStaticProps
+import RAW_CONTENT from './content.json'
+import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
-export default function DataEncryptionUseCase() {
+export async function getStaticProps() {
+  const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
+  return { props: { content } }
+}
+
+export default function DataEncryptionUseCase({ content }) {
   return (
     <div id="use-cases" className="g-section-block page-wrap">
       {/* Header / Buttons */}
@@ -24,166 +36,16 @@ export default function DataEncryptionUseCase() {
       {/* Before/After Diagram */}
       <section>
         <div className="g-container">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url: require('./img/challenge.png'),
-              format: 'png',
-            }}
-            beforeHeadline="The Challenge"
-            beforeContent="With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl"
-            afterImage={{
-              url: require('./img/solution.png'),
-              format: 'png',
-            }}
-            afterHeadline="The Solution"
-            afterContent="Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
 
-      {/* Features / Text and content */}
-      <section className="g-container">
-        <SectionHeader headline="Identity-based Access Features" />
-
-        <div className="g-text-and-content">
-          <div className="text">
-            <div>
-              <h3 id="secure-plugins">Identity Plugins</h3>
-              <p>
-                Improve the extensibility of Vault with pluggable identity
-                backends
-              </p>
-            </div>
-          </div>
-          <div className="content logo-grid">
-            <ul className="g-logo-grid large">
-              {[
-                'aws',
-                'azure',
-                'gcp',
-                'kubernetes',
-                'nomad',
-                'okta',
-                'pivotalcf',
-                'ssh',
-              ].map((logo) => (
-                <li key={logo}>
-                  <img
-                    src={require(`./img/logos/${logo}.png`)}
-                    alt="company logo"
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
+      {/* Features */}
+      <section className="no-section-spacing">
+        <div className="g-grid-container">
+          <SectionHeader headline="Identity-based Access Features" />
         </div>
-
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Entities
-
-Integrated identities across platforms and using this information for policy and access control decisions.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: require('./img/screenshot-entities.png'),
-                format: 'png',
-              },
-            },
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            text: `### Control Groups
-
-Require multiple Identity Entities or members of Identity Groups to authorize an requested action.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: require('./img/screenshot-control-groups.png'),
-                format: 'png',
-              },
-            },
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            text: `### ACL Templates and Policy Control
-
-Create and manage policies that authorize access control throughout your infrastructure and organization`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `# User template (user-tmpl.hcl)
-# Grant permissions on user specific path
-
-path "user-kv/data/{{identity.entity.name}}/*" {
-  capabilities = [ "create", "update", "read", "delete", "list" ]
-}
-
-# For Web UI usage
-path "user-kv/metadata" {
-  capabilities = ["list"]
-}
-
-# Group template (group-tmpl.hcl)
-# Grant permissions on the group specific path
-# The region is specified in the group metadata
-path "group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*" {
-  capabilities = [ "create", "update", "read", "delete", "list" ]
-}
-
-# Group member can update the group information
-path "identity/group/id/{{identity.groups.names.education.id}}" {
-  capabilities = [ "update", "read" ]
-}
-
-# For Web UI usage
-path "group-kv/metadata" {
-  capabilities = ["list"]
-}
-
-path "identity/group/id" {
-  capabilities = [ "list" ]
-}`,
-            },
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            reverseDirection: true,
-            text: `### Identity Groups
-
-Group trusted identities into logical groups for group-based access control.`,
-            content: {
-              __typename: 'SbcImageRecord',
-              image: {
-                url: require('./img/screenshot-identity-groups.png'),
-                format: 'png',
-              },
-            },
-          }}
-        />
-
-        <TextAndContent
-          data={{
-            text: `### Multi-factor Authentication
-
-Enforce MFA workflows when accessing a secret or a secret path`,
-            content: {
-              __typename: 'SbcCodeBlockRecord',
-              chrome: true,
-              code: `$ curl \
---header "X-Vault-Token: ..." \\
---header "X-Vault-MFA:my_totp:695452" \\
-http://127.0.0.1:8200/v1/secret/foo`,
-            },
-          }}
-        />
+        <TextSplits textSplits={content.features} />
       </section>
 
       <UseCaseCtaSection />

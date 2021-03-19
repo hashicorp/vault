@@ -250,209 +250,217 @@ func TestBackend_CreateRoleTagNonce(t *testing.T) {
 }
 
 func TestBackend_ConfigTidyIdentities(t *testing.T) {
-	// create a backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+	for _, path := range []string{"config/tidy/identity-whitelist", "config/tidy/identity-accesslist"} {
+		// create a backend
+		config := logical.TestBackendConfig()
+		storage := &logical.InmemStorage{}
+		config.StorageView = storage
 
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		b, err := Backend(config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		err = b.Setup(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// test update operation
-	tidyRequest := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/tidy/identity-whitelist",
-		Storage:   storage,
-	}
-	data := map[string]interface{}{
-		"safety_buffer":         "60",
-		"disable_periodic_tidy": true,
-	}
-	tidyRequest.Data = data
-	_, err = b.HandleRequest(context.Background(), tidyRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
+		// test update operation
+		tidyRequest := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      path,
+			Storage:   storage,
+		}
+		data := map[string]interface{}{
+			"safety_buffer":         "60",
+			"disable_periodic_tidy": true,
+		}
+		tidyRequest.Data = data
+		_, err = b.HandleRequest(context.Background(), tidyRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// test read operation
-	tidyRequest.Operation = logical.ReadOperation
-	resp, err := b.HandleRequest(context.Background(), tidyRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to read config/tidy/identity-whitelist endpoint")
-	}
-	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
-		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
-	}
+		// test read operation
+		tidyRequest.Operation = logical.ReadOperation
+		resp, err := b.HandleRequest(context.Background(), tidyRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.IsError() {
+			t.Fatalf("failed to read %q endpoint", path)
+		}
+		if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
+			t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+		}
 
-	// test delete operation
-	tidyRequest.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), tidyRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatalf("failed to delete config/tidy/identity-whitelist")
+		// test delete operation
+		tidyRequest.Operation = logical.DeleteOperation
+		resp, err = b.HandleRequest(context.Background(), tidyRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp != nil {
+			t.Fatalf("failed to delete %q", path)
+		}
 	}
 }
 
 func TestBackend_ConfigTidyRoleTags(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+	for _, path := range []string{"config/tidy/roletag-blacklist", "config/tidy/roletag-denylist"} {
+		config := logical.TestBackendConfig()
+		storage := &logical.InmemStorage{}
+		config.StorageView = storage
 
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		b, err := Backend(config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		err = b.Setup(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// test update operation
-	tidyRequest := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/tidy/roletag-blacklist",
-		Storage:   storage,
-	}
-	data := map[string]interface{}{
-		"safety_buffer":         "60",
-		"disable_periodic_tidy": true,
-	}
-	tidyRequest.Data = data
-	_, err = b.HandleRequest(context.Background(), tidyRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
+		// test update operation
+		tidyRequest := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      path,
+			Storage:   storage,
+		}
+		data := map[string]interface{}{
+			"safety_buffer":         "60",
+			"disable_periodic_tidy": true,
+		}
+		tidyRequest.Data = data
+		_, err = b.HandleRequest(context.Background(), tidyRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// test read operation
-	tidyRequest.Operation = logical.ReadOperation
-	resp, err := b.HandleRequest(context.Background(), tidyRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to read config/tidy/roletag-blacklist endpoint")
-	}
-	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
-		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
-	}
+		// test read operation
+		tidyRequest.Operation = logical.ReadOperation
+		resp, err := b.HandleRequest(context.Background(), tidyRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.IsError() {
+			t.Fatalf("failed to read %s endpoint", path)
+		}
+		if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
+			t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+		}
 
-	// test delete operation
-	tidyRequest.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), tidyRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatalf("failed to delete config/tidy/roletag-blacklist")
+		// test delete operation
+		tidyRequest.Operation = logical.DeleteOperation
+		resp, err = b.HandleRequest(context.Background(), tidyRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp != nil {
+			t.Fatalf("failed to delete %s", path)
+		}
 	}
 }
 
 func TestBackend_TidyIdentities(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+	for _, path := range []string{"tidy/identity-whitelist", "tidy/identity-accesslist"} {
+		config := logical.TestBackendConfig()
+		storage := &logical.InmemStorage{}
+		config.StorageView = storage
 
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		b, err := Backend(config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		err = b.Setup(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	expiredIdentityWhitelist := &whitelistIdentity{
-		ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
-	}
-	entry, err := logical.StorageEntryJSON("whitelist/identity/id1", expiredIdentityWhitelist)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := storage.Put(context.Background(), entry); err != nil {
-		t.Fatal(err)
-	}
+		expiredIdentityWhitelist := &accessListIdentity{
+			ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
+		}
+		entry, err := logical.StorageEntryJSON("whitelist/identity/id1", expiredIdentityWhitelist)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storage.Put(context.Background(), entry); err != nil {
+			t.Fatal(err)
+		}
 
-	// test update operation
-	_, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "tidy/identity-whitelist",
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+		// test update operation
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      path,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// let tidy finish in the background
-	time.Sleep(1 * time.Second)
+		// let tidy finish in the background
+		time.Sleep(1 * time.Second)
 
-	entry, err = storage.Get(context.Background(), "whitelist/identity/id1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry != nil {
-		t.Fatal("wl tidy did not remove expired entry")
+		entry, err = storage.Get(context.Background(), "whitelist/identity/id1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if entry != nil {
+			t.Fatal("wl tidy did not remove expired entry")
+		}
 	}
 }
 
 func TestBackend_TidyRoleTags(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+	for _, path := range []string{"tidy/roletag-blacklist", "tidy/roletag-denylist"} {
+		config := logical.TestBackendConfig()
+		storage := &logical.InmemStorage{}
+		config.StorageView = storage
 
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		b, err := Backend(config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+		err = b.Setup(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	expiredIdentityWhitelist := &roleTagBlacklistEntry{
-		ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
-	}
-	entry, err := logical.StorageEntryJSON("blacklist/roletag/id1", expiredIdentityWhitelist)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := storage.Put(context.Background(), entry); err != nil {
-		t.Fatal(err)
-	}
+		expiredIdentityWhitelist := &roleTagBlacklistEntry{
+			ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
+		}
+		entry, err := logical.StorageEntryJSON("blacklist/roletag/id1", expiredIdentityWhitelist)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storage.Put(context.Background(), entry); err != nil {
+			t.Fatal(err)
+		}
 
-	// test update operation
-	_, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "tidy/roletag-blacklist",
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+		// test update operation
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      path,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// let tidy finish in the background
-	time.Sleep(1 * time.Second)
+		// let tidy finish in the background
+		time.Sleep(1 * time.Second)
 
-	entry, err = storage.Get(context.Background(), "blacklist/roletag/id1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry != nil {
-		t.Fatal("bl tidy did not remove expired entry")
+		entry, err = storage.Get(context.Background(), "blacklist/roletag/id1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if entry != nil {
+			t.Fatal("bl tidy did not remove expired entry")
+		}
 	}
 }
 
@@ -899,110 +907,113 @@ func TestBackend_PathRoleTag(t *testing.T) {
 }
 
 func TestBackend_PathBlacklistRoleTag(t *testing.T) {
-	// create the backend
-	storage := &logical.InmemStorage{}
-	config := logical.TestBackendConfig()
-	config.StorageView = storage
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, path := range []string{"roletag-blacklist/", "roletag-denylist/"} {
+		// create the backend
+		storage := &logical.InmemStorage{}
+		config := logical.TestBackendConfig()
+		config.StorageView = storage
+		b, err := Backend(config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// create an role entry
-	data := map[string]interface{}{
-		"auth_type":    "ec2",
-		"policies":     "p,q,r,s",
-		"role_tag":     "VaultRole",
-		"bound_ami_id": "abcd-123",
-	}
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "role/abcd-123",
-		Storage:   storage,
-		Data:      data,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create role")
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+		err = b.Setup(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// create a role tag against an role registered before
-	data2 := map[string]interface{}{
-		"policies": "p,q,r,s",
-	}
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "role/abcd-123/tag",
-		Storage:   storage,
-		Data:      data2,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Data == nil {
-		t.Fatalf("failed to create a tag on role: abcd-123")
-	}
-	if resp.IsError() {
-		t.Fatalf("failed to create a tag on role: abcd-123: %s\n", resp.Data["error"])
-	}
-	tag := resp.Data["tag_value"].(string)
-	if tag == "" {
-		t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
-	}
+		// create an role entry
+		data := map[string]interface{}{
+			"auth_type":    "ec2",
+			"policies":     "p,q,r,s",
+			"role_tag":     "VaultRole",
+			"bound_ami_id": "abcd-123",
+		}
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "role/abcd-123",
+			Storage:   storage,
+			Data:      data,
+		})
+		if resp != nil && resp.IsError() {
+			t.Fatalf("failed to create role")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// blacklist that role tag
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "roletag-blacklist/" + tag,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatalf("failed to blacklist the roletag: %s\n", tag)
-	}
+		// create a role tag against an role registered before
+		data2 := map[string]interface{}{
+			"policies": "p,q,r,s",
+		}
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "role/abcd-123/tag",
+			Storage:   storage,
+			Data:      data2,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Data == nil {
+			t.Fatalf("failed to create a tag on role: abcd-123")
+		}
+		if resp.IsError() {
+			t.Fatalf("failed to create a tag on role: abcd-123: %s\n", resp.Data["error"])
+		}
+		tag := resp.Data["tag_value"].(string)
+		if tag == "" {
+			t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
+		}
 
-	// read the blacklist entry
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "roletag-blacklist/" + tag,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Data == nil {
-		t.Fatalf("failed to read the blacklisted role tag: %s\n", tag)
-	}
-	if resp.IsError() {
-		t.Fatalf("failed to read the blacklisted role tag:%s. Err: %s\n", tag, resp.Data["error"])
-	}
+		// deny list that role tag
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      path + tag,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp != nil {
+			t.Fatalf("failed to deny list the roletag: %s\n", tag)
+		}
 
-	// delete the blacklisted entry
-	_, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "roletag-blacklist/" + tag,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+		// read the deny list entry
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      path + tag,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Data == nil {
+			t.Fatalf("failed to read the deny list role tag: %s\n", tag)
+		}
+		if resp.IsError() {
+			t.Fatalf("failed to read the deny list role tag:%s. Err: %s\n", tag, resp.Data["error"])
+		}
 
-	// try to read the deleted entry
-	tagEntry, err := b.lockedBlacklistRoleTagEntry(context.Background(), storage, tag)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if tagEntry != nil {
-		t.Fatalf("role tag should not have been present: %s\n", tag)
+		// delete the deny listed entry
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.DeleteOperation,
+			Path:      path + tag,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// try to read the deleted entry
+		tagEntry, err := b.lockedDenyLististRoleTagEntry(context.Background(), storage, tag)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tagEntry != nil {
+			t.Fatalf("role tag should not have been present: %s\n", tag)
+		}
 	}
 }
 
@@ -1030,271 +1041,273 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
    TEST_AWS_SECRET_KEY
    TEST_AWS_ACCESS_KEY
 */
-func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.T) {
-	// This test case should be run only when certain env vars are set and
-	// executed as an acceptance test.
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
-	pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
-	if pkcs7 == "" {
-		t.Skipf("env var TEST_AWS_EC2_PKCS7 not set, skipping test")
-	}
-
-	identityDoc := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT")
-	if identityDoc == "" {
-		t.Skipf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT not set, skipping test")
-	}
-
-	identityDocSig := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG")
-	if identityDocSig == "" {
-		t.Skipf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG not set, skipping test")
-	}
-
-	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
-	if amiID == "" {
-		t.Skipf("env var TEST_AWS_EC2_AMI_ID not set, skipping test")
-	}
-
-	iamARN := os.Getenv("TEST_AWS_EC2_IAM_ROLE_ARN")
-	if iamARN == "" {
-		t.Skipf("env var TEST_AWS_EC2_IAM_ROLE_ARN not set, skipping test")
-	}
-
-	accountID := os.Getenv("TEST_AWS_EC2_ACCOUNT_ID")
-	if accountID == "" {
-		t.Skipf("env var TEST_AWS_EC2_ACCOUNT_ID not set, skipping test")
-	}
-
-	roleName := amiID
-
-	// create the backend
-	storage := &logical.InmemStorage{}
-	config := logical.TestBackendConfig()
-	config.StorageView = storage
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	accessKey := os.Getenv("TEST_AWS_ACCESS_KEY")
-	secretKey := os.Getenv("TEST_AWS_SECRET_KEY")
-
-	// In case of problems with making API calls using the credentials (2FA enabled,
-	// for instance), the keys need not be set if the test is running on an EC2
-	// instance with permissions to get the credentials using EC2RoleProvider.
-	if accessKey != "" && secretKey != "" {
-		// get the API credentials from env vars
-		clientConfig := map[string]interface{}{
-			"access_key": accessKey,
-			"secret_key": secretKey,
-		}
-		if clientConfig["access_key"] == "" ||
-			clientConfig["secret_key"] == "" {
-			t.Fatalf("credentials not configured")
+func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing.T) {
+	for _, path := range []string{"identity-whitelist/", "identity-accesslist/"} {
+		// This test case should be run only when certain env vars are set and
+		// executed as an acceptance test.
+		if os.Getenv(logicaltest.TestEnvVar) == "" {
+			t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+			return
 		}
 
-		// store the credentials
-		_, err = b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.UpdateOperation,
-			Storage:   storage,
-			Path:      "config/client",
-			Data:      clientConfig,
-		})
+		pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
+		if pkcs7 == "" {
+			t.Skipf("env var TEST_AWS_EC2_PKCS7 not set, skipping test")
+		}
+
+		identityDoc := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT")
+		if identityDoc == "" {
+			t.Skipf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT not set, skipping test")
+		}
+
+		identityDocSig := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG")
+		if identityDocSig == "" {
+			t.Skipf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG not set, skipping test")
+		}
+
+		amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
+		if amiID == "" {
+			t.Skipf("env var TEST_AWS_EC2_AMI_ID not set, skipping test")
+		}
+
+		iamARN := os.Getenv("TEST_AWS_EC2_IAM_ROLE_ARN")
+		if iamARN == "" {
+			t.Skipf("env var TEST_AWS_EC2_IAM_ROLE_ARN not set, skipping test")
+		}
+
+		accountID := os.Getenv("TEST_AWS_EC2_ACCOUNT_ID")
+		if accountID == "" {
+			t.Skipf("env var TEST_AWS_EC2_ACCOUNT_ID not set, skipping test")
+		}
+
+		roleName := amiID
+
+		// create the backend
+		storage := &logical.InmemStorage{}
+		config := logical.TestBackendConfig()
+		config.StorageView = storage
+		b, err := Backend(config)
 		if err != nil {
 			t.Fatal(err)
 		}
-	}
 
-	loginInput := map[string]interface{}{
-		"pkcs7": pkcs7,
-		"nonce": "vault-client-nonce",
-	}
+		err = b.Setup(context.Background(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	parsedIdentityDoc, err := b.parseIdentityDocument(context.Background(), storage, pkcs7)
-	if err != nil {
-		t.Fatal(err)
-	}
+		accessKey := os.Getenv("TEST_AWS_ACCESS_KEY")
+		secretKey := os.Getenv("TEST_AWS_SECRET_KEY")
 
-	// Perform the login operation with a AMI ID that is not matching
-	// the bound on the role.
-	loginRequest := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "login",
-		Storage:   storage,
-		Data:      loginInput,
-	}
+		// In case of problems with making API calls using the credentials (2FA enabled,
+		// for instance), the keys need not be set if the test is running on an EC2
+		// instance with permissions to get the credentials using EC2RoleProvider.
+		if accessKey != "" && secretKey != "" {
+			// get the API credentials from env vars
+			clientConfig := map[string]interface{}{
+				"access_key": accessKey,
+				"secret_key": secretKey,
+			}
+			if clientConfig["access_key"] == "" ||
+				clientConfig["secret_key"] == "" {
+				t.Fatalf("credentials not configured")
+			}
 
-	// Baseline role data that should succeed permit login
-	data := map[string]interface{}{
-		"auth_type":             "ec2",
-		"policies":              "root",
-		"max_ttl":               "120s",
-		"bound_ami_id":          []string{"wrong_ami_id", amiID, "wrong_ami_id2"},
-		"bound_account_id":      accountID,
-		"bound_iam_role_arn":    iamARN,
-		"bound_ec2_instance_id": []string{parsedIdentityDoc.InstanceID, "i-1234567"},
-	}
+			// store the credentials
+			_, err = b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Path:      "config/client",
+				Data:      clientConfig,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 
-	roleReq := &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "role/" + roleName,
-		Storage:   storage,
-		Data:      data,
-	}
+		loginInput := map[string]interface{}{
+			"pkcs7": pkcs7,
+			"nonce": "vault-client-nonce",
+		}
 
-	updateRoleExpectLoginFail := func(roleRequest, loginRequest *logical.Request) error {
-		resp, err := b.HandleRequest(context.Background(), roleRequest)
+		parsedIdentityDoc, err := b.parseIdentityDocument(context.Background(), storage, pkcs7)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Perform the login operation with a AMI ID that is not matching
+		// the bound on the role.
+		loginRequest := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "login",
+			Storage:   storage,
+			Data:      loginInput,
+		}
+
+		// Baseline role data that should succeed permit login
+		data := map[string]interface{}{
+			"auth_type":             "ec2",
+			"policies":              "root",
+			"max_ttl":               "120s",
+			"bound_ami_id":          []string{"wrong_ami_id", amiID, "wrong_ami_id2"},
+			"bound_account_id":      accountID,
+			"bound_iam_role_arn":    iamARN,
+			"bound_ec2_instance_id": []string{parsedIdentityDoc.InstanceID, "i-1234567"},
+		}
+
+		roleReq := &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "role/" + roleName,
+			Storage:   storage,
+			Data:      data,
+		}
+
+		updateRoleExpectLoginFail := func(roleRequest, loginRequest *logical.Request) error {
+			resp, err := b.HandleRequest(context.Background(), roleRequest)
+			if err != nil || (resp != nil && resp.IsError()) {
+				return fmt.Errorf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+			}
+			resp, err = b.HandleRequest(context.Background(), loginRequest)
+			if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+				return fmt.Errorf("bad: expected login failure: resp:%#v\nerr:%v", resp, err)
+			}
+			return nil
+		}
+
+		// Test a role with the wrong AMI ID
+		data["bound_ami_id"] = []string{"ami-1234567", "ami-7654321"}
+		if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+			t.Fatal(err)
+		}
+
+		roleReq.Operation = logical.UpdateOperation
+		// Place the correct AMI ID in one of the values, but make the AccountID wrong
+		data["bound_ami_id"] = []string{"wrong_ami_id_1", amiID, "wrong_ami_id_2"}
+		data["bound_account_id"] = []string{"wrong-account-id", "wrong-account-id-2"}
+		if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+			t.Fatal(err)
+		}
+
+		// Place the correct AccountID in one of the values, but make the wrong IAMRoleARN
+		data["bound_account_id"] = []string{"wrong-account-id-1", accountID, "wrong-account-id-2"}
+		data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", "wrong_iam_role_arn_2"}
+		if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+			t.Fatal(err)
+		}
+
+		// Place correct IAM role ARN, but incorrect instance ID
+		data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
+		data["bound_ec2_instance_id"] = "i-1234567"
+		if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+			t.Fatal(err)
+		}
+
+		// Place correct instance ID, but substring of the IAM role ARN
+		data["bound_ec2_instance_id"] = []string{parsedIdentityDoc.InstanceID, "i-1234567"}
+		data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", iamARN[:len(iamARN)-2], "wrong_iam_role_arn_2"}
+		if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+			t.Fatal(err)
+		}
+
+		// place a wildcard in the middle of the role ARN
+		// The :31 gets arn:aws:iam::123456789012:role/
+		// This test relies on the role name having at least two characters
+		data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", fmt.Sprintf("%s*%s", iamARN[:31], iamARN[32:])}
+		if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+			t.Fatal(err)
+		}
+
+		// globbed IAM role ARN
+		data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", fmt.Sprintf("%s*", iamARN[:len(iamARN)-2]), "wrong_iam_role_arn_2"}
+		resp, err := b.HandleRequest(context.Background(), roleReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			return fmt.Errorf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+			t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 		}
+
+		// Now, the login attempt should succeed
 		resp, err = b.HandleRequest(context.Background(), loginRequest)
-		if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-			return fmt.Errorf("bad: expected login failure: resp:%#v\nerr:%v", resp, err)
+		if err != nil {
+			t.Fatal(err)
 		}
-		return nil
-	}
+		if resp == nil || resp.Auth == nil || resp.IsError() {
+			t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
+		}
 
-	// Test a role with the wrong AMI ID
-	data["bound_ami_id"] = []string{"ami-1234567", "ami-7654321"}
-	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
-		t.Fatal(err)
-	}
+		// Attempt to re-login with the identity signature
+		delete(loginInput, "pkcs7")
+		loginInput["identity"] = identityDoc
+		loginInput["signature"] = identityDocSig
+		resp, err = b.HandleRequest(context.Background(), loginRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Auth == nil || resp.IsError() {
+			t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
+		}
 
-	roleReq.Operation = logical.UpdateOperation
-	// Place the correct AMI ID in one of the values, but make the AccountID wrong
-	data["bound_ami_id"] = []string{"wrong_ami_id_1", amiID, "wrong_ami_id_2"}
-	data["bound_account_id"] = []string{"wrong-account-id", "wrong-account-id-2"}
-	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
-		t.Fatal(err)
-	}
+		// verify the presence of instance_id in the response object.
+		instanceID := resp.Auth.Metadata["instance_id"]
+		if instanceID == "" {
+			t.Fatalf("instance ID not present in the response object")
+		}
+		if instanceID != parsedIdentityDoc.InstanceID {
+			t.Fatalf("instance ID in response (%q) did not match instance ID from identity document (%q)", instanceID, parsedIdentityDoc.InstanceID)
+		}
 
-	// Place the correct AccountID in one of the values, but make the wrong IAMRoleARN
-	data["bound_account_id"] = []string{"wrong-account-id-1", accountID, "wrong-account-id-2"}
-	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", "wrong_iam_role_arn_2"}
-	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
-		t.Fatal(err)
-	}
+		_, ok := resp.Auth.Metadata["nonce"]
+		if ok {
+			t.Fatalf("client nonce should not have been returned")
+		}
 
-	// Place correct IAM role ARN, but incorrect instance ID
-	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
-	data["bound_ec2_instance_id"] = "i-1234567"
-	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
-		t.Fatal(err)
-	}
+		loginInput["nonce"] = "changed-vault-client-nonce"
+		// try to login again with changed nonce
+		resp, err = b.HandleRequest(context.Background(), loginRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || !resp.IsError() {
+			t.Fatalf("login attempt should have failed due to client nonce mismatch")
+		}
 
-	// Place correct instance ID, but substring of the IAM role ARN
-	data["bound_ec2_instance_id"] = []string{parsedIdentityDoc.InstanceID, "i-1234567"}
-	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", iamARN[:len(iamARN)-2], "wrong_iam_role_arn_2"}
-	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
-		t.Fatal(err)
-	}
+		// Check if a access list identity entry is created after the login.
+		wlRequest := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      path + instanceID,
+			Storage:   storage,
+		}
+		resp, err = b.HandleRequest(context.Background(), wlRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Data == nil || resp.Data["role"] != roleName {
+			t.Fatalf("failed to read access list identity")
+		}
 
-	// place a wildcard in the middle of the role ARN
-	// The :31 gets arn:aws:iam::123456789012:role/
-	// This test relies on the role name having at least two characters
-	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", fmt.Sprintf("%s*%s", iamARN[:31], iamARN[32:])}
-	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
-		t.Fatal(err)
-	}
+		// Delete the access list identity entry.
+		wlRequest.Operation = logical.DeleteOperation
+		resp, err = b.HandleRequest(context.Background(), wlRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.IsError() {
+			t.Fatalf("failed to delete access list identity")
+		}
 
-	// globbed IAM role ARN
-	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", fmt.Sprintf("%s*", iamARN[:len(iamARN)-2]), "wrong_iam_role_arn_2"}
-	resp, err := b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
-	}
+		// Allow a fresh login without supplying the nonce
+		delete(loginInput, "nonce")
 
-	// Now, the login attempt should succeed
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
-	}
+		resp, err = b.HandleRequest(context.Background(), loginRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Auth == nil || resp.IsError() {
+			t.Fatalf("login attempt failed")
+		}
 
-	// Attempt to re-login with the identity signature
-	delete(loginInput, "pkcs7")
-	loginInput["identity"] = identityDoc
-	loginInput["signature"] = identityDocSig
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// verify the presence of instance_id in the response object.
-	instanceID := resp.Auth.Metadata["instance_id"]
-	if instanceID == "" {
-		t.Fatalf("instance ID not present in the response object")
-	}
-	if instanceID != parsedIdentityDoc.InstanceID {
-		t.Fatalf("instance ID in response (%q) did not match instance ID from identity document (%q)", instanceID, parsedIdentityDoc.InstanceID)
-	}
-
-	_, ok := resp.Auth.Metadata["nonce"]
-	if ok {
-		t.Fatalf("client nonce should not have been returned")
-	}
-
-	loginInput["nonce"] = "changed-vault-client-nonce"
-	// try to login again with changed nonce
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || !resp.IsError() {
-		t.Fatalf("login attempt should have failed due to client nonce mismatch")
-	}
-
-	// Check if a whitelist identity entry is created after the login.
-	wlRequest := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "identity-whitelist/" + instanceID,
-		Storage:   storage,
-	}
-	resp, err = b.HandleRequest(context.Background(), wlRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Data == nil || resp.Data["role"] != roleName {
-		t.Fatalf("failed to read whitelist identity")
-	}
-
-	// Delete the whitelist identity entry.
-	wlRequest.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), wlRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.IsError() {
-		t.Fatalf("failed to delete whitelist identity")
-	}
-
-	// Allow a fresh login without supplying the nonce
-	delete(loginInput, "nonce")
-
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Fatalf("login attempt failed")
-	}
-
-	_, ok = resp.Auth.Metadata["nonce"]
-	if !ok {
-		t.Fatalf("expected nonce to be returned")
+		_, ok = resp.Auth.Metadata["nonce"]
+		if !ok {
+			t.Fatalf("expected nonce to be returned")
+		}
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/hashicorp/vault-plugin-auth-cf/models"
 	"github.com/hashicorp/vault-plugin-auth-cf/signatures"
 	"github.com/hashicorp/vault-plugin-auth-cf/util"
@@ -170,8 +171,28 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		b.Logger().Debug(fmt.Sprintf("handling login attempt from %+v", cfCert))
 	}
 
-	if err := b.validate(config, role, cfCert, req.Connection.RemoteAddr); err != nil {
+	client, err := util.NewCFClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := b.validate(client, role, cfCert, req.Connection.RemoteAddr); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	orgName, err := b.getOrgName(client, cfCert)
+	if err != nil {
+		return nil, err
+	}
+
+	appName, err := b.getAppName(client, cfCert)
+	if err != nil {
+		return nil, err
+	}
+
+	spaceName, err := b.getSpaceName(client, cfCert)
+	if err != nil {
+		return nil, err
 	}
 
 	// Everything checks out.
@@ -185,9 +206,12 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		Alias: &logical.Alias{
 			Name: cfCert.AppID,
 			Metadata: map[string]string{
-				"org_id":   cfCert.OrgID,
-				"app_id":   cfCert.AppID,
-				"space_id": cfCert.SpaceID,
+				"org_id":     cfCert.OrgID,
+				"app_id":     cfCert.AppID,
+				"space_id":   cfCert.SpaceID,
+				"org_name":   orgName,
+				"app_name":   appName,
+				"space_name": spaceName,
 			},
 		},
 	}
@@ -248,7 +272,13 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 
 	// Reconstruct the certificate and ensure it still meets all constraints.
 	cfCert, err := models.NewCFCertificate(instanceID, orgID, spaceID, appID, ipAddr)
-	if err := b.validate(config, role, cfCert, req.Connection.RemoteAddr); err != nil {
+
+	client, err := util.NewCFClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := b.validate(client, role, cfCert, req.Connection.RemoteAddr); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -259,7 +289,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	return resp, nil
 }
 
-func (b *backend) validate(config *models.Configuration, role *models.RoleEntry, cfCert *models.CFCertificate, reqConnRemoteAddr string) error {
+func (b *backend) validate(client *cfclient.Client, role *models.RoleEntry, cfCert *models.CFCertificate, reqConnRemoteAddr string) error {
 	if !role.DisableIPMatching {
 		if !matchesIPAddress(reqConnRemoteAddr, net.ParseIP(cfCert.IPAddress)) {
 			return errors.New("no matching IP address")
@@ -278,10 +308,6 @@ func (b *backend) validate(config *models.Configuration, role *models.RoleEntry,
 		return fmt.Errorf("space ID %s doesn't match role constraints of %s", cfCert.SpaceID, role.BoundSpaceIDs)
 	}
 	// Use the CF API to ensure everything still exists and to verify whatever we can.
-	client, err := util.NewCFClient(config)
-	if err != nil {
-		return err
-	}
 
 	// Here, if it were possible, we _would_ do an API call to check the instance ID,
 	// but currently there's no known way to do that via the cf API.
@@ -322,6 +348,39 @@ func (b *backend) validate(config *models.Configuration, role *models.RoleEntry,
 		return fmt.Errorf("cert org ID %s doesn't match API's expected one of %s", cfCert.OrgID, space.OrganizationGuid)
 	}
 	return nil
+}
+
+func (b *backend) getOrgName(client *cfclient.Client, cfCert *models.CFCertificate) (string, error) {
+
+	org, err := client.GetOrgByGuid(cfCert.OrgID)
+	if err != nil {
+		return "", err
+	}
+
+	return org.Name, nil
+
+}
+
+func (b *backend) getAppName(client *cfclient.Client, cfCert *models.CFCertificate) (string, error) {
+
+	app, err := client.AppByGuid(cfCert.AppID)
+	if err != nil {
+		return "", err
+	}
+
+	return app.Name, nil
+
+}
+
+func (b *backend) getSpaceName(client *cfclient.Client, cfCert *models.CFCertificate) (string, error) {
+
+	space, err := client.GetSpaceByGuid(cfCert.SpaceID)
+	if err != nil {
+		return "", err
+	}
+
+	return space.Name, nil
+
 }
 
 func meetsBoundConstraints(certValue string, constraints []string) bool {

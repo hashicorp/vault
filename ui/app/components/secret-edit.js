@@ -2,7 +2,7 @@ import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
-import { alias, or } from '@ember/object/computed';
+import { alias, or, not } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
@@ -35,7 +35,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   wrappedData: null,
   isWrapping: false,
-  showWrapButton: computed.not('wrappedData'),
+  showWrapButton: not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -154,9 +154,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretData.isAdvanced();
   }),
 
-  showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
-    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
-  }),
+  showAdvancedMode: or('secretDataIsAdvanced', 'preferAdvancedEdit'),
 
   isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
     if (!this.model) return;

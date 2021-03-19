@@ -20,7 +20,7 @@ import (
 )
 
 func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
-	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, _ := TestCoreUnsealed(t)
 	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		err := config.StorageView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
@@ -110,7 +110,7 @@ func TestLogicalMountMetrics(t *testing.T) {
 }
 
 func TestCore_DefaultMountTable(t *testing.T) {
-	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	verifyDefaultTable(t, c.mounts, 4)
 
 	// Start a second core with same physical
@@ -126,6 +126,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -142,7 +143,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 }
 
 func TestCore_Mount(t *testing.T) {
-	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
 		Table: mountTableType,
 		Path:  "foo",
@@ -170,6 +171,7 @@ func TestCore_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -190,7 +192,7 @@ func TestCore_Mount(t *testing.T) {
 // entries, and that upon reading the entries from both are recombined
 // correctly
 func TestCore_Mount_Local(t *testing.T) {
-	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, _ := TestCoreUnsealed(t)
 
 	c.mounts = &MountTable{
 		Type: mountTableType,
@@ -289,7 +291,7 @@ func TestCore_Mount_Local(t *testing.T) {
 }
 
 func TestCore_Unmount(t *testing.T) {
-	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	err := c.unmount(namespace.RootContext(nil), "secret")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -312,6 +314,7 @@ func TestCore_Unmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -335,7 +338,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 
 func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 	noop := &NoopBackend{}
-	c, _, root, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, root := TestCoreUnsealed(t)
 	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
@@ -508,15 +511,15 @@ func TestCore_RemountConcurrent(t *testing.T) {
 
 	c2MountMap := map[string]interface{}{}
 	for _, v := range c2.mounts.Entries {
-		
+
 		if _, ok := c2MountMap[v.Path]; ok {
-		t.Fatalf("duplicated mount path found at %s", v.Path)
+			t.Fatalf("duplicated mount path found at %s", v.Path)
 		}
 		c2MountMap[v.Path] = v
 	}
 }
 func TestCore_Remount(t *testing.T) {
-	c, keys, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -539,6 +542,7 @@ func TestCore_Remount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -568,7 +572,7 @@ func TestCore_Remount(t *testing.T) {
 
 func TestCore_Remount_Cleanup(t *testing.T) {
 	noop := &NoopBackend{}
-	c, _, root, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, root := TestCoreUnsealed(t)
 	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
@@ -652,7 +656,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 }
 
 func TestCore_Remount_Protected(t *testing.T) {
-	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, _ := TestCoreUnsealed(t)
 	err := c.remount(namespace.RootContext(nil), "sys", "foo", true)
 	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
@@ -660,13 +664,13 @@ func TestCore_Remount_Protected(t *testing.T) {
 }
 
 func TestDefaultMountTable(t *testing.T) {
-	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, _ := TestCoreUnsealed(t)
 	table := c.defaultMountTable()
 	verifyDefaultTable(t, table, 3)
 }
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
-	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, _ := TestCoreUnsealed(t)
 
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
@@ -868,7 +872,7 @@ func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
 }
 
 func TestSingletonMountTableFunc(t *testing.T) {
-	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c, _, _ := TestCoreUnsealed(t)
 
 	mounts, auth := c.singletonMountTables()
 
@@ -901,7 +905,7 @@ func TestCore_MountInitialize(t *testing.T) {
 				BackendType: logical.TypeLogical,
 			}, false}
 
-		c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+		c, _, _ := TestCoreUnsealed(t)
 		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 			return backend, nil
 		}
@@ -926,7 +930,7 @@ func TestCore_MountInitialize(t *testing.T) {
 				BackendType: logical.TypeLogical,
 			}, false}
 
-		c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+		c, _, _ := TestCoreUnsealed(t)
 		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 			return backend, nil
 		}

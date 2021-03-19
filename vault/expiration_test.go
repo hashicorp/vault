@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1862,7 +1864,9 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 }
 
-func TestExpiration_revokeEntry_rejected(t *testing.T) {
+func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
+	t.Helper()
+
 	core, _, _ := TestCoreUnsealed(t)
 	exp := core.expiration
 
@@ -1929,7 +1933,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = core.setupExpiration(expireLeaseStrategyRevoke)
+	err = core.setupExpiration(e)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1952,6 +1956,14 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 	if le != nil {
 		t.Fatal("lease entry not nil")
 	}
+}
+
+func TestExpiration_revokeEntry_rejected_revoke(t *testing.T) {
+	revokeEntryRejectedCore(t, expireLeaseStrategyRevoke)
+}
+
+func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
+	revokeEntryRejectedCore(t, expireLeaseStrategyFairsharing)
 }
 
 func TestExpiration_renewAuthEntry(t *testing.T) {
@@ -2446,6 +2458,36 @@ func TestExpiration_CachedPolicyIsShared(t *testing.T) {
 	for i := 1; i < len(ptrs); i++ {
 		if ptrs[i-1] != ptrs[i] {
 			t.Errorf("Mismatched pointers: %v and %v", ptrs[i-1], ptrs[i])
+		}
+	}
+}
+
+func TestExpiration_FairsharingEnvVar(t *testing.T) {
+	testCases := []struct {
+		set      string
+		expected int
+	}{
+		{
+			set:      "15",
+			expected: 15,
+		},
+		{
+			set:      "0",
+			expected: numExpirationWorkersTest,
+		},
+		{
+			set:      "10001",
+			expected: numExpirationWorkersTest,
+		},
+	}
+
+	defer os.Unsetenv(fairshareWorkersOverrideVar)
+	for _, tc := range testCases {
+		os.Setenv(fairshareWorkersOverrideVar, tc.set)
+		exp := mockExpiration(t)
+
+		if fairshare.GetNumWorkers(exp.jobManager) != tc.expected {
+			t.Errorf("bad worker pool size. expected %d, got %d", tc.expected, fairshare.GetNumWorkers(exp.jobManager))
 		}
 	}
 }

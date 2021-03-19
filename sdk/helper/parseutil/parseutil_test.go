@@ -6,6 +6,155 @@ import (
 	"time"
 )
 
+func Test_ParseCapacityString(t *testing.T) {
+	testCases := []struct {
+		name     string
+		inp      interface{}
+		valid    bool
+		expected uint64
+	}{
+		{
+			"bare number as an int",
+			5,
+			true,
+			uint64(5),
+		},
+		{
+			"bare number as a float",
+			5.0,
+			true,
+			uint64(5),
+		},
+		{
+			"bare number as a string",
+			"5",
+			true,
+			uint64(5),
+		},
+		{
+			"string",
+			"haha",
+			false,
+			uint64(0),
+		},
+		{
+			"random data structure",
+			struct{}{},
+			false,
+			uint64(0),
+		},
+		{
+			"kb",
+			"5kb",
+			true,
+			uint64(5000),
+		},
+		{
+			"kib",
+			"5kib",
+			true,
+			uint64(5120),
+		},
+		{
+			"KB",
+			"5KB",
+			true,
+			uint64(5000),
+		},
+		{
+			"KIB",
+			"5KIB",
+			true,
+			uint64(5120),
+		},
+		{
+			"kB",
+			"5kB",
+			true,
+			uint64(5000),
+		},
+		{
+			"Kb",
+			"5Kb",
+			true,
+			uint64(5000),
+		},
+		{
+			"space kb",
+			"5 kb",
+			true,
+			uint64(5000),
+		},
+		{
+			"space KB",
+			"5 KB",
+			true,
+			uint64(5000),
+		},
+		{
+			"kb surrounding spaces",
+			" 5 kb ",
+			true,
+			uint64(5000),
+		},
+		{
+			"mb",
+			"5mb",
+			true,
+			uint64(5000000),
+		},
+		{
+			"mib",
+			"5mib",
+			true,
+			uint64(5242880),
+		},
+		{
+			"gb",
+			"5gb",
+			true,
+			uint64(5000000000),
+		},
+		{
+			"gib",
+			"5gib",
+			true,
+			uint64(5368709120),
+		},
+		{
+			"tb",
+			"5tb",
+			true,
+			uint64(5000000000000),
+		},
+		{
+			"tib",
+			"5tib",
+			true,
+			uint64(5497558138880),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			outp, err := ParseCapacityString(tc.inp)
+			if tc.valid && err != nil {
+				t.Errorf("failed to parse: %v. err: %v", tc.inp, err)
+			}
+			if !tc.valid && err == nil {
+				t.Errorf("no error for: %v", tc.inp)
+			}
+			if outp != tc.expected {
+				t.Errorf("input %v parsed as %v, expected %v", tc.inp, outp, tc.expected)
+			}
+		})
+	}
+}
+
 func Test_ParseDurationSecond(t *testing.T) {
 	outp, err := ParseDurationSecond("9876s")
 	if err != nil {

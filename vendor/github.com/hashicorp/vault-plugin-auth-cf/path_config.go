@@ -34,6 +34,22 @@ func (b *backend) pathConfig() *framework.Path {
 				},
 				Description: "The PEM-format CA certificates that are acceptable for the CF API to present.",
 			},
+			"cf_api_mutual_tls_certificate": {
+				Type: framework.TypeString,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "CF API Mutual TLS Certificate",
+					Value: `-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----`,
+				},
+				Description: "The PEM-format certificates that are presented for mutual TLS with the CloudFoundry API. If not set, mutual TLS is not used",
+			},
+			"cf_api_mutual_tls_key": {
+				Type: framework.TypeString,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "CF API Mutual TLS Key",
+					Value: `-----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY-----`,
+				},
+				Description: "The PEM-format private key that are used for mutual TLS with the CloudFoundry API. If not set, mutual TLS is not used",
+			},
 			"cf_api_addr": {
 				Type: framework.TypeString,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -57,6 +73,22 @@ func (b *backend) pathConfig() *framework.Path {
 					Sensitive: true,
 				},
 				Description: "The password for CF’s API.",
+			},
+			"cf_client_id": {
+				Type: framework.TypeString,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "CF API Client ID",
+					Value: "client",
+				},
+				Description: "The client id for CF’s API.",
+			},
+			"cf_client_secret": {
+				Type: framework.TypeString,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:      "CF API Client Secret",
+					Sensitive: true,
+				},
+				Description: "The client secret for CF’s API.",
 			},
 			// These fields were in the original release, but are being deprecated because Cloud Foundry is moving
 			// away from using "PCF" to refer to themselves.
@@ -102,7 +134,7 @@ func (b *backend) pathConfig() *framework.Path {
 					Name:  "Login Max Seconds Old",
 					Value: "300",
 				},
-				Description: `Duration in seconds for the maximum acceptable age of a "signing_time". Useful for clock drift. 
+				Description: `Duration in seconds for the maximum acceptable age of a "signing_time". Useful for clock drift.
 Set low to reduce the opportunity for replay attacks.`,
 				Default: 300,
 			},
@@ -155,22 +187,53 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		}
 		cfApiAddr := cfApiAddrIfc.(string)
 
+		var cfUsername string
 		cfUsernameIfc, ok := data.GetFirst("cf_username", "pcf_username")
-		if !ok {
-			return logical.ErrorResponse("'cf_username' is required"), nil
+		if ok {
+			cfUsername = cfUsernameIfc.(string)
 		}
-		cfUsername := cfUsernameIfc.(string)
 
+		var cfPassword string
 		cfPasswordIfc, ok := data.GetFirst("cf_password", "pcf_password")
-		if !ok {
-			return logical.ErrorResponse("'cf_password' is required"), nil
+		if ok {
+			cfPassword = cfPasswordIfc.(string)
 		}
-		cfPassword := cfPasswordIfc.(string)
+
+		var cfClientId string
+		cfClientIdIfc, ok := data.GetOk("cf_client_id")
+		if ok {
+			cfClientId = cfClientIdIfc.(string)
+		}
+
+		var cfClientSecret string
+		cfClientSecretIfc, ok := data.GetOk("cf_client_secret")
+		if ok {
+			cfClientSecret = cfClientSecretIfc.(string)
+		}
+
+		// Before continuing, make sure that we have a pair of cf_username & cf_password,
+		// pcf_username & pcf_password or cf_client_id & cf_client_secret
+		// if none exist, then we should fail right away.
+		if cfUsername == "" && cfClientId == "" {
+			return logical.ErrorResponse("'cf_username' or 'cf_client_id' is required"), nil
+		}
+
+		if cfPassword == "" && cfClientSecret == "" {
+			return logical.ErrorResponse("'cf_password' or 'cf_client_secret' is required"), nil
+		}
 
 		var cfApiCertificates []string
 		cfApiCertificatesIfc, ok := data.GetFirst("cf_api_trusted_certificates", "pcf_api_trusted_certificates")
 		if ok {
 			cfApiCertificates = cfApiCertificatesIfc.([]string)
+		}
+
+		cfMTLSCertificate, ok := data.Get("cf_api_mutual_tls_certificate").(string)
+		cfMTLSKey, ok := data.Get("cf_api_mutual_tls_key").(string)
+
+		if (cfMTLSCertificate == "" && cfMTLSKey != "") ||
+			(cfMTLSCertificate != "" && cfMTLSKey == "") {
+			return logical.ErrorResponse("both 'cf_api_mutual_tls_certificate' and 'cf_api_mutual_tls_key' must be set if one is set"), nil
 		}
 
 		// Default this to 5 minutes.
@@ -184,13 +247,18 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		if raw, ok := data.GetOk("login_max_seconds_not_after"); ok {
 			loginMaxSecNotAfter = time.Duration(raw.(int)) * time.Second
 		}
+
 		config = &models.Configuration{
 			Version:                1,
 			IdentityCACertificates: identityCACerts,
 			CFAPICertificates:      cfApiCertificates,
+			CFMutualTLSCertificate: cfMTLSCertificate,
+			CFMutualTLSKey:         cfMTLSKey,
 			CFAPIAddr:              cfApiAddr,
 			CFUsername:             cfUsername,
 			CFPassword:             cfPassword,
+			CFClientID:             cfClientId,
+			CFClientSecret:         cfClientSecret,
 			LoginMaxSecNotBefore:   loginMaxSecNotBefore,
 			LoginMaxSecNotAfter:    loginMaxSecNotAfter,
 		}
@@ -203,6 +271,12 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		}
 		if raw, ok := data.GetFirst("cf_api_trusted_certificates", "pcf_api_trusted_certificates"); ok {
 			config.CFAPICertificates = raw.([]string)
+		}
+		if raw, ok := data.GetOk("cf_api_mutual_tls_certificate"); ok {
+			config.CFMutualTLSCertificate = raw.(string)
+		}
+		if raw, ok := data.GetOk("cf_api_mutual_tls_key"); ok {
+			config.CFMutualTLSKey = raw.(string)
 		}
 		if raw, ok := data.GetFirst("cf_api_addr", "pcf_api_addr"); ok {
 			config.CFAPIAddr = raw.(string)
@@ -218,6 +292,12 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		}
 		if raw, ok := data.GetOk("login_max_seconds_not_after"); ok {
 			config.LoginMaxSecNotAfter = time.Duration(raw.(int)) * time.Second
+		}
+		if raw, ok := data.GetOk("cf_client_id"); ok {
+			config.CFClientID = raw.(string)
+		}
+		if raw, ok := data.GetOk("cf_client_secret"); ok {
+			config.CFClientSecret = raw.(string)
 		}
 	}
 
@@ -253,13 +333,15 @@ func (b *backend) operationConfigRead(ctx context.Context, req *logical.Request,
 	}
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"version":                      config.Version,
-			"identity_ca_certificates":     config.IdentityCACertificates,
-			"cf_api_trusted_certificates":  config.CFAPICertificates,
-			"cf_api_addr":                  config.CFAPIAddr,
-			"cf_username":                  config.CFUsername,
-			"login_max_seconds_not_before": config.LoginMaxSecNotBefore / time.Second,
-			"login_max_seconds_not_after":  config.LoginMaxSecNotAfter / time.Second,
+			"version":                       config.Version,
+			"identity_ca_certificates":      config.IdentityCACertificates,
+			"cf_api_trusted_certificates":   config.CFAPICertificates,
+			"cf_api_mutual_tls_certificate": config.CFMutualTLSCertificate,
+			"cf_api_addr":                   config.CFAPIAddr,
+			"cf_username":                   config.CFUsername,
+			"cf_client_id":                  config.CFClientID,
+			"login_max_seconds_not_before":  config.LoginMaxSecNotBefore / time.Second,
+			"login_max_seconds_not_after":   config.LoginMaxSecNotAfter / time.Second,
 		},
 	}
 	// Populate any deprecated values and warn about them. These should just be stripped when we go to

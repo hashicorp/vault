@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
 )
@@ -17,7 +18,7 @@ type forwardedRequestRPCServer struct {
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
-	raftFollowerStates    *raftFollowerStates
+	raftFollowerStates    *raft.FollowerStates
 }
 
 func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
@@ -73,7 +74,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
-		s.raftFollowerStates.update(in.RaftNodeID, in.RaftAppliedIndex)
+		s.raftFollowerStates.Update(in.RaftNodeID, in.RaftAppliedIndex, in.RaftTerm, in.RaftDesiredSuffrage)
 	}
 
 	reply := &EchoReply{
@@ -116,6 +117,8 @@ func (c *forwardingClient) startHeartbeat() {
 				if !c.core.isRaftHAOnly() {
 					req.RaftAppliedIndex = raftBackend.AppliedIndex()
 					req.RaftNodeID = raftBackend.NodeID()
+					req.RaftTerm = raftBackend.Term()
+					req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
 				}
 			}
 

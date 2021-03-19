@@ -6,12 +6,12 @@ import Controller, { inject as controller } from '@ember/controller';
 export default Controller.extend({
   clusterController: controller('vault.cluster'),
 
-  backendCrumb: computed(function() {
+  backendCrumb: computed('clusterController.model.name', function() {
     return {
       label: 'leases',
       text: 'leases',
       path: 'vault.cluster.access.leases.list-root',
-      model: this.get('clusterController.model.name'),
+      model: this.clusterController.model.name,
     };
   }),
 
@@ -26,7 +26,7 @@ export default Controller.extend({
 
     renewLease(model, interval) {
       const adapter = model.store.adapterFor('lease');
-      const flash = this.get('flashMessages');
+      const flash = this.flashMessages;
       adapter
         .renew(model.id, interval)
         .then(() => {
