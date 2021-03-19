@@ -193,10 +193,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     let secretData = this.modelForData;
     let isV2 = this.isV2;
     let key = secretData.get('path') || secret.id;
+
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
+
     return secretData
       .save()
       .then(() => {
