@@ -226,6 +226,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
           let errorMessage = this.controlGroup.logFromError(error);
           this.set('error', errorMessage.content);
         }
+        throw error;
       });
   },
   saveComplete(callback, key) {

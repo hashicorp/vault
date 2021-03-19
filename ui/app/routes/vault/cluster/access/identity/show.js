@@ -20,6 +20,11 @@ export default Route.extend({
     // if the record is in the store use that
     let model = this.store.peekRecord(modelType, params.item_id);
 
+    // if we don't have creationTime, we only have a partial model so reload
+    if (model && !model.get('creationTime')) {
+      model = model.reload();
+    }
+
     // if there's no model, we need to fetch it
     if (!model) {
       model = this.store.findRecord(modelType, params.item_id);
