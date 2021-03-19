@@ -2581,6 +2581,16 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	if ok {
 		rotConfig.Disabled = !enabled.(bool)
 	}
+
+	// Reject out of range settings
+	if rotConfig.Interval < minimumRotationInterval {
+		return logical.ErrorResponse("interval must be greater or equal to %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
+	}
+
+	if rotConfig.MaxOperations < absoluteOperationMinimum || rotConfig.MaxOperations > absoluteOperationMaximum {
+		return logical.ErrorResponse("max_operations must be in the range [%d,%d]", absoluteOperationMinimum, absoluteOperationMaximum), logical.ErrInvalidRequest
+	}
+
 	// Store the rotation config
 	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
