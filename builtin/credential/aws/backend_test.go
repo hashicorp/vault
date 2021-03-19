@@ -380,10 +380,10 @@ func TestBackend_TidyIdentities(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expiredIdentityWhitelist := &accessListIdentity{
+		expiredIdentityAccesslist := &accessListIdentity{
 			ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
 		}
-		entry, err := logical.StorageEntryJSON("whitelist/identity/id1", expiredIdentityWhitelist)
+		entry, err := logical.StorageEntryJSON("whitelist/identity/id1", expiredIdentityAccesslist)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -430,10 +430,10 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expiredIdentityWhitelist := &roleTagBlacklistEntry{
+		expiredIdentityAccesslist := &roleTagDenylistEntry{
 			ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
 		}
-		entry, err := logical.StorageEntryJSON("blacklist/roletag/id1", expiredIdentityWhitelist)
+		entry, err := logical.StorageEntryJSON("blacklist/roletag/id1", expiredIdentityAccesslist)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -906,7 +906,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	}
 }
 
-func TestBackend_PathBlacklistRoleTag(t *testing.T) {
+func TestBackend_PathDenylistRoleTag(t *testing.T) {
 
 	for _, path := range []string{"roletag-blacklist/", "roletag-denylist/"} {
 		// create the backend

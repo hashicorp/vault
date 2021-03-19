@@ -59,14 +59,14 @@ func (b *backend) pathConfigTidyIdentityAccessListExistenceCheck(ctx context.Con
 	return entry != nil, nil
 }
 
-func (b *backend) lockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+func (b *backend) lockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyAccesslistIdentityConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
 	return b.nonLockedConfigTidyIdentities(ctx, s)
 }
 
-func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyAccesslistIdentityConfig, error) {
 	entry, err := s.Get(ctx, identityAccessListConfigStorage)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.S
 		return nil, nil
 	}
 
-	var result tidyWhitelistIdentityConfig
+	var result tidyAccesslistIdentityConfig
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (b *backend) pathConfigTidyIdentityAccessListCreateUpdate(ctx context.Conte
 		return nil, err
 	}
 	if configEntry == nil {
-		configEntry = &tidyWhitelistIdentityConfig{}
+		configEntry = &tidyAccesslistIdentityConfig{}
 	}
 
 	safetyBufferInt, ok := data.GetOk("safety_buffer")
@@ -144,7 +144,7 @@ func (b *backend) pathConfigTidyIdentityAccessListDelete(ctx context.Context, re
 	return nil, req.Storage.Delete(ctx, identityAccessListConfigStorage)
 }
 
-type tidyWhitelistIdentityConfig struct {
+type tidyAccesslistIdentityConfig struct {
 	SafetyBuffer        int  `json:"safety_buffer"`
 	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }

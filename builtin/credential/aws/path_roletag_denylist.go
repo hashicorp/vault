@@ -32,8 +32,8 @@ to avoid any encoding problems, it can be base64 encoded.`,
 			},
 		},
 
-		HelpSynopsis:    pathRoletagBlacklistSyn,
-		HelpDescription: pathRoletagBlacklistDesc,
+		HelpSynopsis:    pathRoletagDenylistSyn,
+		HelpDescription: pathRoletagDenylistDesc,
 	}
 }
 
@@ -79,14 +79,14 @@ func (b *backend) pathRoletagDenyListsList(ctx context.Context, req *logical.Req
 
 // Fetch an entry from the role tag deny list for a given tag.
 // This method takes a role tag in its original form and not a base64 encoded form.
-func (b *backend) lockedDenyLististRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+func (b *backend) lockedDenyLististRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagDenylistEntry, error) {
 	b.denyListMutex.RLock()
 	defer b.denyListMutex.RUnlock()
 
 	return b.nonLockedDenyListRoleTagEntry(ctx, s, tag)
 }
 
-func (b *backend) nonLockedDenyListRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+func (b *backend) nonLockedDenyListRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagDenylistEntry, error) {
 	entry, err := s.Get(ctx, denyListRoletagStorage+base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (b *backend) nonLockedDenyListRoleTagEntry(ctx context.Context, s logical.S
 		return nil, nil
 	}
 
-	var result roleTagBlacklistEntry
+	var result roleTagDenylistEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (b *backend) pathRoletagDenyListUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 	if blEntry == nil {
-		blEntry = &roleTagBlacklistEntry{}
+		blEntry = &roleTagDenylistEntry{}
 	}
 
 	currentTime := time.Now()
@@ -226,16 +226,16 @@ func (b *backend) pathRoletagDenyListUpdate(ctx context.Context, req *logical.Re
 	return nil, nil
 }
 
-type roleTagBlacklistEntry struct {
+type roleTagDenylistEntry struct {
 	CreationTime   time.Time `json:"creation_time"`
 	ExpirationTime time.Time `json:"expiration_time"`
 }
 
-const pathRoletagBlacklistSyn = `
-Blacklist a previously created role tag.
+const pathRoletagDenylistSyn = `
+Denylist a previously created role tag.
 `
 
-const pathRoletagBlacklistDesc = `
+const pathRoletagDenylistDesc = `
 Add a role tag to the deny list so that it cannot be used by any EC2 instance to perform further
 logins. This can be used if the role tag is suspected or believed to be possessed by
 an unintended party.

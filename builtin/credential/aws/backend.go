@@ -210,22 +210,22 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 			// safetyBuffer defaults to 180 days for roletag deny list
 			safetyBuffer := 15552000
-			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
+			tidyDenylistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 			if err != nil {
 				return err
 			}
-			skipBlacklistTidy := false
+			skipDenylistTidy := false
 			// check if tidying of role tags was configured
-			if tidyBlacklistConfigEntry != nil {
+			if tidyDenylistConfigEntry != nil {
 				// check if periodic tidying of role tags was disabled
-				if tidyBlacklistConfigEntry.DisablePeriodicTidy {
-					skipBlacklistTidy = true
+				if tidyDenylistConfigEntry.DisablePeriodicTidy {
+					skipDenylistTidy = true
 				}
 				// overwrite the default safetyBuffer with the configured value
-				safetyBuffer = tidyBlacklistConfigEntry.SafetyBuffer
+				safetyBuffer = tidyDenylistConfigEntry.SafetyBuffer
 			}
 			// tidy role tags if explicitly not disabled
-			if !skipBlacklistTidy {
+			if !skipDenylistTidy {
 				b.tidyDenyListRoleTag(ctx, req, safetyBuffer)
 			}
 		}
@@ -234,22 +234,22 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		// these are locally stored
 
 		safety_buffer := 259200
-		tidyWhitelistConfigEntry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
+		tidyAccesslistConfigEntry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 		if err != nil {
 			return err
 		}
-		skipWhitelistTidy := false
+		skipAccesslistTidy := false
 		// check if tidying of identities was configured
-		if tidyWhitelistConfigEntry != nil {
+		if tidyAccesslistConfigEntry != nil {
 			// check if periodic tidying of identities was disabled
-			if tidyWhitelistConfigEntry.DisablePeriodicTidy {
-				skipWhitelistTidy = true
+			if tidyAccesslistConfigEntry.DisablePeriodicTidy {
+				skipAccesslistTidy = true
 			}
 			// overwrite the default safety_buffer with the configured value
-			safety_buffer = tidyWhitelistConfigEntry.SafetyBuffer
+			safety_buffer = tidyAccesslistConfigEntry.SafetyBuffer
 		}
 		// tidy identities if explicitly not disabled
-		if !skipWhitelistTidy {
+		if !skipAccesslistTidy {
 			b.tidyAccessListIdentity(ctx, req, safety_buffer)
 		}
 
