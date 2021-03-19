@@ -5,6 +5,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"io"
 	"io/ioutil"
 	"os"
@@ -24,11 +29,6 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -615,6 +615,15 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		}
 		config.TrailingLogs = uint64(trailingLogs)
 	}
+	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	if ok {
+		var err error
+		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		if err != nil {
+			return err
+		}
+		config.SnapshotInterval = snapshotInterval
+	}
 
 	config.NoSnapshotRestoreOnStart = true
 	config.MaxAppendEntries = 64
@@ -683,7 +692,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	raftConfig.SnapshotInterval = 5 * time.Second
 	if err := b.applyConfigSettings(raftConfig); err != nil {
 		return err
 	}

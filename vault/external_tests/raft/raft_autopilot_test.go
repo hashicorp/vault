@@ -225,6 +225,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 			"snapshot_threshold":           "50",
 			"trailing_logs":                "100",
 			"autopilot_reconcile_interval": "1s",
+			"snapshot_interval":            "5s",
 		}
 		if coreIdx == 2 {
 			config["snapshot_delay"] = timeToHealthyCore2.String()
@@ -276,7 +277,6 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 			{
 				LeaderAPIAddr: client.Address(),
 				TLSConfig:     cluster.Cores[0].TLSConfig,
-				Retry:         true,
 			},
 		}, false)
 		require.NoError(t, err)
