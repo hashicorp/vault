@@ -363,7 +363,6 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 			{
 				LeaderAPIAddr: client.Address(),
 				TLSConfig:     cluster.Cores[0].TLSConfig,
-				Retry:         true,
 			},
 		}, false)
 		require.NoError(t, err)
