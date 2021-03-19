@@ -1855,11 +1855,11 @@ func (m *ExpirationManager) loadEntry(ctx context.Context, leaseID string) (*lea
 		ctx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	}
 
-	//
 	// If a lease entry is nil, proactively delete the lease lock, in case we
 	// created one erroneously.
+	// If there was an error, we don't know whether the lease entry exists or not.
 	leaseEntry, err := m.loadEntryInternal(ctx, leaseID, restoreMode, true)
-	if err != nil && leaseEntry == nil {
+	if err == nil && leaseEntry == nil {
 		m.deleteLockForLease(leaseID)
 	}
 	return leaseEntry, err
