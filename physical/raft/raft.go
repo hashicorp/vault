@@ -505,8 +505,9 @@ type RaftConfigurationResponse struct {
 
 // Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
-	ID      string `json:"id"`
-	Address string `json:"address"`
+	ID       string `json:"id"`
+	Address  string `json:"address"`
+	Suffrage int    `json:"suffrage"`
 }
 
 // NodeID returns the identifier of the node
@@ -561,8 +562,9 @@ func (b *RaftBackend) Bootstrap(peers []Peer) error {
 
 	for i, p := range peers {
 		raftConfig.Servers[i] = raft.Server{
-			ID:      raft.ServerID(p.ID),
-			Address: raft.ServerAddress(p.Address),
+			ID:       raft.ServerID(p.ID),
+			Address:  raft.ServerAddress(p.Address),
+			Suffrage: raft.ServerSuffrage(p.Suffrage),
 		}
 	}
 
@@ -1015,8 +1017,9 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	ret := make([]Peer, len(future.Configuration().Servers))
 	for i, s := range future.Configuration().Servers {
 		ret[i] = Peer{
-			ID:      string(s.ID),
-			Address: string(s.Address),
+			ID:       string(s.ID),
+			Address:  string(s.Address),
+			Suffrage: int(s.Suffrage),
 		}
 	}
 
