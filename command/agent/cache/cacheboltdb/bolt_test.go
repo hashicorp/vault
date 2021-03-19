@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/cache/keymanager"
-	"github.com/ory/dockertest/v3/docker/pkg/ioutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +25,7 @@ func getTestKeyManager(t *testing.T) keymanager.KeyManager {
 func TestBolt_SetGet(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutils.TempDir("", "bolt-test")
+	path, err := ioutil.TempDir("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -52,7 +51,7 @@ func TestBolt_SetGet(t *testing.T) {
 func TestBoltDelete(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutils.TempDir("", "bolt-test")
+	path, err := ioutil.TempDir("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -84,7 +83,7 @@ func TestBoltDelete(t *testing.T) {
 func TestBoltClear(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutils.TempDir("", "bolt-test")
+	path, err := ioutil.TempDir("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -134,7 +133,7 @@ func TestBoltClear(t *testing.T) {
 func TestBoltSetAutoAuthToken(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutils.TempDir("", "bolt-test")
+	path, err := ioutil.TempDir("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -239,7 +238,7 @@ func Test_SetGetRetrievalToken(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			path, err := ioutils.TempDir("", "bolt-test")
+			path, err := ioutil.TempDir("", "bolt-test")
 			require.NoError(t, err)
 			defer os.RemoveAll(path)
 
