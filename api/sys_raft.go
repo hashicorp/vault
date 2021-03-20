@@ -44,6 +44,18 @@ type AutopilotConfig struct {
 	ServerStabilizationTime        time.Duration `json:"server_stabilization_time" mapstructure:"-"`
 }
 
+// MarshalJSON makes the autopilot config fields JSON compatible
+func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"cleanup_dead_servers":               ac.CleanupDeadServers,
+		"last_contact_threshold":             ac.LastContactThreshold.String(),
+		"dead_server_last_contact_threshold": ac.DeadServerLastContactThreshold.String(),
+		"max_trailing_logs":                  ac.MaxTrailingLogs,
+		"min_quorum":                         ac.MinQuorum,
+		"server_stabilization_time":          ac.ServerStabilizationTime.String(),
+	})
+}
+
 // UnmarshalJSON parses the autopilot config JSON blob
 func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 	var data interface{}
