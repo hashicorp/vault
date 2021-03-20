@@ -151,7 +151,7 @@ export default [
       'step-down',
       {
         category: 'storage',
-        content: ['raft', 'raftautosnapshots'],
+        content: ['raft', 'raftautosnapshots', 'raftautopilot'],
       },
       'tools',
       'unseal',

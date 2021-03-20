@@ -184,3 +184,112 @@ Usage: vault operator raft snapshot restore <snapshot_file>
 
 	  $ vault operator raft snapshot restore raft.snap
 ```
+
+## autopilot
+
+This command groups subcommands for operators interacting with the autopilot
+functionality of the integrated Raft storage backend. There are 3 subcommands
+supported: `get-config`, `set-config` and `state`.
+
+```text
+Usage: vault operator raft autopilot <subcommand> [options] [args]
+
+This command groups subcommands for operators interacting with the autopilot
+functionality of the integrated Raft storage backend.
+
+Subcommands:
+    get-config    Returns the configuration of the autopilot subsystem under integrated storage
+    set-config    Modify the configuration of the autopilot subsystem under integrated storage
+    state         Displays the state of the raft cluster under integrated storage as seen by autopilot
+```
+
+### autopilot state
+
+Displays the state of the raft cluster under integrated storage as seen by autopilot.
+
+```text
+Usage: vault operator raft autopilot state
+
+  Displays the state of the raft cluster under integrated storage as seen by autopilot.
+
+    $ vault operator raft autopilot state
+```
+
+#### Example Output
+
+```text
+Healthy:                      true
+Failure Tolerance:            1
+Leader:                       raft1
+Voters:
+   raft1
+   raft2
+   raft3
+Servers:
+   raft1
+      Name:            raft1
+      Address:         127.0.0.1:8201
+      Status:          leader
+      Node Status:     alive
+      Healthy:         true
+      Last Contact:    0s
+      Last Term:       3
+      Last Index:      38
+   raft2
+      Name:            raft2
+      Address:         127.0.0.2:8201
+      Status:          voter
+      Node Status:     alive
+      Healthy:         true
+      Last Contact:    2.514176729s
+      Last Term:       3
+      Last Index:      38
+```
+
+### autopilot get-config
+
+Returns the configuration of the autopilot subsystem under integrated storage.
+
+```text
+Usage: vault operator raft autopilot get-config
+
+  Returns the configuration of the autopilot subsystem under integrated storage.
+
+    $ vault operator raft autopilot get-config
+```
+
+### autopilot set-config
+
+Modify the configuration of the autopilot subsystem under integrated storage.
+
+```text
+Usage: vault operator raft autopilot set-config [options]
+
+  Modify the configuration of the autopilot subsystem under integrated storage.
+
+	  $ vault operator raft autopilot set-config -server-stabilization-time 10s
+
+```
+
+Flags applicable to this command are the following:
+
+- `cleanup-dead-servers` `(bool)` - Controls whether to remove dead servers from
+  the Raft peer list periodically or when a new server joins. This requires that
+  `min-quorum` is also set.
+
+- `last-contact-threshold` `(string)` - Limit on the amount of time a server can
+  go without leader contact before being considered unhealthy.
+
+- `dead-server-last-contact-threshold` `(string)` - Limit on the amount of time
+  a server can go without leader contact before being considered failed. This
+  takes effect only when `cleanup_dead_servers` is set.
+
+- `max-trailing-logs` `(int)` - Amount of entries in the Raft Log that a server
+  can be behind before being considered unhealthy.
+
+- `min-quorum` `(int)` - Minimum number of servers allowed in a cluster before
+  autopilot can prune dead servers. This should at least be 3. Applicable only for
+  voting nodes.
+
+- `server-stabilization-time` `(string)` - Minimum amount of time a server must
+  be in a stable, healthy state before it can be added to the cluster.
