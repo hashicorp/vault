@@ -23,7 +23,7 @@ type revocationInfo struct {
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial string, fromLease bool) (*logical.Response, error) {
+func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial string, roleName string, fromLease bool) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -45,7 +45,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
 	if colonSerial == certutil.GetHexFormatted(signingBundle.Certificate.SerialNumber.Bytes(), ":") {
-		return logical.ErrorResponse("adding CA to CRL is not allowed"), nil
+		return logical.ErrorResponse("adding Root CA to CRL is not allowed"), nil
 	}
 
 	alreadyRevoked := false
@@ -97,6 +97,12 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if cert == nil {
 			return nil, fmt.Errorf("got a nil certificate")
 		}
+		// Check if we can do anything based on the roleName
+		if roleName != "" { // if no roleName was supplied, the user had general revoke permission
+			if check, err := checkCNrole(ctx, b, req, roleName, cert.Issuer.CommonName); check {
+				return nil, err
+			}
+		}
 
 		// Add a little wiggle room because leases are stored with a second
 		// granularity
@@ -144,6 +150,32 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		resp.Data["revocation_time_rfc3339"] = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
 	}
 	return resp, nil
+}
+
+func checkCNrole(ctx context.Context, b *backend, req *logical.Request, roleName string, cn string) (bool, error) {
+	// Get the role
+	role, err := b.getRole(ctx, req.Storage, roleName)
+	if err != nil {
+		return false, err
+	}
+	if role == nil {
+		return false, errutil.UserError{Err: fmt.Sprintf("unknown role: %s", roleName)}
+	}
+
+	// Create an inputBundle from the role. This is so we can use the preexisting helper
+	// to validate the CN for revocation.
+	roleInputBundle := &inputBundle{role: role}
+
+	// Check the CN. This ensures that the CN is checked even if it's
+	// excluded from SANs.
+	if cn != "" {
+		badName := validateNames(b, roleInputBundle, []string{cn})
+		if len(badName) != 0 {
+			return false, errutil.UserError{Err: fmt.Sprintf(
+				"common name %s not allowed by this role", badName)}
+		}
+	}
+	return true, nil
 }
 
 // Builds a CRL by going through the list of revoked certificates and building
