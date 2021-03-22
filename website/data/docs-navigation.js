@@ -243,7 +243,13 @@ export default [
       },
       'gcp',
       'gcpkms',
-      'key-management',
+      {
+        category: 'key-management',
+        content: [
+          'azurekeyvault',
+          'awskms',
+        ],
+      },
       'kmip',
       {
         category: 'kv',
