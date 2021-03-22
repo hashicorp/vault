@@ -685,7 +685,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.7
+    - GO_VERSION: 1.15.10
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -2021,7 +2021,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.7
+    - GO_VERSION: 1.15.10
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
