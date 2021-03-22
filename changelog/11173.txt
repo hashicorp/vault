@@ -1,0 +1,3 @@
+```release-note:change
+go: Update Go version to 1.15.10
+```
