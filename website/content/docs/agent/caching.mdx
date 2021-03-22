@@ -52,7 +52,7 @@ request to the Vault server.
 ## Forcing Auto-Auth Token
 
 Vault Agent can be configured to force the use of the auto-auth token by using
-the value `force` for the `use_auto_auth_token` option. This configuration
+the value `false` for the `use_auto_auth_token` option. This configuration
 overrides the default behavior described above in [Using Auth-Auth
 Token](/docs/agent/caching#using-auto-auth-token), and instead ignores any
 existing Vault token in the request and instead uses the auto-auth token.
@@ -172,7 +172,7 @@ The top level `cache` block has the following configuration entries:
   without a Vault token will be forwarded to the Vault server with the
   auto-auth token attached. If the requests already bear a token, this
   configuration will be overridden and the token in the request will be used to
-  forward the request to the Vault server. If set to `"force"` Agent will use the
+  forward the request to the Vault server. If set to `"false"` Agent will use the
   auto-auth token, overwriting the attached Vault token if set.
 
 ## Configuration (`listener`)
