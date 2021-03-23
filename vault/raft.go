@@ -168,7 +168,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if err != nil {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, c.disableAutopilot)
+	disableAutopilot := c.disableAutopilot
+	if c.isRaftHAOnly() || c.IsDRSecondary() {
+		disableAutopilot = true
+	}
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)
