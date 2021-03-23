@@ -18,8 +18,8 @@ export default Component.extend({
   }),
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
-    if (!ns) return 'root';
     let ns = this.normalizedNamespace;
+    if (!ns) return 'root';
     let showLastSegment = this.showLastSegment;
     let parts = ns?.split('/');
     return showLastSegment ? parts[parts.length - 1] : ns;
