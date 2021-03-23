@@ -207,7 +207,11 @@ Subcommands:
 
 ### autopilot state
 
-Displays the state of the raft cluster under integrated storage as seen by autopilot.
+Displays the state of the raft cluster under integrated storage as seen by autopilot. It shows whether autopilot thinks the cluster is healthy or not, and how many nodes could fail before the cluster becomes unhealthy ("Failure Tolerance").
+
+State includes a list of all servers by name and IP address. Last Index can indicate how close the state on each node is to the leader.
+
+A node can have a status of "leader", "voter", and "non-voter". Non-voters are described in <link>
 
 ```text
 Usage: vault operator raft autopilot state
