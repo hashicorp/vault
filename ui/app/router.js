@@ -121,7 +121,9 @@ Router.map(function() {
           // database specific route
           this.route('overview');
         });
-        this.route('custom', { path: '/custom/:backend' });
+        this.route('custom', { path: '/custom/:backend' }, function() {
+          this.route('path', { path: '/:itempath' });
+        });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
         this.route('index', { path: '/' });
