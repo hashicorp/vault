@@ -40,16 +40,16 @@ var (
 	TestingUpdateClusterAddr uint32
 )
 
-func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
+func (c *Core) GetRaftIndexes() (globalCommitted uint64, committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
-		return 0, 0
+		return 0, 0, 0
 	}
 
-	return raftStorage.CommittedIndex(), raftStorage.AppliedIndex()
+	return raftStorage.GlobalCommittedIndex(), raftStorage.LocalCommittedIndex(), raftStorage.AppliedIndex()
 }
 
 // startRaftBackend will call SetupCluster in the raft backend which starts raft
@@ -163,6 +163,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
+
+	err := raftBackend.SetupWALArchiving(c.activeContext)
+	if err != nil {
+		return err
+	}
 
 	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
 	if err != nil {

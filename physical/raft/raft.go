@@ -148,6 +148,9 @@ type RaftBackend struct {
 	disableAutopilot bool
 
 	autopilotReconcileInterval time.Duration
+
+	walLogStore raft.LogStore
+	walArchiver *walArchiver
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -344,7 +347,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
-	var log raft.LogStore
+	var log, wallog raft.LogStore
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
 
@@ -371,7 +374,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			if err != nil {
 				return nil, err
 			}
-			stable, store = s, s
+			stable, store, wallog = s, s, s
 		default:
 			s, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
 			if err != nil {
@@ -428,6 +431,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		raftInitCh:                 make(chan struct{}),
 		conf:                       conf,
 		logStore:                   log,
+		walLogStore:                wallog,
 		stableStore:                stable,
 		snapStore:                  snap,
 		dataDir:                    path,
@@ -895,8 +899,11 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	return nil
 }
 
-// CommittedIndex returns the latest index committed to stable storage
-func (b *RaftBackend) CommittedIndex() uint64 {
+// LocalCommittedIndex returns the latest index committed to stable storage
+// locally.
+// This is not what the raft library means by "committed", which means
+// the index is present in the logs of all leaders (current & future).
+func (b *RaftBackend) LocalCommittedIndex() uint64 {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -905,6 +912,18 @@ func (b *RaftBackend) CommittedIndex() uint64 {
 	}
 
 	return b.raft.LastIndex()
+}
+
+func (b *RaftBackend) GlobalCommittedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return 0
+	}
+
+	i, _ := strconv.ParseUint(b.raft.Stats()["commit_index"], 10, 64)
+	return i
 }
 
 // AppliedIndex returns the latest index applied to the FSM
@@ -1355,6 +1374,24 @@ func (b *RaftBackend) DesiredSuffrage() string {
 	return b.fsm.DesiredSuffrage()
 }
 
+func (b *RaftBackend) SetupWALArchiving(ctx context.Context) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if b.walLogStore == nil {
+		b.logger.Info("not using wal log, so not setting up archiving")
+	}
+	w, err := newWALArchiver(b.raft, b.walLogStore, b.logger.Named("walarc"))
+	if err != nil {
+		return err
+	}
+
+	b.logger.Info("starting WAL archiver")
+	b.walArchiver = w
+	b.walArchiver.Start(ctx)
+	return nil
+}
+
 // RaftLock implements the physical Lock interface and enables HA for this
 // backend. The Lock uses the raftNotifyCh for receiving leadership edge
 // triggers. Vault's active duty matches raft's leadership.
@@ -1518,4 +1555,46 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
+}
+
+type walArchiver struct {
+	raft     *raft.Raft
+	logStore raft.LogStore
+	logger   log.Logger
+	// TODO we probably want to persist this
+	lastIndexArchived uint64
+}
+
+func newWALArchiver(raft *raft.Raft, logStore raft.LogStore, logger log.Logger) (*walArchiver, error) {
+	return &walArchiver{
+		raft:     raft,
+		logStore: logStore,
+		logger:   logger,
+	}, nil
+}
+
+func (a walArchiver) Start(ctx context.Context) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			a.archive()
+		}
+	}
+}
+
+// archive attempts to archive any archivable wal log segments.  To be eligible
+// a segment must be sealed (will not receive further log entries) and committed,
+// i.e. the last log index must be raft-committed.
+func (a walArchiver) archive() {
+	comidx, _ := strconv.ParseUint(a.raft.Stats()["commit_index"], 10, 64)
+	logpath, err := a.logStore.GetSealedLogPath(a.lastIndexArchived)
+	if err != nil {
+		a.logger.Error("GetSealedLogPath", "index", a.lastIndexArchived, "error", err)
+	}
+
 }

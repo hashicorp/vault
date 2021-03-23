@@ -3802,8 +3802,9 @@ type LeaderResponse struct {
 	LastWAL                  uint64    `json:"last_wal,omitempty"`
 
 	// Raft Indexes for this node
-	RaftCommittedIndex uint64 `json:"raft_committed_index,omitempty"`
-	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
+	RaftCommittedIndex       uint64 `json:"raft_committed_index,omitempty"`
+	RaftGlobalCommittedIndex uint64 `json:"raft_global_committed_index,omitempty"`
+	RaftAppliedIndex         uint64 `json:"raft_applied_index,omitempty"`
 }
 
 func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
@@ -3833,7 +3834,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.LastWAL = LastWAL(core)
 	}
 
-	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	resp.RaftGlobalCommittedIndex, resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
 	return resp, nil
 }
 

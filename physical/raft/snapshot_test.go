@@ -251,7 +251,7 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	commitIdx := raft1.CommittedIndex()
+	commitIdx := raft1.LocalCommittedIndex()
 
 	// Add raft2 to the cluster
 	addPeer(t, raft1, raft2)
@@ -279,7 +279,7 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	commitIdx = raft1.CommittedIndex()
+	commitIdx = raft1.LocalCommittedIndex()
 
 	// Add raft3 to the cluster
 	addPeer(t, raft1, raft3)
