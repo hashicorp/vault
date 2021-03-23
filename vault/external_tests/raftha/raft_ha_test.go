@@ -3,6 +3,7 @@ package raftha
 import (
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -58,22 +59,12 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 
 	teststorage.RaftHASetup(&conf, &opts, bundler)
+	opts.InmemClusterLayers = true
+	opts.SetupFunc = nil
+	conf.DisableAutopilot = true
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer cluster.Cleanup()
-
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-
-	leaderCore := cluster.Cores[0]
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	// Seal the leader so we can install an address provider
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
-	}
 
 	// Now unseal core for join commands to work
 	testhelpers.EnsureCoresUnsealed(t, cluster)
@@ -100,14 +91,25 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	// Ensure peers are added
 	leaderClient := cluster.Cores[0].Client
-	testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
-	})
+	deadline := time.Now().Add(30 * time.Second)
+	var err error
+	for time.Now().Before(deadline) {
+		err = testhelpers.CheckRaftPeers(t, leaderClient, map[string]bool{
+			"core-0": true,
+			"core-1": true,
+			"core-2": true,
+		})
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test remove peers
-	_, err := leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-1",
 	})
 	if err != nil {

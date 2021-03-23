@@ -625,36 +625,47 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 
 func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
 	t.Helper()
+	if err := CheckRaftPeers(t, client, expected); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func CheckRaftPeers(t testing.T, client *api.Client, expected map[string]bool) error {
+	t.Helper()
 
 	resp, err := client.Logical().Read("sys/storage/raft/configuration")
 	if err != nil {
-		t.Fatalf("error reading raft config: %v", err)
+		return fmt.Errorf("error reading raft config: %v", err)
 	}
 
 	if resp == nil || resp.Data == nil {
-		t.Fatal("missing response data")
+		return fmt.Errorf("missing response data")
 	}
 
 	config, ok := resp.Data["config"].(map[string]interface{})
 	if !ok {
-		t.Fatal("missing config in response data")
+		return fmt.Errorf("missing config in response data")
 	}
 
 	servers, ok := config["servers"].([]interface{})
 	if !ok {
-		t.Fatal("missing servers in response data config")
+		return fmt.Errorf("missing servers in response data config")
 	}
 
 	// Iterate through the servers and remove the node found in the response
 	// from the expected collection
 	for _, s := range servers {
 		server := s.(map[string]interface{})
-		delete(expected, server["node_id"].(string))
+		t.Logf("server:% v", server)
+		if server["voter"].(bool) {
+			delete(expected, server["node_id"].(string))
+		}
 	}
 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		return fmt.Errorf("failed to read configuration successfully, expected peers no found in configuration list: %v, servers: %v", expected, servers)
 	}
+	return nil
 }
