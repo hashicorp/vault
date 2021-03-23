@@ -23,8 +23,8 @@ promoted as a voter. The server stabilization period can be tuned using
 
 ## Dead Server Cleanup
 
-Dead server cleanup automatically removes those nodes from the Raft, that are
-deemed failed, avoiding the manual operator intervention. This feature can be
+Dead server cleanup automatically removes nodes deemed unhealthy from the
+Raft cluster, avoiding the manual operator intervention. This feature can be
 tuned using the `cleanup_dead_servers`, `dead_server_last_contact_threshold`,
 and `min_quorum` (see below).
 
