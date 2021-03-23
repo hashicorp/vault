@@ -61,7 +61,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	teststorage.RaftHASetup(&conf, &opts, bundler)
 	opts.InmemClusterLayers = true
 	opts.SetupFunc = nil
-	conf.DisableAutopilot = true
+	conf.DisableAutopilot = false
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer cluster.Cleanup()
