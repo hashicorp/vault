@@ -31,6 +31,7 @@ import (
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	raftwal "github.com/ncabatoff/raft-wal"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -361,11 +362,23 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
-		if err != nil {
-			return nil, err
+		var store raft.LogStore
+		switch conf["logstore"] {
+		case "raft-wal":
+			logsDir := filepath.Join(path, "logs")
+			os.MkdirAll(logsDir, 0755)
+			s, err := raftwal.NewWAL(logsDir, raftwal.LogConfig{NoSync: false})
+			if err != nil {
+				return nil, err
+			}
+			stable, store = s, s
+		default:
+			s, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
+			if err != nil {
+				return nil, err
+			}
+			stable, store = s, s
 		}
-		stable = store
 
 		// Wrap the store in a LogCache to improve performance.
 		cacheStore, err := raft.NewLogCache(raftLogCacheSize, store)
@@ -467,7 +480,7 @@ func (b *RaftBackend) Close() error {
 		return err
 	}
 
-	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+	if err := b.stableStore.(io.Closer).Close(); err != nil {
 		return err
 	}
 

@@ -51,6 +51,8 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 		"path":          raftDir,
 		"trailing_logs": "100",
 		"node_id":       id,
+		"logstore":      "raft-wal",
+		//"performance_multiplier": "1",
 	}
 
 	if noStoreState {
@@ -405,9 +407,18 @@ func TestRaft_Recovery(t *testing.T) {
 	}
 
 	// Bring up the nodes again
-	raft1.SetupCluster(context.Background(), SetupOpts{})
-	raft2.SetupCluster(context.Background(), SetupOpts{})
-	raft4.SetupCluster(context.Background(), SetupOpts{})
+	err = raft1.SetupCluster(context.Background(), SetupOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = raft2.SetupCluster(context.Background(), SetupOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = raft4.SetupCluster(context.Background(), SetupOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	peers, err := raft1.Peers(context.Background())
 	if err != nil {
