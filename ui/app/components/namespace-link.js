@@ -18,12 +18,11 @@ export default Component.extend({
   }),
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
+    console.error('meep');
+    if (!ns) return 'root';
     let ns = this.normalizedNamespace;
     let showLastSegment = this.showLastSegment;
-    let parts = ns.split('/');
-    if (ns === '') {
-      return 'root';
-    }
+    let parts = ns?.split('/');
     return showLastSegment ? parts[parts.length - 1] : ns;
   }),
 
