@@ -7,18 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"mime"
 	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	sockaddr "github.com/hashicorp/go-sockaddr"
@@ -564,17 +563,18 @@ func handleUIRedirect() http.Handler {
 }
 
 type UIAssetWrapper struct {
-	FileSystem *assetfs.AssetFS
+	FileSystem http.FileSystem
 }
 
-func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
-	file, err := fs.FileSystem.Open(name)
+func (fsw *UIAssetWrapper) Open(name string) (http.File, error) {
+	file, err := fsw.FileSystem.Open(name)
 	if err == nil {
 		return file, nil
 	}
 	// serve index.html instead of 404ing
-	if err == os.ErrNotExist {
-		return fs.FileSystem.Open("index.html")
+	if errors.Is(err, fs.ErrNotExist) {
+		file, err := fsw.FileSystem.Open("index.html")
+		return file, err
 	}
 	return nil, err
 }

@@ -212,10 +212,6 @@ layers:
     dockerfile: |
       ENV GO111MODULE=off
       RUN go get golang.org/x/tools/cmd/goimports
-      RUN go get github.com/hashicorp/go-bindata
-      RUN go get github.com/hashicorp/go-bindata/go-bindata
-      RUN go get github.com/elazarl/go-bindata-assetfs
-      RUN go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
   - name: set-workdir
     dockerfile: |
       ENV REPO=github.com/hashicorp/vault
@@ -229,6 +225,9 @@ layers:
       RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
       RUN apt-get update -y && apt-get install -y -q nodejs yarn={{.YARN_VERSION}} \
                             && rm -rf /var/lib/apt/lists/*
+  - name: make-ui-folder
+    dockerfile: |-
+      RUN mkdir -p http/web_ui 
   - name: ui-dependencies
     source-include: ui/package.json ui/yarn.lock
     dockerfile: |-
@@ -238,12 +237,6 @@ layers:
     source-include: ui/
     dockerfile: |-
       RUN cd ui && yarn run build
-  - name: build-static-assets
-    source-include: Makefile
-    dockerfile: |-
-      RUN go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
-      RUN mkdir -p http && mv bindata_assetfs.go http/
-      RUN goimports -w http/bindata_assetfs.go
   # Up to now, the layers do not vary between packages. This means the layers above
   # can be built prior to package builds in order to warm the cache and speed up
   # builds.

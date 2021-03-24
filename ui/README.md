@@ -103,8 +103,8 @@ To run the tests locally in a browser other than IE11, swap out `launch_in_ci: [
 
 ### Building Vault UI into a Vault Binary
 
-We use `go-bindata-assetfs` to build the static assets of the
-Ember application into a Vault binary.
+We use the [embed](https://golang.org/pkg/embed/) package from Go 1.16+ to build
+the static assets of the Ember application into a Vault binary.
 
 This can be done by running these commands from the root directory run:
 `make static-dist`

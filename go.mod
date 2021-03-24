@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault
 
-go 1.13
+go 1.16
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -39,7 +39,6 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
-	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
@@ -56,7 +55,6 @@ require (
 	github.com/hashicorp/consul-template v0.25.2
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.6.0
