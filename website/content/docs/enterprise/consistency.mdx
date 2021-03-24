@@ -24,7 +24,8 @@ all requests to the leader node.
 
 When using the Integrated Storage backend without performance standbys, only
 a single Vault node (the active node) handles requests.  Requests sent to
-regular standbys are handled by forwarding them to the active node.
+regular standbys are handled by forwarding them to the active node. This Vault configuration
+gives Vault the same behavior as the default Consul consistency model.
 
 When using the Integrated Storage backend with performance standbys, both the
 active node and performance standbys can handle requests.  If a performance standby
