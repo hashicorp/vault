@@ -422,6 +422,7 @@ export default [
       'sealwrap',
       'namespaces',
       'performance-standby',
+      'consistency',
       'control-groups',
       {
         category: 'mfa',
