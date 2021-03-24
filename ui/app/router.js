@@ -122,7 +122,8 @@ Router.map(function() {
           this.route('overview');
         });
         this.route('custom', { path: '/custom/:backend' }, function() {
-          this.route('path', { path: '/:itempath' });
+          this.route('path', { path: '/show/:itempath' });
+          this.route('create', { path: '/create/:itempath' });
         });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
