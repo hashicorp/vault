@@ -5,29 +5,22 @@
   </label>
   <ul class="menu-list">
     {{#each-in @paths as |key path|}}
-      {{!-- each path, show if (param && paramReq) || !param --}}
-      {{!-- {{#if (not this.updateParam) path.requiredGetParam}} --}}
       {{#unless (and this.param)}}
         {{#unless path.requiredGetParam}}
           <LinkTo @route="vault.cluster.secrets.custom.path" @models={{array @backend key}}>
             <li>{{path.key}}</li>
           </LinkTo>
         {{else}}
-        Create {{path.key}}
+          <LinkTo @route="vault.cluster.secrets.custom.create" @models={{array @backend key}}>
+            <li>{{path.key}} <strong>**</strong></li>
+          </LinkTo>
         {{/unless}}
       {{else}}
         {{#if path.requiredGetParam}}
           <LinkTo @route="vault.cluster.secrets.custom.path" @query={{hash item=this.param}} @models={{array @backend key}} >
-            <li>{{path.key}}*</li>
+            <li>{{path.key}}</li>
           </LinkTo>
         {{/if}}
-
-      {{!-- {{#unless path.requiredGetParam}} --}}
-        
-        {{!-- <p>has param</p>
-        
-         --}}
-        
       {{/unless}}
     {{/each-in}}
   </ul>
