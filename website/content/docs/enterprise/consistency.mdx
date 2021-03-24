@@ -30,7 +30,7 @@ gives Vault the same behavior as the default Consul consistency model.
 When using the Integrated Storage backend with performance standbys, both the
 active node and performance standbys can handle requests.  If a performance standby
 handles a login request, or a request that generates a dynamic secret, the
-performance standby will issue an RPC to the active node to store the token
+performance standby will issue a remote procedure call (RPC) to the active node to store the token
 and/or lease.  If the performance standby handles any other request that
 results in a storage write, it will forward that request to the active node
 in the same way a regular standby forwards all requests.
