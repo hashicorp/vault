@@ -35,7 +35,7 @@ and/or lease.  If the performance standby handles any other request that
 results in a storage write, it will forward that request to the active node
 in the same way a regular standby forwards all requests.
 
-With integrated storage all writes occur on the active node, which then issues
+With integrated storage, all writes occur on the active node, which then issues
 RPCs to update the local storage on every other node.  Between when the active
 node writes the data to its local disk, and when those RPCs are handled on the
 other nodes to write the data to their local disks, those nodes present a stale
