@@ -7,8 +7,8 @@ description: Vault Enterprise Consistency Model
 
 # Vault Eventual Consistency
 
-When running in a cluster, Vault has an eventual consistency model. 
-Only one node (the leader) can write to Vault's storage.  
+When running in a cluster, Vault has an eventual consistency model.
+Only one node (the leader) can write to Vault's storage.
 Users generally expect read-after-write consistency: in other
 words, after writing foo=1, a subsequent read of foo should return 1.  Depending
 on the Vault configuration this isn't always the case.  When using performance
@@ -51,50 +51,48 @@ the write into account because the new data isn't present on that node yet.
 
 A similar phenomenon occurs when using performance replication.  One example
 of how this manifests is when using shared mounts.  If a KV secrets engine
-is mounted on the primary with `local=false`, it will appear on the secondary
+is mounted on the primary with `local=false`, it will exist on the secondary
 cluster as well.  The secondary cluster can handle requests to that mount,
 though as with performance standbys, write requests must be forwarded - in
-this case to the primary active node.  Once again, if a write request is followed
-by a read request, and the data initially written on the primary cluster active
-node hasn't yet been pushed out to the secondary cluster before the read request is
-processed on the secondary node handling the request, it will appear as though
-the write hasn't happened.  If the secondary cluster is using Integrated Storage,
-and the read request is being handled on a performance standby, the problem is
-exacerbated because it has to be sent first from the primary active node to the
-secondary active node, and then from there to the secondary performance standby.
+this case to the primary active node.  Once data is written to the primary cluster,
+it won't be visible on the secondary cluster until the data has been replicated
+from the primary. Therefore, on the secondary cluster, it initially appears as if
+the data write hasn't happened.
 
-Even without shared secret engines this can still happen with performance
+If the secondary cluster is using Integrated Storage, and the read request is
+being handled on one of its performance standbys, the problem is exacerbated because it
+has to be sent first from the primary active node to the secondary active node,
+and then from there to the secondary performance standby, each of which can
+introduce their own form of lag.
+
+Even without shared secret engines, stale reads can still happen with performance
 replication. The Identity subsystem aims to provide a view on entities and
 groups which span across clusters.  As such, when logging in to a secondary cluster
 using a shared mount, Vault tries to generate an entity and alias if they don't
-already exist, and these must be stored on the primary using an RPC.  If the
-auth method defines external groups, the login process will also try to refresh
-those so that the resulting token reflects the entity's group memberships.
-This also applies to token renew operations.
-
-(TODO: remove prev paragraph?  maybe more background than needed)
+already exist, and these must be stored on the primary using an RPC.  Something
+similar happens with groups.
 
 ## Mitigations
 
 There has long been a partial mitigation for the above problems.  When writing
 data via RPC, e.g. when a performance standby registers tokens and leases on the
 active node after a login or generating a dynamic secret, part of the response
-includes a number known as the "WAL index".  A full explanation of this is
-outside the scope of this document, but suffice it to say that both performance
-replication and performance standbys use log shipping to stay
-in sync with the upstream source of writes.  The mitigation used by nodes
-sending writes upstream via RPC is to look at the WAL index in the response
-and wait up to 2 seconds to see the that WAL index appear in the logs being
-shipped from upstream.  If the WAL index is seen, the Vault node handling the
-request that resulted in RPCs can return: it knows that any subsequent reads
-will be able to see the value that was just written.  If the WAL index isn't
-seen within those 2 seconds, the Vault node completes the request and hopes
-for the best.
+includes a number known as the "WAL index", aka Write-Ahead Log index.
+
+A full explanation of this is outside the scope of this document, but the short
+version is that both performance replication and performance standbys use log
+shipping to stay in sync with the upstream source of writes.  The mitigation
+historically used by nodes doing writes via RPC is to look at the WAL index in
+the response and wait up to 2 seconds to see if that WAL index appear in the
+logs being shipped from upstream.  Once the WAL index is seen, the Vault node
+handling the request that resulted in RPCs can return its own response to the
+client: it knows that any subsequent reads will be able to see the value that
+was just written. If the WAL index isn't seen within those 2 seconds, the Vault
+node completes the request anyway, returning a warning in the response.
 
 This mitigation option still exists in Vault 1.7, though now there is a
-configuration option to adjust the wait time.
-
-(TODO: reference new config option)
+configuration option to adjust the wait time:
+[best_effort_wal_wait_duration](/docs/configuration/replication).
 
 ## Vault 1.7 Mitigations
 
@@ -107,6 +105,9 @@ There are now a variety of other mitigations available:
 
 The remainder of this document describes the tradeoffs of these mitigations and
 how to use them.
+
+Note that any headers requesting forwarding are disabled by default, and must
+be enabled using [allow_forwarding_via_header](/docs/configuration/replication).
 
 ### Blind Forwarding (Performance standbys only)
 
