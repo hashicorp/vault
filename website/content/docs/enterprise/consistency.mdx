@@ -65,8 +65,8 @@ secondary active node, and then from there to the secondary performance standby.
 
 Even without shared secret engines this can still happen with performance
 replication. The Identity subsystem aims to provide a view on entities and
-groups which spans clusters.  As such, when logging in to a secondary cluster
-using a shared mount Vault tries to generate an entity and alias if they don't
+groups which span across clusters.  As such, when logging in to a secondary cluster
+using a shared mount, Vault tries to generate an entity and alias if they don't
 already exist, and these must be stored on the primary using an RPC.  If the
 auth method defines external groups, the login process will also try to refresh
 those so that the resulting token reflects the entity's group memberships.
