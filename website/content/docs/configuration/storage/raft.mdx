@@ -104,6 +104,14 @@ set `disable_mlock` to `true`, and to disable memory swapping on the system.
   raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
 
+- `autopilot_reconcile_interval` `(string: "")` - This is the interval after
+  which autopilot will pick up any state changes. State change could mean multiple
+  things; for example a newly joined voter node, initially added as non-voter to
+  the raft cluster by autopilot has successfully completed the stabilization
+  period thereby qualifying for being promoted as a voter, a node that has become
+  unhealthy and needs to be shown as such in the state API, a node has been marked
+  as dead needing eviction from raft configuration, etc. Defaults to 10s.
+
 ### `retry_join` stanza
 
 - `leader_api_addr` `(string: "")` - Address of a possible leader node.

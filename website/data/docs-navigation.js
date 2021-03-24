@@ -35,7 +35,10 @@ export default [
       'password-policies',
       'username-templating',
       'ha',
-      'integrated-storage',
+      {
+        category: 'integratedstorage',
+        content:['autopilot'],
+      },
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
@@ -243,7 +246,13 @@ export default [
       },
       'gcp',
       'gcpkms',
-      'key-management',
+      {
+        category: 'key-management',
+        content: [
+          'azurekeyvault',
+          'awskms',
+        ],
+      },
       'kmip',
       {
         category: 'kv',
