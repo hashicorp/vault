@@ -413,7 +413,8 @@ export default [
       'upgrade-to-1.6.0',
       'upgrade-to-1.6.1',
       'upgrade-to-1.6.2',
-      'upgrade-to-1.6.3'
+      'upgrade-to-1.6.3',
+      'upgrade-to-1.7.0'
     ],
   },
   '----------------',
