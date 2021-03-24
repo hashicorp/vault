@@ -25,6 +25,7 @@ export default class VaultClusterSecretsCustomRoute extends Route {
           gettable: !!openApi.get,
           creatable: !!openApi['x-vault-createSupported'],
           urlPath: key,
+          requiredGetParam: openApi.parameters?.find(p => p.required && p.in === 'path'),
           ...openApi,
         };
         const getParams = tabs[key].get.parameters?.find(p => p.name === 'list');
@@ -38,7 +39,7 @@ export default class VaultClusterSecretsCustomRoute extends Route {
     });
     return {
       backend,
-      info,
+      pathInfo: info,
       paramText: '',
     };
   }

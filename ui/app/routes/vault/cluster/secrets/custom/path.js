@@ -4,21 +4,22 @@ export default class VaultClusterSecretsCustomPathRoute extends Route {
   async model(params) {
     // params.backend
     const parentModel = this.modelFor('vault.cluster.secrets.custom');
-    const { itempath, path } = params;
+    const { itempath, item } = params;
     // itempath is the key of the openApi item,
-    // path is the user-input query param
+    // item is the user-input query param
     let queryUrl = `/v1/${parentModel.backend}`;
-    const info = parentModel.info[itempath];
+    const info = parentModel.pathInfo[itempath];
+    console.log({ info });
 
     // If param required on info, use path
     const requiredParam = info.parameters?.find(p => p.required === true && p.in === 'path');
     if (requiredParam) {
-      const reg = /\{(requiredParam.name)\}/;
+      const reg = /\{.*\}/;
       console.log(reg);
-      queryUrl = `${queryUrl}/${info.urlPath.replace(reg, path)}`;
+      queryUrl = `${queryUrl}${info.urlPath.replace(reg, item)}`;
     } else {
       const reg = /\{.*\}/;
-      queryUrl = `${queryUrl}/${info.urlPath.replace(reg, '')}?list=true`;
+      queryUrl = `${queryUrl}${info.urlPath.replace(reg, '')}${info.listable ? '?list=true' : ''}`;
     }
 
     // possible views: list, get, create (form)
@@ -48,7 +49,7 @@ export default class VaultClusterSecretsCustomPathRoute extends Route {
     // });
     return {
       path: queryUrl,
-      info: parentModel.info.metad,
+      info,
       data: json.data,
       list: json.data?.keys,
     };
