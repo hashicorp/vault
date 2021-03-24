@@ -7,8 +7,9 @@ description: Vault Enterprise Consistency Model
 
 # Vault Eventual Consistency
 
-There are two Enterprise features that may expose the user to inconsistent views
-of Vault state.  Users generally expect read-after-write consistency: in other
+When running in a cluster, Vault has an eventual consistency model. 
+Only one node (the leader) can write to Vault's storage.  
+Users generally expect read-after-write consistency: in other
 words, after writing foo=1, a subsequent read of foo should return 1.  Depending
 on the Vault configuration this isn't always the case.  When using performance
 standbys with Raft Integrated Storage, or when using performance replication,
