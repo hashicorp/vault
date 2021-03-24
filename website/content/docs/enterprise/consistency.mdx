@@ -97,7 +97,7 @@ configuration option to adjust the wait time:
 ## Vault 1.7 Mitigations
 
 There are now a variety of other mitigations available:
-* per-request option to blindly forward the request to the active node
+* per-request option to always forward the request to the active node
 * per-request option to conditionally forward the request to the active node
   if it would otherwise result in a stale read
 * per-request option to fail requests if they might result in a stale read
@@ -109,7 +109,7 @@ how to use them.
 Note that any headers requesting forwarding are disabled by default, and must
 be enabled using [allow_forwarding_via_header](/docs/configuration/replication).
 
-### Blind Forwarding (Performance standbys only)
+### Unconditional Forwarding (Performance standbys only)
 
 The simplest solution to never experience stale reads from a performance standby
 is to provide the following HTTP header in the request:
