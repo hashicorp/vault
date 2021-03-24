@@ -14,4 +14,4 @@ ha_backend "consul" {
     disable_clustering = "true"
 }
 
-// No backend stanza in config! 
+// No backend stanza in config!
