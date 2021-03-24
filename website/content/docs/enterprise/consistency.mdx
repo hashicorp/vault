@@ -81,7 +81,7 @@ data via RPC, e.g. when a performance standby registers tokens and leases on the
 active node after a login or generating a dynamic secret, part of the response
 includes a number known as the "WAL index".  A full explanation of this is
 outside the scope of this document, but suffice it to say that both performance
-replication and performance standbys use something called log shipping to stay
+replication and performance standbys use log shipping to stay
 in sync with the upstream source of writes.  The mitigation used by nodes
 sending writes upstream via RPC is to look at the WAL index in the response
 and wait up to 2 seconds to see the that WAL index appear in the logs being
