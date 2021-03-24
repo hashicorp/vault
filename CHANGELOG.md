@@ -1,7 +1,7 @@
 ## 1.8.0 (Unreleased)
 
-## 1.7.0-rc1
-### 10 March 2021
+## 1.7.0
+### 24 March 2021
 
 CHANGES:
 
