@@ -14,6 +14,8 @@ for Vault 1.7.0 compared to 1.6. Please read it carefully.
 
 ## Known Issues
 
+Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.6.4 or 1.7.0.
+
 ### Autopilot
 
 * Autopilot is not currently supported on DR Secondary clusters, or in
@@ -22,8 +24,6 @@ for Vault 1.7.0 compared to 1.6. Please read it carefully.
   cluster address, autopilot may be unable to determine the leader node. If
   affected, you should disabled autopilot by setting the
   `VAULT_RAFT_AUTOPILOT_DIABLE` environment variable to 1.
-
-Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.6.4.
 
 @include 'transform-upgrade.mdx'
 
