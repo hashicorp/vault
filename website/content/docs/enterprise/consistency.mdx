@@ -12,7 +12,7 @@ Only one node (the leader) can write to Vault's storage.
 Users generally expect read-after-write consistency: in other
 words, after writing foo=1, a subsequent read of foo should return 1.  Depending
 on the Vault configuration this isn't always the case.  When using performance
-standbys with Raft Integrated Storage, or when using performance replication,
+standbys with Integrated Storage, or when using performance replication,
 there are some sequences of operations that don't always yield read-after-write
 consistency.
 
