@@ -83,7 +83,7 @@ type FSM struct {
 
 	db *bolt.DB
 
-	// retoreCb is called after we've restored a snapshot
+	// restoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
 	chunker *raftchunking.ChunkingBatchingFSM

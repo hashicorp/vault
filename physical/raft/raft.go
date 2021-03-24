@@ -149,7 +149,7 @@ type RaftBackend struct {
 
 	autopilotReconcileInterval time.Duration
 
-	walLogStore raft.LogStore
+	walLogStore raftwal.FileWALLog
 	walArchiver *walArchiver
 }
 
@@ -347,9 +347,12 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
-	var log, wallog raft.LogStore
+	var log raft.LogStore
+	var wallog raftwal.FileWALLog
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
+	var restoreCb localRestoreCallback
+	var rb *RaftBackend
 
 	var devMode bool
 	if devMode {
@@ -370,11 +373,24 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		case "raft-wal":
 			logsDir := filepath.Join(path, "logs")
 			os.MkdirAll(logsDir, 0755)
-			s, err := raftwal.NewWAL(logsDir, raftwal.LogConfig{NoSync: false})
+			s, err := raftwal.NewWAL(logsDir, raftwal.LogConfig{
+				NoSync:           false,
+				SegmentChunkSize: 32,
+			})
 			if err != nil {
 				return nil, err
 			}
 			stable, store, wallog = s, s, s
+
+			restoreCb = func(index uint64) error {
+				rb.l.Lock()
+				defer rb.l.Unlock()
+
+				err := s.SetFirstIndex(index)
+				logger.Trace("restore callback", "index", index, "SetFirstIndexError", err)
+				return err
+			}
+
 		default:
 			s, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
 			if err != nil {
@@ -391,7 +407,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm, restoreCb)
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +441,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		reconcileInterval = interval
 	}
 
-	return &RaftBackend{
+	rb = &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
 		raftInitCh:                 make(chan struct{}),
@@ -440,7 +456,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize:               maxEntrySize,
 		followerHeartbeatTicker:    time.NewTicker(time.Second),
 		autopilotReconcileInterval: reconcileInterval,
-	}, nil
+	}
+
+	return rb, nil
 }
 
 type snapshotStoreDelay struct {
@@ -1559,13 +1577,13 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 
 type walArchiver struct {
 	raft     *raft.Raft
-	logStore raft.LogStore
+	logStore raftwal.FileWALLog
 	logger   log.Logger
 	// TODO we probably want to persist this
 	lastIndexArchived uint64
 }
 
-func newWALArchiver(raft *raft.Raft, logStore raft.LogStore, logger log.Logger) (*walArchiver, error) {
+func newWALArchiver(raft *raft.Raft, logStore raftwal.FileWALLog, logger log.Logger) (*walArchiver, error) {
 	return &walArchiver{
 		raft:     raft,
 		logStore: logStore,
@@ -1574,27 +1592,47 @@ func newWALArchiver(raft *raft.Raft, logStore raft.LogStore, logger log.Logger) 
 }
 
 func (a walArchiver) Start(ctx context.Context) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			a.archive()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				a.archive()
+			}
 		}
-	}
+	}()
 }
 
 // archive attempts to archive any archivable wal log segments.  To be eligible
 // a segment must be sealed (will not receive further log entries) and committed,
 // i.e. the last log index must be raft-committed.
-func (a walArchiver) archive() {
+func (a *walArchiver) archive() {
 	comidx, _ := strconv.ParseUint(a.raft.Stats()["commit_index"], 10, 64)
-	logpath, err := a.logStore.GetSealedLogPath(a.lastIndexArchived)
-	if err != nil {
-		a.logger.Error("GetSealedLogPath", "index", a.lastIndexArchived, "error", err)
+	if comidx <= a.lastIndexArchived {
+		a.logger.Trace("archive", "index", a.lastIndexArchived, "globcomidx", comidx)
+		return
 	}
 
+	targetIndex := a.lastIndexArchived + 1
+	logpath, entryCount, err := a.logStore.GetSealedLogPath(targetIndex)
+	if err != nil {
+		a.logger.Error("GetSealedLogPath", "target", targetIndex, "error", err)
+	}
+	a.logger.Trace("GetSealedLogPath", "target", targetIndex, "logpath", logpath)
+	if logpath == "" || err != nil {
+		return
+	}
+
+	upto := a.lastIndexArchived + uint64(entryCount)
+	a.logger.Trace("archive", "from", a.lastIndexArchived, "upto", upto, "globcomidx", comidx, "entryCount", entryCount)
+	if upto > comidx {
+		return
+	}
+
+	a.logger.Info("archiving", "upto", upto)
+	a.lastIndexArchived = upto
 }

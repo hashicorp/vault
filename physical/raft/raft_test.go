@@ -48,11 +48,11 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	logger.Info("raft dir", "dir", raftDir)
 
 	conf := map[string]string{
-		"path":          raftDir,
-		"trailing_logs": "100",
-		"node_id":       id,
-		"logstore":      "raft-wal",
-		//"performance_multiplier": "1",
+		"path":                   raftDir,
+		"trailing_logs":          "100",
+		"node_id":                id,
+		"logstore":               "raft-wal",
+		"performance_multiplier": "1",
 	}
 
 	if noStoreState {

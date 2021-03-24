@@ -95,7 +95,8 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 	conf := map[string]string{
 		"path":                   raftDir,
 		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"performance_multiplier": "1",
+		"logstore":               "raft-wal",
 	}
 	for k, v := range extraConf {
 		val, ok := v.(string)
