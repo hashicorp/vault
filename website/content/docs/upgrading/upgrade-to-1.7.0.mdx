@@ -4,7 +4,7 @@ page_title: Upgrading to Vault 1.7.0 - Guides
 sidebar_title: Upgrade to 1.7.0
 description: |-
   This page contains the list of deprecations and important or breaking changes
-  for Vault 1.7..0. Please read it carefully.
+  for Vault 1.7.0. Please read it carefully.
 ---
 
 # Overview
@@ -12,11 +12,18 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.7.0 compared to 1.6. Please read it carefully.
 
-## Barrier Key Auto-Rotation
+## Known Issues
 
-If your Vault installation is at least a year old, the barrier key will be 
-automatically rotated once, and then subsequently will be rotated per the 
-settings in the new `sys/rotate/config` endpoint.  This is a precaution to 
-ensure the number of encryptions performed by the barrier key is fewer than that 
-rrecommended by 
-[NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
+### Autopilot
+
+* Autopilot is not currently supported on DR Secondary clusters, or in
+  Integrated Storage's HA-only mode.
+* If the IP address in the raft peer list is different from the configured
+  cluster address, autopilot may be unable to determine the leader node. If
+  affected, you should disabled autopilot by setting the
+  `VAULT_RAFT_AUTOPILOT_DIABLE` environment variable to 1.
+
+Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.6.4.
+
+@include 'transform-upgrade.mdx'
+
