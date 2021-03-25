@@ -85,8 +85,8 @@ created the containers will find two files containing secrets:
 ## Environment Variable Dynamic Database Credentials 
 
 The following Secret Provider Class retrieves dynamic database credentials from Vault and 
-extracts the generated username and password. The secrets are then mounted as environment variables 
-in the containers.
+extracts the generated username and password. The secrets are then synced to Kubernetes secrets
+so that they can be mounted as environment variables in the containers.
 
 ```yaml
 ---
