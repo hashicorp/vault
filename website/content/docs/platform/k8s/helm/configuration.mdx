@@ -785,7 +785,7 @@ and consider if they're appropriate for your deployment.
 
     - `tag` (`string: "0.1.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
 
-    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
 
   - `volumes` (`array: []`) - A list of volumes made available to all containers. This takes
     standard Kubernetes volume definitions.
