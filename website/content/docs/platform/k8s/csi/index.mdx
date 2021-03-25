@@ -3,13 +3,13 @@ layout: docs
 page_title: Vault CSI Provider
 sidebar_title: Vault CSI Provider
 description: >-
-  The Vault CSI Provider allows pods consume Vault secrets using CSI Secret Store
+  The Vault CSI Provider allows pods to consume Vault secrets using CSI Secret Store
   volumes.
 ---
 
 # Vault CSI Provider
 
-The Vault CSI Provider allows pods consume Vault secrets using 
+The Vault CSI Provider allows pods to consume Vault secrets using 
 [CSI Secret Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes.
 
 ~> The Vault CSI Provider requires the [CSI Secret Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) 
@@ -30,18 +30,12 @@ start running.
 
 The following features are supported by the Vault CSI Provider:
 
-* All Vault secret engines can be used.
+* All Vault secret engines supported.
 * Authenticatation using the requesting pod's service account.
 * TLS/mTLS communciations with Vault.
+* Rendering Vault secrets to files.
 * Syncing secrets to Kubernetes secrets to be used as environment variables.
-* Installation via Vault Helm
-
-### Roadmap
-
-The following features are on the roadmap for the Vault CSI Provider:
-
-* Secret renewals and updates
-* Templating secret strings
+* Installation via [Vault Helm](/docs/platform/k8s/helm)
 
 ## Authenticating with Vault
 
