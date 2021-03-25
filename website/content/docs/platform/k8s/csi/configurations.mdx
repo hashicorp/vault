@@ -31,15 +31,15 @@ The following parameters are supported by the Vault provider:
 
   - `objectName` `(string: "")` - The alias of the object which can be referenced within the secret provider class.
 
+  - `method` `(string: "GET")` - The type of HTTP request. Supported values include "GET" and "PUT".
+
   - `secretPath` `(string: "")` - The path in Vault where the secret is located.
 
-  - `secretArgs` `(map)` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary 
-    for different secret engines.
+  - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary 
+    for different secret engines. For example: 
 
     ```yaml
     secretArgs:
       common_name: "test.example.com"
       ttl: "24h"
     ```
-
-  - `method` `(string: "GET")` - The type of HTTP request. Supported values include "GET" and "PUT".
