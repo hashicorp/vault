@@ -72,7 +72,7 @@ spec:
           driver: "secrets-store.csi.k8s.io"
           readOnly: true
           volumeAttributes:
-            secretProviderClass: "vault-db-creds"?
+            secretProviderClass: "vault-db-creds"
 ```
 
 The pod mounts a CSI volume and specifies the Secret Provider Class (`vault-db-creds`) created above. 
