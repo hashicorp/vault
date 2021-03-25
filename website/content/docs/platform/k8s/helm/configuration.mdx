@@ -74,7 +74,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "0.7.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "0.9.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -82,7 +82,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.6.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.7.0"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `metrics` - Values that configure the Vault Agent Injector metric exporter.
 
@@ -115,6 +115,16 @@ and consider if they're appropriate for your deployment.
       matchLabels:
         injection: enabled
     ```
+
+  - `objectSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what objects can be effected by mutation.
+
+    ```yaml
+    # Selectors are defined as a YAML dictionary.
+    # In this example, all namespaces with the label "injection: enabled" are eligible:
+    objectSelector:
+      matchLabels:
+        injection: enabled
+
 
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
@@ -194,7 +204,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.6.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.7.0"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -763,3 +773,117 @@ and consider if they're appropriate for your deployment.
     "sample/annotation1": "foo"
     "sample/annotation2": "bar"
   ```
+
+- `csi` - Values that configure running the Vault CSI Provider.
+
+  - `enabled` (`boolean: false`) - When set to `true`, the Vault CSI Provider daemonset will be created.
+
+  - `image` - Values that configure the Vault CSI Provider Docker image.
+
+    - `repository` (`string: "hashicorp/vault-csi-provider"`) - The name of the Docker image for the Vault CSI Provider.
+
+    - `tag` (`string: "0.1.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
+
+    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+
+  - `volumes` (`array: []`) - A list of volumes made available to all containers. This takes
+    standard Kubernetes volume definitions.
+
+    ```yaml
+    volumes:
+      - name: plugins
+        emptyDir: {}
+    ```
+
+  - `volumeMounts` (`array: []`) - A list of volumes mounts made available to all containers. This takes
+    standard Kubernetes volume mount definitions.
+
+    ```yaml
+    volumeMounts:
+      - mountPath: /usr/local/libexec/vault
+        name: plugins
+        readOnly: true
+    ```
+
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each of the CSI containers. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
+
+    ```yaml
+    resources:
+      requests:
+        memory: '10Gi'
+      limits:
+        memory: '10Gi'
+    ```
+
+  - `daemonSet` - Values that configure the Vault CSI Provider daemonSet.
+
+    - `updateStrategy` - Values that configure the Vault CSI Provider update strategy.
+
+      - `type` (`string: "RollingUpdate"`) - The [type of update strategy](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) to be used when the daemonset is updated using Helm upgrades.
+
+      - `maxUnavailable` (`int: null`) - The maximum number of unavailable pods during an upgrade.
+
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+      add to the Vault CSI Provider daemonset. This can either be YAML or a YAML-formatted
+      multi-line templated string.
+
+      ```yaml
+      annotations:
+        foo: bar
+      # or
+      annotations: |
+        foo: bar
+      ```
+  - `pod` - Values that configure the Vault CSI Provider pod.
+
+   - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+      add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
+      multi-line templated string.
+
+      ```yaml
+      annotations:
+        foo: bar
+      # or
+      annotations: |
+        foo: bar
+      ```
+
+  - `serviceAccount` - Values that configure the Vault CSI Provider's serviceaccount.
+
+   - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+      add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
+      multi-line templated string.
+
+      ```yaml
+      annotations:
+        foo: bar
+      # or
+      annotations: |
+        foo: bar
+      ```
+
+  - `readinessProbe` - Values that configure the readiness probe for the Vault CSI Proivder  pods.
+
+    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+
+    - `initialDelaySeconds` (`int: 5`) - When set to a value, configures the number of seconds after the container has started before probe initiates.
+
+    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+
+    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+
+    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+    
+  - `livelinessProbes` - Values that configure the liveliness probe for the Vault CSI Proivder pods.
+
+    - `initialDelaySeconds` (`int: 5`) - Sets the initial delay of the liveliness probe when the container starts.
+
+    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+
+    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+
+    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+
+    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+
+  - `debug` (`bool: false`) - When set to true, enables debug logging on the Vault CSI Provider daemonset.
