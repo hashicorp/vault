@@ -58,7 +58,7 @@ account provided to pods if no service account is defined.
 
 ## Secret Provider Class Example
 
-The following is an example of a Secret Class Object using the `vault` provider:
+The following is an example of a Secret Provider Class using the `vault` provider:
 
 ```yaml
 ---
@@ -89,7 +89,7 @@ spec:
     # "secretKey" is the key within the Vault secret response to extract a value from.
 ```
 
-~> Secret Provier Class is a namespace object in Kuberenetes.
+~> Secret Provider Class is a namespaced object in Kuberenetes.
 
 ## Using Secret Provider Classes
 
@@ -114,7 +114,6 @@ spec:
       containers:
       - name: app
         image: my-app:1.0.0
-          runAsGroup: 1000
         volumeMounts:
         - name: "vault-db-creds"
           mountPath: "/mnt/secrets-store"
