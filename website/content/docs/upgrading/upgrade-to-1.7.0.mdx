@@ -21,6 +21,14 @@ ensure the number of encryptions performed by the barrier key is fewer than that
 recommended by 
 [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
 
+## AWS Auth Endpoint Changes and Deprecations
+
+AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
+have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
+updated to`/auth/aws/identity-accesslist`). The legacy endpoint names are considered **deprecated**.
+The old and new endpoints are aliases, sharing the same underlying data. The complete list of
+endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws).
+
 ## Known Issues
 
 Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.6.4 or 1.7.0.
