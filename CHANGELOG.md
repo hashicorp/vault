@@ -53,7 +53,7 @@ IMPROVEMENTS:
 * core/metrics: New telemetry metrics reporting lease expirations by time interval and namespace [[GH-10375](https://github.com/hashicorp/vault/pull/10375)]
 * core: Added active since timestamp to the status output of active nodes. [[GH-10489](https://github.com/hashicorp/vault/pull/10489)]
 * core: Check audit device with a test message before adding it. [[GH-10520](https://github.com/hashicorp/vault/pull/10520)]
-* core: Track barrier encryption count and automatically rotate after a large number of operations or on a schedule [[GH-10744](https://github.com/hashicorp/vault/pull/10744)]
+* core: Track barrier encryption count and automatically rotate after a large number of operations or on a schedule [[GH-10774](https://github.com/hashicorp/vault/pull/10774)]
 * core: add metrics for active entity count [[GH-10514](https://github.com/hashicorp/vault/pull/10514)]
 * core: add partial month client count api [[GH-11022](https://github.com/hashicorp/vault/pull/11022)]
 * core: dev mode listener allows unauthenticated sys/metrics requests [[GH-10992](https://github.com/hashicorp/vault/pull/10992)]
