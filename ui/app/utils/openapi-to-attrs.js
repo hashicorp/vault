@@ -116,3 +116,18 @@ export const combineFieldGroups = function(currentGroups, newFields, excludedFie
 
   return currentGroups;
 };
+
+export const nonModelAttrs = function(openApiProps) {
+  let fieldAttrs = [];
+  for (const key in openApiProps) {
+    if (Object.hasOwnProperty.call(openApiProps, key)) {
+      const element = openApiProps[key];
+      fieldAttrs.push({
+        name: key,
+        type: element.type,
+        options: { ...element, subText: element.helpText || '', helpText: '' },
+      });
+    }
+  }
+  return fieldAttrs;
+};
