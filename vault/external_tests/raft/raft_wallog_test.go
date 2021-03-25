@@ -12,12 +12,14 @@ import (
 	"github.com/hashicorp/vault/vault"
 	testingintf "github.com/mitchellh/go-testing-interface"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"math"
 	"testing"
 	"time"
 )
 
 func TestRaft_WALLog(t *testing.T) {
+	archivePath := t.TempDir()
 	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
 	conf.DisableAutopilot = false
 	opts.InmemClusterLayers = true
@@ -29,6 +31,7 @@ func TestRaft_WALLog(t *testing.T) {
 			"trailing_logs":                "100",
 			"autopilot_reconcile_interval": "1s",
 			"snapshot_interval":            "5s",
+			"archive_path":                 archivePath,
 		}
 		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
 	}
@@ -98,4 +101,14 @@ func TestRaft_WALLog(t *testing.T) {
 		}
 	}
 	require.Equal(t, state.Voters, []string{"core-0", "core-1", "core-2"})
+
+	ents, err := ioutil.ReadDir(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var logs []string
+	for _, ent := range ents {
+		logs = append(logs, ent.Name())
+	}
+	t.Logf("log files: %v", logs)
 }
