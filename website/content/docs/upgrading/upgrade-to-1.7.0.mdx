@@ -18,7 +18,7 @@ If your Vault installation is at least a year old, the barrier key will be
 automatically rotated once, and then subsequently will be rotated per the 
 settings in the new `sys/rotate/config` endpoint.  This is a precaution to 
 ensure the number of encryptions performed by the barrier key is fewer than that 
-rrecommended by 
+recommended by 
 [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
 
 ## Known Issues
@@ -32,7 +32,7 @@ Due to the known issue, Transform Secrets Engine users are recommended to upgrad
 * If the IP address in the raft peer list is different from the configured
   cluster address, autopilot may be unable to determine the leader node. If
   affected, you should disabled autopilot by setting the
-  `VAULT_RAFT_AUTOPILOT_DIABLE` environment variable to 1.
+  `VAULT_RAFT_AUTOPILOT_DISABLE` environment variable to 1.
 
 @include 'transform-upgrade.mdx'
 
