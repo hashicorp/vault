@@ -101,9 +101,11 @@ and consider if they're appropriate for your deployment.
     ```yaml
     resources:
       requests:
-        memory: '10Gi'
+        memory: '256Mi'
+        cpu: '250m'
       limits:
-        memory: '10Gi'
+        memory: '256Mi'
+        cpu: '250m'
     ```
 
   - `namespaceSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If set to null, all non-system namespaces are eligible for injection.
