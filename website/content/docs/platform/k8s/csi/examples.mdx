@@ -97,7 +97,7 @@ metadata:
 spec:
   provider: vault
   secretObjects:
-  - secretName: vault-db-creds
+  - secretName: vault-db-creds-secret
     type: Opaque
     data:
     - objectName: dbUsername # References dbUsername below
@@ -145,12 +145,12 @@ spec:
         - name: DB_USERNAME
           valueFrom:
             secretKeyRef:
-              name: vault-db-creds
+              name: vault-db-creds-secret
               key: username
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: vault-db-creds
+              name: vault-db-creds-secret
               key: password
         volumeMounts:
         - name: "vault-db-creds"

@@ -17,9 +17,10 @@ The Vault CSI Provider allows pods to consume Vault secrets using
 ## Overview
 
 At a high level, the CSI Secret Store controller allows users to create `SecretProviderClass` objects. 
-This object defines which secret provider to use and what secrets to retrieve. When the provider 
-used is `vault`, the Vault CSI Provider will receive the request, use the pod's service account to retrieve 
-the specified secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
+This object defines which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes 
+are created in Kubernetes, the CSI Secret Store will send the request to the Vault CSI Provider when the provider 
+is `vault`. The Vault CSI Provider will then use Secret Class Provider specified and the pod's service account to retrieve 
+the secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
 
 The secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase. 
 This means that pods will be blocked from starting until the secrets have been read from Vault and written to the volume.
@@ -41,7 +42,7 @@ The primary method of authentication with Vault when using the Vault CSI Provide
 is the service account attached to the pod. At this time no other authentication methods 
 are supported.
 
-For Kubernetes authentication, the service account must be bound to a Vault role and a
+For [Kubernetes authentication](/docs/auth/kubernetes), the service account must be bound to a Vault role and a
 policy granting access to the secrets desired.
 
 A service account must be present to use the Vault CSI Provider with the Kubernetes

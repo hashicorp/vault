@@ -30,6 +30,7 @@ Then install the chart and enable the CSI feature by setting the
 `csi.enabled` value to `true`:
 
 ```bash
+# Note: this will also install the Vault server and Agent Injector.
 helm install vault hashicorp/vault --set="csi.enabled=true"
 ```
 
