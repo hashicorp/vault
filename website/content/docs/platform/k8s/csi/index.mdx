@@ -21,9 +21,8 @@ This object defines which secret provider to use and what secrets to retrieve. W
 used is `vault`, the Vault CSI Provider will receive the request, use the pod's service account to retrieve 
 the specified secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
 
-The secret is retrieved from Vault and populated to the host path volume during the `ContainerCreation` phase. 
-This means that the secrets requested from Vault will be populated in the host path volume before containers 
-start running.
+The secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase. 
+This means that pods will be blocked from starting until the secrets have been read from Vault and written to the volume.
 
 ### Features
 
