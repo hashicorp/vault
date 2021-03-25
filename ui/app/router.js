@@ -142,6 +142,7 @@ Router.map(function() {
       }
 
       this.route('not-found', { path: '/*path' });
+      this.route('example');
     });
     this.route('not-found', { path: '/*path' });
   });
