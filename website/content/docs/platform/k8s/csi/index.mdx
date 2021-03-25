@@ -16,7 +16,7 @@ The Vault CSI Provider allows pods to consume Vault secrets using
 
 ## Overview
 
-At a high level, the CSI Secret Store controller allows users to create `SecretStoreClass` objects. 
+At a high level, the CSI Secret Store controller allows users to create `SecretProviderClass` objects. 
 This object defines which secret provider to use and what secrets to retrieve. When the provider 
 used is `vault`, the Vault CSI Provider will receive the request, use the pod's service account to retrieve 
 the specified secrets from Vault, and share them with the pod via a host path volume.
