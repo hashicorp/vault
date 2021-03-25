@@ -37,7 +37,7 @@ export default [
       'ha',
       {
         category: 'integratedstorage',
-        content:['autopilot'],
+        content: ['autopilot'],
       },
       'pgp-gpg-keybase',
       'recovery-mode',
@@ -349,6 +349,10 @@ export default [
           {
             category: 'injector',
             content: ['annotations', 'installation', 'examples'],
+          },
+          {
+            category: 'csi',
+            content: ['configurations', 'examples', 'installation'],
           },
         ],
       },
