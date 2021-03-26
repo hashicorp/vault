@@ -655,14 +655,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		case Ed25519PrivateKey:
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
-			}
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public(), data.Params.SignatureBits)
 		}
 
 		caCert := data.SigningBundle.Certificate
@@ -691,14 +684,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		case "ed25519":
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
-			}
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public(), data.Params.SignatureBits)
 		}
 
 		certTemplate.AuthorityKeyId = subjKeyID
@@ -731,6 +717,33 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 	}
 
 	return result, nil
+}
+
+func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x509.SignatureAlgorithm {
+	// If signature bits are configured, prefer them to the default choice.
+	switch signatureBits {
+	case 256:
+		return x509.ECDSAWithSHA256
+	case 384:
+		return x509.ECDSAWithSHA384
+	case 512:
+		return x509.ECDSAWithSHA512
+	}
+
+	key, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return x509.ECDSAWithSHA256
+	}
+	switch key.Curve {
+	case elliptic.P224(), elliptic.P256():
+		return x509.ECDSAWithSHA256
+	case elliptic.P384():
+		return x509.ECDSAWithSHA384
+	case elliptic.P521():
+		return x509.ECDSAWithSHA512
+	default:
+		return x509.ECDSAWithSHA256
+	}
 }
 
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
