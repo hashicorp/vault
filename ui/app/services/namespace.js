@@ -17,7 +17,8 @@ export default Service.extend({
 
   setNamespace(path) {
     if (!path) {
-      return '';
+      this.set('path', '');
+      return;
     }
     this.set('path', path);
   },
