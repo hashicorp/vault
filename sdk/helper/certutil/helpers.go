@@ -69,21 +69,42 @@ func ParseHexFormatted(in, sep string) []byte {
 	return ret.Bytes()
 }
 
-// GetSubjKeyID returns the subject key ID, e.g. the SHA1 sum
-// of the marshaled public key
+// GetSubjKeyID returns the subject key ID. The computed ID is the SHA-1 hash of
+// the marshaled public key according to
+// https://tools.ietf.org/html/rfc5280#section-4.2.1.2 (1)
 func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
+	return getSubjectKeyID(privateKey.Public())
+}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(privateKey.Public())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+func getSubjectKeyID(pub interface{}) ([]byte, error) {
+	var publicKeyBytes []byte
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		type pkcs1PublicKey struct {
+			N *big.Int
+			E int
+		}
+
+		var err error
+		publicKeyBytes, err = asn1.Marshal(pkcs1PublicKey{
+			N: pub.N,
+			E: pub.E,
+		})
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+		}
+	case *ecdsa.PublicKey:
+		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	case ed25519.PublicKey:
+		publicKeyBytes = pub
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported public key type: %T", pub)}
 	}
-
-	subjKeyID := sha1.Sum(marshaledKey)
-
-	return subjKeyID[:], nil
+	skid := sha1.Sum(publicKeyBytes)
+	return skid[:], nil
 }
 
 // ParsePKIMap takes a map (for instance, the Secret.Data
@@ -908,11 +929,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+		return nil, err
 	}
-	subjKeyID := sha1.Sum(marshaledKey)
 
 	caCert := data.SigningBundle.Certificate
 
