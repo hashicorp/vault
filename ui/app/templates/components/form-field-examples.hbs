@@ -1,0 +1,12 @@
+{{#each this.examples as |ex|}}
+  <label class="is-label has-text-grey title">Output of:</label>
+  <IvyCodemirror @value={{attr.go}} @options={{hash
+    lineNumbers=true
+    tabSize=2
+    mode='go'
+    theme='hashi'
+  }} />
+  <pre class="has-text-grey">{{ex.string}}</pre>
+  <FormField @attr={{ex.attr}} @model={{this.model}} />
+  <hr />
+{{/each}}

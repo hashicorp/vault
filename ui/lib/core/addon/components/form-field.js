@@ -26,6 +26,14 @@ import layout from '../templates/components/form-field';
  *
  */
 
+/*
+  ATTR def:
+  name: String
+  type: One of: boolean, string, number, object
+  options?: {
+    editType: One of: boolean, optionalText, searchSelect, mountAccessor, kv, file, ttl, stringArray, json, textarea, password
+  }
+*/
 export default Component.extend({
   layout,
   'data-test-field': true,
@@ -45,8 +53,25 @@ export default Component.extend({
    *   options: {
    *     label: "Foo",
    *     defaultValue: "",
-   *     editType: "ttl",
-   *     helpText: "This will be in a tooltip"
+   *     editType: "ttl", // boolean, optionalText, searchSelect, mountAccessor, kv, file, ttl, stringArray, json, textarea, password
+   *     helpText: "This will be in a tooltip",
+   *     subText: "This will be under the label",
+   *     warning: "This will be in stringlist, mountAccessor, kv, file",
+   *     sensitive: true, // MaskedInput
+   *     theme: "hashi", // editType json
+   *     characterLimit: 30, // type string
+   *     validationAttr: '?', // regular text input
+   *     invalidMessage: 'Goes with validationAttr', // regular text input
+   *     possibleValues: ['select', 'dropdown', 'options'],
+   *     trueValue: 1, // overrides boolean true/false value
+   *     falseValue: 0, // overrides boolean true/false value
+   *     models: ['ssh-role'], // used for searchSelect lookup
+   *     wildcardLabel: 'role', // used for searchSelect lookup
+   *     subLabel: 'This goes in search select',
+   *     fallbackComponent: 'some-component', // searchSelect
+   *     selectLimit: 2, // limits how many in searchSelect can be chosen
+   *     onlyAllowExisting: false, // do not allow create new on searchSelect
+   *     setDefault: '45m', // used in ttl initial value
    *   },
    *   type: "boolean"
    * }

@@ -186,28 +186,29 @@ type DisplayAttributes struct {
 	// Name is the name of the field suitable as a label or documentation heading.
 	Name string `json:"name,omitempty"`
 
-	// Value is a sample value to display for this field. This may be used
-	// to indicate a default value, but it is for display only and completely separate
-	// from any Default member handling.
+	// Value is a used as the default value for this field, but it is for UI only
+	// and completely separate from any Default member handling.
 	Value interface{} `json:"value,omitempty"`
 
 	// Sensitive indicates that the value should be masked by default in the UI.
 	Sensitive bool `json:"sensitive,omitempty"`
 
 	// Navigation indicates that the path should be available as a navigation tab
-	Navigation bool `json:"navigation,omitempty"`
+	Navigation bool `json:"navigation,omitempty"` // We don't actually use this
 
 	// ItemType is the type of item this path operates on
-	ItemType string `json:"itemType,omitempty"`
+	ItemType string `json:"itemType,omitempty"` // not used
 
 	// Group is the suggested UI group to place this field in.
 	Group string `json:"group,omitempty"`
 
 	// Action is the verb to use for the operation.
-	Action string `json:"action,omitempty"`
+	Action string `json:"action,omitempty"` // not used
 
 	// EditType is the optional type of form field needed for a property
 	// This is only necessary for a "textarea" or "file"
+	// Can be one of: boolean, optionalText, searchSelect, mountAccessor, 
+	// kv, file, ttl, stringArray, json, textarea, password
 	EditType string `json:"editType,omitempty"`
 }
 
