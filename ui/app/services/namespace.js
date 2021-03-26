@@ -16,6 +16,9 @@ export default Service.extend({
   inRootNamespace: equal('path', ROOT_NAMESPACE),
 
   setNamespace(path) {
+    if (!path) {
+      return '';
+    }
     this.set('path', path);
   },
 
