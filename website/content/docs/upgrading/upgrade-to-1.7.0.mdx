@@ -14,12 +14,21 @@ for Vault 1.7.0 compared to 1.6. Please read it carefully.
 
 ## Barrier Key Auto-Rotation
 
-If your Vault installation is at least a year old, the barrier key will be 
-automatically rotated once, and then subsequently will be rotated per the 
-settings in the new `sys/rotate/config` endpoint.  This is a precaution to 
-ensure the number of encryptions performed by the barrier key is fewer than that 
-recommended by 
+If your Vault installation is at least a year old, the barrier key will be
+automatically rotated once, and then subsequently will be rotated per the
+settings in the new `sys/rotate/config` endpoint.  This is a precaution to
+ensure the number of encryptions performed by the barrier key is fewer than that
+recommended by
 [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
+
+## AWS Auth Endpoint Changes and Deprecations
+
+AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
+have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
+updated to`/auth/aws/identity-accesslist`). The old and new endpoints are aliases,
+sharing the same underlying data. The legacy endpoint names are considered **deprecated**
+and will be removed in a future release (not before Vault 1.9). The complete list of
+endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#deprecations-effective-in-vault-1-7).
 
 ## Known Issues
 
