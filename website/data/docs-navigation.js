@@ -36,14 +36,14 @@ export default [
       'username-templating',
       'ha',
       {
-        category: 'integratedstorage',
+        category: 'integrated-storage',
         content: ['autopilot'],
       },
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
       'client-count',
-      'transform'
+      'transform',
     ],
   },
   {
@@ -248,10 +248,7 @@ export default [
       'gcpkms',
       {
         category: 'key-management',
-        content: [
-          'azurekeyvault',
-          'awskms',
-        ],
+        content: ['azurekeyvault', 'awskms'],
       },
       'kmip',
       {
@@ -418,7 +415,7 @@ export default [
       'upgrade-to-1.6.1',
       'upgrade-to-1.6.2',
       'upgrade-to-1.6.3',
-      'upgrade-to-1.7.0'
+      'upgrade-to-1.7.0',
     ],
   },
   '----------------',
