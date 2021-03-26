@@ -105,9 +105,11 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	// If autoTidy hasn't been run and the periodic function goes off, then simply
 	// set the next time for tidying to the appropriate value
 	if b.nextCrlAutoTidy.IsZero() {
-		fmt.Printf("first tidy push out")
-		b.nextCrlAutoTidy = time.Now().Add(b.crlAutoTidy)
-		return nil
+		// NOTE:Commented out for demo purposes
+		// fmt.Printf("first tidy push out")
+		// b.nextCrlAutoTidy = time.Now().Add(b.crlAutoTidy)
+		// return nil
+		b.nextCrlAutoTidy = time.Now()
 	}
 
 	// We're ready to autoTidy
@@ -116,6 +118,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		// tidy_revoked_certs is all we need, I think
 		rawFieldData := map[string]interface{}{}
 		rawFieldData["tidy_revoked_certs"] = true
+		rawFieldData["tidy_cert_store"] = true
 		rawFieldData["safety_buffer"] = 1 // this is for demo purposes. It is unsafe.
 		tidyFd := &framework.FieldData{
 			Raw:    rawFieldData,

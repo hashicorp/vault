@@ -66,8 +66,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
 	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
 
-	fmt.Printf("safety buffer is %d", safetyBuffer)
-	fmt.Printf("tidy revoked certs is %t", tidyRevokedCerts)
+	fmt.Printf("safety buffer is %d\n", safetyBuffer)
+	fmt.Printf("tidy revoked certs is %t\n", tidyRevokedCerts)
+	fmt.Printf("tidy cert store is %t\n", tidyCertStore)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -103,6 +104,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 
 				for _, serial := range serials {
+					fmt.Printf("looking at cereal %s\n", serial)
 					certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 					if err != nil {
 						return errwrap.Wrapf(fmt.Sprintf("error fetching certificate %q: {{err}}", serial), err)
@@ -129,7 +131,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored certificate with serial %q: {{err}}", serial), err)
 					}
 
+					fmt.Printf("Checking cert serial %s duration\n", serial)
 					if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
+						fmt.Printf("deleting cert serial %s\n", serial)
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from storage: {{err}}", serial), err)
 						}
