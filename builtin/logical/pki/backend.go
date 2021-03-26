@@ -115,6 +115,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		// tidy_revoked_certs is all we need, I think
 		rawFieldData := map[string]interface{}{}
 		rawFieldData["tidy_revoked_certs"] = true
+		rawFieldData["safety_buffer"] = 1 // this is for demo purposes. It is unsafe.
 		tidyFd := &framework.FieldData{
 			Raw:    rawFieldData,
 			Schema: pathTidy(b).Fields,
