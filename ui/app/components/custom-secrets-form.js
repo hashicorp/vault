@@ -13,17 +13,19 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 export default class CustomSecretsForm extends Component {
+  @tracked
   model = {
-    set: (...args) => {
-      console.log(args);
+    set: (path, val) => {
+      console.log('TODO: set', path, val);
     },
   };
 
   @action
   handleSubmit(evt) {
-    console.log(evt);
     console.log('submitted');
+    console.log(evt);
   }
 }
