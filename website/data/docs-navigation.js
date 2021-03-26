@@ -347,6 +347,10 @@ export default [
             category: 'injector',
             content: ['annotations', 'installation', 'examples'],
           },
+          {
+            category: 'csi',
+            content: ['configurations', 'examples', 'installation'],
+          },
         ],
       },
       {
