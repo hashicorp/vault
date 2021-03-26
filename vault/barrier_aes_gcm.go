@@ -61,6 +61,13 @@ var (
 // bit. AES-GCM is high performance, and provides both confidentiality
 // and integrity.
 type AESGCMBarrier struct {
+	// Atomics must remain here for alignment on 32-bit architectures
+	UnaccountedEncryptions atomic.Int64
+	// Used only for testing
+	RemoteEncryptions     atomic.Int64
+	totalLocalEncryptions atomic.Int64
+	initialized atomic.Bool	
+
 	backend physical.Backend
 
 	l      sync.RWMutex
@@ -79,13 +86,6 @@ type AESGCMBarrier struct {
 	// future versioning of barrier implementations. It's var instead
 	// of const to allow for testing
 	currentAESGCMVersionByte byte
-
-	initialized atomic.Bool
-
-	UnaccountedEncryptions atomic.Int64
-	// Used only for testing
-	RemoteEncryptions     atomic.Int64
-	totalLocalEncryptions atomic.Int64
 }
 
 func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
