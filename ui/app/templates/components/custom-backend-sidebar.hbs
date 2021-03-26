@@ -1,7 +1,8 @@
 <aside class="menu is-paddingless">
   <p class="menu-label">Available paths</p>
   <label>Param value:
-    <input type="text" name="param" {{on 'change' this.updateParam}} />
+    <input value={{this.param}} type="text" name="param" {{on 'change' this.updateParam}} />
+    <button name="clear" {{on 'click' this.updateParam}}>Clear</button>
   </label>
   <ul class="menu-list">
     {{#each-in @paths as |key path|}}

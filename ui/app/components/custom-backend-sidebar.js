@@ -21,7 +21,10 @@ export default class CustomBackendSidebar extends Component {
 
   @action
   updateParam(evt) {
-    console.log(evt);
-    this.param = evt.target.value.trim();
+    if (evt.target.name === 'clear') {
+      this.param = '';
+    } else {
+      this.param = evt.target.value.trim();
+    }
   }
 }
