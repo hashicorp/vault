@@ -18,7 +18,7 @@ The Vault CSI Provider allows pods to consume Vault secrets using
 
 At a high level, the CSI Secrets Store driver allows users to create `SecretProviderClass` objects. 
 This object defines which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes 
-are created in Kubernetes, the CSI Secret Store will send the request to the Vault CSI Provider when the provider 
+are created, the CSI Secrets Store driver will send the request to the Vault CSI Provider if the provider 
 is `vault`. The Vault CSI Provider will then use Secret Class Provider specified and the pod's service account to retrieve 
 the secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
 
