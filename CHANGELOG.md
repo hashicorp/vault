@@ -5,6 +5,12 @@
 
 CHANGES:
 
+* aws/auth: AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
+have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
+updated to`/auth/aws/identity-accesslist`). The old and new endpoints are aliases,
+sharing the same underlying data. The legacy endpoint names are considered **deprecated**
+and will be removed in a future release (not before Vault 1.9). The complete list of
+endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#deprecations-effective-in-vault-1-7).
 * go: Update Go version to 1.15.10 [[GH-11173](https://github.com/hashicorp/vault/pull/11173)]
 
 FEATURES:
@@ -126,6 +132,10 @@ the given key will be used to encrypt the snapshot using AWS KMS.
 * ui: Fix bug that double encodes secret route when there are spaces in the path and makes you unable to view the version history. [[GH-10596](https://github.com/hashicorp/vault/pull/10596)]
 * ui: Fix expected response from feature-flags endpoint [[GH-10684](https://github.com/hashicorp/vault/pull/10684)]
 * ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
+
+DEPRECATIONS:
+* aws/auth: AWS Auth endpoints that use the "whitelist" and "blacklist" terms have been deprecated.
+Refer to the CHANGES section for additional details.
 
 ## 1.6.3
 ### February 25, 2021
