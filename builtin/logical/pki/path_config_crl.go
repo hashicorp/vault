@@ -13,8 +13,9 @@ import (
 
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
-	Expiry  string `json:"expiry" mapstructure:"expiry"`
-	Disable bool   `json:"disable"`
+	Expiry   string `json:"expiry" mapstructure:"expiry"`
+	Disable  bool   `json:"disable"`
+	AutoTidy string `json:"autotidy"`
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -30,6 +31,12 @@ valid; defaults to 72 hours`,
 			"disable": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `If set to true, disables generating the CRL entirely.`,
+			},
+			"autotidy": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `If set to a non-default value, tidies revoked certificates
+				 according to the specified time interval`,
+				Default: "0s",
 			},
 		},
 
@@ -71,8 +78,9 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *f
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"expiry":  config.Expiry,
-			"disable": config.Disable,
+			"expiry":   config.Expiry,
+			"disable":  config.Disable,
+			"autotidy": config.AutoTidy,
 		},
 	}, nil
 }
@@ -93,6 +101,15 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 			return logical.ErrorResponse(fmt.Sprintf("given expiry could not be decoded: %s", err)), nil
 		}
 		config.Expiry = expiry
+	}
+	if autoTidyRaw, ok := d.GetOk("autotidy"); ok {
+		autoTidy := autoTidyRaw.(string)
+		autoTidyDur, err := time.ParseDuration(autoTidy)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("given autoTidy interval could not be decoded: %s", err)), nil
+		}
+		config.AutoTidy = autoTidy
+		b.crlAutoTidy = autoTidyDur
 	}
 
 	var oldDisable bool

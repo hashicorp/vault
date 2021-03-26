@@ -66,6 +66,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
 	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
 
+	fmt.Printf("safety buffer is %d", safetyBuffer)
+	fmt.Printf("tidy revoked certs is %t", tidyRevokedCerts)
+
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
 	}
