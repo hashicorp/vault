@@ -32,6 +32,30 @@ hyphen-separated octal`,
 	}
 }
 
+func pathRevokeByRole(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `revoke/` + framework.GenericNameRegex("name"),
+		Fields: map[string]*framework.FieldSchema{
+			"serial_number": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Certificate serial number, in colon- or
+hyphen-separated octal`,
+			},
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the role",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathRevokeWrite,
+		},
+
+		HelpSynopsis:    pathRevokeHelpSyn,
+		HelpDescription: pathRevokeHelpDesc,
+	}
+}
+
 func pathRotateCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate`,
@@ -47,6 +71,12 @@ func pathRotateCRL(b *backend) *framework.Path {
 
 func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	serial := data.Get("serial_number").(string)
+	roleNameRaw, ok := data.GetOk("name")
+	if !ok {
+		roleNameRaw = ""
+	}
+	roleName := roleNameRaw.(string)
+
 	if len(serial) == 0 {
 		return logical.ErrorResponse("The serial number must be provided"), nil
 	}
@@ -62,7 +92,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(ctx, b, req, serial, false)
+	return revokeCert(ctx, b, req, serial, roleName, false)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
