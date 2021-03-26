@@ -7,9 +7,10 @@ CHANGES:
 
 * aws/auth: AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
 have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
-updated to`/auth/aws/identity-accesslist`). The legacy endpoint names are considered **deprecated**.
-The old and new endpoints are aliases, sharing the same underlying data. The complete
-list of endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#deprecations-effective-in-vault-1-7).
+updated to`/auth/aws/identity-accesslist`). The old and new endpoints are aliases,
+sharing the same underlying data. The legacy endpoint names are considered **deprecated**
+and will be removed in a future release (not before Vault 1.9). The complete list of
+endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#deprecations-effective-in-vault-1-7).
 * go: Update Go version to 1.15.10 [[GH-11173](https://github.com/hashicorp/vault/pull/11173)]
 
 FEATURES:
