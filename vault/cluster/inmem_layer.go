@@ -192,7 +192,7 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 
 	select {
 	case l.listener.pendingConns <- servConn:
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		return nil, errors.New("inmemlayer: timeout while accepting connection")
 	}
 
