@@ -1,12 +1,27 @@
+<PageHeader as |p|>
+  <p.top>
+    {{key-value-header
+      baseKey=(hash display=model.id id=model.idForNav)
+      path="vault.cluster.secrets.backend.list"
+      mode=mode
+      root=root
+      showCurrent=true
+    }}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      Example Form Fields from <code>attr</code>
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box">
+  <p>The examples below are what the <code>FormField</code> component looks like when passed a particular attribute shape. Some of these attributes can be passed automatically from the <code>go</code> definition, as described below:</p>
+  
+</div>
+
 {{#each this.examples as |ex|}}
-  <label class="is-label has-text-grey title">Output of:</label>
-  <IvyCodemirror @value={{attr.go}} @options={{hash
-    lineNumbers=true
-    tabSize=2
-    mode='go'
-    theme='hashi'
-  }} />
-  <pre class="has-text-grey">{{ex.string}}</pre>
   <FormField @attr={{ex.attr}} @model={{this.model}} />
+  <div class="box"><pre class="has-text-grey">attr = {{ex.string}}</pre></div>
   <hr />
 {{/each}}

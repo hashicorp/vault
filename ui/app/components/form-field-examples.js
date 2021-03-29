@@ -57,7 +57,25 @@ const EXAMPLES = [
     options: {
       editType: 'boolean',
       trueValue: 'on',
-      falstValue: 'off',
+      falseValue: 'off',
+    },
+  },
+  {
+    name: 'timeToLive',
+    type: 'string',
+    options: {
+      editType: 'ttl',
+    },
+  },
+  {
+    name: 'someObject',
+    type: 'object',
+  },
+  {
+    name: 'kvSecret',
+    type: 'string',
+    options: {
+      editType: 'kv',
     },
   },
 ];
