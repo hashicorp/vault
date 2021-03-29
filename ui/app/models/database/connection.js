@@ -64,6 +64,7 @@ export default Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
+  // required
   name: attr('string', {
     label: 'Connection Name',
   }),
@@ -71,6 +72,8 @@ export default Model.extend({
     label: 'Database plugin',
     possibleValues: AVAILABLE_PLUGIN_TYPES,
   }),
+
+  // standard
   verify_connection: attr('boolean', {
     label: 'Connection will be verified',
     defaultValue: true,
@@ -78,7 +81,6 @@ export default Model.extend({
   allowed_roles: attr('array', {
     readOnly: true,
   }),
-
   password_policy: attr('string', {
     label: 'Use custom password policy',
     editType: 'optionalText',
@@ -86,11 +88,14 @@ export default Model.extend({
       'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
   }),
 
-  hosts: attr('string', {}),
-  host: attr('string', {}),
-  url: attr('string', {}),
-  port: attr('string', {}),
-
+  // common fields
+  connection_url: attr('string', {
+    subText: 'The connection string used to connect to the database.',
+  }),
+  url: attr('string', {
+    subText:
+      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
+  }),
   username: attr('string', {
     subText: 'Optional. The name of the user to use as the "root" user when connecting to the database.',
   }),
@@ -99,11 +104,11 @@ export default Model.extend({
       'Optional. The password to use when connecting to the database. Typically used in the connection_url field via the templating directive {{password}}.',
     editType: 'password',
   }),
-  connection_url: attr('string', {
-    subText:
-      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
-  }),
 
+  // optional
+  hosts: attr('string', {}),
+  host: attr('string', {}),
+  port: attr('string', {}),
   write_concern: attr('string', {
     subText: 'Optional. Must be in JSON. See our documentation for help.',
     editType: 'json',
