@@ -1860,6 +1860,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.Seal.SetCore(c)
 	}
 
+	if err := c.InitializeRecovery(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
 	return cleanupFunc, c, localConfig, handler
 }
 

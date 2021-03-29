@@ -8,12 +8,14 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/vault"
 	testingintf "github.com/mitchellh/go-testing-interface"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -30,8 +32,9 @@ func TestRaft_WALLog(t *testing.T) {
 			"snapshot_threshold":           "50",
 			"trailing_logs":                "100",
 			"autopilot_reconcile_interval": "1s",
-			"snapshot_interval":            "5s",
 			"archive_path":                 archivePath,
+			"performance_multiplier":       "1",
+			"logstore":                     "raft-wal",
 		}
 		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
 	}
@@ -65,8 +68,7 @@ func TestRaft_WALLog(t *testing.T) {
 	time.Sleep(stabilizationKickOffWaitDuration)
 
 	cli := cluster.Cores[0].Client
-	// Write more keys than snapshot_threshold
-	for i := 0; i < 250; i++ {
+	for i := 0; i < 25; i++ {
 		_, err := cli.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
 			"test": "data",
 		})
@@ -111,4 +113,73 @@ func TestRaft_WALLog(t *testing.T) {
 		logs = append(logs, ent.Name())
 	}
 	t.Logf("log files: %v", logs)
+
+	lastIndex, _, _ := cluster.Cores[0].Core.GetRaftIndexes()
+	cluster.Cleanup()
+
+	newRaftDir := t.TempDir()
+	_, err = raft.CopyDir(filepath.Join(newRaftDir, "raft", "logs"), archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conf, opts = teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
+	conf.DisableAutopilot = false
+	opts.InmemClusterLayers = true
+	opts.KeepStandbysSealed = true
+	opts.SetupFunc = nil
+	opts.SkipInit = true
+	opts.NumCores = 1
+	conf.DisableAutopilot = true
+	opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+		config := map[string]interface{}{
+			"performance_multiplier": "1",
+			"logstore":               "raft-wal",
+			"lastindex":              fmt.Sprintf("%d", lastIndex),
+			"path":                   newRaftDir,
+		}
+		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
+	}
+
+	// Prepare peers.json
+	type RecoveryPeer struct {
+		ID       string `json:"id"`
+		Address  string `json:"address"`
+		NonVoter bool   `json:"non_voter"`
+	}
+
+	// Leave out node 1 during recovery
+	peersList := make([]*RecoveryPeer, 0, 3)
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       "newnode",
+		Address:  "inmem-clusters_node_0",
+		NonVoter: false,
+	})
+
+	peersJSONBytes, err := jsonutil.EncodeJSON(peersList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(newRaftDir, "raft"), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldcluster := cluster
+	cluster = vault.NewTestCluster(t, conf, opts)
+	cluster.BarrierKeys = oldcluster.BarrierKeys
+	cluster.Start()
+	defer cluster.Cleanup()
+	if err := cluster.UnsealCoresWithError(false); err != nil {
+		t.Fatal(err)
+	}
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	token := cli.Token()
+	cli = cluster.Cores[0].Client
+	cli.SetToken(token)
+	secret, err := cli.Logical().List("secret")
+	if len(secret.Data["keys"].([]interface{})) != 25 {
+		t.Fatal("didnt' find 25 keys under secret/")
+	}
 }

@@ -374,13 +374,31 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		switch conf["logstore"] {
 		case "raft-wal":
 			logsDir := filepath.Join(path, "logs")
+			logger.Trace("setting up raft-wal", "dir", logsDir, "nodeID", localID)
 			os.MkdirAll(logsDir, 0755)
-			s, err := raftwal.NewWAL(logsDir, raftwal.LogConfig{
+			//if inpath := conf["seedlogs"]; inpath != "" {
+			//	if _, err := copyDir(logsDir, inpath); err != nil {
+			//		return nil, fmt.Errorf("error seeding raft-wal from %q: %v", inpath, err)
+			//	}
+			//}
+
+			s, err := raftwal.NewWAL(logger.Named("raft-wal"), logsDir, raftwal.LogConfig{
 				NoSync:           false,
-				SegmentChunkSize: 32,
+				SegmentChunkSize: 16,
 			})
 			if err != nil {
 				return nil, err
+			}
+			if lastindex := conf["lastindex"]; lastindex != "" {
+				//err := s.SetFirstIndex(1)
+				//if err != nil {
+				//	return nil, err
+				//}
+				l, err := strconv.ParseUint(conf["lastindex"], 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				s.SetLastIndex(l)
 			}
 			stable, store, wallog = s, s, s
 
@@ -849,6 +867,29 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return err
 	}
 
+	//if b.conf["seedlogs"] != "" {
+	//	first, err := b.logStore.FirstIndex()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	last, err := b.logStore.LastIndex()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	b.logger.Info("restoring seeded logs", "first", first, "last", last)
+	//	for i := first; i <= last; i++ {
+	//		var lg raft.Log
+	//		err = b.logStore.GetLog(i, &lg)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		err = b.applyLogBytes(ctx, lg.Data)
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//}
+
 	// If we are expecting to start as leader wait until we win the election.
 	// This should happen quickly since there is only one node in the cluster.
 	// StartAsLeader is only set during init, recovery mode, storage migration,
@@ -1313,8 +1354,11 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if uint64(cmdSize) > b.maxEntrySize {
 		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
 	}
+	return b.applyLogBytes(ctx, commandBytes)
+}
 
-	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(cmdSize))
+func (b *RaftBackend) applyLogBytes(ctx context.Context, commandBytes []byte) error {
+	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(len(commandBytes)))
 
 	var chunked bool
 	var applyFuture raft.ApplyFuture
@@ -1657,32 +1701,56 @@ func (a *walArchiver) archive() bool {
 
 	a.logger.Info("archiving", "upto", upto)
 	dest := filepath.Join(a.destPath, filepath.Base(logpath))
-	from, err := os.Open(logpath)
-	if err != nil {
-		a.logger.Error("error opening WAL: %w", err)
-		return false
-	}
-	defer from.Close()
-
-	to, err := os.Create(dest)
-	if err != nil {
-		a.logger.Error("error copying WAL: %w", err)
-		return false
-	}
-	defer to.Close()
-
-	_, err = io.Copy(to, from)
-	if err != nil {
-		a.logger.Error("error copying WAL: %w", err)
-		return false
-	}
-	err = to.Sync()
-	if err != nil {
-		a.logger.Error("error copying WAL: %w", err)
+	if err := CopyFileSync(dest, logpath); err != nil {
+		a.logger.Error("error archiving %v: %w", logpath, err)
 		return false
 	}
 
 	// TODO persist this
 	a.lastIndexArchived = upto
 	return true
+}
+
+func CopyFileSync(dest, src string) error {
+	from, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer from.Close()
+
+	to, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer to.Close()
+
+	_, err = io.Copy(to, from)
+	if err != nil {
+		return err
+	}
+	err = to.Sync()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CopyDir(dest, src string) ([]string, error) {
+	if err := os.MkdirAll(dest, 0755); err != nil {
+		return nil, err
+	}
+	ents, err := ioutil.ReadDir(src)
+	if err != nil {
+		return nil, err
+	}
+	var copied []string
+	for _, ent := range ents {
+		err = CopyFileSync(filepath.Join(dest, ent.Name()), filepath.Join(src, ent.Name()))
+		if err != nil {
+			return copied, err
+		}
+		copied = append(copied, ent.Name())
+	}
+
+	return copied, nil
 }

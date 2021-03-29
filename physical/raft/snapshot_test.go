@@ -547,7 +547,7 @@ func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	snap, err := NewBoltSnapshotStore(dir, logger, nil)
+	snap, err := NewBoltSnapshotStore(dir, logger, nil, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -595,7 +595,7 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := NewBoltSnapshotStore(dir, logger, fsm)
+	snap, err := NewBoltSnapshotStore(dir, logger, fsm, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -661,7 +661,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 	}
 	defer fsm.Close()
 
-	snap, err := NewBoltSnapshotStore(dir, logger, fsm)
+	snap, err := NewBoltSnapshotStore(dir, logger, fsm, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -832,7 +832,7 @@ func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	snap, err := NewBoltSnapshotStore(dir, logger, nil)
+	snap, err := NewBoltSnapshotStore(dir, logger, nil, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -902,7 +902,7 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	_, err = NewBoltSnapshotStore(dir2, logger, nil)
+	_, err = NewBoltSnapshotStore(dir2, logger, nil, nil)
 	if err == nil {
 		t.Fatalf("should fail to use dir with bad perms")
 	}
@@ -921,7 +921,7 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	snap, err := NewBoltSnapshotStore(dir, logger, nil)
+	snap, err := NewBoltSnapshotStore(dir, logger, nil, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

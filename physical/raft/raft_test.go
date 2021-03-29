@@ -32,32 +32,34 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	}
 	t.Logf("raft dir: %s", raftDir)
 
-	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
-}
+	conf := map[string]string{
+		"path":                   raftDir,
+		"trailing_logs":          "100",
+		"performance_multiplier": "1",
+		"logstore":               "raft-wal",
+	}
 
-func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	conf["node_id"] = id
+	return getRaftWithConf(t, bootstrap, conf), raftDir
+}
+
+func getRaftWithConf(t testing.TB, bootstrap bool, conf map[string]string) *RaftBackend {
+	localconf := make(map[string]string)
+	for k, v := range conf {
+		localconf[k] = v
+	}
+	conf = localconf
+
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  fmt.Sprintf("raft-%s", id),
+		Name:  fmt.Sprintf("raft-%s", conf["node_id"]),
 		Level: hclog.Trace,
 	})
-	logger.Info("raft dir", "dir", raftDir)
-
-	conf := map[string]string{
-		"path":                   raftDir,
-		"trailing_logs":          "100",
-		"node_id":                id,
-		"logstore":               "raft-wal",
-		"performance_multiplier": "1",
-	}
-
-	if noStoreState {
-		conf["doNotStoreLatestState"] = ""
-	}
+	logger.Info("raft dir", "dir", conf["path"])
 
 	backendRaw, err := NewRaftBackend(conf, logger)
 	if err != nil {
@@ -91,7 +93,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 
 	backend.DisableAutopilot()
 
-	return backend, raftDir
+	return backend
 }
 
 func connectPeers(nodes ...*RaftBackend) {
@@ -163,55 +165,48 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 	return compareDBs(t, fsm1.getDB(), fsm2.getDB(), false)
 }
 
-func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
-	t.Helper()
-	db1 := make(map[string]string)
-	db2 := make(map[string]string)
-
-	err := boltDB1.View(func(tx *bolt.Tx) error {
+// dbToMap returns a map from bucketname to its contents
+func dbToMap(db *bolt.DB, dataOnly bool) (map[string]map[string]string, error) {
+	ret := make(map[string]map[string]string)
+	err := db.View(func(tx *bolt.Tx) error {
 		c := tx.Cursor()
 		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
 			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
 				continue
 			}
+
+			m := make(map[string]string)
+			ret[string(bucketName)] = m
 
 			b := tx.Bucket(bucketName)
 
 			cBucket := b.Cursor()
 
 			for k, v := cBucket.First(); k != nil; k, v = cBucket.Next() {
-				db1[string(k)] = base64.StdEncoding.EncodeToString(v)
+				m[string(k)] = base64.StdEncoding.EncodeToString(v)
 			}
 		}
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
 
+func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
+	t.Helper()
+	db1, err := dbToMap(boltDB1, dataOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = boltDB2.View(func(tx *bolt.Tx) error {
-		c := tx.Cursor()
-		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
-			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
-				continue
-			}
-			b := tx.Bucket(bucketName)
-
-			c := b.Cursor()
-
-			for k, v := c.First(); k != nil; k, v = c.Next() {
-				db2[string(k)] = base64.StdEncoding.EncodeToString(v)
-			}
-		}
-
-		return nil
-	})
-
+	db2, err := dbToMap(boltDB2, dataOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log(db1)
+	t.Log(db2)
 
 	if diff := deep.Equal(db1, db2); diff != nil {
 		return fmt.Errorf("%+v", diff)
@@ -354,7 +349,7 @@ func TestRaft_Recovery(t *testing.T) {
 	addPeer(t, raft1, raft4)
 
 	// Add some data into the FSM
-	physical.ExerciseBackend(t, raft1)
+	physical.ExerciseTransactionalBackend(t, raft1)
 
 	time.Sleep(10 * time.Second)
 
@@ -432,6 +427,141 @@ func TestRaft_Recovery(t *testing.T) {
 
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 	compareFSMs(t, raft1.fsm, raft4.fsm)
+
+}
+
+func TestRaft_Recovery_WALLogCopy(t *testing.T) {
+	// Create 4 raft nodes
+	raft1, dir1 := getRaft(t, true, true)
+	raft2, dir2 := getRaft(t, false, true)
+	raft3, dir3 := getRaft(t, false, true)
+	defer os.RemoveAll(dir1)
+	defer os.RemoveAll(dir2)
+	defer os.RemoveAll(dir3)
+
+	// Add 3 of them to the cluster
+	addPeer(t, raft1, raft2)
+	addPeer(t, raft1, raft3)
+
+	// Add some data into the FSM
+	physical.ExerciseTransactionalBackend(t, raft1)
+
+	time.Sleep(5 * time.Second)
+
+	// Bring down all nodes
+	raft1.TeardownCluster(nil)
+	raft2.TeardownCluster(nil)
+	raft3.TeardownCluster(nil)
+
+	compareFSMs(t, raft1.fsm, raft2.fsm)
+	compareFSMs(t, raft1.fsm, raft3.fsm)
+
+	// Prepare peers.json
+	type RecoveryPeer struct {
+		ID       string `json:"id"`
+		Address  string `json:"address"`
+		NonVoter bool   `json:"non_voter"`
+	}
+
+	dir4, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir4logs := filepath.Join(dir4, "raft", "logs")
+
+	files, err := CopyDir(dir4logs, filepath.Join(dir2, "raft", "logs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("copied to %v: %s", dir4logs, files)
+
+	conf := map[string]string{
+		"path":                   dir4,
+		"trailing_logs":          "100",
+		"performance_multiplier": "1",
+		"logstore":               "raft-wal",
+		"lastindex":              fmt.Sprintf("%d", raft1.AppliedIndex()),
+		"node_id":                "raft4",
+	}
+	t.Log(conf)
+	raft4 := getRaftWithConf(t, false, conf)
+	defer os.RemoveAll(dir4)
+
+	// Leave out node 3 during recovery, and add the new node 4
+	peersList := make([]*RecoveryPeer, 0, 3)
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       raft1.NodeID(),
+		Address:  raft1.NodeID(),
+		NonVoter: false,
+	})
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       raft2.NodeID(),
+		Address:  raft2.NodeID(),
+		NonVoter: false,
+	})
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       raft4.NodeID(),
+		Address:  raft4.NodeID(),
+		NonVoter: false,
+	})
+
+	peersJSONBytes, err := jsonutil.EncodeJSON(peersList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Bring up the nodes again
+	err = raft1.SetupCluster(context.Background(), SetupOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = raft2.SetupCluster(context.Background(), SetupOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = raft4.SetupCluster(context.Background(), SetupOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	connectPeers(raft1, raft2, raft4)
+
+	peers, err := raft1.Peers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(peers) != 3 {
+		t.Fatalf("failed to recover the cluster")
+	}
+
+	time.Sleep(10 * time.Second)
+	leader := raft1.raft.Leader()
+	for _, node := range []*RaftBackend{raft1, raft2, raft4} {
+		if node.NodeID() == string(leader) {
+			if err := node.Put(context.Background(), &physical.Entry{
+				Key:   "baz",
+				Value: []byte("2"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	time.Sleep(10 * time.Second)
+	compareFSMs(t, raft1.fsm, raft2.fsm)
+	compareFSMs(t, raft1.fsm, raft4.fsm)
+
 }
 
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {

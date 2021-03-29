@@ -1,6 +1,9 @@
 package misc
 
 import (
+	"fmt"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	testingintf "github.com/mitchellh/go-testing-interface"
 	"path"
 	"testing"
 
@@ -139,4 +142,144 @@ func TestRecovery(t *testing.T) {
 			t.Fatal("expected no data in secret mount")
 		}
 	}
+}
+
+func TestRecovery_WALLog(t *testing.T) {
+	archivePath := t.TempDir()
+
+	var keys [][]byte
+	var secretUUID string
+	//var rootToken string
+	{
+		conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
+		conf.DisableAutopilot = false
+		opts.InmemClusterLayers = true
+		opts.KeepStandbysSealed = true
+		opts.SetupFunc = nil
+		opts.NumCores = 1
+		opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+			config := map[string]interface{}{
+				"snapshot_threshold":           "50",
+				"trailing_logs":                "100",
+				"autopilot_reconcile_interval": "1s",
+				"archive_path":                 archivePath,
+				"performance_multiplier":       "1",
+				"logstore":                     "raft-wal",
+			}
+			return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
+		}
+
+		cluster := vault.NewTestCluster(t, conf, opts)
+		cluster.Start()
+		defer cluster.Cleanup()
+		testhelpers.WaitForActiveNode(t, cluster)
+
+		client := cluster.Cores[0].Client
+		for i := 0; i < 25; i++ {
+			_, err := client.Logical().Write(fmt.Sprintf("secret/foo/%d", i), map[string]interface{}{
+				"test": "data",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		mounts, err := cluster.Cores[0].Client.Sys().ListMounts()
+		if err != nil {
+			t.Fatal(err)
+		}
+		secretMount := mounts["secret/"]
+		if secretMount == nil {
+			t.Fatalf("secret mount not found, mounts: %v", mounts)
+		}
+		secretUUID = secretMount.UUID
+
+		//rootToken = client.Token()
+		cluster.EnsureCoresSealed(t)
+		keys = cluster.BarrierKeys
+	}
+
+	{
+		// Now bring it up in recovery mode.
+		var tokenRef atomic.String
+
+		conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
+		conf.DisableAutopilot = false
+		opts.InmemClusterLayers = true
+		opts.KeepStandbysSealed = true
+		opts.SetupFunc = nil
+		opts.NumCores = 1
+		opts.SkipInit = true
+		opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+			config := map[string]interface{}{
+				"snapshot_threshold":           "50",
+				"trailing_logs":                "100",
+				"autopilot_reconcile_interval": "1s",
+				"archive_path":                 archivePath,
+				"performance_multiplier":       "1",
+				"logstore":                     "raft-wal",
+			}
+			return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
+		}
+		conf.RecoveryMode = true
+		opts.DefaultHandlerProperties = vault.HandlerProperties{
+			RecoveryMode:  true,
+			RecoveryToken: &tokenRef,
+		}
+
+		cluster := vault.NewTestCluster(t, conf, opts)
+		cluster.BarrierKeys = keys
+		cluster.Start()
+		defer cluster.Cleanup()
+
+		client := cluster.Cores[0].Client
+		recoveryToken := testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRecovery)
+		_, err := testhelpers.GenerateRootWithError(t, cluster, testhelpers.GenerateRecovery)
+		if err == nil {
+			t.Fatal("expected second generate-root to fail")
+		}
+		client.SetToken(recoveryToken)
+
+		secret, err := client.Logical().List(path.Join("sys/raw/logical", secretUUID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := deep.Equal(secret.Data["keys"], []interface{}{"foo/"}); len(diff) > 0 {
+			t.Fatalf("got=%v, want=%v, diff: %v", secret.Data, []string{"foo/"}, diff)
+		}
+
+		cluster.EnsureCoresSealed(t)
+	}
+
+	/*
+		{
+			// Now go back to regular mode and verify that our changes are present
+			conf := vault.CoreConfig{
+				Physical: inm,
+				Logger:   logger,
+			}
+			opts := vault.TestClusterOptions{
+				HandlerFunc: http.Handler,
+				NumCores:    1,
+				SkipInit:    true,
+			}
+			cluster := vault.NewTestCluster(t, &conf, &opts)
+			cluster.BarrierKeys = keys
+			cluster.Start()
+			defer cluster.Cleanup()
+
+			testhelpers.EnsureCoresUnsealed(t, cluster)
+			vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+			client := cluster.Cores[0].Client
+			client.SetToken(rootToken)
+			secret, err := client.Logical().List("secret/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if secret != nil {
+				t.Fatal("expected no data in secret mount")
+			}
+		}
+	*/
 }

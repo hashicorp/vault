@@ -85,24 +85,23 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 	if err != nil {
 		t.Fatal(err)
 	}
-	//t.Logf("raft dir: %s", raftDir)
-	cleanupFunc := func() {
-		os.RemoveAll(raftDir)
-	}
-
-	logger.Info("raft dir", "dir", raftDir)
 
 	conf := map[string]string{
 		"path":                   raftDir,
 		"node_id":                nodeID,
-		"performance_multiplier": "1",
-		"logstore":               "raft-wal",
+		"performance_multiplier": "8",
 	}
 	for k, v := range extraConf {
 		val, ok := v.(string)
 		if ok {
 			conf[k] = val
 		}
+	}
+
+	raftDir = conf["path"]
+	logger.Info("raft dir", "dir", raftDir)
+	cleanupFunc := func() {
+		os.RemoveAll(raftDir)
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
