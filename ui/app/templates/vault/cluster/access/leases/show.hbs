@@ -52,25 +52,31 @@
         {{model.expireTime}}
       </code>
     </InfoTableRow>
-    <InfoTableRow @label="Expires in" @value={{date-from-now model.expireTime interval=1000 hideSuffix=true}} />
+    <InfoTableRow @label="Expires in" @value={{date-from-now model.expireTime increment=1000 hideSuffix=true}} />
   {{/if}}
   <InfoTableRow @label="TTL" @value={{model.ttl}} />
 </div>
 {{#if (and (not model.isAuthLease) model.renewable capabilities.renew.canUpdate)}}
   <div class="box is-shadowless" data-test-lease-renew-picker=true>
     <h2 class="title is-6">Renew Lease</h2>
-    <form {{action "renewLease" model interval on="submit"}}>
-      <TtlPicker @labelText="Interval" @labelClass="is-label" @onChange={{action (mut interval)}} @outputSeconds={{true}} />
-      <div class="field">
-        <div class="control">
-          <button
-            type="submit"
-            class="button is-primary"
-          >
-            Renew lease
-          </button>
+    <form {{action "renewLease" model increment on="submit"}}>
+      <TtlPicker2 
+        @label="Increment"
+        @helperTextEnabled="Lease will expire after" 
+        @helperTextDisabled="Vault will use the default lease duration" 
+        @labelClass="is-label" 
+        @onChange={{action (mut increment)}} @unit="s" 
+      />
+        <div class="field has-top-margin-s">
+          <div class="control">
+            <button
+              type="submit"
+              class="button is-primary"
+            >
+              Renew lease
+            </button>
+          </div>
         </div>
-      </div>
     </form>
   </div>
-{{/if}}
+  {{/if}}
