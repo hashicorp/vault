@@ -82,10 +82,10 @@ type AESGCMBarrier struct {
 
 	initialized atomic.Bool
 
-	UnaccountedEncryptions atomic.Int64
+	UnaccountedEncryptions *atomic.Int64
 	// Used only for testing
-	RemoteEncryptions     atomic.Int64
-	totalLocalEncryptions atomic.Int64
+	RemoteEncryptions     *atomic.Int64
+	totalLocalEncryptions *atomic.Int64
 }
 
 func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
@@ -115,6 +115,9 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 		sealed:                   true,
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
+		UnaccountedEncryptions:   atomic.NewInt64(0),
+		RemoteEncryptions:        atomic.NewInt64(0),
+		totalLocalEncryptions:    atomic.NewInt64(0),
 	}
 	return b, nil
 }
