@@ -36,8 +36,6 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_open_connections', group: 'pluginConfig' },
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'creation_statements', group: 'statements' },
-      { attr: 'revocation_statements', group: 'statements' },
     ],
   },
 ];
