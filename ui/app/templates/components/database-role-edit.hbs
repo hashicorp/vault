@@ -101,7 +101,7 @@
       <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
         <div class="field is-grouped">
           <div class="control">
-            {{#if (is-empty-object this.warningMessages)}}
+            {{#if (is-empty-value this.warningMessages)}}
               <button
                 data-test-secret-save
                 type="submit"
