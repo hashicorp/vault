@@ -19,7 +19,7 @@
   {{/unless}}
 </div>
 
-{{#unless (eq this.statementFields 'NONE')}}
+{{#unless (and @dbType (not this.statementFields))}}
   <div class="box is-sideless is-fullwidth is-marginless" data-test-statements-section>
     <h3 class="title is-5">Statements</h3>
     {{#unless this.statementFields}}
