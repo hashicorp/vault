@@ -42,6 +42,7 @@ type Entropy struct {
 
 // KMS contains KMS configuration for the server
 type KMS struct {
+	BaseConfig
 	Type string
 	// Purpose can be used to allow a string-based specification of what this
 	// KMS is designated for, in situations where we want to allow more than

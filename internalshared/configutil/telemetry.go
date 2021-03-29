@@ -33,8 +33,9 @@ const (
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
+	UnusedKeys   []string `hcl:",unusedKeys"`
+	StatsiteAddr string   `hcl:"statsite_address"`
+	StatsdAddr   string   `hcl:"statsd_address"`
 
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`

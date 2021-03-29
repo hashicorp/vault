@@ -257,7 +257,7 @@ func testParseEntropy(t *testing.T, oss bool) {
 				mode = "augmentation"
 				}`,
 			outErr:     nil,
-			outEntropy: configutil.Entropy{configutil.EntropyAugmentation},
+			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
 		},
 		{
 			inConfig: `entropy "seal" {
@@ -377,15 +377,16 @@ func testLoadConfigFile(t *testing.T) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsdAddr:                  "bar",
+				UnusedKeys:                  []string{"bad_value"},
 				StatsiteAddr:                "foo",
+				StatsdAddr:                  "bar",
 				DisableHostname:             false,
+				MetricsPrefix:               "myprefix",
 				UsageGaugePeriod:            5 * time.Minute,
 				MaximumGaugeCardinality:     100,
 				DogStatsDAddr:               "127.0.0.1:7254",
 				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
 				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
-				MetricsPrefix:               "myprefix",
 				LeaseMetricsEpsilon:         time.Hour,
 				NumLeaseMetricsTimeBuckets:  168,
 				LeaseMetricsNameSpaceLabels: false,

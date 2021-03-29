@@ -24,6 +24,7 @@ service_registration "consul" {
 }
 
 telemetry {
+    bad_value = "hi"
     statsd_address = "bar"
     usage_gauge_period = "5m"
     maximum_gauge_cardinality = 100
