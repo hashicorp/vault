@@ -1,0 +1,3 @@
+```changelog:enhancement
+core: Add tls_max_version listener config option.
+```
