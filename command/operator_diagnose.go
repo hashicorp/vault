@@ -4,7 +4,9 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -139,6 +141,46 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Output(err.Error())
 		return 1
 	}
+
+	// Check Listener Information
+	// TODO: Run Diagnose checks on the actual net.Listeners
+	disableClustering := config.HAStorage.DisableClustering
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+	status, lns, _ := server.InitListeners(config, disableClustering, &infoKeys, &info)
+
+	if status != 0 {
+		// The error should be displayed in InitListeners. We don't need the error message here.
+		c.UI.Output("Error parsing listener configuration.")
+		return 1
+	}
+
+	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
+	for _, ln := range lns {
+		if ln.Config.TLSDisable {
+			c.UI.Warn("WARNING! TLS is disabled in a Listener config stanza.")
+			continue
+		}
+		if ln.Config.TLSDisableClientCerts {
+			c.UI.Warn("WARNING! TLS for a listener is turned on without requiring client certs.")
+		}
+
+		// Check ciphersuite and load ca/cert/key files
+		// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
+		// perform an active probe.
+		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+		if err != nil {
+			c.UI.Output("Error creating TLS Configuration out of config file: ")
+			c.UI.Output(err.Error())
+			continue
+		}
+
+		sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+			Listener: ln.Listener,
+			Config:   ln.Config,
+		})
+	}
+	diagnose.TLSConfigChecks(sanitizedListeners)
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration

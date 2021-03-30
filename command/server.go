@@ -871,6 +871,87 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 	return backend, nil
 }
 
+func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr) {
+	clusterAddrs := []*net.TCPAddr{}
+
+	// Initialize the listeners
+	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
+	c.reloadFuncsLock.Lock()
+	for i, lnConfig := range config.Listeners {
+		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
+			return 1, nil, nil
+		}
+
+		if reloadFunc != nil {
+			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
+			relSlice = append(relSlice, reloadFunc)
+			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
+		}
+
+		if !disableClustering && lnConfig.Type == "tcp" {
+			addr := lnConfig.ClusterAddress
+			if addr != "" {
+				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
+					return 1, nil, nil
+				}
+				clusterAddrs = append(clusterAddrs, tcpAddr)
+			} else {
+				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+				if !ok {
+					c.UI.Error("Failed to parse tcp listener")
+					return 1, nil, nil
+				}
+				clusterAddr := &net.TCPAddr{
+					IP:   tcpAddr.IP,
+					Port: tcpAddr.Port + 1,
+				}
+				clusterAddrs = append(clusterAddrs, clusterAddr)
+				addr = clusterAddr.String()
+			}
+			props["cluster address"] = addr
+		}
+
+		if lnConfig.MaxRequestSize == 0 {
+			lnConfig.MaxRequestSize = vaulthttp.DefaultMaxRequestSize
+		}
+		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
+
+		if lnConfig.MaxRequestDuration == 0 {
+			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
+		}
+		props["max_request_duration"] = fmt.Sprintf("%s", lnConfig.MaxRequestDuration.String())
+
+		lns = append(lns, listenerutil.Listener{
+			Listener: ln,
+			Config:   lnConfig,
+		})
+
+		// Store the listener props for output later
+		key := fmt.Sprintf("listener %d", i+1)
+		propsList := make([]string, 0, len(props))
+		for k, v := range props {
+			propsList = append(propsList, fmt.Sprintf(
+				"%s: %q", k, v))
+		}
+		sort.Strings(propsList)
+		*infoKeys = append(*infoKeys, key)
+		(*info)[key] = fmt.Sprintf(
+			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
+
+	}
+	c.reloadFuncsLock.Unlock()
+	if !disableClustering {
+		if c.logger.IsDebug() {
+			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+		}
+	}
+	return 0, lns, clusterAddrs
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -1482,83 +1563,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	clusterAddrs := []*net.TCPAddr{}
-
-	// Initialize the listeners
-	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
-	c.reloadFuncsLock.Lock()
-	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
-			return 1
-		}
-
-		if reloadFunc != nil {
-			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
-			relSlice = append(relSlice, reloadFunc)
-			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
-		}
-
-		if !disableClustering && lnConfig.Type == "tcp" {
-			addr := lnConfig.ClusterAddress
-			if addr != "" {
-				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
-					return 1
-				}
-				clusterAddrs = append(clusterAddrs, tcpAddr)
-			} else {
-				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-				if !ok {
-					c.UI.Error("Failed to parse tcp listener")
-					return 1
-				}
-				clusterAddr := &net.TCPAddr{
-					IP:   tcpAddr.IP,
-					Port: tcpAddr.Port + 1,
-				}
-				clusterAddrs = append(clusterAddrs, clusterAddr)
-				addr = clusterAddr.String()
-			}
-			props["cluster address"] = addr
-		}
-
-		if lnConfig.MaxRequestSize == 0 {
-			lnConfig.MaxRequestSize = vaulthttp.DefaultMaxRequestSize
-		}
-		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
-
-		if lnConfig.MaxRequestDuration == 0 {
-			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
-		}
-		props["max_request_duration"] = fmt.Sprintf("%s", lnConfig.MaxRequestDuration.String())
-
-		lns = append(lns, listenerutil.Listener{
-			Listener: ln,
-			Config:   lnConfig,
-		})
-
-		// Store the listener props for output later
-		key := fmt.Sprintf("listener %d", i+1)
-		propsList := make([]string, 0, len(props))
-		for k, v := range props {
-			propsList = append(propsList, fmt.Sprintf(
-				"%s: %q", k, v))
-		}
-		sort.Strings(propsList)
-		infoKeys = append(infoKeys, key)
-		info[key] = fmt.Sprintf(
-			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
-
-	}
-	c.reloadFuncsLock.Unlock()
-	if !disableClustering {
-		if c.logger.IsDebug() {
-			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
-		}
-	}
+	_, lns, clusterAddrs := c.InitListeners(config, disableClustering, &infoKeys, &info)
 
 	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {
