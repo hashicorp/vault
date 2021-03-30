@@ -75,6 +75,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 			cluster.UnsealCore(t, core)
 		}
 		joinFunc(core)
+		time.Sleep(2 * time.Second)
 
 		state, err = client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
@@ -284,33 +285,19 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		cluster.UnsealCore(t, core)
 	}
 
-	checkState := func(nodeID string, numServers int, allHealthy bool, healthy bool, suffrage string) {
-		state, err = client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		require.Equal(t, allHealthy, state.Healthy)
-		require.Len(t, state.Servers, numServers)
-		require.Equal(t, healthy, state.Servers[nodeID].Healthy)
-		require.Equal(t, "alive", state.Servers[nodeID].NodeStatus)
-		require.Equal(t, suffrage, state.Servers[nodeID].Status)
-	}
-
 	joinFunc(cluster.Cores[1])
-	time.Sleep(2 * time.Second)
-	checkState("core-1", 2, false, false, "non-voter")
+	joinFunc(cluster.Cores[2])
 
 	core2shouldBeHealthyAt := time.Now().Add(timeToHealthyCore2)
-	joinFunc(cluster.Cores[2])
-	time.Sleep(2 * time.Second)
-	checkState("core-2", 3, false, false, "non-voter")
 
-	stabilizationWaitDuration := time.Duration(1.25 * float64(config.ServerStabilizationTime))
+	stabilizationWaitDuration := time.Duration(1.5 * float64(config.ServerStabilizationTime))
 	deadline := time.Now().Add(stabilizationWaitDuration)
 	var core1healthy, core2healthy bool
 	for time.Now().Before(deadline) {
 		state, err := client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
-		core1healthy = state.Servers["core-1"].Healthy
-		core2healthy = state.Servers["core-2"].Healthy
+		core1healthy = state.Servers["core-1"] != nil && state.Servers["core-1"].Healthy
+		core2healthy = state.Servers["core-2"] != nil && state.Servers["core-2"].Healthy
 		time.Sleep(1 * time.Second)
 	}
 	if !core1healthy || core2healthy {
