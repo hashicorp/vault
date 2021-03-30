@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
 )
 
@@ -24,7 +24,7 @@ type InmemLayer struct {
 	clientConns map[string][]net.Conn
 
 	peers map[string]*InmemLayer
-	l     sync.Mutex
+	l     deadlock.Mutex
 
 	stopped *atomic.Bool
 	stopCh  chan struct{}
