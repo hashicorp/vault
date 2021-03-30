@@ -4,8 +4,10 @@ disable_mlock = true
 ui = true
 
 listener "tcp" {
-    address = "127.0.0.1:1024"
-    tls_disable = true
+    address = "127.0.0.1:443"
+    address = "127.0.0.1:8200"
+    tls_cert_file = "./../../vault/vault/diagnose/trailingdatacert.pem"
+    tls_key_file = "./../../api/test-fixtures/keys/key.pem"
 }
 
 backend "consul" {

@@ -876,7 +876,11 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
-	c.reloadFuncsLock.Lock()
+
+	if c.reloadFuncsLock != nil {
+		c.reloadFuncsLock.Lock()
+	}
+
 	for i, lnConfig := range config.Listeners {
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
@@ -943,7 +947,9 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 	}
-	c.reloadFuncsLock.Unlock()
+	if c.reloadFuncsLock != nil {
+		c.reloadFuncsLock.Unlock()
+	}
 	if !disableClustering {
 		if c.logger.IsDebug() {
 			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
