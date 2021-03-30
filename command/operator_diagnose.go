@@ -2,6 +2,7 @@ package command
 
 import (
 	"strings"
+	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -19,9 +20,10 @@ var _ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
 
-	flagDebug   bool
-	flagSkips   []string
-	flagConfigs []string
+	flagDebug    bool
+	flagSkips    []string
+	flagConfigs  []string
+	cleanupGuard sync.Once
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -149,6 +151,15 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	status, lns, _ := server.InitListeners(config, disableClustering, &infoKeys, &info)
+
+	// Make sure we close all listeners from this point on
+	listenerCloseFunc := func() {
+		for _, ln := range lns {
+			ln.Listener.Close()
+		}
+	}
+
+	defer c.cleanupGuard.Do(listenerCloseFunc)
 
 	if status != 0 {
 		// The error should be displayed in InitListeners. We don't need the error message here.

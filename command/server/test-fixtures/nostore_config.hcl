@@ -4,7 +4,7 @@ disable_mlock = true
 ui = true
 
 listener "tcp" {
-    address = "127.0.0.1:443"
+    address = "127.0.0.1:1024"
 	tls_disable = true
 }
 
