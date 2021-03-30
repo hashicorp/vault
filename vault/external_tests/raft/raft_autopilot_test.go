@@ -3,6 +3,7 @@ package rafttests
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
 	"time"
@@ -362,20 +363,27 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 	joinFunc(cluster.Cores[1])
 	joinFunc(cluster.Cores[2])
 
-	// Make sure all nodes have an equivalent configuration
-	core0Peers, err := cluster.Cores[0].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core1Peers, err := cluster.Cores[1].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core2Peers, err := cluster.Cores[2].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	deadline := time.Now().Add(10 * time.Second)
+	var core0Peers, core1Peers, core2Peers []raft.Peer
+	for time.Now().Before(deadline) {
+		// Make sure all nodes have an equivalent configuration
+		core0Peers, err = cluster.Cores[0].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		core1Peers, err = cluster.Cores[1].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		core2Peers, err = cluster.Cores[2].UnderlyingRawStorage.(*raft.RaftBackend).Peers(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
 
+		if assert.Equal(t, core0Peers, core1Peers) && assert.Equal(t, core1Peers, core2Peers) {
+			break
+		}
+	}
 	require.Equal(t, core0Peers, core1Peers)
 	require.Equal(t, core1Peers, core2Peers)
 }
