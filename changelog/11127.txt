@@ -1,0 +1,3 @@
+```changelog:bug
+ui: Fix bug where database secret engines with custom names cannot delete connections
+```

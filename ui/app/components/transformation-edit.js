@@ -5,7 +5,8 @@ export default TransformBase.extend({
 
   init() {
     this._super(...arguments);
-    this.set('initialRoles', this.get('model.allowed_roles'));
+    if (!this.model) return;
+    this.set('initialRoles', this.model.allowed_roles);
   },
 
   updateOrCreateRole(role, transformationId, backend) {
@@ -59,7 +60,7 @@ export default TransformBase.extend({
 
   handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
-    const backend = this.get('model.backend');
+    const backend = this.model.backend;
     const promises = updateRoles.map(r => this.updateOrCreateRole(r, transformationId, backend));
 
     Promise.all(promises).then(results => {
@@ -73,7 +74,7 @@ export default TransformBase.extend({
           // eg. trying to update a role with empty array as transformations
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
         }
-        this.get('flashMessages').stickyInfo(message);
+        this.flashMessages.stickyInfo(message);
       }
     });
   },
@@ -93,12 +94,12 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const transformationId = this.get('model.id');
-        const newModelRoles = this.get('model.allowed_roles') || [];
-        const initialRoles = this.get('initialRoles') || [];
+        const transformationId = this.model.id;
+        const newModelRoles = this.model.allowed_roles || [];
+        const initialRoles = this.initialRoles || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]
-          .filter(r => !this.isWildcard(r)) // TODO: expand wildcards into included roles instead
+          .filter(r => !this.isWildcard(r)) // CBS TODO: expand wildcards into included roles instead
           .map(role => {
             if (initialRoles.indexOf(role) < 0) {
               return {

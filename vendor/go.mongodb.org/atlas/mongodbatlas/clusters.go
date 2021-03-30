@@ -1,3 +1,17 @@
+// Copyright 2021 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mongodbatlas
 
 import (
@@ -30,8 +44,9 @@ var _ ClustersService = &ClustersServiceOp{}
 
 // AutoScaling configures your cluster to automatically scale its storage
 type AutoScaling struct {
-	DiskGBEnabled *bool    `json:"diskGBEnabled,omitempty"`
-	Compute       *Compute `json:"compute,omitempty"`
+	AutoIndexingEnabled *bool    `json:"autoIndexingEnabled,omitempty"` // Autopilot mode is only available if you are enrolled in the Auto Pilot Early Access program.
+	Compute             *Compute `json:"compute,omitempty"`
+	DiskGBEnabled       *bool    `json:"diskGBEnabled,omitempty"`
 }
 
 // Compute Specifies whether the cluster automatically scales its cluster tier and whether the cluster can scale down.
@@ -77,12 +92,31 @@ type ReplicationSpec struct {
 	RegionsConfig map[string]RegionsConfig `json:"regionsConfig,omitempty"`
 }
 
+// PrivateEndpoint connection strings. Each object describes the connection strings
+// you can use to connect to this cluster through a private endpoint.
+// Atlas returns this parameter only if you deployed a private endpoint to all regions
+// to which you deployed this cluster's nodes.
+type PrivateEndpoint struct {
+	ConnectionString    string     `json:"connectionString,omitempty"`
+	Endpoints           []Endpoint `json:"endpoints,omitempty"`
+	SRVConnectionString string     `json:"srvConnectionString,omitempty"`
+	Type                string     `json:"type,omitempty"`
+}
+
+// Endpoint through which you connect to Atlas
+type Endpoint struct {
+	EndpointID   string `json:"endpointId,omitempty"`
+	ProviderName string `json:"providerName,omitempty"`
+	Region       string `json:"region,omitempty"`
+}
+
 // ConnectionStrings configuration for applications use to connect to this cluster
 type ConnectionStrings struct {
 	Standard          string            `json:"standard,omitempty"`
 	StandardSrv       string            `json:"standardSrv,omitempty"`
-	AwsPrivateLink    map[string]string `json:"awsPrivateLink,omitempty"`
-	AwsPrivateLinkSrv map[string]string `json:"awsPrivateLinkSrv,omitempty"`
+	PrivateEndpoint   []PrivateEndpoint `json:"privateEndpoint,omitempty"`
+	AwsPrivateLink    map[string]string `json:"awsPrivateLink,omitempty"`    // Deprecated: Use connectionStrings.PrivateEndpoint[n].ConnectionString
+	AwsPrivateLinkSrv map[string]string `json:"awsPrivateLinkSrv,omitempty"` // Deprecated: Use ConnectionStrings.privateEndpoint[n].SRVConnectionString
 	Private           string            `json:"private,omitempty"`
 	PrivateSrv        string            `json:"privateSrv,omitempty"`
 }
@@ -90,7 +124,7 @@ type ConnectionStrings struct {
 // Cluster represents MongoDB cluster.
 type Cluster struct {
 	AutoScaling              *AutoScaling             `json:"autoScaling,omitempty"`
-	BackupEnabled            *bool                    `json:"backupEnabled,omitempty"`
+	BackupEnabled            *bool                    `json:"backupEnabled,omitempty"` // Deprecated: Use ProviderBackupEnabled instead
 	BiConnector              *BiConnector             `json:"biConnector,omitempty"`
 	ClusterType              string                   `json:"clusterType,omitempty"`
 	DiskSizeGB               *float64                 `json:"diskSizeGB,omitempty"`

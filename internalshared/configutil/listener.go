@@ -43,6 +43,7 @@ type Listener struct {
 	TLSCertFile                      string      `hcl:"tls_cert_file"`
 	TLSKeyFile                       string      `hcl:"tls_key_file"`
 	TLSMinVersion                    string      `hcl:"tls_min_version"`
+	TLSMaxVersion                    string      `hcl:"tls_max_version"`
 	TLSCipherSuites                  []uint16    `hcl:"-"`
 	TLSCipherSuitesRaw               string      `hcl:"tls_cipher_suites"`
 	TLSPreferServerCipherSuites      bool        `hcl:"-"`
@@ -145,10 +146,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			if l.MaxRequestSizeRaw != nil {
 				if l.MaxRequestSize, err = parseutil.ParseInt(l.MaxRequestSizeRaw); err != nil {
 					return multierror.Prefix(fmt.Errorf("error parsing max_request_size: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				if l.MaxRequestSize < 0 {
-					return multierror.Prefix(errors.New("max_request_size cannot be negative"), fmt.Sprintf("listeners.%d", i))
 				}
 
 				l.MaxRequestSizeRaw = nil

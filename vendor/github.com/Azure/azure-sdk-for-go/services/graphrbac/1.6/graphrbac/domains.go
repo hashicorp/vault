@@ -71,6 +71,7 @@ func (client DomainsClient) Get(ctx context.Context, domainName string) (result 
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DomainsClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -144,6 +145,7 @@ func (client DomainsClient) List(ctx context.Context, filter string) (result Dom
 	result, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DomainsClient", "List", resp, "Failure responding to request")
+		return
 	}
 
 	return

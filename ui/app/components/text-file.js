@@ -59,7 +59,7 @@ export default Component.extend({
   },
 
   setFile(contents, filename) {
-    this.get('onChange')(this.get('index'), { value: contents, fileName: filename });
+    this.onChange(this.index, { value: contents, fileName: filename });
   },
 
   actions: {
@@ -73,12 +73,12 @@ export default Component.extend({
       }
     },
     updateData(e) {
-      const file = this.get('file');
+      const file = this.file;
       set(file, 'value', e.target.value);
-      this.get('onChange')(this.get('index'), this.get('file'));
+      this.onChange(this.index, this.file);
     },
     clearFile() {
-      this.get('onChange')(this.get('index'), { value: '' });
+      this.onChange(this.index, { value: '' });
     },
   },
 });

@@ -1,10 +1,9 @@
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
@@ -40,7 +39,7 @@ const CA_FIELDS = [
   'keyIdFormat',
 ];
 
-export default DS.Model.extend({
+export default Model.extend({
   useOpenAPI: true,
   getHelpUrl: function(backend) {
     return `/v1/${backend}/roles/example?help=1`;
@@ -66,7 +65,8 @@ export default DS.Model.extend({
     helpText: "Username to use when one isn't specified",
   }),
   allowedUsers: attr('string', {
-    helpText: 'Create a whitelist of users that can use this key (e.g. `admin, dev`, use `*` to allow all.)',
+    helpText:
+      'Create a list of users who are allowed to use this key (e.g. `admin, dev`, or use `*` to allow all.)',
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:
@@ -118,10 +118,23 @@ export default DS.Model.extend({
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
   }),
 
-  attrsForKeyType: computed('keyType', function() {
-    const keyType = this.get('keyType');
+  showFields: computed('keyType', function() {
+    const keyType = this.keyType;
     let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
+  }),
+
+  fieldGroups: computed('keyType', function() {
+    let numRequired = this.keyType === 'otp' ? 3 : 4;
+    let fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
+    let defaultFields = fields.splice(0, numRequired);
+    const groups = [
+      { default: defaultFields },
+      {
+        Options: [...fields],
+      },
+    ];
+    return fieldToAttrs(this, groups);
   }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),

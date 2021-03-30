@@ -28,6 +28,8 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
+    {{else if (and (not value) (and alwaysRender defaultShown))}}
+      <span data-test-row-value="{{label}}">{{defaultShown}}</span>
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray
@@ -41,7 +43,23 @@
           @wildcardLabel={{wildcardLabel}}
         />
       {{else}}
-        <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{#if tooltipText}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="left"
+            as |T|>
+            <T.trigger @tabindex=false>
+              <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>  
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{tooltipText}}
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+          <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{/if}}
       {{/if}}
     {{/if}}
   </div>

@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/auth/enable';
@@ -19,7 +19,8 @@ module('Acceptance | settings/auth/enable', function(hooks) {
     await page.visit();
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
     await page.enable(type, path);
-    assert.equal(
+    await settled();
+    await assert.equal(
       page.flash.latestMessage,
       `Successfully mounted the ${type} auth method at ${path}.`,
       'success flash shows'

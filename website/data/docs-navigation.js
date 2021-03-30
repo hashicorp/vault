@@ -6,9 +6,7 @@
 //   the landing page for the category
 
 export default [
-  {
-    category: 'install',
-  },
+  'install',
   {
     category: 'internals',
     content: [
@@ -35,13 +33,17 @@ export default [
       'response-wrapping',
       'policies',
       'password-policies',
+      'username-templating',
       'ha',
-      'integrated-storage',
+      {
+        category: 'integrated-storage',
+        content: ['autopilot'],
+      },
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
       'client-count',
-      'transform'
+      'transform',
     ],
   },
   {
@@ -51,6 +53,7 @@ export default [
         category: 'listener',
         content: ['tcp'],
       },
+      'replication',
       {
         category: 'seal',
         content: [
@@ -63,9 +66,15 @@ export default [
           'transit',
         ],
       },
+      'sentinel',
+      {
+        category: 'service-registration',
+        content: ['consul', 'kubernetes'],
+      },
       {
         category: 'storage',
         content: [
+          'aerospike',
           'azure',
           'cassandra',
           'cockroachdb',
@@ -89,14 +98,9 @@ export default [
           'zookeeper',
         ],
       },
-      'sentinel',
-      {
-        category: 'service-registration',
-        content: ['consul', 'kubernetes'],
-      },
       'telemetry',
-      { category: 'ui' },
-      { category: 'entropy-augmentation' },
+      'ui',
+      'entropy-augmentation',
     ],
   },
   {
@@ -149,7 +153,7 @@ export default [
           'seal',
           'step-down',
           'unseal',
-	  'usage',
+          'usage',
         ],
       },
       'path-help',
@@ -206,21 +210,21 @@ export default [
           },
         ],
       },
-      { category: 'caching' },
-      { category: 'template' },
-      { category: 'winsvc' },
+      'caching',
+      'template',
+      'winsvc',
     ],
   },
   '----------------',
   {
     category: 'secrets',
     content: [
-      { category: 'ad' },
-      { category: 'alicloud' },
-      { category: 'aws' },
-      { category: 'azure' },
-      { category: 'consul' },
-      { category: 'cubbyhole' },
+      'ad',
+      'alicloud',
+      'aws',
+      'azure',
+      'consul',
+      'cubbyhole',
       {
         category: 'databases',
         content: [
@@ -236,23 +240,27 @@ export default [
           'oracle',
           'postgresql',
           'redshift',
+          'snowflake',
           'custom',
         ],
       },
-      { category: 'gcp' },
-      { category: 'gcpkms' },
-      { category: 'key-management' },
-      { category: 'kmip' },
+      'gcp',
+      'gcpkms',
+      {
+        category: 'key-management',
+        content: ['azurekeyvault', 'awskms'],
+      },
+      'kmip',
       {
         category: 'kv',
         content: ['kv-v1', 'kv-v2'],
       },
-      { category: 'identity' },
-      { category: 'mongodbatlas' },
-      { category: 'nomad' },
-      { category: 'openldap' },
-      { category: 'pki' },
-      { category: 'rabbitmq' },
+      'identity',
+      'mongodbatlas',
+      'nomad',
+      'openldap',
+      'pki',
+      'rabbitmq',
       {
         category: 'ssh',
         content: [
@@ -261,10 +269,11 @@ export default [
           'dynamic-ssh-keys',
         ],
       },
-      { category: 'totp' },
-      { category: 'transform' },
-      { category: 'transit' },
-      { category: 'venafi' },
+      'terraform',
+      'totp',
+      { category: 'transform', content: ['tokenization'] },
+      'transit',
+      'venafi',
     ],
   },
   {
@@ -296,22 +305,12 @@ export default [
     category: 'audit',
     content: ['file', 'syslog', 'socket'],
   },
-  {
-    category: 'plugin',
-  },
-  {
-    category: 'plugin-portal',
-  },
+  'plugin',
+  'plugin-portal',
   '----------------',
-  {
-    category: 'what-is-vault',
-  },
-  {
-    category: 'use-cases',
-  },
-  {
-    category: 'partnerships',
-  },
+  'what-is-vault',
+  'use-cases',
+  'partnerships',
   '----------------',
   {
     category: 'platform',
@@ -347,6 +346,10 @@ export default [
           {
             category: 'injector',
             content: ['annotations', 'installation', 'examples'],
+          },
+          {
+            category: 'csi',
+            content: ['configurations', 'examples', 'installation'],
           },
         ],
       },
@@ -409,32 +412,34 @@ export default [
       'upgrade-to-1.5.2',
       'upgrade-to-1.5.3',
       'upgrade-to-1.6.0',
+      'upgrade-to-1.6.1',
+      'upgrade-to-1.6.2',
+      'upgrade-to-1.6.3',
+      'upgrade-to-1.7.0',
     ],
   },
   '----------------',
   {
     category: 'release-notes',
-    content: [
-      '1.5.0',
-      '1.6.0',
-    ],
+    content: ['1.5.0', '1.6.0', '1.7.0'],
   },
   '----------------',
   {
     category: 'enterprise',
     content: [
-      { category: 'replication' },
+      'replication',
       {
         category: 'hsm',
         content: ['behavior', 'security'],
       },
-      { category: 'automated-integrated-storage-snapshots' },
-      { category: 'lease-count-quotas' },
-      { category: 'entropy-augmentation' },
-      { category: 'sealwrap' },
-      { category: 'namespaces' },
-      { category: 'performance-standby' },
-      { category: 'control-groups' },
+      'automated-integrated-storage-snapshots',
+      'lease-count-quotas',
+      'entropy-augmentation',
+      'sealwrap',
+      'namespaces',
+      'performance-standby',
+      'consistency',
+      'control-groups',
       {
         category: 'mfa',
         content: ['mfa-duo', 'mfa-okta', 'mfa-pingid', 'mfa-totp'],

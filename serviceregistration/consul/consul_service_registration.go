@@ -327,12 +327,12 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 	// demuxer share a lock to synchronize information at the beginning
 	// and end of a handler's life (or after a handler wakes up from
 	// sleeping during a back-off/retry).
-	var shutdown bool
+	var shutdown atomicB.Bool
 	var registeredServiceID string
 	checkLock := new(int32)
 	serviceRegLock := new(int32)
 
-	for !shutdown {
+	for !shutdown.Load() {
 		select {
 		case <-c.notifyActiveCh:
 			// Run reconcile immediately upon active state change notification
@@ -356,7 +356,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 				// Enter handler with serviceRegLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
-					for !shutdown {
+					for !shutdown.Load() {
 						serviceID, err := c.reconcileConsul(registeredServiceID)
 						if err != nil {
 							if c.logger.IsWarn() {
@@ -382,7 +382,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 				// Enter handler with checkLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
-					for !shutdown {
+					for !shutdown.Load() {
 						if err := c.runCheck(c.isSealed.Load()); err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("check unable to talk with Consul backend", "error", err)
@@ -396,7 +396,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			}
 		case <-shutdownCh:
 			c.logger.Info("shutting down consul backend")
-			shutdown = true
+			shutdown.Store(true)
 		}
 	}
 

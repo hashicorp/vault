@@ -57,6 +57,12 @@ const (
 	// soft-mandatory Sentinel policies.
 	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
 
+	VaultIndexHeaderName        = "X-Vault-Index"
+	VaultInconsistentHeaderName = "X-Vault-Inconsistent"
+	VaultForwardHeaderName      = "X-Vault-Forward"
+	VaultInconsistentForward    = "forward-active-node"
+	VaultInconsistentFail       = "fail"
+
 	// DefaultMaxRequestSize is the default maximum accepted request size. This
 	// is to prevent a denial of service attack where no Content-Length is
 	// provided and the server is fed ever more data until it exhausts memory.
@@ -146,6 +152,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
+		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 		}
@@ -287,6 +294,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
+		// if maxRequestSize < 0, no need to set context value
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
@@ -664,12 +672,52 @@ func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
 	return data, nil
 }
 
+// forwardBasedOnHeaders returns true if the request headers specify that
+// we should forward to the active node - either unconditionally or because
+// a specified state isn't present locally.
+func forwardBasedOnHeaders(core *vault.Core, r *http.Request) (bool, error) {
+	rawForward := r.Header.Get(VaultForwardHeaderName)
+	if rawForward != "" {
+		if !core.AllowForwardingViaHeader() {
+			return false, fmt.Errorf("forwarding via header %s disabled in configuration", VaultForwardHeaderName)
+		}
+		if rawForward == "active-node" {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	rawInconsistent := r.Header.Get(VaultInconsistentHeaderName)
+	if rawInconsistent == "" {
+		return false, nil
+	}
+
+	switch rawInconsistent {
+	case VaultInconsistentForward:
+		if !core.AllowForwardingViaHeader() {
+			return false, fmt.Errorf("forwarding via header %s=%s disabled in configuration",
+				VaultInconsistentHeaderName, VaultInconsistentForward)
+		}
+	default:
+		return false, nil
+	}
+
+	return core.MissingRequiredState(r.Header.Values(VaultIndexHeaderName)), nil
+}
+
 // handleRequestForwarding determines whether to forward a request or not,
 // falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If we are a performance standby we can handle the request.
-		if core.PerfStandby() {
+		// Note if the client requested forwarding
+		shouldForward, err := forwardBasedOnHeaders(core, r)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		// If we are a performance standby we can maybe handle the request.
+		if core.PerfStandby() && !shouldForward {
 			ns, err := namespace.FromContext(r.Context())
 			if err != nil {
 				respondError(w, http.StatusBadRequest, err)

@@ -81,7 +81,7 @@ func (b *backend) serviceAccountRollback(ctx context.Context, req *logical.Reque
 		return err
 	}
 
-	return b.deleteServiceAccount(ctx, iamC, &entry.Id)
+	return b.deleteServiceAccount(ctx, iamC, entry.Id)
 }
 
 func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Request, data interface{}) error {
@@ -105,8 +105,8 @@ func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Re
 
 	// If roleset is not nil, get key in use.
 	if rs != nil {
-		if rs.SecretType == SecretTypeAccessToken {
-			// Don't clean keys if roleset generates key secrets.
+		if rs.SecretType != SecretTypeAccessToken {
+			// Don't clean keys if roleset doesn't create access_tokens (i.e. creates keys).
 			return nil
 		}
 
@@ -199,6 +199,9 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 
 	p, err := r.GetIamPolicy(ctx, apiHandle)
 	if err != nil {
+		if isGoogleAccountNotFoundErr(err) || isGoogleAccountUnauthorizedErr(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -216,14 +219,16 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 	return err
 }
 
-func (b *backend) deleteServiceAccount(ctx context.Context, iamAdmin *iam.Service, account *gcputil.ServiceAccountId) error {
-	if account == nil || account.EmailOrId == "" {
+func (b *backend) deleteServiceAccount(ctx context.Context, iamAdmin *iam.Service, account gcputil.ServiceAccountId) error {
+	if account.EmailOrId == "" {
 		return nil
 	}
 
 	_, err := iamAdmin.Projects.ServiceAccounts.Delete(account.ResourceName()).Do()
-	if err != nil && (!isGoogleAccountNotFoundErr(err) || !isGoogleAccountUnauthorizedErr(err)) {
-		return errwrap.Wrapf("unable to delete service account: {{err}}", err)
+	if err != nil {
+		if !isGoogleAccountNotFoundErr(err) && !isGoogleAccountUnauthorizedErr(err) {
+			return errwrap.Wrapf("unable to delete service account: {{err}}", err)
+		}
 	}
 	return nil
 }
@@ -270,14 +275,15 @@ func (b *backend) removeBindings(ctx context.Context, apiHandle *iamutil.ApiHand
 }
 
 // This tries to clean up WALs that are no longer needed.
-// We can ignore errors if deletion fails as WAL rollback
-// will not be done if the object is still in use in the roleset
-// or was not actually created.
-func tryDeleteWALs(ctx context.Context, s logical.Storage, walIds ...string) {
+// We can ignore errors if deletion fails as WAL rollback will no-op if the object is still in use or no longer exists.
+// This simply attempts to reduce the number of GCP calls we will trigger in rollbacks.
+func (b *backend) tryDeleteWALs(ctx context.Context, s logical.Storage, walIds ...string) {
 	for _, walId := range walIds {
-		// ignore errors - if not deleted and still used by
-		// roleset, will be ignored
-		framework.DeleteWAL(ctx, s, walId)
+		// ignore errors, WALs that are not needed will just no-op
+		err := framework.DeleteWAL(ctx, s, walId)
+		if err != nil {
+			b.Logger().Error("unable to delete unneeded WAL %s, ignoring error since WAL will no-op: %v", walId, err)
+		}
 	}
 }
 
@@ -297,10 +303,12 @@ func isGoogleApiErrorWithCodes(err error, validErrCodes ...int) bool {
 	if err == nil {
 		return false
 	}
-	gErr, ok := err.(*googleapi.Error)
+	ok := errwrap.ContainsType(err, new(googleapi.Error))
 	if !ok {
 		return false
 	}
+
+	gErr := errwrap.GetType(err, new(googleapi.Error)).(*googleapi.Error)
 
 	for _, code := range validErrCodes {
 		if gErr.Code == code {

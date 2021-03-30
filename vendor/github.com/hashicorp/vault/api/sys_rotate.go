@@ -68,10 +68,24 @@ func (c *Sys) KeyStatus() (*KeyStatus, error) {
 	}
 	result.InstallTime = installTime
 
+	encryptionsRaw, ok := secret.Data["encryptions"]
+	if ok {
+		encryptions, ok := encryptionsRaw.(json.Number)
+		if !ok {
+			return nil, errors.New("could not convert encryptions to a number")
+		}
+		encryptions64, err := encryptions.Int64()
+		if err != nil {
+			return nil, err
+		}
+		result.Encryptions = int(encryptions64)
+	}
+
 	return &result, err
 }
 
 type KeyStatus struct {
 	Term        int       `json:"term"`
 	InstallTime time.Time `json:"install_time"`
+	Encryptions int       `json:"encryptions"`
 }

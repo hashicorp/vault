@@ -6,7 +6,7 @@ export default Component.extend({
   progress: null,
   classNames: ['shamir-progress'],
   progressDecimal: computed('threshold', 'progress', function() {
-    const { threshold, progress } = this.getProperties('threshold', 'progress');
+    const { threshold, progress } = this;
     if (threshold && progress) {
       return progress / threshold;
     }

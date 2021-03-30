@@ -19,5 +19,15 @@ export default function() {
       data: db['metrics/configs'].first(),
     };
   });
+
+  this.get('/sys/internal/ui/feature-flags', db => {
+    const featuresResponse = db.features.first();
+    return {
+      data: {
+        feature_flags: featuresResponse ? featuresResponse.feature_flags : null,
+      },
+    };
+  });
+
   this.passthrough();
 }

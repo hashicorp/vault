@@ -3,6 +3,8 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,8 +13,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 func TestPluginCatalog_CRUD(t *testing.T) {

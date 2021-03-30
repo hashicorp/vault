@@ -806,7 +806,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
+	var createRootTokenFlag bool
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		createRootTokenFlag = true
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
@@ -820,7 +822,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
+			if createRootTokenFlag {
+				entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
+			} else {
+				entry.ID, err = base62.Random(TokenLength)
+			}
 			if err != nil {
 				return err
 			}
@@ -2328,9 +2334,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
+		// Convert entity alias to lowercase to match the fact that role.AllowedEntityAliases
+		// has also been lowercased. An entity alias will keep its case formatting, but be
+		// treated as lowercase during any value cheek anywhere.
+		entityAlias := strings.ToLower(data.EntityAlias)
+
 		// Check if there is a concrete match
-		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
-			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+		if !strutil.StrListContains(role.AllowedEntityAliases, entityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, entityAlias) {
 			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 		}
 
