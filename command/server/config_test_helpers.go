@@ -689,6 +689,7 @@ listener "tcp" {
 	tls_key_file = "./certs/server.key"
 	tls_client_ca_file = "./certs/rootca.crt"
 	tls_min_version = "tls12"
+	tls_max_version = "tls13"
 	tls_require_and_verify_client_cert = true
 	tls_disable_client_certs = true
 }`))
@@ -719,6 +720,7 @@ listener "tcp" {
 					TLSKeyFile:                    "./certs/server.key",
 					TLSClientCAFile:               "./certs/rootca.crt",
 					TLSMinVersion:                 "tls12",
+					TLSMaxVersion:                 "tls13",
 					TLSRequireAndVerifyClientCert: true,
 					TLSDisableClientCerts:         true,
 				},
