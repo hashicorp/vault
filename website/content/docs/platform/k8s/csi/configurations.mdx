@@ -42,7 +42,7 @@ The following parameters are supported by the Vault provider:
 
   - `secretPath` `(string: "")` - The path in Vault where the secret is located.
 
-  - `secretKey` `(string: "")` - The key in the Vault secret to extract.
+  - `secretKey` `(string: "")` - The key in the Vault secret to extract. If omitted, the whole response from Vault will be written as JSON.
 
   - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary
     for different secret engines. For example:
