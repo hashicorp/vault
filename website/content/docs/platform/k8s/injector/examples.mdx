@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Vault Agent Sidecar Injector Examples
-sidebar_title: Examples
 description: This section documents examples of using the Vault Agent Injector.
 ---
 
@@ -293,8 +292,8 @@ spec:
 
 ## AppRole Authentication
 
-The following example demonstrates how the AppRole authentication method can be used by 
-Vault Agent for retrieving secrets. A Kubernetes secret containing the AppRole secret ID 
+The following example demonstrates how the AppRole authentication method can be used by
+Vault Agent for retrieving secrets. A Kubernetes secret containing the AppRole secret ID
 and role ID should be created first.
 
 ```yaml
@@ -315,20 +314,20 @@ spec:
       labels:
         app: web
       annotations:
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-extra-secret: "approle-example"
-        vault.hashicorp.com/auth-type: "approle"
-        vault.hashicorp.com/auth-path: "auth/approle"
-        vault.hashicorp.com/auth-config-role-id-file-path: "/vault/custom/role-id"
-        vault.hashicorp.com/auth-config-secret-id-file-path: "/vault/custom/secret-id"
-        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/db-app"
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/agent-extra-secret: 'approle-example'
+        vault.hashicorp.com/auth-type: 'approle'
+        vault.hashicorp.com/auth-path: 'auth/approle'
+        vault.hashicorp.com/auth-config-role-id-file-path: '/vault/custom/role-id'
+        vault.hashicorp.com/auth-config-secret-id-file-path: '/vault/custom/secret-id'
+        vault.hashicorp.com/agent-inject-secret-db-creds: 'database/creds/db-app'
         vault.hashicorp.com/agent-inject-template-db-creds: |
           {{- with secret "database/creds/db-app" -}}
           postgres://{{ .Data.username }}:{{ .Data.password }}@postgres.postgres.svc:5432/wizard?sslmode=disable
           {{- end }}
-        vault.hashicorp.com/role: "my-role"
-        vault.hashicorp.com/tls-secret: "vault-tls"
-        vault.hashicorp.com/ca-cert: "/vault/tls/ca.crt"
+        vault.hashicorp.com/role: 'my-role'
+        vault.hashicorp.com/tls-secret: 'vault-tls'
+        vault.hashicorp.com/ca-cert: '/vault/tls/ca.crt'
     spec:
       serviceAccountName: web
       containers:

@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/internal/counters - HTTP API
-sidebar_title: <code>/sys/internal/counters</code>
 description: >-
   The `/sys/internal/counters` endpoints are used to return data about Vault usage.
 ---
@@ -244,8 +243,8 @@ The time period is from the start of the current month, up until the time that t
 Note: the client count may be inaccurate in the moments following a Vault reboot, or leadership change.
 The estimate will stabilize when background loading of client data has completed.
 
-| Method | Path                              |
-| :----- | :-------------------------------- |
+| Method | Path                                      |
+| :----- | :---------------------------------------- |
 | `GET`  | `/sys/internal/counters/activity/monthly` |
 
 ### Sample Request
@@ -268,7 +267,7 @@ $ curl \
   "data": {
     "distinct_entities": 100,
     "non_entity_tokens": 120,
-    "clients": 220,
+    "clients": 220
   },
   "wrap_info": null,
   "warnings": null,
