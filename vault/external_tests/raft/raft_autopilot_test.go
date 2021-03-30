@@ -295,10 +295,12 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	}
 
 	joinFunc(cluster.Cores[1])
+	time.Sleep(2 * time.Second)
 	checkState("core-1", 2, false, false, "non-voter")
 
 	core2shouldBeHealthyAt := time.Now().Add(timeToHealthyCore2)
 	joinFunc(cluster.Cores[2])
+	time.Sleep(2 * time.Second)
 	checkState("core-2", 3, false, false, "non-voter")
 
 	stabilizationWaitDuration := time.Duration(1.25 * float64(config.ServerStabilizationTime))
