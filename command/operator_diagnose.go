@@ -144,6 +144,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
+
 	disableClustering := config.HAStorage.DisableClustering
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -172,7 +173,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		if err != nil {
 			c.UI.Output("Error creating TLS Configuration out of config file: ")
 			c.UI.Output(err.Error())
-			continue
+			return 1
 		}
 
 		sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
@@ -180,7 +181,12 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			Config:   ln.Config,
 		})
 	}
-	diagnose.TLSConfigChecks(sanitizedListeners)
+	err = diagnose.TLSConfigChecks(sanitizedListeners)
+	if err != nil {
+		c.UI.Output("Diagnose caught configuration errors: ")
+		c.UI.Output(err.Error())
+		return 1
+	}
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration

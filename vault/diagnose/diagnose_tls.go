@@ -3,14 +3,13 @@ package diagnose
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/vault"
 )
 
 // TLSConfigChecks contains manual error checks against the TLS configuration
-func TLSConfigChecks(listeners []listenerutil.Listener) {
+func TLSConfigChecks(listeners []listenerutil.Listener) error {
 	for _, listener := range listeners {
 		l := listener.Config
 
@@ -20,11 +19,17 @@ func TLSConfigChecks(listeners []listenerutil.Listener) {
 		// data.
 		cert, err := tls.LoadX509KeyPair(l.TLSCertFile, l.TLSKeyFile)
 		if err != nil {
-			fmt.Printf("err is: %+v", err)
+			return err
 		}
 
-		// QUESTION: Should we return certificate information in Diagnose?
-		fmt.Printf("info found is: %+v", cert)
+		// LoadX509KeyPair has a nil leaf certificate because it does not retain the
+		// parsed form, so we have to manually create it ourselves.
+
+		x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
+		if err != nil {
+			return err
+		}
+		cert.Leaf = x509Cert
 
 		// TODO: Check root as well via l.TLSClientCAFile
 
@@ -33,6 +38,7 @@ func TLSConfigChecks(listeners []listenerutil.Listener) {
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		})
 	}
+	return nil
 }
 
 // ServerListenerActiveProbe attempts to use TLS information to set up a TLS server with each listener

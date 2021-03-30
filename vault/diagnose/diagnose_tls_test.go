@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -55,4 +56,88 @@ func setup(t *testing.T) *vault.Core {
 	return core
 }
 
-func TestTLSConfigChecks(t *testing.T) {}
+func TestTLSValidCert(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "0",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := TLSConfigChecks(listeners)
+	if err != nil {
+		t.Fail()
+	}
+}
+
+func TestTLSFakeCert(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./test-fixtures/fakecert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "0",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := TLSConfigChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "tls: failed to find any PEM data in certificate input" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
+
+func TestTLSTrailingData(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./test-fixtures/trailingdatacert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "0",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := TLSConfigChecks(listeners)
+	if err != nil {
+		t.Errorf(err.Error())
+		// t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	// if err.Error() != "tls: failed to find any PEM data in certificate input" {
+	// 	t.Errorf("Bad error message: %s", err.Error())
+	// }
+}
+
+func TestTLSExpiredCert(t *testing.T) {
+}
+
+func TestTLSMismatchedCryptographicInfo(t *testing.T) {}
+
+func TestTLSContradictoryFlags(t *testing.T) {}
+
+func TestTLSBadCipherSuite(t *testing.T) {}
+
+func TestTLSUnknownAlgorithm(t *testing.T) {}
+
+func TestTLSIncorrectUsageType(t *testing.T) {}
