@@ -955,7 +955,6 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
-	// Question: Do I need to return the address of the listeners?
 	return 0, lns, clusterAddrs
 }
 
