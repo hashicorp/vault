@@ -205,7 +205,15 @@ certainly want to change this if you adjust
 the key_type.`,
 			},
 
-			"key_usage": {
+			"signature_bits": &framework.FieldSchema{
+				Type:    framework.TypeInt,
+				Default: 256,
+				Description: `The number of bits to use in the signature
+algorithm. Defaults to 256 for SHA256.
+Set to 384 for SHA384 and 512 for SHA512.`,
+			},
+
+			"key_usage": &framework.FieldSchema{
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 				Description: `A comma-separated string or list of key usages (not extended
@@ -559,6 +567,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		EmailProtectionFlag:           data.Get("email_protection_flag").(bool),
 		KeyType:                       data.Get("key_type").(string),
 		KeyBits:                       data.Get("key_bits").(int),
+		SignatureBits:                 data.Get("signature_bits").(int),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
@@ -610,6 +619,10 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	}
 
 	if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if err := certutil.ValidateSignatureLength(entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -750,6 +763,7 @@ type roleEntry struct {
 	UseCSRSANs                    bool          `json:"use_csr_sans" mapstructure:"use_csr_sans"`
 	KeyType                       string        `json:"key_type" mapstructure:"key_type"`
 	KeyBits                       int           `json:"key_bits" mapstructure:"key_bits"`
+	SignatureBits                 int           `json:"signature_bits" mapstructure:"signature_bits"`
 	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
 	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
@@ -800,6 +814,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"use_csr_sans":                       r.UseCSRSANs,
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
+		"signature_bits":                     r.SignatureBits,
 		"key_usage":                          r.KeyUsage,
 		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,

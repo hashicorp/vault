@@ -677,6 +677,7 @@ type CreationParameters struct {
 	ExtKeyUsageOIDs               []string
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
+	SignatureBits                 int
 
 	// Only used when signing a CA cert
 	UseCSRValues        bool

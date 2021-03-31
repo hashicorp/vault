@@ -1060,6 +1060,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			OtherSANs:                     otherSANs,
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
+			SignatureBits:                 data.role.SignatureBits,
 			NotAfter:                      notAfter,
 			KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 			ExtKeyUsage:                   parseExtKeyUsages(data.role),
