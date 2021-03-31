@@ -103,6 +103,10 @@ func TestTLSFakeCert(t *testing.T) {
 	}
 }
 
+// TestTLSTrailingData uses a certificate from:
+// https://github.com/golang/go/issues/40545 that contains
+// an extra DER sequence, and makes sure a trailing data error
+// is returned.
 func TestTLSTrailingData(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
@@ -120,13 +124,12 @@ func TestTLSTrailingData(t *testing.T) {
 		},
 	}
 	err := TLSConfigChecks(listeners)
-	if err != nil {
-		t.Errorf(err.Error())
-		// t.Errorf("TLS Config check on fake certificate should fail")
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
 	}
-	// if err.Error() != "tls: failed to find any PEM data in certificate input" {
-	// 	t.Errorf("Bad error message: %s", err.Error())
-	// }
+	if err.Error() != "asn1: syntax error: trailing data" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
 }
 
 func TestTLSExpiredCert(t *testing.T) {

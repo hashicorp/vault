@@ -45,14 +45,14 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[31m[failed]\x1b[0m Access storage\nA storage backend must be specified\n"},
 			1,
 		},
-		// {
-		// 	"diagnose_invalid_cert_trailing_data",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/trailing_data_cert_config.hcl",
-		// 	},
-		// 	[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[31m[failed]\x1b[0m Access storage\nA storage backend must be specified\n"},
-		// 	1,
-		// },
+		{
+			"diagnose_listener_config_ok",
+			[]string{
+				"-config", "./server/test-fixtures/tls_config_ok.hcl",
+			},
+			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n"},
+			0,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

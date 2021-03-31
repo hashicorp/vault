@@ -6,6 +6,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
@@ -24,6 +25,11 @@ type OperatorDiagnoseCommand struct {
 	flagSkips    []string
 	flagConfigs  []string
 	cleanupGuard sync.Once
+
+	reloadFuncsLock *sync.RWMutex
+	reloadFuncs     *map[string][]reloadutil.ReloadFunc
+	startedCh       chan (struct{}) // for tests
+	reloadedCh      chan (struct{}) // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -114,7 +120,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
-
+	rloadFuncs := make(map[string][]reloadutil.ReloadFunc, 5)
 	server := &ServerCommand{
 		// TODO: set up a different one?
 		// In particular, a UI instance that won't output?
@@ -129,8 +135,10 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 		// TODO: other ServerCommand options?
 
-		logger:     log.NewInterceptLogger(nil),
-		allLoggers: []log.Logger{},
+		logger:          log.NewInterceptLogger(nil),
+		allLoggers:      []log.Logger{},
+		reloadFuncs:     &rloadFuncs,
+		reloadFuncsLock: new(sync.RWMutex),
 	}
 
 	phase := "Parse configuration"
