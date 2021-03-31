@@ -371,8 +371,9 @@ func testLoadConfigFile(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					UnusedKeys: []string{"allow_stuff"},
+					Type:       "tcp",
+					Address:    "127.0.0.1:443",
 				},
 			},
 

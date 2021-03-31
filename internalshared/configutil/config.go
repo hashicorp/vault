@@ -11,12 +11,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
-type BaseConfig struct {
-}
-
 // SharedConfig contains some shared values
 type SharedConfig struct {
-	BaseConfig
 	EntSharedConfig
 
 	Listeners []*Listener `hcl:"-"`
