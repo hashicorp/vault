@@ -806,6 +806,12 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 				leaderInfo.TLSConfig.ServerName = leaderInfo.LeaderTLSServerName
 			}
+			if leaderInfo.TLSConfig == nil && leaderInfo.LeaderTLSServerName != "" {
+				leaderInfo.TLSConfig, err = tlsutil.SetupTLSConfig(map[string]string{"address": leaderInfo.LeaderTLSServerName}, "")
+				if err != nil {
+					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
+				}
+			}
 
 			if leaderInfo.TLSConfig != nil {
 				transport.TLSClientConfig = leaderInfo.TLSConfig.Clone()
