@@ -540,7 +540,7 @@ github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
 # github.com/hashicorp/raft v1.2.0
 github.com/hashicorp/raft
-# github.com/hashicorp/raft-autopilot v0.1.2
+# github.com/hashicorp/raft-autopilot v0.1.2 => ../raft-autopilot
 github.com/hashicorp/raft-autopilot
 # github.com/hashicorp/raft-snapshot v1.0.3
 github.com/hashicorp/raft-snapshot
