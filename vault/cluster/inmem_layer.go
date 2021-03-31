@@ -178,14 +178,16 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 	servConn = newDelayedConn(servConn, l.readerDelay)
 
 	l.servConns[addr] = append(l.servConns[addr], servConn)
+	connectionCh := l.connectionCh
+	pendingConns := l.listener.pendingConns
 	l.l.Unlock()
 
 	if l.logger.IsDebug() {
 		l.logger.Debug("received connection", "node", l.addr, "remote", addr)
 	}
-	if l.connectionCh != nil {
+	if connectionCh != nil {
 		select {
-		case l.connectionCh <- &ConnectionInfo{
+		case connectionCh <- &ConnectionInfo{
 			Node:     l.addr,
 			Remote:   addr,
 			IsServer: true,
@@ -196,7 +198,7 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 	}
 
 	select {
-	case l.listener.pendingConns <- servConn:
+	case pendingConns <- servConn:
 	case <-time.After(2 * time.Second):
 		return nil, errors.New("inmemlayer: timeout while accepting connection")
 	}
