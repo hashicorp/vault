@@ -3,8 +3,8 @@ package rafttests
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -380,7 +380,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if assert.Equal(t, core0Peers, core1Peers) && assert.Equal(t, core1Peers, core2Peers) {
+		if reflect.DeepEqual(core0Peers, core1Peers) && reflect.DeepEqual(core1Peers, core2Peers) {
 			break
 		}
 		time.Sleep(time.Second)
