@@ -202,7 +202,6 @@ path "${backend}/config/*" {
     await clickTrigger('#database');
     assert.equal(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
-    await this.pauseTest();
     assert
       .dom('[data-test-component="empty-state"]')
       .exists({ count: 2 }, 'Two empty states exist before selections made');
