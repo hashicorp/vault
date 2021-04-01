@@ -200,7 +200,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			Config:   ln.Config,
 		})
 	}
-	err = diagnose.TLSConfigChecks(sanitizedListeners)
+	err = diagnose.ListenerChecks(sanitizedListeners)
 	if err != nil {
 		c.UI.Output("Diagnose caught configuration errors: ")
 		c.UI.Output(err.Error())
