@@ -2,6 +2,7 @@ package configutil
 
 import (
 	"fmt"
+	"github.com/hashicorp/hcl/hcl/token"
 	"io/ioutil"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 
 // SharedConfig contains some shared values
 type SharedConfig struct {
+	FoundKeys  []string               `hcl:",decodedFields"`
+	UnusedKeys map[string][]token.Pos `hcl:",unusedKeyPositions"`
 	EntSharedConfig
 
 	Listeners []*Listener `hcl:"-"`
@@ -75,6 +78,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		if result.DefaultMaxRequestDuration, err = parseutil.ParseDurationSecond(result.DefaultMaxRequestDurationRaw); err != nil {
 			return nil, err
 		}
+		result.FoundKeys = append(result.FoundKeys, "DefaultMaxRequestDuration")
 		result.DefaultMaxRequestDurationRaw = nil
 	}
 
@@ -82,6 +86,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
 			return nil, err
 		}
+		result.FoundKeys = append(result.FoundKeys, "DisableMlock")
 		result.DisableMlockRaw = nil
 	}
 

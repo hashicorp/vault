@@ -505,7 +505,7 @@ func expandObject(node ast.Node, result reflect.Value) ast.Node {
 	// we need to un-flatten the ast enough to decode
 	newNode := &ast.ObjectItem{
 		Keys: []*ast.ObjectKey{
-			&ast.ObjectKey{
+			{
 				Token: keyToken,
 			},
 		},
@@ -628,6 +628,19 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 	decodedFields := make([]string, 0, len(fields))
 	decodedFieldsVal := make([]reflect.Value, 0)
 	unusedKeysVal := make([]reflect.Value, 0)
+
+	// fill unusedNodeKeys with keys from the AST
+	// a slice because we have to do equals case fold to match Filter
+	unusedNodeKeys := make(map[string][]token.Pos, 0)
+	for _, item := range list.Items {
+		for _, k := range item.Keys {
+			fn := k.Token.Value().(string)
+			sl := unusedNodeKeys[fn]
+			unusedNodeKeys[fn]  = append(sl, k.Token.Pos)
+		}
+	}
+
+	var fieldAlias string
 	for _, f := range fields {
 		field, fieldValue := f.field, f.val
 		if !fieldValue.IsValid() {
@@ -661,9 +674,12 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 
 				fieldValue.SetString(item.Keys[0].Token.Value().(string))
 				continue
-			case "unusedKeys":
+			case "unusedKeyPositions":
 				unusedKeysVal = append(unusedKeysVal, fieldValue)
 				continue
+			}
+			if strings.HasPrefix(tagParts[1], "alias:") {
+				fieldAlias = tagParts[1][6:]
 			}
 		}
 
@@ -682,9 +698,13 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 			continue
 		}
 
-		// Track the used key
+		// Track the used keys
 		usedKeys[fieldName] = struct{}{}
-
+		unusedNodeKeys = removeCaseFold(unusedNodeKeys, fieldName)
+		if fieldAlias != "" {
+			unusedNodeKeys = removeCaseFold(unusedNodeKeys, fieldAlias)
+		}
+		
 		// Create the field name and decode. We range over the elements
 		// because we actually want the value.
 		fieldName = fmt.Sprintf("%s.%s", name, fieldName)
@@ -716,6 +736,13 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 		}
 	}
 
+	if len(unusedNodeKeys) > 0 {
+		// like decodedFields, populated the unusedKeys field(s)
+		for _, v := range unusedKeysVal {
+			v.Set(reflect.ValueOf(unusedNodeKeys))
+		}
+	}
+
 	return nil
 }
 
@@ -726,4 +753,18 @@ func findNodeType() reflect.Type {
 	}
 	value := reflect.ValueOf(nodeContainer).FieldByName("Node")
 	return value.Type()
+}
+
+func removeCaseFold(xs map[string][]token.Pos, y string) map[string][]token.Pos {
+	var toDel []string
+
+	for i := range xs {
+		if strings.EqualFold(i, y) {
+			toDel = append(toDel, i)
+		}
+	}
+	for _, i := range toDel {
+		delete(xs, i)
+	}
+	return xs
 }
