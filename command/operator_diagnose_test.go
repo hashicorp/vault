@@ -31,7 +31,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_ok",
 			[]string{
-				"-config", "./server/test-fixtures/config.hcl",
+				"-config", "./server/test-fixtures/config_diagnose_ok.hcl",
 			},
 			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n"},
 			0,
