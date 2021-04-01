@@ -36,6 +36,6 @@ export default Fragment.extend({
     helpText:
       "The type of token that should be generated via this role. Can be `service`, `batch`, or `default` to use the mount's default (which unless changed will be `service` tokens).",
     possibleValues: ['default', 'batch', 'service'],
-    defaultValue: 'default',
+    defaultFormValue: 'default',
   }),
 });
