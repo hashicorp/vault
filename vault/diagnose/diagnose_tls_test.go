@@ -72,7 +72,7 @@ func TestTLSValidCert(t *testing.T) {
 			},
 		},
 	}
-	err := TLSConfigChecks(listeners)
+	err := ListenerChecks(listeners)
 	if err != nil {
 		t.Fail()
 	}
@@ -94,7 +94,7 @@ func TestTLSFakeCert(t *testing.T) {
 			},
 		},
 	}
-	err := TLSConfigChecks(listeners)
+	err := ListenerChecks(listeners)
 	if err == nil {
 		t.Errorf("TLS Config check on fake certificate should fail")
 	}
@@ -123,7 +123,7 @@ func TestTLSTrailingData(t *testing.T) {
 			},
 		},
 	}
-	err := TLSConfigChecks(listeners)
+	err := ListenerChecks(listeners)
 	if err == nil {
 		t.Errorf("TLS Config check on fake certificate should fail")
 	}

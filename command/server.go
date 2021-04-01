@@ -871,21 +871,20 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 	return backend, nil
 }
 
-func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr) {
+func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, error, []listenerutil.Listener, []*net.TCPAddr) {
 	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 
-	if c.reloadFuncsLock != nil {
-		c.reloadFuncsLock.Lock()
-	}
+	c.reloadFuncsLock.Lock()
 
+	var errMsg error
 	for i, lnConfig := range config.Listeners {
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
-			return 1, nil, nil
+			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
+			return 1, errMsg, nil, nil
 		}
 
 		if reloadFunc != nil {
@@ -899,15 +898,15 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 			if addr != "" {
 				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
-					return 1, nil, nil
+					errMsg = fmt.Errorf("Error resolving cluster_address: %s", err)
+					return 1, errMsg, nil, nil
 				}
 				clusterAddrs = append(clusterAddrs, tcpAddr)
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
-					c.UI.Error("Failed to parse tcp listener")
-					return 1, nil, nil
+					errMsg = fmt.Errorf("Failed to parse tcp listener")
+					return 1, errMsg, nil, nil
 				}
 				clusterAddr := &net.TCPAddr{
 					IP:   tcpAddr.IP,
@@ -947,15 +946,13 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 	}
-	if c.reloadFuncsLock != nil {
-		c.reloadFuncsLock.Unlock()
-	}
+	c.reloadFuncsLock.Unlock()
 	if !disableClustering {
 		if c.logger.IsDebug() {
 			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
-	return 0, lns, clusterAddrs
+	return 0, nil, lns, clusterAddrs
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -1569,7 +1566,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	_, lns, clusterAddrs := c.InitListeners(config, disableClustering, &infoKeys, &info)
+	status, errMsg, lns, clusterAddrs := c.InitListeners(config, disableClustering, &infoKeys, &info)
+
+	if status != 0 {
+		c.UI.Output("Error parsing listener configuration.")
+		c.UI.Error(errMsg.Error())
+		return 1
+	}
 
 	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {

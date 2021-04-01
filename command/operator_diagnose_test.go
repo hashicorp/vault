@@ -21,7 +21,7 @@ func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseC
 }
 
 func TestOperatorDiagnoseCommand_Run(t *testing.T) {
-
+	t.Parallel()
 	cases := []struct {
 		name         string
 		args         []string
@@ -55,11 +55,13 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 	}
 
 	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
 		for _, tc := range cases {
 			tc := tc
 
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
 				client, closer := testVaultServer(t)
 				defer closer()

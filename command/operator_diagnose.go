@@ -158,7 +158,13 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	disableClustering := config.HAStorage.DisableClustering
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	status, lns, _ := server.InitListeners(config, disableClustering, &infoKeys, &info)
+	status, errMsg, lns, _ := server.InitListeners(config, disableClustering, &infoKeys, &info)
+
+	if status != 0 {
+		c.UI.Output("Error parsing listener configuration.")
+		c.UI.Error(errMsg.Error())
+		return 1
+	}
 
 	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {
@@ -168,12 +174,6 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	defer c.cleanupGuard.Do(listenerCloseFunc)
-
-	if status != 0 {
-		// The error should be displayed in InitListeners. We don't need the error message here.
-		c.UI.Output("Error parsing listener configuration.")
-		return 1
-	}
 
 	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, ln := range lns {
