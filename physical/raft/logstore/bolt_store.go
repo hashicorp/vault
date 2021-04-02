@@ -2,7 +2,9 @@ package logstore
 
 import (
 	"errors"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/raft"
 	bolt "go.etcd.io/bbolt"
 )
@@ -31,6 +33,9 @@ type BoltStore struct {
 
 	// The path to the Bolt database file
 	path string
+
+	// doneCh controls the emitting of BoltDB stat metrics
+	doneCh chan struct{}
 }
 
 // Options contains all the configuration used to open the BoltDB
@@ -71,8 +76,9 @@ func New(options Options) (*BoltStore, error) {
 
 	// Create the new store
 	store := &BoltStore{
-		conn: handle,
-		path: options.Path,
+		conn:   handle,
+		path:   options.Path,
+		doneCh: make(chan struct{}),
 	}
 
 	// If the store was opened read-only, don't try and create buckets
@@ -83,6 +89,9 @@ func New(options Options) (*BoltStore, error) {
 			return nil, err
 		}
 	}
+
+	go store.emitMetrics()
+
 	return store, nil
 }
 
@@ -105,8 +114,40 @@ func (b *BoltStore) initialize() error {
 	return tx.Commit()
 }
 
+func (b *BoltStore) emitMetrics() {
+	for {
+		select {
+		case <-b.doneCh:
+			return
+		default:
+			stats := b.conn.Stats()
+			txstats := stats.TxStats
+			metrics.SetGauge([]string{"raft", "bolt_store", "freelist", "free_pages"}, float32(stats.FreePageN))
+			metrics.SetGauge([]string{"raft", "bolt_store", "freelist", "pending_pages"}, float32(stats.PendingPageN))
+			metrics.SetGauge([]string{"raft", "bolt_store", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc))
+			metrics.SetGauge([]string{"raft", "bolt_store", "freelist", "used_bytes"}, float32(stats.FreelistInuse))
+			metrics.SetGauge([]string{"raft", "bolt_store", "transaction", "started_read_transactions"}, float32(stats.TxN))
+			metrics.SetGauge([]string{"raft", "bolt_store", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN))
+			metrics.SetGauge([]string{"raft", "bolt_store", "page", "count"}, float32(txstats.PageCount))
+			metrics.SetGauge([]string{"raft", "bolt_store", "page", "bytes_allocated"}, float32(txstats.PageAlloc))
+			metrics.SetGauge([]string{"raft", "bolt_store", "cursor", "created"}, float32(txstats.CursorCount))
+			metrics.SetGauge([]string{"raft", "bolt_store", "node", "allocations"}, float32(txstats.NodeCount))
+			metrics.SetGauge([]string{"raft", "bolt_store", "node", "dereferences"}, float32(txstats.NodeDeref))
+			metrics.SetGauge([]string{"raft", "bolt_store", "rebalance", "count"}, float32(txstats.Rebalance))
+			metrics.AddSample([]string{"raft", "bolt_store", "rebalance", "time"}, float32(txstats.RebalanceTime))
+			metrics.SetGauge([]string{"raft", "bolt_store", "split", "count"}, float32(txstats.Split))
+			metrics.SetGauge([]string{"raft", "bolt_store", "spill", "count"}, float32(txstats.Spill))
+			metrics.AddSample([]string{"raft", "bolt_store", "spill", "time"}, float32(txstats.SpillTime))
+			metrics.SetGauge([]string{"raft", "bolt_store", "write", "count"}, float32(txstats.Write))
+			metrics.AddSample([]string{"raft", "bolt_store", "write", "time"}, float32(txstats.WriteTime))
+			time.Sleep(time.Second)
+		}
+	}
+}
+
 // Close is used to gracefully close the DB connection.
 func (b *BoltStore) Close() error {
+	close(b.doneCh)
 	return b.conn.Close()
 }
 
