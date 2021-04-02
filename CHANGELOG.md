@@ -1,22 +1,29 @@
 ## 1.8.0 (Unreleased)
 
-## 1.7.0-rc1
-### 10 March 2021
+## 1.7.0
+### 24 March 2021
 
 CHANGES:
 
-* go: Update go version to 1.15.8 [[GH-11060](https://github.com/hashicorp/vault/pull/11060)]
+* aws/auth: AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
+have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
+updated to`/auth/aws/identity-accesslist`). The old and new endpoints are aliases,
+sharing the same underlying data. The legacy endpoint names are considered **deprecated**
+and will be removed in a future release (not before Vault 1.9). The complete list of
+endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#deprecations-effective-in-vault-1-7).
+* go: Update Go version to 1.15.10 [[GH-11114](https://github.com/hashicorp/vault/pull/11114)] [[GH-11173](https://github.com/hashicorp/vault/pull/11173)]
 
 FEATURES:
 
 * **Aerospike Storage Backend**: Add support for using Aerospike as a storage backend [[GH-10131](https://github.com/hashicorp/vault/pull/10131)]
-* **Autopilot for Integrated Storage:** A set of features has been added to allow for automatic operator-friendly management of Vault servers. This is only applicable when integrated storage is in use.
-  - **Dead Server Cleanup:** Dead servers will periodically be cleaned up and removed from the Raft peer set, to prevent them from interfering with the quorum size and leader elections.
-  - **Server Health Checking:** An API has been added to track the state of servers, including their health.
-  - **New Server Stabilization:** When a new server is added to the cluster, there will be a waiting period where it must be healthy and stable for a certain amount of time before being promoted to a full, voting member.
+* **Autopilot for Integrated Storage**: A set of features has been added to allow for automatic operator-friendly management of Vault servers. This is only applicable when integrated storage is in use.
+  * **Dead Server Cleanup**: Dead servers will periodically be cleaned up and removed from the Raft peer set, to prevent them from interfering with the quorum size and leader elections.
+  * **Server Health Checking**: An API has been added to track the state of servers, including their health.
+  * **New Server Stabilization**: When a new server is added to the cluster, there will be a waiting period where it must be healthy and stable for a certain amount of time before being promoted to a full, voting member.
+* **Tokenization Secrets Engine (Enterprise)**: The Tokenization Secrets Engine is now generally available. We have added support for MySQL, key rotation, and snapshot/restore.
 * agent: Support for persisting the agent cache to disk [[GH-10938](https://github.com/hashicorp/vault/pull/10938)]
 * auth/jwt: Adds `max_age` role parameter and `auth_time` claim validation. [[GH-10919](https://github.com/hashicorp/vault/pull/10919)]
-* core (enterprise): X-Vault-Index and related headers can be used by clients to manage eventual consistency. 
+* core (enterprise): X-Vault-Index and related headers can be used by clients to manage eventual consistency.
 * kmip (enterprise): Use entropy augmentation to generate kmip certificates
 * sdk: Private key generation in the certutil package now allows custom io.Readers to be used. [[GH-10653](https://github.com/hashicorp/vault/pull/10653)]
 * secrets/aws: add IAM tagging support for iam_user roles [[GH-10953](https://github.com/hashicorp/vault/pull/10953)]
@@ -26,6 +33,9 @@ FEATURES:
 * secrets/database/mssql: Add ability to customize dynamic usernames [[GH-10767](https://github.com/hashicorp/vault/pull/10767)]
 * secrets/database/mysql: Add ability to customize dynamic usernames [[GH-10834](https://github.com/hashicorp/vault/pull/10834)]
 * secrets/database/postgresql: Add ability to customize dynamic usernames [[GH-10766](https://github.com/hashicorp/vault/pull/10766)]
+* secrets/db/snowflake: Added support for Snowflake to the Database Secret Engine [[GH-10603](https://github.com/hashicorp/vault/pull/10603)]
+* secrets/keymgmt (enterprise): Adds beta support for distributing and managing keys in AWS KMS.
+* secrets/keymgmt (enterprise): Adds general availability for distributing and managing keys in Azure Key Vault.
 * secrets/openldap: Added dynamic roles to OpenLDAP similar to the combined database engine [[GH-10996](https://github.com/hashicorp/vault/pull/10996)]
 * secrets/terraform: New secret engine for managing Terraform Cloud API tokens [[GH-10931](https://github.com/hashicorp/vault/pull/10931)]
 * ui: Adds check for feature flag on application, and updates namespace toolbar on login if present [[GH-10588](https://github.com/hashicorp/vault/pull/10588)]
@@ -49,7 +59,7 @@ IMPROVEMENTS:
 * core/metrics: New telemetry metrics reporting lease expirations by time interval and namespace [[GH-10375](https://github.com/hashicorp/vault/pull/10375)]
 * core: Added active since timestamp to the status output of active nodes. [[GH-10489](https://github.com/hashicorp/vault/pull/10489)]
 * core: Check audit device with a test message before adding it. [[GH-10520](https://github.com/hashicorp/vault/pull/10520)]
-* core: Track barrier encryption count and automatically rotate after a large number of operations or on a schedule [[GH-10744](https://github.com/hashicorp/vault/pull/10744)]
+* core: Track barrier encryption count and automatically rotate after a large number of operations or on a schedule [[GH-10774](https://github.com/hashicorp/vault/pull/10774)]
 * core: add metrics for active entity count [[GH-10514](https://github.com/hashicorp/vault/pull/10514)]
 * core: add partial month client count api [[GH-11022](https://github.com/hashicorp/vault/pull/11022)]
 * core: dev mode listener allows unauthenticated sys/metrics requests [[GH-10992](https://github.com/hashicorp/vault/pull/10992)]
@@ -58,6 +68,8 @@ IMPROVEMENTS:
 * storage/raft (enterprise): Listing of peers is now allowed on DR secondary
 cluster nodes, as an update operation that takes in DR operation token for
 authenticating the request.
+* transform (enterprise): Improve FPE transformation performance
+* transform (enterprise): Use transactions with batch tokenization operations for improved performance
 * ui: Clarify language on usage metrics page empty state [[GH-10951](https://github.com/hashicorp/vault/pull/10951)]
 * ui: Customize MongoDB input fields on Database Secrets Engine [[GH-10949](https://github.com/hashicorp/vault/pull/10949)]
 * ui: Upgrade Ember-cli from 3.8 to 3.22. [[GH-9972](https://github.com/hashicorp/vault/pull/9972)]
@@ -115,10 +127,15 @@ the given key will be used to encrypt the snapshot using AWS KMS.
 * transform (enterprise): Fix transform configuration not handling `stores` parameter on the legacy path
 * transform (enterprise): Make expiration timestamps human readable
 * transform (enterprise): Return false for invalid tokens on the validate endpoint rather than returning an HTTP error
+* ui: Add role from database connection automatically populates the database for new role [[GH-11119](https://github.com/hashicorp/vault/pull/11119)]
 * ui: Fix bug in Transform secret engine when a new role is added and then removed from a transformation [[GH-10417](https://github.com/hashicorp/vault/pull/10417)]
 * ui: Fix bug that double encodes secret route when there are spaces in the path and makes you unable to view the version history. [[GH-10596](https://github.com/hashicorp/vault/pull/10596)]
 * ui: Fix expected response from feature-flags endpoint [[GH-10684](https://github.com/hashicorp/vault/pull/10684)]
 * ui: Fix footer URL linking to the correct version changelog. [[GH-10491](https://github.com/hashicorp/vault/pull/10491)]
+
+DEPRECATIONS:
+* aws/auth: AWS Auth endpoints that use the "whitelist" and "blacklist" terms have been deprecated.
+Refer to the CHANGES section for additional details.
 
 ## 1.6.3
 ### February 25, 2021

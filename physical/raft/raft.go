@@ -5,6 +5,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"io"
 	"io/ioutil"
 	"os"
@@ -24,11 +29,6 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -145,6 +145,8 @@ type RaftBackend struct {
 	// VAULT_RAFT_AUTOPILOT_DISABLE during startup and can't be updated once the
 	// node is up and running.
 	disableAutopilot bool
+
+	autopilotReconcileInterval time.Duration
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -385,7 +387,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
 		}
-		snap = newSnapshotStoreDelay(snap, delay)
+		snap = newSnapshotStoreDelay(snap, delay, logger)
 	}
 
 	maxEntrySize := defaultMaxEntrySize
@@ -398,28 +400,40 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize = uint64(i)
 	}
 
+	var reconcileInterval time.Duration
+	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
+		}
+		reconcileInterval = interval
+	}
+
 	return &RaftBackend{
-		logger:                  logger,
-		fsm:                     fsm,
-		raftInitCh:              make(chan struct{}),
-		conf:                    conf,
-		logStore:                log,
-		stableStore:             stable,
-		snapStore:               snap,
-		dataDir:                 path,
-		localID:                 localID,
-		permitPool:              physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize:            maxEntrySize,
-		followerHeartbeatTicker: time.NewTicker(time.Second),
+		logger:                     logger,
+		fsm:                        fsm,
+		raftInitCh:                 make(chan struct{}),
+		conf:                       conf,
+		logStore:                   log,
+		stableStore:                stable,
+		snapStore:                  snap,
+		dataDir:                    path,
+		localID:                    localID,
+		permitPool:                 physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:               maxEntrySize,
+		followerHeartbeatTicker:    time.NewTicker(time.Second),
+		autopilotReconcileInterval: reconcileInterval,
 	}, nil
 }
 
 type snapshotStoreDelay struct {
+	logger  log.Logger
 	wrapped raft.SnapshotStore
 	delay   time.Duration
 }
 
 func (s snapshotStoreDelay) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+	s.logger.Trace("delaying before creating snapshot", "delay", s.delay)
 	time.Sleep(s.delay)
 	return s.wrapped.Create(version, index, term, configuration, configurationIndex, trans)
 }
@@ -434,8 +448,9 @@ func (s snapshotStoreDelay) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 
 var _ raft.SnapshotStore = &snapshotStoreDelay{}
 
-func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration) *snapshotStoreDelay {
+func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration, logger log.Logger) *snapshotStoreDelay {
 	return &snapshotStoreDelay{
+		logger:  logger,
 		wrapped: snap,
 		delay:   delay,
 	}
@@ -490,8 +505,9 @@ type RaftConfigurationResponse struct {
 
 // Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
-	ID      string `json:"id"`
-	Address string `json:"address"`
+	ID       string `json:"id"`
+	Address  string `json:"address"`
+	Suffrage int    `json:"suffrage"`
 }
 
 // NodeID returns the identifier of the node
@@ -546,8 +562,9 @@ func (b *RaftBackend) Bootstrap(peers []Peer) error {
 
 	for i, p := range peers {
 		raftConfig.Servers[i] = raft.Server{
-			ID:      raft.ServerID(p.ID),
-			Address: raft.ServerAddress(p.Address),
+			ID:       raft.ServerID(p.ID),
+			Address:  raft.ServerAddress(p.Address),
+			Suffrage: raft.ServerSuffrage(p.Suffrage),
 		}
 	}
 
@@ -597,6 +614,15 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 			return err
 		}
 		config.TrailingLogs = uint64(trailingLogs)
+	}
+	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	if ok {
+		var err error
+		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		if err != nil {
+			return err
+		}
+		config.SnapshotInterval = snapshotInterval
 	}
 
 	config.NoSnapshotRestoreOnStart = true
@@ -774,6 +800,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	b.logger.Info("creating Raft", "config", fmt.Sprintf("%#v", raftConfig))
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
@@ -998,8 +1025,9 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	ret := make([]Peer, len(future.Configuration().Servers))
 	for i, s := range future.Configuration().Servers {
 		ret[i] = Peer{
-			ID:      string(s.ID),
-			Address: string(s.Address),
+			ID:       string(s.ID),
+			Address:  string(s.Address),
+			Suffrage: int(s.Suffrage),
 		}
 	}
 

@@ -1,4 +1,5 @@
 import { Base } from '../show';
+import { settled } from '@ember/test-helpers';
 import { create, clickable, collection, text, isPresent } from 'ember-cli-page-object';
 
 export default create({
@@ -10,7 +11,10 @@ export default create({
   generateCert: clickable('[data-test-credentials-link]'),
   deleteBtn: clickable('[data-test-role-delete] button'),
   confirmBtn: clickable('[data-test-confirm-button]'),
-  deleteRole() {
-    return this.deleteBtn().confirmBtn();
+  async deleteRole() {
+    await this.deleteBtn();
+    await settled();
+    await this.confirmBtn();
+    await settled();
   },
 });

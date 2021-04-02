@@ -15,4 +15,5 @@ export default create({
   addRole: clickable('[data-test-secret-create="true"]'),
   enable: clickable('[data-test-enable-connection=""]'),
   edit: clickable('[data-test-edit-link="true"]'),
+  delete: clickable('[data-test-database-connection-delete]'),
 });

@@ -286,6 +286,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
 				BaseCommand: getBaseCommand(),

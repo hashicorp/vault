@@ -20,6 +20,9 @@ export default class DatabaseRoleEdit extends Component {
     ) {
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
     }
+    if (this.args.initialKey) {
+      this.args.model.database = [this.args.initialKey];
+    }
   }
 
   @tracked loading = false;

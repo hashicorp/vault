@@ -49,6 +49,7 @@ type Listener struct {
 	Listener           net.Listener
 	ProxyHeaderTimeout time.Duration
 	SourceCheck        SourceChecker
+	UnknownOK          bool // allow PROXY UNKNOWN
 }
 
 // Conn is used to wrap and underlying connection which
@@ -62,28 +63,36 @@ type Conn struct {
 	useConnAddr        bool
 	once               sync.Once
 	proxyHeaderTimeout time.Duration
+	unknownOK          bool
 }
 
 // Accept waits for and returns the next connection to the listener.
 func (p *Listener) Accept() (net.Conn, error) {
 	// Get the underlying connection
-	conn, err := p.Listener.Accept()
-	if err != nil {
-		return nil, err
-	}
-	var useConnAddr bool
-	if p.SourceCheck != nil {
-		allowed, err := p.SourceCheck(conn.RemoteAddr())
+	for {
+		conn, err := p.Listener.Accept()
 		if err != nil {
 			return nil, err
 		}
-		if !allowed {
-			useConnAddr = true
+		var useConnAddr bool
+		if p.SourceCheck != nil {
+			allowed, err := p.SourceCheck(conn.RemoteAddr())
+			if err != nil {
+				if err == ErrInvalidUpstream {
+					conn.Close()
+					continue
+				}
+				return nil, err
+			}
+			if !allowed {
+				useConnAddr = true
+			}
 		}
+		newConn := NewConn(conn, p.ProxyHeaderTimeout)
+		newConn.useConnAddr = useConnAddr
+		newConn.unknownOK = p.UnknownOK
+		return newConn, nil
 	}
-	newConn := NewConn(conn, p.ProxyHeaderTimeout)
-	newConn.useConnAddr = useConnAddr
-	return newConn, nil
 }
 
 // Close closes the underlying listener.
@@ -117,6 +126,22 @@ func (p *Conn) Read(b []byte) (int, error) {
 		return 0, err
 	}
 	return p.bufReader.Read(b)
+}
+
+func (p *Conn) ReadFrom(r io.Reader) (int64, error) {
+	if rf, ok := p.conn.(io.ReaderFrom); ok {
+		return rf.ReadFrom(r)
+	}
+	return io.Copy(p.conn, r)
+}
+
+func (p *Conn) WriteTo(w io.Writer) (int64, error) {
+	var err error
+	p.once.Do(func() { err = p.checkPrefix() })
+	if err != nil {
+		return 0, err
+	}
+	return p.bufReader.WriteTo(w)
 }
 
 func (p *Conn) Write(b []byte) (int, error) {
@@ -209,18 +234,30 @@ func (p *Conn) checkPrefix() error {
 
 	// Split on spaces, should be (PROXY <type> <src addr> <dst addr> <src port> <dst port>)
 	parts := strings.Split(header, " ")
-	if len(parts) != 6 {
+	if len(parts) < 2 {
 		p.conn.Close()
 		return fmt.Errorf("Invalid header line: %s", header)
 	}
 
 	// Verify the type is known
 	switch parts[1] {
+	case "UNKNOWN":
+		if !p.unknownOK || len(parts) != 2 {
+			p.conn.Close()
+			return fmt.Errorf("Invalid UNKNOWN header line: %s", header)
+		}
+		p.useConnAddr = true
+		return nil
 	case "TCP4":
 	case "TCP6":
 	default:
 		p.conn.Close()
 		return fmt.Errorf("Unhandled address type: %s", parts[1])
+	}
+
+	if len(parts) != 6 {
+		p.conn.Close()
+		return fmt.Errorf("Invalid header line: %s", header)
 	}
 
 	// Parse out the source address

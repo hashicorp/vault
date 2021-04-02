@@ -109,7 +109,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	// Also convert any user inputs to UTC to avoid
 	// problems later.
 	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(time.Now().UTC().AddDate(0, -1, 0))
+		endTime = timeutil.EndOfMonth(timeutil.StartOfPreviousMonth(time.Now().UTC()))
 	} else {
 		endTime = endTime.UTC()
 	}
