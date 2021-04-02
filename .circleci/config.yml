@@ -685,7 +685,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.10
+    - GO_VERSION: 1.16.2
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -783,7 +783,7 @@ jobs:
         - .buildcache/packages/store
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.4-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
     resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -992,7 +992,7 @@ jobs:
         - .buildcache/packages/store
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.4-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1449,7 +1449,7 @@ jobs:
         - .buildcache/packages/store
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.4-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
     resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -2021,12 +2021,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.10
+    - GO_VERSION: 1.16.2
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.4-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
     resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
