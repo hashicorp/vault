@@ -16,7 +16,6 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'password_policy' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'write_concern', group: 'pluginConfig' },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },

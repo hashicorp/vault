@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, settled, click, visit, fillIn, findAll } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
@@ -29,10 +29,10 @@ const mount = async () => {
   return path;
 };
 
-const newConnection = async backend => {
+const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
   const name = `connection-${Date.now()}`;
   await connectionPage.visitCreate({ backend });
-  await connectionPage.dbPlugin('mongodb-database-plugin');
+  await connectionPage.dbPlugin(plugin);
   await connectionPage.name(name);
   await connectionPage.url(`mongodb://127.0.0.1:4321/${name}`);
   await connectionPage.toggleVerify();
@@ -40,6 +40,40 @@ const newConnection = async backend => {
   await connectionPage.enable();
   return name;
 };
+
+const connectionTests = [
+  {
+    name: 'mongodb-connection',
+    plugin: 'mongodb-database-plugin',
+    url: `mongodb://127.0.0.1:4321/test`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password').exists(`Password field exists for ${name}`);
+      assert.dom('[data-test-input="write_concern').exists(`Write concern field exists for ${name}`);
+      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+    },
+    showFields: async name => {},
+  },
+  {
+    name: 'mssql-connection',
+    plugin: 'mssql-database-plugin',
+    url: `mssql://127.0.0.1:4321/test`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+    },
+    showFields: async name => {},
+  },
+];
 
 module('Acceptance | secrets/database/*', function(hooks) {
   setupApplicationTest(hooks);
@@ -71,7 +105,51 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
   });
 
-  test('Connection create and edit form happy path works as expected', async function(assert) {
+  test('Connection create and edit form for each plugin', async function(assert) {
+    const backend = await mount();
+    for (let testCase of connectionTests) {
+      await connectionPage.visitCreate({ backend });
+      assert
+        .dom('[data-test-empty-state-title')
+        .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
+      await connectionPage.dbPlugin(testCase.plugin);
+      assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
+      await connectionPage.name(testCase.name);
+      await connectionPage.url(testCase.url);
+      testCase.requiredFields(assert, testCase.name);
+      await connectionPage.toggleVerify();
+      await connectionPage.save();
+      await connectionPage.enable();
+      assert
+        .dom('[data-test-modal-title]')
+        .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
+      await connectionPage.enable();
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/show/${testCase.name}`),
+        `Saves connection and takes you to show page for ${testCase.name}`
+      );
+      testCase.showFields(testCase.name);
+      await connectionPage.edit();
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/edit/${testCase.name}`),
+        `Edit connection button and takes you to edit page for ${testCase.name}`
+      );
+      assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
+      assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
+      assert.dom('[data-test-input="password"]').doesNotExist('Password is not available for edit');
+      assert.dom('[data-test-toggle-input="show-password"]').exists('Update password toggle exists');
+      await connectionPage.toggleVerify();
+      await connectionPage.save();
+      await connectionPage.addRole();
+      assert.equal(
+        currentURL(),
+        `/vault/secrets/${backend}/create?itemType=role`,
+        'Add role links to new role page'
+      );
+    }
+  });
+
+  skip('Connection create and edit form happy path works as expected', async function(assert) {
     const backend = await mount();
     const connectionDetails = {
       plugin: 'mongodb-database-plugin',
