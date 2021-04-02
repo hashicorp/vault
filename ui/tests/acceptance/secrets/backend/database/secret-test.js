@@ -107,6 +107,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     const backend = await mount();
     for (let testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });
+      assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
       assert
         .dom('[data-test-empty-state-title')
         .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
@@ -148,6 +149,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
         testCase.name,
         'Database connection is pre-selected on the form'
       );
+      await click('[data-test-secret-breadcrumb]');
     }
   });
 
