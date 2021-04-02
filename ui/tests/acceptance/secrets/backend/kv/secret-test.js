@@ -65,6 +65,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets
       .next()
       .path(enginePath)
+      .toggleOptions()
       .version(1)
       .submit();
     await listPage.create();
@@ -83,6 +84,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets
       .next()
       .path(enginePath)
+      .toggleOptions()
       .version(1)
       .submit();
     await listPage.create();
@@ -137,6 +139,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets
       .next()
       .path(enginePath)
+      .toggleOptions()
       .version(1)
       .submit();
     await listPage.create();
