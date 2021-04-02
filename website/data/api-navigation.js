@@ -38,7 +38,13 @@ export default [
       },
       'gcp',
       'gcpkms',
-      'key-management',
+      {
+        category: 'key-management',
+        content: [
+          'azurekeyvault',
+          'awskms',
+        ],
+      },
       'kmip',
       {
         category: 'kv',
@@ -61,6 +67,7 @@ export default [
       'pki',
       'rabbitmq',
       'ssh',
+      'terraform',
       'totp',
       'transform',
       'transit',
@@ -141,13 +148,14 @@ export default [
         content: ['replication-performance', 'replication-dr'],
       },
       'rotate',
+      'rotate-config',
       'seal',
       'seal-status',
       'sealwrap-rewrap',
       'step-down',
       {
         category: 'storage',
-        content: ['raft', 'raftautosnapshots'],
+        content: ['raft', 'raftautopilot', 'raftautosnapshots'],
       },
       'tools',
       'unseal',

@@ -8,7 +8,7 @@ parameters:
     default: "/tmp/testlogs"
   go_image:
     type: string
-    default: "circleci/golang:1.15.3-buster"
+    default: "circleci/golang:1.15.4-buster"
   use_docker:
     type: boolean
     default: false

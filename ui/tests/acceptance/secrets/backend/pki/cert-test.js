@@ -57,7 +57,7 @@ elRplAzrMF4=
     await generatePage.issueCert('foo');
     await settled();
     assert.ok(generatePage.hasCert, 'displays the cert');
-
+    await settled();
     await generatePage.back();
     await settled();
     assert.notOk(generatePage.commonNameValue, 'the form is cleared');

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/go-ldap/ldif"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
 
@@ -142,4 +144,122 @@ func shouldTryLastPwd(lastPwd string, lastBindPasswordRotation time.Time) bool {
 		return false
 	}
 	return lastBindPasswordRotation.Add(10 * time.Minute).After(time.Now())
+}
+
+func (c *Client) Add(cfg *Config, req *ldap.AddRequest) error {
+	if req == nil {
+		return fmt.Errorf("invalid request: request is nil")
+	}
+	if req.DN == "" {
+		return fmt.Errorf("invalid request: DN is empty")
+	}
+	conn, err := c.ldap.DialLDAP(cfg.ConfigEntry)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if err := bind(cfg, conn); err != nil {
+		return err
+	}
+
+	err = conn.Add(req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) Del(cfg *Config, req *ldap.DelRequest) error {
+	if req == nil {
+		return fmt.Errorf("invalid request: request is nil")
+	}
+	if req.DN == "" {
+		return fmt.Errorf("invalid request: DN is empty")
+	}
+	conn, err := c.ldap.DialLDAP(cfg.ConfigEntry)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if err := bind(cfg, conn); err != nil {
+		return err
+	}
+
+	return conn.Del(req)
+}
+
+func (c *Client) Execute(cfg *Config, entries []*ldif.Entry, continueOnFailure bool) (err error) {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	conn, err := c.ldap.DialLDAP(cfg.ConfigEntry)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if err := bind(cfg, conn); err != nil {
+		return err
+	}
+
+	merr := new(multierror.Error)
+	for _, entry := range entries {
+		if entry == nil {
+			// Skip entries that are nil since they don't indicate an error in execution. Since these entries
+			// are usually coming from an ldif parse, this should generally not happen so it's mainly to
+			// protect against developers from screwing up and creating a panic due to a nil reference
+			continue
+		}
+		var err error
+		switch {
+		case entry.Entry != nil:
+			addReq := coerceToAddRequest(entry.Entry)
+			err = errorf("failed to run AddRequest: %w", conn.Add(addReq))
+		case entry.Add != nil:
+			err = errorf("failed to run AddRequest: %w", conn.Add(entry.Add))
+		case entry.Modify != nil:
+			err = errorf("failed to run ModifyRequest: %w", conn.Modify(entry.Modify))
+		case entry.Del != nil:
+			err = errorf("failed to run DelRequest: %w", conn.Del(entry.Del))
+		default:
+			err = fmt.Errorf("unrecognized or missing LDIF command")
+		}
+
+		if err != nil {
+			if continueOnFailure {
+				merr = multierror.Append(merr, err)
+			} else {
+				return err
+			}
+		}
+	}
+	return merr.ErrorOrNil()
+}
+
+func coerceToAddRequest(entry *ldap.Entry) *ldap.AddRequest {
+	attributes := make([]ldap.Attribute, 0, len(entry.Attributes))
+	for _, entryAttribute := range entry.Attributes {
+		attribute := ldap.Attribute{
+			Type: entryAttribute.Name,
+			Vals: entryAttribute.Values,
+		}
+		attributes = append(attributes, attribute)
+	}
+	addReq := &ldap.AddRequest{
+		DN:         entry.DN,
+		Attributes: attributes,
+		Controls:   nil,
+	}
+	return addReq
+}
+
+func errorf(format string, wrappedErr error) error {
+	if wrappedErr == nil {
+		return nil
+	}
+
+	return fmt.Errorf(format, wrappedErr)
 }

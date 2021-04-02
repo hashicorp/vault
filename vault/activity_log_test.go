@@ -1770,8 +1770,8 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	month0 := time.Now().UTC()
 	segment0 := a.GetStartTimestamp()
-	month1 := month0.AddDate(0, 1, 0)
-	month2 := month0.AddDate(0, 2, 0)
+	month1 := timeutil.StartOfNextMonth(month0)
+	month2 := timeutil.StartOfNextMonth(month1)
 
 	// Trigger end-of-month
 	a.HandleEndOfMonth(month1)
@@ -1895,7 +1895,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _ := TestCoreUnsealed(t)
+	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -2137,8 +2137,84 @@ func TestActivityLog_Precompute(t *testing.T) {
 		for i := 0; i <= tc.ExpectedUpTo; i++ {
 			checkPrecomputedQuery(i)
 		}
-
 	}
+
+	// Check metrics on the last precomputed query
+	// (otherwise we need a way to reset the in-memory metrics between test cases.)
+
+	intervals := sink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+	expectedGauges := []struct {
+		Name           string
+		NamespaceLabel string
+		Value          float32
+	}{
+		// october values
+		{
+			"identity.entity.active.monthly",
+			"root",
+			15.0,
+		},
+		{
+			"identity.entity.active.monthly",
+			"deleted-bbbbb", // No namespace entry for this fake ID
+			5.0,
+		},
+		{
+			"identity.entity.active.monthly",
+			"deleted-ccccc",
+			5.0,
+		},
+		// august-september values
+		{
+			"identity.entity.active.reporting_period",
+			"root",
+			20.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-aaaaa",
+			5.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-bbbbb",
+			10.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-ccccc",
+			5.0,
+		},
+	}
+	for _, g := range expectedGauges {
+		found := false
+		for _, actual := range intervals[0].Gauges {
+			actualNamespaceLabel := ""
+			for _, l := range actual.Labels {
+				if l.Name == "namespace" {
+					actualNamespaceLabel = l.Value
+					break
+				}
+			}
+			if actual.Name == g.Name && actualNamespaceLabel == g.NamespaceLabel {
+				found = true
+				if actual.Value != g.Value {
+					t.Errorf("Mismatched value for %v %v %v != %v",
+						g.Name, g.NamespaceLabel, actual.Value, g.Value)
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("No guage found for %v %v",
+				g.Name, g.NamespaceLabel)
+		}
+	}
+
 }
 
 type BlockingInmemStorage struct {
@@ -2231,11 +2307,26 @@ func TestActivityLog_NextMonthStart(t *testing.T) {
 	}
 }
 
+// The retention worker is called on unseal; wait for it to finish before
+// proceeding with the test.
+func waitForRetentionWorkerToFinish(t *testing.T, a *ActivityLog) {
+	t.Helper()
+	timeout := time.After(30 * time.Second)
+	select {
+	case <-a.retentionDone:
+		return
+	case <-timeout:
+		t.Fatal("timeout waiting for retention worker to finish")
+	}
+
+}
+
 func TestActivityLog_Deletion(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
+	waitForRetentionWorkerToFinish(t, a)
 
 	times := []time.Time{
 		time.Date(2019, 1, 15, 1, 2, 3, 0, time.UTC), // 0
@@ -2343,4 +2434,57 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 	checkPresent(21)
 
+}
+
+func TestActivityLog_partialMonthClientCount(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	// entities[0] is from a previous month
+	partialMonthEntityCount := len(entities[1:])
+	var partialMonthTokenCount int
+	for _, countByNS := range tokenCounts {
+		partialMonthTokenCount += int(countByNS)
+	}
+
+	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
+
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	entityCount, ok := results["distinct_entities"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if entityCount != partialMonthEntityCount {
+		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	}
+
+	tokenCount, ok := results["non_entity_tokens"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if tokenCount != partialMonthTokenCount {
+		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
+	}
+	clientCount, ok := results["clients"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if clientCount != expectedClientCount {
+		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	}
 }

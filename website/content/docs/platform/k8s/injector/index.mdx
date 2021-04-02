@@ -50,15 +50,15 @@ useful to customize Vault Agent beyond what the provided annotations offer.
 ### Authenticating with Vault
 
 The primary method of authentication with Vault when using the Vault Agent Injector
-is the service account attached to the pod. At this time, no other authentication
-method is supported by the controller.
+is the service account attached to the pod. Other authentication methods can be configured 
+using annotations.
 
-The service account must be bound to a Vault role and a policy granting access to
-the secrets desired.
+For Kubernetes authentication, the service account must be bound to a Vault role and a 
+policy granting access to the secrets desired.
 
-A service account must be present to use the Vault Agent Injector. It is _not_
-recommended to bind Vault roles to the default service account provided to pods
-if no service account is defined.
+A service account must be present to use the Vault Agent Injector with the Kubernetes 
+authentication method. It is _not_ recommended to bind Vault roles to the default service 
+account provided to pods if no service account is defined.
 
 ### Requesting Secrets
 

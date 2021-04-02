@@ -59,7 +59,7 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo: "influxdb",
-		ImageTag:  "alpine",
+		ImageTag:  "1.8-alpine",
 		Env: []string{
 			"INFLUXDB_DB=vault",
 			"INFLUXDB_ADMIN_USER=" + c.Username,

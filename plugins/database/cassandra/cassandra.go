@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/helper/template"
+
 	"github.com/gocql/gocql"
 	multierror "github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
@@ -18,6 +19,8 @@ const (
 	defaultUserDeletionCQL   = `DROP USER '{{username}}';`
 	defaultChangePasswordCQL = `ALTER USER {{username}} WITH PASSWORD '{{password}}';`
 	cassandraTypeName        = "cassandra"
+
+	defaultUserNameTemplate = `{{ printf "v_%s_%s_%s_%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 | replace "-" "_" | lowercase }}`
 )
 
 var _ dbplugin.Database = &Cassandra{}
@@ -25,6 +28,8 @@ var _ dbplugin.Database = &Cassandra{}
 // Cassandra is an implementation of Database interface
 type Cassandra struct {
 	*cassandraConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 // New returns a new Cassandra instance
@@ -58,6 +63,37 @@ func (c *Cassandra) getConnection(ctx context.Context) (*gocql.Session, error) {
 	return session.(*gocql.Session), nil
 }
 
+func (c *Cassandra) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	c.usernameProducer = up
+
+	_, err = c.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	err = c.cassandraConnectionProducer.Initialize(ctx, req)
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to initialize: %w", err)
+	}
+
+	resp := dbplugin.InitializeResponse{
+		Config: req.Config,
+	}
+	return resp, nil
+}
+
 // NewUser generates the username/password on the underlying Cassandra secret backend as instructed by
 // the statements provided.
 func (c *Cassandra) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
@@ -79,17 +115,10 @@ func (c *Cassandra) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (d
 		rollbackCQL = []string{defaultUserDeletionCQL}
 	}
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 15),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
-		credsutil.Separator("_"),
-		credsutil.MaxLength(100),
-		credsutil.ToLower(),
-	)
+	username, err := c.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
-	username = strings.ReplaceAll(username, "-", "_")
 
 	for _, stmt := range creationCQL {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {

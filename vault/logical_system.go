@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -150,6 +151,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
@@ -183,6 +185,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	// operation token.
 	if core.IsDRSecondary() {
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -2512,52 +2515,92 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 		Data: map[string]interface{}{
 			"term":         info.Term,
 			"install_time": info.InstallTime.Format(time.RFC3339Nano),
+			"encryptions":  info.Encryptions,
 		},
 	}
 	return resp, nil
 }
 
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"max_operations": rotConfig.MaxOperations,
+			"enabled":        !rotConfig.Disabled,
+		},
+	}
+	if rotConfig.Interval > 0 {
+		resp.Data["interval"] = rotConfig.Interval.String()
+	} else {
+		resp.Data["interval"] = 0
+	}
+	return resp, nil
+}
+
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+	maxOps, ok, err := data.GetOkErr("max_operations")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.MaxOperations = int64(maxOps.(int))
+	}
+	interval, ok, err := data.GetOkErr("interval")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.Interval = time.Second * time.Duration(interval.(int))
+	}
+
+	enabled, ok, err := data.GetOkErr("enabled")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.Disabled = !enabled.(bool)
+	}
+
+	// Reject out of range settings
+	if rotConfig.Interval < minimumRotationInterval {
+		return logical.ErrorResponse("interval must be greater or equal to %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
+	}
+
+	if rotConfig.MaxOperations < absoluteOperationMinimum || rotConfig.MaxOperations > absoluteOperationMaximum {
+		return logical.ErrorResponse("max_operations must be in the range [%d,%d]", absoluteOperationMinimum, absoluteOperationMaximum), logical.ErrInvalidRequest
+	}
+
+	// Store the rotation config
+	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // handleRotate is used to trigger a key rotation
-func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRotate(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
 
-	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
-	if err != nil {
-		b.Backend.Logger().Error("failed to create new encryption key", "error", err)
+	if err := b.rotateBarrierKey(ctx); err != nil {
+		b.Backend.Logger().Error("error handling key rotation", "error", err)
 		return handleError(err)
 	}
-	b.Backend.Logger().Info("installed new encryption key")
-
-	// In HA mode, we need to an upgrade path for the standby instances
-	if b.Core.ha != nil {
-		// Create the upgrade path to the new term
-		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
-			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
-		}
-
-		// Schedule the destroy of the upgrade path
-		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
-			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
-			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
-				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
-			}
-		})
-	}
-
-	// Write to the canary path, which will force a synchronous truing during
-	// replication
-	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   coreKeyringCanaryPath,
-		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
-	}); err != nil {
-		b.Core.logger.Error("error saving keyring canary", "error", err)
-		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
-	}
-
 	return nil, nil
 }
 
@@ -3145,14 +3188,14 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	}
 
 	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
+		return logical.ErrorResponse(`"bytes" should be less than %d`, maxBytes), nil
 	}
 
 	switch format {
 	case "hex":
 	case "base64":
 	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
 	}
 
 	randBytes, err := uuid.GenerateRandomBytes(bytes)
@@ -3660,6 +3703,213 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	return resp, nil
 }
 
+type SealStatusResponse struct {
+	Type         string `json:"type"`
+	Initialized  bool   `json:"initialized"`
+	Sealed       bool   `json:"sealed"`
+	T            int    `json:"t"`
+	N            int    `json:"n"`
+	Progress     int    `json:"progress"`
+	Nonce        string `json:"nonce"`
+	Version      string `json:"version"`
+	Migration    bool   `json:"migration"`
+	ClusterName  string `json:"cluster_name,omitempty"`
+	ClusterID    string `json:"cluster_id,omitempty"`
+	RecoverySeal bool   `json:"recovery_seal"`
+	StorageType  string `json:"storage_type,omitempty"`
+}
+
+func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+	sealed := core.Sealed()
+
+	initialized, err := core.Initialized(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var sealConfig *SealConfig
+	if core.SealAccess().RecoveryKeySupported() {
+		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
+	} else {
+		sealConfig, err = core.SealAccess().BarrierConfig(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if sealConfig == nil {
+		return &SealStatusResponse{
+			Type:         core.SealAccess().BarrierType(),
+			Initialized:  initialized,
+			Sealed:       true,
+			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+			StorageType:  core.StorageType(),
+			Version:      version.GetVersion().VersionNumber(),
+		}, nil
+	}
+
+	// Fetch the local cluster name and identifier
+	var clusterName, clusterID string
+	if !sealed {
+		cluster, err := core.Cluster(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if cluster == nil {
+			return nil, fmt.Errorf("failed to fetch cluster details")
+		}
+		clusterName = cluster.Name
+		clusterID = cluster.ID
+	}
+
+	progress, nonce := core.SecretProgress()
+
+	return &SealStatusResponse{
+		Type:         sealConfig.Type,
+		Initialized:  initialized,
+		Sealed:       sealed,
+		T:            sealConfig.SecretThreshold,
+		N:            sealConfig.SecretShares,
+		Progress:     progress,
+		Nonce:        nonce,
+		Version:      version.GetVersion().VersionNumber(),
+		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
+		ClusterName:  clusterName,
+		ClusterID:    clusterID,
+		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+		StorageType:  core.StorageType(),
+	}, nil
+}
+
+type LeaderResponse struct {
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
+	LeaderAddress            string    `json:"leader_address"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address"`
+	PerfStandby              bool      `json:"performance_standby"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64    `json:"last_wal,omitempty"`
+
+	// Raft Indexes for this node
+	RaftCommittedIndex uint64 `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
+}
+
+func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+	haEnabled := true
+	isLeader, address, clusterAddr, err := core.Leader()
+	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
+		haEnabled = false
+		err = nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &LeaderResponse{
+		HAEnabled:            haEnabled,
+		IsSelf:               isLeader,
+		LeaderAddress:        address,
+		LeaderClusterAddress: clusterAddr,
+		PerfStandby:          core.PerfStandby(),
+	}
+	if isLeader {
+		resp.ActiveTime = core.ActiveTime()
+	}
+	if resp.PerfStandby {
+		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+	} else if isLeader || !haEnabled {
+		resp.LastWAL = LastWAL(core)
+	}
+
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	return resp, nil
+}
+
+func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	status, err := b.Core.GetSealStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buf, err := json.Marshal(status)
+	if err != nil {
+		return nil, err
+	}
+	httpResp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+	return httpResp, nil
+}
+
+func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	status, err := b.Core.GetLeaderStatus()
+	if err != nil {
+		return nil, err
+	}
+	buf, err := json.Marshal(status)
+	if err != nil {
+		return nil, err
+	}
+	httpResp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+	return httpResp, nil
+}
+
+func (b *SystemBackend) verifyDROperationTokenOnSecondary(f framework.OperationFunc, lock bool) framework.OperationFunc {
+	if b.Core.IsDRSecondary() {
+		return b.verifyDROperationToken(f, lock)
+	}
+	return f
+}
+
+func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
+	// Rotate to the new term
+	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to create new encryption key"), err)
+	}
+	b.Backend.Logger().Info("installed new encryption key")
+
+	// In HA mode, we need to an upgrade path for the standby instances
+	if b.Core.ha != nil && b.Core.KeyRotateGracePeriod() > 0 {
+		// Create the upgrade path to the new term
+		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
+			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
+		}
+
+		// Schedule the destroy of the upgrade path
+		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
+			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
+				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
+			}
+		})
+	}
+
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
+	}); err != nil {
+		b.Core.logger.Error("error saving keyring canary", "error", err)
+		return errwrap.Wrap(errors.New("failed to save keyring canary"), err)
+	}
+
+	return nil
+
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4157,6 +4407,25 @@ Enable a new audit backend or disable an existing backend.
 		`,
 	},
 
+	"rotate-config": {
+		"Configures settings related to the backend encryption key management.",
+		`
+		Configures settings related to the automatic rotation of the backend encryption key.
+		`,
+	},
+
+	"rotation-enabled": {
+		"Whether automatic rotation is enabled.",
+		"",
+	},
+	"rotation-max-operations": {
+		"The number of encryption operations performed before the barrier key is automatically rotated.",
+		"",
+	},
+	"rotation-interval": {
+		"How long after installation of an active key term that the key will be automatically rotated.",
+		"",
+	},
 	"rotate": {
 		"Rotates the backend encryption key used to persist data.",
 		`
@@ -4396,6 +4665,10 @@ This path responds to the following HTTP methods.
 	"activity-query": {
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
+	},
+	"activity-monthly": {
+		"Count of active clients so far this month.",
+		"Count of active clients so far this month.",
 	},
 	"activity-config": {
 		"Control the collection and reporting of client counts.",

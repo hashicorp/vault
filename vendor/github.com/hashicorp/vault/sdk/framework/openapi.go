@@ -257,6 +257,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			location := "path"
 			required := true
 
+			if field == nil {
+				continue
+			}
+
 			if field.Query {
 				location = "query"
 				required = false
@@ -575,6 +579,9 @@ func convertType(t FieldType) schemaType {
 	case TypeTime:
 		ret.baseType = "string"
 		ret.format = "date-time"
+	case TypeFloat:
+		ret.baseType = "number"
+		ret.format = "float"
 	default:
 		log.L().Warn("error parsing field type", "type", t)
 		ret.format = "unknown"

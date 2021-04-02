@@ -85,6 +85,57 @@ func Generate(instanceID, orgID, spaceID, appID, ipAddress string) (*TestCertifi
 	}, nil
 }
 
+func GenerateMTLS() (*TestMTLSCertificates, error) {
+	// Keep a note of all the paths we're generating,
+	// so we can clean them up properly
+	var paths []string
+
+	// Generate a certificate authority
+	caCert, caPrivateKey, err := generateCA("", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	pathToCaCert, err := makePathTo(caCert)
+	if err != nil {
+		return nil, err
+	}
+	paths = append(paths, pathToCaCert)
+
+	// Generate a certificate signed by the CA
+	mtlsCert, mtlsKey, err := generateSignedCert(caCert, caPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pathToMtlsCert, err := makePathTo(mtlsCert)
+	if err != nil {
+		return nil, err
+	}
+	paths = append(paths, pathToMtlsCert)
+
+	out := &bytes.Buffer{}
+	pem.Encode(out, pemBlockForKey(mtlsKey))
+	mtlsKeyString := out.String()
+	pathToMtlsKey, err := makePathTo(mtlsKeyString)
+	if err != nil {
+		return nil, err
+	}
+	paths = append(paths, pathToMtlsKey)
+
+	return &TestMTLSCertificates{
+		SigningCA:         caCert,
+		PathToSigningCA:   pathToCaCert,
+		Certificate:       mtlsCert,
+		PathToCertificate: pathToMtlsCert,
+		PrivateKey:        mtlsKeyString,
+		PathToPrivateKey:  pathToMtlsKey,
+		cleanup: func() error {
+			return cleanup(paths)
+		},
+	}, nil
+}
+
 type TestCertificates struct {
 	CACertificate       string
 	InstanceCertificate string
@@ -101,7 +152,26 @@ type TestCertificates struct {
 	cleanup func() error
 }
 
+type TestMTLSCertificates struct {
+	SigningCA         string
+	PathToSigningCA   string
+	Certificate       string
+	PathToCertificate string
+	PrivateKey        string
+	PathToPrivateKey  string
+
+	// cleanup contains a function that has a path to all the temporary files we made,
+	// and deletes them. They're all in the /tmp folder so they'll disappear on the next
+	// system restart anyways, but in case of repeated tests, it's best to leave nothing
+	// behind if possible.
+	cleanup func() error
+}
+
 func (e *TestCertificates) Close() error {
+	return e.cleanup()
+}
+
+func (e *TestMTLSCertificates) Close() error {
 	return e.cleanup()
 }
 
@@ -225,6 +295,52 @@ func generateIdentity(caCert string, caPriv *rsa.PrivateKey, instanceID, orgID, 
 	}
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, ca509cert, publicKey(priv), caPriv)
+	if err != nil {
+		return "", nil, err
+	}
+
+	out := &bytes.Buffer{}
+	pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	cert := out.String()
+	return cert, priv, nil
+}
+
+func generateSignedCert(caCert string, caPrivateKey *rsa.PrivateKey) (string, *rsa.PrivateKey, error) {
+	block, certBytes := pem.Decode([]byte(caCert))
+	if block == nil {
+		return "", nil, errors.New("block shouldn't be nil")
+	}
+	if len(certBytes) > 0 {
+		return "", nil, errors.New("there shouldn't be more bytes")
+	}
+	ca509cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return "", nil, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Country:            []string{"US"},
+			Province:           []string{"CA"},
+			Organization:       []string{"Hashicorp"},
+			OrganizationalUnit: []string{},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour * 24 * 365 * 100),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
+		DNSNames:              []string{"vault"},
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", nil, err
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, ca509cert, publicKey(priv), caPrivateKey)
 	if err != nil {
 		return "", nil, err
 	}

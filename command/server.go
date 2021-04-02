@@ -100,6 +100,8 @@ type ServerCommand struct {
 	startedCh       chan (struct{}) // for tests
 	reloadedCh      chan (struct{}) // for tests
 
+	allLoggers []log.Logger
+
 	// new stuff
 	flagConfigs            []string
 	flagLogLevel           string
@@ -126,6 +128,7 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
+	flagDiagnose           string
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -209,6 +212,19 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		f.StringVar(&StringVar{
+			Name:    "diagnose",
+			Target:  &c.flagDiagnose,
+			Default: notSetValue,
+			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
+		})
+	} else {
+		// Ensure diagnose is *not* run when feature flag is off.
+		c.flagDiagnose = notSetValue
+	}
 
 	f = set.NewFlagSet("Dev Options")
 
@@ -812,6 +828,49 @@ func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ..
 	q.t.Reset(100 * time.Millisecond)
 }
 
+func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, error) {
+	// Ensure that a backend is provided
+	if config.Storage == nil {
+		return nil, fmt.Errorf("A storage backend must be specified")
+	}
+
+	// Initialize the backend
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		return nil, fmt.Errorf("Unknown storage type %s", config.Storage.Type)
+	}
+
+	// Do any custom configuration needed per backend
+	switch config.Storage.Type {
+	case storageTypeConsul:
+		if config.ServiceRegistration == nil {
+			// If Consul is configured for storage and service registration is unconfigured,
+			// use Consul for service registration without requiring additional configuration.
+			// This maintains backward-compatibility.
+			config.ServiceRegistration = &server.ServiceRegistration{
+				Type:   "consul",
+				Config: config.Storage.Config,
+			}
+		}
+	case storageTypeRaft:
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+		if len(config.ClusterAddr) == 0 {
+			return nil, fmt.Errorf("Cluster address must be set when using raft storage")
+		}
+	}
+
+	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	c.allLoggers = append(c.allLoggers, namedStorageLogger)
+	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	if err != nil {
+		return nil, fmt.Errorf("Error initializing storage of type %s: %w", config.Storage.Type, err)
+	}
+
+	return backend, nil
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -843,6 +902,21 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if c.flagDiagnose != notSetValue {
+		if c.flagDev {
+			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
+			return 1
+		}
+		// TODO: add a file output flag to Diagnose
+		diagnose := &OperatorDiagnoseCommand{
+			BaseCommand: c.BaseCommand,
+			flagDebug:   false,
+			flagSkips:   []string{},
+			flagConfigs: c.flagConfigs,
+		}
+		diagnose.RunWithParsedFlags()
+	}
+
 	// Load the configuration
 	var config *server.Config
 	var err error
@@ -868,6 +942,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
 		}
+		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
 	parsedConfig, err := c.parseConfig()
@@ -918,7 +993,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
 
-	allLoggers := []log.Logger{c.logger}
+	c.allLoggers = []log.Logger{c.logger}
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -931,7 +1006,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
-	allLoggers = append(allLoggers, namedGRPCLogFaker)
+	c.allLoggers = append(c.allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
 		logger: namedGRPCLogFaker,
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
@@ -939,12 +1014,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if memProfilerEnabled {
 		c.startMemProfiler()
-	}
-
-	// Ensure that a backend is provided
-	if config.Storage == nil {
-		c.UI.Output("A storage backend must be specified")
-		return 1
 	}
 
 	if config.DefaultMaxRequestDuration != 0 {
@@ -988,44 +1057,15 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
-	// Initialize the backend
-	factory, exists := c.PhysicalBackends[config.Storage.Type]
-	if !exists {
-		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
-		return 1
-	}
-
-	// Do any custom configuration needed per backend
-	switch config.Storage.Type {
-	case storageTypeConsul:
-		if config.ServiceRegistration == nil {
-			// If Consul is configured for storage and service registration is unconfigured,
-			// use Consul for service registration without requiring additional configuration.
-			// This maintains backward-compatibility.
-			config.ServiceRegistration = &server.ServiceRegistration{
-				Type:   "consul",
-				Config: config.Storage.Config,
-			}
-		}
-	case storageTypeRaft:
-		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
-		}
-		if len(config.ClusterAddr) == 0 {
-			c.UI.Error("Cluster address must be set when using raft storage")
-			return 1
-		}
-	}
-
-	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
-	allLoggers = append(allLoggers, namedStorageLogger)
-	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	// Initialize the storage backend
+	backend, err := c.setupStorage(config)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
+		c.UI.Error(err.Error())
 		return 1
 	}
 
 	// Prevent server startup if migration is active
+	// TODO: how to incorporate this check into Diagnose?
 	if c.storageMigrationActive(backend) {
 		return 1
 	}
@@ -1040,7 +1080,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
-		allLoggers = append(allLoggers, namedSDLogger)
+		c.allLoggers = append(c.allLoggers, namedSDLogger)
 
 		// Since we haven't even begun starting Vault's core yet,
 		// we know that Vault is in its pre-running state.
@@ -1094,7 +1134,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 			var seal vault.Seal
 			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-			allLoggers = append(allLoggers, sealLogger)
+			c.allLoggers = append(c.allLoggers, sealLogger)
 			defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("shamir"),
@@ -1180,7 +1220,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableSealWrap:           config.DisableSealWrap,
 		DisablePerformanceStandby: config.DisablePerformanceStandby,
 		DisableIndexing:           config.DisableIndexing,
-		AllLoggers:                allLoggers,
+		AllLoggers:                c.allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
@@ -1237,7 +1277,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
-		allLoggers = append(allLoggers, namedHALogger)
+		c.allLoggers = append(c.allLoggers, namedHALogger)
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(

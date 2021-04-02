@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
@@ -209,15 +210,18 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-
 			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
+			// Re-inserting the already indexed object in memdb might cause problems.
+			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
+			rlq = rlq.Clone()
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
+			quota = rlq
 		}
 
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)

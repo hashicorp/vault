@@ -14,6 +14,14 @@ SECURITY:
 {{ end -}}
 {{- end -}}
 
+{{- if .NotesByType.change }}
+CHANGES:
+
+{{range .NotesByType.change -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
 {{- if .NotesByType.feature -}}
 FEATURES:
 

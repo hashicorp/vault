@@ -21,7 +21,7 @@ import layout from '../templates/components/form-field-groups';
  * />
  * ```
  *
- * @param [renderGroup=null] {String} - A whitelist of groups to include in the render.
+ * @param [renderGroup=null] {String} - An allow list of groups to include in the render.
  * @param model=null {DS.Model} - Model to be passed down to form-field component. If `fieldGroups` is present on the model then it will be iterated over and groups of `FormField` components will be rendered.
  * @param onChange=null {Func} - Handler that will get set on the `FormField` component.
  *

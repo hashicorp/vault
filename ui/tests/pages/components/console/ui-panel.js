@@ -13,7 +13,8 @@ export default {
   }),
   lastLogOutput: getter(function() {
     let count = this.logOutputItems.length;
-    return this.logOutputItems.objectAt(count - 1).text;
+    let outputItemText = this.logOutputItems.objectAt(count - 1).text;
+    return outputItemText;
   }),
   logTextItems: collection('[data-test-component="console/log-text"]', {
     text: text(),

@@ -4,7 +4,7 @@ page_title: Vault Agent Template
 sidebar_title: Templates
 description: >-
   Vault Agent's Template functionality allows Vault secrets to be rendered to
-  files 
+  files
 
   using Consul Template markup.
 ---
@@ -30,43 +30,42 @@ rendered locally.
 
 The top level `template` block has multiple configurations entries:
 
-- `source` `(object: optional)` - Path on disk to use as the input template. This
+- `source` `(string: "")` - Path on disk to use as the input template. This
   option is required if not using the `contents` option.
-- `destination` `(object: required)` - Path on disk where the rendered secrets should
+- `destination` `(string: required)` - Path on disk where the rendered secrets should
   be created. If the parent directories If the parent directories do not exist, Vault
   Agent will attempt to create them, unless `create_dest_dirs` is false.
-- `create_dest_dirs` `(object: required)` - This option tells Vault Agent to create
-  the parent directories of the destination path if they do not exist. The default
-  value is true.
-- `contents` `(object: optional)` - This option allows embedding the contents of
+- `create_dest_dirs` `(bool: true)` - This option tells Vault Agent to create
+  the parent directories of the destination path if they do not exist.
+- `contents` `(string: "")` - This option allows embedding the contents of
   a template in the configuration file rather then supplying the `source` path to
   the template file. This is useful for short templates. This option is mutually
   exclusive with the `source` option.
-- `command` `(object: optional)` - This is the optional command to run when the
+- `command` `(string: "")` - This is the optional command to run when the
   template is rendered. The command will only run if the resulting template changes.
   The command must return within 30s (configurable), and it must have a successful
   exit code. Vault Agent is not a replacement for a process monitor or init system.
-- `command_timeout` `(object: optional)` - This is the maximum amount of time to
-  wait for the optional command to return. Default is 30s.
-- `error_on_missing_key` `(object: optional)` - Exit with an error when accessing
+- `command_timeout` `(duration: 30s)` - This is the maximum amount of time to
+  wait for the optional command to return.
+- `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
   to "true".
-- `perms` `(object: optional)` - This is the permission to render the file. If
+- `perms` `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
   path, the permissions are 0644.
-- `backup` `(object: optional)` - This option backs up the previously rendered template
+- `backup` `(bool: true)` - This option backs up the previously rendered template
   at the destination path before writing a new one. It keeps exactly one backup.
   This option is useful for preventing accidental changes to the data without having
   a rollback strategy.
-- `left_delimiter` `(object: optional)` - Delimiter to use in the template. The
+- `left_delimiter` `(string: "{{")` - Delimiter to use in the template. The
   default is "{{" but for some templates, it may be easier to use a different
   delimiter that does not conflict with the output file itself.
-- `right_delimiter` `(object: optional)` - Delimiter to use in the template. The
+- `right_delimiter` `(string: "}}")` - Delimiter to use in the template. The
   default is "}}" but for some templates, it may be easier to use a different
   delimiter that does not conflict with the output file itself.
-- `sandbox_path` `(object: optional)` - If a sandbox path is provided, any path
+- `sandbox_path` `(string: "")` - If a sandbox path is provided, any path
   provided to the `file` function is checked that it falls within the sandbox path.
   Relative paths that try to traverse outside the sandbox path will exit with an error.
 - `wait` `(object: required)` - This is the `minimum(:maximum)` to wait before rendering
@@ -99,7 +98,7 @@ vault {
 
 auto_auth {
   method {
-    type      = "approle"
+    type = "approle"
 
     config = {
       role_id_file_path = "/etc/vault/roleid"
@@ -135,7 +134,7 @@ high level overview of different behaviors.
 
 ### Renewable Secrets
 
-If a secret or token is renewable, Vault Agent will renew the secret after 2/3 
+If a secret or token is renewable, Vault Agent will renew the secret after 2/3
 of the secret's lease duration has elapsed.
 
 ### Non-Renewable Secrets
