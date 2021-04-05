@@ -20,7 +20,7 @@ python:
   working_directory: /go/src/github.com/hashicorp/vault
 alpine:
   docker:
-    - image: docker.mirror.hashicorp.services/alpine:3.10.2
+    - image: docker.mirror.hashicorp.services/alpine:3.13
   shell: /bin/sh
   working_directory: /go/src/github.com/hashicorp/vault
 docker-env-go-test-remote-docker:

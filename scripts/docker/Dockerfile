@@ -16,7 +16,7 @@ RUN make bootstrap \
 
 # Docker Image
 
-FROM alpine:3.10
+FROM alpine:3.13
 
 # Create a vault user and group first so the IDs get set the same way,
 # even as the rest of this may change over time.
