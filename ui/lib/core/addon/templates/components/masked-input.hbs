@@ -1,22 +1,21 @@
-<div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
+<div class="masked-input {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
-    <pre class="masked-value display-only is-word-break">{{displayValue}}</pre>
+    <pre class="masked-value display-only is-word-break">{{value}}</pre>
   {{else if maskWhileTyping}}
     <input
       autocomplete="off"
       spellcheck="false"
-      {{!-- ARG TODO LDAP bindpass is where you did this, confirm this works --}}
-      {{!-- type={{if isMasked "password" "text"}} --}}
       value={{value}}
       onchange={{action "updateValue"}}
-      class="input masked-font"
+      class="input {{unless showValue "masked-font"}}"
       data-test-input
     />
   {{else}}
+  {{!-- ARG todo for text area as well --}}
     <textarea class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
       onfocus={{action (mut isFocused) true}} onblur={{action (mut isFocused) false}} onkeydown={{action onKeyDown}}
-      onchange={{action "updateValue"}} value={{readonly displayValue}} data-test-textarea />
+      onchange={{action "updateValue"}} value={{readonly value}} data-test-textarea />
   {{/if}}
   {{#if allowCopy}}
     <CopyButton
@@ -31,6 +30,6 @@
     type="button"
     class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}"
     data-test-button>
-    <Icon @glyph={{if shouldObscure "visibility-hide" "visibility-show"}} aria-hidden="true" />
+    <Icon @glyph={{if showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
   </button>
 </div>
