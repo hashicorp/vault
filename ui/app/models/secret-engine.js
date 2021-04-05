@@ -60,8 +60,17 @@ export default Model.extend({
   formFieldGroups: computed('engineType', function() {
     let type = this.engineType;
     let defaultGroup = { default: ['path'] };
+    let optionsGroup = {
+      'Method Options': [
+        'description',
+        'config.listingVisibility',
+        'local',
+        'sealWrap',
+        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ],
+    };
     if (type === 'kv' || type === 'generic') {
-      defaultGroup.default.push('options.{version}');
+      optionsGroup['Method Options'].unshift('options.{version}');
     }
     if (type === 'database') {
       // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
@@ -79,18 +88,7 @@ export default Model.extend({
         },
       ];
     }
-    return [
-      defaultGroup,
-      {
-        'Method Options': [
-          'description',
-          'config.listingVisibility',
-          'local',
-          'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-        ],
-      },
-    ];
+    return [defaultGroup, optionsGroup];
   }),
 
   attrs: computed('formFields', function() {
