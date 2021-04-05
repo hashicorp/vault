@@ -7,10 +7,10 @@ description: Kubernetes Persistent Cache for Vault Agent Caching
 
 # Vault Agent Kubernetes Persistent Cache
 
-The `kubernetes` persistent cache configures Vault Agent persistent caching specifically for 
-Kubernetes environments. This type of persistent cache requires a Kubernetes service account 
-token. The service account token is used during encryption and decryption of the persistent cache 
-as an additional integrity check.
+When `kubernetes` is configured for the persistent cache type, Vault Agent will optimize the 
+persistent cache specifically for Kubernetes. This type of persistent cache requires a Kubernetes 
+service account token. The service account token is used during encryption and decryption of the 
+persistent cache as an additional integrity check.
 
 The Vault Agent persistent cache file in Kubernetes should only be used for handing off Vault tokens 
 and leases between initialization and sidecar Vault Agent containers. This cache file should be shared 
