@@ -6,10 +6,11 @@
     <input
       autocomplete="off"
       spellcheck="false"
-      type={{if isMasked "password" "text"}}
+      {{!-- ARG TODO LDAP bindpass is where you did this, confirm this works --}}
+      {{!-- type={{if isMasked "password" "text"}} --}}
       value={{value}}
       onchange={{action "updateValue"}}
-      class="input"
+      class="input masked-font"
       data-test-input
     />
   {{else}}
@@ -19,10 +20,10 @@
   {{/if}}
   {{#if allowCopy}}
     <CopyButton
-    @clipboardText={{value}}
-    @success={{action (set-flash-message 'Data copied!')}}
-    class="copy-button button {{if displayOnly "is-compact"}}"
-      data-test-copy-button>
+      @clipboardText={{value}}
+      @success={{action (set-flash-message 'Data copied!')}}
+      class="copy-button button {{if displayOnly "is-compact"}}"
+        data-test-copy-button>
       <Icon @glyph="copy-action" aria-hidden="Copy value" />
     </CopyButton>
   {{/if}}
