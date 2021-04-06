@@ -18,7 +18,7 @@
     "@hashicorp/react-inline-svg": "5.0.0",
     "@hashicorp/react-logo-grid": "3.0.1",
     "@hashicorp/react-markdown-page": "0.1.0",
-    "@hashicorp/react-product-downloader": "4.0.2",
+    "@hashicorp/react-product-downloader": "7.0.4",
     "@hashicorp/react-section-header": "3.0.1",
     "@hashicorp/react-subnav": "7.1.0",
     "@hashicorp/react-text-splits": "1.0.5",
