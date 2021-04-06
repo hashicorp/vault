@@ -36,6 +36,7 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
   return {
     props: await generateStaticProps({
+      mainBranch: 'master',
       navDataFile: NAV_DATA_FILE,
       localContentDir: CONTENT_DIR,
       product: { name: productName, slug: productSlug },
