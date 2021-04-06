@@ -2614,16 +2614,6 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
-// SanitizedConfig returns a sanitized version of the current config.
-// See server.Config.Sanitized for specific values omitted.
-func (c *Core) SanitizedConfig() map[string]interface{} {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return nil
-	}
-	return conf.(*server.Config).Sanitized()
-}
-
 // LogFormat returns the log format current in use.
 func (c *Core) LogFormat() string {
 	conf := c.rawConfig.Load()
