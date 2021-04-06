@@ -1,4 +1,4 @@
----
+--
 layout: docs
 page_title: Integrated Storage
 sidebar_title: Integrated Storage
@@ -205,7 +205,7 @@ to the active node, or when Raft is in use, to handle leader election and
 replication of stored data.
 
 The cluster port is secured using a TLS certificate that the Vault active node
-generates at startup.  It's clear how this can work when not using integrated
+generates internally.  It's clear how this can work when not using integrated
 storage: every node has at least read access to storage, so once the active
 node has persisted the certificate, the standby nodes can fetch it, and all
 agree on how cluster traffic should be encrypted.
@@ -232,9 +232,9 @@ All subsequent inter-node communication will use the cluster port.
 
 ### Assisted raft join techniques
 
-The simplest but least desirable solution is to do it by hand: issue raft join
-commands specifying the explicit names or IPs of the nodes to join to.  In this
-section we look at other TLS-compatible options that lend themselves more to automation.
+The simplest option is to do it by hand: issue raft join commands specifying the
+explicit names or IPs of the nodes to join to.  In this section we look at other
+TLS-compatible options that lend themselves more to automation.
 
 #### Autojoin with TLS servername
 
@@ -255,15 +255,6 @@ The drawback here is that the cluster may someday outgrow the CIDR and changing
 it may be a pain.  For similar reasons this solution may be impractical when
 using non-voting nodes and dynamically scaling clusters.
 
-#### Autojoin using a second TCP listener
-
-Modify the Vault HCL to specify a second listener on another port that's used
-solely for auto-join.  This second listener could use disable_tls in conjunction
-with a network ACL or security group that limits access to the Vault nodes.
-
-This technique was recommended at one point but is inferior to the others listed
-here in that it provides a new attack vector.
-
 #### Load balancer instead of autojoin
 
 Most Vault instances are going to have a load balancer (LB) between clients and
@@ -274,22 +265,6 @@ with the LB address as the target.
 One potential issue here: some users want a public facing LB for clients to
 connect to Vault, but aren't comfortable with Vault internal traffic
 egressing from the internal network it normally runs on.
-
-#### DNS instead of autojoin
-
-One proposal for making autojoin work in AWS is to have Vault reverse resolve
-the IP addresses coming from go-discover and join to the resulting hostname
-instead.  However, if the user is willing and able to configure DNS for each
-Vault node (or is using Consul service registration), we can use DNS instead
-of autojoin, as with the LB case.  In this case the retry_join target address
-becomes the A record that maps to all Vault nodes.
-
-Downsides: Not everyone uses DNS.  Not known to have been tested.  If not using
-Consul for DNS, it feels like it could be slow, because we'd presumably be
-round-robining across all nodes, and at the outset it may take time before we
-actually reach a node that can be joined with.  Presumably in the LB and Consul
-cases health checks would ensure that we don't get routed to a node that can't
-be joined with, those we should validate that.
 
 ## Outage Recovery
 
