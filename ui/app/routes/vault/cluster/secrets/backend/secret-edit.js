@@ -95,6 +95,7 @@ export default Route.extend(UnloadModelRoute, {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
+      database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
@@ -226,6 +227,9 @@ export default Route.extend(UnloadModelRoute, {
     }
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);
+    }
+    if (modelType === 'database/role') {
+      secret = secret.replace('role/', '');
     }
     let secretModel;
 

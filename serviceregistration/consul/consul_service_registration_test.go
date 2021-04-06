@@ -118,6 +118,7 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer core.Shutdown()
 
 	waitForServices(t, map[string][]string{
 		"consul": []string{},

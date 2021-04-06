@@ -6,15 +6,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"path"
 
 	"github.com/shirou/gopsutil/internal/common"
 	"golang.org/x/sys/unix"
 )
-
-func Partitions(all bool) ([]PartitionStat, error) {
-	return PartitionsWithContext(context.Background(), all)
-}
 
 func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, error) {
 	var ret []PartitionStat
@@ -66,20 +61,11 @@ func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, erro
 			Fstype:     common.IntToString(stat.F_fstypename[:]),
 			Opts:       opts,
 		}
-		if all == false {
-			if !path.IsAbs(d.Device) || !common.PathExists(d.Device) {
-				continue
-			}
-		}
 
 		ret = append(ret, d)
 	}
 
 	return ret, nil
-}
-
-func IOCounters(names ...string) (map[string]IOCountersStat, error) {
-	return IOCountersWithContext(context.Background(), names...)
 }
 
 func IOCountersWithContext(ctx context.Context, names ...string) (map[string]IOCountersStat, error) {
@@ -132,10 +118,6 @@ func parseDiskstats(buf []byte) (Diskstats, error) {
 	}
 
 	return ds, nil
-}
-
-func Usage(path string) (*UsageStat, error) {
-	return UsageWithContext(context.Background(), path)
 }
 
 func UsageWithContext(ctx context.Context, path string) (*UsageStat, error) {

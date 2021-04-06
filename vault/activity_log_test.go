@@ -2307,11 +2307,26 @@ func TestActivityLog_NextMonthStart(t *testing.T) {
 	}
 }
 
+// The retention worker is called on unseal; wait for it to finish before
+// proceeding with the test.
+func waitForRetentionWorkerToFinish(t *testing.T, a *ActivityLog) {
+	t.Helper()
+	timeout := time.After(30 * time.Second)
+	select {
+	case <-a.retentionDone:
+		return
+	case <-timeout:
+		t.Fatal("timeout waiting for retention worker to finish")
+	}
+
+}
+
 func TestActivityLog_Deletion(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
+	waitForRetentionWorkerToFinish(t, a)
 
 	times := []time.Time{
 		time.Date(2019, 1, 15, 1, 2, 3, 0, time.UTC), // 0
@@ -2419,4 +2434,57 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 	checkPresent(21)
 
+}
+
+func TestActivityLog_partialMonthClientCount(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	// entities[0] is from a previous month
+	partialMonthEntityCount := len(entities[1:])
+	var partialMonthTokenCount int
+	for _, countByNS := range tokenCounts {
+		partialMonthTokenCount += int(countByNS)
+	}
+
+	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
+
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	entityCount, ok := results["distinct_entities"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if entityCount != partialMonthEntityCount {
+		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	}
+
+	tokenCount, ok := results["non_entity_tokens"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if tokenCount != partialMonthTokenCount {
+		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
+	}
+	clientCount, ok := results["clients"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if clientCount != expectedClientCount {
+		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	}
 }

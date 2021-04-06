@@ -44,9 +44,13 @@ PASSTHROUGH_TARGETS := \
 	aliases meta package package-meta package-meta-all \
 	build-ci watch-ci \
 	stage-config stage custom-build custom-build-config\
+	bundle \
+	orchestrator stop-orchestrator \
 	list-custom-builds \
 	list-staged-builds \
-	publish-config publish
+	list-promoted-builds \
+	publish-config publish \
+	workflow
 
 .PHONY: $(PASSTHROUGH_TARGETS)
 

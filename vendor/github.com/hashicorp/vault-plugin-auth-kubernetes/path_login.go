@@ -103,7 +103,7 @@ func (b *kubeAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d
 	}
 
 	// look up the JWT token in the kubernetes API
-	err = serviceAccount.lookup(jwtStr, b.reviewFactory(config))
+	err = serviceAccount.lookup(ctx, jwtStr, b.reviewFactory(config))
 	if err != nil {
 		b.Logger().Error(`login unauthorized due to: ` + err.Error())
 		return nil, logical.ErrPermissionDenied
@@ -350,8 +350,8 @@ type projectedServiceAccountPod struct {
 
 // lookup calls the TokenReview API in kubernetes to verify the token and secret
 // still exist.
-func (s *serviceAccount) lookup(jwtStr string, tr tokenReviewer) error {
-	r, err := tr.Review(jwtStr, s.Audience)
+func (s *serviceAccount) lookup(ctx context.Context, jwtStr string, tr tokenReviewer) error {
+	r, err := tr.Review(ctx, jwtStr, s.Audience)
 	if err != nil {
 		return err
 	}

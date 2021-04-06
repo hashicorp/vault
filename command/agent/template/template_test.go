@@ -14,6 +14,7 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -24,6 +25,294 @@ func TestNewServer(t *testing.T) {
 	server := NewServer(&ServerConfig{})
 	if server == nil {
 		t.Fatal("nil server returned")
+	}
+}
+
+func newAgentConfig(listeners []*configutil.Listener, enableCache, enablePersisentCache bool) *config.Config {
+	agentConfig := &config.Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile:   "./pidfile",
+			Listeners: listeners,
+		},
+		AutoAuth: &config.AutoAuth{
+			Method: &config.Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*config.Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &config.Vault{
+			Address:          "http://127.0.0.1:1111",
+			CACert:           "config_ca_cert",
+			CAPath:           "config_ca_path",
+			TLSSkipVerifyRaw: interface{}("true"),
+			TLSSkipVerify:    true,
+			ClientCert:       "config_client_cert",
+			ClientKey:        "config_client_key",
+		},
+	}
+	if enableCache {
+		agentConfig.Cache = &config.Cache{
+			UseAutoAuthToken: true,
+		}
+	}
+
+	if enablePersisentCache {
+		agentConfig.Cache.Persist = &config.Persist{Type: "kubernetes"}
+	}
+
+	return agentConfig
+}
+
+func TestCacheConfigUnix(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8300",
+			TLSDisable: true,
+		},
+		{
+			Type:        "tcp",
+			Address:     "127.0.0.1:8400",
+			TLSKeyFile:  "/path/to/cakey.pem",
+			TLSCertFile: "/path/to/cacert.pem",
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true, true)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "unix://foobar"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigHTTP(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8300",
+			TLSDisable: true,
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:        "tcp",
+			Address:     "127.0.0.1:8400",
+			TLSKeyFile:  "/path/to/cakey.pem",
+			TLSCertFile: "/path/to/cacert.pem",
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true, true)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "http://127.0.0.1:8300"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigHTTPS(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:        "tcp",
+			Address:     "127.0.0.1:8300",
+			TLSKeyFile:  "/path/to/cakey.pem",
+			TLSCertFile: "/path/to/cacert.pem",
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8400",
+			TLSDisable: true,
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true, true)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "https://127.0.0.1:8300"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+
+	if *ctConfig.Vault.SSL.Verify {
+		t.Fatalf("expected %t, got %t", true, *ctConfig.Vault.SSL.Verify)
+	}
+}
+
+func TestCacheConfigNoCache(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:        "tcp",
+			Address:     "127.0.0.1:8300",
+			TLSKeyFile:  "/path/to/cakey.pem",
+			TLSCertFile: "/path/to/cacert.pem",
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8400",
+			TLSDisable: true,
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, false, false)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "http://127.0.0.1:1111"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigNoPersistentCache(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:        "tcp",
+			Address:     "127.0.0.1:8300",
+			TLSKeyFile:  "/path/to/cakey.pem",
+			TLSCertFile: "/path/to/cacert.pem",
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8400",
+			TLSDisable: true,
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true, false)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "http://127.0.0.1:1111"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigNoListener(t *testing.T) {
+	listeners := []*configutil.Listener{}
+
+	agentConfig := newAgentConfig(listeners, true, true)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	expected := "http://127.0.0.1:1111"
+	if *ctConfig.Vault.Address != expected {
+		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+	}
+}
+
+func TestCacheConfigRejectMTLS(t *testing.T) {
+	listeners := []*configutil.Listener{
+		{
+			Type:                          "tcp",
+			Address:                       "127.0.0.1:8300",
+			TLSKeyFile:                    "/path/to/cakey.pem",
+			TLSCertFile:                   "/path/to/cacert.pem",
+			TLSRequireAndVerifyClientCert: true,
+		},
+		{
+			Type:        "unix",
+			Address:     "foobar",
+			TLSDisable:  true,
+			SocketMode:  "configmode",
+			SocketUser:  "configuser",
+			SocketGroup: "configgroup",
+		},
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8400",
+			TLSDisable: true,
+		},
+	}
+
+	agentConfig := newAgentConfig(listeners, true, true)
+	serverConfig := ServerConfig{AgentConfig: agentConfig}
+
+	_, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+	if err == nil {
+		t.Fatal("expected error, got none")
 	}
 }
 
@@ -162,8 +451,13 @@ func TestServerRun(t *testing.T) {
 			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
 			sc := ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
-				VaultConf: &config.Vault{
-					Address: ts.URL,
+				AgentConfig: &config.Config{
+					Vault: &config.Vault{
+						Address: ts.URL,
+						Retry: &config.Retry{
+							NumRetries: 3,
+						},
+					},
 				},
 				LogLevel:      hclog.Trace,
 				LogWriter:     hclog.DefaultOutput,
@@ -175,7 +469,6 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
-			server.testingLimitRetry = 3
 
 			errCh := make(chan error)
 			go func() {

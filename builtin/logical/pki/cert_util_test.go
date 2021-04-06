@@ -163,30 +163,58 @@ func TestPki_PermitFQDNs(t *testing.T) {
 	var b backend
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
-	apiData := &framework.FieldData{
-		Schema: fields,
-		Raw: map[string]interface{}{
-			"common_name": "example.com.",
-			"ttl":         3600,
+	cases := map[string]struct {
+		input    *inputBundle
+		expected []string
+	}{
+		"base valid case": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "example.com.",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowAnyName:     true,
+					MaxTTL:           3600,
+					EnforceHostnames: true,
+				},
+			},
+			expected: []string{"example.com."},
+		},
+		"case insensitivity validation": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "Example.Net",
+						"alt_names":   "eXaMPLe.COM",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expected: []string{"Example.Net", "eXaMPLe.COM"},
 		},
 	}
-	input := &inputBundle{
-		apiData: apiData,
-		role: &roleEntry{
-			AllowAnyName:     true,
-			MaxTTL:           3600,
-			EnforceHostnames: true,
-		},
-	}
-	cb, err := generateCreationBundle(&b, input, nil, nil)
-	if err != nil {
-		t.Fatalf("Error: %v", err)
+
+	for _, testCase := range cases {
+		cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
+		if err != nil {
+			t.Fatalf("Error: %v", err)
+		}
+
+		actual := cb.Params.DNSNames
+
+		if !reflect.DeepEqual(testCase.expected, actual) {
+			t.Fatalf("Expected %v, got %v", testCase.expected, actual)
+		}
 	}
 
-	expected := []string{"example.com."}
-	actual := cb.Params.DNSNames
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("Expected %v, got %v", expected, actual)
-	}
 }

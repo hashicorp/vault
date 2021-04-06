@@ -3,12 +3,11 @@ package azureauth
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"runtime"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // Using the same time parsing logic from https://github.com/coreos/go-oidc
@@ -46,12 +45,24 @@ func strListContains(haystack []string, needle string) bool {
 	return false
 }
 
+const ossVaultGUID = `15cd22ce-24af-43a4-aa83-4c1a36a4b177`
+const entVaultGUID = `b2c13ec1-60e8-4733-9a76-88dbb2ce2471`
+
 // userAgent determines the User Agent to send on HTTP requests. This is mostly copied
 // from the useragent helper in vault and may get replaced with something more general
 // for plugins
 func userAgent() string {
-	version := os.Getenv(pluginutil.PluginVaultVersionEnv)
-	projectURL := "https://www.vaultproject.io/"
-	rt := runtime.Version()
-	return fmt.Sprintf("Vault/%s (+%s; %s)", version, projectURL, rt)
+	ua := useragent.String()
+
+	// ent has many version variations, so if it's not "dev" or "" we'll assume
+	// it's an enterprise variation
+	guid := ossVaultGUID
+	ver := version.GetVersion()
+	if ver.VersionMetadata != "" && ver.VersionMetadata != "dev" {
+		guid = entVaultGUID
+	}
+
+	vaultIDString := fmt.Sprintf("; %s)", guid)
+
+	return strings.Replace(ua, ")", vaultIDString, 1)
 }

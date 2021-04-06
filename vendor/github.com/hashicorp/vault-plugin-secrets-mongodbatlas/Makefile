@@ -13,6 +13,9 @@ bin: fmtcheck generate
 
 default: dev
 
+dockerbuild: fmtcheck
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' DOCKER_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin.
 dev: fmtcheck generate

@@ -33,8 +33,12 @@ export default [
       'response-wrapping',
       'policies',
       'password-policies',
+      'username-templating',
       'ha',
-      'integrated-storage',
+      {
+        category: 'integrated-storage',
+        content: ['autopilot'],
+      },
       'pgp-gpg-keybase',
       'recovery-mode',
       'resource-quotas',
@@ -49,6 +53,7 @@ export default [
         category: 'listener',
         content: ['tcp'],
       },
+      'replication',
       {
         category: 'seal',
         content: [
@@ -60,6 +65,11 @@ export default [
           'pkcs11',
           'transit',
         ],
+      },
+      'sentinel',
+      {
+        category: 'service-registration',
+        content: ['consul', 'kubernetes'],
       },
       {
         category: 'storage',
@@ -87,11 +97,6 @@ export default [
           'swift',
           'zookeeper',
         ],
-      },
-      'sentinel',
-      {
-        category: 'service-registration',
-        content: ['consul', 'kubernetes'],
       },
       'telemetry',
       'ui',
@@ -241,7 +246,10 @@ export default [
       },
       'gcp',
       'gcpkms',
-      'key-management',
+      {
+        category: 'key-management',
+        content: ['azurekeyvault', 'awskms'],
+      },
       'kmip',
       {
         category: 'kv',
@@ -261,6 +269,7 @@ export default [
           'dynamic-ssh-keys',
         ],
       },
+      'terraform',
       'totp',
       { category: 'transform', content: ['tokenization'] },
       'transit',
@@ -338,6 +347,10 @@ export default [
             category: 'injector',
             content: ['annotations', 'installation', 'examples'],
           },
+          {
+            category: 'csi',
+            content: ['configurations', 'examples', 'installation'],
+          },
         ],
       },
       {
@@ -399,12 +412,16 @@ export default [
       'upgrade-to-1.5.2',
       'upgrade-to-1.5.3',
       'upgrade-to-1.6.0',
+      'upgrade-to-1.6.1',
+      'upgrade-to-1.6.2',
+      'upgrade-to-1.6.3',
+      'upgrade-to-1.7.0',
     ],
   },
   '----------------',
   {
     category: 'release-notes',
-    content: ['1.5.0', '1.6.0'],
+    content: ['1.5.0', '1.6.0', '1.7.0'],
   },
   '----------------',
   {
@@ -421,6 +438,7 @@ export default [
       'sealwrap',
       'namespaces',
       'performance-standby',
+      'consistency',
       'control-groups',
       {
         category: 'mfa',

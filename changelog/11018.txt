@@ -1,0 +1,3 @@
+```changelog:enhancement
+ui: Add tests for database role setting form
+```

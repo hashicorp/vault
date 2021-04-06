@@ -115,7 +115,7 @@ func createOrgKey(ctx context.Context, client *mongodbatlas.Client, apiKeyDescri
 		return nil, err
 	}
 
-	if err := addWhitelistEntry(ctx, client, credentialEntry.OrganizationID, key.ID, credentialEntry); err != nil {
+	if err := addAccessListEntry(ctx, client, credentialEntry.OrganizationID, key.ID, credentialEntry); err != nil {
 		return nil, err
 	}
 
@@ -143,13 +143,13 @@ func createProjectAPIKey(ctx context.Context, client *mongodbatlas.Client, apiKe
 		}
 	}
 
-	// if we have whitelist entries and no orgIds then return an error
+	// if we have access list entries and no orgIds then return an error
 	if (len(credentialEntry.IPAddresses)+len(credentialEntry.CIDRBlocks)) > 0 && len(orgIDs) == 0 {
 		return nil, fmt.Errorf("No organization ID was found on programmatic key roles")
 	}
 
 	for orgID := range orgIDs {
-		if err := addWhitelistEntry(ctx, client, orgID, key.ID, credentialEntry); err != nil {
+		if err := addAccessListEntry(ctx, client, orgID, key.ID, credentialEntry); err != nil {
 			return nil, err
 		}
 	}
@@ -172,17 +172,17 @@ func createAndAssignKey(ctx context.Context, client *mongodbatlas.Client, apiKey
 	return key, nil
 }
 
-func addWhitelistEntry(ctx context.Context, client *mongodbatlas.Client, orgID string, keyID string, cred *atlasCredentialEntry) error {
-	var entries []*mongodbatlas.WhitelistAPIKeysReq
+func addAccessListEntry(ctx context.Context, client *mongodbatlas.Client, orgID string, keyID string, cred *atlasCredentialEntry) error {
+	var entries []*mongodbatlas.AccessListAPIKeysReq
 	for _, cidrBlock := range cred.CIDRBlocks {
-		cidr := &mongodbatlas.WhitelistAPIKeysReq{
+		cidr := &mongodbatlas.AccessListAPIKeysReq{
 			CidrBlock: cidrBlock,
 		}
 		entries = append(entries, cidr)
 	}
 
 	for _, ipAddress := range cred.IPAddresses {
-		ip := &mongodbatlas.WhitelistAPIKeysReq{
+		ip := &mongodbatlas.AccessListAPIKeysReq{
 			IPAddress: ipAddress,
 		}
 		entries = append(entries, ip)
@@ -190,7 +190,7 @@ func addWhitelistEntry(ctx context.Context, client *mongodbatlas.Client, orgID s
 	}
 
 	if entries != nil {
-		_, _, err := client.WhitelistAPIKeys.Create(ctx, orgID, keyID, entries)
+		_, _, err := client.AccessListAPIKeys.Create(ctx, orgID, keyID, entries)
 		return err
 
 	}

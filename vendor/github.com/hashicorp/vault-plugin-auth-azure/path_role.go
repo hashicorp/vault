@@ -16,83 +16,87 @@ import (
 // pathsRole returns the path configurations for the CRUD operations on roles
 func pathsRole(b *azureAuthBackend) []*framework.Path {
 	p := []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "role/?",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathRoleList,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.pathRoleList,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"policies": &framework.FieldSchema{
+				"policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: tokenutil.DeprecationText("token_policies"),
 					Deprecated:  true,
 				},
-				"num_uses": &framework.FieldSchema{
+				"num_uses": {
 					Type:        framework.TypeInt,
 					Description: tokenutil.DeprecationText("token_num_uses"),
 					Deprecated:  true,
 				},
-				"ttl": &framework.FieldSchema{
+				"ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: tokenutil.DeprecationText("token_ttl"),
 					Deprecated:  true,
 				},
-				"max_ttl": &framework.FieldSchema{
+				"max_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: tokenutil.DeprecationText("token_max_ttl"),
 					Deprecated:  true,
 				},
-				"period": &framework.FieldSchema{
+				"period": {
 					Type:        framework.TypeDurationSecond,
 					Description: tokenutil.DeprecationText("token_period"),
 					Deprecated:  true,
 				},
-				"bound_subscription_ids": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma-separated list of subscription ids that login 
-is restricted to.`,
+				"bound_subscription_ids": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of subscription ids that login is restricted to.`,
 				},
-				"bound_resource_groups": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma-separated list of resource groups that login 
-is restricted to.`,
+				"bound_resource_groups": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of resource groups that login is restricted to.`,
 				},
-				"bound_group_ids": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma-separated list of group ids that login 
-is restricted to.`,
+				"bound_group_ids": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of group ids that login is restricted to.`,
 				},
-				"bound_service_principal_ids": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma-separated list of service principal ids that login 
-is restricted to.`,
+				"bound_service_principal_ids": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of service principal ids that login is restricted to.`,
 				},
-				"bound_locations": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma-separated list of locations that login 
-is restricted to.`,
+				"bound_locations": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of locations that login is restricted to.`,
 				},
-				"bound_scale_sets": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma-separated list of scale sets that login 
-is restricted to.`,
+				"bound_scale_sets": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of scale sets that login is restricted to.`,
 				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: b.pathRoleCreateUpdate,
-				logical.UpdateOperation: b.pathRoleCreateUpdate,
-				logical.ReadOperation:   b.pathRoleRead,
-				logical.DeleteOperation: b.pathRoleDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: b.pathRoleCreateUpdate,
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleCreateUpdate,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleRead,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.pathRoleDelete,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
@@ -180,7 +184,7 @@ func (b *azureAuthBackend) pathRoleExistenceCheck(ctx context.Context, req *logi
 }
 
 // pathRoleList is used to list all the Roles registered with the backend.
-func (b *azureAuthBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *azureAuthBackend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err

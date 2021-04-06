@@ -1,11 +1,13 @@
 package cassandra
 
 import (
+	"context"
 	"reflect"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	backoff "github.com/cenkalti/backoff/v3"
 	"github.com/gocql/gocql"
@@ -65,31 +67,99 @@ func TestCassandra_Initialize(t *testing.T) {
 }
 
 func TestCassandra_CreateUser(t *testing.T) {
-	db, cleanup := getCassandra(t, 4)
-	defer cleanup()
-
-	password := "myreallysecurepassword"
-	createReq := dbplugin.NewUserRequest{
-		UsernameConfig: dbplugin.UsernameMetadata{
-			DisplayName: "test",
-			RoleName:    "test",
-		},
-		Statements: dbplugin.Statements{
-			Commands: []string{createUserStatements},
-		},
-		Password:   password,
-		Expiration: time.Now().Add(1 * time.Minute),
+	type testCase struct {
+		// Config will have the hosts & port added to it during the test
+		config                map[string]interface{}
+		newUserReq            dbplugin.NewUserRequest
+		expectErr             bool
+		expectedUsernameRegex string
+		assertCreds           func(t testing.TB, address string, port int, username, password string, timeout time.Duration)
 	}
 
-	createResp := dbtesting.AssertNewUser(t, db, createReq)
-
-	expectedRegex := "^v_test_test_[a-zA-Z0-9]{20}_[0-9]{10}$"
-	re := regexp.MustCompile(expectedRegex)
-	if !re.MatchString(createResp.Username) {
-		t.Fatalf("Generated username %q did not match regexp %q", createResp.Username, expectedRegex)
+	tests := map[string]testCase{
+		"default username_template": {
+			config: map[string]interface{}{
+				"username":         "cassandra",
+				"password":         "cassandra",
+				"protocol_version": "4",
+				"connect_timeout":  "20s",
+			},
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "mylongrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{createUserStatements},
+				},
+				Password:   "bfn985wjAHIh6t",
+				Expiration: time.Now().Add(1 * time.Minute),
+			},
+			expectErr:             false,
+			expectedUsernameRegex: `^v_token_mylongrolenamew_[a-z0-9]{20}_[0-9]{10}$`,
+			assertCreds:           assertCreds,
+		},
+		"custom username_template": {
+			config: map[string]interface{}{
+				"username":          "cassandra",
+				"password":          "cassandra",
+				"protocol_version":  "4",
+				"connect_timeout":   "20s",
+				"username_template": `foo_{{random 20}}_{{.RoleName | replace "e" "3"}}_{{unix_time}}`,
+			},
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "mylongrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{createUserStatements},
+				},
+				Password:   "bfn985wjAHIh6t",
+				Expiration: time.Now().Add(1 * time.Minute),
+			},
+			expectErr:             false,
+			expectedUsernameRegex: `^foo_[a-zA-Z0-9]{20}_mylongrol3nam3withmanycharact3rs_[0-9]{10}$`,
+			assertCreds:           assertCreds,
+		},
 	}
 
-	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
+			pieces := strings.Split(connURL, ":")
+			defer cleanup()
+
+			db := new()
+
+			config := test.config
+			config["hosts"] = connURL
+			config["port"] = pieces[1]
+
+			initReq := dbplugin.InitializeRequest{
+				Config:           config,
+				VerifyConnection: true,
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			dbtesting.AssertInitialize(t, db, initReq)
+
+			require.True(t, db.Initialized, "Database is not initialized")
+
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			newUserResp, err := db.NewUser(ctx, test.newUserReq)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			require.Regexp(t, test.expectedUsernameRegex, newUserResp.Username)
+			test.assertCreds(t, db.Hosts, db.Port, newUserResp.Username, test.newUserReq.Password, 5*time.Second)
+		})
+	}
 }
 
 func TestMyCassandra_UpdateUserPassword(t *testing.T) {
@@ -217,4 +287,4 @@ func assertNoCreds(t testing.TB, address string, port int, username, password st
 }
 
 const createUserStatements = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
-GRANT ALL PERMISSIONS ON ALL KEYSPACES TO {{username}};`
+GRANT ALL PERMISSIONS ON ALL KEYSPACES TO '{{username}}';`

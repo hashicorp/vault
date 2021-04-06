@@ -4,8 +4,12 @@
       {{#if (eq group "default")}}
         {{#each fields as |attr|}}
           {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
-            {{form-field data-test-field attr=attr model=model onChange=onChange
-            }}
+            <FormField
+              data-test-field
+              @attr={{attr}}
+              @model={{model}}
+              @onChange={{onChange}}
+            />
           {{/unless}}
         {{/each}}
       {{else}}
@@ -20,7 +24,11 @@
         {{#if (get this (concat "show" (camelize group)))}}
           <div class="box is-marginless">
             {{#each fields as |attr|}}
-              {{form-field data-test-field attr=attr model=model}}
+              <FormField
+                data-test-field
+                @attr={{attr}}
+                @model={{model}}
+              />
             {{/each}}
           </div>
         {{/if}}

@@ -193,6 +193,7 @@ func printKeyStatus(ks *api.KeyStatus) string {
 	return columnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
+		fmt.Sprintf("Encryption Count | %d", ks.Encryptions),
 	}, nil)
 }
 

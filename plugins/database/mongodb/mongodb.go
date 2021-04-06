@@ -7,9 +7,11 @@ import (
 	"io"
 	"strings"
 
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
+
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -18,11 +20,17 @@ import (
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
-const mongoDBTypeName = "mongodb"
+const (
+	mongoDBTypeName = "mongodb"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 }}`
+)
 
 // MongoDB is an implementation of Database interface
 type MongoDB struct {
 	*mongoDBConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 var _ dbplugin.Database = &MongoDB{}
@@ -64,7 +72,26 @@ func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest
 
 	m.RawConfig = req.Config
 
-	err := mapstructure.WeakDecode(req.Config, m.mongoDBConnectionProducer)
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	m.usernameProducer = up
+
+	_, err = m.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	err = mapstructure.WeakDecode(req.Config, m.mongoDBConnectionProducer)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
@@ -116,12 +143,7 @@ func (m *MongoDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbp
 		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 15),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
-		credsutil.MaxLength(100),
-		credsutil.Separator("-"),
-	)
+	username, err := m.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}

@@ -52,6 +52,21 @@ The response will contain a token at `auth.client_token`:
 }
 ```
 
+### MFA
+
+Okta Verify Push and TOTP MFA methods are supported during login. For TOTP, the current
+passcode may be provided via the `totp` parameter:
+
+```shell-session
+$ vault login -method=okta username=my-username totp=123456
+```
+
+If `totp` is not set and MFA Push is configured in Okta, a Push will be sent during login.
+
+Note that this MFA support is integrated with Okta Auth and is limited strictly to login
+operations. It is not related to [Enterprise MFA](https://www.vaultproject.io/docs/enterprise/mfa).
+
+
 ## Configuration
 
 Auth methods must be configured in advance before users or machines can

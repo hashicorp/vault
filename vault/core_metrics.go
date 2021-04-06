@@ -10,13 +10,24 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
-	writeTimer := time.Tick(c.counters.syncInterval)
+
 	identityCountTimer := time.Tick(time.Minute * 10)
+	// Only emit on active node of cluster that is not a DR cecondary.
+	if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
+		identityCountTimer = nil
+	}
+
+	writeTimer := time.Tick(c.counters.syncInterval)
+	// Do not process the writeTimer on DR Secondary nodes
+	if c.IsDRSecondary() {
+		writeTimer = nil
+	}
 
 	// This loop covers
 	// vault.expire.num_leases
@@ -59,8 +70,19 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				continue
 			}
 			if c.perfStandby { // already have lock here, do not re-acquire
-				syncCounter(c)
+				err := syncCounters(c)
+				if err != nil {
+					c.logger.Error("writing syncing counters", "err", err)
+				}
 			} else {
+				// Perf standbys will have synced above, but active nodes on a secondary cluster still need to ship
+				// barrier encryption counts
+				if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+					err := syncBarrierEncryptionCounter(c)
+					if err != nil {
+						c.logger.Error("writing syncing encryption counts", "err", err)
+					}
+				}
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
 				if err != nil {
 					c.logger.Error("writing request counters to barrier", "err", err)
@@ -68,11 +90,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
-			// Only emit on active node of cluster that is not a DR cecondary.
-			if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
-				break
-			}
-
 			// TODO: this can be replaced by the identity gauge counter; we need to
 			// sum across all namespaces.
 			go func() {
