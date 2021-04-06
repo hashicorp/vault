@@ -57,8 +57,7 @@ func (c *Core) setupReplicationResolverHandler() error {
 }
 
 // GetCoreConfigInternal returns the server configuration
-// in struct format. This function should only be used internally
-// to retrieve the core config.
+// in struct format.
 func (c *Core) GetCoreConfigInternal() *server.Config {
 	conf := c.rawConfig.Load()
 	if conf == nil {
