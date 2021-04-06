@@ -2,9 +2,13 @@ package command
 
 import (
 	"strings"
+	"sync"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -17,9 +21,15 @@ var _ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
 
-	flagDebug   bool
-	flagSkips   []string
-	flagConfigs []string
+	flagDebug    bool
+	flagSkips    []string
+	flagConfigs  []string
+	cleanupGuard sync.Once
+
+	reloadFuncsLock *sync.RWMutex
+	reloadFuncs     *map[string][]reloadutil.ReloadFunc
+	startedCh       chan struct{} // for tests
+	reloadedCh      chan struct{} // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -110,7 +120,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
-
+	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
 	server := &ServerCommand{
 		// TODO: set up a different one?
 		// In particular, a UI instance that won't output?
@@ -125,8 +135,10 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 		// TODO: other ServerCommand options?
 
-		logger:     log.NewInterceptLogger(nil),
-		allLoggers: []log.Logger{},
+		logger:          log.NewInterceptLogger(nil),
+		allLoggers:      []log.Logger{},
+		reloadFuncs:     &rloadFuncs,
+		reloadFuncsLock: new(sync.RWMutex),
 	}
 
 	phase := "Parse configuration"
@@ -136,6 +148,61 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	if err != nil {
 		c.UI.Output(same_line + status_failed + phase)
 		c.UI.Output("Error while reading configuration files:")
+		c.UI.Output(err.Error())
+		return 1
+	}
+
+	// Check Listener Information
+	// TODO: Run Diagnose checks on the actual net.Listeners
+
+	disableClustering := config.HAStorage.DisableClustering
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+	status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
+
+	if status != 0 {
+		c.UI.Output("Error parsing listener configuration.")
+		c.UI.Error(errMsg.Error())
+		return 1
+	}
+
+	// Make sure we close all listeners from this point on
+	listenerCloseFunc := func() {
+		for _, ln := range lns {
+			ln.Listener.Close()
+		}
+	}
+
+	defer c.cleanupGuard.Do(listenerCloseFunc)
+
+	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
+	for _, ln := range lns {
+		if ln.Config.TLSDisable {
+			c.UI.Warn("WARNING! TLS is disabled in a Listener config stanza.")
+			continue
+		}
+		if ln.Config.TLSDisableClientCerts {
+			c.UI.Warn("WARNING! TLS for a listener is turned on without requiring client certs.")
+		}
+
+		// Check ciphersuite and load ca/cert/key files
+		// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
+		// perform an active probe.
+		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+		if err != nil {
+			c.UI.Output("Error creating TLS Configuration out of config file: ")
+			c.UI.Output(err.Error())
+			return 1
+		}
+
+		sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+			Listener: ln.Listener,
+			Config:   ln.Config,
+		})
+	}
+	err = diagnose.ListenerChecks(sanitizedListeners)
+	if err != nil {
+		c.UI.Output("Diagnose caught configuration errors: ")
 		c.UI.Output(err.Error())
 		return 1
 	}
