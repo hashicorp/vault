@@ -9,7 +9,7 @@ const NAV_DATA_FILE = 'data/intro-nav-data.json'
 const CONTENT_DIR = 'content/intro'
 const basePath = 'intro'
 
-export default function DocsLayout(props) {
+export default function IntroLayout(props) {
   return (
     <DocsPage
       product={{ name: productName, slug: productSlug }}
