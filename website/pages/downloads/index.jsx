@@ -24,15 +24,18 @@ export default function DownloadsPage({ releases }) {
         getStartedLinks={[
           {
             label: 'Getting Started with the CLI',
-            href: 'http://localhost:3000/collections/vault/getting-started',
+            href:
+              'http://learn.hashicorp.com/collections/vault/getting-started',
           },
           {
             label: 'Getting Started with Vault UI',
-            href: 'http://localhost:3000/collections/vault/getting-started-ui',
+            href:
+              'http://learn.hashicorp.com/collections/vault/getting-started-ui',
           },
           {
             label: 'Vault on HCP',
-            href: 'http://localhost:3000/collections/vault/getting-started-ui',
+            href:
+              'http://learn.hashicorp.com/collections/vault/getting-started-ui',
           },
           {
             label: 'View all Vault tutorials',
