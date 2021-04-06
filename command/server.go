@@ -931,7 +931,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		if lnConfig.MaxRequestDuration == 0 {
 			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
-		props["max_request_duration"] = fmt.Sprintf("%s", lnConfig.MaxRequestDuration.String())
+		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
 		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
