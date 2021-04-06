@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Replication - Vault Enterprise
-sidebar_title: Replication
 description: >-
   Vault Enterprise has support for Replication, allowing critical data to be
   replicated across clusters to support horizontally scaling and disaster
@@ -96,15 +95,15 @@ details.
 Also note that enabling replication will modify the secondary seal.
 If the secondary uses an auto seal, its recovery configuration and keys
 will be replaced; if it uses shamir, its seal configuration and unseal
-keys will be replaced.  Here seal/recovery configuration means the number of
+keys will be replaced. Here seal/recovery configuration means the number of
 seal/recovery key fragments and the required threshold of those
 fragments.
 
-| Primary seal | Secondary seal | Impact on secondary of enabling replication |
-| ------------ | -------------- | ------------------------------------------- |
-| Shamir       | Shamir         | Seal config and unseal keys replaced with primary's |
+| Primary seal | Secondary seal | Impact on secondary of enabling replication                                                |
+| ------------ | -------------- | ------------------------------------------------------------------------------------------ |
+| Shamir       | Shamir         | Seal config and unseal keys replaced with primary's                                        |
 | Shamir       | Auto           | Seal recovery config and recovery keys replaced with primary's seal config and unseal keys |
-| Auto         | Auto           | Seal recovery config and recovery keys replaced with primary's |
+| Auto         | Auto           | Seal recovery config and recovery keys replaced with primary's                             |
 | Auto         | Shamir         | Seal config and unseal keys replaced with primary's recovery seal config and recovery keys |
 
 ### Vault versions
