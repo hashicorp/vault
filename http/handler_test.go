@@ -15,8 +15,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -188,6 +187,37 @@ func TestHandler_cors(t *testing.T) {
 		if actual != expected {
 			t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
 		}
+	}
+}
+
+func TestHandler_HostnameHeader(t *testing.T) {
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+
+	hnHeader := resp.Header.Get("X-Vault-Hostname")
+	if hnHeader == "" {
+		t.Fatal("missing 'X-Vault-Hostname' header entry in response")
+	}
+
+	rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+	if rniHeader != "" {
+		t.Fatalf("no raft node ID header was expected, since we're not running a raft cluster. instead, got %s", rniHeader)
 	}
 }
 

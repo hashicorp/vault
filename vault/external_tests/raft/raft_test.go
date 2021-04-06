@@ -287,6 +287,42 @@ func TestRaft_RemovePeer(t *testing.T) {
 	})
 }
 
+func TestRaft_NodeIDHeader(t *testing.T) {
+	t.Parallel()
+	cluster := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	for i, c := range cluster.Cores {
+		if c.Core.Sealed() {
+			t.Fatalf("failed to unseal core %d", i)
+		}
+
+		client := c.Client
+		req := client.NewRequest("GET", "/v1/sys/seal-status")
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp == nil {
+			t.Fatalf("nil response")
+		}
+
+		hnHeader := resp.Header.Get("X-Vault-Hostname")
+		rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+		nodeID := c.Core.GetRaftNodeID()
+
+		if hnHeader == "" {
+			t.Fatal("missing 'X-Vault-Hostname' header entry in response")
+		}
+		if rniHeader == "" {
+			t.Fatal("missing 'X-Vault-Raft-Node-ID' header entry in response")
+		}
+		if rniHeader != nodeID {
+			t.Fatalf("got the wrong raft node id. expected %s to equal %s", rniHeader, nodeID)
+		}
+	}
+}
+
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
 	cluster := raftCluster(t, nil)

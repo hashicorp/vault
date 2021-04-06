@@ -21,8 +21,9 @@ import (
 	"github.com/NYTimes/gziphandler"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -315,6 +316,21 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
+
+		// Set some response headers with raft node id (if applicable) and hostname, if available
+		nodeID := core.GetRaftNodeID()
+		if nodeID != "" {
+			w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+		}
+		info, err := hostutil.CollectHostInfo(ctx)
+
+		// These headers aren't essential, so don't return an error here - just log it
+		if err != nil {
+			core.Logger().Error("error retrieving host info", "err", err)
+		}
+		if info != nil && info.Host != nil {
+			w.Header().Set("X-Vault-Hostname", info.Host.Hostname)
+		}
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
