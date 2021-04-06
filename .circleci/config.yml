@@ -1552,7 +1552,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.3-buster \
+              testcontainer circleci/golang:1.15.4-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1747,7 +1747,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.3
+    - GO_VERSION: 1.15.10
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   netbsd_amd64_package:
