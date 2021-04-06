@@ -58,10 +58,10 @@ existing Vault token in the request and instead uses the auto-auth token.
 
 ## Persistent Cache
 
-Vault Agent restoring tokens and leases from a persistent cache 
-file. The persistent cache is a BoltDB file that includes tuples encrypted by a generated 
-encryption key. The encrypted tuples include the Vault token used to retrieve secrets, 
-leases for tokens/secrets, and secret values.
+Vault Agent can restore tokens and leases from a persistent cache file created by a previous 
+Vault Agent process. The persistent cache is a BoltDB file that includes tuples encrypted 
+by a generated encryption key. The encrypted tuples include the Vault token used to retrieve 
+secrets, leases for tokens/secrets, and secret values.
 
 -> **Note:** Vault Agent Caching persistent cache will only restore _leased_ secrets. Secrets 
 that are not renewable, such as KV v2, will not be persisted.
