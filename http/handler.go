@@ -23,7 +23,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -322,14 +321,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		if nodeID != "" {
 			w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
 		}
-		info, err := hostutil.CollectHostInfo(ctx)
 
-		// These headers aren't essential, so don't return an error here - just log it
-		if err != nil {
-			core.Logger().Error("error retrieving host info", "err", err)
-		}
-		if info != nil && info.Host != nil {
-			w.Header().Set("X-Vault-Hostname", info.Host.Hostname)
+		// Swallow this error since we don't want to pollute the logs and we also don't want to
+		// return an HTTP error here. This information is best effort.
+		hostname, _ := os.Hostname()
+		if hostname != "" {
+			w.Header().Set("X-Vault-Hostname", hostname)
 		}
 
 		switch {
