@@ -3,6 +3,7 @@ package diagnose
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/vault"
@@ -52,4 +53,6 @@ func TLSFileChecks(certFilePath, keyFilePath string) error {
 // ServerListenerActiveProbe attempts to use TLS information to set up a TLS server with each listener
 // and generate a successful request through to the server.
 // TODO
-func ServerListenerActiveProbe(core *vault.Core) {}
+func ServerListenerActiveProbe(core *vault.Core) error {
+	return fmt.Errorf("Method not implemented")
+}
