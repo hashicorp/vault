@@ -3109,13 +3109,14 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	// First test creation
 	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
-		"orphan":           true,
-		"period":           "72h",
-		"allowed_policies": "test1,test2",
-		"path_suffix":      "happenin",
-		"bound_cidrs":      []string{"0.0.0.0/0"},
-		"explicit_max_ttl": "2h",
-		"token_num_uses":   123,
+		"orphan":              true,
+		"period":              "72h",
+		"allowed_policies":    "test1,test2",
+		"allow_glob_policies": true,
+		"path_suffix":         "happenin",
+		"bound_cidrs":         []string{"0.0.0.0/0"},
+		"explicit_max_ttl":    "2h",
+		"token_num_uses":      123,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -3146,6 +3147,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"period":                 int64(259200),
 		"allowed_policies":       []string{"test1", "test2"},
 		"disallowed_policies":    []string{},
+		"allow_glob_policies":    true,
 		"path_suffix":            "happenin",
 		"explicit_max_ttl":       int64(7200),
 		"token_explicit_max_ttl": int64(7200),
@@ -3207,6 +3209,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_period":           int64(284400),
 		"allowed_policies":       []string{"test3"},
 		"disallowed_policies":    []string{},
+		"allow_glob_policies":    true,
 		"path_suffix":            "happenin",
 		"token_explicit_max_ttl": int64(288000),
 		"explicit_max_ttl":       int64(288000),
@@ -3257,6 +3260,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_explicit_max_ttl": int64(5),
 		"allowed_policies":       []string{"test3"},
 		"disallowed_policies":    []string{},
+		"allow_glob_policies":    true,
 		"path_suffix":            "happenin",
 		"period":                 int64(0),
 		"token_period":           int64(0),
@@ -3307,6 +3311,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"explicit_max_ttl":       int64(5),
 		"allowed_policies":       []string{"test3"},
 		"disallowed_policies":    []string{},
+		"allow_glob_policies":    true,
 		"path_suffix":            "",
 		"period":                 int64(0),
 		"token_period":           int64(0),
@@ -3406,7 +3411,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	ts := core.tokenStore
 	ps := core.policyStore
 
-	// Create 3 different policies
+	// Create 4 different policies
 	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test1"
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
@@ -3421,6 +3426,12 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 
 	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test3"
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
+	policy.Name = "test3b"
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
@@ -3456,10 +3467,32 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testnot23")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allow_glob_policies": true,
+		"disallowed_policies": "test2,test3*",
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// glob policy without allow_glob_policies enabled
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testglobdisabled")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies": "test*",
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
 	// Create a token that has all the policies defined above
 	req = logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
-	req.Data["policies"] = []string{"test1", "test2", "test3"}
+	req.Data["policies"] = []string{"test1", "test2", "test3", "test3b"}
 	resp = testMakeTokenViaRequest(t, ts, req)
 	if resp == nil || resp.Auth == nil {
 		t.Fatal("got nil response")
@@ -3490,10 +3523,56 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatalf("expected an error response, got %#v", resp)
 	}
 
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
 	// Disallowed should act as a blacklist so make sure we can still make
 	// something with other policies in the request
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
 	req.Data["policies"] = []string{"foo", "bar"}
+	req.ClientToken = parentToken
+	testMakeTokenViaRequest(t, ts, req)
+
+	// Check to be sure 'test3*' matches 'test3'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test3"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check to be sure 'test3*' matches 'test3b'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test3b"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check to be sure 'test*' without globbing matches 'test*'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testglobdisabled")
+	req.Data["policies"] = []string{"test*"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check to be sure 'test*' without globbing doesn't match 'test1' or 'test'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testglobdisabled")
+	req.Data["policies"] = []string{"test1", "test"}
+	req.ClientToken = parentToken
+	testMakeTokenViaRequest(t, ts, req)
+
+	// Check that non-blacklisted policies still work
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test1"}
 	req.ClientToken = parentToken
 	testMakeTokenViaRequest(t, ts, req)
 
@@ -3544,6 +3623,69 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	}
 
 	req.Data["policies"] = []string{"test2"}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// test glob matching when allow_glob_policies is true
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allow_glob_policies": true,
+		"allowed_policies":    "test*",
+	}
+
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Path = "create/test"
+	req.Data["policies"] = []string{"footest"}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"testfoo", "test2"}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// test not glob matching when allow_glob_policies is false
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testnoglob")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies": "test*",
+	}
+
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Path = "create/testnoglob"
+	req.Data["policies"] = []string{"test"}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"testfoo"}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"test*"}
 	resp = testMakeTokenViaRequest(t, ts, req)
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
@@ -4117,6 +4259,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"token_period":           int64(1),
 			"allowed_policies":       []string(nil),
 			"disallowed_policies":    []string(nil),
+			"allow_glob_policies":    false,
 			"path_suffix":            "",
 			"token_explicit_max_ttl": int64(3600),
 			"explicit_max_ttl":       int64(3600),
@@ -4170,6 +4313,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"token_period":           int64(5),
 			"allowed_policies":       []string(nil),
 			"disallowed_policies":    []string(nil),
+			"allow_glob_policies":    false,
 			"path_suffix":            "",
 			"token_explicit_max_ttl": int64(7200),
 			"explicit_max_ttl":       int64(7200),
@@ -4222,6 +4366,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"token_period":           int64(7),
 			"allowed_policies":       []string(nil),
 			"disallowed_policies":    []string(nil),
+			"allow_glob_policies":    false,
 			"path_suffix":            "",
 			"token_explicit_max_ttl": int64(5200),
 			"explicit_max_ttl":       int64(0),
@@ -4276,6 +4421,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"token_period":           int64(5),
 			"allowed_policies":       []string(nil),
 			"disallowed_policies":    []string(nil),
+			"allow_glob_policies":    false,
 			"path_suffix":            "",
 			"token_explicit_max_ttl": int64(7200),
 			"explicit_max_ttl":       int64(0),

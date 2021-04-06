@@ -43,6 +43,17 @@ func StrListSubset(super, sub []string) bool {
 	return true
 }
 
+// StrListSubsetGlob checks if a given list is a subset of
+// another set, allowing for globs.
+func StrListSubsetGlob(super, sub []string) bool {
+	for _, item := range sub {
+		if !StrListContainsGlob(super, item) {
+			return false
+		}
+	}
+	return true
+}
+
 // ParseDedupAndSortStrings parses a comma separated list of strings
 // into a slice of strings. The return slice will be sorted and will
 // not contain duplicate or empty items.
@@ -275,6 +286,18 @@ func RemoveEmpty(items []string) []string {
 		itemsSlice = append(itemsSlice, item)
 	}
 	return itemsSlice
+}
+
+// RemoveGlobs removes any elements containing globs from a slice of strings.
+func RemoveGlobs(items []string) []string {
+	ret := make([]string, 0, len(items))
+	for _, item := range items {
+		// glob.GLOB is "*"; ignore items containing that
+		if !strings.Contains(item, glob.GLOB) {
+			ret = append(ret, item)
+		}
+	}
+	return ret
 }
 
 // EquivalentSlices checks whether the given string sets are equivalent, as in,
