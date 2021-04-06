@@ -74,7 +74,7 @@ func TestTLSValidCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err != nil {
-		t.Fail()
+		t.Errorf(err.Error())
 	}
 }
 

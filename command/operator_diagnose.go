@@ -28,8 +28,8 @@ type OperatorDiagnoseCommand struct {
 
 	reloadFuncsLock *sync.RWMutex
 	reloadFuncs     *map[string][]reloadutil.ReloadFunc
-	startedCh       chan (struct{}) // for tests
-	reloadedCh      chan (struct{}) // for tests
+	startedCh       chan struct{} // for tests
+	reloadedCh      chan struct{} // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -120,7 +120,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
-	rloadFuncs := make(map[string][]reloadutil.ReloadFunc, 5)
+	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
 	server := &ServerCommand{
 		// TODO: set up a different one?
 		// In particular, a UI instance that won't output?
@@ -158,7 +158,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	disableClustering := config.HAStorage.DisableClustering
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	status, errMsg, lns, _ := server.InitListeners(config, disableClustering, &infoKeys, &info)
+	status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 
 	if status != 0 {
 		c.UI.Output("Error parsing listener configuration.")
