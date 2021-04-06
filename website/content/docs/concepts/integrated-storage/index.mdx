@@ -1,4 +1,4 @@
----
+--
 layout: docs
 page_title: Integrated Storage
 description: Learn about the integrated raft storage in Vault.
@@ -22,6 +22,16 @@ Vault to use integrated storage.
 
 The sections below go into various details on how to operate Vault with
 integrated storage.
+
+## Server-to-Server Communication
+
+Once nodes are joined to one another they begin to communicate using mTLS over
+Vault's cluster port. The cluster port defaults to `8201`. The TLS information
+is exchanged at join time and is rotated on a cadence.
+
+A requirement for integrated storage is that the
+[cluster_addr](/docs/concepts/ha#per-node-cluster-address) configuration option
+is set. This allows Vault to assign an address to the node ID at join time.
 
 ## Cluster Membership
 
@@ -168,15 +178,92 @@ node2    node2.vault.local:8201    follower    true
 node3    node3.vault.local:8201    leader      true
 ```
 
-## Server-to-Server Communication
+## Integrated Storage and TLS
 
-Once nodes are joined to one another they begin to communicate using mTLS over
-Vault's cluster port. The cluster port defaults to `8201`. The TLS information
-is exchanged at join time and is rotated on a cadence.
+We've glossed over some details in the above sections on bootstrapping clusters.
+The instructions are sufficient for most cases, but some users have run into
+problems when using auto-join and TLS in conjunction with things like auto-scaling.
+The issue is that go-discover on most platforms returns IPs (not hostnames), and
+because the IPs aren't knowable in advance, the TLS certificates used to secure
+the Vault API port don't contain these IPs in their IP SANs.
 
-A requirement for integrated storage is that the
-[cluster_addr](/docs/concepts/ha#per-node-cluster-address) configuration option
-is set. This allows Vault to assign an address to the node ID at join time.
+### Vault networking recap
+
+Before we explore solutions to this problem, let's recapitulate how Vault nodes
+speak to one another.
+
+Vault exposes two TCP ports: the API port and the cluster port.
+
+The API port is where clients send their Vault HTTP requests.
+
+For a single-node Vault cluster you don't worry about a cluster port as it won't be used.
+
+When you have multiple nodes you also need a cluster port.  This is used by Vault
+nodes to issue RPCs to one another, e.g. to forward requests from a standby node
+to the active node, or when Raft is in use, to handle leader election and
+replication of stored data.
+
+The cluster port is secured using a TLS certificate that the Vault active node
+generates internally.  It's clear how this can work when not using integrated
+storage: every node has at least read access to storage, so once the active
+node has persisted the certificate, the standby nodes can fetch it, and all
+agree on how cluster traffic should be encrypted.
+
+It's less clear how this works with integrated storage, as there is a chicken
+and egg problem.  Nodes don't have a shared view of storage until the raft
+cluster has been formed, but we're trying to form the raft cluster!  To solve
+this problem, a Vault node must speak to another Vault node using the API port
+instead of the cluster port.  This is currently the only situation in which
+OSS Vault does this (Vault Enterprise also does something similar when setting
+up replication.)
+
+* node2 wants to join the cluster, so issues challenge API request to existing member node1
+* node1 replies to challenge request with (1) an encrypted random UUID and (2) seal config
+* node2 must decrypt UUID using seal; if using auto-unseal can do it directly, if using shamir must wait for user to provide enough unseal keys to perform decryption
+* node2 sends decrypted UUID back to node1 using answer API
+* node1 sees node2 can be trusted (since it has seal access) and replies with a bootstrap package which includes the cluster TLS certificate and private key
+* node2 gets sent a raft snapshot over the cluster port
+
+After this procedure the new node will never again send traffic to the API port.
+All subsequent inter-node communication will use the cluster port.
+
+![Raft Join Process](/img/raft-join-detailed.png)
+
+### Assisted raft join techniques
+
+The simplest option is to do it by hand: issue raft join commands specifying the
+explicit names or IPs of the nodes to join to.  In this section we look at other
+TLS-compatible options that lend themselves more to automation.
+
+#### Autojoin with TLS servername
+
+As of Vault 1.6.2, the simplest option might be to specify a leader_tls_servername
+in the retry_join stanza which matches a DNS SAN in the certificate.
+
+Note that names in a certificate's DNS SAN don't actually have to be registered
+in a DNS server.  Your nodes may have no names found in DNS, while still
+using certificate(s) that contain this shared "servername" in their DNS SANs.
+
+#### Autojoin but constrain CIDR, list all possible IPs in certificate
+
+If all the vault node IPs are assigned from a small subnet, e.g. a /28, it
+becomes practical to put all the IPs that exist in that subnet into the IP SANs
+of the TLS certificate the nodes will share.
+
+The drawback here is that the cluster may someday outgrow the CIDR and changing
+it may be a pain.  For similar reasons this solution may be impractical when
+using non-voting nodes and dynamically scaling clusters.
+
+#### Load balancer instead of autojoin
+
+Most Vault instances are going to have a load balancer (LB) between clients and
+the Vault nodes.  In that case, the LB knows how to route traffic to working
+Vault nodes, and there's no need for auto-join: we can just use retry_join
+with the LB address as the target.
+
+One potential issue here: some users want a public facing LB for clients to
+connect to Vault, but aren't comfortable with Vault internal traffic
+egressing from the internal network it normally runs on.
 
 ## Outage Recovery
 
