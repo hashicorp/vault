@@ -1,7 +1,7 @@
 <div class="masked-input {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
-    <pre class="masked-value display-only is-word-break">{{value}}</pre>
+    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{value}}</pre>
   {{else if maskWhileTyping}}
     <input
       autocomplete="off"
