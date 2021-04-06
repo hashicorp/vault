@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Vault Agent
-sidebar_title: Vault Agent
 description: |-
   Vault Agent is a client-side daemon that can be used to perform some Vault
   functionality automatically.
@@ -102,20 +101,21 @@ Auto-auth, however, has its own notion of retrying and is not affected by this
 section.
 
 Here are the options for the `retry` stanza:
+
 - `num_retries` `(int: 12)` - Specify how many times a failing request will
-  be retried.  A value of `0` translates to the default, i.e. 12 retries.
-  A value of `-1` disables retries.  The environment variable `VAULT_MAX_RETRIES`
+  be retried. A value of `0` translates to the default, i.e. 12 retries.
+  A value of `-1` disables retries. The environment variable `VAULT_MAX_RETRIES`
   overrides this setting.
 
-There are a couple of subtleties to be aware of here.  First, requests originating
+There are a couple of subtleties to be aware of here. First, requests originating
 from the proxy cache will only be retried if they resulted in specific HTTP
 result codes: any 50x code except 501 ("not implemented"), as well as 412
 ("precondition failed"); 412 is used in Vault Enterprise 1.7+ to indicate a
-stale read due to eventual consistency.  Requests coming from the template
+stale read due to eventual consistency. Requests coming from the template
 subsystem are retried regardless of the failure.
 
 Second, the backoff algorithm used to set the time between retries differs for
-the template and cache subsystems.  This is a technical limitation we hope
+the template and cache subsystems. This is a technical limitation we hope
 to address in the future.
 
 ### listener Stanza

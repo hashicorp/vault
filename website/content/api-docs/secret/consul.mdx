@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: Consul - Secrets Engines - HTTP API
-sidebar_title: Consul
 description: This is the API documentation for the Vault Consul secrets engine.
 ---
 
