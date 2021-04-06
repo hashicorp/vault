@@ -9,7 +9,7 @@ const NAV_DATA_FILE = 'data/guides-nav-data.json'
 const CONTENT_DIR = 'content/guides'
 const basePath = 'guides'
 
-export default function DocsLayout(props) {
+export default function GuidesLayout(props) {
   return (
     <DocsPage
       product={{ name: productName, slug: productSlug }}
