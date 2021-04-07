@@ -29,7 +29,7 @@
   {{#if key.enterAsText}}
     <div class="control">
       <textarea
-        class="textarea"
+        class="textarea masked-font"
         oninput={{action "updateData"}}
         data-test-pgp-file-textarea=true
       >{{key.value}}</textarea>
@@ -54,7 +54,7 @@
               {{#if key.fileName}}
                 {{key.fileName}}
               {{else}}
-                Choose a file&hellip;
+                Choose a file&hellip;meep
               {{/if}}
             </span>
             {{#if key.fileName}}

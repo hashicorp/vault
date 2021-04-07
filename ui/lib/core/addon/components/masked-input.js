@@ -22,6 +22,7 @@ import layout from '../templates/components/masked-input';
  * @param [maskByDefault=false] {bool} - Relevant only when using DisplayOnly value. If true this by default masks the value.
  * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
  * @param [maskWhileTyping=false] {bool} - Whether or not to mask the value while typing by using the custom obscure font.
+ * @param [isCertificate=false] {bool} - If certificate display the label and icons differently.
  *
  *
  */
