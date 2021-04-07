@@ -1,10 +1,33 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import Button from '@hashicorp/react-button'
 import ProductDownloader from '@hashicorp/react-product-downloader'
 import HashiHead from '@hashicorp/react-head'
 import { VERSION, CHANGELOG_URL, packageManagers } from 'data/version'
 import { productName, productSlug } from 'data/metadata'
 import s from './style.module.css'
+
+function MerchandisingSlot() {
+  return (
+    <div className={s.merchandisingSlot}>
+      <div className={s.centerWrapper}>
+        <p>
+          Want all of the power and security of Vault, without the complexity
+          and overhead of managing it yourself?
+        </p>
+        <Button
+          title="Sign up for HCP Vault"
+          linkType="inbound"
+          url="https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=download_cta"
+          theme={{
+            variant: 'tertiary',
+            brand: 'vault',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
 
 export default function DownloadsPage({ releases }) {
   const changelogUrl = CHANGELOG_URL.length
@@ -54,13 +77,16 @@ export default function DownloadsPage({ releases }) {
           label: 'View Tutorials at HashiCorp Learn',
         }}
         merchandisingSlot={
-          <p className={s.releaseNote}>
-            Release notes are available in our{' '}
-            <Link href={`/docs/release-notes/${VERSION}`}>
-              <a>documentation</a>
-            </Link>
-            .
-          </p>
+          <>
+            <MerchandisingSlot />
+            <p className={s.releaseNote}>
+              Release notes are available in our{' '}
+              <Link href={`/docs/release-notes/${VERSION}`}>
+                <a>documentation</a>
+              </Link>
+              .
+            </p>
+          </>
         }
       />
     </div>
