@@ -71,9 +71,11 @@ func TLSFileChecks(certFilePath, keyFilePath, rootFilePath string, checkRoot boo
 
 	if !checkRoot {
 		// Check that certificate isn't expired and is of correct usage type
-		cert.Leaf.Verify(x509.VerifyOptions{
+		if _, err = cert.Leaf.Verify(x509.VerifyOptions{
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		})
+		}); err != nil {
+			return fmt.Errorf("failed to verify certificate: " + err.Error())
+		}
 	} else {
 		if rootFilePath == "" {
 			return fmt.Errorf("TLS Root CA file not specified, but TLS chain verification is required")
