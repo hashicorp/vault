@@ -116,7 +116,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse public_key as SSH key: %s", err)), nil
 	}
 
-	err = b.validateSignedKeyRequirements(userPublicKey, role)
+	err = b.validateSignedKeyRequirements(publicKey, userPublicKey, role)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("public_key failed to meet the key requirements: %s", err)), nil
 	}
@@ -421,7 +421,20 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 	return ttl, nil
 }
 
-func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *sshRole) error {
+func (b *backend) validateSignedKeyRequirements(publicKeyRaw string, publickey ssh.PublicKey, role *sshRole) error {
+	publicKeyRaw = strings.TrimSuffix(publicKeyRaw, "\n") // remove extra newline for comparison
+	if role.AllowedPublicKeys != nil && len(role.AllowedPublicKeys) > 0 {
+		keyInAcceptList := false
+		for _, key := range role.AllowedPublicKeys {
+			if publicKeyRaw == key {
+				keyInAcceptList = true
+			}
+		}
+		if !keyInAcceptList {
+			return fmt.Errorf("pubkey cannot be signed by role -- reason: not in AcceptList")
+		}
+	}
+
 	if len(role.AllowedUserKeyLengths) != 0 {
 		var kstr string
 		var kbits int
