@@ -146,7 +146,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v3.21.1+incompatible
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
@@ -155,6 +155,10 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
+	go.opentelemetry.io/otel v0.19.0
+	go.opentelemetry.io/otel/exporters/stdout v0.19.0
+	go.opentelemetry.io/otel/sdk v0.19.0
+	go.opentelemetry.io/otel/trace v0.19.0
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b

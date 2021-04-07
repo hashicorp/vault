@@ -3,6 +3,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -21,6 +22,7 @@ func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseC
 }
 
 func TestOperatorDiagnoseCommand_Run(t *testing.T) {
+	initTracer()
 	t.Parallel()
 	cases := []struct {
 		name         string
@@ -84,4 +86,5 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			})
 		}
 	})
+	tp.ForceFlush(context.Background())
 }

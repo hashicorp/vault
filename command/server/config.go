@@ -77,13 +77,13 @@ func (c *Config) Validate(source string) []configutil.ConfigError {
 	if c.Telemetry != nil {
 		results = append(results, c.Telemetry.Validate(source)...)
 	}
-	// Look for incorrect section counts
-	if c, ok := c.SectionCounts[sectionSeal]; ok && c > 2 {
+	/*// Look for incorrect section counts
+	if c, ok := c.Sections[sectionSeal]; ok && c > 2 {
 		results = append(results, configutil.ConfigError{
 			Problem:  "",
 			Position: token.Pos{},
 		}
-	}
+	}*/
 	return results
 }
 

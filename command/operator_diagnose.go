@@ -1,6 +1,8 @@
 package command
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -11,6 +13,11 @@ import (
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
@@ -104,6 +111,24 @@ const status_failed = "\u001b[31m[failed]\u001b[0m "
 const status_warn = "\u001b[33m[ warn ]\u001b[0m "
 const same_line = "\u001b[F"
 
+var tp *sdktrace.TracerProvider
+
+// initTracer creates and registers trace provider instance.
+func initTracer() {
+	var err error
+	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	if err != nil {
+		panic(fmt.Sprintf("failed to initialize stdout exporter %v\n", err))
+		return
+	}
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	tp = sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSpanProcessor(bsp),
+	)
+	otel.SetTracerProvider(tp)
+}
+
 func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
@@ -118,6 +143,10 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
 	}
+	tracer := tp.Tracer("vault")
+	ctx := context.Background()
+	ctx, span := tracer.Start(ctx, "initialization")
+	defer span.End()
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
@@ -141,17 +170,17 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		reloadFuncsLock: new(sync.RWMutex),
 	}
 
-	phase := "Parse configuration"
-	c.UI.Output(status_unknown + phase)
+	ctx, span2 := tracer.Start(ctx, "Parse configuration")
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output("Error while reading configuration files:")
-		c.UI.Output(err.Error())
+		span.RecordError(err, trace.WithAttributes(attribute.KeyValue{Key: "message", Value: attribute.StringValue("Error while reading configuration files")}))
+		/*		c.UI.Output(same_line + status_failed + phase)
+				c.UI.Output("Error while reading configuration files:")
+				c.UI.Output(err.Error())*/
 		return 1
 	}
-
+	span2.End()
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
@@ -211,6 +240,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
 	// TODO: check for storage backend
+	var phase string
 	c.UI.Output(same_line + status_ok + phase)
 
 	phase = "Access storage"
@@ -222,6 +252,5 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		return 1
 	}
 	c.UI.Output(same_line + status_ok + phase)
-
 	return 0
 }
