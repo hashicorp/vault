@@ -1,33 +1,42 @@
 import { productName, productSlug } from 'data/metadata'
-import order from 'data/guides-navigation.js'
 import DocsPage from '@hashicorp/react-docs-page'
 import {
   generateStaticPaths,
   generateStaticProps,
 } from '@hashicorp/react-docs-page/server'
 
-const subpath = 'guides'
+const NAV_DATA_FILE = 'data/guides-nav-data.json'
+const CONTENT_DIR = 'content/guides'
+const basePath = 'guides'
 
 export default function GuidesLayout(props) {
   return (
     <DocsPage
       product={{ name: productName, slug: productSlug }}
-      subpath={subpath}
-      order={order}
-      mainBranch="master"
+      baseRoute={basePath}
       staticProps={props}
     />
   )
 }
 
 export async function getStaticPaths() {
-  return generateStaticPaths(subpath)
+  return {
+    fallback: false,
+    paths: await generateStaticPaths({
+      navDataFile: NAV_DATA_FILE,
+      localContentDir: CONTENT_DIR,
+    }),
+  }
 }
 
 export async function getStaticProps({ params }) {
-  return generateStaticProps({
-    subpath,
-    productName,
-    params,
-  })
+  return {
+    props: await generateStaticProps({
+      mainBranch: 'master',
+      navDataFile: NAV_DATA_FILE,
+      localContentDir: CONTENT_DIR,
+      product: { name: productName, slug: productSlug },
+      params,
+    }),
+  }
 }
