@@ -500,7 +500,7 @@ func (d *DynamoDBBackend) HAEnabled() bool {
 func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) error {
 	for len(requests) > 0 {
 		batchSize := int(math.Min(float64(len(requests)), 25))
-		batch := map[string][]*dynamodb.WriteRequest{ d.table: requests[:batchSize] }
+		batch := map[string][]*dynamodb.WriteRequest{d.table: requests[:batchSize]}
 		requests = requests[batchSize:]
 
 		var err error
@@ -511,19 +511,20 @@ func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) 
 		boff.MaxElapsedTime = 600 * time.Second
 
 		for len(batch) > 0 {
-			output, err := d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+			var output *dynamodb.BatchWriteItemOutput
+			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
 				RequestItems: batch,
 			})
 
-			if err != nil{
+			if err != nil {
 				break
 			}
 
 			if len(output.UnprocessedItems) == 0 {
 				break
 			} else {
-				duration := boff.NextBackOff();
-				if (duration != backoff.Stop) {
+				duration := boff.NextBackOff()
+				if duration != backoff.Stop {
 					batch = output.UnprocessedItems
 					time.Sleep(duration)
 				} else {
