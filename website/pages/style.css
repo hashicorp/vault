@@ -5,7 +5,7 @@
 @import '~@hashicorp/nextjs-scripts/prism/style.css';
 
 :root {
-  --highlight-color: var(--brand);
+  --highlight-color: var(--brand-link);
 }
 
 @import '~@hashicorp/react-alert-banner/style.css';
