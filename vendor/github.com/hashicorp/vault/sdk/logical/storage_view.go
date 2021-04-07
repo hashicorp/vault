@@ -42,9 +42,7 @@ func (s *StorageView) Get(ctx context.Context, key string) (*StorageEntry, error
 	if entry == nil {
 		return nil, nil
 	}
-	if entry != nil {
-		entry.Key = s.TruncateKey(entry.Key)
-	}
+	entry.Key = s.TruncateKey(entry.Key)
 
 	return &StorageEntry{
 		Key:      entry.Key,

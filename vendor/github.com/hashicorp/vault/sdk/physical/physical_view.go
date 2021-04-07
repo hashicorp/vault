@@ -48,9 +48,7 @@ func (v *View) Get(ctx context.Context, key string) (*Entry, error) {
 	if entry == nil {
 		return nil, nil
 	}
-	if entry != nil {
-		entry.Key = v.truncateKey(entry.Key)
-	}
+	entry.Key = v.truncateKey(entry.Key)
 
 	return &Entry{
 		Key:   entry.Key,
