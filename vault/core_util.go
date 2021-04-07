@@ -66,16 +66,6 @@ func (c *Core) GetCoreConfigInternal() *server.Config {
 	return conf.(*server.Config)
 }
 
-// SanitizedConfig returns a sanitized version of the current config.
-// See server.Config.Sanitized for specific values omitted.
-func (c *Core) SanitizedConfig() map[string]interface{} {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return nil
-	}
-	return conf.(*server.Config).Sanitized()
-}
-
 func (c *Core) teardownReplicationResolverHandler() {}
 func createSecondaries(*Core, *CoreConfig)          {}
 
