@@ -31,6 +31,7 @@ export default Model.extend({
   plugin_name: attr('string', {
     label: 'Database plugin',
     possibleValues: AVAILABLE_PLUGIN_TYPES,
+    noDefault: true,
   }),
   verify_connection: attr('boolean', {
     defaultValue: true,
