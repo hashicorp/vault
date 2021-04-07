@@ -19,7 +19,6 @@
 @import '~@hashicorp/react-enterprise-alert/style.css';
 @import '~@hashicorp/react-hero/style.css';
 @import '~@hashicorp/react-logo-grid/style.css';
-@import '~@hashicorp/react-product-downloader/dist/style.css';
 @import '~@hashicorp/react-search/style.css';
 @import '~@hashicorp/react-section-header/style.css';
 @import '~@hashicorp/react-tabs/style.css';
@@ -37,7 +36,6 @@
 
 /* Pages */
 @import './not-found/style.css';
-@import './downloads/style.css';
 @import './community/style.css';
 @import './use-cases/style.css';
 

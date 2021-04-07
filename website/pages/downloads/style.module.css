@@ -1,0 +1,14 @@
+.root {
+  composes: .g-container from global;
+  margin-top: 72px;
+  margin-bottom: 72px;
+}
+
+.logo {
+  width: 105px;
+}
+
+.releaseNote {
+  composes: .g-type-body from global;
+  text-align: center;
+}
