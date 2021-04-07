@@ -1,61 +1,15 @@
 package diagnose
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/vault"
 )
 
-func setup(t *testing.T) *vault.Core {
-	serverConf := &server.Config{
-		SharedConfig: &configutil.SharedConfig{
-			Listeners: []*configutil.Listener{
-				{
-					Type:                          "tcp",
-					Address:                       "127.0.0.1:443",
-					ClusterAddress:                "127.0.0.1:8201",
-					TLSCertFile:                   "./certs/server.crt",
-					TLSKeyFile:                    "./certs/server.key",
-					TLSClientCAFile:               "./certs/rootca.crt",
-					TLSMinVersion:                 "tls11",
-					TLSRequireAndVerifyClientCert: true,
-					TLSDisableClientCerts:         true,
-				},
-				{
-					Type:                          "tcp",
-					Address:                       "127.0.0.1:443",
-					ClusterAddress:                "127.0.0.1:8201",
-					TLSCertFile:                   "./certs/server2.crt",
-					TLSKeyFile:                    "./certs/server2.key",
-					TLSClientCAFile:               "./certs/rootca2.crt",
-					TLSMinVersion:                 "tls12",
-					TLSRequireAndVerifyClientCert: true,
-					TLSDisableClientCerts:         false,
-				},
-				{
-					Type:                          "tcp",
-					Address:                       "127.0.0.1:443",
-					ClusterAddress:                "127.0.0.1:8201",
-					TLSCertFile:                   "./certs/server3.crt",
-					TLSKeyFile:                    "./certs/server3.key",
-					TLSClientCAFile:               "./certs/rootca3.crt",
-					TLSMinVersion:                 "tls13",
-					TLSRequireAndVerifyClientCert: false,
-					TLSDisableClientCerts:         true,
-				},
-			},
-		},
-	}
-	conf := &vault.CoreConfig{
-		RawConfig: serverConf,
-	}
-	core := vault.TestCoreWithConfig(t, conf)
-	return core
-}
-
+// TestTLSValidCert is the positive test case to show that specifying a valid cert and key
+// passes all checks.
 func TestTLSValidCert(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
@@ -66,7 +20,7 @@ func TestTLSValidCert(t *testing.T) {
 				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
 				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
-				TLSMinVersion:                 "0",
+				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
 			},
@@ -78,6 +32,7 @@ func TestTLSValidCert(t *testing.T) {
 	}
 }
 
+// TestTLSFakeCert simply ensures that the certificate file must contain PEM data.
 func TestTLSFakeCert(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
@@ -88,7 +43,7 @@ func TestTLSFakeCert(t *testing.T) {
 				TLSCertFile:                   "./test-fixtures/fakecert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
 				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
-				TLSMinVersion:                 "0",
+				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
 			},
@@ -117,7 +72,7 @@ func TestTLSTrailingData(t *testing.T) {
 				TLSCertFile:                   "./test-fixtures/trailingdatacert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
 				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
-				TLSMinVersion:                 "0",
+				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
 			},
@@ -132,15 +87,183 @@ func TestTLSTrailingData(t *testing.T) {
 	}
 }
 
-func TestTLSExpiredCert(t *testing.T) {
+func TestTLSExpiredCert(t *testing.T) {}
+
+// TestTLSMismatchedCryptographicInfo verifies that a cert and key of differing cryptographic
+// types, when specified together, is met with a unique error message.
+func TestTLSMismatchedCryptographicInfo(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./test-fixtures/ecdsa.key",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "tls: private key type does not match public key type" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+
+	listeners = []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./test-fixtures/ecdsa.crt",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err = ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "tls: private key type does not match public key type" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
 }
 
-func TestTLSMismatchedCryptographicInfo(t *testing.T) {}
+// TestTLSMultiKeys verifies that a unique error message is thrown when a key is specified twice.
+func TestTLSMultiKeys(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/key.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
 
-func TestTLSContradictoryFlags(t *testing.T) {}
+// TestTLSMultiCerts verifies that a unique error message is thrown when a cert is specified twice.
+func TestTLSMultiCerts(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/cert.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "tls: found a certificate rather than a key in the PEM for the private key" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
 
-func TestTLSBadCipherSuite(t *testing.T) {}
+// TestTLSInvalidRoot makes sure that the Verify call in tls.go checks the authority of
+// the root.
+func TestTLSInvalidRoot(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./test-fixtures/ecdsa.crt",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "failed to verify certificate: x509: certificate signed by unknown authority" {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
 
-func TestTLSUnknownAlgorithm(t *testing.T) {}
+func TestTLSInvalidMinVersion(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "0",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != fmt.Errorf(minVersionError, "0").Error() {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
 
-func TestTLSIncorrectUsageType(t *testing.T) {}
+func TestTLSInvalidMaxVersion(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMaxVersion:                 "0",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != fmt.Errorf(maxVersionError, "0").Error() {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
