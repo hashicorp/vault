@@ -623,6 +623,8 @@ func testConfig_Sanitized(t *testing.T) {
 		"raw_storage_endpoint":         true,
 		"disable_sentinel_trace":       true,
 		"enable_ui":                    true,
+		"hostname_header":              false,
+		"raft_node_id_header":          false,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,

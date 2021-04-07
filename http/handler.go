@@ -293,6 +293,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	if maxRequestSize == 0 {
 		maxRequestSize = DefaultMaxRequestSize
 	}
+
+	// Swallow this error since we don't want to pollute the logs and we also don't want to
+	// return an HTTP error here. This information is best effort.
+	hostname, _ := os.Hostname()
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
@@ -317,15 +322,14 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
 		// Set some response headers with raft node id (if applicable) and hostname, if available
-		nodeID := core.GetRaftNodeID()
-		if nodeID != "" {
-			w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+		if core.RaftNodeIDHeader() {
+			nodeID := core.GetRaftNodeID()
+			if nodeID != "" {
+				w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+			}
 		}
 
-		// Swallow this error since we don't want to pollute the logs and we also don't want to
-		// return an HTTP error here. This information is best effort.
-		hostname, _ := os.Hostname()
-		if hostname != "" {
+		if core.HostnameHeader() && hostname != "" {
 			w.Header().Set("X-Vault-Hostname", hostname)
 		}
 

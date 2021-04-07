@@ -40,7 +40,7 @@ var (
 	TestingUpdateClusterAddr uint32
 )
 
-// GetNodeID returns the raft node ID if there is one, or an empty string if there's not
+// GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
 func (c *Core) GetRaftNodeID() string {
 	rb := c.getRaftBackend()
 

@@ -179,20 +179,6 @@ The Vault CLI always adds this header to every request, regardless of whether
 the request is being sent to a Vault Agent or directly to a Vault Server. In
 addition, the Vault SDK always adds this header to every request.
 
-## The `X-Vault-Hostname` Header
-
-The Vault Server will return the hostname of the node handling the HTTP request
-as a `X-Vault-Hostname` header in the response. If this header is not present,
-it means there was some kind of error retrieving the hostname for that particular
-node.
-
-## The `X-Vault-Raft-Node-ID` Header
-
-If the Vault Server is participating in a Raft cluster (e.g. using integrated storage),
-the Raft node ID of the node handling the HTTP request will be returned as a
-`X-Vault-Raft-Node-ID` header in the response. If the Vault Server is not participating
-in a Raft cluster, this header will be omitted.
-
 ## Help
 
 To retrieve the help for any API within Vault, including mounted backends, auth

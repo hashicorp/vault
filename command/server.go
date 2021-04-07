@@ -1315,6 +1315,8 @@ func (c *ServerCommand) Run(args []string) int {
 		MetricsHelper:             metricsHelper,
 		MetricSink:                metricSink,
 		SecureRandomReader:        secureRandomReader,
+		HostnameHeader:            config.HostnameHeader,
+		RaftNodeIDHeader:          config.RaftNodeIDHeader,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

@@ -567,6 +567,10 @@ type Core struct {
 
 	// disableAutopilot is used to disable the autopilot subsystem in raft storage
 	disableAutopilot bool
+
+	// enable/disable identifying response headers
+	hostnameHeader   bool
+	raftNodeIDHeader bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -675,6 +679,10 @@ type CoreConfig struct {
 
 	// DisableAutopilot is used to disable autopilot subsystem in raft storage
 	DisableAutopilot bool
+
+	// Whether to send headers in the HTTP response showing hostname or raft node ID
+	HostnameHeader   bool
+	RaftNodeIDHeader bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -822,6 +830,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		numExpirationWorkers:     conf.NumExpirationWorkers,
 		raftFollowerStates:       raft.NewFollowerStates(),
 		disableAutopilot:         conf.DisableAutopilot,
+		hostnameHeader:           conf.HostnameHeader,
+		raftNodeIDHeader:         conf.RaftNodeIDHeader,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1002,6 +1012,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	return c, nil
+}
+
+// HostnameHeader determines whether to add the X-Vault-Hostname header
+// to HTTP responses.
+func (c *Core) HostnameHeader() bool {
+	return c.hostnameHeader
+}
+
+// RaftNodeIDHeader determines whether to add the X-Vault-Raft-Node-ID header
+// to HTTP responses.
+func (c *Core) RaftNodeIDHeader() bool {
+	return c.raftNodeIDHeader
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It

@@ -68,6 +68,12 @@ type Config struct {
 
 	DisableSentinelTrace    bool        `hcl:"-"`
 	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace"`
+
+	HostnameHeader    bool        `hcl:"-"`
+	HostnameHeaderRaw interface{} `hcl:"hostname_header"`
+
+	RaftNodeIDHeader    bool        `hcl:"-"`
+	RaftNodeIDHeaderRaw interface{} `hcl:"raft_node_id_header"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -245,6 +251,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableIndexing = c2.DisableIndexing
 	}
 
+	result.HostnameHeader = c.HostnameHeader
+	if c2.HostnameHeader {
+		result.HostnameHeader = c2.HostnameHeader
+	}
+
+	result.RaftNodeIDHeader = c.RaftNodeIDHeader
+	if c2.RaftNodeIDHeader {
+		result.RaftNodeIDHeader = c2.RaftNodeIDHeader
+	}
+
 	// Use values from top-level configuration for storage if set
 	if storage := result.Storage; storage != nil {
 		if result.APIAddr != "" {
@@ -402,6 +418,18 @@ func ParseConfig(d string) (*Config, error) {
 
 	if result.DisableIndexingRaw != nil {
 		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.HostnameHeaderRaw != nil {
+		if result.HostnameHeader, err = parseutil.ParseBool(result.HostnameHeaderRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.RaftNodeIDHeaderRaw != nil {
+		if result.RaftNodeIDHeader, err = parseutil.ParseBool(result.RaftNodeIDHeaderRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -742,6 +770,10 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sealwrap": c.DisableSealWrap,
 
 		"disable_indexing": c.DisableIndexing,
+
+		"hostname_header": c.HostnameHeader,
+
+		"raft_node_id_header": c.RaftNodeIDHeader,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

@@ -46,6 +46,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"max_lease_ttl":                json.Number("0"),
 		"pid_file":                     "",
 		"plugin_directory":             "",
+		"hostname_header":              false,
+		"raft_node_id_header":          false,
 	}
 
 	expected = map[string]interface{}{
