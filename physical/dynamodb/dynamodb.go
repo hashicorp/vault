@@ -2,6 +2,7 @@ package dynamodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -27,6 +28,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
+
+	"github.com/cenkalti/backoff/v3"
 )
 
 const (
@@ -497,15 +500,40 @@ func (d *DynamoDBBackend) HAEnabled() bool {
 func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) error {
 	for len(requests) > 0 {
 		batchSize := int(math.Min(float64(len(requests)), 25))
-		batch := requests[:batchSize]
+		batch := map[string][]*dynamodb.WriteRequest{d.table: requests[:batchSize]}
 		requests = requests[batchSize:]
 
+		var err error
+
 		d.permitPool.Acquire()
-		_, err := d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-			RequestItems: map[string][]*dynamodb.WriteRequest{
-				d.table: batch,
-			},
-		})
+
+		boff := backoff.NewExponentialBackOff()
+		boff.MaxElapsedTime = 600 * time.Second
+
+		for len(batch) > 0 {
+			var output *dynamodb.BatchWriteItemOutput
+			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+				RequestItems: batch,
+			})
+
+			if err != nil {
+				break
+			}
+
+			if len(output.UnprocessedItems) == 0 {
+				break
+			} else {
+				duration := boff.NextBackOff()
+				if duration != backoff.Stop {
+					batch = output.UnprocessedItems
+					time.Sleep(duration)
+				} else {
+					err = errors.New("dynamodb: timeout handling UnproccessedItems")
+					break
+				}
+			}
+		}
+
 		d.permitPool.Release()
 		if err != nil {
 			return err
