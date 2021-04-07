@@ -30,8 +30,9 @@ export default function Homepage({ content }) {
           buttons={[
             {
               external: false,
-              title: 'Get Started',
-              url: 'https://www.vaultproject.io/intro/getting-started',
+              title: 'Try Cloud',
+              url:
+                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
             },
             {
               external: false,
@@ -40,9 +41,8 @@ export default function Homepage({ content }) {
             },
             {
               type: 'inbound',
-              title: 'Try Cloud',
-              url:
-                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
+              title: 'Get Started with Vault',
+              url: 'https://www.vaultproject.io/intro/getting-started',
               theme: { variant: 'tertiary' },
             },
           ]}
