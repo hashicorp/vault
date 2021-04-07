@@ -569,6 +569,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	// it is an error to delete a key that is actively referenced by a role
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
@@ -577,10 +578,12 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	for _, roleName := range roleNames {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
 		if err != nil {
+			i.oidcLock.Unlock()
 			return nil, err
 		}
 		if entry != nil {
 			if err := entry.DecodeJSON(&role); err != nil {
+				i.oidcLock.Unlock()
 				return nil, err
 			}
 			if role.Key == targetKeyName {
@@ -599,6 +602,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	// key can safely be deleted now
 	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
