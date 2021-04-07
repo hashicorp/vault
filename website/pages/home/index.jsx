@@ -127,7 +127,7 @@ export default function Homepage({ content }) {
           id="cloud-offerings"
           title="HCP Vault"
           chin="Available on AWS"
-          description="HCP Vault allows organizations to get up and running quickly, providing immediate access to Vault’s best-in-class secrets management and encryption capabilities, with the platform providing the resilience and operational excellence so you do not have to manage Vault yourself."
+          description="HCP Vault provides all of the power and security of Vault, without the complexity and overhead of managing it yourself. Access Vault’s best-in-class secrets management and encryption capabilities instantly and onboard applications and teams easily."
           image={require('./img/hcp-vault.svg?url')}
           links={[
             {
