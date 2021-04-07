@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault
 
-go 1.13
+go 1.16
 
 replace github.com/hashicorp/vault/api => ./api
 
