@@ -68,7 +68,7 @@ export default function Homepage({ content }) {
         <section>
           <div className="g-container">
             <UseCases
-              theme="vault"
+              product="vault"
               items={[
                 {
                   title: 'Secrets Management',
@@ -155,6 +155,7 @@ export default function Homepage({ content }) {
             <Button
               title="Learn More"
               url="https://www.hashicorp.com/products/vault/enterprise"
+              theme={{ brand: 'vault' }}
             />
           </div>
         </section>
