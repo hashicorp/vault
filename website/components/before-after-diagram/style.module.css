@@ -4,7 +4,7 @@
   /* CSS custom properties to control theming */
   --product-color: var(--black);
   --gray-6-transparent: rgba(210, 212, 219, 0);
-  --after-bullet-background: url('/img/icons/check-circle.svg');
+  --after-bullet-background: url('/img/icons/check-square-vault.svg');
   --after-bullet-height: 18px;
 
   display: flex;
@@ -21,29 +21,6 @@
     flex-direction: column;
     margin-left: 40px;
     margin-right: 0;
-  }
-
-  &[data-theme='vault'] {
-    --after-bullet-background: url('/img/icons/check-circle-blue.svg');
-    --after-bullet-height: 19px;
-  }
-
-  &[data-theme='consul'] {
-    --product-color: var(--consul);
-    --after-bullet-background: url('/img/icons/check-circle-pink.svg');
-    --after-bullet-height: 19px;
-  }
-
-  &[data-theme='terraform'] {
-    --product-color: var(--terraform);
-    --after-bullet-background: url('/img/icons/check-circle-purple.svg');
-    --after-bullet-height: 19px;
-  }
-
-  &[data-theme='nomad'] {
-    --product-color: var(--nomad);
-    --after-bullet-background: url('/img/icons/check-circle-green.svg');
-    --after-bullet-height: 19px;
   }
 }
 
