@@ -85,7 +85,7 @@ func (b *backend) tidyDenyListRoleTag(ctx context.Context, req *logical.Request,
 					return fmt.Errorf("found entry for tag %q but actual tag is empty", tag)
 				}
 
-				var result roleTagBlacklistEntry
+				var result roleTagDenylistEntry
 				if err := tagEntry.DecodeJSON(&result); err != nil {
 					return err
 				}
