@@ -169,7 +169,7 @@ func (c *DebugCommand) Flags() *FlagSets {
 		Usage: "Target to capture, defaulting to all if none specified. " +
 			"This can be specified multiple times to capture multiple targets. " +
 			"Available targets are: config, host, metrics, pprof, " +
-			"replication-status, server-status.",
+			"replication-status, server-status, log.",
 	})
 
 	return set
@@ -477,7 +477,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 }
 
 func (c *DebugCommand) defaultTargets() []string {
-	return []string{"config", "host", "metrics", "pprof", "replication-status", "server-status"}
+	return []string{"config", "host", "metrics", "pprof", "replication-status", "server-status", "log"}
 }
 
 func (c *DebugCommand) captureStaticTargets() error {
@@ -513,6 +513,7 @@ func (c *DebugCommand) capturePollingTargets() error {
 	var g run.Group
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), c.flagDuration+debugDurationGrace)
+	defer cancelFunc()
 
 	// This run group watches for interrupt or duration
 	g.Add(func() error {
@@ -570,6 +571,15 @@ func (c *DebugCommand) capturePollingTargets() error {
 	if strutil.StrListContains(c.flagTargets, "server-status") {
 		g.Add(func() error {
 			c.collectServerStatus(ctx)
+			return nil
+		}, func(error) {
+			cancelFunc()
+		})
+	}
+
+	if strutil.StrListContains(c.flagTargets, "log") {
+		g.Add(func() error {
+			_ = c.writeLogs(ctx)
 			return nil
 		}, func(error) {
 			cancelFunc()
@@ -980,4 +990,29 @@ func (c *DebugCommand) captureError(target string, err error) {
 		Timestamp:   time.Now().UTC(),
 	})
 	c.errLock.Unlock()
+}
+
+func (c *DebugCommand) writeLogs(ctx context.Context) error {
+	out, err := os.Create(filepath.Join(c.flagOutput, "vault.log"))
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case log := <-logCh:
+			_, err = out.WriteString(log)
+			if err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
