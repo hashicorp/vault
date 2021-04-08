@@ -12,11 +12,11 @@
 @import '~@hashicorp/react-toggle/style.css';
 @import '~@hashicorp/react-alert-banner/style.css';
 @import '~@hashicorp/react-button/styles/index.css';
-@import '~@hashicorp/react-case-study-slider/style.css';
 @import '~@hashicorp/react-code-block/style.css';
 @import '~@hashicorp/react-content/style.css';
 @import '~@hashicorp/react-docs-page/style.css';
 @import '~@hashicorp/react-enterprise-alert/style.css';
+@import '~@hashicorp/react-featured-slider/style.css';
 @import '~@hashicorp/react-hero/style.css';
 @import '~@hashicorp/react-logo-grid/style.css';
 @import '~@hashicorp/react-tabs/style.css';
