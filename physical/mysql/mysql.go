@@ -576,8 +576,8 @@ func (i *MySQLHALock) hasLock(key string) error {
 	var result sql.NullInt64
 	err := i.in.statements["used_lock"].QueryRow(key).Scan(&result)
 	if err == sql.ErrNoRows || !result.Valid {
-		// This is not an error to us since it just means the lock isn't held
-		return nil
+		// Signal we do no longer possess the lock, hence we need to step-down as leader.
+		return ErrLockLost
 	}
 
 	if err != nil {
@@ -630,6 +630,8 @@ var (
 	GlobalLockID int64
 	// ErrLockHeld is returned when another vault instance already has a lock held for the given key.
 	ErrLockHeld = errors.New("mysql: lock already held")
+	// ErrLockLost is returned when you are monitoring you leader lock, but your lock is lost.
+	ErrLockLost = errors.New("mysql: lock lost")
 	// ErrUnlockFailed
 	ErrUnlockFailed = errors.New("mysql: unable to release lock, already released or not held by this session")
 	// You were unable to update that you are the new leader in the DB
