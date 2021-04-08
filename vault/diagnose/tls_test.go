@@ -2,6 +2,7 @@ package diagnose
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -87,7 +88,32 @@ func TestTLSTrailingData(t *testing.T) {
 	}
 }
 
-func TestTLSExpiredCert(t *testing.T) {}
+// TestTLSExpiredCert checks that an expired certificate fails TLS checks
+// with an appropriate error.
+func TestTLSExpiredCert(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./test-fixtures/expiredcert.pem",
+				TLSKeyFile:                    "./test-fixtures/expiredprivatekey.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Errorf("TLS Config check on fake certificate should fail")
+	}
+	if !strings.Contains(err.Error(), "certificate has expired or is not yet valid") {
+		t.Errorf("Bad error message: %s", err.Error())
+	}
+}
 
 // TestTLSMismatchedCryptographicInfo verifies that a cert and key of differing cryptographic
 // types, when specified together, is met with a unique error message.
