@@ -1053,7 +1053,16 @@
       },
       {
         "title": "JWT/OIDC",
-        "path": "auth/jwt"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/jwt"
+          },
+          {
+            "title": "OIDC Providers",
+            "path": "auth/jwt_oidc_providers"
+          }
+        ]
       },
       {
         "title": "Kerberos",
