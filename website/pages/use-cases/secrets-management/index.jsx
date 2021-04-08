@@ -29,7 +29,11 @@ export default function SecretsManagmentUseCase({ content }) {
         />
 
         <div className="button-container">
-          <Button title="Download" url="/downloads" />
+          <Button
+            title="Download"
+            url="/downloads"
+            theme={{ brand: 'vault' }}
+          />
           <Button title="Get Started" url="/intro" theme="dark-outline" />
         </div>
       </section>
