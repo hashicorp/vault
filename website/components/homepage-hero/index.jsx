@@ -25,7 +25,7 @@ export default function HomepageHero({
           buttons: buttons.slice(0, 2),
           centered: false,
           description: description,
-          theme: 'vault-gray',
+          product: 'vault',
           title: title,
           videos: [
             {
