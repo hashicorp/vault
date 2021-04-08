@@ -72,7 +72,6 @@ func TestMountTableMetrics(t *testing.T) {
 	if nonlocalLogicalMountsizeAfterMount <= nonlocalLogicalMountsize {
 		t.Errorf("Mount size does not change after new mount is mounted")
 	}
-
 }
 
 func sysMetricsReq(client *api.Client, cluster *vault.TestCluster) (*SysMetricsJSON, error) {

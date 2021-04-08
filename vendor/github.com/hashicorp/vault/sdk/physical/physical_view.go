@@ -6,9 +6,7 @@ import (
 	"strings"
 )
 
-var (
-	ErrRelativePath = errors.New("relative paths not supported")
-)
+var ErrRelativePath = errors.New("relative paths not supported")
 
 // View represents a prefixed view of a physical backend
 type View struct {

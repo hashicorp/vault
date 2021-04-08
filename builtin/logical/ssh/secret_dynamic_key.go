@@ -16,11 +16,11 @@ func secretDynamicKey(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretDynamicKeyType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username in host",
 			},
-			"ip": &framework.FieldSchema{
+			"ip": {
 				Type:        framework.TypeString,
 				Description: "IP address of host",
 			},

@@ -19,9 +19,11 @@ func TestCounterMode(t *testing.T) {
 	// inp = "\x00\x00\x00\x00"+context+"\x00\x00\x01\x00"
 	// digest = hmac.HMAC(key, inp, hash).digest()
 	// print [ord(x) for x in digest]
-	expect256 := []byte{219, 25, 238, 6, 185, 236, 180, 64, 248, 152, 251,
+	expect256 := []byte{
+		219, 25, 238, 6, 185, 236, 180, 64, 248, 152, 251,
 		153, 79, 5, 141, 222, 66, 200, 66, 143, 40, 3, 101, 221, 206, 163, 102,
-		80, 88, 234, 87, 157}
+		80, 88, 234, 87, 157,
+	}
 
 	for _, l := range []uint32{128, 256, 384, 1024} {
 		out, err := CounterMode(prf, prfLen, key, context, l)
@@ -41,7 +43,6 @@ func TestCounterMode(t *testing.T) {
 			t.Fatalf("mis-match")
 		}
 	}
-
 }
 
 func TestHMACSHA256PRF(t *testing.T) {
@@ -63,9 +64,11 @@ func TestHMACSHA256PRF(t *testing.T) {
 	// key = "".join([chr(x) for x in range(1, 17)])
 	// hm = hmac.HMAC(key, msg, hash)
 	// print [ord(x) for x in hm.digest()]
-	expect := []byte{9, 50, 146, 8, 188, 130, 150, 107, 205, 147, 82, 170,
+	expect := []byte{
+		9, 50, 146, 8, 188, 130, 150, 107, 205, 147, 82, 170,
 		253, 183, 26, 38, 167, 194, 220, 111, 56, 118, 219, 209, 31, 52, 137,
-		90, 246, 133, 191, 124}
+		90, 246, 133, 191, 124,
+	}
 	if !bytes.Equal(expect, out) {
 		t.Fatalf("mis-matched output")
 	}

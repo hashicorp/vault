@@ -121,8 +121,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	defer core.Shutdown()
 
 	waitForServices(t, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"standby"},
+		"consul": {},
+		"vault":  {"standby"},
 	})
 
 	// Initialize and unseal the core
@@ -140,8 +140,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	waitForServices(t, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"active", "initialized"},
+		"consul": {},
+		"vault":  {"active", "initialized"},
 	})
 }
 

@@ -35,10 +35,8 @@ const (
 	auditTableType = "audit"
 )
 
-var (
-	// loadAuditFailed if loading audit tables encounters an error
-	errLoadAuditFailed = errors.New("failed to setup audit table")
-)
+// loadAuditFailed if loading audit tables encounters an error
+var errLoadAuditFailed = errors.New("failed to setup audit table")
 
 func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 	requestId, err := uuid.GenerateUUID()

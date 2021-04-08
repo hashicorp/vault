@@ -37,8 +37,7 @@ func (*entManager) Reset() error {
 	return nil
 }
 
-type LeaseCountQuota struct {
-}
+type LeaseCountQuota struct{}
 
 func (l LeaseCountQuota) allow(request *Request) (Response, error) {
 	panic("implement me")

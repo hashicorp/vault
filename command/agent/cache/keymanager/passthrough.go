@@ -18,7 +18,6 @@ type PassthroughKeyManager struct {
 // If a key is provided, it will be used as the encryption key for the wrapper,
 // otherwise one will be generated.
 func NewPassthroughKeyManager(key []byte) (*PassthroughKeyManager, error) {
-
 	var rootKey []byte = nil
 	switch len(key) {
 	case 0:

@@ -164,7 +164,6 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 }
 
 func performTemplating(input string, p *PopulateStringInput) (string, error) {
-
 	performAliasTemplating := func(trimmed string, alias *logical.Alias) (string, error) {
 		switch {
 		case trimmed == "id":

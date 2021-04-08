@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*WriteCommand)(nil)
-var _ cli.CommandAutocomplete = (*WriteCommand)(nil)
+var (
+	_ cli.Command             = (*WriteCommand)(nil)
+	_ cli.CommandAutocomplete = (*WriteCommand)(nil)
+)
 
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {

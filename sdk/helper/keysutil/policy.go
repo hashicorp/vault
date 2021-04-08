@@ -312,7 +312,7 @@ type Policy struct {
 	deleted uint32
 
 	Name string      `json:"name"`
-	Key  []byte      `json:"key,omitempty"` //DEPRECATED
+	Key  []byte      `json:"key,omitempty"` // DEPRECATED
 	Keys keyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is

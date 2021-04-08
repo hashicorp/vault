@@ -52,7 +52,7 @@ func TestFSM_Batching(t *testing.T) {
 				Type:  raft.LogConfiguration,
 				Data: raft.EncodeConfiguration(raft.Configuration{
 					Servers: []raft.Server{
-						raft.Server{
+						{
 							Address: raft.ServerAddress("test"),
 							ID:      raft.ServerID("test"),
 						},
