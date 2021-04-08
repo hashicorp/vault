@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync/atomic"
+
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	"sync/atomic"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"

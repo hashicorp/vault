@@ -401,7 +401,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // active.
 func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stopCh chan struct{}) {
 	var manualStepDown bool
-	var firstIteration = true
+	firstIteration := true
 	for {
 		// Check for a shutdown
 		select {
@@ -728,7 +728,6 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 					default:
 						c.logger.Debug("new leader found, but still processing previous leader change")
 					}
-
 				}
 				atomic.AddInt32(lopCount, -1)
 			}()

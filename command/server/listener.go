@@ -1,13 +1,14 @@
 package server
 
 import (
-	"github.com/hashicorp/errwrap"
-	// We must import sha512 so that it registers with the runtime so that
-	// certificates that use it can be parsed.
 	_ "crypto/sha512"
 	"fmt"
 	"io"
 	"net"
+
+	"github.com/hashicorp/errwrap"
+	// We must import sha512 so that it registers with the runtime so that
+	// certificates that use it can be parsed.
 
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/internalshared/configutil"

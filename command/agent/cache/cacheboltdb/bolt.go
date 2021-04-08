@@ -66,7 +66,7 @@ type BoltStorageConfig struct {
 // exist.
 func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 	dbPath := filepath.Join(config.Path, DatabaseFileName)
-	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +290,7 @@ func (b *BoltStorage) Clear() error {
 
 // DBFileExists checks whether the vault agent cache file at `filePath` exists
 func DBFileExists(path string) (bool, error) {
-	checkFile, err := os.OpenFile(filepath.Join(path, DatabaseFileName), os.O_RDWR, 0600)
+	checkFile, err := os.OpenFile(filepath.Join(path, DatabaseFileName), os.O_RDWR, 0o600)
 	defer checkFile.Close()
 	switch {
 	case err == nil:

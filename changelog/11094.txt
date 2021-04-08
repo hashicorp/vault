@@ -1,3 +1,3 @@
-```changelog:bug
+```release-note:bug
 ui: Fix issue where logging in without namespace input causes error
 ```

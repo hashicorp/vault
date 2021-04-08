@@ -30,7 +30,7 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 
 	f := &fileSink{
 		logger: conf.Logger,
-		mode:   0640,
+		mode:   0o640,
 	}
 
 	pathRaw, ok := conf.Config["path"]

@@ -17,12 +17,12 @@ func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "The organization users must be part of",
 			},
 
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
 are running GitHub Enterprise or an
@@ -32,12 +32,12 @@ API-compatible authentication server.`,
 					Group: "GitHub Options",
 				},
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,

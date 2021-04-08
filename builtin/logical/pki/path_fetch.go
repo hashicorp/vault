@@ -59,7 +59,7 @@ func pathFetchValid(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"serial": &framework.FieldSchema{
+			"serial": {
 				Type: framework.TypeString,
 				Description: `Certificate serial number, in colon- or
 hyphen-separated octal`,
@@ -236,7 +236,8 @@ reply:
 			Data: map[string]interface{}{
 				logical.HTTPContentType: contentType,
 				logical.HTTPRawBody:     certificate,
-			}}
+			},
+		}
 		if retErr != nil {
 			if b.Logger().IsWarn() {
 				b.Logger().Warn("possible error, but cannot return in raw response. Note that an empty CA probably means none was configured, and an empty CRL is possibly correct", "error", retErr)

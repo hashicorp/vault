@@ -128,7 +128,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	loginData["role"] = role
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, loginData)
-
 	if err != nil {
 		return nil, err
 	}

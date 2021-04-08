@@ -56,6 +56,30 @@ overrides the default behavior described above in [Using Auth-Auth
 Token](/docs/agent/caching#using-auto-auth-token), and instead ignores any
 existing Vault token in the request and instead uses the auto-auth token.
 
+## Persistent Cache
+
+Vault Agent can restore tokens and leases from a persistent cache file created by a previous 
+Vault Agent process. The persistent cache is a BoltDB file that includes tuples encrypted 
+by a generated encryption key. The encrypted tuples include the Vault token used to retrieve 
+secrets, leases for tokens/secrets, and secret values.
+
+-> **Note:** Vault Agent Caching persistent cache will only restore _leased_ secrets. Secrets 
+that are not renewable, such as KV v2, will not be persisted.
+
+In order to use Vault Agent persistent cache, auto-auth must be used. During the restoration 
+of the cache, Vault Agent will pre-populate auto-auth with the persisted token. This token 
+is required to renew restored leases. If the token has expired, the cached leases will be evicted and 
+secrets will need to be retrieved from Vault.
+
+If Vault Agent templating is enabled alongside of the persistent cache, Vault Agent will automatically 
+route templating requests through the cache. This ensures template requests are cached and restored properly.
+
+At the time of this writing, Vault Agent persistent cache is only supported in a Kubernetes 
+environment. In the future the persistent cache will be expanded to include other environments.
+
+For more information about the Vault Agent persistent cache, see the sidebar for specific persistent 
+cache types.
+
 ## Cache Evictions
 
 The eviction of cache entries pertaining to secrets will occur when the agent
@@ -174,6 +198,25 @@ The top level `cache` block has the following configuration entries:
   forward the request to the Vault server. If set to `"force"` Agent will use the
   auto-auth token, overwriting the attached Vault token if set.
 
+- `persist` `(object: optional)` - Configuration for the persistent cache.
+
+### Configuration (Persist)
+
+These are common configuration values that live within the `persist` block:
+
+- `type` `(string: required)` - The type of the persistent cahce to use, 
+  e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
+  the block, e.g. `persist "kubernetes" {...}`.
+
+- `path` `(string: required)` - The path on disk where the persistent cache file 
+  should be created or restored from.
+
+- `keep_after_import` `(bool: optional)` - When set to true, a restored cache file 
+  is not deleted. Defaults to `false`.
+
+- `exit_on_err` `(bool: optional)` - When set to true, if any errors occur during 
+  a persitent cache restore, Vault Agent will exit with an error. Defaults to `true`.
+
 ## Configuration (`listener`)
 
 - `listener` `(array of objects: required)` - Configuration for the listeners.
@@ -228,6 +271,42 @@ cache {
 listener "unix" {
   address = "/path/to/socket"
   tls_disable = true
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_disable = true
+}
+
+vault {
+  address = "http://127.0.0.1:8200"
+}
+```
+
+### Persistent Cache Example Configuration
+
+An example configuration, with very contrived values, follows:
+
+```javascript
+auto_auth {
+  method "kubernetes" {
+    config = {
+      role = "foobar"
+    }
+  }
+
+  sink "file" {
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+}
+
+cache {
+  use_auto_auth_token = true
+  persist "kubernetes" {
+    path = "/vault/agent-cache"
+  }
 }
 
 listener "tcp" {

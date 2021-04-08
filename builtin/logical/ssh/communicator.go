@@ -304,7 +304,7 @@ func scpUploadFile(dst string, src io.Reader, w io.Writer, r *bufio.Reader, fi *
 		defer os.Remove(tf.Name())
 		defer tf.Close()
 
-		mode = 0644
+		mode = 0o644
 
 		if _, err := io.Copy(tf, src); err != nil {
 			return err

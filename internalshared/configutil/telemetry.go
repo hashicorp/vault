@@ -370,7 +370,6 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	}
 	fanout = append(fanout, inm)
 	globalMetrics, err := metrics.NewGlobal(metricsConf, fanout)
-
 	if err != nil {
 		return nil, nil, false, err
 	}

@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault
 
-go 1.13
+go 1.16
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -161,7 +161,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	golang.org/x/text v0.3.5 // indirect
-	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
+	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
@@ -169,4 +169,5 @@ require (
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
+	mvdan.cc/gofumpt v0.1.1
 )
