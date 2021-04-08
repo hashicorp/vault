@@ -528,7 +528,6 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("allowed changing resolve_aws_unique_ids from true to false")
 	}
-
 }
 
 func TestAwsEc2_RoleCrud(t *testing.T) {
@@ -815,7 +814,6 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 }
 
 func TestRoleInitialize(t *testing.T) {
-
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -970,7 +968,6 @@ func TestRoleInitialize(t *testing.T) {
 }
 
 func TestAwsVersion(t *testing.T) {
-
 	before := awsVersion{
 		Version: 42,
 	}

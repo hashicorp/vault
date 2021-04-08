@@ -17,11 +17,11 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "internal/counters/activity$",
 		Fields: map[string]*framework.FieldSchema{
-			"start_time": &framework.FieldSchema{
+			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
 			},
-			"end_time": &framework.FieldSchema{
+			"end_time": {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
 			},

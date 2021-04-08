@@ -17,7 +17,7 @@ func (b *backend) pathConfigTidyRoletagDenyList() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
-				Default: 15552000, //180d
+				Default: 15552000, // 180d
 				Description: `The amount of extra time that must have passed beyond the roletag
 expiration, before it is removed from the backend storage.
 Defaults to 4320h (180 days).`,
@@ -152,6 +152,7 @@ type tidyDenyListRoleTagConfig struct {
 const pathConfigTidyRoletagDenyListHelpSyn = `
 Configures the periodic tidying operation of the deny listed role tag entries.
 `
+
 const pathConfigTidyRoletagDenyListHelpDesc = `
 By default, the expired entries in the deny list will be attempted to be removed
 periodically. This operation will look for expired items in the list and purges them.

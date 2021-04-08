@@ -73,9 +73,11 @@ const (
 )
 
 // Verify DynamoDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*DynamoDBBackend)(nil)
-var _ physical.HABackend = (*DynamoDBBackend)(nil)
-var _ physical.Lock = (*DynamoDBLock)(nil)
+var (
+	_ physical.Backend   = (*DynamoDBBackend)(nil)
+	_ physical.HABackend = (*DynamoDBBackend)(nil)
+	_ physical.Lock      = (*DynamoDBLock)(nil)
+)
 
 // DynamoDBBackend is a physical backend that stores data in
 // a DynamoDB table. It can be run in high-availability mode
@@ -177,7 +179,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
 	}
-	var dynamodbMaxRetry = aws.UseServiceDefaultRetries
+	dynamodbMaxRetry := aws.UseServiceDefaultRetries
 	if dynamodbMaxRetryString != "" {
 		var err error
 		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)

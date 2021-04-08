@@ -550,7 +550,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 		"min": {
 			fixturePath: "./test-fixtures/config-template-min.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
+				{
 					Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
 					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 				},
@@ -559,7 +559,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 		"full": {
 			fixturePath: "./test-fixtures/config-template-full.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
+				{
 					Backup:         pointerutil.BoolPtr(true),
 					Command:        pointerutil.StringPtr("restart service foo"),
 					CommandTimeout: pointerutil.TimeDurationPtr("60s"),
@@ -568,7 +568,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 					ErrMissingKey:  pointerutil.BoolPtr(true),
 					LeftDelim:      pointerutil.StringPtr("<<"),
-					Perms:          pointerutil.FileModePtr(0655),
+					Perms:          pointerutil.FileModePtr(0o655),
 					RightDelim:     pointerutil.StringPtr(">>"),
 					SandboxPath:    pointerutil.StringPtr("/path/on/disk/where"),
 
@@ -582,19 +582,19 @@ func TestLoadConfigFile_Template(t *testing.T) {
 		"many": {
 			fixturePath: "./test-fixtures/config-template-many.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
+				{
 					Source:         pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
 					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 					ErrMissingKey:  pointerutil.BoolPtr(false),
 					CreateDestDirs: pointerutil.BoolPtr(true),
 					Command:        pointerutil.StringPtr("restart service foo"),
-					Perms:          pointerutil.FileModePtr(0600),
+					Perms:          pointerutil.FileModePtr(0o600),
 				},
-				&ctconfig.TemplateConfig{
+				{
 					Source:      pointerutil.StringPtr("/path/on/disk/to/template2.ctmpl"),
 					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render2.txt"),
 					Backup:      pointerutil.BoolPtr(true),
-					Perms:       pointerutil.FileModePtr(0755),
+					Perms:       pointerutil.FileModePtr(0o755),
 					Wait: &ctconfig.WaitConfig{
 						Min: pointerutil.TimeDurationPtr("2s"),
 						Max: pointerutil.TimeDurationPtr("10s"),
@@ -660,7 +660,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 		"min": {
 			fixturePath: "./test-fixtures/config-template-min-nosink.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
+				{
 					Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
 					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 				},
@@ -669,7 +669,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 		"full": {
 			fixturePath: "./test-fixtures/config-template-full-nosink.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
+				{
 					Backup:         pointerutil.BoolPtr(true),
 					Command:        pointerutil.StringPtr("restart service foo"),
 					CommandTimeout: pointerutil.TimeDurationPtr("60s"),
@@ -678,7 +678,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 					ErrMissingKey:  pointerutil.BoolPtr(true),
 					LeftDelim:      pointerutil.StringPtr("<<"),
-					Perms:          pointerutil.FileModePtr(0655),
+					Perms:          pointerutil.FileModePtr(0o655),
 					RightDelim:     pointerutil.StringPtr(">>"),
 					SandboxPath:    pointerutil.StringPtr("/path/on/disk/where"),
 
@@ -692,19 +692,19 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 		"many": {
 			fixturePath: "./test-fixtures/config-template-many-nosink.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
+				{
 					Source:         pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
 					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 					ErrMissingKey:  pointerutil.BoolPtr(false),
 					CreateDestDirs: pointerutil.BoolPtr(true),
 					Command:        pointerutil.StringPtr("restart service foo"),
-					Perms:          pointerutil.FileModePtr(0600),
+					Perms:          pointerutil.FileModePtr(0o600),
 				},
-				&ctconfig.TemplateConfig{
+				{
 					Source:      pointerutil.StringPtr("/path/on/disk/to/template2.ctmpl"),
 					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render2.txt"),
 					Backup:      pointerutil.BoolPtr(true),
-					Perms:       pointerutil.FileModePtr(0755),
+					Perms:       pointerutil.FileModePtr(0o755),
 					Wait: &ctconfig.WaitConfig{
 						Min: pointerutil.TimeDurationPtr("2s"),
 						Max: pointerutil.TimeDurationPtr("10s"),

@@ -16,9 +16,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-var (
-	currentRoleStorageVersion = 3
-)
+var currentRoleStorageVersion = 3
 
 func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
@@ -333,7 +331,6 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 
 // initialize is used to initialize the AWS roles
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
-
 	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
 		return nil

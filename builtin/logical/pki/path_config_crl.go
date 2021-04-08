@@ -21,13 +21,13 @@ func pathConfigCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/crl",
 		Fields: map[string]*framework.FieldSchema{
-			"expiry": &framework.FieldSchema{
+			"expiry": {
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours`,
 				Default: "72h",
 			},
-			"disable": &framework.FieldSchema{
+			"disable": {
 				Type:        framework.TypeBool,
 				Description: `If set to true, disables generating the CRL entirely.`,
 			},

@@ -1,9 +1,9 @@
 package consts
 
 const (
-	//N.B. This needs to be excluded from replication despite the name; it's
-	//merely saying that this is cluster information for the replicated
-	//cluster.
+	// N.B. This needs to be excluded from replication despite the name; it's
+	// merely saying that this is cluster information for the replicated
+	// cluster.
 	CoreReplicatedClusterPrefix   = "core/cluster/replicated/"
 	CoreReplicatedClusterPrefixDR = "core/cluster/replicated-dr/"
 
@@ -45,7 +45,6 @@ const (
 
 // We verify no change to the above values are made
 func init() {
-
 	if OldReplicationBootstrapping != 3 {
 		panic("Replication Constants have changed")
 	}

@@ -1177,7 +1177,6 @@ func (a *ActivityLog) activeFragmentWorker() {
 			endOfMonth.Reset(delta)
 		}
 	}
-
 }
 
 type ActivityIntentLog struct {
@@ -1358,7 +1357,6 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
 
 	// TODO: check if current segment is full and should be written
-
 }
 
 type ClientCountResponse struct {

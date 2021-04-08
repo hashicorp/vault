@@ -22,7 +22,6 @@ func ListenerChecks(listeners []listenerutil.Listener) error {
 
 // TLSChecks contains manual error checks against the TLS configuration
 func TLSFileChecks(certFilePath, keyFilePath string) error {
-
 	// LoadX509KeyPair will check if the key/cert information can be loaded from files,
 	// if they exist with keys and certs of the same algorithm type, if there
 	// is an unknown algorithm type being used, and if the files have trailing

@@ -35,12 +35,12 @@ func New() (*CacheMemDB, error) {
 func newDB() (*memdb.MemDB, error) {
 	cacheSchema := &memdb.DBSchema{
 		Tables: map[string]*memdb.TableSchema{
-			tableNameIndexer: &memdb.TableSchema{
+			tableNameIndexer: {
 				Name: tableNameIndexer,
 				Indexes: map[string]*memdb.IndexSchema{
 					// This index enables fetching the cached item based on the
 					// identifier of the index.
-					IndexNameID: &memdb.IndexSchema{
+					IndexNameID: {
 						Name:   IndexNameID,
 						Unique: true,
 						Indexer: &memdb.StringFieldIndex{
@@ -49,7 +49,7 @@ func newDB() (*memdb.MemDB, error) {
 					},
 					// This index enables fetching all the entries in cache for
 					// a given request path, in a given namespace.
-					IndexNameRequestPath: &memdb.IndexSchema{
+					IndexNameRequestPath: {
 						Name:   IndexNameRequestPath,
 						Unique: false,
 						Indexer: &memdb.CompoundIndex{
@@ -65,7 +65,7 @@ func newDB() (*memdb.MemDB, error) {
 					},
 					// This index enables fetching all the entries in cache
 					// belonging to the leases of a given token.
-					IndexNameLeaseToken: &memdb.IndexSchema{
+					IndexNameLeaseToken: {
 						Name:         IndexNameLeaseToken,
 						Unique:       false,
 						AllowMissing: true,
@@ -77,7 +77,7 @@ func newDB() (*memdb.MemDB, error) {
 					// that are tied to the given token, regardless of the
 					// entries belonging to the token or belonging to the
 					// lease.
-					IndexNameToken: &memdb.IndexSchema{
+					IndexNameToken: {
 						Name:         IndexNameToken,
 						Unique:       true,
 						AllowMissing: true,
@@ -87,7 +87,7 @@ func newDB() (*memdb.MemDB, error) {
 					},
 					// This index enables fetching all the entries in cache for
 					// the given parent token.
-					IndexNameTokenParent: &memdb.IndexSchema{
+					IndexNameTokenParent: {
 						Name:         IndexNameTokenParent,
 						Unique:       false,
 						AllowMissing: true,
@@ -97,7 +97,7 @@ func newDB() (*memdb.MemDB, error) {
 					},
 					// This index enables fetching all the entries in cache for
 					// the given accessor.
-					IndexNameTokenAccessor: &memdb.IndexSchema{
+					IndexNameTokenAccessor: {
 						Name:         IndexNameTokenAccessor,
 						Unique:       true,
 						AllowMissing: true,
@@ -107,7 +107,7 @@ func newDB() (*memdb.MemDB, error) {
 					},
 					// This index enables fetching all the entries in cache for
 					// the given lease identifier.
-					IndexNameLease: &memdb.IndexSchema{
+					IndexNameLease: {
 						Name:         IndexNameLease,
 						Unique:       true,
 						AllowMissing: true,

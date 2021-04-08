@@ -13,10 +13,10 @@ import (
 
 func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "creds/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
@@ -29,10 +29,10 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
 			HelpDescription: pathCredsCreateReadHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the static role.",
 				},

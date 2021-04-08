@@ -1168,7 +1168,6 @@ func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context) (string, err
 		}
 		return "", nil
 	}()
-
 	if err != nil {
 		return "", err
 	}

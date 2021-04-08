@@ -142,7 +142,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "create/" + framework.GenericNameRegex("role_name"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
@@ -171,7 +171,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to lookup (POST request body)",
 				},
@@ -190,7 +190,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to look up (request body)",
 				},
@@ -208,7 +208,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup-self$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to look up (unused, does not need to be set)",
 				},
@@ -227,7 +227,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token (request body)",
 				},
@@ -256,7 +256,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
 				},
@@ -274,7 +274,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke-orphan",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
 				},
@@ -292,11 +292,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to renew (request body)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -315,11 +315,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew-self$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to renew (unused, does not need to be set)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -338,11 +338,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to renew (request body)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -372,56 +372,56 @@ func (ts *TokenStore) paths() []*framework.Path {
 	rolesPath := &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
 		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
+			"role_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"allowed_policies": &framework.FieldSchema{
+			"allowed_policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenAllowedPoliciesHelp,
 			},
 
-			"disallowed_policies": &framework.FieldSchema{
+			"disallowed_policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenDisallowedPoliciesHelp,
 			},
 
-			"orphan": &framework.FieldSchema{
+			"orphan": {
 				Type:        framework.TypeBool,
 				Description: tokenOrphanHelp,
 			},
 
-			"period": &framework.FieldSchema{
+			"period": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Use 'token_period' instead.",
 				Deprecated:  true,
 			},
 
-			"path_suffix": &framework.FieldSchema{
+			"path_suffix": {
 				Type:        framework.TypeString,
 				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
 			},
 
-			"explicit_max_ttl": &framework.FieldSchema{
+			"explicit_max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Use 'token_explicit_max_ttl' instead.",
 				Deprecated:  true,
 			},
 
-			"renewable": &framework.FieldSchema{
+			"renewable": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: tokenRenewableHelp,
 			},
 
-			"bound_cidrs": &framework.FieldSchema{
+			"bound_cidrs": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Use 'token_bound_cidrs' instead.",
 				Deprecated:  true,
 			},
 
-			"allowed_entity_aliases": &framework.FieldSchema{
+			"allowed_entity_aliases": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
 			},
@@ -568,7 +568,6 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 }
 
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
-
 	switch key {
 	case tokenSubPath + salt.DefaultLocation:
 		ts.saltLock.Lock()
@@ -1738,7 +1737,6 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 	}
 
 	entry, err := ts.accessorView(ns).Get(ctx, lookupID)
-
 	if err != nil {
 		return aEntry, errwrap.Wrapf("failed to read index using accessor: {{err}}", err)
 	}
@@ -1794,7 +1792,6 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		var tidyErrors *multierror.Error
 
 		doTidy := func() error {
-
 			ts.logger.Info("beginning tidy operation on tokens")
 			defer ts.logger.Info("finished tidy operation on tokens")
 
@@ -2061,7 +2058,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 			"token": aEntry.TokenID,
 		},
 		Schema: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token to lookup",
 			},
@@ -2076,7 +2073,6 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 	}
 	if resp.IsError() {
 		return resp, nil
-
 	}
 
 	// Remove the token ID from the response
@@ -3480,7 +3476,6 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -3497,7 +3492,6 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		values[i].Value = float32(intValues[i])
 	}
 	return values, nil
-
 }
 
 func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -3529,7 +3523,6 @@ func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -3596,7 +3589,6 @@ func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.Ga
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -3697,7 +3689,6 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}

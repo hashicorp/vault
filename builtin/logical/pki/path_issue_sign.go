@@ -145,7 +145,6 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
 func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	roleName := data.Get("role").(string)
 
 	// Get the role if one was specified

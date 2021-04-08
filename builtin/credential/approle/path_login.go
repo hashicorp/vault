@@ -17,11 +17,11 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role_id": &framework.FieldSchema{
+			"role_id": {
 				Type:        framework.TypeString,
 				Description: "Unique identifier of the Role. Required to be supplied when the 'bind_secret_id' constraint is set.",
 			},
-			"secret_id": &framework.FieldSchema{
+			"secret_id": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "SecretID belong to the App role",
@@ -54,7 +54,6 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	// RoleID must be supplied during every login
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
 	if roleID == "" {

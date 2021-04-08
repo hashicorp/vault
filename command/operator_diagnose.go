@@ -15,8 +15,10 @@ import (
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
-var _ cli.Command = (*OperatorDiagnoseCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorDiagnoseCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
+)
 
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
@@ -98,11 +100,13 @@ func (c *OperatorDiagnoseCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-const status_unknown = "[      ] "
-const status_ok = "\u001b[32m[  ok  ]\u001b[0m "
-const status_failed = "\u001b[31m[failed]\u001b[0m "
-const status_warn = "\u001b[33m[ warn ]\u001b[0m "
-const same_line = "\u001b[F"
+const (
+	status_unknown = "[      ] "
+	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
+	status_failed  = "\u001b[31m[failed]\u001b[0m "
+	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
+	same_line      = "\u001b[F"
+)
 
 func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	f := c.Flags()
