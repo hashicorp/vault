@@ -5,6 +5,7 @@ package vault
 import (
 	"context"
 
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -53,6 +54,16 @@ func coreInit(c *Core, conf *CoreConfig) error {
 }
 func (c *Core) setupReplicationResolverHandler() error {
 	return nil
+}
+
+// GetCoreConfigInternal returns the server configuration
+// in struct format.
+func (c *Core) GetCoreConfigInternal() *server.Config {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil
+	}
+	return conf.(*server.Config)
 }
 
 func (c *Core) teardownReplicationResolverHandler() {}

@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: MongoDB - Database - Secrets Engines - HTTP API
-sidebar_title: MongoDB
 description: >-
   The MongoDB plugin for Vault's database secrets engine generates database
   credentials to access MongoDB servers.
@@ -59,17 +58,17 @@ has a number of parameters to further configure a connection.
 <details>
   <summary><b>Example Usernames:</b></summary>
 
-  | Example       |                                                      |
-  | ------------- | ---------------------------------------------------- |
-  | `DisplayName` | `token`                                              |
-  | `RoleName`    | `myrolename`                                         |
-  | Username      | `v-token-myrolename-jNFRlKsZZMxJEx60o66i-1614294836` |
+| Example       |                                                      |
+| ------------- | ---------------------------------------------------- |
+| `DisplayName` | `token`                                              |
+| `RoleName`    | `myrolename`                                         |
+| Username      | `v-token-myrolename-jNFRlKsZZMxJEx60o66i-1614294836` |
 
-  | Example       |                                                                     |
-  | ------------- | ------------------------------------------------------------------- |
-  | `DisplayName` | `amuchlonger_dispname`                                              |
-  | `RoleName`    | `role-name-with-dashes`                                             |
-  | Username      | `v-amuchlonger_dis-role-name-with--jNFRlKsZZMxJEx60o66i-1614294836` |
+| Example       |                                                                     |
+| ------------- | ------------------------------------------------------------------- |
+| `DisplayName` | `amuchlonger_dispname`                                              |
+| `RoleName`    | `role-name-with-dashes`                                             |
+| Username      | `v-amuchlonger_dis-role-name-with--jNFRlKsZZMxJEx60o66i-1614294836` |
 
 </details>
 </details>

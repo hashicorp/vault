@@ -38,11 +38,11 @@
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }} data-test-input={{attr.name}}>
-        {{#unless attr.options.defaultValue}}
+        {{#if attr.options.noDefault}}
           <option value="">
             Select one
           </option>
-        {{/unless}}
+        {{/if}}
         {{#each (path-or-array attr.options.possibleValues model) as |val|}}
           <option selected={{eq (get model valuePath) (or val.value val)}} value={{or val.value val}}>
             {{or val.displayName val}}
