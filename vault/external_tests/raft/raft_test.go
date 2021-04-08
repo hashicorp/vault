@@ -347,7 +347,6 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestRaft_Configuration(t *testing.T) {
