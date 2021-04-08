@@ -18,9 +18,8 @@ func TestTLSValidCert(t *testing.T) {
 				Type:                          "tcp",
 				Address:                       "127.0.0.1:443",
 				ClusterAddress:                "127.0.0.1:8201",
-				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
-				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
-				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSCertFile:                   "./test-fixtures/goodcertwithroot.pem",
+				TLSKeyFile:                    "./test-fixtures/goodkey.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -29,7 +28,7 @@ func TestTLSValidCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 }
 
@@ -43,7 +42,6 @@ func TestTLSFakeCert(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./test-fixtures/fakecert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
-				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -52,10 +50,10 @@ func TestTLSFakeCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
-	if err.Error() != "tls: failed to find any PEM data in certificate input" {
-		t.Errorf("Bad error message: %s", err.Error())
+	if !strings.Contains(err.Error(), "could not decode cert") {
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -72,7 +70,6 @@ func TestTLSTrailingData(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./test-fixtures/trailingdatacert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
-				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -81,10 +78,10 @@ func TestTLSTrailingData(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
-	if err.Error() != "asn1: syntax error: trailing data" {
-		t.Errorf("Bad error message: %s", err.Error())
+	if !strings.Contains(err.Error(), "asn1: syntax error: trailing data") {
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -99,7 +96,6 @@ func TestTLSExpiredCert(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./test-fixtures/expiredcert.pem",
 				TLSKeyFile:                    "./test-fixtures/expiredprivatekey.pem",
-				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -108,10 +104,10 @@ func TestTLSExpiredCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if !strings.Contains(err.Error(), "certificate has expired or is not yet valid") {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -126,7 +122,6 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
 				TLSKeyFile:                    "./test-fixtures/ecdsa.key",
-				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -135,10 +130,10 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "tls: private key type does not match public key type" {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 
 	listeners = []listenerutil.Listener{
@@ -158,10 +153,10 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 	}
 	err = ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "tls: private key type does not match public key type" {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -184,10 +179,10 @@ func TestTLSMultiKeys(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched" {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -201,7 +196,6 @@ func TestTLSMultiCerts(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/cert.pem",
-				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -210,10 +204,10 @@ func TestTLSMultiCerts(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "tls: found a certificate rather than a key in the PEM for the private key" {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -227,8 +221,7 @@ func TestTLSInvalidRoot(t *testing.T) {
 				Address:                       "127.0.0.1:443",
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
-				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
-				TLSClientCAFile:               "./test-fixtures/ecdsa.crt",
+				TLSKeyFile:                    "./test-fixtures/goodkey.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -237,10 +230,10 @@ func TestTLSInvalidRoot(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "failed to verify certificate: x509: certificate signed by unknown authority" {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -262,10 +255,10 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != fmt.Errorf(minVersionError, "0").Error() {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
 
@@ -287,9 +280,9 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Errorf("TLS Config check on fake certificate should fail")
+		t.Error("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != fmt.Errorf(maxVersionError, "0").Error() {
-		t.Errorf("Bad error message: %s", err.Error())
+		t.Errorf("Bad error message: %w", err)
 	}
 }
