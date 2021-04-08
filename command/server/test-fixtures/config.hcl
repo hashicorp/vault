@@ -45,3 +45,5 @@ pid_file = "./pidfile"
 raw_storage_endpoint = true
 disable_sealwrap = true
 disable_printable_check = true
+hostname_header = true
+raft_node_id_header = true

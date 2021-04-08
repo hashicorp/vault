@@ -441,6 +441,11 @@ func testLoadConfigFile(t *testing.T) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		HostnameHeader:      true,
+		HostnameHeaderRaw:   true,
+		RaftNodeIDHeader:    true,
+		RaftNodeIDHeaderRaw: true,
 	}
 
 	addExpectedEntConfig(expected, []string{})

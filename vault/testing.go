@@ -159,6 +159,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.MetricSink = opts.MetricSink
 	conf.NumExpirationWorkers = numExpirationWorkersTest
 	conf.RawConfig = opts.RawConfig
+	conf.HostnameHeader = opts.HostnameHeader
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger

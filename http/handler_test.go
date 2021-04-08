@@ -191,33 +191,68 @@ func TestHandler_cors(t *testing.T) {
 }
 
 func TestHandler_HostnameHeader(t *testing.T) {
-	core, _, _ := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-
-	req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		config        *vault.CoreConfig
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			config:        nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			config: &vault.CoreConfig{
+				HostnameHeader: true,
+			},
+			headerPresent: true,
+		},
 	}
 
-	client := cleanhttp.DefaultClient()
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			var core *vault.Core
 
-	if resp == nil {
-		t.Fatal("nil response")
-	}
+			if tc.config == nil {
+				core, _, _ = vault.TestCoreUnsealed(t)
+			} else {
+				core, _, _ = vault.TestCoreUnsealedWithConfig(t, tc.config)
+			}
 
-	hnHeader := resp.Header.Get("X-Vault-Hostname")
-	if hnHeader == "" {
-		t.Fatal("missing 'X-Vault-Hostname' header entry in response")
-	}
+			ln, addr := TestServer(t, core)
+			defer ln.Close()
 
-	rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
-	if rniHeader != "" {
-		t.Fatalf("no raft node ID header was expected, since we're not running a raft cluster. instead, got %s", rniHeader)
+			req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			client := cleanhttp.DefaultClient()
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if resp == nil {
+				t.Fatal("nil response")
+			}
+
+			hnHeader := resp.Header.Get("X-Vault-Hostname")
+			if tc.headerPresent && hnHeader == "" {
+				t.Logf("header configured = %t", core.HostnameHeader())
+				t.Fatal("missing 'X-Vault-Hostname' header entry in response")
+			}
+			if !tc.headerPresent && hnHeader != "" {
+				t.Fatal("didn't expect 'X-Vault-Hostname' header but it was present anyway")
+			}
+
+			rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+			if rniHeader != "" {
+				t.Fatalf("no raft node ID header was expected, since we're not running a raft cluster. instead, got %s", rniHeader)
+			}
+		})
 	}
 }
 
