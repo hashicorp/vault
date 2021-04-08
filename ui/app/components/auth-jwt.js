@@ -16,6 +16,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
   store: service(),
+  featureFlagService: service('featureFlag'),
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
@@ -131,7 +132,7 @@ export default Component.extend({
     // The namespace can be either be passed as a query paramter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
-    if (namespace === '') {
+    if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
       let i = state.indexOf(',ns=');
       if (i >= 0) {
         // ",ns=" is 4 characters
