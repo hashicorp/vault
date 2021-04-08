@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"net"
 	"reflect"
@@ -29,6 +31,7 @@ const (
 	testIP              = "127.0.0.1"
 	testUserName        = "vaultssh"
 	testAdminUser       = "vaultssh"
+	testCaKeyType       = "ca"
 	testOTPKeyType      = "otp"
 	testDynamicKeyType  = "dynamic"
 	testCIDRList        = "127.0.0.1/32"
@@ -313,6 +316,118 @@ func TestBackend_allowed_users(t *testing.T) {
 		resp.Data["ip"] != "52.207.235.245" ||
 		resp.Data["username"] != "test" {
 		t.Fatalf("failed to create credential: resp:%#v", resp)
+	}
+}
+
+func TestBackend_allowed_users_template(t *testing.T) {
+	testEntityID := "c65c8cff-5142-3d41-93d0-9d06286e7203"
+	testSshUsername := "testsshusername"
+	testEntityMetadata := map[string]string{
+		"ssh_username": testSshUsername,
+	}
+	testAllowedUsersTemplate := "ssh-{{ identity.entity.metadata.ssh_username }}"
+	expectedValidPrincipal := "ssh-" + testSshUsername
+
+	// Setup Vault cluster with a preexisting entity.
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+				defaultLeaseTTLVal := 2 * time.Minute
+				maxLeaseTTLVal := 10 * time.Minute
+				return Factory(context.Background(), &logical.BackendConfig{
+					Logger:      vault.NewTestLogger(t),
+					StorageView: &logical.InmemStorage{},
+					System: &logical.StaticSystemView{
+						DefaultLeaseTTLVal: defaultLeaseTTLVal,
+						MaxLeaseTTLVal:     maxLeaseTTLVal,
+						EntityVal: &logical.Entity{
+							ID:       testEntityID,
+							Name:     "testentity",
+							Aliases:  []*logical.Alias{},
+							Metadata: testEntityMetadata,
+						},
+					},
+				})
+			},
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0]
+	client := core.Client
+	vault.TestWaitActive(t, core.Core)
+
+	// Create a policy allowing our test user to sign a SSH key.
+	err := client.Sys().PutPolicy("test", `
+	   path "ssh/*" {
+		capabilities = ["update"]
+	   }
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Init userpass auth with test user.
+	if err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Init SSH secret engine with a signing role.
+	err = client.Sys().Mount("ssh", &api.MountInput{
+		Type: "ssh",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
+		"generate_signing_key": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"allowed_users":           testAllowedUsersTemplate,
+		"allowed_users_template":  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Login test user and sign key with expected valid principal.
+	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key":       testCAPublicKey,
+		"valid_principals": expectedValidPrincipal,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

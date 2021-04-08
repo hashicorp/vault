@@ -221,7 +221,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
 		if role.AllowedUsersTemplate {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`^{{.+?}}$`, principal)
+			matched, _ := regexp.MatchString(`{{.+?}}`, principal)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve principal based on template + entityID from request.
