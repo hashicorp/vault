@@ -66,6 +66,6 @@ func handleUnauthenticated(core *vault.Core) http.Handler {
 		}
 
 		resp, err := core.HandleRequest(r.Context(), req)
-		respondLogical(w, r, req, resp, true)
+		respondLogical(core, w, r, req, resp, true)
 	})
 }
