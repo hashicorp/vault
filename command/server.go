@@ -872,7 +872,10 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 }
 
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
-func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
+func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
+	ctx, span := tracer.Start(ctx, "init-listeners")
+	defer span.End()
+
 	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
@@ -887,6 +890,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
 			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
+			span.RecordError(errMsg)
 			return 1, nil, nil, errMsg
 		}
 
@@ -902,6 +906,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
 				if err != nil {
 					errMsg = fmt.Errorf("Error resolving cluster_address: %s", err)
+					span.RecordError(errMsg)
 					return 1, nil, nil, errMsg
 				}
 				clusterAddrs = append(clusterAddrs, tcpAddr)
@@ -909,6 +914,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
 					errMsg = fmt.Errorf("Failed to parse tcp listener")
+					span.RecordError(errMsg)
 					return 1, nil, nil, errMsg
 				}
 				clusterAddr := &net.TCPAddr{
@@ -958,6 +964,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 }
 
 func (c *ServerCommand) Run(args []string) int {
+	ctx := context.Background()
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -1568,7 +1575,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	status, lns, clusterAddrs, errMsg := c.InitListeners(config, disableClustering, &infoKeys, &info)
+	status, lns, clusterAddrs, errMsg := c.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
 
 	if status != 0 {
 		c.UI.Output("Error parsing listener configuration.")

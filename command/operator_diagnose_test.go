@@ -3,9 +3,9 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mitchellh/cli"
 )
@@ -22,7 +22,6 @@ func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseC
 }
 
 func TestOperatorDiagnoseCommand_Run(t *testing.T) {
-	initTracer()
 	t.Parallel()
 	cases := []struct {
 		name         string
@@ -69,6 +68,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testOperatorDiagnoseCommand(t)
+				initTracer(ui)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -85,6 +85,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				}
 			})
 		}
+		time.Sleep(5 * time.Second)
 	})
-	tp.ForceFlush(context.Background())
 }
