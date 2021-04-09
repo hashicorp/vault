@@ -58,16 +58,7 @@
             </T.content>
           </ToolTip>
         {{else}}
-          {{#if (eq label "Certificate")}}
-            <MaskedInput 
-              @value={{value}}
-              @displayOnly={{true}}
-              @maskByDefault={{true}}
-              @isCertificate={{true}}
-            />    
-          {{else}}
-            <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
-          {{/if}}
+          <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
         {{/if}}
       {{/if}}
     {{/if}}

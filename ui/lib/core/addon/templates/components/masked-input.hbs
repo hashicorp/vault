@@ -1,7 +1,7 @@
 <div class="masked-input {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
-    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{value}}</pre>
+    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{unless showValue (truncate value 20) value}}</pre>
   {{else if maskWhileTyping}}
     <input
       autocomplete="off"
@@ -12,7 +12,6 @@
       data-test-input
     />
   {{else}}
-  {{!-- ARG todo for text area as well --}}
     <textarea class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
       onfocus={{action (mut isFocused) true}} onblur={{action (mut isFocused) false}} onkeydown={{action onKeyDown}}
       onchange={{action "updateValue"}} value={{readonly value}} data-test-textarea />
