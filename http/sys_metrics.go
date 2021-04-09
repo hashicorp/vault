@@ -1,14 +1,11 @@
 package http
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -48,24 +45,5 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 		default:
 			respondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
 		}
-	})
-}
-
-func handleUnauthenticated(core *vault.Core) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origBody := new(bytes.Buffer)
-		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
-		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
-		if err != nil || status != 0 {
-			respondError(w, status, err)
-			return
-		}
-		if origBody != nil {
-			r.Body = ioutil.NopCloser(origBody)
-		}
-
-		resp, err := core.HandleRequest(r.Context(), req)
-		respondLogical(core, w, r, req, resp, true)
 	})
 }
