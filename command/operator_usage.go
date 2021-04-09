@@ -14,8 +14,10 @@ import (
 	"github.com/ryanuber/columnize"
 )
 
-var _ cli.Command = (*OperatorUsageCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorUsageCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorUsageCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorUsageCommand)(nil)
+)
 
 type OperatorUsageCommand struct {
 	*BaseCommand
@@ -240,7 +242,6 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 	}
 
 	return ret, nil
-
 }
 
 func (c *OperatorUsageCommand) namespacesOutput(data map[string]interface{}) []string {

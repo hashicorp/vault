@@ -38,9 +38,11 @@ type EtcdBackend struct {
 }
 
 // Verify EtcdBackend satisfies the correct interfaces
-var _ physical.Backend = (*EtcdBackend)(nil)
-var _ physical.HABackend = (*EtcdBackend)(nil)
-var _ physical.Lock = (*EtcdLock)(nil)
+var (
+	_ physical.Backend   = (*EtcdBackend)(nil)
+	_ physical.HABackend = (*EtcdBackend)(nil)
+	_ physical.Lock      = (*EtcdLock)(nil)
+)
 
 // newEtcd3Backend constructs a etcd3 backend.
 func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -358,7 +360,6 @@ func (c *EtcdLock) Value() (bool, string, error) {
 	resp, err := c.etcd.Get(ctx,
 		c.prefix, clientv3.WithPrefix(),
 		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortAscend))
-
 	if err != nil {
 		return false, "", err
 	}

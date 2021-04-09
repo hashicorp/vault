@@ -22,6 +22,7 @@ export default Model.extend({
   }),
   type: attr('string', {
     label: 'Type of role',
+    noDefault: true,
     possibleValues: ['static', 'dynamic'],
   }),
   ttl: attr({

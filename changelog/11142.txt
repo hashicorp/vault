@@ -1,3 +1,3 @@
-```changelog:bug
+```release-note:bug
 ui: Fix date display on expired token notice
 ```

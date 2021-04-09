@@ -21,9 +21,11 @@ import (
 )
 
 // Verify FileBackend satisfies the correct interfaces
-var _ physical.Backend = (*FileBackend)(nil)
-var _ physical.Transactional = (*TransactionalFileBackend)(nil)
-var _ physical.PseudoTransactional = (*FileBackend)(nil)
+var (
+	_ physical.Backend             = (*FileBackend)(nil)
+	_ physical.Transactional       = (*TransactionalFileBackend)(nil)
+	_ physical.PseudoTransactional = (*FileBackend)(nil)
+)
 
 // FileBackend is a physical backend that stores data on disk
 // at a given file path. It can be used for durable single server
@@ -234,7 +236,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	}
 
 	// Make the parent tree
-	if err := os.MkdirAll(path, 0700); err != nil {
+	if err := os.MkdirAll(path, 0o700); err != nil {
 		return err
 	}
 
@@ -243,7 +245,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	f, err := os.OpenFile(
 		fullPath,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
-		0600)
+		0o600)
 	if err != nil {
 		if f != nil {
 			f.Close()

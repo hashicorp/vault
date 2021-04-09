@@ -18,7 +18,7 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
 		Fields: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "GitHub personal API token",
 			},
@@ -248,13 +248,11 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	}
 
 	groupPoliciesList, err := b.TeamMap.Policies(ctx, req.Storage, teamNames...)
-
 	if err != nil {
 		return nil, nil, err
 	}
 
 	userPoliciesList, err := b.UserMap.Policies(ctx, req.Storage, []string{*user.Login}...)
-
 	if err != nil {
 		return nil, nil, err
 	}

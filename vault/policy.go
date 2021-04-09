@@ -69,17 +69,15 @@ func (p PolicyType) String() string {
 	return ""
 }
 
-var (
-	cap2Int = map[string]uint32{
-		DenyCapability:   DenyCapabilityInt,
-		CreateCapability: CreateCapabilityInt,
-		ReadCapability:   ReadCapabilityInt,
-		UpdateCapability: UpdateCapabilityInt,
-		DeleteCapability: DeleteCapabilityInt,
-		ListCapability:   ListCapabilityInt,
-		SudoCapability:   SudoCapabilityInt,
-	}
-)
+var cap2Int = map[string]uint32{
+	DenyCapability:   DenyCapabilityInt,
+	CreateCapability: CreateCapabilityInt,
+	ReadCapability:   ReadCapabilityInt,
+	UpdateCapability: UpdateCapabilityInt,
+	DeleteCapability: DeleteCapabilityInt,
+	ListCapability:   ListCapabilityInt,
+	SudoCapability:   SudoCapabilityInt,
+}
 
 type egpPath struct {
 	Path string `json:"path"`

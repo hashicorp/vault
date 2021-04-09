@@ -46,7 +46,6 @@ func TestMSSQLBackend(t *testing.T) {
 		"username": username,
 		"password": password,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -98,7 +97,6 @@ func TestMSSQLBackend_schema(t *testing.T) {
 		"username": username,
 		"password": password,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}

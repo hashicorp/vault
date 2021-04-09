@@ -9,8 +9,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftAutopilotSetConfigCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftAutopilotSetConfigCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftAutopilotSetConfigCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftAutopilotSetConfigCommand)(nil)
+)
 
 type OperatorRaftAutopilotSetConfigCommand struct {
 	*BaseCommand

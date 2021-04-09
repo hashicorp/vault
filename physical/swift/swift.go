@@ -160,7 +160,6 @@ func (s *SwiftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer s.permitPool.Release()
 
 	err := s.client.ObjectPutBytes(s.container, entry.Key, entry.Value, "")
-
 	if err != nil {
 		return err
 	}
@@ -175,9 +174,9 @@ func (s *SwiftBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
 
-	//Do a list of names with the key first since eventual consistency means
-	//it might be deleted, but a node might return a read of bytes which fails
-	//the physical test
+	// Do a list of names with the key first since eventual consistency means
+	// it might be deleted, but a node might return a read of bytes which fails
+	// the physical test
 	list, err := s.client.ObjectNames(s.container, &swift.ObjectsOpts{Prefix: key})
 	if err != nil {
 		return nil, err

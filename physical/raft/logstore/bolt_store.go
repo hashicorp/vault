@@ -10,7 +10,7 @@ import (
 const (
 	// Permissions to use on the db file. This is only used if the
 	// database file does not exist and needs to be created.
-	dbFileMode = 0600
+	dbFileMode = 0o600
 )
 
 var (

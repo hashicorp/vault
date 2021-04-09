@@ -11,7 +11,6 @@ import (
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-
 	b, err := Backend(ctx, conf)
 	if err != nil {
 		return nil, err

@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Agent Sidecar Injector Overview
-sidebar_title: Agent Injector
 description: >-
   The Vault Agent Sidecar Injector is a Kubernetes admission webhook that adds
   Vault Agent containers to pods for consuming Vault secrets.
@@ -50,14 +49,14 @@ useful to customize Vault Agent beyond what the provided annotations offer.
 ### Authenticating with Vault
 
 The primary method of authentication with Vault when using the Vault Agent Injector
-is the service account attached to the pod. Other authentication methods can be configured 
+is the service account attached to the pod. Other authentication methods can be configured
 using annotations.
 
-For Kubernetes authentication, the service account must be bound to a Vault role and a 
+For Kubernetes authentication, the service account must be bound to a Vault role and a
 policy granting access to the secrets desired.
 
-A service account must be present to use the Vault Agent Injector with the Kubernetes 
-authentication method. It is _not_ recommended to bind Vault roles to the default service 
+A service account must be present to use the Vault Agent Injector with the Kubernetes
+authentication method. It is _not_ recommended to bind Vault roles to the default service
 account provided to pods if no service account is defined.
 
 ### Requesting Secrets

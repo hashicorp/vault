@@ -24,7 +24,6 @@ func TestAerospikeBackend(t *testing.T) {
 		"namespace": config.namespace,
 		"set":       config.set,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

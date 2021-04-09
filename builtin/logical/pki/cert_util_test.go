@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"testing"
-
 	"strings"
+	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -216,5 +215,4 @@ func TestPki_PermitFQDNs(t *testing.T) {
 			t.Fatalf("Expected %v, got %v", testCase.expected, actual)
 		}
 	}
-
 }

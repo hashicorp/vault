@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVMetadataDeleteCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVMetadataDeleteCommand)(nil)
+var (
+	_ cli.Command             = (*KVMetadataDeleteCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVMetadataDeleteCommand)(nil)
+)
 
 type KVMetadataDeleteCommand struct {
 	*BaseCommand

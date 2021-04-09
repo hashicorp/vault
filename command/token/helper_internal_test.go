@@ -42,7 +42,7 @@ func TestInternalHelperFilePerms(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fi.Mode().Perm()&004 != 004 {
+	if fi.Mode().Perm()&0o04 != 0o04 {
 		t.Fatalf("expected world-readable/writable permission bits, got: %o", fi.Mode().Perm())
 	}
 
@@ -56,7 +56,7 @@ func TestInternalHelperFilePerms(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fi.Mode().Perm()&004 != 0 {
+	if fi.Mode().Perm()&0o04 != 0 {
 		t.Fatalf("expected no world-readable/writable permission bits, got: %o", fi.Mode().Perm())
 	}
 }

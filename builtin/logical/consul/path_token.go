@@ -19,7 +19,7 @@ func pathToken(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
@@ -90,8 +90,8 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		return s, nil
 	}
 
-	//Create an ACLToken for Consul 1.4 and above
-	var policyLink = []*api.ACLTokenPolicyLink{}
+	// Create an ACLToken for Consul 1.4 and above
+	policyLink := []*api.ACLTokenPolicyLink{}
 	for _, policyName := range result.Policies {
 		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
 			Name: policyName,
