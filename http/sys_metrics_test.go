@@ -64,9 +64,9 @@ func TestSysPProfUnauthenticated(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// Default: Only authenticated access
-	resp := testHttpGet(t, "", addr+"/v1/sys/pprof")
+	resp := testHttpGet(t, "", addr+"/v1/sys/pprof/cmdline")
 	testResponseStatus(t, resp, 400)
-	resp = testHttpGet(t, token, addr+"/v1/sys/pprof")
+	resp = testHttpGet(t, token, addr+"/v1/sys/pprof/cmdline")
 	testResponseStatus(t, resp, 200)
 
 	// Close listener
@@ -87,10 +87,10 @@ func TestSysPProfUnauthenticated(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// Test without token
-	resp = testHttpGet(t, "", addr+"/v1/sys/pprof")
+	resp = testHttpGet(t, "", addr+"/v1/sys/pprof/cmdline")
 	testResponseStatus(t, resp, 200)
 
 	// Should also work with token
-	resp = testHttpGet(t, token, addr+"/v1/sys/pprof")
+	resp = testHttpGet(t, token, addr+"/v1/sys/pprof/cmdline")
 	testResponseStatus(t, resp, 200)
 }

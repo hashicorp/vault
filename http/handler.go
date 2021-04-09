@@ -181,6 +181,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			for _, name := range []string{"goroutine", "threadcreate", "heap", "allocs", "block", "mutex"} {
 				mux.Handle("/v1/sys/pprof/"+name, pprof.Handler(name))
 			}
+			mux.Handle("/v1/sys/pprof/", http.HandlerFunc(pprof.Index))
 			mux.Handle("/v1/sys/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 			mux.Handle("/v1/sys/pprof/profile", http.HandlerFunc(pprof.Profile))
 			mux.Handle("/v1/sys/pprof/symbol", http.HandlerFunc(pprof.Symbol))
