@@ -262,6 +262,8 @@ func TestTLSNoRoot(t *testing.T) {
 	}
 }
 
+// TestTLSInvalidMinVersion checks that a listener with an invalid minimum configured
+// version errors appropriately.
 func TestTLSInvalidMinVersion(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
@@ -287,6 +289,8 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 	}
 }
 
+// TestTLSInvalidMaxVersion checks that a listener with an invalid maximum configured
+// version errors appropriately.
 func TestTLSInvalidMaxVersion(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{

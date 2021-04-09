@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const noRootCAError = "TLS Chain could not be verified because root CA was not specified and system CAs were insufficient to verify the server certificate."
 const minVersionError = "'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
 const maxVersionError = "'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
 
@@ -21,7 +20,7 @@ func ListenerChecks(listeners []listenerutil.Listener) error {
 	for _, listener := range listeners {
 		l := listener.Config
 
-		// Perform the TLS version check for listeners
+		// Perform the TLS version check for listeners.
 		if l.TLSMinVersion == "" {
 			l.TLSMinVersion = "tls12"
 		}
@@ -39,12 +38,7 @@ func ListenerChecks(listeners []listenerutil.Listener) error {
 
 		var err error
 		// Perform checks on the TLS Cryptographic Information.
-		if l.TLSRequireAndVerifyClientCert {
-			err = TLSFileChecks(l.TLSCertFile, l.TLSKeyFile, l.TLSClientCAFile, true)
-		} else {
-			err = TLSFileChecks(l.TLSCertFile, l.TLSKeyFile, "", false)
-		}
-		if err != nil {
+		if err = TLSFileChecks(l.TLSCertFile, l.TLSKeyFile); err != nil {
 			return err
 		}
 	}
@@ -52,7 +46,7 @@ func ListenerChecks(listeners []listenerutil.Listener) error {
 }
 
 // TLSFileChecks contains manual error checks against the TLS configuration
-func TLSFileChecks(certFilePath, keyFilePath, rootFilePath string, checkRoot bool) error {
+func TLSFileChecks(certFilePath, keyFilePath string) error {
 	data, err := ioutil.ReadFile(certFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read tls_client_ca_file: %w", err)
