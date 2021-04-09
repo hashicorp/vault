@@ -111,7 +111,8 @@
 {{!-- File Input --}}
   {{text-file
     index=""
-    helpText=attr.options.helpText
+    fileHelpText=attr.options.helpText
+    textareaHelpText=attr.options.helpText
     file=file
     onChange=(action "setFile")
     warning=attr.options.warning

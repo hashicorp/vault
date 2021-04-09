@@ -72,12 +72,14 @@ export default Model.extend({
   max_connection_lifetime: attr('string'),
   tls: attr('string', {
     label: 'TLS Certificate Key',
-    subText: 'x509 certificate for connecting to the database.',
+    helpText:
+      'x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.',
     editType: 'file',
   }),
   tls_ca: attr('string', {
     label: 'TLS CA',
-    subText: 'x509 CA file for validating the certificate presented by the MongoDB server.',
+    helpText:
+      'x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.',
     editType: 'file',
   }),
   root_rotation_statements: attr({
