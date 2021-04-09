@@ -27,7 +27,7 @@
   {{/if}}
   <button {{action "toggleMask"}}
     type="button"
-    class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}"
+    class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button"
     data-test-button>
     <Icon @glyph={{if showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
   </button>

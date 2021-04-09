@@ -19,6 +19,7 @@ export default Component.extend({
   file: null,
 
   index: null,
+  showValue: false,
   onChange: () => {},
 
   /*
@@ -79,6 +80,9 @@ export default Component.extend({
     },
     clearFile() {
       this.onChange(this.index, { value: '' });
+    },
+    toggleMask() {
+      this.toggleProperty('showValue');
     },
   },
 });

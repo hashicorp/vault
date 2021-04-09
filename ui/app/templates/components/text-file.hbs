@@ -36,12 +36,18 @@
 {{/unless}}
 <div class="field">
   {{#if file.enterAsText}}
-    <div class="control">
+    <div class="control has-icon-right">
       <textarea
-        class="textarea"
+        class="textarea {{unless showValue "masked-font"}}"
         oninput={{action "updateData"}}
         data-test-text-file-textarea=true
       >{{file.value}}</textarea>
+      <button {{action "toggleMask"}}
+        type="button"
+        class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}"
+        data-test-button>
+        <Icon @glyph={{if showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
+      </button>
     </div>
     <p class="help has-text-grey">
       {{textareaHelpText}}
