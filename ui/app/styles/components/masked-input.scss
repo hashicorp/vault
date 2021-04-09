@@ -12,11 +12,6 @@
   align-items: center;
 }
 
-.masked-input.masked.display-only,
-.masked-input:not(.masked) {
-  align-items: start;
-}
-
 .has-label .masked-input {
   padding-top: $spacing-s;
 }
@@ -99,10 +94,6 @@
 
 .masked-input.masked .masked-value {
   color: $grey-light;
-}
-
-.masked-input:not(.masked) .masked-input-toggle {
-  color: $blue;
 }
 
 .masked-input .input:focus + .masked-input-toggle {
