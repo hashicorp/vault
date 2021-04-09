@@ -65,6 +65,10 @@ const (
 	numExpirationWorkersTest = 10
 
 	fairshareWorkersOverrideVar = "VAULT_LEASE_REVOCATION_WORKERS"
+
+	// limit zombie error messages to 240 characters to be respectful of storage
+	// requirements
+	maxZombieErrorLength = 240
 )
 
 type pendingInfo struct {
@@ -94,6 +98,7 @@ type ExpirationManager struct {
 	// TTL zero, which we want to count but have no timer associated.
 	pending     sync.Map
 	nonexpiring sync.Map
+	zombies     sync.Map
 	leaseCount  int
 	pendingLock sync.RWMutex
 
@@ -210,6 +215,13 @@ func (r *revocationJob) OnFailure(err error) {
 
 	if pending.revokesAttempted >= maxRevokeAttempts {
 		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+		le, err := r.m.loadEntry(r.nsCtx, r.leaseID)
+		if err != nil {
+			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID)
+			return
+		}
+
+		r.m.markLeaseAsZombie(r.nsCtx, le, err)
 		return
 	}
 
@@ -1645,11 +1657,14 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
-	var pending pendingInfo
+	if le.isZombie() {
+		return
+	}
 
 	// Check for an existing timer
 	info, ok := m.pending.Load(le.LeaseID)
 
+	var pending pendingInfo
 	if le.ExpireTime.IsZero() {
 		if le.nonexpiringToken() {
 			// Store this in the nonexpiring map instead of pending.
@@ -1839,6 +1854,15 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
 	}
 	le.namespace = ns
+
+	if le.isZombie() {
+		// the lease was previously irrevocable, so it shouldn't exist with the
+		// valid leases
+		m.zombies.Store(le.LeaseID, le)
+		m.restoreLoaded.Delete(le.LeaseID)
+		m.pending.Delete(le.LeaseID)
+		return le, nil
+	}
 
 	if restoreMode {
 		if checkRestored {
@@ -2275,6 +2299,24 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	return nil
 }
 
+func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntry, err error) {
+	if le.isZombie() {
+		m.logger.Info("attempted to re-mark lease as zombie", "original_error", le.RevokeErr, "new_error", err.Error())
+		return
+	}
+
+	errStr := err.Error()
+	if len(errStr) == 0 {
+		errStr = "no error message given"
+	}
+	if len(errStr) > maxZombieErrorLength {
+		errStr = errStr[:maxZombieErrorLength]
+	}
+
+	le.RevokeErr = errStr
+	m.persistEntry(ctx, le)
+}
+
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
@@ -2295,6 +2337,11 @@ type leaseEntry struct {
 	Version int `json:"version"`
 
 	namespace *namespace.Namespace
+
+	// RevokeErr tracks if a lease has consistently failed revocation. The first
+	// time this happens, RevokeErr will be set, thus marking this leaseEntry
+	// as a zombie that will have to be manually removed.
+	RevokeErr string `json:"revokeErr"`
 }
 
 // encode is used to JSON encode the lease entry
@@ -2307,6 +2354,9 @@ func (le *leaseEntry) renewable() (bool, error) {
 	// If there is no entry, cannot review to renew
 	case le == nil:
 		return false, fmt.Errorf("lease not found")
+
+	case le.isZombie():
+		return false, fmt.Errorf("lease is not renewable and has failed previous revocation attempts")
 
 	case le.ExpireTime.IsZero():
 		return false, fmt.Errorf("lease is not renewable")
@@ -2338,6 +2388,10 @@ func (le *leaseEntry) nonexpiringToken() bool {
 		return false
 	}
 	return !le.Auth.LeaseEnabled()
+}
+
+func (le *leaseEntry) isZombie() bool {
+	return le.RevokeErr != ""
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry
