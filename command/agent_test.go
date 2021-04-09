@@ -1496,8 +1496,8 @@ path "/secret/*" {
 
 	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
 		"bind_secret_id": "true",
-		"token_ttl":      "3s",
-		"token_max_ttl":  "10s",
+		"token_ttl":      "1h",
+		"token_max_ttl":  "2h",
 		"policies":       []string{"test-autoauth"},
 	})
 	if err != nil {
