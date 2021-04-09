@@ -181,7 +181,7 @@ func TestTLSMultiKeys(t *testing.T) {
 	if err == nil {
 		t.Error("TLS Config check on fake certificate should fail")
 	}
-	if err.Error() != "tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched" {
+	if !strings.Contains(err.Error(), "pem block does not parse to a certificate") {
 		t.Errorf("Bad error message: %w", err)
 	}
 }
@@ -206,14 +206,42 @@ func TestTLSMultiCerts(t *testing.T) {
 	if err == nil {
 		t.Error("TLS Config check on fake certificate should fail")
 	}
-	if err.Error() != "tls: found a certificate rather than a key in the PEM for the private key" {
+	if !strings.Contains(err.Error(), "found a certificate rather than a key in the PEM for the private key") {
 		t.Errorf("Bad error message: %w", err)
 	}
 }
 
 // TestTLSInvalidRoot makes sure that the Verify call in tls.go checks the authority of
-// the root.
+// the root. The root certificate used in this test is the Baltimore Cyber Trust root
+// certificate, downloaded from: https://www.digicert.com/kb/digicert-root-certificates.htm
 func TestTLSInvalidRoot(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./test-fixtures/goodcertbadroot.pem",
+				TLSKeyFile:                    "./test-fixtures/goodkey.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := ListenerChecks(listeners)
+	if err == nil {
+		t.Error("TLS Config check on fake certificate should fail")
+	}
+	if err.Error() != "failed to verify certificate: x509: certificate signed by unknown authority" {
+		t.Errorf("Bad error message: %w", err)
+	}
+}
+
+// TestTLSNoRoot ensures that a server certificate that is passed in without a root
+// is still accepted by diagnose as valid. This is an acceptable, though less secure,
+// server configuration.
+func TestTLSNoRoot(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
 			Config: &configutil.Listener{
@@ -229,11 +257,8 @@ func TestTLSInvalidRoot(t *testing.T) {
 		},
 	}
 	err := ListenerChecks(listeners)
-	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
-	}
-	if err.Error() != "failed to verify certificate: x509: certificate signed by unknown authority" {
-		t.Errorf("Bad error message: %w", err)
+	if err != nil {
+		t.Error("Server certificate without root certificate is insecure, but still valid.")
 	}
 }
 

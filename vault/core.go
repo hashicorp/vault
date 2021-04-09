@@ -1387,6 +1387,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error checking if seal is migrated or not: %w", err)
 	}
+
 	if ok {
 		c.logger.Info("migration is already performed")
 		return nil

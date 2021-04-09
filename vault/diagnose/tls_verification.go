@@ -2,6 +2,7 @@ package diagnose
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+const noRootCAError = "TLS Chain could not be verified because root CA was not specified and system CAs were insufficient to verify the server certificate."
 const minVersionError = "'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
 const maxVersionError = "'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
 
@@ -98,30 +100,38 @@ func TLSFileChecks(certFilePath, keyFilePath, rootFilePath string, checkRoot boo
 		return fmt.Errorf("Number of leaf certificates detected is not one. Instead, it is: %d", len(leafCerts))
 	}
 
-	// Check that certificate isn't expired, is of correct usage type, and has an appropriate
+	rootSubjs := rootPool.Subjects()
+	if len(rootSubjs) == 0 {
+		// this is a self signed server certificate, or the root is just not provided. In any
+		// case, we need to bypass the root verification step by adding the leaf itself to the
+		// root pool.
+		rootPool.AddCert(leafCerts[0])
+	}
+
+	// Verify checks that certificate isn't expired, is of correct usage type, and has an appropriate
 	// chain.
-	if chains, err := leafCerts[0].Verify(x509.VerifyOptions{
+	_, err = leafCerts[0].Verify(x509.VerifyOptions{
 		Roots:         rootPool,
 		Intermediates: interPool,
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-	}); err != nil {
+	})
+
+	if err != nil {
 		return fmt.Errorf("failed to verify certificate: %w", err)
-	} else {
-		fmt.Printf("%+v", chains)
 	}
 
-	// LoadX509KeyPair has a nil leaf certificate because it does not retain the
-	// parsed form, so we have to manually create it ourselves.
+	// After verify passes, we need to check the values on the certificate itself.
+	// This is a separate check beyond the certificate expiry and chain checks.
 
-	// cert, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
-	// if err != nil {
-	// 	return err
-	// }
-	// x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
-	// if err != nil {
-	// 	return err
-	// }
-	// cert.Leaf = x509Cert
+	cert, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
+	if err != nil {
+		return err
+	}
+	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return err
+	}
+	cert.Leaf = x509Cert
 
 	return nil
 }
