@@ -1,5 +1,9 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
+import { setComponentTemplate } from '@ember/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+
+// import Component from '@ember/component';
 import autosize from 'autosize';
 import layout from '../templates/components/masked-input';
 
@@ -25,36 +29,50 @@ import layout from '../templates/components/masked-input';
  *
  *
  */
+class MaskedInput extends Component {
+  // export default Component.extend({
+  layout;
+  value = null;
+  placeholder = 'value';
+  maskWhileTyping = false;
+  displayOnly = false;
+  onKeyDown() {}
+  onChange() {}
 
-export default Component.extend({
-  layout,
-  value: null,
-  placeholder: 'value',
-  maskWhileTyping: false,
-  showValue: false,
-  didInsertElement() {
-    this._super(...arguments);
-    autosize(this.element.querySelector('textarea'));
-  },
-  didUpdate() {
-    this._super(...arguments);
-    autosize.update(this.element.querySelector('textarea'));
-  },
-  willDestroyElement() {
-    this._super(...arguments);
-    autosize.destroy(this.element.querySelector('textarea'));
-  },
-  displayOnly: false,
-  onKeyDown() {},
-  onChange() {},
-  actions: {
-    toggleMask() {
-      this.toggleProperty('showValue');
-    },
-    updateValue(e) {
-      let value = e.target.value;
-      this.set('value', value);
-      this.onChange(value);
-    },
-  },
-});
+  @tracked
+  showValue = false;
+
+  constructor() {
+    super(...arguments);
+    let test = document.querySelector('textarea');
+    console.log(test, 'test');
+  }
+  // didInsertElement() {
+  //   // ARG replace with action and did-insert https://guides.emberjs.com/release/upgrading/current-edition/glimmer-components/#toc_lifecycle-and-properties
+  //   // this._super(...arguments);
+  //   autosize(this.element.querySelector('textarea'));
+  // }
+
+  // didUpdate() {
+  //   this._super(...arguments);
+  //   autosize.update(this.element.querySelector('textarea'));
+  // },
+  // willDestroyElement() {
+  //   this._super(...arguments);
+  //   autosize.destroy(this.element.querySelector('textarea'));
+  // },
+
+  @action
+  toggleMask() {
+    let value = this.showValue;
+    this.showValue = !value;
+  }
+  @action
+  updateValue(e) {
+    let value = e.target.value;
+    this.value = value;
+    this.onChange(value);
+  }
+}
+
+export default setComponentTemplate(layout, MaskedInput);

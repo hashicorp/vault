@@ -170,8 +170,13 @@
   }}
 {{else if (eq attr.options.sensitive true)}}
 {{!-- Masked Input --}}
-  <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
-    @onChange={{action (action "setAndBroadcast" valuePath)}} @maskWhileTyping={{if (eq attr.name "bindpass") true}}/>
+  <MaskedInput
+    @value={{or (get model valuePath) attr.options.defaultValue}}
+    @placeholder=""
+    @allowCopy="true"
+    @onChange={{action (action "setAndBroadcast" valuePath)}}
+    @maskWhileTyping={{true}}
+  />
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}

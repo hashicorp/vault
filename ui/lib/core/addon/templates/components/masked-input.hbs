@@ -1,34 +1,35 @@
-<div class="masked-input {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
+<div class="masked-input {{if @displayOnly "display-only"}} {{if @allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
-  {{#if displayOnly}}
-    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{unless showValue (truncate value 20) value}}</pre>
-  {{else if maskWhileTyping}}
+  {{#if @displayOnly}}
+    <pre class="masked-value display-only is-word-break {{unless this.showValue "masked-font"}}">{{unless this.showValue (truncate @value 20) @value}}</pre>
+  {{else if @maskWhileTyping}}
     <input
       autocomplete="off"
       spellcheck="false"
-      value={{value}}
+      value={{@value}}
       onchange={{action "updateValue"}}
-      class="input {{unless showValue "masked-font"}}"
+      class="input {{unless this.showValue "masked-font"}}"
       data-test-input
     />
   {{else}}
-    <textarea class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
+  ARG WORK ON THIS
+    <textarea class="input masked-value" rows=1 wrap="off" placeholder={{@placeholder}}
       onfocus={{action (mut isFocused) true}} onblur={{action (mut isFocused) false}} onkeydown={{action onKeyDown}}
-      onchange={{action "updateValue"}} value={{readonly value}} data-test-textarea />
+      onchange={{action "updateValue"}} value={{readonly @value}} data-test-textarea />
   {{/if}}
-  {{#if allowCopy}}
+  {{#if @allowCopy}}
     <CopyButton
-      @clipboardText={{value}}
+      @clipboardText={{@value}}
       @success={{action (set-flash-message 'Data copied!')}}
-      class="copy-button button {{if displayOnly "is-compact"}}"
+      class="copy-button button {{if @displayOnly "is-compact"}}"
         data-test-copy-button>
       <Icon @glyph="copy-action" aria-hidden="Copy value" />
     </CopyButton>
   {{/if}}
   <button {{action "toggleMask"}}
     type="button"
-    class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button"
+    class="{{if (eq @value "") "has-text-grey"}} masked-input-toggle button"
     data-test-button>
-    <Icon @glyph={{if showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
+    <Icon @glyph={{if this.showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
   </button>
 </div>
