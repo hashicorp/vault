@@ -2,10 +2,10 @@ package http
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
