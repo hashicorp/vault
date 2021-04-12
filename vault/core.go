@@ -1013,13 +1013,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, nil
 }
 
-// HostnameHeader determines whether to add the X-Vault-Hostname header
+// HostnameHeaderEnabled determines whether to add the X-Vault-Hostname header
 // to HTTP responses.
 func (c *Core) HostnameHeaderEnabled() bool {
 	return c.enableResponseHeaderHostname
 }
 
-// RaftNodeIDHeader determines whether to add the X-Vault-Raft-Node-ID header
+// RaftNodeIDHeaderEnabled determines whether to add the X-Vault-Raft-Node-ID header
 // to HTTP responses.
 func (c *Core) RaftNodeIDHeaderEnabled() bool {
 	return c.enableResponseHeaderRaftNodeID
