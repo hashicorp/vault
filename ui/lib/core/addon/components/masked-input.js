@@ -27,7 +27,6 @@ import layout from '../templates/components/masked-input';
  * @param [isCertificate=false] {bool} - If certificate display the label and icons differently.
  */
 class MaskedInput extends Component {
-  // export default Component.extend({
   layout;
 
   placeholder = 'value';
