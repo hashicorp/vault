@@ -2491,3 +2491,98 @@ func TestExpiration_FairsharingEnvVar(t *testing.T) {
 		}
 	}
 }
+
+func TestExpiration_MarkZombie(t *testing.T) {
+	exp := mockExpiration(t)
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "zombie/lease",
+		ClientToken: "sometoken",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "sometoken", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: 10 * time.Hour,
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	leaseID, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loadedLE, err := exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading non zombie lease: %v", err)
+	}
+	if loadedLE.isZombie() {
+		t.Fatalf("lease is zombie and shouldn't be")
+	}
+	if _, ok := exp.zombies.Load(leaseID); ok {
+		t.Fatalf("lease included in zombie map")
+	}
+	if _, ok := exp.pending.Load(leaseID); !ok {
+		t.Fatalf("lease not included in pending map")
+	}
+
+	zombieErr := fmt.Errorf("test zombie error")
+	exp.markLeaseAsZombie(ctx, loadedLE, zombieErr)
+
+	if !loadedLE.isZombie() {
+		t.Fatalf("zombie lease is not zombie and should be")
+	}
+	if loadedLE.RevokeErr != zombieErr.Error() {
+		t.Errorf("zombie lease has wrong error message. expected %s, got %s", zombieErr.Error(), loadedLE.RevokeErr)
+	}
+	if _, ok := exp.zombies.Load(leaseID); !ok {
+		t.Fatalf("zombie lease not included in zombie map")
+	}
+	if _, ok := exp.pending.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in pending map")
+	}
+	if _, ok := exp.nonexpiring.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in nonexpiring map")
+	}
+	if _, ok := exp.restoreLoaded.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in restore map")
+	}
+
+	// stop and restore to verify that zombies are properly loaded from storage
+	err = exp.Stop()
+	if err != nil {
+		t.Fatalf("error stopping expiration manager: %v", err)
+	}
+
+	err = exp.Restore(nil)
+	if err != nil {
+		t.Fatalf("error restoring expiration manager: %v", err)
+	}
+
+	loadedLE, err = exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading non zombie lease after restore: %v", err)
+	}
+
+	if !loadedLE.isZombie() {
+		t.Fatalf("zombie lease is not zombie and should be")
+	}
+	if loadedLE.RevokeErr != zombieErr.Error() {
+		t.Errorf("zombie lease has wrong error message. expected %s, got %s", zombieErr.Error(), loadedLE.RevokeErr)
+	}
+	if _, ok := exp.zombies.Load(leaseID); !ok {
+		t.Fatalf("zombie lease not included in zombie map")
+	}
+	if _, ok := exp.pending.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in pending map")
+	}
+	if _, ok := exp.nonexpiring.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in nonexpiring map")
+	}
+	if _, ok := exp.restoreLoaded.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in restore map")
+	}
+}
