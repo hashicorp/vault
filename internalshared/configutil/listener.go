@@ -43,6 +43,7 @@ type Listener struct {
 	TLSCertFile                      string      `hcl:"tls_cert_file"`
 	TLSKeyFile                       string      `hcl:"tls_key_file"`
 	TLSMinVersion                    string      `hcl:"tls_min_version"`
+	TLSMaxVersion                    string      `hcl:"tls_max_version"`
 	TLSCipherSuites                  []uint16    `hcl:"-"`
 	TLSCipherSuitesRaw               string      `hcl:"tls_cipher_suites"`
 	TLSPreferServerCipherSuites      bool        `hcl:"-"`
