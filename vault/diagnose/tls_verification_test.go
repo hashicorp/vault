@@ -312,6 +312,6 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != fmt.Errorf(maxVersionError, "0").Error() {
-		t.Fatalf("Bad error message: %s", err)
+		t.Errorf("Bad error message: %w", err)
 	}
 }
