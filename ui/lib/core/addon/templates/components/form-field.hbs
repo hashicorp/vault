@@ -175,7 +175,6 @@
     @placeholder=""
     @allowCopy="true"
     @onChange={{action (action "setAndBroadcast" valuePath)}}
-    @maskWhileTyping={{true}}
   />
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">

@@ -4,12 +4,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 // import Component from '@ember/component';
-import autosize from 'autosize';
 import layout from '../templates/components/masked-input';
 
 /**
  * @module MaskedInput
  * `MaskedInput` components are textarea inputs where the input is hidden. They are used to enter sensitive information like passwords.
+ * If the field needs to be something other than displayOnly or a input field, you should use the component TextFile nested in the FormField component.
  *
  * @example
  * <MaskedInput
@@ -24,52 +24,31 @@ import layout from '../templates/components/masked-input';
  * @param [allowCopy=null] {bool} - Whether or not the input should render with a copy button.
  * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
  * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
- * @param [maskWhileTyping=false] {bool} - Whether or not to mask the value while typing by using the custom obscure font.
  * @param [isCertificate=false] {bool} - If certificate display the label and icons differently.
- *
- *
  */
 class MaskedInput extends Component {
   // export default Component.extend({
   layout;
-  value = null;
+
   placeholder = 'value';
-  maskWhileTyping = false;
   displayOnly = false;
   onKeyDown() {}
   onChange() {}
 
   @tracked
   showValue = false;
-
-  constructor() {
-    super(...arguments);
-    let test = document.querySelector('textarea');
-    console.log(test, 'test');
-  }
-  // didInsertElement() {
-  //   // ARG replace with action and did-insert https://guides.emberjs.com/release/upgrading/current-edition/glimmer-components/#toc_lifecycle-and-properties
-  //   // this._super(...arguments);
-  //   autosize(this.element.querySelector('textarea'));
-  // }
-
-  // didUpdate() {
-  //   this._super(...arguments);
-  //   autosize.update(this.element.querySelector('textarea'));
-  // },
-  // willDestroyElement() {
-  //   this._super(...arguments);
-  //   autosize.destroy(this.element.querySelector('textarea'));
-  // },
+  @tracked
+  value = null;
 
   @action
   toggleMask() {
-    let value = this.showValue;
-    this.showValue = !value;
+    this.showValue = !this.showValue;
   }
   @action
   updateValue(e) {
+    e.preventDefault();
     let value = e.target.value;
+    console.log(value, 'value');
     this.value = value;
     this.onChange(value);
   }
