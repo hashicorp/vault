@@ -43,7 +43,7 @@ export default function DownloadsPage({ releases }) {
         productId={productSlug}
         latestVersion={VERSION}
         changelog={changelogUrl}
-        getStartedDescription="Follow step-by-step tutorials on the essentials of Nomad."
+        getStartedDescription="Follow step-by-step tutorials on the essentials of Vault."
         getStartedLinks={[
           {
             label: 'Getting Started with the CLI',
@@ -68,7 +68,7 @@ export default function DownloadsPage({ releases }) {
         logo={
           <img
             className={s.logo}
-            alt="Nomad"
+            alt="Vault"
             src={require('./img/vault-logo.svg')}
           />
         }
