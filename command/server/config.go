@@ -69,11 +69,11 @@ type Config struct {
 	DisableSentinelTrace    bool        `hcl:"-"`
 	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace"`
 
-	HostnameHeader    bool        `hcl:"-"`
-	HostnameHeaderRaw interface{} `hcl:"hostname_header"`
+	EnableResponseHeaderHostname    bool        `hcl:"-"`
+	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
-	RaftNodeIDHeader    bool        `hcl:"-"`
-	RaftNodeIDHeaderRaw interface{} `hcl:"raft_node_id_header"`
+	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
+	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -251,14 +251,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableIndexing = c2.DisableIndexing
 	}
 
-	result.HostnameHeader = c.HostnameHeader
-	if c2.HostnameHeader {
-		result.HostnameHeader = c2.HostnameHeader
+	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
+	if c2.EnableResponseHeaderHostname {
+		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
 	}
 
-	result.RaftNodeIDHeader = c.RaftNodeIDHeader
-	if c2.RaftNodeIDHeader {
-		result.RaftNodeIDHeader = c2.RaftNodeIDHeader
+	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
+	if c2.EnableResponseHeaderRaftNodeID {
+		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
 	}
 
 	// Use values from top-level configuration for storage if set
@@ -422,14 +422,14 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
-	if result.HostnameHeaderRaw != nil {
-		if result.HostnameHeader, err = parseutil.ParseBool(result.HostnameHeaderRaw); err != nil {
+	if result.EnableResponseHeaderHostnameRaw != nil {
+		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
 			return nil, err
 		}
 	}
 
-	if result.RaftNodeIDHeaderRaw != nil {
-		if result.RaftNodeIDHeader, err = parseutil.ParseBool(result.RaftNodeIDHeaderRaw); err != nil {
+	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
+		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -771,9 +771,9 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"disable_indexing": c.DisableIndexing,
 
-		"hostname_header": c.HostnameHeader,
+		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
 
-		"raft_node_id_header": c.RaftNodeIDHeader,
+		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

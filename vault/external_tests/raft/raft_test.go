@@ -12,11 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/go-cleanhttp"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -31,12 +28,12 @@ import (
 )
 
 type RaftClusterOpts struct {
-	DisableFollowerJoins  bool
-	InmemCluster          bool
-	EnableAutopilot       bool
-	PhysicalFactoryConfig map[string]interface{}
-	DisablePerfStandby    bool
-	RaftNodeIDHeader      bool
+	DisableFollowerJoins           bool
+	InmemCluster                   bool
+	EnableAutopilot                bool
+	PhysicalFactoryConfig          map[string]interface{}
+	DisablePerfStandby             bool
+	EnableResponseHeaderRaftNodeID bool
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -48,8 +45,8 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
-		DisableAutopilot: !ropts.EnableAutopilot,
-		RaftNodeIDHeader: ropts.RaftNodeIDHeader,
+		DisableAutopilot:               !ropts.EnableAutopilot,
+		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 	}
 
 	opts := vault.TestClusterOptions{
@@ -306,7 +303,7 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 		{
 			description: "with header configured",
 			ropts: &RaftClusterOpts{
-				RaftNodeIDHeader: true,
+				EnableResponseHeaderRaftNodeID: true,
 			},
 			headerPresent: true,
 		},

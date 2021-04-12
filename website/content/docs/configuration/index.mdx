@@ -155,7 +155,7 @@ to specify where the configuration is.
 - `pid_file` `(string: "")` - Path to the file in which the Vault server's
   Process ID (PID) should be stored.
 
-- `hostname_header` `(bool: false)` - Enables the addition of an HTTP header
+- `enable_response_header_hostname` `(bool: false)` - Enables the addition of an HTTP header
   in all of Vault's HTTP responses: `X-Vault-Hostname`. This will contain the
   host name of the Vault node that serviced the HTTP request. This information
   is best effort and is not guaranteed to be present. If this configuration
@@ -163,7 +163,7 @@ to specify where the configuration is.
   it means there was some kind of error retrieving the host name from the
   operating system.
 
-- `raft_node_id_header` `(bool: false)` - Enables the addition of an HTTP header
+- `enable_response_header_raft_node_id` `(bool: false)` - Enables the addition of an HTTP header
   in all of Vault's HTTP responses: `X-Vault-Raft-Node-ID`. If Vault is participating
   in a Raft cluster (i.e. using integrated storage), this header will contain the
   Raft node ID of the Vault node that serviced the HTTP request. If Vault is not

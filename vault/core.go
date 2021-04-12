@@ -26,8 +26,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/physical/raft"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -41,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -569,8 +568,8 @@ type Core struct {
 	disableAutopilot bool
 
 	// enable/disable identifying response headers
-	hostnameHeader   bool
-	raftNodeIDHeader bool
+	enableResponseHeaderHostname   bool
+	enableResponseHeaderRaftNodeID bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -681,8 +680,8 @@ type CoreConfig struct {
 	DisableAutopilot bool
 
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
-	HostnameHeader   bool
-	RaftNodeIDHeader bool
+	EnableResponseHeaderHostname   bool
+	EnableResponseHeaderRaftNodeID bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -821,17 +820,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
-		recoveryMode:             conf.RecoveryMode,
-		postUnsealStarted:        new(uint32),
-		raftJoinDoneCh:           make(chan struct{}),
-		clusterHeartbeatInterval: clusterHeartbeatInterval,
-		activityLogConfig:        conf.ActivityLogConfig,
-		keyRotateGracePeriod:     new(int64),
-		numExpirationWorkers:     conf.NumExpirationWorkers,
-		raftFollowerStates:       raft.NewFollowerStates(),
-		disableAutopilot:         conf.DisableAutopilot,
-		hostnameHeader:           conf.HostnameHeader,
-		raftNodeIDHeader:         conf.RaftNodeIDHeader,
+		recoveryMode:                   conf.RecoveryMode,
+		postUnsealStarted:              new(uint32),
+		raftJoinDoneCh:                 make(chan struct{}),
+		clusterHeartbeatInterval:       clusterHeartbeatInterval,
+		activityLogConfig:              conf.ActivityLogConfig,
+		keyRotateGracePeriod:           new(int64),
+		numExpirationWorkers:           conf.NumExpirationWorkers,
+		raftFollowerStates:             raft.NewFollowerStates(),
+		disableAutopilot:               conf.DisableAutopilot,
+		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
+		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1016,14 +1015,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 // HostnameHeader determines whether to add the X-Vault-Hostname header
 // to HTTP responses.
-func (c *Core) HostnameHeader() bool {
-	return c.hostnameHeader
+func (c *Core) HostnameHeaderEnabled() bool {
+	return c.enableResponseHeaderHostname
 }
 
 // RaftNodeIDHeader determines whether to add the X-Vault-Raft-Node-ID header
 // to HTTP responses.
-func (c *Core) RaftNodeIDHeader() bool {
-	return c.raftNodeIDHeader
+func (c *Core) RaftNodeIDHeaderEnabled() bool {
+	return c.enableResponseHeaderRaftNodeID
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
