@@ -28,7 +28,7 @@ func TestTLSValidCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatalf(err.Error())
 	}
 }
 
@@ -50,10 +50,10 @@ func TestTLSFakeCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if !strings.Contains(err.Error(), "could not decode cert") {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -78,10 +78,10 @@ func TestTLSTrailingData(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if !strings.Contains(err.Error(), "asn1: syntax error: trailing data") {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -104,10 +104,10 @@ func TestTLSExpiredCert(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if !strings.Contains(err.Error(), "certificate has expired or is not yet valid") {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -130,10 +130,10 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "tls: private key type does not match public key type" {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 
 	listeners = []listenerutil.Listener{
@@ -153,10 +153,10 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 	}
 	err = ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "tls: private key type does not match public key type" {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -179,10 +179,10 @@ func TestTLSMultiKeys(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if !strings.Contains(err.Error(), "pem block does not parse to a certificate") {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -204,10 +204,10 @@ func TestTLSMultiCerts(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if !strings.Contains(err.Error(), "found a certificate rather than a key in the PEM for the private key") {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -231,10 +231,10 @@ func TestTLSInvalidRoot(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != "failed to verify certificate: x509: certificate signed by unknown authority" {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -258,7 +258,7 @@ func TestTLSNoRoot(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err != nil {
-		t.Error("Server certificate without root certificate is insecure, but still valid.")
+		t.Fatalf("Server certificate without root certificate is insecure, but still valid.")
 	}
 }
 
@@ -282,10 +282,10 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != fmt.Errorf(minVersionError, "0").Error() {
-		t.Errorf("Bad error message: %w", err)
+		t.Fatalf("Bad error message: %s", err)
 	}
 }
 
@@ -309,7 +309,7 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 	}
 	err := ListenerChecks(listeners)
 	if err == nil {
-		t.Error("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if err.Error() != fmt.Errorf(maxVersionError, "0").Error() {
 		t.Errorf("Bad error message: %w", err)

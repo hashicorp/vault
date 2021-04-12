@@ -36,9 +36,8 @@ func ListenerChecks(listeners []listenerutil.Listener) error {
 			return fmt.Errorf(maxVersionError, l.TLSMaxVersion)
 		}
 
-		var err error
 		// Perform checks on the TLS Cryptographic Information.
-		if err = TLSFileChecks(l.TLSCertFile, l.TLSKeyFile); err != nil {
+		if err := TLSFileChecks(l.TLSCertFile, l.TLSKeyFile); err != nil {
 			return err
 		}
 	}
@@ -117,15 +116,10 @@ func TLSFileChecks(certFilePath, keyFilePath string) error {
 	// After verify passes, we need to check the values on the certificate itself.
 	// This is a separate check beyond the certificate expiry and chain checks.
 
-	cert, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
+	_, err = tls.LoadX509KeyPair(certFilePath, keyFilePath)
 	if err != nil {
 		return err
 	}
-	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
-	if err != nil {
-		return err
-	}
-	cert.Leaf = x509Cert
 
 	return nil
 }
