@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -731,35 +732,35 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 
 		var wg sync.WaitGroup
 
-		// Capture goroutines
+		for _, target := range []string{"threadcreate", "allocs", "block", "mutex", "goroutine", "heap"} {
+			wg.Add(1)
+			go func(target string) {
+				defer wg.Done()
+				data, err := pprofTarget(ctx, c.cachedClient, target, nil)
+				if err != nil {
+					c.captureError("pprof."+target, err)
+					return
+				}
+
+				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o644)
+				if err != nil {
+					c.captureError("pprof."+target, err)
+				}
+			}(target)
+		}
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			data, err := pprofGoroutine(ctx, c.cachedClient)
+			data, err := pprofTarget(ctx, c.cachedClient, "goroutine", url.Values{"debug": []string{"2"}})
 			if err != nil {
-				c.captureError("pprof.goroutine", err)
+				c.captureError("pprof.goroutines-text", err)
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "goroutines.txt"), data, 0o644)
 			if err != nil {
-				c.captureError("pprof.goroutine", err)
-			}
-		}()
-
-		// Capture heap
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			data, err := pprofHeap(ctx, c.cachedClient)
-			if err != nil {
-				c.captureError("pprof.heap", err)
-				return
-			}
-
-			err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0o644)
-			if err != nil {
-				c.captureError("pprof.heap", err)
+				c.captureError("pprof.goroutines-text", err)
 			}
 		}()
 
@@ -911,24 +912,11 @@ func (c *DebugCommand) compress(dst string) error {
 	return nil
 }
 
-func pprofGoroutine(ctx context.Context, client *api.Client) ([]byte, error) {
-	req := client.NewRequest("GET", "/v1/sys/pprof/goroutine")
-	resp, err := client.RawRequestWithContext(ctx, req)
-	if err != nil {
-		return nil, err
+func pprofTarget(ctx context.Context, client *api.Client, target string, params url.Values) ([]byte, error) {
+	req := client.NewRequest("GET", "/v1/sys/pprof/"+target)
+	if params != nil {
+		req.Params = params
 	}
-	defer resp.Body.Close()
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-func pprofHeap(ctx context.Context, client *api.Client) ([]byte, error) {
-	req := client.NewRequest("GET", "/v1/sys/pprof/heap")
 	resp, err := client.RawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
