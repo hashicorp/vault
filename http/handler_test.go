@@ -205,7 +205,7 @@ func TestHandler_HostnameHeader(t *testing.T) {
 		{
 			description: "with header configured",
 			config: &vault.CoreConfig{
-				HostnameHeader: true,
+				EnableResponseHeaderHostname: true,
 			},
 			headerPresent: true,
 		},
@@ -241,7 +241,7 @@ func TestHandler_HostnameHeader(t *testing.T) {
 
 			hnHeader := resp.Header.Get("X-Vault-Hostname")
 			if tc.headerPresent && hnHeader == "" {
-				t.Logf("header configured = %t", core.HostnameHeader())
+				t.Logf("header configured = %t", core.HostnameHeaderEnabled())
 				t.Fatal("missing 'X-Vault-Hostname' header entry in response")
 			}
 			if !tc.headerPresent && hnHeader != "" {

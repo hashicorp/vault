@@ -322,14 +322,14 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
 		// Set some response headers with raft node id (if applicable) and hostname, if available
-		if core.RaftNodeIDHeader() {
+		if core.RaftNodeIDHeaderEnabled() {
 			nodeID := core.GetRaftNodeID()
 			if nodeID != "" {
 				w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
 			}
 		}
 
-		if core.HostnameHeader() && hostname != "" {
+		if core.HostnameHeaderEnabled() && hostname != "" {
 			w.Header().Set("X-Vault-Hostname", hostname)
 		}
 
