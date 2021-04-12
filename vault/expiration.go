@@ -1856,11 +1856,7 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	le.namespace = ns
 
 	if le.isZombie() {
-		// the lease was previously irrevocable, so it shouldn't exist with the
-		// valid leases
 		m.zombies.Store(le.LeaseID, le)
-		m.restoreLoaded.Delete(le.LeaseID)
-		m.pending.Delete(le.LeaseID)
 		return le, nil
 	}
 
@@ -2300,6 +2296,8 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 }
 
 func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntry, err error) {
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
 	if le.isZombie() {
 		m.logger.Info("attempted to re-mark lease as zombie", "original_error", le.RevokeErr, "new_error", err.Error())
 		return
@@ -2315,6 +2313,11 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 
 	le.RevokeErr = errStr
 	m.persistEntry(ctx, le)
+
+	m.zombies.Store(le.LeaseID, le)
+	m.pending.Delete(le.LeaseID)
+	m.nonexpiring.Delete(le.LeaseID)
+	m.restoreLoaded.Delete(le.LeaseID)
 }
 
 // leaseEntry is used to structure the values the expiration
