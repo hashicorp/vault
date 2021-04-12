@@ -344,7 +344,6 @@ func checkCounter(t *testing.T, inmemSink *metrics.InmemSink, keyPrefix string, 
 	if counter.Sum != 1.0 {
 		t.Errorf("Counter sum %v is not 1.", counter.Sum)
 	}
-
 }
 
 func TestRequestHandling_LoginMetric(t *testing.T) {
@@ -429,7 +428,6 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 			"token_type":   "service",
 		},
 	)
-
 }
 
 func TestRequestHandling_SecretLeaseMetric(t *testing.T) {

@@ -43,8 +43,10 @@ var _ physical.Backend = (*PostgreSQLBackend)(nil)
 // With distinction using central postgres clock, hereby avoiding
 // possible issues with multiple clocks
 //
-var _ physical.HABackend = (*PostgreSQLBackend)(nil)
-var _ physical.Lock = (*PostgreSQLLock)(nil)
+var (
+	_ physical.HABackend = (*PostgreSQLBackend)(nil)
+	_ physical.Lock      = (*PostgreSQLLock)(nil)
+)
 
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.

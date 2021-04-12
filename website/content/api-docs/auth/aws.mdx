@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: AWS - Auth Methods - HTTP API
-sidebar_title: AWS
 description: This is the API documentation for the Vault AWS auth method.
 ---
 
@@ -516,8 +515,8 @@ $ curl \
 
 Configures the periodic tidying operation of the access listed identity entries.
 
-| Method | Path                                       |
-| :----- | :----------------------------------------- |
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
 | `POST` | `/auth/aws/config/tidy/identity-accesslist` |
 
 ### Parameters
@@ -550,8 +549,8 @@ $ curl \
 
 Returns the previously configured periodic access list tidying settings.
 
-| Method | Path                                       |
-| :----- | :----------------------------------------- |
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
 | `GET`  | `/auth/aws/config/tidy/identity-accesslist` |
 
 ### Sample Request
@@ -577,8 +576,8 @@ $ curl \
 
 Deletes the previously configured periodic access list tidying settings.
 
-| Method   | Path                                       |
-| :------- | :----------------------------------------- |
+| Method   | Path                                        |
+| :------- | :------------------------------------------ |
 | `DELETE` | `/auth/aws/config/tidy/identity-accesslist` |
 
 ### Sample Request
@@ -594,8 +593,8 @@ $ curl \
 
 Configures the periodic tidying operation of the deny listed role tag entries.
 
-| Method | Path                                      |
-| :----- | :---------------------------------------- |
+| Method | Path                                     |
+| :----- | :--------------------------------------- |
 | `POST` | `/auth/aws/config/tidy/roletag-denylist` |
 
 ### Parameters
@@ -628,8 +627,8 @@ $ curl \
 
 Returns the previously configured periodic deny list tidying settings.
 
-| Method | Path                                      |
-| :----- | :---------------------------------------- |
+| Method | Path                                     |
+| :----- | :--------------------------------------- |
 | `GET`  | `/auth/aws/config/tidy/roletag-denylist` |
 
 ### Sample Request
@@ -655,8 +654,8 @@ $ curl \
 
 Deletes the previously configured periodic deny list tidying settings.
 
-| Method   | Path                                      |
-| :------- | :---------------------------------------- |
+| Method   | Path                                     |
+| :------- | :--------------------------------------- |
 | `DELETE` | `/auth/aws/config/tidy/roletag-denylist` |
 
 ### Sample Request
@@ -1109,8 +1108,8 @@ that if the role tag was previously used to perform a successful login,
 placing the tag in the deny list does not invalidate the already issued
 token.
 
-| Method | Path                                    |
-| :----- | :-------------------------------------- |
+| Method | Path                                   |
+| :----- | :------------------------------------- |
 | `POST` | `/auth/aws/roletag-denylist/:role_tag` |
 
 ### Parameters
@@ -1132,8 +1131,8 @@ $ curl \
 
 Returns the deny list entry of a previously deny listed role tag.
 
-| Method | Path                                    |
-| :----- | :-------------------------------------- |
+| Method | Path                                   |
+| :----- | :------------------------------------- |
 | `GET`  | `/auth/aws/roletag-denylist/:role_tag` |
 
 ### Parameters
@@ -1165,8 +1164,8 @@ $ curl \
 
 Lists all the role tags that are deny listed.
 
-| Method | Path                          |
-| :----- | :---------------------------- |
+| Method | Path                         |
+| :----- | :--------------------------- |
 | `LIST` | `/auth/aws/roletag-denylist` |
 
 ### Sample Request
@@ -1194,8 +1193,8 @@ $ curl \
 
 Deletes a deny listed role tag.
 
-| Method   | Path                                    |
-| :------- | :-------------------------------------- |
+| Method   | Path                                   |
+| :------- | :------------------------------------- |
 | `DELETE` | `/auth/aws/roletag-denylist/:role_tag` |
 
 ### Parameters
@@ -1218,8 +1217,8 @@ $ curl \
 Cleans up the entries in the deny listed based on expiration time on the entry and
 `safety_buffer`.
 
-| Method | Path                               |
-| :----- | :--------------------------------- |
+| Method | Path                              |
+| :----- | :-------------------------------- |
 | `POST` | `/auth/aws/tidy/roletag-denylist` |
 
 ### Parameters
@@ -1242,8 +1241,8 @@ $ curl \
 Returns an entry in the identity access list. An entry will be created/updated by every
 successful login.
 
-| Method | Path                                        |
-| :----- | :------------------------------------------ |
+| Method | Path                                         |
+| :----- | :------------------------------------------- |
 | `GET`  | `/auth/aws/identity-accesslist/:instance_id` |
 
 ### Parameters
@@ -1278,8 +1277,8 @@ $ curl \
 
 Lists all the instance IDs that are in the access list of successful logins.
 
-| Method | Path                           |
-| :----- | :----------------------------- |
+| Method | Path                            |
+| :----- | :------------------------------ |
 | `LIST` | `/auth/aws/identity-accesslist` |
 
 ### Sample Request
@@ -1305,8 +1304,8 @@ $ curl \
 
 Deletes a cache of the successful login from an instance.
 
-| Method   | Path                                        |
-| :------- | :------------------------------------------ |
+| Method   | Path                                         |
+| :------- | :------------------------------------------- |
 | `DELETE` | `/auth/aws/identity-accesslist/:instance_id` |
 
 ### Parameters
@@ -1329,8 +1328,8 @@ $ curl \
 Cleans up the entries in the access list based on expiration time and
 `safety_buffer`.
 
-| Method | Path                                |
-| :----- | :---------------------------------- |
+| Method | Path                                 |
+| :----- | :----------------------------------- |
 | `POST` | `/auth/aws/tidy/identity-accesslist` |
 
 ### Parameters
@@ -1361,4 +1360,3 @@ URLs are deprecated. The affected APIs include:
 | `/auth/aws/tidy/roletag-denylist`           | `/auth/aws/tidy/roletag-blacklist`         |
 | `/auth/aws/config/tidy/identity-accesslist` | `/auth/aws/config/tidy/identity-whitelist` |
 | `/auth/aws/config/tidy/roletag-denylist`    | `/auth/aws/config/tidy/roletag-blacklist`  |
-

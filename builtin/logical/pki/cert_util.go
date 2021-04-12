@@ -932,8 +932,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr != nil && data.role.UseCSRSANs {
 			if len(csr.URIs) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+					return nil, errutil.UserError{
+						Err: fmt.Sprintf(
+							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
 					}
 				}
 
@@ -949,8 +950,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					}
 
 					if !valid {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
 						}
 					}
 
@@ -961,8 +963,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			uriAlt := data.apiData.Get("uri_sans").([]string)
 			if len(uriAlt) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+					return nil, errutil.UserError{
+						Err: fmt.Sprintf(
+							"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
 					}
 				}
 
@@ -977,15 +980,17 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					}
 
 					if !valid {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via the API which are not valid for this role"),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via the API which are not valid for this role"),
 						}
 					}
 
 					parsedURI, err := url.Parse(uri)
 					if parsedURI == nil || err != nil {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
 						}
 					}
 
@@ -1000,13 +1005,13 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	subject := pkix.Name{
 		CommonName:         cn,
 		SerialNumber:       ridSerialNumber,
-		Country:            strutil.RemoveDuplicates(data.role.Country, false),
-		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
+		Country:            strutil.RemoveDuplicatesStable(data.role.Country, false),
+		Organization:       strutil.RemoveDuplicatesStable(data.role.Organization, false),
 		OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
-		Locality:           strutil.RemoveDuplicates(data.role.Locality, false),
-		Province:           strutil.RemoveDuplicates(data.role.Province, false),
-		StreetAddress:      strutil.RemoveDuplicates(data.role.StreetAddress, false),
-		PostalCode:         strutil.RemoveDuplicates(data.role.PostalCode, false),
+		Locality:           strutil.RemoveDuplicatesStable(data.role.Locality, false),
+		Province:           strutil.RemoveDuplicatesStable(data.role.Province, false),
+		StreetAddress:      strutil.RemoveDuplicatesStable(data.role.StreetAddress, false),
+		PostalCode:         strutil.RemoveDuplicatesStable(data.role.PostalCode, false),
 	}
 
 	// Get the TTL and verify it against the max allowed

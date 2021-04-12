@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: OpenLDAP - Secrets Engines - HTTP API
-sidebar_title: OpenLDAP
 description: This is the API documentation for the Vault OpenLDAP secrets engine.
 ---
 
@@ -226,7 +225,6 @@ $ curl \
     http://127.0.0.1:8200/v1/openldap/static-cred/hashicorp
 ```
 
-
 #### Sample Get Response
 
 ```json
@@ -266,8 +264,8 @@ OpenLDAP domain user account.
 
 #### Parameters
 
-| Method   | Path                       |
-| :------- | :------------------------- |
+| Method   | Path                        |
+| :------- | :-------------------------- |
 | `POST`   | `/openldap/role/:role_name` |
 | `DELETE` | `/openldap/role/:role_name` |
 
@@ -341,6 +339,7 @@ The `creation_ldif`, `deletion_ldif`, `rollback_ldif`, and `username_template` f
 Sample LDIF files:
 
 `creation.ldif`:
+
 ```
 dn: cn={{.Username}},ou=users,dc=learn,dc=example
 objectClass: person
@@ -372,7 +371,7 @@ Full Payload:
 ```
 
 -> Note: The LDIF statements may optionally be base64 encoded. If they are base64 encoded when creating/updating the
-   role configuration, the decoded version will be returned from the `GET` endpoint.
+role configuration, the decoded version will be returned from the `GET` endpoint.
 
 #### Sample POST Request
 
@@ -386,8 +385,8 @@ $ curl \
 
 ### Read Dynamic Role Configuration
 
-| Method | Path                       |
-| ------ | -------------------------- |
+| Method | Path                        |
+| ------ | --------------------------- |
 | `GET`  | `/openldap/role/:role_name` |
 
 Retrieves a dynamic role's configuration.

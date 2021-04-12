@@ -80,7 +80,7 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 			t.Fatal("unexpected number of keys found")
 		}
 
-		for k, _ := range keys {
+		for k := range keys {
 			if k != strconv.Itoa(expectedVersion) {
 				t.Fatalf("expected version %q, received version %q", strconv.Itoa(expectedVersion), k)
 			}

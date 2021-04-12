@@ -638,7 +638,6 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			}
 
 			return nil
-
 		}()
 
 		return nil, nil

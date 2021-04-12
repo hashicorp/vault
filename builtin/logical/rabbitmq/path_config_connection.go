@@ -17,24 +17,24 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"connection_uri": &framework.FieldSchema{
+			"connection_uri": {
 				Type:        framework.TypeString,
 				Description: "RabbitMQ Management URI",
 			},
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username of a RabbitMQ management administrator",
 			},
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password of the provided RabbitMQ management user",
 			},
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set, connection_uri is verified by actually connecting to the RabbitMQ management API`,
 			},
-			"password_policy": &framework.FieldSchema{
+			"password_policy": {
 				Type:        framework.TypeString,
 				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
 			},

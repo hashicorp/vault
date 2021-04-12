@@ -16,11 +16,11 @@ func pathCode(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "code/" + framework.GenericNameWithAtRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key.",
 			},
-			"code": &framework.FieldSchema{
+			"code": {
 				Type:        framework.TypeString,
 				Description: "TOTP code to be validated.",
 			},
@@ -121,6 +121,7 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 const pathCodeHelpSyn = `
 Request time-based one-time use password or validate a password for a certain key .
 `
+
 const pathCodeHelpDesc = `
 This path generates and validates time-based one-time use passwords for a certain key. 
 

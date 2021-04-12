@@ -23,22 +23,22 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated string or list of policies as previously created in Nomad. Required for 'client' token.",
 			},
 
-			"global": &framework.FieldSchema{
+			"global": {
 				Type:        framework.TypeBool,
 				Description: "Boolean value describing if the token should be global or not. Defaults to false.",
 			},
 
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:    framework.TypeString,
 				Default: "client",
 				Description: `Which type of token to create: 'client'

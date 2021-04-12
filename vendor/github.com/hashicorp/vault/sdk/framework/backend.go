@@ -164,7 +164,8 @@ func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	err = fd.Validate()
 	if err != nil {
@@ -260,7 +261,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	if req.Operation != logical.HelpOperation {
 		err := fd.Validate()

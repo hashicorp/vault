@@ -19,12 +19,12 @@ func pathLoginWithAppIDPath(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login/(?P<app_id>.+)",
 		Fields: map[string]*framework.FieldSchema{
-			"app_id": &framework.FieldSchema{
+			"app_id": {
 				Type:        framework.TypeString,
 				Description: "The unique app ID",
 			},
 
-			"user_id": &framework.FieldSchema{
+			"user_id": {
 				Type:        framework.TypeString,
 				Description: "The unique user ID",
 			},
@@ -43,12 +43,12 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"app_id": &framework.FieldSchema{
+			"app_id": {
 				Type:        framework.TypeString,
 				Description: "The unique app ID",
 			},
 
-			"user_id": &framework.FieldSchema{
+			"user_id": {
 				Type:        framework.TypeString,
 				Description: "The unique user ID",
 			},

@@ -17,15 +17,15 @@ import (
 func TestGrabLockOrStop(t *testing.T) {
 	// Stop the test early if we deadlock.
 	const (
-		workers = 100
+		workers      = 100
 		testDuration = time.Second
-		testTimeout = 10*testDuration
+		testTimeout  = 10 * testDuration
 	)
 	done := make(chan struct{})
 	defer close(done)
 	var lockCount int64
 	go func() {
-		select{
+		select {
 		case <-done:
 		case <-time.After(testTimeout):
 			panic(fmt.Sprintf("deadlock after %d lock count",
@@ -56,13 +56,13 @@ func TestGrabLockOrStop(t *testing.T) {
 				go func() {
 					defer closerWg.Done()
 					// Close the stop channel half the time.
-					if rand.Int() % 2 == 0 {
+					if rand.Int()%2 == 0 {
 						close(stop)
 					}
 				}()
 
 				// Half the goroutines lock/unlock and the other half rlock/runlock.
-				if g % 2 == 0 {
+				if g%2 == 0 {
 					if !grabLockOrStop(lock.Lock, lock.Unlock, stop) {
 						lock.Unlock()
 					}
