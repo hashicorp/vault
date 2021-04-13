@@ -96,3 +96,8 @@
   background: var(--gray-1);
   color: white;
 }
+
+/** DEBT: short term patch until the branding changes roll out. Remove this with this PR — https://github.com/hashicorp/vault/pull/11118 **/
+.g-content {
+  --brand-text: var(--vagrant) !important;
+}
