@@ -1,5 +1,6 @@
 #community {
   --brand-link: var(--vault-link);
+
   max-width: var(--site-max-width);
   margin: 72px auto;
 
