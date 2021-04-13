@@ -26,7 +26,7 @@
     "@hashicorp/react-text-split": "^3.0.1-alpha.16",
     "@hashicorp/react-text-splits": "^2.0.1-alpha.16",
     "@hashicorp/react-use-cases": "3.0.0",
-    "@hashicorp/react-vertical-text-block-list": "5.0.0",
+    "@hashicorp/react-vertical-text-block-list": "6.0.0",
     "next": "10.1.3",
     "next-mdx-remote": "2.1.4",
     "next-remote-watch": "1.0.0",
