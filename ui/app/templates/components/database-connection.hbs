@@ -40,20 +40,20 @@
         Reset connection
       </ConfirmAction>
       {{/if}}
-      {{#if (and @model.canReset @model.canDelete)}}
+      {{#if (or @model.canReset @model.canDelete)}}
       <div class="toolbar-separator" />
       {{/if}}
-      {{#if @model.canRotate }}
-      <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @onConfirmAction={{this.rotate}}
-        @confirmTitle="Rotate credentials?"
-        @confirmMessage={{'This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'}}
-        @confirmButtonText="Rotate"
-        data-test-database-connection-rotate
-      >
-        Rotate root credentials
-      </ConfirmAction>
+      {{#if @model.canRotateRoot }}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{this.rotate}}
+          @confirmTitle="Rotate credentials?"
+          @confirmMessage={{'This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'}}
+          @confirmButtonText="Rotate"
+          data-test-database-connection-rotate
+        >
+          Rotate root credentials
+        </ConfirmAction>
       {{/if}}
       {{#if @model.canAddRole}}
       <ToolbarSecretLink
