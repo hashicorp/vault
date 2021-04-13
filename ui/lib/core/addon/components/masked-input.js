@@ -28,16 +28,24 @@ import layout from '../templates/components/masked-input';
  */
 class MaskedInput extends Component {
   layout;
+  @tracked
+  showValue = false;
 
-  placeholder = 'value';
-  displayOnly = false;
+  @tracked
+  value = null;
   onKeyDown() {}
   onChange() {}
 
-  @tracked
-  showValue = false;
-  @tracked
-  value = null;
+  get defaultDisplayOnly() {
+    return this.args.displayOnly || false;
+  }
+
+  get defaultPlaceholder() {
+    if (this.args.placeholder) {
+      this.showValue = true;
+    }
+    return this.args.placeholder || 'value';
+  }
 
   @action
   toggleMask() {
@@ -47,8 +55,9 @@ class MaskedInput extends Component {
   updateValue(e) {
     e.preventDefault();
     let value = e.target.value;
-    console.log(value, 'value');
     this.value = value;
+    console.log('value in masked input', value);
+    console.log(this.args.onChange());
     this.onChange(value);
   }
 }

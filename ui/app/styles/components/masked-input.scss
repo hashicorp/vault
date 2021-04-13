@@ -1,10 +1,10 @@
 // ARG chance I could remove because of form style
 .masked-font {
-  font-family: obscure;
-  font-size: $size-medium;
-  letter-spacing: 2px;
-  line-height: 2.5;
-  color: $ui-gray-300;
+  // font-family: obscure;
+  // font-size: $size-medium;
+  // letter-spacing: 2px;
+  // line-height: 2.5;
+  color: $ui-gray-300; // because on form css this color gets overridden in the CSS
 }
 
 .masked-input {

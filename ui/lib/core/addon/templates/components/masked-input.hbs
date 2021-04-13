@@ -1,22 +1,34 @@
+
 <div class="masked-input {{if @displayOnly "display-only"}} {{if @allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if @displayOnly}}
     <pre class="masked-value display-only is-word-break {{unless this.showValue "masked-font"}}">{{unless this.showValue (truncate @value 20) @value}}</pre>
-  {{else}}
+  {{else if @inputField}}
     <input
       autocomplete="off"
       spellcheck="false"
-      value={{@value}}
+      value={{this.value}}
       class="input {{unless this.showValue "masked-font"}}"
       data-test-input
       {{on 'keyup' this.updateValue}}
     />
+  {{else}}
+    <textarea 
+      class="input masked-value {{unless this.showValue "masked-font"}}"
+      {{!-- something off here with default values and glimmer with placeholder --}}
+      rows=1 wrap="off" placeholder={{this.defaultPlaceholder}} 
+      onkeydown={{action @onKeyDown}}
+      {{on "change" this.updateValue}}
+      value={{readonly this.value}}
+      data-test-textarea 
+    />
   {{/if}}
   {{#if @allowCopy}}
+  {{log this.value "this.value" @value}}
     <CopyButton
-      @clipboardText={{this.value}}
+      @clipboardText={{@value}}
       @success={{action (set-flash-message 'Data copied!')}}
-      class="copy-button button {{if @displayOnly "is-compact"}}"
+      class="copy-button button {{if this.defaultDisplayOnly "is-compact"}}"
         data-test-copy-button>
       <Icon @glyph="copy-action" aria-hidden="Copy value" />
     </CopyButton>
@@ -24,7 +36,7 @@
   <button 
     {{on "click" this.toggleMask}}
     type="button"
-    class="{{if (eq @value "") "has-text-grey"}} masked-input-toggle button"
+    class="{{if (eq this.value "") "has-text-grey"}} masked-input-toggle button"
     data-test-button>
     <Icon @glyph={{if this.showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
   </button>
