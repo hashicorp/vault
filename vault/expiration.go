@@ -934,17 +934,9 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	if info, ok := m.pending.Load(leaseID); ok {
-		pending := info.(pendingInfo)
-		pending.timer.Stop()
-		m.pending.Delete(leaseID)
-		m.leaseCount--
-		// Log but do not fail; unit tests (and maybe Tidy on production systems)
-		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-			m.logger.Error("failed to update quota on revocation", "error", err)
-		}
-	}
+	m.removeFromPending(ctx, leaseID)
 	m.nonexpiring.Delete(leaseID)
+	m.zombies.Delete(leaseID)
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -2295,6 +2287,20 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	return nil
 }
 
+// must be called with m.pendingLock held
+func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
+	if info, ok := m.pending.Load(leaseID); ok {
+		pending := info.(pendingInfo)
+		pending.timer.Stop()
+		m.pending.Delete(leaseID)
+		m.leaseCount--
+		// Log but do not fail; unit tests (and maybe Tidy on production systems)
+		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+			m.logger.Error("failed to update quota on revocation", "error", err)
+		}
+	}
+}
+
 func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntry, err error) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
@@ -2315,6 +2321,7 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 	m.persistEntry(ctx, le)
 
 	m.zombies.Store(le.LeaseID, le)
+	m.removeFromPending(ctx, le.LeaseID)
 	m.pending.Delete(le.LeaseID)
 	m.nonexpiring.Delete(le.LeaseID)
 	m.restoreLoaded.Delete(le.LeaseID)
