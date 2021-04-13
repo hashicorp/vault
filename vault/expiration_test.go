@@ -2547,9 +2547,6 @@ func TestExpiration_MarkZombie(t *testing.T) {
 	if _, ok := exp.nonexpiring.Load(leaseID); ok {
 		t.Fatalf("zombie lease included in nonexpiring map")
 	}
-	if _, ok := exp.restoreLoaded.Load(leaseID); ok {
-		t.Fatalf("zombie lease included in restore map")
-	}
 
 	// stop and restore to verify that zombies are properly loaded from storage
 	err = exp.Stop()
@@ -2581,8 +2578,5 @@ func TestExpiration_MarkZombie(t *testing.T) {
 	}
 	if _, ok := exp.nonexpiring.Load(leaseID); ok {
 		t.Fatalf("zombie lease included in nonexpiring map")
-	}
-	if _, ok := exp.restoreLoaded.Load(leaseID); ok {
-		t.Fatalf("zombie lease included in restore map")
 	}
 }

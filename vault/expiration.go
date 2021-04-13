@@ -2324,7 +2324,6 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 	m.removeFromPending(ctx, le.LeaseID)
 	m.pending.Delete(le.LeaseID)
 	m.nonexpiring.Delete(le.LeaseID)
-	m.restoreLoaded.Delete(le.LeaseID)
 }
 
 // leaseEntry is used to structure the values the expiration
