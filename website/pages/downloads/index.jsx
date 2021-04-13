@@ -15,7 +15,7 @@ export default function DownloadsPage(staticProps) {
     <ProductDownloadsPage
       {...staticProps}
       changelog={changelogUrl}
-      getStartedDescription="Follow step-by-step tutorials on the essentials of Nomad."
+      getStartedDescription="Follow step-by-step tutorials on the essentials of Vault."
       getStartedLinks={[
         {
           label: 'Getting Started with the CLI',
@@ -39,7 +39,7 @@ export default function DownloadsPage(staticProps) {
       logo={
         <img
           className={s.logo}
-          alt="Nomad"
+          alt="Vault"
           src={require('./img/vault-logo.svg')}
         />
       }
