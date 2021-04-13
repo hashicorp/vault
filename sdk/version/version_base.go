@@ -8,7 +8,8 @@ var (
 	// Whether cgo is enabled or not; set at build time
 	CgoEnabled bool
 
-	Version           = ""
+	// The actual version will be generated at release time using ldflags
+	Version           = "TBD"
 	VersionPrerelease = ""
 	VersionMetadata   = ""
 )
