@@ -31,9 +31,6 @@ import { tracked } from '@glimmer/tracking';
  */
 
 export default class TextFile extends Component {
-  // ARG TODO figure out glimmer class name bindings.
-  classNames = ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'];
-  classNameBindings = ['inputOnly:is-paddingless'];
   fileHelpText = 'Select a file from your computer';
   textareaHelpText = 'Enter the value as text';
 
