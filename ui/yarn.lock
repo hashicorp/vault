@@ -4190,11 +4190,6 @@ abbrev@1:
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"
   integrity sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==
 
-abortcontroller-polyfill@^1.1.9:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/abortcontroller-polyfill/-/abortcontroller-polyfill-1.4.0.tgz#0d5eb58e522a461774af8086414f68e1dda7a6c4"
-  integrity sha512-3ZFfCRfDzx3GFjO6RAkYx81lPGpUS20ISxux9gLxuKnqafNcFQo59+IoZqpO2WvQlyc287B62HDnDdNYRmlvWA==
-
 abortcontroller-polyfill@^1.4.0:
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/abortcontroller-polyfill/-/abortcontroller-polyfill-1.5.0.tgz#2c562f530869abbcf88d949a2b60d1d402e87a7c"
@@ -9613,21 +9608,6 @@ ember-cli-preprocess-registry@^3.3.0:
     debug "^3.0.1"
     process-relative-require "^1.0.0"
 
-ember-cli-pretender@^3.1.1:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/ember-cli-pretender/-/ember-cli-pretender-3.2.0.tgz#8d91a20bb5f57092a328317591ec1dd622fcadf1"
-  integrity sha512-3q7a0bjbHAevWaQQE447McT1neQIMgBjllfbOVX27D1qQqCZ5h6qMsRe7fU44B6/UQcCcghpbNoeEcNcI56wOg==
-  dependencies:
-    abortcontroller-polyfill "^1.1.9"
-    broccoli-funnel "^2.0.1"
-    broccoli-merge-trees "^3.0.0"
-    chalk "^2.4.2"
-    ember-cli-babel "^6.6.0"
-    fake-xml-http-request "^2.0.0"
-    pretender "^3.0.1"
-    route-recognizer "^0.3.3"
-    whatwg-fetch "^3.0.0"
-
 ember-cli-sass@^10.0.1:
   version "10.0.1"
   resolved "https://registry.yarnpkg.com/ember-cli-sass/-/ember-cli-sass-10.0.1.tgz#afa91eb7dfe3890be0390639d66976512e7d8edc"
@@ -11119,7 +11099,7 @@ extsprintf@^1.2.0:
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
   integrity sha1-4mifjzVvrWLMplo6kcXfX5VRaS8=
 
-fake-xml-http-request@^2.0.0, fake-xml-http-request@^2.1.1:
+fake-xml-http-request@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/fake-xml-http-request/-/fake-xml-http-request-2.1.1.tgz#279fdac235840d7a4dff77d98ec44bce9fc690a6"
   integrity sha512-Kn2WYYS6cDBS5jq/voOfSGCA0TafOYAUPbEp8mUVpD/DVV5bQIDjlq+MLLvNUokkbTpjBVlLDaM5PnX+PwZMlw==
@@ -16388,7 +16368,7 @@ prepend-http@^2.0.0:
   resolved "https://registry.yarnpkg.com/prepend-http/-/prepend-http-2.0.0.tgz#e92434bfa5ea8c19f41cdfd401d741a3c819d897"
   integrity sha1-6SQ0v6XqjBn0HN/UAddBo8gZ2Jc=
 
-pretender@^3.0.1, pretender@^3.4.3:
+pretender@^3.4.3:
   version "3.4.3"
   resolved "https://registry.yarnpkg.com/pretender/-/pretender-3.4.3.tgz#a3b4160516007075d29127262f3a0063d19896e9"
   integrity sha512-AlbkBly9R8KR+R0sTCJ/ToOeEoUMtt52QVCetui5zoSmeLOU3S8oobFsyPLm1O2txR6t58qDNysqPnA1vVi8Hg==
@@ -20252,11 +20232,6 @@ whatwg-encoding@^1.0.1, whatwg-encoding@^1.0.5:
   integrity sha512-b5lim54JOPN9HtzvK9HFXvBma/rnfFeqsic0hSpjtDbVxR3dJKLc+KB4V6GgiGOvl7CY/KNh8rxSo9DKQrnUEw==
   dependencies:
     iconv-lite "0.4.24"
-
-whatwg-fetch@^3.0.0:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/whatwg-fetch/-/whatwg-fetch-3.2.0.tgz#8e134f701f0a4ab5fda82626f113e2b647fd16dc"
-  integrity sha512-SdGPoQMMnzVYThUbSrEvqTlkvC1Ux27NehaJ/GUHBfNrh5Mjg+1/uRyFMwVnxO2MrikMWvWAqUGgQOfVU4hT7w==
 
 whatwg-fetch@^3.4.0:
   version "3.4.1"
