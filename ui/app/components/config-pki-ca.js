@@ -167,7 +167,7 @@ export default Component.extend({
         .destroyRecord()
         .then(() => {
           this.flashMessages.success(
-            `The CA key for ${backend} has been deleted. The old CA certificate will still be accessible for reading until a new certificate/key is generated or uploaded.`
+            `The CA key for ${backend} has been deleted. The old CA certificate will still be accessible for reading until a new certificate/key are generated or uploaded.`
           );
         })
         .finally(() => {
