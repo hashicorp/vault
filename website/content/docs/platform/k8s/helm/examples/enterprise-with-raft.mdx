@@ -15,7 +15,7 @@ Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` valu
 ```shell
 helm install vault hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.6.2_ent' \
+  --set='server.image.tag=1.7.0_ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
