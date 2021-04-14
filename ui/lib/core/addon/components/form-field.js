@@ -38,7 +38,7 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    const valuePath = this.attr.options.fieldValue || this.attr.name;
+    const valuePath = this.attr.options?.fieldValue || this.attr.name;
     const modelValue = this.model[valuePath];
     this.set('showInput', !!modelValue);
   },
