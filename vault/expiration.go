@@ -836,6 +836,10 @@ func (m *ExpirationManager) Stop() error {
 		return true
 	})
 	m.uniquePolicies = make(map[string][]string)
+	m.zombies.Range(func(key, _ interface{}) bool {
+		m.zombies.Delete(key)
+		return true
+	})
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -2327,7 +2331,6 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 
 	m.zombies.Store(le.LeaseID, le)
 	m.removeFromPending(ctx, le.LeaseID)
-	m.pending.Delete(le.LeaseID)
 	m.nonexpiring.Delete(le.LeaseID)
 }
 
@@ -2404,6 +2407,7 @@ func (le *leaseEntry) nonexpiringToken() bool {
 	return !le.Auth.LeaseEnabled()
 }
 
+// TODO maybe lock RevokeErr once this goes in: https://github.com/hashicorp/vault/pull/11122
 func (le *leaseEntry) isZombie() bool {
 	return le.RevokeErr != ""
 }
