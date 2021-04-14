@@ -1,6 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
@@ -154,10 +154,10 @@ export default Model.extend({
   canEdit: alias('editConnectionPath.canUpdate'),
   canDelete: alias('editConnectionPath.canDelete'),
   resetConnectionPath: lazyCapabilities(apiPath`${'backend'}/reset/${'id'}`, 'backend', 'id'),
-  canReset: computed.or('resetConnectionPath.canUpdate', 'resetConnectionPath.canCreate'),
+  canReset: or('resetConnectionPath.canUpdate', 'resetConnectionPath.canCreate'),
   rotateRootPath: lazyCapabilities(apiPath`${'backend'}/rotate-root/${'id'}`, 'backend', 'id'),
-  canRotateRoot: computed.or('rotateRootPath.canUpdate', 'rotateRootPath.canCreate'),
+  canRotateRoot: or('rotateRootPath.canUpdate', 'rotateRootPath.canCreate'),
   rolePath: lazyCapabilities(apiPath`${'backend'}/role/*`, 'backend'),
   staticRolePath: lazyCapabilities(apiPath`${'backend'}/static-role/*`, 'backend'),
-  canAddRole: computed.or('rolePath.canCreate', 'staticRolePath.canCreate'),
+  canAddRole: or('rolePath.canCreate', 'staticRolePath.canCreate'),
 });
