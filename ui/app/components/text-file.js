@@ -11,7 +11,6 @@ import { guidFor } from '@ember/object/internals';
  * @example
  * <TextFile
  *  @inputOnly={{true}}
- *  @index=""
  *  @helpText="help text"
  *  @file={{object}}
  *  @onChange={{action "someOnChangeFunction"}}
@@ -19,7 +18,6 @@ import { guidFor } from '@ember/object/internals';
  * />
  *
  * @param [inputOnly] {bool} - When true, only the file input will be rendered
- * @param [index] {number} - ARG TODO unsure???
  * @param [helpText] {string} - Text underneath label.
  * @param file {object} - * Object in the shape of:
  * {
@@ -35,6 +33,7 @@ export default class TextFile extends Component {
   fileHelpText = 'Select a file from your computer';
   textareaHelpText = 'Enter the value as text';
   elementId = guidFor(this);
+  index = '';
 
   @tracked file = null;
   @tracked showValue = false;
@@ -53,8 +52,7 @@ export default class TextFile extends Component {
   }
 
   setFile(contents, filename) {
-    let index = this.args.index || null;
-    this.args.onChange(index, { value: contents, fileName: filename });
+    this.args.onChange(this.index, { value: contents, fileName: filename });
   }
 
   @action
@@ -73,13 +71,11 @@ export default class TextFile extends Component {
     e.preventDefault();
     let file = this.args.file;
     set(file, 'value', e.target.value);
-    let index = this.args.index || null;
-    this.args.onChange(index, file);
+    this.args.onChange(this.index, file);
   }
   @action
   clearFile() {
-    let index = this.args.index || null;
-    this.args.onChange(index, { value: '' });
+    this.args.onChange(this.index, { value: '' });
   }
   @action
   toggleMask() {
