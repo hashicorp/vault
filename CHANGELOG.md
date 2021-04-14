@@ -5,6 +5,9 @@
 
 CHANGES:
 
+* agent: Failed auto-auth attempts are now throttled by an exponential backoff instead of the
+~2 second retry delay. The maximum backoff may be configured with the new `max_backoff` parameter,
+which defaults to 5 minutes.
 * aws/auth: AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
 have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
 updated to`/auth/aws/identity-accesslist`). The old and new endpoints are aliases,
@@ -44,7 +47,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* agent: Add template-retry stanza to agent config. [[GH-10644](https://github.com/hashicorp/vault/pull/10644)]
+* agent: Add a `vault.retry` stanza that allows specifying number of retries on failure; this applies both to templating and proxied requests. [[GH-11113](https://github.com/hashicorp/vault/pull/11113)]
 * agent: Agent can now run as a Windows service. [[GH-10231](https://github.com/hashicorp/vault/pull/10231)]
 * agent: Better concurrent request handling on identical requests proxied through Agent. [[GH-10705](https://github.com/hashicorp/vault/pull/10705)]
 * agent: Route templating server through cache when persistent cache is enabled. [[GH-10927](https://github.com/hashicorp/vault/pull/10927)]
