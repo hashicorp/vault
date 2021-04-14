@@ -1,8 +1,5 @@
-import Component from '@glimmer/component';
-import { setComponentTemplate } from '@ember/component';
-import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-
+import Component from '@ember/component';
+import autosize from 'autosize';
 // import Component from '@ember/component';
 import layout from '../templates/components/masked-input';
 
@@ -26,40 +23,35 @@ import layout from '../templates/components/masked-input';
  * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
  * @param [isCertificate=false] {bool} - If certificate display the label and icons differently.
  */
-class MaskedInput extends Component {
-  layout;
-  @tracked
-  showValue = false;
-
-  @tracked
-  value = null;
-  onKeyDown() {}
-  onChange() {}
-
-  get defaultDisplayOnly() {
-    return this.args.displayOnly || false;
-  }
-
-  get defaultPlaceholder() {
-    if (this.args.placeholder) {
-      this.showValue = true;
-    }
-    return this.args.placeholder || 'value';
-  }
-
-  @action
-  toggleMask() {
-    this.showValue = !this.showValue;
-  }
-  @action
-  updateValue(e) {
-    e.preventDefault();
-    let value = e.target.value;
-    this.value = value;
-    console.log('value in masked input', value);
-    console.log(this.args.onChange());
-    this.onChange(value);
-  }
-}
-
-export default setComponentTemplate(layout, MaskedInput);
+export default Component.extend({
+  layout,
+  value: null,
+  placeholder: 'value',
+  maskWhileTyping: false,
+  showValue: false,
+  didInsertElement() {
+    this._super(...arguments);
+    autosize(this.element.querySelector('textarea'));
+  },
+  didUpdate() {
+    this._super(...arguments);
+    autosize.update(this.element.querySelector('textarea'));
+  },
+  willDestroyElement() {
+    this._super(...arguments);
+    autosize.destroy(this.element.querySelector('textarea'));
+  },
+  displayOnly: false,
+  onKeyDown() {},
+  onChange() {},
+  actions: {
+    toggleMask() {
+      this.toggleProperty('showValue');
+    },
+    updateValue(e) {
+      let value = e.target.value;
+      this.set('value', value);
+      this.onChange(value);
+    },
+  },
+});
