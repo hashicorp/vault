@@ -153,7 +153,7 @@ github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
 github.com/armon/go-metrics/prometheus
-# github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
+# github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a
 ## explicit
 github.com/armon/go-proxyproto
 # github.com/armon/go-radix v1.0.0
@@ -1300,7 +1300,8 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20200302205851-738671d3881b
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/mod v0.2.0
+# golang.org/x/mod v0.4.0
+## explicit
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
@@ -1330,7 +1331,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+# golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
@@ -1363,7 +1364,7 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
+# golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 ## explicit
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/analysis
@@ -1388,8 +1389,10 @@ golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
+golang.org/x/tools/internal/lsp/fuzzy
 golang.org/x/tools/internal/packagesinternal
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+golang.org/x/tools/internal/typesinternal
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/api v0.29.0
