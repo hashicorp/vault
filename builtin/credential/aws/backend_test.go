@@ -20,9 +20,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const testVaultHeaderValue = "VaultAcceptanceTesting"
-const testValidRoleName = "valid-role"
-const testInvalidRoleName = "invalid-role"
+const (
+	testVaultHeaderValue = "VaultAcceptanceTesting"
+	testValidRoleName    = "valid-role"
+	testInvalidRoleName  = "invalid-role"
+)
 
 func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// create a backend
@@ -479,7 +481,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := map[string]interface{}{"access_key": "AKIAJBRHKV6EVTTNXDHA",
+	data := map[string]interface{}{
+		"access_key": "AKIAJBRHKV6EVTTNXDHA",
 		"secret_key": "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",
 	}
 
@@ -495,7 +498,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Data:      data,
 	}
 
-	data3 := map[string]interface{}{"access_key": "",
+	data3 := map[string]interface{}{
+		"access_key": "",
 		"secret_key": "mCtSM8ZUEQ3mOFVZYPBQkf2sO6F/W7a5TVzrl3Oj",
 	}
 	stepInvalidAccessKey := logicaltest.TestStep{
@@ -505,7 +509,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 		ErrorOk:   true,
 	}
 
-	data4 := map[string]interface{}{"access_key": "accesskey",
+	data4 := map[string]interface{}{
+		"access_key": "accesskey",
 		"secret_key": "",
 	}
 	stepInvalidSecretKey := logicaltest.TestStep{
@@ -554,7 +559,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//test existence check returning true
+	// test existence check returning true
 	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "config/client",
@@ -907,7 +912,6 @@ func TestBackend_PathRoleTag(t *testing.T) {
 }
 
 func TestBackend_PathBlacklistRoleTag(t *testing.T) {
-
 	for _, path := range []string{"roletag-blacklist/", "roletag-denylist/"} {
 		// create the backend
 		storage := &logical.InmemStorage{}
@@ -1483,7 +1487,8 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// potentially pick up credentials from the ~/.config files), but probably
 	// good enough rather than having to muck around in the low-level details
 	for _, envvar := range []string{
-		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SECURITY_TOKEN", "AWS_SESSION_TOKEN"} {
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SECURITY_TOKEN", "AWS_SESSION_TOKEN",
+	} {
 		// Skip test if any of the required env vars are missing
 		testEnvVar := os.Getenv("TEST_" + envvar)
 		if testEnvVar == "" {

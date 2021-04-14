@@ -62,7 +62,7 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	}
 	s3conn := s3.New(sess)
 
-	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	bucket := fmt.Sprintf("vault-s3-testacc-%d", randInt)
 
 	_, err = s3conn.CreateBucket(&s3.CreateBucketInput{

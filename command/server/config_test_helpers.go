@@ -247,7 +247,7 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 }
 
 func testParseEntropy(t *testing.T, oss bool) {
-	var tests = []struct {
+	tests := []struct {
 		inConfig   string
 		outErr     error
 		outEntropy configutil.Entropy
@@ -627,7 +627,8 @@ func testConfig_Sanitized(t *testing.T) {
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
 			"redirect_addr":      "top_level_api_addr",
-			"type":               "consul"},
+			"type":               "consul",
+		},
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
@@ -707,6 +708,7 @@ listener "tcp" {
 	tls_key_file = "./certs/server.key"
 	tls_client_ca_file = "./certs/rootca.crt"
 	tls_min_version = "tls12"
+	tls_max_version = "tls13"
 	tls_require_and_verify_client_cert = true
 	tls_disable_client_certs = true
 }`))
@@ -737,6 +739,7 @@ listener "tcp" {
 					TLSKeyFile:                    "./certs/server.key",
 					TLSClientCAFile:               "./certs/rootca.crt",
 					TLSMinVersion:                 "tls12",
+					TLSMaxVersion:                 "tls13",
 					TLSRequireAndVerifyClientCert: true,
 					TLSDisableClientCerts:         true,
 				},
@@ -769,7 +772,7 @@ func testParseSeals(t *testing.T) {
 				},
 			},
 			Seals: []*configutil.KMS{
-				&configutil.KMS{
+				{
 					Type:    "pkcs11",
 					Purpose: []string{"many", "purposes"},
 					Config: map[string]string{
@@ -784,7 +787,7 @@ func testParseSeals(t *testing.T) {
 						"generate_key":           "true",
 					},
 				},
-				&configutil.KMS{
+				{
 					Type:     "pkcs11",
 					Purpose:  []string{"single"},
 					Disabled: true,

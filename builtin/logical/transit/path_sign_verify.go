@@ -143,7 +143,7 @@ func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The key to use",
 			},
@@ -307,7 +307,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 
 		if p.Type.HashSignatureInput() && !prehashed {
-			var hf = keysutil.HashFuncMap[hashAlgorithm]()
+			hf := keysutil.HashFuncMap[hashAlgorithm]()
 			hf.Write(input)
 			input = hf.Sum(nil)
 		}

@@ -319,7 +319,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	t.Logf("config: %s", conf)
 
 	jwtToken, _ := agent.GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
@@ -358,7 +358,7 @@ auto_auth {
 `
 
 	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
-	if err := ioutil.WriteFile(conf, []byte(config), 0600); err != nil {
+	if err := ioutil.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test config", "path", conf)
@@ -776,7 +776,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0600); err != nil {
+				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				templatePaths = append(templatePaths, fileName)
@@ -907,7 +907,7 @@ auto_auth {
 
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0600); err != nil {
+				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -1163,6 +1163,7 @@ var templates = []string{
 {{- if .Data.data.password }}"password":"{{ .Data.data.password }}"{{- end }}}
 {{- end }}`,
 }
+
 var rendered = []string{
 	`{"secret": "other","username":"barstuff","password":"zap"}`,
 	`{"secret": "myapp","username":"bar","password":"zap"}`,
@@ -1177,6 +1178,7 @@ func templateContents(seed int) string {
 	index := seed % len(templates)
 	return templates[index]
 }
+
 func templateRendered(seed int) string {
 	index := seed % len(templates)
 	return rendered[index]
@@ -1367,7 +1369,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 
 			// make some template files
 			templatePath := filepath.Join(tmpDir, "render_0.tmpl")
-			if err := ioutil.WriteFile(templatePath, []byte(templateContents(0)), 0600); err != nil {
+			if err := ioutil.WriteFile(templatePath, []byte(templateContents(0)), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			templateConfig := fmt.Sprintf(templateConfigString, templatePath, tmpDir, "render_0.json")
@@ -1415,7 +1417,7 @@ vault {
 				// the temp dir before Agent has had time to render and will
 				// likely fail the test
 				tick := time.Tick(1 * time.Second)
-				timeout := time.After(10 * time.Second)
+				timeout := time.After(15 * time.Second)
 				var err error
 				for {
 					select {
@@ -1460,7 +1462,6 @@ vault {
 			default:
 				t.Fatalf("%s expectError=%v error=%v code=%d", tcname, tc.expectError, err, code)
 			}
-
 		})
 	}
 }
@@ -1495,8 +1496,8 @@ path "/secret/*" {
 
 	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
 		"bind_secret_id": "true",
-		"token_ttl":      "3s",
-		"token_max_ttl":  "10s",
+		"token_ttl":      "1h",
+		"token_max_ttl":  "2h",
 		"policies":       []string{"test-autoauth"},
 	})
 	if err != nil {

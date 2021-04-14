@@ -1,13 +1,14 @@
 package cassandra
 
 import (
+	"os"
+	"reflect"
+	"testing"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"os"
-	"reflect"
-	"testing"
 )
 
 func TestCassandraBackend(t *testing.T) {
@@ -27,7 +28,6 @@ func TestCassandraBackend(t *testing.T) {
 		"hosts":            hosts,
 		"protocol_version": "3",
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -41,7 +41,8 @@ func TestCassandraBackendBuckets(t *testing.T) {
 		"":          {"."},
 		"a":         {"."},
 		"a/b":       {".", "a"},
-		"a/b/c/d/e": {".", "a", "a/b", "a/b/c", "a/b/c/d"}}
+		"a/b/c/d/e": {".", "a", "a/b", "a/b/c", "a/b/c/d"},
+	}
 
 	b := &CassandraBackend{}
 	for input, expected := range expectations {

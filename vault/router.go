@@ -18,11 +18,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	deniedPassthroughRequestHeaders = []string{
-		consts.AuthHeaderName,
-	}
-)
+var deniedPassthroughRequestHeaders = []string{
+	consts.AuthHeaderName,
+}
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
@@ -346,9 +344,11 @@ func (r *Router) MountConflict(ctx context.Context, path string) string {
 func (r *Router) MatchingStorageByAPIPath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, true)
 }
+
 func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, false)
 }
+
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -512,8 +512,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
-	defer metrics.MeasureSince([]string{"route", string(req.Operation),
-		strings.Replace(mount, "/", "-", -1)}, time.Now())
+	defer metrics.MeasureSince([]string{
+		"route", string(req.Operation),
+		strings.Replace(mount, "/", "-", -1),
+	}, time.Now())
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend

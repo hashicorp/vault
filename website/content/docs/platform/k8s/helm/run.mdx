@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Running Vault - Kubernetes
-sidebar_title: Running Vault
 description: >-
   Vault can run directly on Kubernetes in various configurations.  For
   pure-Kubernetes workloads, this enables Vault to also exist purely within
@@ -54,7 +53,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
+hashicorp/vault	0.11.0        	1.7.0     	Official HashiCorp Vault Chart
 ```
 
 -> **Important:** The Helm chart is new and under significant development.
@@ -73,14 +72,16 @@ Or install a specific version of the chart.
 # List the available releases
 $ helm search repo hashicorp/vault -l
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.11.0       	1.7.0      	Official HashiCorp Vault Chart
+hashicorp/vault	0.10.0       	1.7.0      	Official HashiCorp Vault Chart
 hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
 hashicorp/vault	0.9.0        	1.6.1      	Official HashiCorp Vault Chart
 hashicorp/vault	0.8.0        	1.5.4      	Official HashiCorp Vault Chart
 hashicorp/vault	0.7.0        	1.5.2      	Official HashiCorp Vault Chart
 hashicorp/vault	0.6.0        	1.4.2      	Official HashiCorp Vault Chart
 
-# Install version 0.9.1
-$ helm install vault hashicorp/vault --version 0.9.1
+# Install version 0.11.0
+$ helm install vault hashicorp/vault --version 0.11.0
 ```
 
 The `helm install` command accepts parameters to override default configuration
@@ -423,14 +424,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
+hashicorp/vault	0.10.0        	1.7.0     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.9.1 \
+$ helm upgrade vault hashicorp/vault --version=0.10.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run

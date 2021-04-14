@@ -566,7 +566,6 @@ func TestHandler_requestAuth(t *testing.T) {
 
 	rootCtx := namespace.RootContext(nil)
 	te, err := core.LookupToken(rootCtx, token)
-
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -630,7 +629,6 @@ func TestHandler_requestAuth(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error, got none")
 	}
-
 }
 
 func TestHandler_getTokenFromReq(t *testing.T) {

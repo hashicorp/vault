@@ -13,10 +13,10 @@ import (
 
 func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of this database connection",
 				},
@@ -33,10 +33,10 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
 			HelpDescription: pathCredsCreateReadHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the static role",
 				},
@@ -211,6 +211,7 @@ This path attempts to rotate the root credentials for the given database.
 const pathRotateRoleCredentialsUpdateHelpSyn = `
 Request to rotate the credentials for a static user account.
 `
+
 const pathRotateRoleCredentialsUpdateHelpDesc = `
 This path attempts to rotate the credentials for the given static user account.
 `

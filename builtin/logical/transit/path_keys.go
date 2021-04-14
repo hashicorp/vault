@@ -36,12 +36,12 @@ func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
 
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `
@@ -51,14 +51,14 @@ The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96"
 `,
 			},
 
-			"derived": &framework.FieldSchema{
+			"derived": {
 				Type: framework.TypeBool,
 				Description: `Enables key derivation mode. This
 allows for per-transaction unique
 keys for encryption operations.`,
 			},
 
-			"convergent_encryption": &framework.FieldSchema{
+			"convergent_encryption": {
 				Type: framework.TypeBool,
 				Description: `Whether to support convergent encryption.
 This is only supported when using a key with
@@ -74,21 +74,21 @@ given context. Failing to do so will severely
 impact the ciphertext's security.`,
 			},
 
-			"exportable": &framework.FieldSchema{
+			"exportable": {
 				Type: framework.TypeBool,
 				Description: `Enables keys to be exportable.
 This allows for all the valid keys
 in the key ring to be exported.`,
 			},
 
-			"allow_plaintext_backup": &framework.FieldSchema{
+			"allow_plaintext_backup": {
 				Type: framework.TypeBool,
 				Description: `Enables taking a backup of the named
 key in plaintext format. Once set,
 this cannot be disabled.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `Base64 encoded context for key derivation.
 When reading a key with key derivation enabled,

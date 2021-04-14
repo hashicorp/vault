@@ -64,5 +64,4 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
 		t.Fatalf("bad mismatch response body: diff: %v", diff)
 	}
-
 }

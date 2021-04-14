@@ -207,7 +207,7 @@ func TestDBFileExists(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if tc.createFile {
-				err = ioutil.WriteFile(path.Join(tmpPath, DatabaseFileName), []byte("test-db-path"), 0600)
+				err = ioutil.WriteFile(path.Join(tmpPath, DatabaseFileName), []byte("test-db-path"), 0o600)
 				require.NoError(t, err)
 			}
 			exists, err := DBFileExists(tmpPath)
@@ -215,7 +215,6 @@ func TestDBFileExists(t *testing.T) {
 			assert.Equal(t, tc.expectExist, exists)
 		})
 	}
-
 }
 
 func Test_SetGetRetrievalToken(t *testing.T) {

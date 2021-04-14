@@ -113,7 +113,7 @@ func combinePolicyDocuments(policies ...string) (string, error) {
 	var policy string
 	var err error
 	var policyBytes []byte
-	var newPolicy = PolicyDocument{
+	newPolicy := PolicyDocument{
 		// 2012-10-17 is the current version of the AWS policy language:
 		// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_version.html
 		Version: "2012-10-17",

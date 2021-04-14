@@ -168,7 +168,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if err != nil {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, c.disableAutopilot)
+	disableAutopilot := c.disableAutopilot
+	if c.IsDRSecondary() {
+		disableAutopilot = true
+	}
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)
@@ -801,6 +805,12 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
 				}
 				leaderInfo.TLSConfig.ServerName = leaderInfo.LeaderTLSServerName
+			}
+			if leaderInfo.TLSConfig == nil && leaderInfo.LeaderTLSServerName != "" {
+				leaderInfo.TLSConfig, err = tlsutil.SetupTLSConfig(map[string]string{"address": leaderInfo.LeaderTLSServerName}, "")
+				if err != nil {
+					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
+				}
 			}
 
 			if leaderInfo.TLSConfig != nil {

@@ -456,7 +456,6 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 		pt, err := d.Decrypt(ctx, blobInfo, nil)
 		if err != nil {
 			return errwrap.Wrapf("failed to decrypt encrypted recovery key: {{err}}", err)
-
 		}
 		if err := d.SetRecoveryKey(ctx, pt); err != nil {
 			return errwrap.Wrapf("failed to save upgraded recovery key: {{err}}", err)

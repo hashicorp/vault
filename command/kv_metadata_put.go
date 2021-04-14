@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVMetadataPutCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVMetadataPutCommand)(nil)
+var (
+	_ cli.Command             = (*KVMetadataPutCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVMetadataPutCommand)(nil)
+)
 
 type KVMetadataPutCommand struct {
 	*BaseCommand

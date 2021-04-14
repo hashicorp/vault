@@ -5,14 +5,15 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
@@ -47,7 +48,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		DisableAutopilot: !ropts.EnableAutopilot,
 	}
 
-	var opts = vault.TestClusterOptions{
+	opts := vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	}
 	opts.InmemClusterLayers = ropts.InmemCluster
@@ -119,7 +120,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 func TestRaft_Retry_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -140,7 +141,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leaderAPI,
 			TLSConfig:     leaderCore.TLSConfig,
 			Retry:         true,
@@ -183,7 +184,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 func TestRaft_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -994,7 +995,7 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 func TestRaft_Join_InitStatus(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)

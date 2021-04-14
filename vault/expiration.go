@@ -2184,7 +2184,6 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -2222,9 +2221,7 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 // type (though most likely we would only call this from within the "vault" core package.)
 type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path string) bool
 
-var (
-	ErrInRestoreMode = errors.New("expiration manager in restore mode")
-)
+var ErrInRestoreMode = errors.New("expiration manager in restore mode")
 
 // WalkTokens extracts the Auth structure from leases corresponding to tokens.
 // Returning false from the walk function terminates the iteration.

@@ -16,11 +16,11 @@ func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "RabbitMQ username",
 			},
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for the RabbitMQ username",
 			},

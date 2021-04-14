@@ -38,7 +38,7 @@ func TestStepwise_Run_SkipIfNotAcc(t *testing.T) {
 	defer os.Setenv(TestEnvVar, "1")
 	skipCase := Case{
 		Environment: new(mockEnvironment),
-		Steps:       []Step{Step{}},
+		Steps:       []Step{{}},
 	}
 
 	expected := mockT{

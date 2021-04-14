@@ -166,7 +166,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 		return nil
 	}
 
-	var tlsConfig = &tls.Config{}
+	tlsConfig := &tls.Config{}
 	if pemBundlePath, ok := conf["pem_bundle_file"]; ok {
 		pemBundleData, err := ioutil.ReadFile(pemBundlePath)
 		if err != nil {
@@ -225,7 +225,8 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	}
 
 	cluster.SslOpts = &gocql.SslOptions{
-		Config: tlsConfig.Clone()}
+		Config: tlsConfig.Clone(),
+	}
 	return nil
 }
 
