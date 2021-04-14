@@ -14,15 +14,18 @@ package tools
 // see https://github.com/golang/protobuf/releases#v1.4-generated-code and
 // https://github.com/protocolbuffers/protobuf-go/releases/tag/v1.20.0#v1.20-grpc-support
 //go:generate go install github.com/golang/protobuf/protoc-gen-go
+//go:generate go install golang.org/x/tools/cmd/goimports
+//go:generate go install github.com/mitchellh/gox
+//go:generate go install github.com/client9/misspell/cmd/misspell
+//go:generate go install mvdan.cc/gofumpt
 import (
 	_ "github.com/golang/protobuf/protoc-gen-go"
 
-	//go:generate go install golang.org/x/tools/cmd/goimports
 	_ "golang.org/x/tools/cmd/goimports"
 
-	//go:generate go install github.com/mitchellh/gox
 	_ "github.com/mitchellh/gox"
 
-	//go:generate go install github.com/client9/misspell/cmd/misspell
 	_ "github.com/client9/misspell/cmd/misspell"
+
+	_ "mvdan.cc/gofumpt"
 )

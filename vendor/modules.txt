@@ -1301,7 +1301,6 @@ golang.org/x/crypto/ssh/terminal
 golang.org/x/lint
 golang.org/x/lint/golint
 # golang.org/x/mod v0.4.0
-## explicit
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
@@ -1759,6 +1758,11 @@ k8s.io/utils/integer
 ## explicit
 layeh.com/radius
 layeh.com/radius/rfc2865
+# mvdan.cc/gofumpt v0.1.1
+## explicit
+mvdan.cc/gofumpt
+mvdan.cc/gofumpt/format
+mvdan.cc/gofumpt/internal/diff
 # sigs.k8s.io/structured-merge-diff/v3 v3.0.0
 sigs.k8s.io/structured-merge-diff/v3/value
 # sigs.k8s.io/yaml v1.2.0
