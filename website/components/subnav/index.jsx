@@ -27,7 +27,7 @@ export default function ProductSubnav() {
           url: '/downloads',
         },
       ]}
-      currentPath={router.pathname}
+      currentPath={router.asPath}
       menuItems={menuItems}
       menuItemsAlign="right"
       constrainWidth
