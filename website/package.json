@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/react": "^17.0.3",
     "dart-linkcheck": "^2.0.15",
-    "husky": "^6.0.0",
+    "husky": "^4.3.8",
     "inquirer": "^8.0.0",
     "prettier": "^2.2.1"
   },
@@ -56,7 +56,6 @@
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
     "start": "next-remote-watch ./content/**/*.mdx",
-    "static": "npm run build && npm run export && cp _redirects out/.",
-    "prepare": "husky install"
+    "static": "npm run build && npm run export && cp _redirects out/."
   }
 }
