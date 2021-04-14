@@ -17,6 +17,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
       { attr: 'write_concern', group: 'pluginConfig' },
+      { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
     ],
@@ -32,6 +33,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'password_policy' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
+      { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'max_open_connections', group: 'pluginConfig' },
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
@@ -83,8 +85,11 @@ export default Model.extend({
   password_policy: attr('string', {
     label: 'Use custom password policy',
     editType: 'optionalText',
-    subText:
+    subText: 'Specify the name of an existing password policy.',
+    defaultSubText:
       'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
+    defaultShown: 'Default',
+    docLink: 'https://www.vaultproject.io/docs/concepts/password-policies',
   }),
 
   // common fields
@@ -114,6 +119,14 @@ export default Model.extend({
     theme: 'hashi short',
     defaultShown: 'Default',
     // defaultValue: '# For example: { "wmode": "majority", "wtimeout": 5000 }',
+  }),
+  username_template: attr('string', {
+    editType: 'optionalText',
+    subText: 'Enter the custom username template to use.',
+    defaultSubText:
+      'Template describing how dynamic usernames are generated. Vault will use the default for this plugin.',
+    docLink: 'https://www.vaultproject.io/docs/concepts/username-templating',
+    defaultShown: 'Default',
   }),
   max_open_connections: attr('number', {
     defaultValue: 4,
@@ -172,7 +185,7 @@ export default Model.extend({
 
   statementFields: computed('plugin_name', function() {
     if (!this.plugin_name) {
-      return null;
+      return expandAttributeMeta(this, ['root_rotation_statements']);
     }
     let fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
       .fields.filter(f => f.group === 'statements')
