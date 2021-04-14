@@ -7,7 +7,7 @@ CHANGES:
 
 * agent: Failed auto-auth attempts are now throttled by an exponential backoff instead of the
 ~2 second retry delay. The maximum backoff may be configured with the new `max_backoff` parameter,
-which defaults to 5 minutes.
+which defaults to 5 minutes. [[GH-10964](https://github.com/hashicorp/vault/pull/10964)]
 * aws/auth: AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
 have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
 updated to`/auth/aws/identity-accesslist`). The old and new endpoints are aliases,
