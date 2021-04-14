@@ -20,14 +20,14 @@
       <div class="control is-flex">
         <input
           data-test-text-toggle=true
-          id={{concat "useText-" @elementId}}
+          id={{concat "useText-" this.elementId}}
           type="checkbox"
-          name={{concat "useText-" @elementId}}
+          name={{concat "useText-" this.elementId}}
           class="switch is-rounded is-success is-small"
           checked={{@file.enterAsText}}
           {{on 'change' (toggle "enterAsText" @file)}}
         />
-        <label for={{concat "useText-" @elementId}}>
+        <label for={{concat "useText-" this.elementId}}>
           Enter as text
         </label>
       </div>

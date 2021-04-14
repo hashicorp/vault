@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { set } from '@ember/object';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { guidFor } from '@ember/object/internals';
 
 /**
  * @module TextFile
@@ -33,6 +34,7 @@ import { tracked } from '@glimmer/tracking';
 export default class TextFile extends Component {
   fileHelpText = 'Select a file from your computer';
   textareaHelpText = 'Enter the value as text';
+  elementId = guidFor(this);
 
   @tracked file = null;
   @tracked showValue = false;
