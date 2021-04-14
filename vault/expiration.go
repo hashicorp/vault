@@ -1565,6 +1565,11 @@ func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string)
 		return m.leaseTimesForExport(info.(pendingInfo).cachedLeaseInfo), nil
 	}
 
+	info, ok = m.zombies.Load(leaseID)
+	if ok && info.(*leaseEntry) != nil {
+		return m.leaseTimesForExport(info.(*leaseEntry)), nil
+	}
+
 	// Load the entry
 	le, err := m.loadEntryInternal(ctx, leaseID, true, false)
 	if err != nil {

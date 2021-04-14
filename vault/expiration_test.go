@@ -2580,3 +2580,64 @@ func TestExpiration_MarkZombie(t *testing.T) {
 		t.Fatalf("zombie lease included in nonexpiring map")
 	}
 }
+
+func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
+	exp := mockExpiration(t)
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "zombie/lease",
+		ClientToken: "sometoken",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "sometoken", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: 10 * time.Hour,
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	leaseID, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error getting lease times: %v", err)
+	}
+	if expectedLeaseTimes == nil {
+		t.Fatal("got nil lease")
+	}
+
+	le, err := exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading lease: %v", err)
+	}
+	exp.markLeaseAsZombie(ctx, le, fmt.Errorf("test zombie error"))
+
+	zombieLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error getting zombie lease times: %v", err)
+	}
+	if zombieLeaseTimes == nil {
+		t.Fatal("got nil zombie lease")
+	}
+
+	// strip monotonic clock reading
+	expectedLeaseTimes.IssueTime = expectedLeaseTimes.IssueTime.Round(0)
+	expectedLeaseTimes.ExpireTime = expectedLeaseTimes.ExpireTime.Round(0)
+	expectedLeaseTimes.LastRenewalTime = expectedLeaseTimes.LastRenewalTime.Round(0)
+
+	if zombieLeaseTimes.IssueTime != expectedLeaseTimes.IssueTime {
+		t.Errorf("bad issue time. expected %v, got %v", expectedLeaseTimes.IssueTime, zombieLeaseTimes.IssueTime)
+	}
+	if zombieLeaseTimes.ExpireTime != expectedLeaseTimes.ExpireTime {
+		t.Errorf("bad expire time. expected %v, got %v", expectedLeaseTimes.ExpireTime, zombieLeaseTimes.ExpireTime)
+	}
+	if zombieLeaseTimes.LastRenewalTime != expectedLeaseTimes.LastRenewalTime {
+		t.Errorf("bad last renew time. expected %v, got %v", expectedLeaseTimes.LastRenewalTime, zombieLeaseTimes.LastRenewalTime)
+	}
+}
