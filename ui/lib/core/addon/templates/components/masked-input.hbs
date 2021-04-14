@@ -2,20 +2,20 @@
 <div class="masked-input {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
-    <pre class="masked-value display-only is-word-break {{unless this.showValue "masked-font"}}">{{unless this.showValue (truncate value 20) value}}</pre>
+    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{unless showValue (truncate value 20) value}}</pre>
   {{else if inputField}}
     <input
       autocomplete="off"
       spellcheck="false"
       value={{value}}
-      class="input {{unless this.showValue "masked-font"}}"
+      class="input {{unless showValue "masked-font"}}"
       onchange={{action "updateValue"}}
       data-test-input
     />
   {{else}}
     <textarea 
       class="input masked-value {{unless showValue "masked-font"}}"
-      rows=1 wrap="off" placeholder={{placeholder}} 
+      rows=1 wrap="off"
       onkeydown={{action onKeyDown}}
       onchange={{action "updateValue"}}
       value={{value}}
@@ -32,7 +32,7 @@
     </CopyButton>
   {{/if}}
   <button 
-    onchange={{action "toggleMask"}}
+    onclick={{action "toggleMask"}}
     type="button"
     class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button"
     data-test-button>

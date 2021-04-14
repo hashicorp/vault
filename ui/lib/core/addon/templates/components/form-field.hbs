@@ -172,7 +172,6 @@
 {{!-- Masked Input --}}
   <MaskedInput
     @value={{or (get model valuePath) attr.options.defaultValue}}
-    @placeholder=""
     @allowCopy="true"
     @onChange={{action (action "setAndBroadcast" valuePath)}}
   />

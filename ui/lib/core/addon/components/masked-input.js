@@ -11,13 +11,11 @@ import layout from '../templates/components/masked-input';
  * @example
  * <MaskedInput
  *  @value={{attr.options.defaultValue}}
- *  @placeholder="secret"
  *  @allowCopy={{true}}
  *  @onChange={{action "someAction"}}
  * />
  *
  * @param [value] {String} - The value to display in the input.
- * @param [placeholder=value] {String} - The placeholder to display before the user has entered any input.
  * @param [allowCopy=null] {bool} - Whether or not the input should render with a copy button.
  * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
  * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
@@ -26,9 +24,7 @@ import layout from '../templates/components/masked-input';
 export default Component.extend({
   layout,
   value: null,
-  placeholder: 'value',
-  maskWhileTyping: false,
-  showValue: false,
+  showValue: true,
   didInsertElement() {
     this._super(...arguments);
     autosize(this.element.querySelector('textarea'));
