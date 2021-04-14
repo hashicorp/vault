@@ -1,6 +1,5 @@
 import Component from '@ember/component';
 import autosize from 'autosize';
-// import Component from '@ember/component';
 import layout from '../templates/components/masked-input';
 
 /**
@@ -24,7 +23,7 @@ import layout from '../templates/components/masked-input';
 export default Component.extend({
   layout,
   value: null,
-  showValue: true,
+  showValue: false,
   didInsertElement() {
     this._super(...arguments);
     autosize(this.element.querySelector('textarea'));

@@ -3,58 +3,50 @@ import { set } from '@ember/object';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
+/**
+ * @module TextFile
+ * `TextFile` components are file upload components where you can either toggle to upload a file or enter text.
+ *
+ * @example
+ * <TextFile
+ *  @inputOnly={{true}}
+ *  @index=""
+ *  @helpText="help text"
+ *  @file={{object}}
+ *  @onChange={{action "someOnChangeFunction"}}
+ *  @label={{"string"}}
+ * />
+ *
+ * @param [inputOnly] {bool} - When true, only the file input will be rendered
+ * @param [index] {number} - ARG TODO unsure???
+ * @param [helpText] {string} - Text underneath label.
+ * @param file {object} - * Object in the shape of:
+ * {
+ *   value: 'file contents here',
+ *   fileName: 'nameOfFile.txt',
+ *   enterAsText: bool
+ * }
+ * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
+ * @param [label=null] {string} - Text to use as the label for the file input. If null, a default will be rendered.
+ */
+
 export default class TextFile extends Component {
+  // ARG TODO figure out glimmer class name bindings.
   'data-test-component' = 'text-file';
   classNames = ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'];
   classNameBindings = ['inputOnly:is-paddingless'];
-
-  /*
-   * @public
-   * @param Object
-   * Object in the shape of:
-   * {
-   *   value: 'file contents here',
-   *   fileName: 'nameOfFile.txt',
-   *   enterAsText: bool
-   * }
-   */
-  @tracked
-  file = null;
-  @tracked
-  index = null;
-  @tracked
-  showValue = false;
-
-  /*
-   * @public
-   * @param Boolean
-   * When true, only the file input will be rendered
-   */
-  inputOnly = false;
-
-  /*
-   * @public
-   * @param String
-   * Text to use as the label for the file input
-   * If null, a default will be rendered
-   */
-  label = null;
-
-  /*
-   * @public
-   * @param String
-   * Text to use as help under the file input
-   * If null, a default will be rendered
-   */
   fileHelpText = 'Select a file from your computer';
-
-  /*
-   * @public
-   * @param String
-   * Text to use as help under the textarea in text-input mode
-   * If null, a default will be rendered
-   */
   textareaHelpText = 'Enter the value as text';
+
+  @tracked file = null;
+  @tracked showValue = false;
+
+  get inputOnly() {
+    return this.args.inputOnly || false;
+  }
+  get label() {
+    return this.args.label || null;
+  }
 
   readFile(file) {
     const reader = new FileReader();
@@ -63,9 +55,7 @@ export default class TextFile extends Component {
   }
 
   setFile(contents, filename) {
-    let index = this.args.index || this.index; // ARG Todo understand defaults and args.
-    console.log(index, 'index');
-    console.log(Object.keys(this.args));
+    let index = this.args.index || null;
     this.args.onChange(index, { value: contents, fileName: filename });
   }
 
@@ -83,14 +73,15 @@ export default class TextFile extends Component {
   @action
   updateData(e) {
     e.preventDefault();
-    const file = this.args.file;
+    let file = this.args.file;
     set(file, 'value', e.target.value);
-    console.log(file, 'file');
-    this.args.onChange(this.args.index, file);
+    let index = this.args.index || null;
+    this.args.onChange(index, file);
   }
   @action
   clearFile() {
-    this.args.onChange(this.index, { value: '' });
+    let index = this.args.index || null;
+    this.args.onChange(index, { value: '' });
   }
   @action
   toggleMask() {
