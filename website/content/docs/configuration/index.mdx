@@ -167,8 +167,8 @@ to specify where the configuration is.
   in all of Vault's HTTP responses: `X-Vault-Raft-Node-ID`. If Vault is participating
   in a Raft cluster (i.e. using integrated storage), this header will contain the
   Raft node ID of the Vault node that serviced the HTTP request. If Vault is not
-  participating in a Raft cluster, this header will be omitted, regardless of
-  whether this configuration option is enabled.
+  participating in a Raft cluster, this header will be omitted, whether this configuration
+  option is enabled or not.
 
 ### High Availability Parameters
 
