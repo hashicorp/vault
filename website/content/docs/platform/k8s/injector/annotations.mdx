@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `vault:1.6.3`.
+  not needed. Defaults to `vault:1.7.0`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -71,6 +71,16 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
+
+- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the 
+  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`, 
+  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret, 
+  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`. 
+  For example, if a secret annotation `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/agent-inject-template-file-foobar` would configure the template file.
+
+- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering 
+  secrets if no custom template is defined. Possible values include `map` and `json`. Defaults to `map`.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
