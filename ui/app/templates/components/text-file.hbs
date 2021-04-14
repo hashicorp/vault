@@ -34,7 +34,7 @@
     </div>
   </div>
 {{/unless}}
-<div class="field text-file box is-fullwidth is-marginless is-shadowless" data-test-component="text-file">
+<div class="field text-file box is-fullwidth is-marginless is-shadowless {{if this.inputOnly "is-paddingless"}}" data-test-component="text-file">
   {{#if @file.enterAsText}}
     <div class="control has-icon-right">
       <textarea
