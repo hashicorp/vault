@@ -270,6 +270,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
 
   test('it can revoke from the credentials show page', async function(assert) {
     let { path, scope, role, serial } = await generateCreds();
+    await settled();
     await credentialsPage.visitDetail({ backend: path, scope, role, serial });
     await settled();
     await credentialsPage.delete().confirmDelete();
