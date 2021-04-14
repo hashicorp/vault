@@ -70,6 +70,8 @@ module('Integration | Component | pgp file', function(hooks) {
     assert.equal(this.lastOnChangeCall[1].value, text, 'the key value is passed to onChange');
   });
 
+  // ARG add that it shows masks on allow text entry, just add inside of test
+
   test('toggling back and forth', async function(assert) {
     const key = { value: '' };
     const event = fileEvent();

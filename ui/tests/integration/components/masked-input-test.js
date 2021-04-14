@@ -26,16 +26,14 @@ module('Integration | Component | masked input', function(hooks) {
     assert.ok(component.textareaIsPresent);
   });
 
-  test('it renders an input with type password when maskWhileTyping is true', async function(assert) {
-    await render(hbs`{{masked-input maskWhileTyping=true}}`);
-    assert.ok(component.inputIsPresent);
-    assert.equal(
-      this.element.querySelector('input').getAttribute('type'),
-      'password',
-      'default type equals password'
-    );
+  test('it renders an input with obscure font', async function(assert) {
+    await render(hbs`{{masked-input}}`);
+    assert.dom('[data-test-textarea]').hasClass('masked-font', 'loading class with correct font');
   });
 
+  // renders input when ??
+
+  // when display only font is masked
   test('it does not render a textarea when displayOnly is true', async function(assert) {
     await render(hbs`{{masked-input displayOnly=true}}`);
 
@@ -52,27 +50,6 @@ module('Integration | Component | masked input', function(hooks) {
     await render(hbs`{{masked-input allowCopy=false}}`);
 
     assert.notOk(component.copyButtonIsPresent);
-  });
-
-  test('it unmasks text on focus', async function(assert) {
-    this.set('value', 'value');
-    await render(hbs`{{masked-input value=value}}`);
-    assert.ok(hasClass(component.wrapperClass, 'masked'));
-
-    await component.focusField();
-    assert.notOk(hasClass(component.wrapperClass, 'masked'));
-  });
-
-  test('it remasks text on blur', async function(assert) {
-    this.set('value', 'value');
-    await render(hbs`{{masked-input value=value}}`);
-
-    assert.ok(hasClass(component.wrapperClass, 'masked'));
-
-    await component.focusField();
-    await component.blurField();
-
-    assert.ok(hasClass(component.wrapperClass, 'masked'));
   });
 
   test('it unmasks text when button is clicked', async function(assert) {
@@ -96,15 +73,5 @@ module('Integration | Component | masked input', function(hooks) {
     assert.ok(hasClass(component.wrapperClass, 'masked'));
   });
 
-  test('it changes type to text when unmasked button is clicked', async function(assert) {
-    this.set('value', 'value');
-    await render(hbs`{{masked-input value=value maskWhileTyping=true}}`);
-    await component.toggleMasked();
-
-    assert.equal(
-      this.element.querySelector('input').getAttribute('type'),
-      'text',
-      'when unmasked type changes to text'
-    );
-  });
+  // concates long outputs
 });
