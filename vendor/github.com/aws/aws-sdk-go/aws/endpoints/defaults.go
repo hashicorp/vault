@@ -6399,7 +6399,7 @@ var awsPartition = partition{
 				"eu-south-1":   endpoint{},
 				"eu-west-1":    endpoint{},
 				"eu-west-2":    endpoint{
-				        Hostname: "sts.eu-west-2.amazonaws.com
+				        Hostname: "sts.eu-west-2.amazonaws.com",
 					CredentialScope: credentialScope{
 					        Region: "eu-west-2",
 						},
