@@ -2355,9 +2355,10 @@ type leaseEntry struct {
 
 	namespace *namespace.Namespace
 
-	// RevokeErr tracks if a lease has consistently failed revocation. The first
-	// time this happens, RevokeErr will be set, thus marking this leaseEntry
-	// as a zombie that will have to be manually removed.
+	// RevokeErr tracks if a lease has failed revocation in a way that is
+	// unlikely to be automatically resolved. The first time this happens,
+	// RevokeErr will be set, thus marking this leaseEntry as a zombie that will
+	// have to be manually removed.
 	RevokeErr string `json:"revokeErr"`
 }
 
