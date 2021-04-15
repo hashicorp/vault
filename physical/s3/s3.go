@@ -182,7 +182,6 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	}
 
 	_, err := s.client.PutObject(putObjectInput)
-
 	if err != nil {
 		return err
 	}
@@ -257,7 +256,6 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -315,7 +313,6 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			}
 			return true
 		})
-
 	if err != nil {
 		return nil, err
 	}

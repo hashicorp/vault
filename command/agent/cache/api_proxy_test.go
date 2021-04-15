@@ -2,9 +2,10 @@ package cache
 
 import (
 	"encoding/base64"
-	"github.com/go-test/deep"
 	"net/http"
 	"testing"
+
+	"github.com/go-test/deep"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -104,7 +105,7 @@ func TestMergeStates(t *testing.T) {
 		expected []string
 	}
 
-	var testCases = []testCase{
+	testCases := []testCase{
 		{
 			name:     "empty-old",
 			old:      nil,

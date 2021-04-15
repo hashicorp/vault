@@ -20,10 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
-var (
-	// invalidKey is used to test Unseal
-	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
-)
+// invalidKey is used to test Unseal
+var invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
 	logger = logging.NewVaultLogger(log.Trace)
@@ -2066,7 +2064,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		return noopBack, nil
 	}
 
-	var secretWritingPolicy = `
+	secretWritingPolicy := `
 name = "admins"
 path "secret/*" {
 	capabilities = ["update", "create", "read"]
@@ -2324,10 +2322,10 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			"Should-Passthrough":                  []string{"foo"},
-			"Should-Passthrough-Case-Insensitive": []string{"baz"},
-			"Should-Not-Passthrough":              []string{"bar"},
-			consts.AuthHeaderName:                 []string{"nope"},
+			"Should-Passthrough":                  {"foo"},
+			"Should-Passthrough-Case-Insensitive": {"baz"},
+			"Should-Not-Passthrough":              {"bar"},
+			consts.AuthHeaderName:                 {"nope"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2402,7 +2400,7 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			consts.AuthHeaderName: []string{"foo"},
+			consts.AuthHeaderName: {"foo"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2515,7 +2513,6 @@ func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized boo
 
 // TestCore_ServiceRegistration tests whether standalone ServiceRegistration works
 func TestCore_ServiceRegistration(t *testing.T) {
-
 	// Make a mock service discovery
 	sr := &mockServiceRegistration{}
 

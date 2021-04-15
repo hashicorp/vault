@@ -932,8 +932,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr != nil && data.role.UseCSRSANs {
 			if len(csr.URIs) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+					return nil, errutil.UserError{
+						Err: fmt.Sprintf(
+							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
 					}
 				}
 
@@ -949,8 +950,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					}
 
 					if !valid {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
 						}
 					}
 
@@ -961,8 +963,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			uriAlt := data.apiData.Get("uri_sans").([]string)
 			if len(uriAlt) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+					return nil, errutil.UserError{
+						Err: fmt.Sprintf(
+							"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
 					}
 				}
 
@@ -977,15 +980,17 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					}
 
 					if !valid {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via the API which are not valid for this role"),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via the API which are not valid for this role"),
 						}
 					}
 
 					parsedURI, err := url.Parse(uri)
 					if parsedURI == nil || err != nil {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
 						}
 					}
 

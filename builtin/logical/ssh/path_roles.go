@@ -73,20 +73,20 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for all types]
 				Name of the role being created.`,
 			},
-			"key": &framework.FieldSchema{
+			"key": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Name of the registered key in Vault. Before creating the role, use the
 				'keys/' endpoint to create a named key.`,
 			},
-			"admin_user": &framework.FieldSchema{
+			"admin_user": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
@@ -99,7 +99,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Admin Username",
 				},
 			},
-			"default_user": &framework.FieldSchema{
+			"default_user": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for Dynamic type] [Required for OTP type] [Optional for CA type]
@@ -110,7 +110,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Default Username",
 				},
 			},
-			"cidr_list": &framework.FieldSchema{
+			"cidr_list": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
@@ -120,7 +120,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "CIDR List",
 				},
 			},
-			"exclude_cidr_list": &framework.FieldSchema{
+			"exclude_cidr_list": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
@@ -131,7 +131,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Exclude CIDR List",
 				},
 			},
-			"port": &framework.FieldSchema{
+			"port": {
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
@@ -143,7 +143,7 @@ func pathRoles(b *backend) *framework.Path {
 					Value: 22,
 				},
 			},
-			"key_type": &framework.FieldSchema{
+			"key_type": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for all types]
@@ -154,13 +154,13 @@ func pathRoles(b *backend) *framework.Path {
 					Value: "ca",
 				},
 			},
-			"key_bits": &framework.FieldSchema{
+			"key_bits": {
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Length of the RSA dynamic key in bits. It is 1024 by default or it can be 2048.`,
 			},
-			"install_script": &framework.FieldSchema{
+			"install_script": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Not-applicable for OTP type] [Not applicable for CA type]
@@ -168,7 +168,7 @@ func pathRoles(b *backend) *framework.Path {
 				The inbuilt default install script will be for Linux hosts. For sample
 				script, refer the project documentation website.`,
 			},
-			"allowed_users": &framework.FieldSchema{
+			"allowed_users": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for all types] [Works differently for CA type]
@@ -184,7 +184,7 @@ func pathRoles(b *backend) *framework.Path {
 				allow any user.
 				`,
 			},
-			"allowed_users_template": &framework.FieldSchema{
+			"allowed_users_template": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -193,7 +193,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 				Default: false,
 			},
-			"allowed_domains": &framework.FieldSchema{
+			"allowed_domains": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -201,7 +201,7 @@ func pathRoles(b *backend) *framework.Path {
 				valid host. If only certain domains are allowed, then this list enforces it.
 				`,
 			},
-			"key_option_specs": &framework.FieldSchema{
+			"key_option_specs": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
@@ -210,7 +210,7 @@ func pathRoles(b *backend) *framework.Path {
 				file format and should not contain spaces.
 				`,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -222,7 +222,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "TTL",
 				},
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -232,7 +232,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Max TTL",
 				},
 			},
-			"allowed_critical_options": &framework.FieldSchema{
+			"allowed_critical_options": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -240,7 +240,7 @@ func pathRoles(b *backend) *framework.Path {
  				To allow any critical options, set this to an empty string.
 				 `,
 			},
-			"allowed_extensions": &framework.FieldSchema{
+			"allowed_extensions": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -248,7 +248,7 @@ func pathRoles(b *backend) *framework.Path {
 				To allow any extensions, set this to an empty string.
 				`,
 			},
-			"default_critical_options": &framework.FieldSchema{
+			"default_critical_options": {
 				Type: framework.TypeMap,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type]
@@ -258,7 +258,7 @@ func pathRoles(b *backend) *framework.Path {
 				by "allowed_critical_options". Defaults to none.
 				`,
 			},
-			"default_extensions": &framework.FieldSchema{
+			"default_extensions": {
 				Type: framework.TypeMap,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type]
@@ -268,7 +268,7 @@ func pathRoles(b *backend) *framework.Path {
 				"allowed_extensions". Defaults to none.
 				`,
 			},
-			"allow_user_certificates": &framework.FieldSchema{
+			"allow_user_certificates": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -276,7 +276,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 				Default: false,
 			},
-			"allow_host_certificates": &framework.FieldSchema{
+			"allow_host_certificates": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -284,7 +284,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 				Default: false,
 			},
-			"allow_bare_domains": &framework.FieldSchema{
+			"allow_bare_domains": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -293,14 +293,14 @@ func pathRoles(b *backend) *framework.Path {
 				This is a separate option as in some cases this can be considered a security threat.
 				`,
 			},
-			"allow_subdomains": &framework.FieldSchema{
+			"allow_subdomains": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains".
 				`,
 			},
-			"allow_user_key_ids": &framework.FieldSchema{
+			"allow_user_key_ids": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -312,7 +312,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Allow User Key IDs",
 				},
 			},
-			"key_id_format": &framework.FieldSchema{
+			"key_id_format": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -325,14 +325,14 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Key ID Format",
 				},
 			},
-			"allowed_user_key_lengths": &framework.FieldSchema{
+			"allowed_user_key_lengths": {
 				Type: framework.TypeMap,
 				Description: `
                                 [Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
                                 If set, allows the enforcement of key types and minimum key sizes to be signed.
                                 `,
 			},
-			"algorithm_signer": &framework.FieldSchema{
+			"algorithm_signer": {
 				Type: framework.TypeString,
 				Description: `
 				When supplied, this value specifies a signing algorithm for the key. Possible values: 

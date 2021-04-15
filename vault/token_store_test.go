@@ -4051,7 +4051,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 func TestTokenStore_RoleTokenFields(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	//c, _, root := TestCoreUnsealed(t)
+	// c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	rootContext := namespace.RootContext(context.Background())
 
@@ -4466,6 +4466,7 @@ func testTokenStore_NumUses_SelfLookupHelper(t *testing.T, core *Core, clientTok
 		t.Fatalf("num_uses mismatch (expected %d, got %d)", expectedNumUses, actualNumUses)
 	}
 }
+
 func TestTokenStore_NumUses(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 	roleNumUses := 10

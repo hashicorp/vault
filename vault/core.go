@@ -680,7 +680,6 @@ type CoreConfig struct {
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
-
 	// Check whether there is a ServiceRegistration explicitly configured
 	if c.ServiceRegistration != nil {
 		return c.ServiceRegistration
@@ -1388,6 +1387,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error checking if seal is migrated or not: %w", err)
 	}
+
 	if ok {
 		c.logger.Info("migration is already performed")
 		return nil
@@ -1916,7 +1916,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.persistFeatureFlags(ctx); err != nil {
 			return err
 		}
-
 	}
 
 	if c.autoRotateCancel == nil {
@@ -2001,7 +2000,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
-		//Cannot do this above, as we need other resources like mounts to be setup
+		// Cannot do this above, as we need other resources like mounts to be setup
 		if err := c.setupPluginReload(); err != nil {
 			return err
 		}

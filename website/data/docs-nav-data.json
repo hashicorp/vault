@@ -765,7 +765,25 @@
       },
       {
         "title": "Caching",
-        "path": "agent/caching"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "agent/caching"
+          },
+          {
+            "title": "Persistent Caching",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "agent/caching/persistent-caches"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "agent/caching/persistent-caches/kubernetes"
+              }
+            ]
+          }
+        ]
       },
       {
         "title": "Templates",
@@ -1035,7 +1053,16 @@
       },
       {
         "title": "JWT/OIDC",
-        "path": "auth/jwt"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/jwt"
+          },
+          {
+            "title": "OIDC Providers",
+            "path": "auth/jwt_oidc_providers"
+          }
+        ]
       },
       {
         "title": "Kerberos",

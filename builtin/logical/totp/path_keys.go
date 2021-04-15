@@ -205,18 +205,18 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 
 	// Read parameters from url if given
 	if inputURL != "" {
-		//Parse url
+		// Parse url
 		urlObject, err := url.Parse(inputURL)
 		if err != nil {
 			return logical.ErrorResponse("an error occurred while parsing url string"), err
 		}
 
-		//Set up query object
+		// Set up query object
 		urlQuery := urlObject.Query()
 		path := strings.TrimPrefix(urlObject.Path, "/")
 		index := strings.Index(path, ":")
 
-		//Read issuer
+		// Read issuer
 		urlIssuer := urlQuery.Get("issuer")
 		if urlIssuer != "" {
 			issuer = urlIssuer
@@ -226,17 +226,17 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			}
 		}
 
-		//Read account name
+		// Read account name
 		if index == -1 {
 			accountName = path
 		} else {
 			accountName = path[index+1:]
 		}
 
-		//Read key string
+		// Read key string
 		keyString = urlQuery.Get("secret")
 
-		//Read period
+		// Read period
 		periodQuery := urlQuery.Get("period")
 		if periodQuery != "" {
 			periodInt, err := strconv.Atoi(periodQuery)
@@ -246,7 +246,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			period = periodInt
 		}
 
-		//Read digits
+		// Read digits
 		digitsQuery := urlQuery.Get("digits")
 		if digitsQuery != "" {
 			digitsInt, err := strconv.Atoi(digitsQuery)
@@ -256,7 +256,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			digits = digitsInt
 		}
 
-		//Read algorithm
+		// Read algorithm
 		algorithmQuery := urlQuery.Get("algorithm")
 		if algorithmQuery != "" {
 			algorithm = algorithmQuery

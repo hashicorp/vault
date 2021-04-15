@@ -73,8 +73,10 @@ type captureError struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-var _ cli.Command = (*DebugCommand)(nil)
-var _ cli.CommandAutocomplete = (*DebugCommand)(nil)
+var (
+	_ cli.Command             = (*DebugCommand)(nil)
+	_ cli.CommandAutocomplete = (*DebugCommand)(nil)
+)
 
 type DebugCommand struct {
 	*BaseCommand
@@ -351,7 +353,7 @@ func (c *DebugCommand) generateIndex() error {
 	}
 
 	// Write out file
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0o644); err != nil {
 		return fmt.Errorf("error generating index file; %s", err)
 	}
 
@@ -448,7 +450,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	_, err = os.Stat(c.flagOutput)
 	switch {
 	case os.IsNotExist(err):
-		err := os.MkdirAll(c.flagOutput, 0755)
+		err := os.MkdirAll(c.flagOutput, 0o755)
 		if err != nil {
 			return "", fmt.Errorf("unable to create output directory: %s", err)
 		}
@@ -722,7 +724,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		// Create a sub-directory for pprof data
 		currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
 		dirName := filepath.Join(c.flagOutput, currentDir)
-		if err := os.MkdirAll(dirName, 0755); err != nil {
+		if err := os.MkdirAll(dirName, 0o755); err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
 			continue
 		}
@@ -739,7 +741,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0o644)
 			if err != nil {
 				c.captureError("pprof.goroutine", err)
 			}
@@ -755,7 +757,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0o644)
 			if err != nil {
 				c.captureError("pprof.heap", err)
 			}
@@ -779,7 +781,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0o644)
 			if err != nil {
 				c.captureError("pprof.profile", err)
 			}
@@ -795,7 +797,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0o644)
 			if err != nil {
 				c.captureError("pprof.trace", err)
 			}
@@ -888,7 +890,7 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0o644); err != nil {
 		return err
 	}
 

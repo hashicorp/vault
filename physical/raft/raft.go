@@ -5,11 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,6 +12,12 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
@@ -40,10 +41,12 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
 // Verify RaftBackend satisfies the correct interfaces
-var _ physical.Backend = (*RaftBackend)(nil)
-var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physical.HABackend = (*RaftBackend)(nil)
-var _ physical.Lock = (*RaftLock)(nil)
+var (
+	_ physical.Backend       = (*RaftBackend)(nil)
+	_ physical.Transactional = (*RaftBackend)(nil)
+	_ physical.HABackend     = (*RaftBackend)(nil)
+	_ physical.Lock          = (*RaftLock)(nil)
+)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -269,7 +272,7 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o755)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -317,7 +320,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
 				return nil, err
 			}
 
@@ -1111,7 +1114,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	// snapshot applied to a quorum of nodes.
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: restoreCallbackOp,
 			},
 		},
@@ -1130,7 +1133,7 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: deleteOp,
 				Key:    path,
 			},
@@ -1176,7 +1179,7 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: putOp,
 				Key:    entry.Key,
 				Value:  entry.Value,
@@ -1387,7 +1390,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		case <-stopCh:
 			return nil, nil
 		}
-
 	}
 
 	l.b.l.RLock()
@@ -1405,7 +1407,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	if l.b.raft.State() == raft.Leader {
 		err := l.b.applyLog(context.Background(), &LogData{
 			Operations: []*LogOperation{
-				&LogOperation{
+				{
 					OpType: putOp,
 					Key:    l.key,
 					Value:  l.value,
@@ -1429,7 +1431,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				l.b.l.RLock()
 				err := l.b.applyLog(context.Background(), &LogData{
 					Operations: []*LogOperation{
-						&LogOperation{
+						{
 							OpType: putOp,
 							Key:    l.key,
 							Value:  l.value,
