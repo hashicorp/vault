@@ -1,7 +1,7 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
@@ -101,7 +101,13 @@ module('Integration | Component | form field', function(hooks) {
 
   test('it renders: editType file', async function(assert) {
     await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
+
     assert.ok(component.hasTextFile, 'renders the text-file component');
+    await click('[data-test-text-toggle="true"]');
+    await fillIn('[data-test-text-file-textarea="true"]', 'hello world');
+    assert.dom('[data-test-text-file-textarea="true"]').hasClass('masked-font');
+    await click('[data-test-button]');
+    assert.dom('[data-test-text-file-textarea="true"]').doesNotHaveClass('masked-font');
   });
 
   test('it renders: editType ttl', async function(assert) {
