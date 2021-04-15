@@ -2653,5 +2653,3 @@ func TestExpiration_StopClearsZombieCache(t *testing.T) {
 		t.Error("expiration manager zombies cache should be cleared on stop")
 	}
 }
-
-// TODO 1977 should zombies be in WalkTokens and walkLeases?
