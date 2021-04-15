@@ -1,4 +1,4 @@
-import VerticalTextBlockList from '@hashicorp/react-vertical-text-block-list'
+import VerticalTextBlockList from '@hashicorp/react-vertical-text-block-list/index.tsx'
 import SectionHeader from '@hashicorp/react-section-header'
 import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
@@ -13,6 +13,7 @@ function CommunityPage() {
         use_h1={true}
       />
       <VerticalTextBlockList
+        product="vault"
         data={[
           {
             header: 'Discussion List',

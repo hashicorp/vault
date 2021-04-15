@@ -1,7 +1,7 @@
 .g-section-block.g-cta-section {
   -webkit-box-align: center;
   align-items: center;
-  background: var(--gray-2);
+  background: var(--vault);
   display: -webkit-box;
   display: flex;
   -webkit-box-pack: center;
@@ -10,7 +10,7 @@
   padding-right: 15px;
   position: relative;
   text-align: center;
-  color: var(--white);
+  color: var(--black);
 
   & .g-btn.white {
     background: var(--white);
