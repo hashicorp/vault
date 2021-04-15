@@ -1,13 +1,14 @@
 package cassandra
 
 import (
+	"os"
+	"reflect"
+	"testing"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"os"
-	"reflect"
-	"testing"
 )
 
 func TestCassandraBackend(t *testing.T) {
@@ -18,7 +19,7 @@ func TestCassandraBackend(t *testing.T) {
 		t.Skip("skipping race test in CI pending https://github.com/gocql/gocql/pull/1474")
 	}
 
-	cleanup, hosts := cassandra.PrepareTestContainer(t, "")
+	cleanup, hosts := cassandra.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Run vault tests

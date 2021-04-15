@@ -2,9 +2,9 @@ package cassandra
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,33 +12,58 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
-func PrepareTestContainer(t *testing.T, version string) (func(), string) {
+type containerConfig struct {
+	version    string
+	copyFromTo map[string]string
+	sslOpts    *gocql.SslOptions
+}
+
+type ContainerOpt func(*containerConfig)
+
+func Version(version string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.version = version
+	}
+}
+
+func CopyFromTo(copyFromTo map[string]string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.copyFromTo = copyFromTo
+	}
+}
+
+func SslOpts(sslOpts *gocql.SslOptions) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.sslOpts = sslOpts
+	}
+}
+
+func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (func(), string) {
 	t.Helper()
 	if os.Getenv("CASSANDRA_HOSTS") != "" {
 		return func() {}, os.Getenv("CASSANDRA_HOSTS")
 	}
 
-	if version == "" {
-		version = "3.11"
+	containerCfg := &containerConfig{
+		version: "3.11",
 	}
 
-	var copyFromTo map[string]string
-	cwd, _ := os.Getwd()
-	fixturePath := fmt.Sprintf("%s/test-fixtures/", cwd)
-	if _, err := os.Stat(fixturePath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			// If it doesn't exist, no biggie
-			t.Fatal(err)
+	for _, opt := range opts {
+		opt(containerCfg)
+	}
+
+	copyFromTo := map[string]string{}
+	for from, to := range containerCfg.copyFromTo {
+		absFrom, err := filepath.Abs(from)
+		if err != nil {
+			t.Fatalf("Unable to get absolute path for file %s", from)
 		}
-	} else {
-		copyFromTo = map[string]string{
-			fixturePath: "/etc/cassandra",
-		}
+		copyFromTo[absFrom] = to
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:  "cassandra",
-		ImageTag:   version,
+		ImageTag:   containerCfg.version,
 		Ports:      []string{"9042/tcp"},
 		CopyFromTo: copyFromTo,
 		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
@@ -58,6 +83,8 @@ func PrepareTestContainer(t *testing.T, version string) (func(), string) {
 		clusterConfig.ProtoVersion = 4
 		clusterConfig.Port = port
 
+		clusterConfig.SslOpts = containerCfg.sslOpts
+
 		session, err := clusterConfig.CreateSession()
 		if err != nil {
 			return nil, fmt.Errorf("error creating session: %s", err)
@@ -65,19 +92,19 @@ func PrepareTestContainer(t *testing.T, version string) (func(), string) {
 		defer session.Close()
 
 		// Create keyspace
-		q := session.Query(`CREATE KEYSPACE "vault" WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };`)
-		if err := q.Exec(); err != nil {
+		query := session.Query(`CREATE KEYSPACE "vault" WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };`)
+		if err := query.Exec(); err != nil {
 			t.Fatalf("could not create cassandra keyspace: %v", err)
 		}
 
 		// Create table
-		q = session.Query(`CREATE TABLE "vault"."entries" (
+		query = session.Query(`CREATE TABLE "vault"."entries" (
 		    bucket text,
 		    key text,
 		    value blob,
 		    PRIMARY KEY (bucket, key)
 		) WITH CLUSTERING ORDER BY (key ASC);`)
-		if err := q.Exec(); err != nil {
+		if err := query.Exec(); err != nil {
 			t.Fatalf("could not create cassandra table: %v", err)
 		}
 		return cfg, nil

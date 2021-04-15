@@ -20,7 +20,12 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, hostname := cassandra.PrepareTestContainer(t, "latest")
+	copyFromTo := map[string]string{
+		"test-fixtures/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
+	}
+	cleanup, hostname := cassandra.PrepareTestContainer(t,
+		cassandra.CopyFromTo(copyFromTo),
+	)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -41,7 +46,11 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, hostname := cassandra.PrepareTestContainer(t, "latest")
+	copyFromTo := map[string]string{
+		"test-fixtures/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
+	}
+	cleanup, hostname := cassandra.PrepareTestContainer(t,
+		cassandra.CopyFromTo(copyFromTo))
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{

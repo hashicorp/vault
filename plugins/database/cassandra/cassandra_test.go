@@ -17,7 +17,10 @@ import (
 )
 
 func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()) {
-	cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
+	cleanup, connURL := cassandra.PrepareTestContainer(t,
+		cassandra.Version("latest"),
+		cassandra.CopyFromTo(insecureFileMounts),
+	)
 	pieces := strings.Split(connURL, ":")
 
 	db := new()
@@ -53,7 +56,7 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 	return db, cleanup
 }
 
-func TestCassandra_Initialize(t *testing.T) {
+func TestInitialize(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
@@ -66,7 +69,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	defer cleanup()
 }
 
-func TestCassandra_CreateUser(t *testing.T) {
+func TestCreateUser(t *testing.T) {
 	type testCase struct {
 		// Config will have the hosts & port added to it during the test
 		config                map[string]interface{}
@@ -126,7 +129,10 @@ func TestCassandra_CreateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
+			cleanup, connURL := cassandra.PrepareTestContainer(t,
+				cassandra.Version("latest"),
+				cassandra.CopyFromTo(insecureFileMounts),
+			)
 			pieces := strings.Split(connURL, ":")
 			defer cleanup()
 
@@ -162,7 +168,7 @@ func TestCassandra_CreateUser(t *testing.T) {
 	}
 }
 
-func TestMyCassandra_UpdateUserPassword(t *testing.T) {
+func TestUpdateUserPassword(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
@@ -198,7 +204,7 @@ func TestMyCassandra_UpdateUserPassword(t *testing.T) {
 	assertCreds(t, db.Hosts, db.Port, createResp.Username, newPassword, 5*time.Second)
 }
 
-func TestCassandra_DeleteUser(t *testing.T) {
+func TestDeleteUser(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
