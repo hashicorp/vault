@@ -104,50 +104,6 @@ render pages.`,
 			},
 		},
 		{
-			Pattern: "pprof/allocs",
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handlePprofAllocs,
-					Summary:     "Returns a sampling of all past memory allocations.",
-					Description: "Returns a sampling of all past memory allocations.",
-				},
-			},
-		},
-		{
-			Pattern: "pprof/threadcreate",
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handlePprofThreadcreate,
-					Summary:     "Returns stack traces that led to the creation of new OS threads",
-					Description: "Returns stack traces that led to the creation of new OS threads",
-				},
-			},
-		},
-		{
-			Pattern: "pprof/block",
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handlePprofBlock,
-					Summary:     "Returns stack traces that led to blocking on synchronization primitives",
-					Description: "Returns stack traces that led to blocking on synchronization primitives",
-				},
-			},
-		},
-		{
-			Pattern: "pprof/mutex",
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handlePprofMutex,
-					Summary:     "Returns stack traces of holders of contended mutexes",
-					Description: "Returns stack traces of holders of contended mutexes",
-				},
-			},
-		},
-		{
 			Pattern: "pprof/profile",
 
 			Fields: map[string]*framework.FieldSchema{
