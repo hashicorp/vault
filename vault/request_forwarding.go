@@ -336,7 +336,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		return 0, nil, nil, ErrCannotForward
 	}
 
-	defer metrics.MeasureSince([]string{"replication", "rpc", "client", "forward"}, time.Now())
+	defer metrics.MeasureSince([]string{"ha", "rpc", "client", "forward"}, time.Now())
 
 	origPath := req.URL.Path
 	defer func() {
@@ -356,7 +356,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	}
 	resp, err := c.rpcForwardingClient.ForwardRequest(req.Context(), freq)
 	if err != nil {
-		metrics.IncrCounter([]string{"replication", "rpc", "client", "forward", "errors"}, 1)
+		metrics.IncrCounter([]string{"ha", "rpc", "client", "forward", "errors"}, 1)
 		c.logger.Error("error during forwarded RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
 	}
