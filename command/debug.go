@@ -674,15 +674,11 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 		}
 
 		// Check replication status. We skip on processing metrics if we're one
-		// of the following (since the request will be forwarded):
-		// 1. Any type of DR Node
-		// 2. Non-DR, non-performance standby nodes
+		// a DR node, though non-perf standbys will fail if they aren't using
+		// unauthenticated_metrics_access.
 		switch {
 		case healthStatus.ReplicationDRMode == "secondary":
 			c.logger.Info("skipping metrics capture on DR secondary node")
-			continue
-		case healthStatus.Standby && !healthStatus.PerformanceStandby:
-			c.logger.Info("skipping metrics on standby node")
 			continue
 		}
 
