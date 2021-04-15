@@ -38,9 +38,6 @@
         margin-top: 0;
         margin-bottom: 8px;
       }
-      & .chin {
-        color: var(--gray-3);
-      }
       & .description {
         color: var(--gray-2);
         margin-top: 28px;
