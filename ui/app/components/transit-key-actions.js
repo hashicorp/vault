@@ -102,8 +102,8 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (!model) {
       return null;
     }
-    const backend = get(model, 'backend') || get(model, 'id');
-    const id = get(model, 'id');
+    const backend = model.backend || model.id;
+    const id = model.id;
 
     return {
       backend,

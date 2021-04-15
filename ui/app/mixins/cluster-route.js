@@ -55,19 +55,19 @@ export default Mixin.create({
   },
 
   hasKeyData() {
-    return !!get(this.controllerFor(INIT), 'keyData');
+    return !!this.controllerFor(INIT).keyData;
   },
 
   targetRouteName(transition) {
     const cluster = this.clusterModel();
     const isAuthed = this.authToken();
-    if (get(cluster, 'needsInit')) {
+    if (cluster.needsInit) {
       return INIT;
     }
     if (this.hasKeyData() && this.routeName !== UNSEAL && this.routeName !== AUTH) {
       return INIT;
     }
-    if (get(cluster, 'sealed')) {
+    if (cluster.sealed) {
       return UNSEAL;
     }
     if (get(cluster, 'dr.isSecondary')) {
@@ -87,8 +87,8 @@ export default Mixin.create({
       return AUTH;
     }
     if (
-      (!get(cluster, 'needsInit') && this.routeName === INIT) ||
-      (!get(cluster, 'sealed') && this.routeName === UNSEAL) ||
+      (!cluster.needsInit && this.routeName === INIT) ||
+      (!cluster.sealed && this.routeName === UNSEAL) ||
       (!get(cluster, 'dr.isSecondary') && this.routeName === DR_REPLICATION_SECONDARY) ||
       (isAuthed && this.routeName === AUTH)
     ) {

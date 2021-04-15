@@ -54,7 +54,7 @@ export default Component.extend(FocusOnInsertMixin, {
   persistKey(method, successCallback) {
     const key = this.key;
     return key[method]().then(() => {
-      if (!get(key, 'isError')) {
+      if (!key.isError) {
         if (this.wizard.featureState === 'secret') {
           this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
         } else {

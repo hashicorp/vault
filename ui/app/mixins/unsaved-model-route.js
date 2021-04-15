@@ -9,7 +9,7 @@ export default Mixin.create({
       if (!model) {
         return true;
       }
-      if (get(model, 'hasDirtyAttributes')) {
+      if (model.hasDirtyAttributes) {
         if (
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'

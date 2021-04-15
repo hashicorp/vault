@@ -68,7 +68,7 @@ export default Component.extend(FocusOnInsertMixin, {
   persist(method, successCallback) {
     const model = this.model;
     return model[method]().then(() => {
-      if (!get(model, 'isError')) {
+      if (!model.isError) {
         if (this.wizard.featureState === 'role') {
           this.wizard.transitionFeatureMachine('role', 'CONTINUE', this.backendType);
         }

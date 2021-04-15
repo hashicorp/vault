@@ -35,7 +35,7 @@ export default Controller.extend({
       model.unloadRecord();
       const newModel = this.store.createRecord('ssh-sign', {
         role: roleModel,
-        id: `${get(roleModel, 'backend')}-${get(roleModel, 'name')}`,
+        id: `${roleModel.backend}-${roleModel.name}`,
       });
       this.set('model', newModel);
     },

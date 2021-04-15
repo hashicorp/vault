@@ -38,8 +38,8 @@ export default Component.extend({
     if (this.currentUserIsRequesting) {
       return 'You';
     }
-    if (entity && get(entity, 'name')) {
-      return get(entity, 'name');
+    if (entity && entity.name) {
+      return entity.name;
     }
     return 'Someone';
   }),

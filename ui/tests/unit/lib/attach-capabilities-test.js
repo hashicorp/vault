@@ -20,13 +20,13 @@ module('Unit | lib | attach capabilities', function(hooks) {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
     });
-    let relationship = get(mc, 'relationshipsByName').get('updatePath');
+    let relationship = mc.relationshipsByName.get('updatePath');
 
     assert.equal(relationship.key, 'updatePath', 'has updatePath relationship');
     assert.equal(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
     assert.equal(relationship.type, 'capabilities', 'updatePath is a related capabilities model');
 
-    relationship = get(mc, 'relationshipsByName').get('deletePath');
+    relationship = mc.relationshipsByName.get('deletePath');
     assert.equal(relationship.key, 'deletePath', 'has deletePath relationship');
     assert.equal(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
     assert.equal(relationship.type, 'capabilities', 'deletePath is a related capabilities model');

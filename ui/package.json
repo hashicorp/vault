@@ -183,7 +183,7 @@
     "node": "10.* || >= 12"
   },
   "ember": {
-    "edition": "octane"
+    "edition": "recommended"
   },
   "private": true,
   "ember-addon": {
