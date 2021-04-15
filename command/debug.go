@@ -582,7 +582,10 @@ func (c *DebugCommand) capturePollingTargets() error {
 
 	if strutil.StrListContains(c.flagTargets, "log") {
 		g.Add(func() error {
-			_ = c.writeLogs(ctx)
+			c.writeLogs(ctx)
+			// If writeLogs returned earlier due to an error, wait for context
+			// to terminate so we don't abort everything.
+			<-ctx.Done()
 			return nil
 		}, func(error) {
 			cancelFunc()
@@ -982,16 +985,17 @@ func (c *DebugCommand) captureError(target string, err error) {
 	c.errLock.Unlock()
 }
 
-func (c *DebugCommand) writeLogs(ctx context.Context) error {
+func (c *DebugCommand) writeLogs(ctx context.Context) {
 	out, err := os.Create(filepath.Join(c.flagOutput, "vault.log"))
 	if err != nil {
-		return err
+		c.captureError("log", err)
+		return
 	}
-	defer out.Close()
 
 	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
 	if err != nil {
-		return err
+		c.captureError("log", err)
+		return
 	}
 
 	for {
@@ -999,10 +1003,11 @@ func (c *DebugCommand) writeLogs(ctx context.Context) error {
 		case log := <-logCh:
 			_, err = out.WriteString(log)
 			if err != nil {
-				return err
+				c.captureError("log", err)
+				return
 			}
 		case <-ctx.Done():
-			return nil
+			return
 		}
 	}
 }
