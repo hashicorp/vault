@@ -3,7 +3,6 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import apiPath from 'vault/utils/api-path';
-import { get } from '@ember/object';
 
 let MODEL_TYPE = 'test-form-model';
 

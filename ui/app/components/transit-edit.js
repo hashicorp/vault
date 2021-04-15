@@ -3,7 +3,7 @@ import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
 import { task, waitForEvent } from 'ember-concurrency';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';

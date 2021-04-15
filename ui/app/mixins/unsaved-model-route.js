@@ -1,5 +1,4 @@
 import Mixin from '@ember/object/mixin';
-import { get } from '@ember/object';
 
 // this mixin relies on `unload-model-route` also being used
 export default Mixin.create({

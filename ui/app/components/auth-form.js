@@ -4,7 +4,7 @@ import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
-import { get, computed } from '@ember/object';
+import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
