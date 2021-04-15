@@ -33,7 +33,7 @@ module('Integration | Component | masked input', function(hooks) {
 
     assert.dom('.masked-value').hasClass('masked-font', 'loading class with correct font');
   });
-  // when display only font is masked
+
   test('it does not render a textarea when displayOnly is true', async function(assert) {
     await render(hbs`{{masked-input displayOnly=true}}`);
 

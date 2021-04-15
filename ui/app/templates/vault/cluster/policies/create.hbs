@@ -46,11 +46,7 @@
         </div>
       </div>
       {{#if showFileUpload}}
-        <TextFile 
-          @inputOnly={{true}}
-          @file={{file}}
-          @onChange={{action "setPolicyFromFile"}} 
-        />
+        <TextFile @inputOnly={{true}} @file={{file}} @onChange={{action "setPolicyFromFile"}} />
       {{else}}
         <IvyCodemirror @value={{model.policy}} @id="policy" @valueUpdated={{action (mut model.policy)}} @options={{hash
             lineNumbers=true

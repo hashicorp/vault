@@ -101,7 +101,6 @@ module('Integration | Component | form field', function(hooks) {
 
   test('it renders: editType file', async function(assert) {
     await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
-
     assert.ok(component.hasTextFile, 'renders the text-file component');
     await click('[data-test-text-toggle="true"]');
     await fillIn('[data-test-text-file-textarea="true"]', 'hello world');
