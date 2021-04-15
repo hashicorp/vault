@@ -110,7 +110,6 @@
 {{else if (eq attr.options.editType "file")}}
 {{!-- File Input --}}
   {{text-file
-    index=""
     helpText=attr.options.helpText
     file=file
     onChange=(action "setFile")

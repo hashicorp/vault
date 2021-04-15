@@ -10,14 +10,9 @@ const component = create(maskedInput);
 module('Integration | Component | masked input', function(hooks) {
   setupRenderingTest(hooks);
 
-  const hasClass = (classString = '', classToFind) => {
-    return classString.split(' ').includes(classToFind);
-  };
-
   test('it renders', async function(assert) {
     await render(hbs`{{masked-input}}`);
-
-    assert.ok(hasClass(component.wrapperClass, 'masked'));
+    assert.dom('[data-test-masked-input]').exists('shows expiration beacon');
   });
 
   test('it renders a textarea', async function(assert) {
@@ -28,11 +23,16 @@ module('Integration | Component | masked input', function(hooks) {
 
   test('it renders an input with obscure font', async function(assert) {
     await render(hbs`{{masked-input}}`);
+
     assert.dom('[data-test-textarea]').hasClass('masked-font', 'loading class with correct font');
   });
 
-  // renders input when ??
+  test('it renders obscure font when displayOnly', async function(assert) {
+    this.set('value', 'value');
+    await render(hbs`{{masked-input displayOnly=true value=value}}`);
 
+    assert.dom('.masked-value').hasClass('masked-font', 'loading class with correct font');
+  });
   // when display only font is masked
   test('it does not render a textarea when displayOnly is true', async function(assert) {
     await render(hbs`{{masked-input displayOnly=true}}`);
@@ -55,12 +55,9 @@ module('Integration | Component | masked input', function(hooks) {
   test('it unmasks text when button is clicked', async function(assert) {
     this.set('value', 'value');
     await render(hbs`{{masked-input value=value}}`);
-
-    assert.ok(hasClass(component.wrapperClass, 'masked'));
-
     await component.toggleMasked();
 
-    assert.notOk(hasClass(component.wrapperClass, 'masked'));
+    assert.dom('.masked-value').doesNotHaveClass('masked-font');
   });
 
   test('it remasks text when button is clicked', async function(assert) {
@@ -70,7 +67,7 @@ module('Integration | Component | masked input', function(hooks) {
     await component.toggleMasked();
     await component.toggleMasked();
 
-    assert.ok(hasClass(component.wrapperClass, 'masked'));
+    assert.dom('.masked-value').hasClass('masked-font');
   });
 
   // concates long outputs
