@@ -27,11 +27,13 @@ const STATEMENT_FIELDS = {
     default: ['rotation_statements'],
     'mongodb-database-plugin': [],
     'mssql-database-plugin': [],
+    'mysql-database-plugin': [],
   },
   dynamic: {
     default: ['creation_statements', 'revocation_statements', 'rollback_statements', 'renew_statements'],
     'mongodb-database-plugin': ['creation_statement', 'revocation_statement'],
     'mssql-database-plugin': ['creation_statements', 'revocation_statements'],
+    'mysql-database-plugin': ['creation_statements', 'revocation_statements'],
   },
 };
 export default class DatabaseRoleSettingForm extends Component {

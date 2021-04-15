@@ -41,6 +41,27 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
+  {
+    value: 'mysql-database-plugin',
+    displayName: 'MySQL/MariaDB',
+    fields: [
+      { attr: 'plugin_name' },
+      { attr: 'name' },
+      { attr: 'verify_connection' },
+      { attr: 'password_policy' },
+      { attr: 'connection_url', group: 'pluginConfig' },
+      { attr: 'username', group: 'pluginConfig', show: false },
+      { attr: 'password', group: 'pluginConfig', show: false },
+      { attr: 'max_open_connections', group: 'pluginConfig' },
+      { attr: 'max_idle_connections', group: 'pluginConfig' },
+      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
+      { attr: 'username_template', group: 'pluginConfig' },
+      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'root_rotation_statements', group: 'statements' },
+      { attr: 'some_attr' },
+    ],
+  },
 ];
 
 /**
