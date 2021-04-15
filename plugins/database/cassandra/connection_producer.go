@@ -96,9 +96,6 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 		if err != nil {
 			return fmt.Errorf("error marshaling PEM information: %w", err)
 		}
-		// c.certificate = certBundle.Certificate
-		// c.privateKey = certBundle.PrivateKey
-		// c.issuingCA = certBundle.IssuingCA
 		c.certBundle = certBundle
 		c.TLS = true
 
@@ -111,9 +108,6 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 		if err != nil {
 			return fmt.Errorf("error marshaling PEM information: %w", err)
 		}
-		// c.certificate = certBundle.Certificate
-		// c.privateKey = certBundle.PrivateKey
-		// c.issuingCA = certBundle.IssuingCA
 		c.certBundle = certBundle
 		c.TLS = true
 	}

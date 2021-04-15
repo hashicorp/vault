@@ -18,9 +18,9 @@ var (
 		"test-fixtures/no_tls/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
 	}
 	secureFileMounts = map[string]string{
-		"test-fixtures/with_tls/cassandra_with_tls.yaml": "/etc/cassandra/cassandra.yaml",
-		"test-fixtures/with_tls/keystore.jks":            "/etc/cassandra/keystore.jks",
-		"test-fixtures/with_tls/.cassandra":              "/root/.cassandra/",
+		"test-fixtures/with_tls/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
+		"test-fixtures/with_tls/keystore.jks":   "/etc/cassandra/keystore.jks",
+		"test-fixtures/with_tls/.cassandra":     "/root/.cassandra/",
 	}
 )
 
