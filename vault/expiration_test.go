@@ -2492,8 +2492,9 @@ func TestExpiration_FairsharingEnvVar(t *testing.T) {
 	}
 }
 
-func TestExpiration_MarkZombie(t *testing.T) {
-	exp := mockExpiration(t)
+// register one lease ID and return the leaseID
+func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager) string {
+	t.Helper()
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -2509,16 +2510,24 @@ func TestExpiration_MarkZombie(t *testing.T) {
 		},
 	}
 
-	ctx := namespace.RootContext(nil)
 	leaseID, err := exp.Register(ctx, req, resp)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	return leaseID
+}
+
+func TestExpiration_MarkZombie(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	leaseID := registerOneLease(t, ctx, exp)
 	loadedLE, err := exp.loadEntry(ctx, leaseID)
 	if err != nil {
 		t.Fatalf("error loading non zombie lease: %v", err)
 	}
+
 	if loadedLE.isZombie() {
 		t.Fatalf("lease is zombie and shouldn't be")
 	}
@@ -2583,27 +2592,9 @@ func TestExpiration_MarkZombie(t *testing.T) {
 
 func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
 	exp := mockExpiration(t)
-
-	req := &logical.Request{
-		Operation:   logical.ReadOperation,
-		Path:        "zombie/lease",
-		ClientToken: "sometoken",
-	}
-	req.SetTokenEntry(&logical.TokenEntry{ID: "sometoken", NamespaceID: "root"})
-	resp := &logical.Response{
-		Secret: &logical.Secret{
-			LeaseOptions: logical.LeaseOptions{
-				TTL: 10 * time.Hour,
-			},
-		},
-	}
-
 	ctx := namespace.RootContext(nil)
-	leaseID, err := exp.Register(ctx, req, resp)
-	if err != nil {
-		t.Fatal(err)
-	}
 
+	leaseID := registerOneLease(t, ctx, exp)
 	expectedLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
 		t.Fatalf("error getting lease times: %v", err)
@@ -2641,3 +2632,26 @@ func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
 		t.Errorf("bad last renew time. expected %v, got %v", expectedLeaseTimes.LastRenewalTime, zombieLeaseTimes.LastRenewalTime)
 	}
 }
+
+func TestExpiration_StopClearsZombieCache(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	leaseID := registerOneLease(t, ctx, exp)
+	le, err := exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading non zombie lease: %v", err)
+	}
+
+	exp.markLeaseAsZombie(ctx, le, fmt.Errorf("test zombie error"))
+	err = exp.Stop()
+	if err != nil {
+		t.Fatalf("error stopping expiration manager: %v", err)
+	}
+
+	if _, ok := exp.zombies.Load(leaseID); ok {
+		t.Error("expiration manager zombies cache should be cleared on stop")
+	}
+}
+
+// TODO 1977 should zombies be in WalkTokens and walkLeases?
