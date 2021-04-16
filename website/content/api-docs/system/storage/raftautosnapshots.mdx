@@ -19,8 +19,9 @@ where the snapshots are written, as well as a retention policy governing when
 older snapshots get deleted.
 
 Note that for cloud storage types, you can either provide credentials explicitly
-using the parameters below, or omit them and rely on the cloud provider's
-other mechanisms to provide access to cloud resources.
+using the parameters below, or for GCP and AWS you can omit them and rely on the
+other mechanisms the cloud provider's SDK allows for authenticating, e.g.
+environment variables or files on disk in predefined locations.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
