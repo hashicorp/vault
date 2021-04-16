@@ -3,7 +3,6 @@ package cassandra
 import (
 	"context"
 	"crypto/tls"
-	"strings"
 	"testing"
 	"time"
 
@@ -57,7 +56,7 @@ func TestTLSConnection(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := cassandra.PrepareTestContainer(t,
+			host, cleanup := cassandra.PrepareTestContainer(t,
 				cassandra.Version("3.11.9"),
 				cassandra.CopyFromTo(secureFileMounts),
 				cassandra.SslOpts(&gocql.SslOptions{
@@ -67,13 +66,10 @@ func TestTLSConnection(t *testing.T) {
 			)
 			defer cleanup()
 
-			// This is fine if it panics - the connection URL should include the port and if it doesn't, this should fail
-			port := strings.Split(connURL, ":")[1]
-
 			// Set values that we don't know until the cassandra container is started
 			config := map[string]interface{}{
-				"hosts":            connURL,
-				"port":             port,
+				"hosts":            host.ConnectionURL(),
+				"port":             host.Port,
 				"username":         "cassandra",
 				"password":         "cassandra",
 				"protocol_version": "3",

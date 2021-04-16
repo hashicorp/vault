@@ -3,7 +3,6 @@ package cassandra
 import (
 	"context"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,17 +16,16 @@ import (
 )
 
 func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()) {
-	cleanup, connURL := cassandra.PrepareTestContainer(t,
+	host, cleanup := cassandra.PrepareTestContainer(t,
 		cassandra.Version("latest"),
 		cassandra.CopyFromTo(insecureFileMounts),
 	)
-	pieces := strings.Split(connURL, ":")
 
 	db := new()
 	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
-			"hosts":            connURL,
-			"port":             pieces[1],
+			"hosts":            host.ConnectionURL(),
+			"port":             host.Port,
 			"username":         "cassandra",
 			"password":         "cassandra",
 			"protocol_version": protocolVersion,
@@ -37,8 +35,8 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 	}
 
 	expectedConfig := map[string]interface{}{
-		"hosts":            connURL,
-		"port":             pieces[1],
+		"hosts":            host.ConnectionURL(),
+		"port":             host.Port,
 		"username":         "cassandra",
 		"password":         "cassandra",
 		"protocol_version": protocolVersion,
@@ -129,18 +127,17 @@ func TestCreateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := cassandra.PrepareTestContainer(t,
+			host, cleanup := cassandra.PrepareTestContainer(t,
 				cassandra.Version("latest"),
 				cassandra.CopyFromTo(insecureFileMounts),
 			)
-			pieces := strings.Split(connURL, ":")
 			defer cleanup()
 
 			db := new()
 
 			config := test.config
-			config["hosts"] = connURL
-			config["port"] = pieces[1]
+			config["hosts"] = host.ConnectionURL()
+			config["port"] = host.Port
 
 			initReq := dbplugin.InitializeRequest{
 				Config:           config,

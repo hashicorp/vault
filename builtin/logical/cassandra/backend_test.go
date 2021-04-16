@@ -23,7 +23,7 @@ func TestBackend_basic(t *testing.T) {
 	copyFromTo := map[string]string{
 		"test-fixtures/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
 	}
-	cleanup, hostname := cassandra.PrepareTestContainer(t,
+	host, cleanup := cassandra.PrepareTestContainer(t,
 		cassandra.CopyFromTo(copyFromTo),
 	)
 	defer cleanup()
@@ -31,7 +31,7 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, hostname),
+			testAccStepConfig(t, host.ConnectionURL()),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, "test"),
 		},
@@ -49,14 +49,14 @@ func TestBackend_roleCrud(t *testing.T) {
 	copyFromTo := map[string]string{
 		"test-fixtures/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
 	}
-	cleanup, hostname := cassandra.PrepareTestContainer(t,
+	host, cleanup := cassandra.PrepareTestContainer(t,
 		cassandra.CopyFromTo(copyFromTo))
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, hostname),
+			testAccStepConfig(t, host.ConnectionURL()),
 			testAccStepRole(t),
 			testAccStepRoleWithOptions(t),
 			testAccStepReadRole(t, "test", testRole),

@@ -3,6 +3,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -38,10 +39,27 @@ func SslOpts(sslOpts *gocql.SslOptions) ContainerOpt {
 	}
 }
 
-func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (func(), string) {
+type Host struct {
+	Name string
+	Port string
+}
+
+func (h Host) ConnectionURL() string {
+	return net.JoinHostPort(h.Name, h.Port)
+}
+
+func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	t.Helper()
 	if os.Getenv("CASSANDRA_HOSTS") != "" {
-		return func() {}, os.Getenv("CASSANDRA_HOSTS")
+		host, port, err := net.SplitHostPort(os.Getenv("CASSANDRA_HOSTS"))
+		if err != nil {
+			t.Fatalf("Failed to split host & port from CASSANDRA_HOSTS (%s): %s", os.Getenv("CASSANDRA_HOSTS"), err)
+		}
+		h := Host{
+			Name: host,
+			Port: port,
+		}
+		return h, func() {}
 	}
 
 	containerCfg := &containerConfig{
@@ -112,5 +130,14 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (func(), string) {
 	if err != nil {
 		t.Fatalf("Could not start docker cassandra: %s", err)
 	}
-	return svc.Cleanup, svc.Config.Address()
+
+	host, port, err := net.SplitHostPort(svc.Config.Address())
+	if err != nil {
+		t.Fatalf("Failed to split host & port from address (%s): %s", svc.Config.Address(), err)
+	}
+	h := Host{
+		Name: host,
+		Port: port,
+	}
+	return h, svc.Cleanup
 }
