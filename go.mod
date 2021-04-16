@@ -156,6 +156,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
 	go.uber.org/atomic v1.6.0
+	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

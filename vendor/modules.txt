@@ -1119,6 +1119,10 @@ go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
 # go.uber.org/atomic v1.6.0
 go.uber.org/atomic
+# go.uber.org/goleak v1.1.10
+## explicit
+go.uber.org/goleak
+go.uber.org/goleak/internal/stack
 # go.uber.org/multierr v1.5.0
 go.uber.org/multierr
 # go.uber.org/zap v1.14.1
