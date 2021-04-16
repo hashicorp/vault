@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
@@ -1969,9 +1970,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 
 		case <-c.SigUSR2Ch:
-			buf := make([]byte, 32*1024*1024)
-			n := runtime.Stack(buf[:], true)
-			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
+			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
 
