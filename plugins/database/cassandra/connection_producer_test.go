@@ -9,7 +9,6 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -27,23 +26,18 @@ func TestTLSConnection(t *testing.T) {
 	type testCase struct {
 		config    map[string]interface{}
 		expectErr bool
-		// errorMsg is only checked if expectErr is true. This also a partial string match, so if this value shows up
-		// anywhere in the error it will pass the assertion
-		errorMsg string
 	}
 
 	tests := map[string]testCase{
 		"tls not specified": {
 			config:    map[string]interface{}{},
 			expectErr: true,
-			errorMsg:  "EOF",
 		},
 		"unrecognized certificate": {
 			config: map[string]interface{}{
 				"tls": "true",
 			},
 			expectErr: true,
-			errorMsg:  "certificate signed by unknown authority",
 		},
 		"insecure TLS": {
 			config: map[string]interface{}{
@@ -95,10 +89,6 @@ func TestTLSConnection(t *testing.T) {
 			}
 			if !test.expectErr && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
-			}
-
-			if err != nil {
-				require.Contains(t, err.Error(), test.errorMsg)
 			}
 		})
 	}
