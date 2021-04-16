@@ -352,7 +352,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		c.logger.Error("got nil forwarding RPC request")
 		return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 	}
-	resp, err := c.rpcForwardingClient.ForwardRequest(c.rpcClientConnContext, freq)
+	resp, err := c.rpcForwardingClient.ForwardRequest(req.Context(), freq)
 	if err != nil {
 		c.logger.Error("error during forwarded RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
