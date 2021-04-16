@@ -13,7 +13,7 @@
     "@hashicorp/react-content": "7.0.0",
     "@hashicorp/react-docs-page": "13.1.3",
     "@hashicorp/react-featured-slider": "4.0.0",
-    "@hashicorp/react-hashi-stack-menu": "2.0.0",
+    "@hashicorp/react-hashi-stack-menu": "2.0.3",
     "@hashicorp/react-head": "3.0.1",
     "@hashicorp/react-hero": "7.1.0",
     "@hashicorp/react-image": "4.0.0",
