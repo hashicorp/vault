@@ -36,6 +36,9 @@ func TestNewRateLimitQuota(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink())
 			require.Equal(t, tc.expectErr, err != nil, err)
+			if err == nil {
+				require.Nil(t, tc.rlq.close())
+			}
 		})
 	}
 }
@@ -63,6 +66,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 	}
 
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
+	defer rlq.close()
 
 	var wg sync.WaitGroup
 
@@ -137,6 +141,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 	}
 
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
+	defer rlq.close()
 	require.True(t, rlq.getPurgeBlocked())
 
 	var wg sync.WaitGroup
