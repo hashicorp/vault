@@ -231,7 +231,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 }
 
 func getSslOpts(certBundle *certutil.CertBundle, minTLSVersion string, insecureSkipVerify bool) (*gocql.SslOptions, error) {
-	var tlsConfig *tls.Config
+	tlsConfig := &tls.Config{}
 	if certBundle != nil {
 		if certBundle.Certificate == "" && certBundle.PrivateKey != "" {
 			return nil, fmt.Errorf("found private key for TLS authentication but no certificate")
@@ -245,12 +245,10 @@ func getSslOpts(certBundle *certutil.CertBundle, minTLSVersion string, insecureS
 			return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
 		}
 
-		tlsConfig, err := parsedCertBundle.GetTLSConfig(certutil.TLSClient)
-		if err != nil || tlsConfig == nil {
+		tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
+		if err != nil {
 			return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%w", tlsConfig, err)
 		}
-	} else {
-		tlsConfig = &tls.Config{}
 	}
 
 	tlsConfig.InsecureSkipVerify = insecureSkipVerify
