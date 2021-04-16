@@ -1,7 +1,7 @@
 .g-section-block.g-cta-section {
   -webkit-box-align: center;
   align-items: center;
-  background: var(--vault);
+  background: var(--vault-secondary);
   display: -webkit-box;
   display: flex;
   -webkit-box-pack: center;
