@@ -19,7 +19,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.14.7
+GO_VERSION_MIN=1.14.15
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
