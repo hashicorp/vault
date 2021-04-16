@@ -9972,6 +9972,13 @@ ember-power-select@^2.0.0:
     ember-text-measurer "^0.5.0"
     ember-truth-helpers "^2.1.0"
 
+ember-promise-helpers@^1.0.9:
+  version "1.0.9"
+  resolved "https://registry.yarnpkg.com/ember-promise-helpers/-/ember-promise-helpers-1.0.9.tgz#4559dd4a09be1a2725eddd7146169d2d53a92e7a"
+  integrity sha512-BDcx2X28baEL0YMKSmDGQzvdyfiFSlx4Byf34hVrAw6W7VO17YYLjeXPebVBOXLA1BMWmUo0Bb2pZRZ09MQYYA==
+  dependencies:
+    ember-cli-babel "^6.16.0"
+
 ember-qunit@^4.6.0:
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/ember-qunit/-/ember-qunit-4.6.0.tgz#ad79fd3ff00073a8779400cc5a4b44829517590f"

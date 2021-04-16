@@ -18,34 +18,26 @@ import Component from '@glimmer/component';
 // Below fields are intended to be dynamic based on type of role and db.
 // example of usage: FIELDS[roleType][db]
 const ROLE_FIELDS = {
-  static: {
-    default: ['ttl', 'max_ttl', 'username', 'rotation_period'],
-    'mongodb-database-plugin': ['username', 'rotation_period'],
-  },
-  dynamic: {
-    default: ['ttl', 'max_ttl', 'username', 'rotation_period'],
-    'mongodb-database-plugin': ['ttl', 'max_ttl'],
-  },
+  static: ['username', 'rotation_period'],
+  dynamic: ['ttl', 'max_ttl'],
 };
 
 const STATEMENT_FIELDS = {
   static: {
-    default: ['creation_statements', 'revocation_statements', 'rotation_statements'],
-    'mongodb-database-plugin': 'NONE', // will not show the section
+    default: ['rotation_statements'],
+    'mongodb-database-plugin': [],
+    'mssql-database-plugin': [],
   },
   dynamic: {
-    default: ['creation_statements', 'revocation_statements', 'rotation_statements'],
+    default: ['creation_statements', 'revocation_statements', 'rollback_statements', 'renew_statements'],
     'mongodb-database-plugin': ['creation_statement', 'revocation_statement'],
+    'mssql-database-plugin': ['creation_statements', 'revocation_statements'],
   },
 };
-
 export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {
-    const type = this.args.roleType;
-    if (!type) return null;
-    const db = this.args.dbType || 'default';
-    const dbValidFields = ROLE_FIELDS[type][db];
-    if (!Array.isArray(dbValidFields)) return dbValidFields;
+    if (!this.args.roleType) return null;
+    let dbValidFields = ROLE_FIELDS[this.args.roleType];
     return this.args.attrs.filter(a => {
       return dbValidFields.includes(a.name);
     });
@@ -53,10 +45,12 @@ export default class DatabaseRoleSettingForm extends Component {
 
   get statementFields() {
     const type = this.args.roleType;
+    const plugin = this.args.dbType;
     if (!type) return null;
-    const db = this.args.dbType || 'default';
-    const dbValidFields = STATEMENT_FIELDS[type][db];
-    if (!Array.isArray(dbValidFields)) return dbValidFields;
+    let dbValidFields = STATEMENT_FIELDS[type].default;
+    if (STATEMENT_FIELDS[type][plugin]) {
+      dbValidFields = STATEMENT_FIELDS[type][plugin];
+    }
     return this.args.attrs.filter(a => {
       return dbValidFields.includes(a.name);
     });
