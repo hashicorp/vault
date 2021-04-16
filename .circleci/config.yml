@@ -774,7 +774,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.15
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.5.2
+    - GOTESTSUM_VERSION: 0.6.0
   algolia-index:
     docker:
     - image: node:12
@@ -1036,7 +1036,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.15
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.5.2
+    - GOTESTSUM_VERSION: 0.6.0
   freebsd_amd64_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -1474,7 +1474,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.15
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.5.2
+    - GOTESTSUM_VERSION: 0.6.0
   test-go-nightly:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -1581,7 +1581,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.15
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.5.2
+    - GOTESTSUM_VERSION: 0.6.0
   netbsd_amd64_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
