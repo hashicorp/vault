@@ -18,13 +18,13 @@ func TestCassandraBackend(t *testing.T) {
 		t.Skip("skipping race test in CI pending https://github.com/gocql/gocql/pull/1474")
 	}
 
-	cleanup, hosts := cassandra.PrepareTestContainer(t, "")
+	host, cleanup := cassandra.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
 	b, err := NewCassandraBackend(map[string]string{
-		"hosts":            hosts,
+		"hosts":            host.ConnectionURL(),
 		"protocol_version": "3",
 	}, logger)
 
