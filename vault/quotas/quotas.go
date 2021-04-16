@@ -261,14 +261,16 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	return manager, nil
 }
 
-// SetQuota adds a new quota rule to the db.
+// SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
-// setQuotaLocked should be called with the manager's lock held
+// setQuotaLocked adds or updates a quota rule, modifying the db as well as
+// any runtime elements such as goroutines.
+// It should be called with the write lock held.
 func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
 	if qType == TypeLeaseCount.String() {
 		m.setIsPerfStandby(quota)
@@ -277,13 +279,17 @@ func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota,
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	raw, err := txn.First(qType, "id", quota.quotaID())
+	raw, err := txn.First(qType, indexID, quota.quotaID())
 	if err != nil {
 		return err
 	}
 
 	// If there already exists an entry in the db, remove that first.
 	if raw != nil {
+		quota := raw.(Quota)
+		if err := quota.close(); err != nil {
+			return err
+		}
 		err = txn.Delete(qType, raw)
 		if err != nil {
 			return err
