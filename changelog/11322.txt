@@ -1,0 +1,3 @@
+```release-note:bug
+core: requests forwarded by standby weren't always timed out.
+```
