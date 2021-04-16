@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
+	"go.uber.org/goleak"
 )
 
 type clientResult struct {
@@ -203,4 +205,16 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 			}
 		}
 	}()
+}
+
+func TestRateLimitQuota_Update(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	require.NoError(t, err)
+
+	quota := NewRateLimitQuota("quota1", "", "", 10, time.Second, 0)
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
+
+	require.Nil(t, quota.close())
 }
