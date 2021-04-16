@@ -11,14 +11,13 @@ export default function UseCaseCtaSection() {
           linkType="download"
           theme={{
             variant: 'primary',
-            background: 'dark',
             brand: 'neutral',
           }}
         />
         <Button
           url="/docs"
           title="Explore Docs"
-          theme={{ variant: 'secondary', background: 'light' }}
+          theme={{ variant: 'secondary' }}
         />
       </div>
     </section>
