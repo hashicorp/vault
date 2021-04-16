@@ -27,7 +27,7 @@ import (
 // scenario is to have one global session object to interact with the
 // whole Cassandra cluster.
 //
-// This type extends the Node interface by adding a convinient query builder
+// This type extends the Node interface by adding a convenient query builder
 // and automatically sets a default consistency level on all operations
 // that do not have a consistency level set.
 type Session struct {
@@ -62,7 +62,6 @@ type Session struct {
 	schemaEvents *eventDebouncer
 
 	// ring metadata
-	hosts                     []HostInfo
 	useSystemSchema           bool
 	hasAggregatesAndFunctions bool
 
@@ -227,18 +226,44 @@ func (s *Session) init() error {
 	}
 
 	hosts = hosts[:0]
+	// each host will increment left and decrement it after connecting and once
+	// there's none left, we'll close hostCh
+	var left int64
+	// we will receive up to len(hostMap) of messages so create a buffer so we
+	// don't end up stuck in a goroutine if we stopped listening
+	connectedCh := make(chan struct{}, len(hostMap))
+	// we add one here because we don't want to end up closing hostCh until we're
+	// done looping and the decerement code might be reached before we've looped
+	// again
+	atomic.AddInt64(&left, 1)
 	for _, host := range hostMap {
-		host = s.ring.addOrUpdate(host)
+		host := s.ring.addOrUpdate(host)
 		if s.cfg.filterHost(host) {
 			continue
 		}
 
-		host.setState(NodeUp)
-		s.pool.addHost(host)
+		atomic.AddInt64(&left, 1)
+		go func() {
+			s.pool.addHost(host)
+			connectedCh <- struct{}{}
+
+			// if there are no hosts left, then close the hostCh to unblock the loop
+			// below if its still waiting
+			if atomic.AddInt64(&left, -1) == 0 {
+				close(connectedCh)
+			}
+		}()
 
 		hosts = append(hosts, host)
 	}
+	// once we're done looping we subtract the one we initially added and check
+	// to see if we should close
+	if atomic.AddInt64(&left, -1) == 0 {
+		close(connectedCh)
+	}
 
+	// before waiting for them to connect, add them all to the policy so we can
+	// utilize efficiencies by calling AddHosts if the policy supports it
 	type bulkAddHosts interface {
 		AddHosts([]*HostInfo)
 	}
@@ -247,6 +272,15 @@ func (s *Session) init() error {
 	} else {
 		for _, host := range hosts {
 			s.policy.AddHost(host)
+		}
+	}
+
+	readyPolicy, _ := s.policy.(ReadyPolicy)
+	// now loop over connectedCh until it's closed (meaning we've connected to all)
+	// or until the policy says we're ready
+	for range connectedCh {
+		if readyPolicy != nil && readyPolicy.Ready() {
+			break
 		}
 	}
 
@@ -320,7 +354,8 @@ func (s *Session) reconnectDownedHosts(intv time.Duration) {
 				if h.IsUp() {
 					continue
 				}
-				s.handleNodeUp(h.ConnectAddress(), h.Port(), true)
+				// we let the pool call handleNodeUp to change the host state
+				s.pool.addHost(h)
 			}
 		case <-s.ctx.Done():
 			return
@@ -806,6 +841,7 @@ type Query struct {
 	trace                 Tracer
 	observer              QueryObserver
 	session               *Session
+	conn                  *Conn
 	rt                    RetryPolicy
 	spec                  SpeculativeExecutionPolicy
 	binding               func(q *QueryInfo) ([]interface{}, error)
@@ -1094,12 +1130,17 @@ func (q *Query) speculativeExecutionPolicy() SpeculativeExecutionPolicy {
 	return q.spec
 }
 
+// IsIdempotent returns whether the query is marked as idempotent.
+// Non-idempotent query won't be retried.
+// See "Retries and speculative execution" in package docs for more details.
 func (q *Query) IsIdempotent() bool {
 	return q.idempotent
 }
 
 // Idempotent marks the query as being idempotent or not depending on
 // the value.
+// Non-idempotent query won't be retried.
+// See "Retries and speculative execution" in package docs for more details.
 func (q *Query) Idempotent(value bool) *Query {
 	q.idempotent = value
 	return q
@@ -1164,6 +1205,11 @@ func (q *Query) Iter() *Iter {
 	if isUseStatement(q.stmt) {
 		return &Iter{err: ErrUseStmt}
 	}
+	// if the query was specifically run on a connection then re-use that
+	// connection when fetching the next results
+	if q.conn != nil {
+		return q.conn.executeQuery(q.Context(), q)
+	}
 	return q.session.executeQuery(q)
 }
 
@@ -1195,6 +1241,10 @@ func (q *Query) Scan(dest ...interface{}) error {
 // statement containing an IF clause). If the transaction fails because
 // the existing values did not match, the previous values will be stored
 // in dest.
+//
+// As for INSERT .. IF NOT EXISTS, previous values will be returned as if
+// SELECT * FROM. So using ScanCAS with INSERT is inherently prone to
+// column mismatching. Use MapScanCAS to capture them safely.
 func (q *Query) ScanCAS(dest ...interface{}) (applied bool, err error) {
 	q.disableSkipMetadata = true
 	iter := q.Iter()
@@ -1423,7 +1473,7 @@ func (iter *Iter) Scan(dest ...interface{}) bool {
 	}
 
 	if iter.next != nil && iter.pos >= iter.next.pos {
-		go iter.next.fetch()
+		iter.next.fetchAsync()
 	}
 
 	// currently only support scanning into an expand tuple, such that its the same
@@ -1517,16 +1567,31 @@ func (iter *Iter) NumRows() int {
 	return iter.numRows
 }
 
+// nextIter holds state for fetching a single page in an iterator.
+// single page might be attempted multiple times due to retries.
 type nextIter struct {
-	qry  *Query
-	pos  int
-	once sync.Once
-	next *Iter
+	qry   *Query
+	pos   int
+	oncea sync.Once
+	once  sync.Once
+	next  *Iter
+}
+
+func (n *nextIter) fetchAsync() {
+	n.oncea.Do(func() {
+		go n.fetch()
+	})
 }
 
 func (n *nextIter) fetch() *Iter {
 	n.once.Do(func() {
-		n.next = n.qry.session.executeQuery(n.qry)
+		// if the query was specifically run on a connection then re-use that
+		// connection when fetching the next results
+		if n.qry.conn != nil {
+			n.next = n.qry.conn.executeQuery(n.qry.Context(), n.qry)
+		} else {
+			n.next = n.qry.session.executeQuery(n.qry)
+		}
 	})
 	return n.next
 }
@@ -1536,7 +1601,6 @@ type Batch struct {
 	Entries               []BatchEntry
 	Cons                  Consistency
 	routingKey            []byte
-	routingKeyBuffer      []byte
 	CustomPayload         map[string][]byte
 	rt                    RetryPolicy
 	spec                  SpeculativeExecutionPolicy
@@ -1733,7 +1797,7 @@ func (b *Batch) WithTimestamp(timestamp int64) *Batch {
 
 func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
 	latency := end.Sub(start)
-	_, metricsForHost := b.metrics.attempt(1, latency, host, b.observer != nil)
+	attempt, metricsForHost := b.metrics.attempt(1, latency, host, b.observer != nil)
 
 	if b.observer == nil {
 		return
@@ -1753,6 +1817,7 @@ func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host 
 		Host:    host,
 		Metrics: metricsForHost,
 		Err:     iter.err,
+		Attempt: attempt,
 	})
 }
 
@@ -1968,7 +2033,6 @@ type ObservedQuery struct {
 	Err error
 
 	// Attempt is the index of attempt at executing this query.
-	// An attempt might be either retry or fetching next page of a query.
 	// The first attempt is number zero and any retries have non-zero attempt number.
 	Attempt int
 }
@@ -1999,6 +2063,10 @@ type ObservedBatch struct {
 
 	// The metrics per this host
 	Metrics *hostMetrics
+
+	// Attempt is the index of attempt at executing this query.
+	// The first attempt is number zero and any retries have non-zero attempt number.
+	Attempt int
 }
 
 // BatchObserver is the interface implemented by batch observers / stat collectors.
