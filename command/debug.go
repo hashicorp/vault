@@ -748,6 +748,8 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 			}(target)
 		}
 
+		// As a convenience, we'll also fetch the goroutine target using debug=2, which yields a text
+		// version of the stack traces that don't require using `go tool pprof` to view.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
