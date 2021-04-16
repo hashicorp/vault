@@ -985,11 +985,11 @@ func (c *DebugCommand) captureError(target string, err error) {
 
 func (c *DebugCommand) writeLogs(ctx context.Context) {
 	out, err := os.Create(filepath.Join(c.flagOutput, "vault.log"))
-	defer out.Close()
 	if err != nil {
 		c.captureError("log", err)
 		return
 	}
+	defer out.Close()
 
 	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
 	if err != nil {
