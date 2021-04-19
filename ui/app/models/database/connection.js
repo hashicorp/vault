@@ -20,6 +20,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
   {
@@ -37,6 +38,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_open_connections', group: 'pluginConfig' },
       { attr: 'max_idle_connections', group: 'pluginConfig' },
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
+      { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
 ];
