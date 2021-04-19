@@ -783,7 +783,7 @@ jobs:
         - .buildcache/packages/store
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1002,7 +1002,7 @@ jobs:
         - .buildcache/packages/store
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1468,7 +1468,7 @@ jobs:
         - .buildcache/packages/store
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -2171,7 +2171,7 @@ jobs:
         command: make ci-verify
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
