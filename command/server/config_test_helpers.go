@@ -711,6 +711,12 @@ listener "tcp" {
 	tls_max_version = "tls13"
 	tls_require_and_verify_client_cert = true
 	tls_disable_client_certs = true
+    telemetry {
+      unauthenticated_metrics_access = true
+    }
+    profiling {
+      unauthenticated_pprof_access = true
+    }
 }`))
 
 	config := Config{
@@ -742,6 +748,12 @@ listener "tcp" {
 					TLSMaxVersion:                 "tls13",
 					TLSRequireAndVerifyClientCert: true,
 					TLSDisableClientCerts:         true,
+					Telemetry: configutil.ListenerTelemetry{
+						UnauthenticatedMetricsAccess: true,
+					},
+					Profiling: configutil.ListenerProfiling{
+						UnauthenticatedPProfAccess: true,
+					},
 				},
 			},
 		},

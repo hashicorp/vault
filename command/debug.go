@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -581,7 +582,10 @@ func (c *DebugCommand) capturePollingTargets() error {
 
 	if strutil.StrListContains(c.flagTargets, "log") {
 		g.Add(func() error {
-			_ = c.writeLogs(ctx)
+			c.writeLogs(ctx)
+			// If writeLogs returned earlier due to an error, wait for context
+			// to terminate so we don't abort everything.
+			<-ctx.Done()
 			return nil
 		}, func(error) {
 			cancelFunc()
@@ -670,15 +674,11 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 		}
 
 		// Check replication status. We skip on processing metrics if we're one
-		// of the following (since the request will be forwarded):
-		// 1. Any type of DR Node
-		// 2. Non-DR, non-performance standby nodes
+		// a DR node, though non-perf standbys will fail if they aren't using
+		// unauthenticated_metrics_access.
 		switch {
 		case healthStatus.ReplicationDRMode == "secondary":
 			c.logger.Info("skipping metrics capture on DR secondary node")
-			continue
-		case healthStatus.Standby && !healthStatus.PerformanceStandby:
-			c.logger.Info("skipping metrics on standby node")
 			continue
 		}
 
@@ -731,35 +731,37 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 
 		var wg sync.WaitGroup
 
-		// Capture goroutines
+		for _, target := range []string{"threadcreate", "allocs", "block", "mutex", "goroutine", "heap"} {
+			wg.Add(1)
+			go func(target string) {
+				defer wg.Done()
+				data, err := pprofTarget(ctx, c.cachedClient, target, nil)
+				if err != nil {
+					c.captureError("pprof."+target, err)
+					return
+				}
+
+				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o644)
+				if err != nil {
+					c.captureError("pprof."+target, err)
+				}
+			}(target)
+		}
+
+		// As a convenience, we'll also fetch the goroutine target using debug=2, which yields a text
+		// version of the stack traces that don't require using `go tool pprof` to view.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			data, err := pprofGoroutine(ctx, c.cachedClient)
+			data, err := pprofTarget(ctx, c.cachedClient, "goroutine", url.Values{"debug": []string{"2"}})
 			if err != nil {
-				c.captureError("pprof.goroutine", err)
+				c.captureError("pprof.goroutines-text", err)
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "goroutines.txt"), data, 0o644)
 			if err != nil {
-				c.captureError("pprof.goroutine", err)
-			}
-		}()
-
-		// Capture heap
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			data, err := pprofHeap(ctx, c.cachedClient)
-			if err != nil {
-				c.captureError("pprof.heap", err)
-				return
-			}
-
-			err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0o644)
-			if err != nil {
-				c.captureError("pprof.heap", err)
+				c.captureError("pprof.goroutines-text", err)
 			}
 		}()
 
@@ -911,24 +913,11 @@ func (c *DebugCommand) compress(dst string) error {
 	return nil
 }
 
-func pprofGoroutine(ctx context.Context, client *api.Client) ([]byte, error) {
-	req := client.NewRequest("GET", "/v1/sys/pprof/goroutine")
-	resp, err := client.RawRequestWithContext(ctx, req)
-	if err != nil {
-		return nil, err
+func pprofTarget(ctx context.Context, client *api.Client, target string, params url.Values) ([]byte, error) {
+	req := client.NewRequest("GET", "/v1/sys/pprof/"+target)
+	if params != nil {
+		req.Params = params
 	}
-	defer resp.Body.Close()
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-func pprofHeap(ctx context.Context, client *api.Client) ([]byte, error) {
-	req := client.NewRequest("GET", "/v1/sys/pprof/heap")
 	resp, err := client.RawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
@@ -994,16 +983,18 @@ func (c *DebugCommand) captureError(target string, err error) {
 	c.errLock.Unlock()
 }
 
-func (c *DebugCommand) writeLogs(ctx context.Context) error {
+func (c *DebugCommand) writeLogs(ctx context.Context) {
 	out, err := os.Create(filepath.Join(c.flagOutput, "vault.log"))
 	if err != nil {
-		return err
+		c.captureError("log", err)
+		return
 	}
 	defer out.Close()
 
 	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
 	if err != nil {
-		return err
+		c.captureError("log", err)
+		return
 	}
 
 	for {
@@ -1011,10 +1002,11 @@ func (c *DebugCommand) writeLogs(ctx context.Context) error {
 		case log := <-logCh:
 			_, err = out.WriteString(log)
 			if err != nil {
-				return err
+				c.captureError("log", err)
+				return
 			}
 		case <-ctx.Done():
-			return nil
+			return
 		}
 	}
 }
