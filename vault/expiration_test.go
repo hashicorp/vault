@@ -497,7 +497,8 @@ func TestExpiration_Register(t *testing.T) {
 }
 
 func TestExpiration_Register_BatchToken(t *testing.T) {
-	exp := mockExpiration(t)
+	c, _, rootToken := TestCoreUnsealed(t)
+	exp := c.expiration
 	noop := &NoopBackend{
 		RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 			resp := &logical.Response{Secret: req.Secret}
@@ -505,15 +506,17 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 			return resp, nil
 		},
 	}
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "logical/")
-	meUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
-	if err != nil {
-		t.Fatal(err)
+	{
+		_, barrier, _ := mockBarrier(t)
+		view := NewBarrierView(barrier, "logical/")
+		meUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	te := &logical.TokenEntry{
@@ -521,9 +524,10 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 		TTL:          1 * time.Second,
 		NamespaceID:  "root",
 		CreationTime: time.Now().Unix(),
+		Parent:       rootToken,
 	}
 
-	err = exp.tokenStore.create(context.Background(), te)
+	err := exp.tokenStore.create(context.Background(), te)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -579,6 +583,13 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 		}
 
 		break
+	}
+	idEnts, err := exp.tokenView.List(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(idEnts) != 0 {
+		t.Fatalf("expected no entries in sys/expire/token, got: %v", idEnts)
 	}
 }
 
