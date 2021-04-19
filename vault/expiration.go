@@ -98,9 +98,13 @@ type ExpirationManager struct {
 	// TTL zero, which we want to count but have no timer associated.
 	pending     sync.Map
 	nonexpiring sync.Map
-	zombies     sync.Map
 	leaseCount  int
 	pendingLock sync.RWMutex
+
+	// Track expired leases that have been determined to be irrevocable (without
+	// manual intervention). These irrevocable leases are referred to as
+	// "zombies" or "zombie leases"
+	zombies sync.Map
 
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
