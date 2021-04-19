@@ -1117,7 +1117,7 @@ func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*logical.To
 	return ts.lookupInternal(ctx, id, false, true)
 }
 
-func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
+func (ts *TokenStore) lookupBatchTokenInternal(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	// Strip the b. from the front and namespace ID from the back
 	bEntry, _ := namespace.SplitIDFromString(id[2:])
 
@@ -1141,6 +1141,16 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 		return nil, err
 	}
 
+	te.ID = id
+	return te, nil
+}
+
+func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
+	te, err := ts.lookupBatchTokenInternal(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
 	if time.Now().After(time.Unix(te.CreationTime, 0).Add(te.TTL)) {
 		return nil, nil
 	}
@@ -1155,7 +1165,6 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 		}
 	}
 
-	te.ID = id
 	return te, nil
 }
 
