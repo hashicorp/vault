@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -124,7 +125,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		// Handle non-forwarded paths
 		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
-		mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
 		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
@@ -169,6 +169,19 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 		} else {
 			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
+		}
+
+		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedPProfAccess {
+			for _, name := range []string{"goroutine", "threadcreate", "heap", "allocs", "block", "mutex"} {
+				mux.Handle("/v1/sys/pprof/"+name, pprof.Handler(name))
+			}
+			mux.Handle("/v1/sys/pprof/", http.HandlerFunc(pprof.Index))
+			mux.Handle("/v1/sys/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+			mux.Handle("/v1/sys/pprof/profile", http.HandlerFunc(pprof.Profile))
+			mux.Handle("/v1/sys/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+			mux.Handle("/v1/sys/pprof/trace", http.HandlerFunc(pprof.Trace))
+		} else {
+			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 		}
 
 		additionalRoutes(mux, core)
