@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+package gocql
+
 // The uuid package can be used to generate and parse universally unique
 // identifiers, a standardized format in the form of a 128 bit number.
 //
 // http://tools.ietf.org/html/rfc4122
-package gocql
 
 import (
 	"crypto/rand"

@@ -359,7 +359,7 @@ github.com/go-stack/stack
 github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 github.com/go-yaml/yaml
-# github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+# github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
