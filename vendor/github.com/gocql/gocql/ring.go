@@ -63,29 +63,6 @@ func (r *ring) currentHosts() map[string]*HostInfo {
 	return hosts
 }
 
-func (r *ring) addHost(host *HostInfo) bool {
-	// TODO(zariel): key all host info by HostID instead of
-	// ip addresses
-	if host.invalidConnectAddr() {
-		panic(fmt.Sprintf("invalid host: %v", host))
-	}
-	ip := host.ConnectAddress().String()
-
-	r.mu.Lock()
-	if r.hosts == nil {
-		r.hosts = make(map[string]*HostInfo)
-	}
-
-	_, ok := r.hosts[ip]
-	if !ok {
-		r.hostList = append(r.hostList, host)
-	}
-
-	r.hosts[ip] = host
-	r.mu.Unlock()
-	return ok
-}
-
 func (r *ring) addOrUpdate(host *HostInfo) *HostInfo {
 	if existingHost, ok := r.addHostIfMissing(host); ok {
 		existingHost.update(host)

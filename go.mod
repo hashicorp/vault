@@ -49,7 +49,7 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
-	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
@@ -83,7 +83,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.8.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.9.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.9.2
+	github.com/hashicorp/vault-plugin-auth-jwt v0.9.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.7.0
@@ -156,6 +156,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
 	go.uber.org/atomic v1.6.0
+	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
