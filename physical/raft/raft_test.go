@@ -20,6 +20,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	bolt "go.etcd.io/bbolt"
@@ -215,6 +216,14 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 	}
 
 	return nil
+}
+
+func TestRaft_BoltMetrics(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	b.SetMetricsSink(metricsutil.BlackholeSink())
+	physical.ExerciseBackend(t, b)
 }
 
 func TestRaft_Backend(t *testing.T) {

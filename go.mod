@@ -6,6 +6,8 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/hashicorp/raft-boltdb/v2 => ../raft-boltdb/v2
+
 require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
@@ -76,6 +78,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.2.0
 	github.com/hashicorp/raft-autopilot v0.1.2
+	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210409134258-03c10cc3d4ea
 	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/serf v0.9.5 // indirect
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.8.0
