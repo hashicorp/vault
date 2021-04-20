@@ -108,7 +108,14 @@ func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 
 func TestTokenStore_CubbyholeTidy(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
+	testTokenStore_CubbyholeTidy(t, c, root, namespace.RootContext(nil))
+}
+
+func testTokenStore_CubbyholeTidy(t *testing.T, c *Core, root string, nsCtx context.Context) {
 	ts := c.tokenStore
+
+	backend := c.router.MatchingBackend(nsCtx, cubbyholeMountPath)
+	view := c.router.MatchingStorageByAPIPath(nsCtx, cubbyholeMountPath)
 
 	for i := 1; i <= 20; i++ {
 		// Create 20 tokens
@@ -121,7 +128,7 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 			},
 		}
 
-		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		resp := testMakeTokenViaRequestContext(t, nsCtx, ts, tokenReq)
 		token := resp.Auth.ClientToken
 
 		// Supplying token ID forces SHA1 hashing to be used
@@ -139,14 +146,14 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			resp, err := ts.cubbyholeBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			resp, err := backend.HandleRequest(nsCtx, &logical.Request{
 				ClientToken: invalidToken,
 				Operation:   logical.UpdateOperation,
 				Path:        "cubbyhole/sample/data",
 				Data: map[string]interface{}{
 					"foo": "bar",
 				},
-				Storage: ts.cubbyholeBackend.storageView,
+				Storage: view,
 			})
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
@@ -157,7 +164,7 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 		if i%2 == 0 {
 			continue
 		}
-		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		resp, err := c.HandleRequest(nsCtx, &logical.Request{
 			ClientToken: token,
 			Operation:   logical.UpdateOperation,
 			Path:        "cubbyhole/sample/data",
@@ -170,8 +177,18 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 		}
 	}
 
+	// List all the cubbyhole storage keys
+	cubbyholeKeys, err := view.List(nsCtx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(cubbyholeKeys) != 14 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 14, actual: %d", len(cubbyholeKeys))
+	}
+
 	// Tidy cubbyhole storage
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	resp, err := ts.HandleRequest(nsCtx, &logical.Request{
 		Path:      "tidy",
 		Operation: logical.UpdateOperation,
 	})
@@ -183,7 +200,7 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// List all the cubbyhole storage keys
-	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	cubbyholeKeys, err = view.List(nsCtx, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -523,7 +540,12 @@ func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl str
 
 func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request) *logical.Response {
 	t.Helper()
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	return testMakeTokenViaRequestContext(t, namespace.RootContext(nil), ts, req)
+}
+
+func testMakeTokenViaRequestContext(t testing.TB, ctx context.Context, ts *TokenStore, req *logical.Request) *logical.Response {
+	t.Helper()
+	resp, err := ts.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,18 +557,23 @@ func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request)
 		return resp
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	te := &logical.TokenEntry{
 		Path:        resp.Auth.CreationPath,
-		NamespaceID: namespace.RootNamespaceID,
+		NamespaceID: ns.ID,
 	}
 
 	if resp.Auth.TokenType != logical.TokenTypeBatch {
-		if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), te, resp.Auth); err != nil {
+		if err := ts.expiration.RegisterAuth(ctx, te, resp.Auth); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	te, err = ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	te, err = ts.Lookup(ctx, resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
