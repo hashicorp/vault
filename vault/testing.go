@@ -1519,6 +1519,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RecoveryMode = base.RecoveryMode
 
 		coreConfig.ActivityLogConfig = base.ActivityLogConfig
+		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
+		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
 
 		testApplyEntBaseConfig(coreConfig, base)
 	}
