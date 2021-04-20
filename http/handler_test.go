@@ -15,8 +15,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -188,6 +187,72 @@ func TestHandler_cors(t *testing.T) {
 		if actual != expected {
 			t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
 		}
+	}
+}
+
+func TestHandler_HostnameHeader(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		config        *vault.CoreConfig
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			config:        nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			config: &vault.CoreConfig{
+				EnableResponseHeaderHostname: true,
+			},
+			headerPresent: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			var core *vault.Core
+
+			if tc.config == nil {
+				core, _, _ = vault.TestCoreUnsealed(t)
+			} else {
+				core, _, _ = vault.TestCoreUnsealedWithConfig(t, tc.config)
+			}
+
+			ln, addr := TestServer(t, core)
+			defer ln.Close()
+
+			req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			client := cleanhttp.DefaultClient()
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if resp == nil {
+				t.Fatal("nil response")
+			}
+
+			hnHeader := resp.Header.Get("X-Vault-Hostname")
+			if tc.headerPresent && hnHeader == "" {
+				t.Logf("header configured = %t", core.HostnameHeaderEnabled())
+				t.Fatal("missing 'X-Vault-Hostname' header entry in response")
+			}
+			if !tc.headerPresent && hnHeader != "" {
+				t.Fatal("didn't expect 'X-Vault-Hostname' header but it was present anyway")
+			}
+
+			rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+			if rniHeader != "" {
+				t.Fatalf("no raft node ID header was expected, since we're not running a raft cluster. instead, got %s", rniHeader)
+			}
+		})
 	}
 }
 
