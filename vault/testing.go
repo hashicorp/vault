@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
@@ -49,7 +49,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
-	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/mitchellh/go-testing-interface"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
 )
@@ -158,6 +158,8 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.MetricsHelper = opts.MetricsHelper
 	conf.MetricSink = opts.MetricSink
 	conf.NumExpirationWorkers = numExpirationWorkersTest
+	conf.RawConfig = opts.RawConfig
+	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -1516,6 +1518,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RecoveryMode = base.RecoveryMode
 
 		coreConfig.ActivityLogConfig = base.ActivityLogConfig
+		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
+		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
 
 		testApplyEntBaseConfig(coreConfig, base)
 	}
