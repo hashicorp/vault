@@ -764,13 +764,20 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 
 		break
 	}
-	idEnts, err := exp.tokenView.List(context.Background(), "")
-	if err != nil {
-		t.Fatal(err)
+
+	deadline := time.Now().Add(5 * time.Second)
+	var idEnts []string
+	for time.Now().Before(deadline) {
+		idEnts, err = exp.tokenView.List(context.Background(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(idEnts) == 0 {
+			return
+		}
+		time.Sleep(time.Second)
 	}
-	if len(idEnts) != 0 {
-		t.Fatalf("expected no entries in sys/expire/token, got: %v", idEnts)
-	}
+	t.Fatalf("expected no entries in sys/expire/token, got: %v", idEnts)
 }
 
 func TestExpiration_RegisterAuth(t *testing.T) {
