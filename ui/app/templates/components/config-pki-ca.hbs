@@ -95,7 +95,22 @@
       data-test-warning
     />
     {{#each model.attrs as |attr|}}
-      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{#if (or 
+        (eq attr.name "csr")
+        (eq attr.name "certificate")
+        (eq attr.name "issuingCa")
+        (eq attr.name "caChain")
+        (eq attr.name "privateKey")
+      )}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+          />
+        </InfoTableRow>
+      {{else}}
+        {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
