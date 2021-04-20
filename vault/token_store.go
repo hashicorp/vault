@@ -1162,6 +1162,9 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 	if err != nil {
 		return nil, err
 	}
+	if te == nil {
+		return nil, nil
+	}
 
 	if time.Now().After(time.Unix(te.CreationTime, 0).Add(te.TTL)) {
 		return nil, nil
