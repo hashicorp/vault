@@ -82,8 +82,8 @@
         <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading has-bottom-margin-s'}}" id="auth-submit">
           Sign In
         </button>
-        {{#if (and showLoading (eq selectedAuthBackend.type "okta"))}}
-          <p>If this is running slowly, MFA might be enabled. Check your MFA device and accept the push request to continue.</p>
+        {{#if (and showLoading showPushNotificationMessage)}}
+          <p>Please wait. If login is taking longer than usual, you may need to check your device for an MFA notification. Vault will keep trying until timeout.</p>
         {{/if}}
     </form>
   {{/if}}
