@@ -1,8 +1,10 @@
 <div class="auth-form">
   {{#if showLoading}}
-    <div class="vault-loader">
-      <VaultLogoSpinner />
-    </div>
+    {{#unless (eq selectedAuthBackend.type "okta")}}
+      <div class="vault-loader">
+        <VaultLogoSpinner />
+      </div>
+    {{/unless}}
   {{/if}}
   {{#if hasMethodsWithPath}}
     <nav class="tabs is-marginless">
@@ -77,9 +79,12 @@
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
         {{/if}}
-        <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
+        <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading has-bottom-margin-s'}}" id="auth-submit">
           Sign In
         </button>
+        {{#if (and showLoading (eq selectedAuthBackend.type "okta"))}}
+          <p>If this is running slowly, MFA might be enabled. Check your MFA device and accept the push request to continue.</p>
+        {{/if}}
     </form>
   {{/if}}
 </div>
