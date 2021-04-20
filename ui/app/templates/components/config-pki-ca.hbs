@@ -20,6 +20,7 @@
           <MaskedInput
             @value={{get model attr.name}}
             @displayOnly={{true}}
+            @allowCopy={{true}}
           />
         </InfoTableRow>
       {{else if (eq attr.name "expiration")}}
@@ -106,6 +107,7 @@
           <MaskedInput
             @value={{get model attr.name}}
             @displayOnly={{true}}
+            @allowCopy={{true}}
           />
         </InfoTableRow>
       {{else}}
