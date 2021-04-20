@@ -155,7 +155,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	extensions, err := b.calculateExtensions(data, role)
+	extensions, err := b.calculateExtensions(data, req, role)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -356,27 +356,51 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 	return criticalOptions, nil
 }
 
-func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
+func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, error) {
 	unparsedExtensions := data.Get("extensions").(map[string]interface{})
-	if len(unparsedExtensions) == 0 {
-		return role.DefaultExtensions, nil
-	}
+	extensions := make(map[string]string)
+	if len(unparsedExtensions) > 0 {
+		extensions = convertMapToStringValue(unparsedExtensions)
+		if role.AllowedExtensions != "" {
+			notAllowed := []string{}
+			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
 
-	extensions := convertMapToStringValue(unparsedExtensions)
+			for extension := range extensions {
+				if !strutil.StrListContains(allowedExtensions, extension) {
+					notAllowed = append(notAllowed, extension)
+				}
+			}
 
-	if role.AllowedExtensions != "" {
-		notAllowed := []string{}
-		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
-
-		for extension := range extensions {
-			if !strutil.StrListContains(allowedExtensions, extension) {
-				notAllowed = append(notAllowed, extension)
+			if len(notAllowed) != 0 {
+				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 			}
 		}
+	} else {
+		extensions = role.DefaultExtensions
+	}
 
-		if len(notAllowed) != 0 {
-			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
+	if role.DefaultExtensionsTemplate {
+		templatedExtensions := make(map[string]string)
+		for extensionKey, extensionValue := range extensions {
+			// Look for templating markers {{ .* }}
+			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)
+			if matched {
+				if req.EntityID != "" {
+					// Retrieve extension value based on template + entityID from request.
+					templateExtensionValue, err := framework.PopulateIdentityTemplate(extensionValue, req.EntityID, b.System())
+					if err == nil {
+						// Template returned an extension value that we can use
+						templatedExtensions[extensionKey] = templateExtensionValue
+					} else {
+						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
+					}
+				}
+			} else {
+				// Static extension value or err template
+				templatedExtensions[extensionKey] = extensionValue
+			}
 		}
+		return templatedExtensions, nil
 	}
 
 	return extensions, nil
