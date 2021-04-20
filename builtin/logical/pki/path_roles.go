@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -77,7 +78,8 @@ name in a request`,
 subdomains directly beneath these domains, including
 the wildcard subdomains. See the documentation for more
 information. This parameter accepts a comma-separated 
-string or list of domains.`,
+string or list of domains.  This parameter supports
+templating.`,
 			},
 			"allowed_domains_template": {
 				Type: framework.TypeBool,
@@ -139,7 +141,7 @@ Any valid IP is accepted.`,
 			"allowed_uri_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
-Any valid URI is accepted, these values support globbing.`,
+Any valid URI is accepted, these values support globbing.  This parameter supports templating.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Allowed URI Subject Alternative Names",
 				},
@@ -827,6 +829,72 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		responseData["generate_lease"] = r.GenerateLease
 	}
 	return responseData
+}
+
+// applyIdentityTemplating updates the role by evaluating any templated field;
+// currently just AllowedDomains and AllowedURISANs.  Fields are only modified
+// if a template was successfully applied to them.  An error applying the
+// template for one field does not prevent subsequent fields from being updated.
+// Ideally, parse errors of identity templating should be handled when
+// configuring the role, instead when applying the role. Unfortunately, the
+// templating library does not support parsing validations yet.
+func (r *roleEntry) applyIdentityTemplating(sys logical.SystemView, req *logical.Request) error {
+	info, err := sys.EntityInfo(req.EntityID)
+	if err != nil {
+		return err
+	}
+	if info == nil {
+		// we may hit this case if token auth is being used.  Carry on
+		// without applying templating
+		return nil
+	}
+
+	entity := &identity.Entity{
+		ID:       req.EntityID,
+		Name:     info.Name,
+		Metadata: info.Metadata,
+		Aliases:  make([]*identity.Alias, 0, len(info.Aliases)),
+	}
+
+	for i, a := range info.Aliases {
+		entity.Aliases = append(entity.Aliases, &identity.Alias{
+			MountAccessor: a.MountAccessor,
+			ID:            fmt.Sprintf("alias-%d", i),
+			Name:          a.Name,
+			Metadata:      a.Metadata,
+		})
+	}
+
+	input := identity.PopulateStringInput{
+		Mode:              identity.ACLTemplating,
+		ValidityCheckOnly: false,
+		Entity:            entity,
+		Groups:            nil,
+		Namespace:         nil,
+	}
+
+	var templateErr error
+	for i := range r.AllowedDomains {
+		input.String = r.AllowedDomains[i]
+		modified, out, err := identity.PopulateString(input)
+		if err != nil {
+			templateErr = errwrap.Wrapf("error populating allowed_domains: {{err}}", err)
+		} else if modified {
+			r.AllowedDomains[i] = out
+		}
+	}
+
+	for i := range r.AllowedURISANs {
+		input.String = r.AllowedURISANs[i]
+		modified, out, err := identity.PopulateString(input)
+		if err != nil {
+			templateErr = errwrap.Wrapf("error populating allowed_uri_sans: {{err}}", err)
+		} else if modified {
+			r.AllowedURISANs[i] = out
+		}
+	}
+
+	return templateErr
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

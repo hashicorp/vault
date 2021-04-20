@@ -210,6 +210,11 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			"error fetching CA certificate: %s", caErr)}
 	}
 
+	if err := role.applyIdentityTemplating(b.System(), req); err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"failed to apply role identity templating: %s", err)}
+	}
+
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
