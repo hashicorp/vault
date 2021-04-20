@@ -82,6 +82,7 @@ export default Route.extend({
       const { prefix } = this.paramsFor(this.routeName);
 
       set(error, 'keyId', prefix);
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model
       if (hasModel && error.httpStatus === 404) {
