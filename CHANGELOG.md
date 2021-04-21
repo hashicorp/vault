@@ -5,6 +5,12 @@
 
 SECURITY:
 
+* The PKI Secrets Engine tidy functionality may cause Vault to exclude revoked-but-unexpired certificates from the
+  Vault CRL. This vulnerability affects Vault and Vault Enterprise 1.5.1 and newer and was fixed in versions
+  1.5.8, 1.6.4, and 1.7.1. (CVE-2021-27668)
+* The Cassandra Database and Storage backends were not correctly verifying TLS certificates. This issue affects all
+  versions of Vault and Vault Enterprise and was fixed in versions 1.6.4, and 1.7.1. (CVE-2021-27400)
+
 CHANGES:
 
 * go: Update to Go 1.15.11 [[GH-11395](https://github.com/hashicorp/vault/pull/11395)]
@@ -182,6 +188,12 @@ Refer to the CHANGES section for additional details.
 ### 21 April 2021
 
 SECURITY:
+
+* The PKI Secrets Engine tidy functionality may cause Vault to exclude revoked-but-unexpired certificates from the
+  Vault CRL. This vulnerability affects Vault and Vault Enterprise 1.5.1 and newer and was fixed in versions
+  1.5.8, 1.6.4, and 1.7.1. (CVE-2021-27668)
+* The Cassandra Database and Storage backends were not correctly verifying TLS certificates. This issue affects all
+  versions of Vault and Vault Enterprise and was fixed in versions 1.6.4, and 1.7.1. (CVE-2021-27400)
 
 CHANGES:
 
@@ -406,6 +418,10 @@ BUG FIXES:
 
 SECURITY:
 
+* The PKI Secrets Engine tidy functionality may cause Vault to exclude revoked-but-unexpired certificates from the
+  Vault CRL. This vulnerability affects Vault and Vault Enterprise 1.5.1 and newer and was fixed in versions
+  1.5.8, 1.6.4, and 1.7.1. (CVE-2021-27668)
+
 CHANGES:
 
 * go: Update to Go 1.14.15 [[GH-11397](https://github.com/hashicorp/vault/pull/11397)]
@@ -451,7 +467,7 @@ BUG FIXES:
 SECURITY:
 
 * LDAP Auth Method: We addressed an issue where error messages returned by the
-  LDAP auth methold allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
+  LDAP auth method allowed user enumeration [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]. This vulnerability affects Vault OSS and Vault 
   Enterprise and is fixed in 1.5.6 and 1.6.1 (CVE-2020-35177).
 * Sentinel EGP: We've fixed incorrect handling of namespace paths to prevent
   users within namespaces from applying Sentinel EGP policies to paths above
