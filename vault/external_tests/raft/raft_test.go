@@ -5,8 +5,6 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"net/http"
 	"strings"
