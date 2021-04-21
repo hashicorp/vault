@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -169,7 +168,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, a
 	if raw, ok := appsMap["cidr_block"]; ok {
 		_, cidr, err := net.ParseCIDR(raw.(string))
 		if err != nil {
-			return "", nil, errwrap.Wrapf("invalid restriction cidr: {{err}}", err)
+			return "", nil, fmt.Errorf("invalid restriction cidr: %w", err)
 		}
 
 		var addr string
