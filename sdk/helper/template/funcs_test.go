@@ -23,7 +23,7 @@ func TestNowNano(t *testing.T) {
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 	for i := 0; i < 100; i++ {
 		str := unixTimeMillis()
-		actual, err := strconv.Atoi(str)
+		actual, err := strconv.ParseUint(str, 10, 64)
 		require.NoError(t, err)
 		// Make sure the value generated is from now (or later if the clock ticked over)
 		require.GreaterOrEqual(t, int64(actual), now)
