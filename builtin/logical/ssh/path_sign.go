@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -163,7 +162,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read CA private key: {{err}}", err)
+		return nil, fmt.Errorf("failed to read CA private key: %w", err)
 	}
 	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
 		return nil, fmt.Errorf("failed to read CA private key")
@@ -171,7 +170,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse stored CA private key: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
 	}
 
 	cBundle := creationBundle{
@@ -532,7 +531,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	algo := b.Role.AlgorithmSigner
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to generate signed SSH key: sign error: {{err}}", err)
+		return nil, fmt.Errorf("failed to generate signed SSH key: sign error: %w", err)
 	}
 
 	certificate.Signature = sig
