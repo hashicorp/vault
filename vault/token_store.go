@@ -86,19 +86,25 @@ var (
 			return errors.New("nil token entry")
 		}
 
+		storage := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+		if storage == nil {
+			return fmt.Errorf("no cubby mount entry")
+		}
+		view := storage.(*BarrierView)
+
 		switch {
 		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
 			}
-			return ts.cubbyholeBackend.revoke(ctx, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+			return ts.cubbyholeBackend.revoke(ctx, view, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 
 		default:
 			if te.CubbyholeID == "" {
 				return fmt.Errorf("missing cubbyhole ID while destroying")
 			}
-			return ts.cubbyholeBackend.revoke(ctx, te.CubbyholeID)
+			return ts.cubbyholeBackend.revoke(ctx, view, te.CubbyholeID)
 		}
 	}
 )
@@ -1156,6 +1162,9 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 	if err != nil {
 		return nil, err
 	}
+	if te == nil {
+		return nil, nil
+	}
 
 	if time.Now().After(time.Unix(te.CreationTime, 0).Add(te.TTL)) {
 		return nil, nil
@@ -1822,7 +1831,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// List all the cubbyhole storage keys
-			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
+			view := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+			if view == nil {
+				return fmt.Errorf("no cubby mount entry")
+			}
+			bview := view.(*BarrierView)
+
+			cubbyholeKeys, err := bview.List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
@@ -2019,7 +2034,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				key := strings.TrimSuffix(key, "/")
 				if !validCubbyholeKeys[key] {
 					ts.logger.Info("deleting invalid cubbyhole", "key", key)
-					err = ts.cubbyholeBackend.revoke(quitCtx, key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, bview, key)
 					if err != nil {
 						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
 					}
