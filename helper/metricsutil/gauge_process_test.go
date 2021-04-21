@@ -265,7 +265,7 @@ func TestGauge_Backoff(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	threshold := time.Duration(int(sink.GaugeInterval) / 100)
+	threshold := time.Duration(int64(sink.GaugeInterval) / 100)
 	f := func(ctx context.Context) ([]GaugeLabelValues, error) {
 		atomic.AddUint32(&c.numCalls, 1)
 		// Move time forward by more than 1% of the gauge interval
