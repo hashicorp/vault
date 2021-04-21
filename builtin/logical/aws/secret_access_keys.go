@@ -226,7 +226,7 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: username,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
+		return nil, fmt.Errorf("error writing WAL entry: %w", err)
 	}
 
 	userPath := role.UserPath
@@ -246,8 +246,8 @@ func (b *backend) secretAccessKeysCreate(
 	_, err = iamClient.CreateUser(createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
-			iamErr := errwrap.Wrapf("error creating IAM user: {{err}}", err)
-			return nil, errwrap.Wrap(errwrap.Wrapf("failed to delete WAL entry: {{err}}", walErr), iamErr)
+			iamErr := fmt.Errorf("error creating IAM user: %w", err)
+			return nil, errwrap.Wrap(fmt.Errorf("failed to delete WAL entry: %w", walErr), iamErr)
 		}
 		return logical.ErrorResponse("Error creating IAM user: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -318,7 +318,7 @@ func (b *backend) secretAccessKeysCreate(
 	// the secret because it'll get rolled back anyways, so we have to return
 	// an error here.
 	if err := framework.DeleteWAL(ctx, s, walID); err != nil {
-		return nil, errwrap.Wrapf("failed to commit WAL entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to commit WAL entry: %w", err)
 	}
 
 	// Return the info!
