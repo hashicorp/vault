@@ -122,7 +122,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
-    intermediateCert = page.form.certificate;
+    await click('.masked-input-toggle');
+    intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: intermediatePath });
