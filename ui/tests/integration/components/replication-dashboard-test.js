@@ -190,9 +190,6 @@ module('Integration | Component | replication-dashboard', function(hooks) {
     assert.dom('[data-test-error]').includesText('state', 'show correct error title');
     assert
       .dom('[data-test-inline-error-message]')
-      .includesText(
-        '  The cluster is shutdown. Please check your server logs.',
-        'show correct error message'
-      );
+      .includesText('The cluster is shutdown. Please check your server logs.', 'show correct error message');
   });
 });

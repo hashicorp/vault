@@ -36,7 +36,7 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 
 // sanitizePath removes any leading or trailing things from a "path".
 func sanitizePath(s string) string {
-	return ensureNoTrailingSlash(ensureNoLeadingSlash(strings.TrimSpace(s)))
+	return ensureNoTrailingSlash(ensureNoLeadingSlash(s))
 }
 
 // ensureTrailingSlash ensures the given string has a trailing slash.
@@ -193,6 +193,7 @@ func printKeyStatus(ks *api.KeyStatus) string {
 	return columnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
+		fmt.Sprintf("Encryption Count | %d", ks.Encryptions),
 	}, nil)
 }
 

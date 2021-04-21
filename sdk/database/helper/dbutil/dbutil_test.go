@@ -58,5 +58,4 @@ func TestStatementCompatibilityHelper(t *testing.T) {
 	if !reflect.DeepEqual(expectedStatements3, StatementCompatibilityHelper(statements3)) {
 		t.Fatalf("mismatch: %#v, %#v", expectedStatements3, statements3)
 	}
-
 }

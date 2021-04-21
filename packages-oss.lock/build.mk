@@ -18,14 +18,6 @@ ifneq ($(PRODUCT_VERSION),)
 $(error You cannot set PRODUCT_VERSION for local builds, did you mean PRODUCT_REVISION?)
 endif
 
-# PACKAGES_ROOT holds the package store, as well as other package aliases.
-PACKAGES_ROOT := $(CACHE_ROOT)/packages
-# PACKAGE_STORE is where we store all the package files themselves
-# addressed by their input hashes.
-PACKAGE_STORE := $(PACKAGES_ROOT)/store
-# BY_ALIAS is where we store alias symlinks to the store.
-BY_ALIAS      := $(PACKAGES_ROOT)/by-alias
-
 # Include the layers driver.
 include $(LOCKDIR)/layer.mk
 

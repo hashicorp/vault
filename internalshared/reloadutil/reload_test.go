@@ -49,11 +49,11 @@ opM24uvQT3Bc0UM0WNh3tdRFuboxDeBDh7PX/2RIoiaMuCCiRZ3O0A==
 	keyFile := tempDir + "/server.key"
 	certFile := tempDir + "/server.crt"
 
-	err = ioutil.WriteFile(certFile, cert, 0755)
+	err = ioutil.WriteFile(certFile, cert, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing to temp file: %s", err)
 	}
-	err = ioutil.WriteFile(keyFile, key, 0755)
+	err = ioutil.WriteFile(keyFile, key, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing to temp file: %s", err)
 	}

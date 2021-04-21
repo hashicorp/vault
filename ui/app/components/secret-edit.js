@@ -2,13 +2,14 @@ import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
-import { alias, or } from '@ember/object/computed';
+import { alias, or, not } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -16,6 +17,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   wizard: service(),
+  controlGroup: service(),
   router: service(),
   store: service(),
   flashMessages: service(),
@@ -35,7 +37,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   wrappedData: null,
   isWrapping: false,
-  showWrapButton: computed.not('wrappedData'),
+  showWrapButton: not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -154,9 +156,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretData.isAdvanced();
   }),
 
-  showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
-    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
-  }),
+  showAdvancedMode: or('secretDataIsAdvanced', 'preferAdvancedEdit'),
 
   isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
     if (!this.model) return;
@@ -199,26 +199,42 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       secretData.set(secretData.pathAttr, key);
     }
 
-    return secretData.save().then(() => {
-      if (!secretData.isError) {
-        if (isV2) {
-          secret.set('id', key);
+    if (this.mode === 'create') {
+      key = JSON.stringify({
+        backend: secret.backend,
+        id: key,
+      });
+    }
+
+    return secretData
+      .save()
+      .then(() => {
+        if (!secretData.isError) {
+          if (isV2) {
+            secret.set('id', key);
+          }
+          if (isV2 && Object.keys(secret.changedAttributes()).length) {
+            // save secret metadata
+            secret
+              .save()
+              .then(() => {
+                this.saveComplete(successCallback, key);
+              })
+              .catch(e => {
+                this.set(e, e.errors.join(' '));
+              });
+          } else {
+            this.saveComplete(successCallback, key);
+          }
         }
-        if (isV2 && Object.keys(secret.changedAttributes()).length) {
-          // save secret metadata
-          secret
-            .save()
-            .then(() => {
-              this.saveComplete(successCallback, key);
-            })
-            .catch(e => {
-              this.set(e, e.errors.join(' '));
-            });
-        } else {
-          this.saveComplete(successCallback, key);
+      })
+      .catch(error => {
+        if (error instanceof ControlGroupError) {
+          let errorMessage = this.controlGroup.logFromError(error);
+          this.set('error', errorMessage.content);
         }
-      }
-    });
+        throw error;
+      });
   },
   saveComplete(callback, key) {
     if (this.wizard.featureState === 'secret') {
@@ -314,8 +330,14 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         return;
       }
 
-      this.persistKey(() => {
-        this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
+      this.persistKey(key => {
+        let secretKey;
+        try {
+          secretKey = JSON.parse(key).id;
+        } catch (error) {
+          secretKey = key;
+        }
+        this.transitionToRoute(SHOW_ROUTE, secretKey);
       });
     },
 

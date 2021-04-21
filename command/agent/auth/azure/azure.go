@@ -157,7 +157,6 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
-
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("error fetching metadata from %s: {{err}}", endpoint), err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -154,7 +155,8 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["context"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Context = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
@@ -162,13 +164,15 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["ciphertext"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Ciphertext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
 			}
 		}
 
+		// don't allow "null" to be passed in for the plaintext value
 		if v, has := item["plaintext"]; has {
 			if casted, ok := v.(string); ok {
 				(*dst)[i].Plaintext = casted
@@ -178,7 +182,8 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["nonce"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Nonce = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T'", i, item["nonce"]))
@@ -186,7 +191,8 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["key_version"]; has {
-			if casted, ok := v.(int); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(int); ok {
 				(*dst)[i].KeyVersion = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))

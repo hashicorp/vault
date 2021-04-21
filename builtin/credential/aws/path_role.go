@@ -16,9 +16,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-var (
-	currentRoleStorageVersion = 3
-)
+var currentRoleStorageVersion = 3
 
 func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
@@ -166,9 +164,9 @@ auth_type is ec2.`,
 				Type:    framework.TypeBool,
 				Default: false,
 				Description: `If set, only allows a single token to be granted per
-        instance ID. In order to perform a fresh login, the entry in whitelist
+        instance ID. In order to perform a fresh login, the entry in the access list
         for the instance ID needs to be cleared using
-        'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. This is only
+        'auth/aws-ec2/identity-accesslist/<instance_id>' endpoint. This is only
         applicable when auth_type is ec2.`,
 			},
 		},
@@ -333,7 +331,6 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 
 // initialize is used to initialize the AWS roles
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
-
 	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
 		return nil
@@ -413,7 +410,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		for _, roleName := range roleNames {
 			// make sure the context hasn't been canceled
 			if ctx.Err() != nil {
-				return false, err
+				return false, ctx.Err()
 			}
 			_, err := b.roleInternal(ctx, s, roleName)
 			if err != nil {

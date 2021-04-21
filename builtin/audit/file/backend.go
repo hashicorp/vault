@@ -73,7 +73,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Check if mode is provided
-	mode := os.FileMode(0600)
+	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
 		if err != nil {
@@ -256,6 +256,24 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	}
 
 	return b.log(ctx, buf, writer)
+}
+
+func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	var writer io.Writer
+	switch b.path {
+	case "stdout":
+		writer = os.Stdout
+	case "discard":
+		return nil
+	}
+
+	var buf bytes.Buffer
+	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+		return err
+	}
+
+	return b.log(ctx, &buf, writer)
 }
 
 // The file lock must be held before calling this

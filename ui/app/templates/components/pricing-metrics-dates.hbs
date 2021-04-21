@@ -1,5 +1,5 @@
 <form onsubmit={{action "handleQuery"}}>
-  <div class="field-body pricing-metrics-date-form">
+  <div class="field-body pricing-metrics-date-form" data-test-pricing-metrics-form>
     <div class="field is-narrow">
       <label for="start" class="is-label">From</label>
       <div class="control">
@@ -36,9 +36,11 @@
   <FormError>{{error}}</FormError>
 {{/if}}
 <div class="box is-fullwidth is-shadowless">
-  <h2 class="title is-4">
-    {{date-format resultStart "MMM DD, YYYY"}} through {{date-format resultEnd "MMM DD, YYYY"}}
-  </h2>
+  {{#if (and resultStart resultEnd)}}
+    <h2 class="title is-4" data-test-pricing-result-dates>
+      {{date-format resultStart "MMM dd, yyyy"}} through {{date-format resultEnd "MMM dd, yyyy"}}
+    </h2>
+  {{/if}}
   {{#if showResultsWarning}}
   <div class="access-information" data-test-results-date-warning>
     <Icon @glyph="info-circle-fill" class="has-text-info"/>

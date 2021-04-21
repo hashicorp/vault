@@ -69,12 +69,12 @@ export default Service.extend({
   },
 
   tokenForUrl(url) {
-    if (this.get('version.isOSS')) {
+    if (this.version.isOSS) {
       return null;
     }
     let pathForUrl = parseURL(url).pathname;
     pathForUrl = pathForUrl.replace('/v1/', '');
-    let tokenInfo = this.get('tokenToUnwrap');
+    let tokenInfo = this.tokenToUnwrap;
     if (tokenInfo && tokenInfo.creation_path === pathForUrl) {
       let { token, accessor, creation_time } = tokenInfo;
       return { token, accessor, creationTime: creation_time };
@@ -85,7 +85,7 @@ export default Service.extend({
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
     let creationPath = response && get(response, 'wrap_info.creation_path');
     if (
-      this.get('version.isOSS') ||
+      this.version.isOSS ||
       wasWrapTTLRequested ||
       !response ||
       (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||
@@ -118,7 +118,7 @@ export default Service.extend({
   urlFromTransition(transitionObj) {
     let transition = transitionObj.to;
     let [params, queryParams] = this.paramsFromTransition(transition, [], {});
-    let url = this.get('router').urlFor(transition.name, ...params, {
+    let url = this.router.urlFor(transition.name, ...params, {
       queryParams,
     });
     return url.replace('/ui', '');
@@ -130,7 +130,7 @@ export default Service.extend({
     let data = { accessor, token, creation_path, creation_time, ttl };
     data.uiParams = { url };
     this.storeControlGroupToken(data);
-    return this.get('router').transitionTo('vault.cluster.access.control-group-accessor', accessor);
+    return this.router.transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },
 
   logFromError(error) {
@@ -138,7 +138,7 @@ export default Service.extend({
     let data = { accessor, token, creation_path, creation_time, ttl };
     this.storeControlGroupToken(data);
 
-    let href = this.get('router').urlFor('vault.cluster.access.control-group-accessor', accessor);
+    let href = this.router.urlFor('vault.cluster.access.control-group-accessor', accessor);
     let lines = [
       `A Control Group was encountered at ${error.creation_path}.`,
       `The Control Group Token is ${error.token}.`,

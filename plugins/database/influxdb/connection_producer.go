@@ -23,7 +23,7 @@ type influxdbConnectionProducer struct {
 	Host              string      `json:"host" structs:"host" mapstructure:"host"`
 	Username          string      `json:"username" structs:"username" mapstructure:"username"`
 	Password          string      `json:"password" structs:"password" mapstructure:"password"`
-	Port              string      `json:"port" structs:"port" mapstructure:"port"` //default to 8086
+	Port              string      `json:"port" structs:"port" mapstructure:"port"` // default to 8086
 	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS       bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
 	ConnectTimeoutRaw interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
@@ -168,7 +168,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 	}
 
 	if i.TLS {
-		var tlsConfig *tls.Config
+		tlsConfig := &tls.Config{}
 		if len(i.certificate) > 0 || len(i.issuingCA) > 0 {
 			if len(i.certificate) > 0 && len(i.privateKey) == 0 {
 				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")

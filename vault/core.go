@@ -3,10 +3,14 @@ package vault
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +18,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -47,6 +55,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/patrickmn/go-cache"
+	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
 
@@ -71,6 +80,8 @@ const (
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
+
+	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 )
 
 var (
@@ -107,6 +118,7 @@ var (
 	PerformanceMerkleRoot        = merkleRootImpl
 	DRMerkleRoot                 = merkleRootImpl
 	LastRemoteWAL                = lastRemoteWALImpl
+	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
 )
 
@@ -390,6 +402,8 @@ type Core struct {
 	//
 	// Name
 	clusterName string
+	// ID
+	clusterID uberAtomic.String
 	// Specific cipher suites to use for clustering, if any
 	clusterCipherSuites []uint16
 	// Used to modify cluster parameters
@@ -504,8 +518,8 @@ type Core struct {
 	// Stores request counters
 	counters counters
 
-	// Stores the raft applied index for standby nodes
-	raftFollowerStates *raftFollowerStates
+	// raftFollowerStates tracks information about all the raft follower nodes.
+	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
@@ -534,6 +548,28 @@ type Core struct {
 	clusterHeartbeatInterval time.Duration
 
 	activityLogConfig ActivityLogCoreConfig
+
+	// activeTime is set on active nodes indicating the time at which this node
+	// became active.
+	activeTime time.Time
+
+	// KeyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	keyRotateGracePeriod *int64
+
+	autoRotateCancel context.CancelFunc
+
+	// number of workers to use for lease revocation in the expiration manager
+	numExpirationWorkers int
+
+	IndexHeaderHMACKey uberAtomic.Value
+
+	// disableAutopilot is used to disable the autopilot subsystem in raft storage
+	disableAutopilot bool
+
+	// enable/disable identifying response headers
+	enableResponseHeaderHostname   bool
+	enableResponseHeaderRaftNodeID bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -636,12 +672,21 @@ type CoreConfig struct {
 
 	// Activity log controls
 	ActivityLogConfig ActivityLogCoreConfig
+
+	// number of workers to use for lease revocation in the expiration manager
+	NumExpirationWorkers int
+
+	// DisableAutopilot is used to disable autopilot subsystem in raft storage
+	DisableAutopilot bool
+
+	// Whether to send headers in the HTTP response showing hostname or raft node ID
+	EnableResponseHeaderHostname   bool
+	EnableResponseHeaderRaftNodeID bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
-
 	// Check whether there is a ServiceRegistration explicitly configured
 	if c.ServiceRegistration != nil {
 		return c.ServiceRegistration
@@ -718,6 +763,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterHeartbeatInterval = 5 * time.Second
 	}
 
+	if conf.NumExpirationWorkers == 0 {
+		conf.NumExpirationWorkers = numExpirationWorkersDefault
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:             entCore{},
@@ -771,11 +820,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
-		recoveryMode:             conf.RecoveryMode,
-		postUnsealStarted:        new(uint32),
-		raftJoinDoneCh:           make(chan struct{}),
-		clusterHeartbeatInterval: clusterHeartbeatInterval,
-		activityLogConfig:        conf.ActivityLogConfig,
+		recoveryMode:                   conf.RecoveryMode,
+		postUnsealStarted:              new(uint32),
+		raftJoinDoneCh:                 make(chan struct{}),
+		clusterHeartbeatInterval:       clusterHeartbeatInterval,
+		activityLogConfig:              conf.ActivityLogConfig,
+		keyRotateGracePeriod:           new(int64),
+		numExpirationWorkers:           conf.NumExpirationWorkers,
+		raftFollowerStates:             raft.NewFollowerStates(),
+		disableAutopilot:               conf.DisableAutopilot,
+		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
+		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -796,6 +851,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -955,6 +1011,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	return c, nil
+}
+
+// HostnameHeaderEnabled determines whether to add the X-Vault-Hostname header
+// to HTTP responses.
+func (c *Core) HostnameHeaderEnabled() bool {
+	return c.enableResponseHeaderHostname
+}
+
+// RaftNodeIDHeaderEnabled determines whether to add the X-Vault-Raft-Node-ID header
+// to HTTP responses.
+func (c *Core) RaftNodeIDHeaderEnabled() bool {
+	return c.enableResponseHeaderRaftNodeID
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -1340,6 +1408,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error checking if seal is migrated or not: %w", err)
 	}
+
 	if ok {
 		c.logger.Info("migration is already performed")
 		return nil
@@ -1850,6 +1919,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Mark the active time. We do this first so it can be correlated to the logs
+	// for the active startup.
+	c.activeTime = time.Now().UTC()
+
 	if err := postUnsealPhysical(c); err != nil {
 		return err
 	}
@@ -1864,6 +1937,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.persistFeatureFlags(ctx); err != nil {
 			return err
 		}
+	}
+
+	if c.autoRotateCancel == nil {
+		var autoRotateCtx context.Context
+		autoRotateCtx, c.autoRotateCancel = context.WithCancel(c.activeContext)
+		go c.autoRotateBarrierLoop(autoRotateCtx)
 	}
 
 	if !c.IsDRSecondary() {
@@ -1908,7 +1987,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startRollback(); err != nil {
 			return err
 		}
-		if err := c.setupExpiration(expireLeaseStrategyRevoke); err != nil {
+		var expirationStrategy ExpireLeaseStrategy
+		if os.Getenv("VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY") != "" {
+			expirationStrategy = expireLeaseStrategyRevoke
+		} else {
+			expirationStrategy = expireLeaseStrategyFairsharing
+		}
+		if err := c.setupExpiration(expirationStrategy); err != nil {
 			return err
 		}
 		if err := c.loadAudits(ctx); err != nil {
@@ -1926,7 +2011,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
-		if err := c.setupActivityLog(ctx); err != nil {
+		// not waiting on wg to avoid changing existing behavior
+		var wg sync.WaitGroup
+		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
 	} else {
@@ -1934,7 +2021,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
-		//Cannot do this above, as we need other resources like mounts to be setup
+		// Cannot do this above, as we need other resources like mounts to be setup
 		if err := c.setupPluginReload(); err != nil {
 			return err
 		}
@@ -2039,6 +2126,7 @@ func (c *Core) preSeal() error {
 
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
+	c.activeTime = time.Time{}
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
@@ -2083,6 +2171,11 @@ func (c *Core) preSeal() error {
 	}
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
+	}
+
+	if c.autoRotateCancel != nil {
+		c.autoRotateCancel()
+		c.autoRotateCancel = nil
 	}
 
 	preSealPhysical(c)
@@ -2163,6 +2256,10 @@ func lastPerformanceWALImpl(c *Core) uint64 {
 }
 
 func lastRemoteWALImpl(c *Core) uint64 {
+	return 0
+}
+
+func lastRemoteUpstreamWALImpl(c *Core) uint64 {
 	return 0
 }
 
@@ -2507,6 +2604,10 @@ func (c *Core) IsDRSecondary() bool {
 	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
 }
 
+func (c *Core) IsPerfSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+}
+
 func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
@@ -2661,4 +2762,103 @@ func (c *Core) RateLimitResponseHeadersEnabled() bool {
 	}
 
 	return false
+}
+
+func (c *Core) KeyRotateGracePeriod() time.Duration {
+	return time.Duration(atomic.LoadInt64(c.keyRotateGracePeriod))
+}
+
+func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
+	atomic.StoreInt64(c.keyRotateGracePeriod, int64(t))
+}
+
+// Periodically test whether to automatically rotate the barrier key
+func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
+	t := time.NewTicker(autoRotateCheckInterval)
+	for {
+		select {
+		case <-t.C:
+			c.checkBarrierAutoRotate(ctx)
+		case <-ctx.Done():
+			t.Stop()
+			return
+		}
+	}
+}
+
+func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.isPrimary() {
+		reason, err := c.barrier.CheckBarrierAutoRotate(ctx)
+		if err != nil {
+			lf := c.logger.Error
+			if strings.HasSuffix(err.Error(), "context canceled") {
+				lf = c.logger.Debug
+			}
+			lf("error in barrier auto rotation", "error", err)
+			return
+		}
+		if reason != "" {
+			// Time to rotate.  Invoke the rotation handler in order to both rotate and create
+			// the replication canary
+			c.logger.Info("automatic barrier key rotation triggered", "reason", reason)
+
+			_, err := c.systemBackend.handleRotate(ctx, nil, nil)
+			if err != nil {
+				c.logger.Error("error automatically rotating barrier key", "error", err)
+			} else {
+				metrics.IncrCounter(barrierRotationsMetric, 1)
+			}
+		}
+	}
+}
+
+func (c *Core) isPrimary() bool {
+	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
+}
+
+func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
+	cooked, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return nil, err
+	}
+	s := string(cooked)
+
+	lastIndex := strings.LastIndexByte(s, ':')
+	if lastIndex == -1 {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
+	stateHMAC, err := hex.DecodeString(stateHMACRaw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header HMAC: %v, %w", stateHMACRaw, err)
+	}
+
+	if len(hmacKey) != 0 {
+		hm := hmac.New(sha256.New, hmacKey)
+		hm.Write([]byte(state))
+		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
+			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
+		}
+	}
+
+	pieces := strings.Split(state, ":")
+	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+
+	return &logical.WALState{
+		ClusterID:       pieces[1],
+		LocalIndex:      localIndex,
+		ReplicatedIndex: replicatedIndex,
+	}, nil
 }

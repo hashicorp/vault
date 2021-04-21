@@ -22,15 +22,15 @@ func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: "[Required] Name of the role",
 			},
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "[Optional] Username in remote host",
 			},
-			"ip": &framework.FieldSchema{
+			"ip": {
 				Type:        framework.TypeString,
 				Description: "[Required] IP of the remote host",
 			},

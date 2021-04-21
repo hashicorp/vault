@@ -405,7 +405,6 @@ func TestGauge_InterruptedStreaming(t *testing.T) {
 		t.Errorf("Found %v gauges, expected fewer.",
 			len(intervals[0].Gauges))
 	}
-
 }
 
 // helper function to create a closure that's a GaugeCollector.

@@ -44,9 +44,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-vault-plugin-secrets-mongodbatlas
-vault-plugin-database-mongodbatlas
-vault*
+/vault-plugin-secrets-mongodbatlas
+/vault-plugin-database-mongodbatlas
+/vault*
+/pkg/*/vault-plugin-database-mongodbatlas
+/bin/
 
 .idea/
 # End of https://www.gitignore.io/api/go,macos

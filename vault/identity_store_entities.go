@@ -164,6 +164,9 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		force := d.Get("force").(bool)
 
 		// Create a MemDB transaction to merge entities
+		i.lock.Lock()
+		defer i.lock.Unlock()
+
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
@@ -172,7 +175,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false, true)
+		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, false, false, true)
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), nil
 		}
@@ -551,7 +554,7 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 		for _, bucket := range byBucket {
 			ids := make([]string, len(bucket))
 			i := 0
-			for id, _ := range bucket {
+			for id := range bucket {
 				ids[i] = id
 				i++
 			}
@@ -566,6 +569,8 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 	}
 }
 
+// handleEntityDeleteCommon deletes an entity by removing it from groups of
+// which it's a member and then, if update is true, deleting the entity itself.
 func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, update bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {

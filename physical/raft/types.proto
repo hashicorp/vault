@@ -37,3 +37,7 @@ message ConfigurationValue {
     uint64 index = 1;
     repeated Server servers = 2;
 }
+
+message LocalNodeConfigValue{
+  string desired_suffrage = 1;
+}

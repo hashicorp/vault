@@ -261,14 +261,16 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	return manager, nil
 }
 
-// SetQuota adds a new quota rule to the db.
+// SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
-// setQuotaLocked should be called with the manager's lock held
+// setQuotaLocked adds or updates a quota rule, modifying the db as well as
+// any runtime elements such as goroutines.
+// It should be called with the write lock held.
 func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
 	if qType == TypeLeaseCount.String() {
 		m.setIsPerfStandby(quota)
@@ -277,13 +279,17 @@ func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota,
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	raw, err := txn.First(qType, "id", quota.quotaID())
+	raw, err := txn.First(qType, indexID, quota.quotaID())
 	if err != nil {
 		return err
 	}
 
 	// If there already exists an entry in the db, remove that first.
 	if raw != nil {
+		quota := raw.(Quota)
+		if err := quota.close(); err != nil {
+			return err
+		}
 		err = txn.Delete(qType, raw)
 		if err != nil {
 			return err
@@ -397,6 +403,7 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 		quotas = append(quotas, raw.(Quota))
 	}
 	if len(quotas) > 1 {
+		m.logger.Debug("conflicting quotas in QuotaByFactors", "matching_quotas", quotas)
 		return nil, fmt.Errorf("conflicting quota definitions detected")
 	}
 	if len(quotas) == 0 {
@@ -446,6 +453,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 			quotas = append(quotas, quota)
 		}
 		if len(quotas) > 1 {
+			m.logger.Debug("conflicting quotas in queryQuota", "matching_quotas", quotas, "args", args)
 			return nil, fmt.Errorf("conflicting quota definitions detected")
 		}
 		if len(quotas) == 0 {
@@ -651,19 +659,27 @@ func (m *Manager) Reset() error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	var err error
-	m.db, err = memdb.NewMemDB(dbSchema())
+	err := m.resetCache()
 	if err != nil {
 		return err
 	}
-
 	m.storage = nil
 	m.ctx = nil
 
 	return m.entManager.Reset()
 }
 
-// dbSchema creates a DB schema for holding all the quota rules. It creates a
+// Must be called with the lock held
+func (m *Manager) resetCache() error {
+	db, err := memdb.NewMemDB(dbSchema())
+	if err != nil {
+		return err
+	}
+	m.db = db
+	return nil
+}
+
+// dbSchema creates a DB schema for holding all the quota rules. It creates
 // table for each supported type of quota.
 func dbSchema() *memdb.DBSchema {
 	schema := &memdb.DBSchema{
@@ -867,6 +883,9 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 	m.setEnableRateLimitAuditLoggingLocked(config.EnableRateLimitAuditLogging)
 	m.setEnableRateLimitResponseHeadersLocked(config.EnableRateLimitResponseHeaders)
 	m.setRateLimitExemptPathsLocked(exemptPaths)
+	if err = m.resetCache(); err != nil {
+		return err
+	}
 
 	// Load the quota rules for all supported types from storage and load it in
 	// the quota manager.

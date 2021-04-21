@@ -1,8 +1,11 @@
 // Copyright (c) 2012 The gocql Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//This file will be the future home for more policies
+
 package gocql
+
+//This file will be the future home for more policies
+
 
 import (
 	"context"
@@ -37,12 +40,6 @@ func (c *cowHostList) get() []*HostInfo {
 	return *l
 }
 
-func (c *cowHostList) set(list []*HostInfo) {
-	c.mu.Lock()
-	c.list.Store(&list)
-	c.mu.Unlock()
-}
-
 // add will add a host if it not already in the list
 func (c *cowHostList) add(host *HostInfo) bool {
 	c.mu.Lock()
@@ -66,33 +63,6 @@ func (c *cowHostList) add(host *HostInfo) bool {
 	c.list.Store(&l)
 	c.mu.Unlock()
 	return true
-}
-
-func (c *cowHostList) update(host *HostInfo) {
-	c.mu.Lock()
-	l := c.get()
-
-	if len(l) == 0 {
-		c.mu.Unlock()
-		return
-	}
-
-	found := false
-	newL := make([]*HostInfo, len(l))
-	for i := range l {
-		if host.Equal(l[i]) {
-			newL[i] = host
-			found = true
-		} else {
-			newL[i] = l[i]
-		}
-	}
-
-	if found {
-		c.list.Store(&newL)
-	}
-
-	c.mu.Unlock()
 }
 
 func (c *cowHostList) remove(ip net.IP) bool {
@@ -304,7 +274,10 @@ type HostSelectionPolicy interface {
 	KeyspaceChanged(KeyspaceUpdateEvent)
 	Init(*Session)
 	IsLocal(host *HostInfo) bool
-	//Pick returns an iteration function over selected hosts
+	// Pick returns an iteration function over selected hosts.
+	// Multiple attempts of a single query execution won't call the returned NextHost function concurrently,
+	// so it's safe to have internal state without additional synchronization as long as every call to Pick returns
+	// a different instance of NextHost.
 	Pick(ExecutableQuery) NextHost
 }
 
@@ -878,6 +851,51 @@ func roundRobbin(shift int, hosts ...[]*HostInfo) NextHost {
 func (d *dcAwareRR) Pick(q ExecutableQuery) NextHost {
 	nextStartOffset := atomic.AddUint64(&d.lastUsedHostIdx, 1)
 	return roundRobbin(int(nextStartOffset), d.localHosts.get(), d.remoteHosts.get())
+}
+
+// ReadyPolicy defines a policy for when a HostSelectionPolicy can be used. After
+// each host connects during session initialization, the Ready method will be
+// called. If you only need a single Host to be up you can wrap a
+// HostSelectionPolicy policy with SingleHostReadyPolicy.
+type ReadyPolicy interface {
+	Ready() bool
+}
+
+// SingleHostReadyPolicy wraps a HostSelectionPolicy and returns Ready after a
+// single host has been added via HostUp
+func SingleHostReadyPolicy(p HostSelectionPolicy) *singleHostReadyPolicy {
+	return &singleHostReadyPolicy{
+		HostSelectionPolicy: p,
+	}
+}
+
+type singleHostReadyPolicy struct {
+	HostSelectionPolicy
+	ready    bool
+	readyMux sync.Mutex
+}
+
+func (s *singleHostReadyPolicy) HostUp(host *HostInfo) {
+	s.HostSelectionPolicy.HostUp(host)
+
+	s.readyMux.Lock()
+	s.ready = true
+	s.readyMux.Unlock()
+}
+
+func (s *singleHostReadyPolicy) Ready() bool {
+	s.readyMux.Lock()
+	ready := s.ready
+	s.readyMux.Unlock()
+	if !ready {
+		return false
+	}
+
+	// in case the wrapped policy is also a ReadyPolicy, defer to that
+	if rdy, ok := s.HostSelectionPolicy.(ReadyPolicy); ok {
+		return rdy.Ready()
+	}
+	return true
 }
 
 // ConvictionPolicy interface is used by gocql to determine if a host should be

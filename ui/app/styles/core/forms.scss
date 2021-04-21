@@ -218,6 +218,7 @@ label {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
     background-color: $ui-gray-100;
+    cursor: not-allowed;
   }
 }
 .field.has-addons {
@@ -310,4 +311,8 @@ label {
   color: $grey;
   position: absolute;
   right: 8px;
+}
+
+fieldset.form-fieldset {
+  border: none;
 }

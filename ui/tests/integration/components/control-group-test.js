@@ -15,7 +15,7 @@ const controlGroupService = Service.extend({
     this.set('wrapInfo', null);
   },
   wrapInfoForAccessor() {
-    return this.get('wrapInfo');
+    return this.wrapInfo;
   },
 });
 

@@ -20,6 +20,7 @@ config:
   product-id:            github.com/hashicorp/vault
   circleci-project-slug: gh/hashicorp/vault
   circleci-host:         circleci.com
+  on-publish:            create-github-release
 
 # inputs are a set of environment variables that may affect the set of bytes produced
 # for a given package. Note that a package is a zip file containing the binary, so
@@ -37,7 +38,7 @@ inputs:
     PRODUCT_VERSION: 0.0.0-snapshot
 
     # GO_VERSION is the version of the Go toolchain to use to compile this package.
-    GO_VERSION: 1.14.7
+    GO_VERSION: 1.16.2
 
     # YARN_VERSION is the version of Yarn to install for the UI layer.
     YARN_VERSION: 1.19.1-1
@@ -101,8 +102,8 @@ build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/has
 # The fully expanded set of packages are written to packages.lock. That file
 # is a useful data source for building CI/CD pipelines.
 packages:
-  - inputs: { GOOS: darwin, GOARCH: 386 }
   - inputs: { GOOS: darwin, GOARCH: amd64 }
+  - inputs: { GOOS: darwin, GOARCH: arm64 }
   - inputs: { GOOS: freebsd, GOARCH: 386 }
   - inputs: { GOOS: freebsd, GOARCH: amd64 }
   - inputs: { GOOS: freebsd, GOARCH: arm }

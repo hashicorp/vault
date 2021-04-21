@@ -18,31 +18,31 @@ func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy",
 		Fields: map[string]*framework.FieldSchema{
-			"tidy_cert_store": &framework.FieldSchema{
+			"tidy_cert_store": {
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the certificate store`,
 			},
 
-			"tidy_revocation_list": &framework.FieldSchema{
+			"tidy_revocation_list": {
 				Type:        framework.TypeBool,
 				Description: `Deprecated; synonym for 'tidy_revoked_certs`,
 			},
 
-			"tidy_revoked_certs": &framework.FieldSchema{
+			"tidy_revoked_certs": {
 				Type: framework.TypeBool,
 				Description: `Set to true to expire all revoked
 and expired certificates, removing them both from the CRL and from storage. The
 CRL will be rotated if this causes any values to be removed.`,
 			},
 
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type: framework.TypeDurationSecond,
 				Description: `The amount of extra time that must have passed
 beyond certificate expiration before it is removed
 from the backend storage and/or revocation list.
 Defaults to 72 hours.`,
-				Default: 259200, //72h, but TypeDurationSecond currently requires defaults to be int
+				Default: 259200, // 72h, but TypeDurationSecond currently requires defaults to be int
 			},
 		},
 
@@ -138,7 +138,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				b.revokeStorageLock.Lock()
 				defer b.revokeStorageLock.Unlock()
 
-				tidiedRevoked := false
+				rebuildCRL := false
 
 				revokedSerials, err := req.Storage.List(ctx, "revoked/")
 				if err != nil {
@@ -178,24 +178,22 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
 					}
 
-					// Remove the matched certificate entries from revoked/ and
-					// cert/ paths. We compare against both the NotAfter time
-					// within the cert itself and the time from the revocation
-					// entry, and perform tidy if either one tells us that the
-					// certificate has already been revoked.
-					now := time.Now()
-					if now.After(revokedCert.NotAfter.Add(bufferDuration)) || now.After(revInfo.RevocationTimeUTC.Add(bufferDuration)) {
+					// Only remove the entries from revoked/ and certs/ if we're
+					// past its NotAfter value. This is because we use the
+					// information on revoked/ to build the CRL and the
+					// information on certs/ for lookup.
+					if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
 						}
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from store when tidying revoked: {{err}}", serial), err)
 						}
-						tidiedRevoked = true
+						rebuildCRL = true
 					}
 				}
 
-				if tidiedRevoked {
+				if rebuildCRL {
 					if err := buildCRL(ctx, b, req, false); err != nil {
 						return err
 					}

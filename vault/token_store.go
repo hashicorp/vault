@@ -86,19 +86,25 @@ var (
 			return errors.New("nil token entry")
 		}
 
+		storage := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+		if storage == nil {
+			return fmt.Errorf("no cubby mount entry")
+		}
+		view := storage.(*BarrierView)
+
 		switch {
 		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
 			}
-			return ts.cubbyholeBackend.revoke(ctx, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+			return ts.cubbyholeBackend.revoke(ctx, view, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 
 		default:
 			if te.CubbyholeID == "" {
 				return fmt.Errorf("missing cubbyhole ID while destroying")
 			}
-			return ts.cubbyholeBackend.revoke(ctx, te.CubbyholeID)
+			return ts.cubbyholeBackend.revoke(ctx, view, te.CubbyholeID)
 		}
 	}
 )
@@ -142,7 +148,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "create/" + framework.GenericNameRegex("role_name"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
@@ -171,7 +177,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to lookup (POST request body)",
 				},
@@ -190,7 +196,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to look up (request body)",
 				},
@@ -208,7 +214,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup-self$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to look up (unused, does not need to be set)",
 				},
@@ -227,7 +233,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token (request body)",
 				},
@@ -256,7 +262,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
 				},
@@ -274,7 +280,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke-orphan",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
 				},
@@ -292,11 +298,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to renew (request body)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -315,11 +321,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew-self$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to renew (unused, does not need to be set)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -338,11 +344,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to renew (request body)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -372,56 +378,56 @@ func (ts *TokenStore) paths() []*framework.Path {
 	rolesPath := &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
 		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
+			"role_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"allowed_policies": &framework.FieldSchema{
+			"allowed_policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenAllowedPoliciesHelp,
 			},
 
-			"disallowed_policies": &framework.FieldSchema{
+			"disallowed_policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenDisallowedPoliciesHelp,
 			},
 
-			"orphan": &framework.FieldSchema{
+			"orphan": {
 				Type:        framework.TypeBool,
 				Description: tokenOrphanHelp,
 			},
 
-			"period": &framework.FieldSchema{
+			"period": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Use 'token_period' instead.",
 				Deprecated:  true,
 			},
 
-			"path_suffix": &framework.FieldSchema{
+			"path_suffix": {
 				Type:        framework.TypeString,
 				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
 			},
 
-			"explicit_max_ttl": &framework.FieldSchema{
+			"explicit_max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Use 'token_explicit_max_ttl' instead.",
 				Deprecated:  true,
 			},
 
-			"renewable": &framework.FieldSchema{
+			"renewable": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: tokenRenewableHelp,
 			},
 
-			"bound_cidrs": &framework.FieldSchema{
+			"bound_cidrs": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Use 'token_bound_cidrs' instead.",
 				Deprecated:  true,
 			},
 
-			"allowed_entity_aliases": &framework.FieldSchema{
+			"allowed_entity_aliases": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
 			},
@@ -568,7 +574,6 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 }
 
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
-
 	switch key {
 	case tokenSubPath + salt.DefaultLocation:
 		ts.saltLock.Lock()
@@ -806,7 +811,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
+	var createRootTokenFlag bool
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		createRootTokenFlag = true
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
@@ -820,7 +827,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
+			if createRootTokenFlag {
+				entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
+			} else {
+				entry.ID, err = base62.Random(TokenLength)
+			}
 			if err != nil {
 				return err
 			}
@@ -1117,7 +1128,7 @@ func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*logical.To
 	return ts.lookupInternal(ctx, id, false, true)
 }
 
-func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
+func (ts *TokenStore) lookupBatchTokenInternal(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	// Strip the b. from the front and namespace ID from the back
 	bEntry, _ := namespace.SplitIDFromString(id[2:])
 
@@ -1141,6 +1152,19 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 		return nil, err
 	}
 
+	te.ID = id
+	return te, nil
+}
+
+func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
+	te, err := ts.lookupBatchTokenInternal(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if te == nil {
+		return nil, nil
+	}
+
 	if time.Now().After(time.Unix(te.CreationTime, 0).Add(te.TTL)) {
 		return nil, nil
 	}
@@ -1155,7 +1179,6 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 		}
 	}
 
-	te.ID = id
 	return te, nil
 }
 
@@ -1732,7 +1755,6 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 	}
 
 	entry, err := ts.accessorView(ns).Get(ctx, lookupID)
-
 	if err != nil {
 		return aEntry, errwrap.Wrapf("failed to read index using accessor: {{err}}", err)
 	}
@@ -1788,7 +1810,6 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		var tidyErrors *multierror.Error
 
 		doTidy := func() error {
-
 			ts.logger.Info("beginning tidy operation on tokens")
 			defer ts.logger.Info("finished tidy operation on tokens")
 
@@ -1807,7 +1828,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// List all the cubbyhole storage keys
-			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
+			view := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+			if view == nil {
+				return fmt.Errorf("no cubby mount entry")
+			}
+			bview := view.(*BarrierView)
+
+			cubbyholeKeys, err := bview.List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
@@ -2004,7 +2031,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				key := strings.TrimSuffix(key, "/")
 				if !validCubbyholeKeys[key] {
 					ts.logger.Info("deleting invalid cubbyhole", "key", key)
-					err = ts.cubbyholeBackend.revoke(quitCtx, key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, bview, key)
 					if err != nil {
 						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
 					}
@@ -2055,7 +2082,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 			"token": aEntry.TokenID,
 		},
 		Schema: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token to lookup",
 			},
@@ -2070,7 +2097,6 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 	}
 	if resp.IsError() {
 		return resp, nil
-
 	}
 
 	// Remove the token ID from the response
@@ -2328,9 +2354,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
+		// Convert entity alias to lowercase to match the fact that role.AllowedEntityAliases
+		// has also been lowercased. An entity alias will keep its case formatting, but be
+		// treated as lowercase during any value cheek anywhere.
+		entityAlias := strings.ToLower(data.EntityAlias)
+
 		// Check if there is a concrete match
-		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
-			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+		if !strutil.StrListContains(role.AllowedEntityAliases, entityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, entityAlias) {
 			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 		}
 
@@ -3469,7 +3500,6 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -3486,7 +3516,6 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		values[i].Value = float32(intValues[i])
 	}
 	return values, nil
-
 }
 
 func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -3518,7 +3547,6 @@ func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -3585,7 +3613,6 @@ func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.Ga
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -3686,7 +3713,6 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}

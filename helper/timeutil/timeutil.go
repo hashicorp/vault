@@ -5,8 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 )
+
+func StartOfPreviousMonth(t time.Time) time.Time {
+	year, month, _ := t.Date()
+	return time.Date(year, month, 1, 0, 0, 0, 0, t.Location()).AddDate(0, -1, 0)
+}
 
 func StartOfMonth(t time.Time) time.Time {
 	year, month, _ := t.Date()
@@ -99,8 +105,8 @@ func InRange(t, start, end time.Time) bool {
 		(t.Equal(end) || t.Before(end))
 }
 
-// Used when a storage path has the form <timestamp>/,
-// where timestamp is a Unix timestamp.
+// ParseTimeFromPath returns a UTC time from a path of the form '<timestamp>/',
+// where <timestamp> is a Unix timestamp
 func ParseTimeFromPath(path string) (time.Time, error) {
 	elems := strings.Split(path, "/")
 	if len(elems) == 1 {
@@ -121,4 +127,15 @@ func ParseTimeFromPath(path string) (time.Time, error) {
 func MonthsPreviousTo(months int, now time.Time) time.Time {
 	firstOfMonth := StartOfMonth(now.UTC())
 	return firstOfMonth.AddDate(0, -months, 0)
+}
+
+// Skip this test if too close to the end of a month!
+func SkipAtEndOfMonth(t *testing.T) {
+	t.Helper()
+
+	thisMonth := StartOfMonth(time.Now().UTC())
+	endOfMonth := EndOfMonth(thisMonth)
+	if endOfMonth.Sub(time.Now()) < 10*time.Minute {
+		t.Skip("too close to end of month")
+	}
 }

@@ -15,7 +15,7 @@
 {{/if}}
 <PageHeader as |p|>
   <p.top>
-    {{#if (not (or isSummaryDashboard isSecondary)) }}
+    {{#unless (or isSummaryDashboard isSecondary) }}
       {{#key-value-header
         baseKey=baseKey
         path="vault.cluster.replication-dr-promote"
@@ -30,7 +30,7 @@
           {{/link-to}}
         </li>
       {{/key-value-header}}
-    {{/if}}
+    {{/unless}}
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -50,7 +50,7 @@
 {{#if showTabs}}
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
-      {{#if (not isSummaryDashboard )}}
+      {{#unless isSummaryDashboard}}
         <ul>
           {{#link-to
             "vault.cluster.replication-dr-promote.details"
@@ -78,7 +78,7 @@
             {{link-to-external "Summary" "replication"}}
           </li>
         </ul>
-      {{/if}}
+      {{/unless}}
     </nav>
   </div>
 {{/if}}

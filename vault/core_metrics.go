@@ -10,13 +10,24 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
-	writeTimer := time.Tick(c.counters.syncInterval)
+
 	identityCountTimer := time.Tick(time.Minute * 10)
+	// Only emit on active node of cluster that is not a DR cecondary.
+	if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
+		identityCountTimer = nil
+	}
+
+	writeTimer := time.Tick(c.counters.syncInterval)
+	// Do not process the writeTimer on DR Secondary nodes
+	if c.IsDRSecondary() {
+		writeTimer = nil
+	}
 
 	// This loop covers
 	// vault.expire.num_leases
@@ -59,8 +70,19 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				continue
 			}
 			if c.perfStandby { // already have lock here, do not re-acquire
-				syncCounter(c)
+				err := syncCounters(c)
+				if err != nil {
+					c.logger.Error("writing syncing counters", "err", err)
+				}
 			} else {
+				// Perf standbys will have synced above, but active nodes on a secondary cluster still need to ship
+				// barrier encryption counts
+				if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+					err := syncBarrierEncryptionCounter(c)
+					if err != nil {
+						c.logger.Error("writing syncing encryption counts", "err", err)
+					}
+				}
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
 				if err != nil {
 					c.logger.Error("writing request counters to barrier", "err", err)
@@ -68,11 +90,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
-			// Only emit on active node of cluster that is not a DR cecondary.
-			if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
-				break
-			}
-
 			// TODO: this can be replaced by the identity gauge counter; we need to
 			// sum across all namespaces.
 			go func() {
@@ -114,6 +131,17 @@ func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.Gau
 		return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
 	}
 	return ts.gaugeCollectorByPolicy(ctx)
+}
+
+func (c *Core) leaseExpiryGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	e := c.expiration
+	metricsConsts := c.MetricSink().TelemetryConsts
+	c.stateLock.RUnlock()
+	if e == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil expiration manager")
+	}
+	return e.leaseAggregationMetrics(ctx, metricsConsts)
 }
 
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -165,6 +193,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			"",
 		},
 		{
+			[]string{"expire", "leases", "by_expiration"},
+			[]metrics.Label{{"gauge", "leases_by_expiration"}},
+			c.leaseExpiryGaugeCollector,
+			"",
+		},
+		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
@@ -192,6 +226,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
+			"",
+		},
+		{
+			[]string{"identity", "entity", "active", "partial_month"},
+			[]metrics.Label{{"gauge", "identity_active_month"}},
+			c.activeEntityGaugeCollector,
 			"",
 		},
 	}
@@ -241,6 +281,13 @@ func (c *Core) findKvMounts() []*kvMount {
 
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
+
+	// emitMetrics doesn't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.mounts is nil. If we do not, emitMetrics will panic if this is
+	// run after seal.
+	if c.mounts == nil {
+		return mounts
+	}
 
 	for _, entry := range c.mounts.Entries {
 		if entry.Type == "kv" {

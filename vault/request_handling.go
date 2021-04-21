@@ -61,7 +61,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 		return nil, nil, nil
 	}
 
-	//c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
+	// c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
 
 	// Fetch the entity
 	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
@@ -83,7 +83,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 
 	policies := make(map[string][]string)
 	if entity != nil {
-		//c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
+		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
 		if len(entity.Policies) != 0 {
@@ -443,15 +443,22 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	err = waitForReplicationState(ctx, c, req)
+	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
 	}
 
 	if !hasNamespaces(c) && ns.Path != "" {
 		return nil, logical.CodedError(403, "namespaces feature not enabled")
 	}
 
+	walState := &logical.WALState{}
+	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
 	if c.router.LoginPath(ctx, req.Path) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
@@ -557,6 +564,26 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 				return nil, ErrInternalError
 			}
 		}
+	}
+
+	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
+		walState.ClusterID = c.clusterID.Load()
+		if walState.LocalIndex == 0 {
+			if c.perfStandby {
+				walState.LocalIndex = LastRemoteWAL(c)
+			} else {
+				walState.LocalIndex = LastWAL(c)
+			}
+		}
+		if walState.ReplicatedIndex == 0 {
+			if c.perfStandby {
+				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+			} else {
+				walState.ReplicatedIndex = LastRemoteWAL(c)
+			}
+		}
+
+		req.SetResponseState(walState)
 	}
 
 	return
@@ -717,7 +744,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
-		c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+		c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 		retErr = multierror.Append(retErr, quotaErr)
 		return nil, auth, retErr
 	}
@@ -1115,7 +1142,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		})
 
 		if quotaErr != nil {
-			c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+			c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 			retErr = multierror.Append(retErr, quotaErr)
 			return
 		}

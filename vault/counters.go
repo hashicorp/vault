@@ -12,8 +12,11 @@ import (
 
 const (
 	requestCounterDatePathFormat = "2006/01"
-	countersPath                 = systemBarrierPrefix + "counters"
-	requestCountersPath          = "sys/counters/requests/"
+
+	// This storage path stores both the request counters in this file, and the activity log.
+	countersSubPath = "counters/"
+
+	requestCountersPath = "sys/counters/requests/"
 )
 
 type counters struct {
@@ -189,7 +192,6 @@ type TokenCounter struct {
 
 // countActiveTokens returns the number of active tokens
 func (c *Core) countActiveTokens(ctx context.Context) (*ActiveTokens, error) {
-
 	// Get all of the namespaces
 	ns := c.collectNamespaces()
 
@@ -224,7 +226,6 @@ type EntityCounter struct {
 
 // countActiveEntities returns the number of active entities
 func (c *Core) countActiveEntities(ctx context.Context) (*ActiveEntities, error) {
-
 	count, err := c.identityStore.countEntities()
 	if err != nil {
 		return nil, err

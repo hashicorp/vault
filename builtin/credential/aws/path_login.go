@@ -72,7 +72,7 @@ of ec2.`,
 				Description: `The nonce to be used for subsequent login requests when
 auth_type is ec2.  If this parameter is not specified at
 all and if reauthentication is allowed, then the backend will generate a random
-nonce, attaches it to the instance's identity-whitelist entry and returns the
+nonce, attaches it to the instance's identity access list entry and returns the
 nonce back as part of auth metadata.  This value should be used with further
 login requests, to establish client authenticity. Clients can choose to set a
 custom nonce if preferred, in which case, it is recommended that clients provide
@@ -193,7 +193,6 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 	}
 	if len(status.Reservations) == 0 {
 		return nil, fmt.Errorf("no reservations found in instance description")
-
 	}
 	if len(status.Reservations[0].Instances) == 0 {
 		return nil, fmt.Errorf("no instance details found in reservations")
@@ -211,9 +210,9 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 }
 
 // validateMetadata matches the given client nonce and pending time with the
-// one cached in the identity whitelist during the previous login. But, if
+// one cached in the identity access list during the previous login. But, if
 // reauthentication is disabled, login attempt is failed immediately.
-func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, roleEntry *awsRoleEntry) error {
+func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessListIdentity, roleEntry *awsRoleEntry) error {
 	// For sanity
 	if !storedIdentity.DisallowReauthentication && storedIdentity.ClientNonce == "" {
 		return fmt.Errorf("client nonce missing in stored identity")
@@ -243,7 +242,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	// pendingTime in the instance metadata, which sadly is only updated
 	// when an instance is stopped and started but *not* when the instance
 	// is rebooted. If reboot survivability is needed, either
-	// instrumentation to delete the instance ID from the whitelist is
+	// instrumentation to delete the instance ID from the access list is
 	// necessary, or the client must durably store the nonce.
 	//
 	// If the `allow_instance_migration` property of the registered role is
@@ -511,7 +510,6 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		// Extract out the instance profile name from the instance
 		// profile ARN
 		iamInstanceProfileEntity, err := parseIamArn(iamInstanceProfileARN)
-
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to parse IAM instance profile ARN %q: {{err}}", iamInstanceProfileARN), err)
 		}
@@ -686,14 +684,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %v", validationError)), nil
 	}
 
-	// Get the entry from the identity whitelist, if there is one
-	storedIdentity, err := whitelistIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID)
+	// Get the entry from the identity access list, if there is one
+	storedIdentity, err := accessListIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID)
 	if err != nil {
 		return nil, err
 	}
 
 	// disallowReauthentication value that gets cached at the stored
-	// identity-whitelist entry is determined not just by the role entry.
+	// identity access list entry is determined not just by the role entry.
 	// If client explicitly sets nonce to be empty, it implies intent to
 	// disable reauthentication. Also, role tag can override the 'false'
 	// value with 'true' (the other way around is not allowed).
@@ -714,7 +712,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		if clientNonce == "" {
 			clientNonce = reauthenticationDisabledNonce
 
-			// Ensure that the intent lands in the whitelist
+			// Ensure that the intent lands in the access list
 			disallowReauthentication = true
 		}
 	}
@@ -735,7 +733,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		// to 'false', a role-tag login sets the value to 'true', then
 		// role gets updated to not use a role-tag, and a login attempt
 		// is made with role's value set to 'false'. Removing the entry
-		// from the identity-whitelist should be the only way to be
+		// from the identity access list should be the only way to be
 		// able to login from the instance again.
 		disallowReauthentication = disallowReauthentication || storedIdentity.DisallowReauthentication
 	}
@@ -753,7 +751,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// Load the current values for max TTL and policies from the role entry,
 	// before checking for overriding max TTL in the role tag.  The shortest
 	// max TTL is used to cap the token TTL; the longest max TTL is used to
-	// make the whitelist entry as long as possible as it controls for replay
+	// make the access list entry as long as possible as it controls for replay
 	// attacks.
 	shortestMaxTTL := b.System().MaxLeaseTTL()
 	longestMaxTTL := b.System().MaxLeaseTTL()
@@ -807,12 +805,12 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	// Save the login attempt in the identity whitelist
+	// Save the login attempt in the identity access list
 	currentTime := time.Now()
 	if storedIdentity == nil {
 		// Role, ClientNonce and CreationTime of the identity entry,
 		// once set, should never change.
-		storedIdentity = &whitelistIdentity{
+		storedIdentity = &accessListIdentity{
 			Role:         roleName,
 			ClientNonce:  clientNonce,
 			CreationTime: currentTime,
@@ -836,7 +834,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
 
-	if err = setWhitelistIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
+	if err = setAccessListIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -935,13 +933,13 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 		return nil, fmt.Errorf("role tag is being used by an unauthorized instance")
 	}
 
-	// Check if the role tag is blacklisted
-	blacklistEntry, err := b.lockedBlacklistRoleTagEntry(ctx, s, rTagValue)
+	// Check if the role tag is deny listed
+	denyListEntry, err := b.lockedDenyLististRoleTagEntry(ctx, s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
-	if blacklistEntry != nil {
-		return nil, fmt.Errorf("role tag is blacklisted")
+	if denyListEntry != nil {
+		return nil, fmt.Errorf("role tag is deny listed")
 	}
 
 	// Ensure that the policies on the RoleTag is a subset of policies on the role
@@ -1108,12 +1106,12 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
 	}
 
-	storedIdentity, err := whitelistIdentityEntry(ctx, req.Storage, instanceID)
+	storedIdentity, err := accessListIdentityEntry(ctx, req.Storage, instanceID)
 	if err != nil {
 		return nil, err
 	}
 	if storedIdentity == nil {
-		return nil, fmt.Errorf("failed to verify the whitelist identity entry for instance ID: %q", instanceID)
+		return nil, fmt.Errorf("failed to verify the access list identity entry for instance ID: %q", instanceID)
 	}
 
 	// Ensure that role entry is not deleted
@@ -1155,8 +1153,8 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 
 	// Updating the expiration time is required for the tidy operation on the
-	// whitelist identity storage items
-	if err = setWhitelistIdentityEntry(ctx, req.Storage, instanceID, storedIdentity); err != nil {
+	// access list identity storage items
+	if err = setAccessListIdentityEntry(ctx, req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -1818,11 +1816,11 @@ document and a client created nonce. This nonce should be unique and should be u
 the instance for all future logins, unless 'disallow_reauthentication' option on the
 registered role is enabled, in which case client nonce is optional.
 
-First login attempt, creates a whitelist entry in Vault associating the instance to the nonce
+First login attempt, creates a access list entry in Vault associating the instance to the nonce
 provided. All future logins will succeed only if the client nonce matches the nonce in the
-whitelisted entry.
+access list entry.
 
-By default, a cron task will periodically look for expired entries in the whitelist
+By default, a cron task will periodically look for expired entries in the access list
 and deletes them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/identities' endpoint.

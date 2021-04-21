@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -10,213 +11,465 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/stretchr/testify/require"
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
 
 func TestMySQL_Initialize(t *testing.T) {
-	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
-	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
-	initReq := dbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db := new(false)
-	_, err := db.Initialize(context.Background(), initReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Test decoding a string value for max_open_connections
-	connectionDetails = map[string]interface{}{
-		"connection_url":       connURL,
-		"max_open_connections": "5",
-	}
-
-	initReq = dbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db = new(false)
-	_, err = db.Initialize(context.Background(), initReq)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-func TestMySQL_CreateUser(t *testing.T) {
-	t.Run("missing creation statements", func(t *testing.T) {
-		db := new(false)
-
-		password, err := credsutil.RandomAlphaNumeric(32, false)
-		if err != nil {
-			t.Fatalf("unable to generate password: %s", err)
-		}
-
-		createReq := dbplugin.NewUserRequest{
-			UsernameConfig: dbplugin.UsernameMetadata{
-				DisplayName: "test",
-				RoleName:    "test",
-			},
-			Statements: dbplugin.Statements{
-				Commands: []string{},
-			},
-			Password:   password,
-			Expiration: time.Now().Add(time.Minute),
-		}
-
-		userResp, err := db.NewUser(context.Background(), createReq)
-		if err == nil {
-			t.Fatalf("expected err, got nil")
-		}
-		if userResp.Username != "" {
-			t.Fatalf("expected empty username, got [%s]", userResp.Username)
-		}
-	})
-
-	t.Run("non-legacy", func(t *testing.T) {
-		// Shared test container for speed - there should not be any overlap between the tests
-		cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
-		defer cleanup()
-
-		connectionDetails := map[string]interface{}{
-			"connection_url": connURL,
-		}
-
-		initReq := dbplugin.InitializeRequest{
-			Config:           connectionDetails,
-			VerifyConnection: true,
-		}
-
-		db := new(false)
-		_, err := db.Initialize(context.Background(), initReq)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-
-		testCreateUser(t, db, connURL)
-	})
-
-	t.Run("legacy", func(t *testing.T) {
-		// Shared test container for speed - there should not be any overlap between the tests
-		cleanup, connURL := mysqlhelper.PrepareTestContainer(t, true, "secret")
-		defer cleanup()
-
-		connectionDetails := map[string]interface{}{
-			"connection_url": connURL,
-		}
-
-		initReq := dbplugin.InitializeRequest{
-			Config:           connectionDetails,
-			VerifyConnection: true,
-		}
-
-		db := new(true)
-		_, err := db.Initialize(context.Background(), initReq)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-
-		testCreateUser(t, db, connURL)
-	})
-}
-
-func testCreateUser(t *testing.T, db *MySQL, connURL string) {
 	type testCase struct {
-		createStmts []string
+		rootPassword string
 	}
 
 	tests := map[string]testCase{
-		"create name": {
-			createStmts: []string{`
-				CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
-				GRANT SELECT ON *.* TO '{{name}}'@'%';`,
-			},
+		"non-special characters in root password": {
+			rootPassword: "B44a30c4C04D0aAaE140",
 		},
-		"create username": {
-			createStmts: []string{`
-				CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
-				GRANT SELECT ON *.* TO '{{username}}'@'%';`,
-			},
-		},
-		"prepared statement name": {
-			createStmts: []string{`
-				CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
-				set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{name}}'@'%'");
-				PREPARE grantStmt from @grants;
-				EXECUTE grantStmt;
-				DEALLOCATE PREPARE grantStmt;
-				`,
-			},
-		},
-		"prepared statement username": {
-			createStmts: []string{`
-				CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
-				set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{username}}'@'%'");
-				PREPARE grantStmt from @grants;
-				EXECUTE grantStmt;
-				DEALLOCATE PREPARE grantStmt;
-				`,
-			},
+		"special characters in root password": {
+			rootPassword: "#secret!%25#{@}",
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			password, err := credsutil.RandomAlphaNumeric(32, false)
-			if err != nil {
-				t.Fatalf("unable to generate password: %s", err)
-			}
+			testInitialize(t, test.rootPassword)
+		})
+	}
+}
 
-			createReq := dbplugin.NewUserRequest{
+func testInitialize(t *testing.T, rootPassword string) {
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, rootPassword)
+	defer cleanup()
+
+	mySQLConfig, err := stdmysql.ParseDSN(connURL)
+	if err != nil {
+		panic(fmt.Sprintf("Test failure: connection URL is invalid: %s", err))
+	}
+	rootUser := mySQLConfig.User
+	mySQLConfig.User = "{{username}}"
+	mySQLConfig.Passwd = "{{password}}"
+	tmplConnURL := mySQLConfig.FormatDSN()
+
+	type testCase struct {
+		initRequest  dbplugin.InitializeRequest
+		expectedResp dbplugin.InitializeResponse
+
+		expectErr         bool
+		expectInitialized bool
+	}
+
+	tests := map[string]testCase{
+		"missing connection_url": {
+			initRequest: dbplugin.InitializeRequest{
+				Config:           map[string]interface{}{},
+				VerifyConnection: true,
+			},
+			expectedResp:      dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"basic config": {
+			initRequest: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+				},
+				VerifyConnection: true,
+			},
+			expectedResp: dbplugin.InitializeResponse{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+				},
+			},
+			expectErr:         false,
+			expectInitialized: true,
+		},
+		"username and password replacement in connection_url": {
+			initRequest: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": tmplConnURL,
+					"username":       rootUser,
+					"password":       rootPassword,
+				},
+				VerifyConnection: true,
+			},
+			expectedResp: dbplugin.InitializeResponse{
+				Config: map[string]interface{}{
+					"connection_url": tmplConnURL,
+					"username":       rootUser,
+					"password":       rootPassword,
+				},
+			},
+			expectErr:         false,
+			expectInitialized: true,
+		},
+		"invalid username template": {
+			initRequest: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": "{{.FieldThatDoesNotExist}}",
+				},
+				VerifyConnection: true,
+			},
+			expectedResp:      dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"bad username template": {
+			initRequest: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": "{{ .DisplayName", // Explicitly bad template
+				},
+				VerifyConnection: true,
+			},
+			expectedResp:      dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"custom username template": {
+			initRequest: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": "foo-{{random 10}}-{{.DisplayName}}",
+				},
+				VerifyConnection: true,
+			},
+			expectedResp: dbplugin.InitializeResponse{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": "foo-{{random 10}}-{{.DisplayName}}",
+				},
+			},
+			expectErr:         false,
+			expectInitialized: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := newMySQL(DefaultUserNameTemplate)
+			defer dbtesting.AssertClose(t, db)
+			initResp, err := db.Initialize(context.Background(), test.initRequest)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			require.Equal(t, test.expectedResp, initResp)
+			require.Equal(t, test.expectInitialized, db.Initialized, "Initialized variable not set correctly")
+		})
+	}
+}
+
+func TestMySQL_NewUser_nonLegacy(t *testing.T) {
+	displayName := "token"
+	roleName := "testrole"
+
+	type testCase struct {
+		usernameTemplate string
+
+		newUserReq dbplugin.NewUserRequest
+
+		expectedUsernameRegex string
+		expectErr             bool
+	}
+
+	tests := map[string]testCase{
+		"name statements": {
+			newUserReq: dbplugin.NewUserRequest{
 				UsernameConfig: dbplugin.UsernameMetadata{
-					DisplayName: "test",
-					RoleName:    "test",
+					DisplayName: displayName,
+					RoleName:    roleName,
 				},
 				Statements: dbplugin.Statements{
-					Commands: test.createStmts,
+					Commands: []string{
+						`CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{name}}'@'%';`,
+					},
 				},
-				Password:   password,
+				Password:   "09g8hanbdfkVSM",
 				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-token-testrole-[a-zA-Z0-9]{15}$`,
+			expectErr:             false,
+		},
+		"username statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{username}}'@'%';`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-token-testrole-[a-zA-Z0-9]{15}$`,
+			expectErr:             false,
+		},
+		"prepared name statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+						set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{name}}'@'%'");
+						PREPARE grantStmt from @grants;
+						EXECUTE grantStmt;
+						DEALLOCATE PREPARE grantStmt;`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-token-testrole-[a-zA-Z0-9]{15}$`,
+			expectErr:             false,
+		},
+		"prepared username statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+						set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{username}}'@'%'");
+						PREPARE grantStmt from @grants;
+						EXECUTE grantStmt;
+						DEALLOCATE PREPARE grantStmt;`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-token-testrole-[a-zA-Z0-9]{15}$`,
+			expectErr:             false,
+		},
+		"custom username template": {
+			usernameTemplate: "foo-{{random 10}}-{{.RoleName | uppercase}}",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{username}}'@'%';`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^foo-[a-zA-Z0-9]{10}-TESTROLE$`,
+			expectErr:             false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+			defer cleanup()
+
+			connectionDetails := map[string]interface{}{
+				"connection_url":    connURL,
+				"username_template": test.usernameTemplate,
 			}
 
-			userResp, err := db.NewUser(context.Background(), createReq)
-			if err != nil {
-				t.Fatalf("err: %s", err)
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
 			}
 
-			if err := mysqlhelper.TestCredsExist(t, connURL, userResp.Username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
+			db := newMySQL(DefaultUserNameTemplate)
+			defer db.Close()
+			_, err := db.Initialize(context.Background(), initReq)
+			require.NoError(t, err)
+
+			userResp, err := db.NewUser(context.Background(), test.newUserReq)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			require.Regexp(t, test.expectedUsernameRegex, userResp.Username)
+
+			err = mysqlhelper.TestCredsExist(t, connURL, userResp.Username, test.newUserReq.Password)
+			require.NoError(t, err, "Failed to connect with credentials")
+		})
+	}
+}
+
+func TestMySQL_NewUser_legacy(t *testing.T) {
+	displayName := "token"
+	roleName := "testrole"
+
+	type testCase struct {
+		usernameTemplate string
+
+		newUserReq dbplugin.NewUserRequest
+
+		expectedUsernameRegex string
+		expectErr             bool
+	}
+
+	tests := map[string]testCase{
+		"name statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{name}}'@'%';`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-test-[a-zA-Z0-9]{9}$`,
+			expectErr:             false,
+		},
+		"username statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{username}}'@'%';`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-test-[a-zA-Z0-9]{9}$`,
+			expectErr:             false,
+		},
+		"prepared name statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+						set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{name}}'@'%'");
+						PREPARE grantStmt from @grants;
+						EXECUTE grantStmt;
+						DEALLOCATE PREPARE grantStmt;`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-test-[a-zA-Z0-9]{9}$`,
+			expectErr:             false,
+		},
+		"prepared username statements": {
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+						set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{username}}'@'%'");
+						PREPARE grantStmt from @grants;
+						EXECUTE grantStmt;
+						DEALLOCATE PREPARE grantStmt;`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^v-test-[a-zA-Z0-9]{9}$`,
+			expectErr:             false,
+		},
+		"custom username template": {
+			usernameTemplate: `{{printf "foo-%s-%s" (random 5) (.RoleName | uppercase) | truncate 16}}`,
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: displayName,
+					RoleName:    roleName,
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+						GRANT SELECT ON *.* TO '{{username}}'@'%';`,
+					},
+				},
+				Password:   "09g8hanbdfkVSM",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: `^foo-[a-zA-Z0-9]{5}-TESTRO$`,
+			expectErr:             false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+			defer cleanup()
+
+			connectionDetails := map[string]interface{}{
+				"connection_url":    connURL,
+				"username_template": test.usernameTemplate,
 			}
 
-			// Test a second time to make sure usernames don't collide
-			userResp, err = db.NewUser(context.Background(), createReq)
-			if err != nil {
-				t.Fatalf("err: %s", err)
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
 			}
 
-			if err := mysqlhelper.TestCredsExist(t, connURL, userResp.Username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
+			db := newMySQL(DefaultLegacyUserNameTemplate)
+			defer db.Close()
+			_, err := db.Initialize(context.Background(), initReq)
+			require.NoError(t, err)
+
+			userResp, err := db.NewUser(context.Background(), test.newUserReq)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
 			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			require.Regexp(t, test.expectedUsernameRegex, userResp.Username)
+
+			err = mysqlhelper.TestCredsExist(t, connURL, userResp.Username, test.newUserReq.Password)
+			require.NoError(t, err, "Failed to connect with credentials")
 		})
 	}
 }
@@ -234,7 +487,8 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 			statements: []string{defaultMySQLRotateCredentialsSQL},
 		},
 		"default name": {
-			statements: []string{`
+			statements: []string{
+				`
 				ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';`,
 			},
 		},
@@ -260,7 +514,8 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 				VerifyConnection: true,
 			}
 
-			db := new(false)
+			db := newMySQL(DefaultUserNameTemplate)
+			defer db.Close()
 			_, err := db.Initialize(context.Background(), initReq)
 			if err != nil {
 				t.Fatalf("err: %s", err)
@@ -315,7 +570,8 @@ func TestMySQL_DeleteUser(t *testing.T) {
 			revokeStmts: []string{defaultMysqlRevocationStmts},
 		},
 		"default username": {
-			revokeStmts: []string{`
+			revokeStmts: []string{
+				`
 				REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{username}}'@'%'; 
 				DROP USER '{{username}}'@'%'`,
 			},
@@ -335,7 +591,8 @@ func TestMySQL_DeleteUser(t *testing.T) {
 		VerifyConnection: true,
 	}
 
-	db := new(false)
+	db := newMySQL(DefaultUserNameTemplate)
+	defer db.Close()
 	_, err := db.Initialize(context.Background(), initReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -354,7 +611,8 @@ func TestMySQL_DeleteUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 						GRANT SELECT ON *.* TO '{{name}}'@'%';`,
 					},
@@ -444,7 +702,8 @@ func TestMySQL_UpdateUser(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			db := new(false)
+			db := newMySQL(DefaultUserNameTemplate)
+			defer db.Close()
 			_, err := db.Initialize(context.Background(), initReq)
 			if err != nil {
 				t.Fatalf("err: %s", err)
@@ -480,35 +739,6 @@ func TestMySQL_UpdateUser(t *testing.T) {
 				t.Fatalf("Should not be able to connect with initial credentials")
 			}
 		})
-	}
-}
-
-func TestMySQL_Initialize_ReservedChars(t *testing.T) {
-	pw := "#secret!%25#{@}"
-	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, pw)
-	defer cleanup()
-
-	// Revert password set to test replacement by db.Init
-	connURL = strings.ReplaceAll(connURL, pw, "{{password}}")
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-		"password":       pw,
-	}
-
-	db := new(false)
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
 	}
 }
 

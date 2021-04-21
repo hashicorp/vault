@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -20,8 +21,8 @@ import (
 	"github.com/NYTimes/gziphandler"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -56,6 +57,12 @@ const (
 	// PolicyOverrideHeaderName is the header set to request overriding
 	// soft-mandatory Sentinel policies.
 	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
+
+	VaultIndexHeaderName        = "X-Vault-Index"
+	VaultInconsistentHeaderName = "X-Vault-Inconsistent"
+	VaultForwardHeaderName      = "X-Vault-Forward"
+	VaultInconsistentForward    = "forward-active-node"
+	VaultInconsistentFail       = "fail"
 
 	// DefaultMaxRequestSize is the default maximum accepted request size. This
 	// is to prevent a denial of service attack where no Content-Length is
@@ -124,7 +131,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		// Handle non-forwarded paths
 		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
-		mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
 		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
@@ -146,6 +152,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
+		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 		}
@@ -168,6 +175,19 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 		} else {
 			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
+		}
+
+		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedPProfAccess {
+			for _, name := range []string{"goroutine", "threadcreate", "heap", "allocs", "block", "mutex"} {
+				mux.Handle("/v1/sys/pprof/"+name, pprof.Handler(name))
+			}
+			mux.Handle("/v1/sys/pprof/", http.HandlerFunc(pprof.Index))
+			mux.Handle("/v1/sys/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+			mux.Handle("/v1/sys/pprof/profile", http.HandlerFunc(pprof.Profile))
+			mux.Handle("/v1/sys/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+			mux.Handle("/v1/sys/pprof/trace", http.HandlerFunc(pprof.Trace))
+		} else {
+			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 		}
 
 		additionalRoutes(mux, core)
@@ -273,6 +293,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	if maxRequestSize == 0 {
 		maxRequestSize = DefaultMaxRequestSize
 	}
+
+	// Swallow this error since we don't want to pollute the logs and we also don't want to
+	// return an HTTP error here. This information is best effort.
+	hostname, _ := os.Hostname()
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
@@ -287,6 +312,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
+		// if maxRequestSize < 0, no need to set context value
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
@@ -294,6 +320,18 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
+
+		// Set some response headers with raft node id (if applicable) and hostname, if available
+		if core.RaftNodeIDHeaderEnabled() {
+			nodeID := core.GetRaftNodeID()
+			if nodeID != "" {
+				w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+			}
+		}
+
+		if core.HostnameHeaderEnabled() && hostname != "" {
+			w.Header().Set("X-Vault-Hostname", hostname)
+		}
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
@@ -466,7 +504,6 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
 		// The fileserver handler strips trailing slashes and does a redirect.
 		// We don't want the redirect to happen so we preemptively trim the slash
 		// here.
@@ -664,12 +701,52 @@ func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
 	return data, nil
 }
 
+// forwardBasedOnHeaders returns true if the request headers specify that
+// we should forward to the active node - either unconditionally or because
+// a specified state isn't present locally.
+func forwardBasedOnHeaders(core *vault.Core, r *http.Request) (bool, error) {
+	rawForward := r.Header.Get(VaultForwardHeaderName)
+	if rawForward != "" {
+		if !core.AllowForwardingViaHeader() {
+			return false, fmt.Errorf("forwarding via header %s disabled in configuration", VaultForwardHeaderName)
+		}
+		if rawForward == "active-node" {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	rawInconsistent := r.Header.Get(VaultInconsistentHeaderName)
+	if rawInconsistent == "" {
+		return false, nil
+	}
+
+	switch rawInconsistent {
+	case VaultInconsistentForward:
+		if !core.AllowForwardingViaHeader() {
+			return false, fmt.Errorf("forwarding via header %s=%s disabled in configuration",
+				VaultInconsistentHeaderName, VaultInconsistentForward)
+		}
+	default:
+		return false, nil
+	}
+
+	return core.MissingRequiredState(r.Header.Values(VaultIndexHeaderName)), nil
+}
+
 // handleRequestForwarding determines whether to forward a request or not,
 // falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If we are a performance standby we can handle the request.
-		if core.PerfStandby() {
+		// Note if the client requested forwarding
+		shouldForward, err := forwardBasedOnHeaders(core, r)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		// If we are a performance standby we can maybe handle the request.
+		if core.PerfStandby() && !shouldForward {
 			ns, err := namespace.FromContext(r.Context())
 			if err != nil {
 				respondError(w, http.StatusBadRequest, err)

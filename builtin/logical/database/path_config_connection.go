@@ -39,7 +39,7 @@ func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("reset/%s", framework.GenericNameRegex("name")),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of this database connection",
 			},
@@ -83,40 +83,40 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of this database connection",
 			},
 
-			"plugin_name": &framework.FieldSchema{
+			"plugin_name": {
 				Type: framework.TypeString,
 				Description: `The name of a builtin or previously registered
 				plugin known to vault. This endpoint will create an instance of
 				that plugin type.`,
 			},
 
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If true, the connection details are verified by
 				actually connecting to the database. Defaults to true.`,
 			},
 
-			"allowed_roles": &framework.FieldSchema{
+			"allowed_roles": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma separated string or array of the role names
 				allowed to get creds from this database connection. If empty no
 				roles are allowed. If "*" all roles are allowed.`,
 			},
 
-			"root_rotation_statements": &framework.FieldSchema{
+			"root_rotation_statements": {
 				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements to be executed
 				to rotate the root user's credentials. See the plugin's API 
 				page for more information on support and formatting for this 
 				parameter.`,
 			},
-			"password_policy": &framework.FieldSchema{
+			"password_policy": {
 				Type:        framework.TypeString,
 				Description: `Password policy to use when generating passwords.`,
 			},
@@ -207,6 +207,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		delete(config.ConnectionDetails, "password")
+		delete(config.ConnectionDetails, "private_key")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),

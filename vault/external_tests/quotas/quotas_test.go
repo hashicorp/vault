@@ -24,16 +24,14 @@ path "/auth/token/lookup" {
 `
 )
 
-var (
-	coreConfig = &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": pki.Factory,
-		},
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-)
+var coreConfig = &vault.CoreConfig{
+	LogicalBackends: map[string]logical.Factory{
+		"pki": pki.Factory,
+	},
+	CredentialBackends: map[string]logical.Factory{
+		"userpass": userpass.Factory,
+	},
+}
 
 func setupMounts(t *testing.T, client *api.Client) {
 	t.Helper()
@@ -78,7 +76,6 @@ func setupMounts(t *testing.T, client *api.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func teardownMounts(t *testing.T, client *api.Client) {
@@ -159,6 +156,44 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, s.Data, 1, "incorrect number of quotas")
+}
+
+func TestQuotas_RateLimit_DupPath(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+	// create a global rate limit quota
+	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+		"rate": 10,
+		"path": "",
+	})
+	require.NoError(t, err)
+
+	// create a rate limit quota w/ 'secret' path
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "secret",
+	})
+	require.NoError(t, err)
+
+	s, err := client.Logical().Read("sys/quotas/rate-limit/secret-rlq")
+	require.NoError(t, err)
+	require.NotEmpty(t, s.Data)
+
+	// create a rate limit quota w/ empty path (same name)
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "",
+	})
+
+	if err == nil {
+		t.Fatal("Duplicated paths were accepted")
+	}
 }
 
 func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {

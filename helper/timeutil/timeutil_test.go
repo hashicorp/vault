@@ -6,6 +6,33 @@ import (
 	"time"
 )
 
+func TestTimeutil_StartOfPreviousMonth(t *testing.T) {
+	testCases := []struct {
+		Input    time.Time
+		Expected time.Time
+	}{
+		{
+			Input:    time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			Expected: time.Date(2019, 12, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			Input:    time.Date(2020, 1, 15, 0, 0, 0, 0, time.UTC),
+			Expected: time.Date(2019, 12, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			Input:    time.Date(2020, 3, 31, 23, 59, 59, 999999999, time.UTC),
+			Expected: time.Date(2020, 2, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	for _, tc := range testCases {
+		result := StartOfPreviousMonth(tc.Input)
+		if !result.Equal(tc.Expected) {
+			t.Errorf("start of month before %v is %v, got %v", tc.Input, tc.Expected, result)
+		}
+	}
+}
+
 func TestTimeutil_StartOfMonth(t *testing.T) {
 	testCases := []struct {
 		Input    time.Time

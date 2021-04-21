@@ -17,27 +17,27 @@ func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
 
-			"ciphertext": &framework.FieldSchema{
+			"ciphertext": {
 				Type:        framework.TypeString,
 				Description: "Ciphertext value to rewrap",
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded context for key derivation. Required for derived keys.",
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type:        framework.TypeString,
 				Description: "Nonce for when convergent encryption is used",
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal

@@ -225,7 +225,7 @@ func (r *Runner) Start() {
 		// Warn the user if they are watching too many dependencies.
 		if r.watcher.Size() > saneViewLimit {
 			log.Printf("[WARN] (runner) watching %d dependencies - watching this "+
-				"many dependencies could DDoS your consul cluster", r.watcher.Size())
+				"many dependencies could DDoS your servers", r.watcher.Size())
 		} else {
 			log.Printf("[DEBUG] (runner) watching %d dependencies", r.watcher.Size())
 		}

@@ -14,7 +14,7 @@ func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
 		Fields: map[string]*framework.FieldSchema{
-			"pem_bundle": &framework.FieldSchema{
+			"pem_bundle": {
 				Type: framework.TypeString,
 				Description: `PEM-format, concatenated unencrypted
 secret key and certificate.`,

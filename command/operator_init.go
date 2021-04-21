@@ -14,8 +14,10 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-var _ cli.Command = (*OperatorInitCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorInitCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+)
 
 type OperatorInitCommand struct {
 	*BaseCommand
@@ -94,7 +96,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Default: false,
 		Usage: "Print the current initialization status. An exit code of 0 means " +
 			"the Vault is already initialized. An exit code of 1 means an error " +
-			"occurred. An exit code of 2 means the mean is not initialized.",
+			"occurred. An exit code of 2 means the Vault is not initialized.",
 	})
 
 	f.IntVar(&IntVar{

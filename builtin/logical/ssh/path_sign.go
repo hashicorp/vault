@@ -46,11 +46,11 @@ func pathSign(b *backend) *framework.Path {
 		},
 
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: `The desired role with configuration for this request.`,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `The requested Time To Live for the SSH certificate;
 sets the expiration date. If not specified
@@ -58,28 +58,28 @@ the role default, backend default, or system
 default TTL is used, in that order. Cannot
 be later than the role max TTL.`,
 			},
-			"public_key": &framework.FieldSchema{
+			"public_key": {
 				Type:        framework.TypeString,
 				Description: `SSH public key that should be signed.`,
 			},
-			"valid_principals": &framework.FieldSchema{
+			"valid_principals": {
 				Type:        framework.TypeString,
 				Description: `Valid principals, either usernames or hostnames, that the certificate should be signed for.`,
 			},
-			"cert_type": &framework.FieldSchema{
+			"cert_type": {
 				Type:        framework.TypeString,
 				Description: `Type of certificate to be created; either "user" or "host".`,
 				Default:     "user",
 			},
-			"key_id": &framework.FieldSchema{
+			"key_id": {
 				Type:        framework.TypeString,
 				Description: `Key id that the created certificate should have. If not specified, the display name of the token will be used.`,
 			},
-			"critical_options": &framework.FieldSchema{
+			"critical_options": {
 				Type:        framework.TypeMap,
 				Description: `Critical options that the certificate should be signed for.`,
 			},
-			"extensions": &framework.FieldSchema{
+			"extensions": {
 				Type:        framework.TypeMap,
 				Description: `Extensions that the certificate should be signed for.`,
 			},
@@ -532,7 +532,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	algo := b.Role.AlgorithmSigner
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key: sign error")
+		return nil, errwrap.Wrapf("failed to generate signed SSH key: sign error: {{err}}", err)
 	}
 
 	certificate.Signature = sig
