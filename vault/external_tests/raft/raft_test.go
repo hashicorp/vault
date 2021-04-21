@@ -12,10 +12,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -66,6 +68,69 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_BoltDBMetrics(t *testing.T) {
+	sink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := vault.CoreConfig{
+		MetricSink:    metricsutil.NewClusterMetricSink("test-cluster", sink),
+		MetricsHelper: metricsutil.NewMetricsHelper(sink, false),
+	}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	teststorage.RaftBackendSetup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	leaderClient := cluster.Cores[0].Client
+
+	// Make sure the underlying storage is raft and set the metrics sink
+	var clusterSink *metricsutil.ClusterMetricSink
+	if rb, ok := cluster.Cores[0].UnderlyingStorage.(*raft.RaftBackend); ok {
+		clusterSink = metricsutil.NewClusterMetricSink("test-cluster", sink)
+		rb.SetMetricsSink(clusterSink)
+	} else {
+		t.Fatal("should've had a raft backend but didn't")
+	}
+
+	// Write a few keys
+	for i := 0; i < 50; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			fmt.Sprintf("foo%d", i): fmt.Sprintf("bar%d", i),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	intervals := sink.Data()
+	t.Fatalf("intervals = %v", intervals)
+
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	var counter *metrics.SampledValue = nil
+
+	for _, c := range intervals[0].Counters {
+		if strings.HasPrefix(c.Name, "core.something.whaetver") {
+			counter = &c
+			break
+		}
+	}
+	if counter == nil {
+		t.Fatalf("No %q counter found.", "core.something.whaetver")
+	}
+
+	if counter.Count != 1 {
+		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
+	}
+
+	if counter.Sum != 1.0 {
+		t.Errorf("Counter sum %v is not 1.", counter.Sum)
+	}
 }
 
 func TestRaft_RetryAutoJoin(t *testing.T) {

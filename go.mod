@@ -6,8 +6,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/raft-boltdb/v2 => ../raft-boltdb/v2
-
 require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
@@ -65,7 +63,7 @@ require (
 	github.com/hashicorp/go-hclog v0.15.0
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
-	github.com/hashicorp/go-msgpack v0.5.5
+	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.6.7
@@ -78,7 +76,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.2.0
 	github.com/hashicorp/raft-autopilot v0.1.2
-	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210409134258-03c10cc3d4ea
+	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/serf v0.9.5 // indirect
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.8.0

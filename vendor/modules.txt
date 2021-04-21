@@ -612,7 +612,8 @@ github.com/hashicorp/raft
 # github.com/hashicorp/raft-autopilot v0.1.2
 ## explicit
 github.com/hashicorp/raft-autopilot
-# github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210409134258-03c10cc3d4ea
+# github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
+## explicit
 github.com/hashicorp/raft-boltdb/v2
 # github.com/hashicorp/raft-snapshot v1.0.3
 ## explicit

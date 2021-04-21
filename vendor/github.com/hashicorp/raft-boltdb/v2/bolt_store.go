@@ -105,6 +105,10 @@ func (b *BoltStore) initialize() error {
 	return tx.Commit()
 }
 
+func (b *BoltStore) Stats() bbolt.Stats {
+	return b.conn.Stats()
+}
+
 // Close is used to gracefully close the DB connection.
 func (b *BoltStore) Close() error {
 	return b.conn.Close()

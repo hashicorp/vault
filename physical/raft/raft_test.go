@@ -218,14 +218,6 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 	return nil
 }
 
-func TestRaft_BoltMetrics(t *testing.T) {
-	b, dir := getRaft(t, true, true)
-	defer os.RemoveAll(dir)
-
-	b.SetMetricsSink(metricsutil.BlackholeSink())
-	physical.ExerciseBackend(t, b)
-}
-
 func TestRaft_Backend(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
