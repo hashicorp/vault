@@ -1,6 +1,6 @@
-export const VERSION = '1.7.0'
+export const VERSION = '1.7.1'
 export const CHANGELOG_URL =
-  'https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#170'
+  'https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#171'
 
 // HashiCorp officially supported package managers
 export const packageManagers = [
