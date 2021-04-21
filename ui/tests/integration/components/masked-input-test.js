@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, focus } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import maskedInput from 'vault/tests/pages/components/masked-input';
@@ -79,5 +79,13 @@ module('Integration | Component | masked input', function(hooks) {
     await component.toggleMasked();
     let unMaskedValue = document.querySelector('.masked-value').innerText;
     assert.equal(unMaskedValue.length, this.value.length);
+  });
+
+  test('it does not unmask text on focus', async function(assert) {
+    this.set('value', '123456789-123456789-123456789');
+    await render(hbs`{{masked-input value=value}}`);
+    assert.dom('.masked-value').hasClass('masked-font');
+    await focus('.masked-value');
+    assert.dom('.masked-value').hasClass('masked-font');
   });
 });

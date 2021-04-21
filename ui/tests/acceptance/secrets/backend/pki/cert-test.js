@@ -55,6 +55,8 @@ elRplAzrMF4=
     await settled();
     await generatePage.issueCert('foo');
     await settled();
+    let countMaskedFonts = document.querySelectorAll('.masked-font').length;
+    assert.equal(countMaskedFonts, 3); // certificate, issuing ca, and private key
     let firstUnMaskButton = document.querySelectorAll('.masked-input-toggle')[0];
     await click(firstUnMaskButton);
     assert.dom('.masked-value').hasTextContaining('-----BEGIN CERTIFICATE-----');
