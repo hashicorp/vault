@@ -23,7 +23,7 @@ import { guidFor } from '@ember/object/internals';
  * {
  *   value: 'file contents here',
  *   fileName: 'nameOfFile.txt',
- *   enterAsText: bool
+ *   enterAsText: boolean ability to enter as text
  * }
  * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
  * @param [label=null] {string} - Text to use as the label for the file input. If null, a default will be rendered.
