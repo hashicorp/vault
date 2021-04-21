@@ -40,7 +40,7 @@ set -euo pipefail
 declare -A REMOTES
 
 # url_remotes lists remotes along with their push URLs, where they are
-# filesystem paths (i.e. do not start with / or . ).
+# not filesystem paths (i.e. do not start with / or . ).
 url_remotes() { git remote -v | grep -F "(push)" | sed -E 's/[[:space:]]+\(push\)//g' | grep -Ev "\t(/|\.)"; }
 for R in $(url_remotes | cut -f1); do
 	REMOTES[$R]="$(url_remotes | grep -E "^$R\t" | cut -f2)"
