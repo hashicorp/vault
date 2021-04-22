@@ -87,11 +87,11 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 
 	// Make sure the underlying storage is raft and set the metrics sink
 	var clusterSink *metricsutil.ClusterMetricSink
-	if rb, ok := cluster.Cores[0].UnderlyingStorage.(*raft.RaftBackend); ok {
+	if rb, ok := cluster.Cores[0].UnderlyingRawStorage.(*raft.RaftBackend); ok {
 		clusterSink = metricsutil.NewClusterMetricSink("test-cluster", sink)
 		rb.SetMetricsSink(clusterSink)
 	} else {
-		t.Fatal("should've had a raft backend but didn't")
+		t.Fatalf("should've had a raft backend but instead got %v", rb)
 	}
 
 	// Write a few keys
@@ -105,31 +105,23 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 	}
 
 	intervals := sink.Data()
-	t.Fatalf("intervals = %v", intervals)
 
 	// Test crossed an interval boundary, don't try to deal with it.
 	if len(intervals) > 1 {
 		t.Skip("Detected interval crossing.")
 	}
 
-	var counter *metrics.SampledValue = nil
-
-	for _, c := range intervals[0].Counters {
-		if strings.HasPrefix(c.Name, "core.something.whaetver") {
-			counter = &c
+	// To validate our metrics are being sent, we check for the presence of one
+	noBoltDBMetrics := true
+	for _, c := range intervals[0].Gauges {
+		if c.Name == "raft.bolt_store.freelist.free_pages" {
+			noBoltDBMetrics = false
 			break
 		}
 	}
-	if counter == nil {
-		t.Fatalf("No %q counter found.", "core.something.whaetver")
-	}
 
-	if counter.Count != 1 {
-		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
-	}
-
-	if counter.Sum != 1.0 {
-		t.Errorf("Counter sum %v is not 1.", counter.Sum)
+	if noBoltDBMetrics {
+		t.Fatal("expected to find boltdb metrics being emitted from the raft backend, but there were none")
 	}
 }
 
