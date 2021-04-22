@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -135,7 +134,7 @@ type databaseBackend struct {
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("config/%s", name))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read connection configuration: {{err}}", err)
+		return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 	}
 	if entry == nil {
 		return nil, fmt.Errorf("failed to find entry for connection with name: %q", name)

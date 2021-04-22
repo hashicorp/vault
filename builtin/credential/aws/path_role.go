@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -290,11 +289,11 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 
 	needUpgrade, err := b.upgradeRole(ctx, s, result)
 	if err != nil {
-		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
+		return nil, fmt.Errorf("error upgrading roleEntry: %w", err)
 	}
 	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		if err = b.setRole(ctx, s, roleName, result); err != nil {
-			return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
+			return nil, fmt.Errorf("error saving upgraded roleEntry: %w", err)
 		}
 	}
 
@@ -574,7 +573,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 
 	err := req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 	if err != nil {
-		return nil, errwrap.Wrapf("error deleting role: {{err}}", err)
+		return nil, fmt.Errorf("error deleting role: %w", err)
 	}
 
 	b.roleCache.Delete(roleName)
@@ -923,7 +922,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if roleEntry.HMACKey == "" {
 		roleEntry.HMACKey, err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to generate role HMAC key: {{err}}", err)
+			return nil, fmt.Errorf("failed to generate role HMAC key: %w", err)
 		}
 	}
 

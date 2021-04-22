@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -588,7 +587,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	default:
 		_, err := parseOtherSANs(allowedOtherSANs)
 		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error parsing allowed_other_sans: {{err}}", err).Error()), nil
+			return logical.ErrorResponse(fmt.Errorf("error parsing allowed_other_sans: %w", err).Error()), nil
 		}
 	}
 	entry.AllowedOtherSANs = allowedOtherSANs

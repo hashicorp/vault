@@ -185,7 +185,7 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 		},
 	})
 	if err != nil {
-		errW := errwrap.Wrapf(fmt.Sprintf("error fetching description for instance ID %q: {{err}}", instanceID), err)
+		errW := fmt.Errorf("error fetching description for instance ID %q: %w", instanceID, err)
 		return nil, errwrap.Wrap(errW, awsutil.CheckAWSError(err))
 	}
 	if status == nil {
@@ -328,7 +328,7 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 	// Parse the signature from asn1 format into a struct
 	pkcs7Data, err := pkcs7.Parse(pkcs7BER.Bytes)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse the BER encoded PKCS#7 signature: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse the BER encoded PKCS#7 signature: %w", err)
 	}
 
 	// Get the public certificates that are used to verify the signature.
@@ -511,19 +511,19 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		// profile ARN
 		iamInstanceProfileEntity, err := parseIamArn(iamInstanceProfileARN)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to parse IAM instance profile ARN %q: {{err}}", iamInstanceProfileARN), err)
+			return nil, fmt.Errorf("failed to parse IAM instance profile ARN %q: %w", iamInstanceProfileARN, err)
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
 		iamClient, err := b.clientIAM(ctx, s, identityDoc.Region, identityDoc.AccountID)
 		if err != nil {
-			return nil, errwrap.Wrapf("could not fetch IAM client: {{err}}", err)
+			return nil, fmt.Errorf("could not fetch IAM client: %w", err)
 		} else if iamClient == nil {
 			return nil, fmt.Errorf("received a nil iamClient")
 		}
 		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileEntity.FriendlyName)
 		if err != nil {
-			return nil, errwrap.Wrapf("IAM role ARN could not be fetched: {{err}}", err)
+			return nil, fmt.Errorf("IAM role ARN could not be fetched: %w", err)
 		}
 		if iamRoleARN == "" {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched")
@@ -1018,7 +1018,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 				b.Logger().Debug("account_id not present during iam renewal attempt, continuing to attempt validation")
 			}
 			if _, err := b.validateInstance(ctx, req.Storage, instanceID, instanceRegion, accountID); err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
+				return nil, fmt.Errorf("failed to verify instance ID %q: %w", instanceID, err)
 			}
 		} else {
 			return nil, fmt.Errorf("unrecognized entity_type in metadata: %q", roleEntry.InferredEntityType)
@@ -1054,11 +1054,21 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 			if fullArn == "" {
 				entity, err := parseIamArn(canonicalArn)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error parsing ARN %q when updating login for role %q: {{err}}", canonicalArn, roleName), err)
+					return nil, fmt.Errorf(
+						"error parsing ARN %q when updating login for role %q: %w",
+						canonicalArn,
+						roleName,
+						err,
+					)
 				}
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error looking up full ARN of entity %v when updating login for role %q: {{err}}", entity, roleName), err)
+					return nil, fmt.Errorf(
+						"error looking up full ARN of entity %v when updating login for role %q: %w",
+						entity,
+						roleName,
+						err,
+					)
 				}
 				if fullArn == "" {
 					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v when updating login for role %q", entity, roleName)
@@ -1103,7 +1113,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 
 	// Cross check that the instance is still in 'running' state
 	if _, err := b.validateInstance(ctx, req.Storage, instanceID, region, accountID); err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
+		return nil, fmt.Errorf("failed to verify instance ID %q: %w", instanceID, err)
 	}
 
 	storedIdentity, err := accessListIdentityEntry(ctx, req.Storage, instanceID)
@@ -1649,7 +1659,7 @@ func submitCallerIdentityRequest(ctx context.Context, maxRetries int, method, en
 
 	response, err := retryingClient.Do(retryableReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error making request: {{err}}", err)
+		return nil, fmt.Errorf("error making request: %w", err)
 	}
 	if response != nil {
 		defer response.Body.Close()
@@ -1744,7 +1754,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 
 	client, err := b.clientIAM(ctx, s, region.ID(), e.AccountNumber)
 	if err != nil {
-		return "", errwrap.Wrapf("error creating IAM client: {{err}}", err)
+		return "", fmt.Errorf("error creating IAM client: %w", err)
 	}
 
 	switch e.Type {
@@ -1754,7 +1764,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		}
 		resp, err := client.GetUser(&input)
 		if err != nil {
-			return "", errwrap.Wrapf(fmt.Sprintf("error fetching user %q: {{err}}", e.FriendlyName), err)
+			return "", fmt.Errorf("error fetching user %q: %w", e.FriendlyName, err)
 		}
 		if resp == nil {
 			return "", fmt.Errorf("nil response from GetUser")
@@ -1768,7 +1778,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		}
 		resp, err := client.GetRole(&input)
 		if err != nil {
-			return "", errwrap.Wrapf(fmt.Sprintf("error fetching role %q: {{err}}", e.FriendlyName), err)
+			return "", fmt.Errorf("error fetching role %q: %w", e.FriendlyName, err)
 		}
 		if resp == nil {
 			return "", fmt.Errorf("nil response form GetRole")

@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -374,7 +373,7 @@ func validateOtherSANs(data *inputBundle, requested map[string][]string) (string
 
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
-		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
+		return "", "", fmt.Errorf("error parsing role's allowed SANs: %w", err)
 	}
 	for oid, names := range requested {
 		for _, name := range names {
@@ -682,7 +681,7 @@ func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]otherNameUtf8, err
 			var other otherNameRaw
 			_, err := asn1.UnmarshalWithParams(data, &other, "tag:0")
 			if err != nil {
-				return errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
+				return fmt.Errorf("could not parse requested other SAN: %w", err)
 			}
 			val, err := other.extractUTF8String()
 			if err != nil {
@@ -871,7 +870,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	if data.role.UseCSRSANs && csr != nil && len(csr.Extensions) > 0 {
 		others, err := getOtherSANsFromX509Extensions(csr.Extensions)
 		if err != nil {
-			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+			return nil, errutil.UserError{Err: fmt.Errorf("could not parse requested other SAN: %w", err).Error()}
 		}
 		for _, other := range others {
 			otherSANsInput = append(otherSANsInput, other.String())
@@ -880,7 +879,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	if len(otherSANsInput) > 0 {
 		requested, err := parseOtherSANs(otherSANsInput)
 		if err != nil {
-			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+			return nil, errutil.UserError{Err: fmt.Errorf("could not parse requested other SAN: %w", err).Error()}
 		}
 		badOID, badName, err := validateOtherSANs(data, requested)
 		switch {
@@ -1133,7 +1132,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	if block == nil {
 		keyData, err = base64.StdEncoding.DecodeString(priv)
 		if err != nil {
-			return errwrap.Wrapf("error converting response to pkcs8: error decoding original value: {{err}}", err)
+			return fmt.Errorf("error converting response to pkcs8: error decoding original value: %w", err)
 		}
 	} else {
 		keyData = block.Bytes
@@ -1149,12 +1148,12 @@ func convertRespToPKCS8(resp *logical.Response) error {
 		return fmt.Errorf("unknown private key type %q", privKeyType)
 	}
 	if err != nil {
-		return errwrap.Wrapf("error converting response to pkcs8: error parsing previous key: {{err}}", err)
+		return fmt.Errorf("error converting response to pkcs8: error parsing previous key: %w", err)
 	}
 
 	keyData, err = x509.MarshalPKCS8PrivateKey(signer)
 	if err != nil {
-		return errwrap.Wrapf("error converting response to pkcs8: error marshaling pkcs8 key: {{err}}", err)
+		return fmt.Errorf("error converting response to pkcs8: error marshaling pkcs8 key: %w", err)
 	}
 
 	if pemUsed {

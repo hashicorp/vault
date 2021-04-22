@@ -3,8 +3,8 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -68,7 +68,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	if batchInputRaw != nil {
 		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {

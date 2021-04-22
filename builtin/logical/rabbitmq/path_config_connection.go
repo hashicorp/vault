@@ -2,8 +2,8 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
@@ -73,12 +73,12 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 		// Create RabbitMQ management client
 		client, err := rabbithole.NewClient(uri, username, password)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create client: {{err}}", err)
+			return nil, fmt.Errorf("failed to create client: %w", err)
 		}
 
 		// Verify that configured credentials is capable of listing
 		if _, err = client.ListUsers(); err != nil {
-			return nil, errwrap.Wrapf("failed to validate the connection: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate the connection: %w", err)
 		}
 	}
 

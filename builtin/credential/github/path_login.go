@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -173,7 +172,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	if config.BaseURL != "" {
 		parsedURL, err := url.Parse(config.BaseURL)
 		if err != nil {
-			return nil, nil, errwrap.Wrapf("successfully parsed base_url when set but failing to parse now: {{err}}", err)
+			return nil, nil, fmt.Errorf("successfully parsed base_url when set but failing to parse now: %w", err)
 		}
 		client.BaseURL = parsedURL
 	}

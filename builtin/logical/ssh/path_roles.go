@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -369,7 +368,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if cidrList != "" {
 		valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate cidr_list: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate cidr_list: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate cidr_list"), nil
@@ -381,7 +380,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if excludeCidrList != "" {
 		valid, err := cidrutil.ValidateCIDRListString(excludeCidrList, ",")
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate exclude_cidr_list entry: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate exclude_cidr_list entry: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse(fmt.Sprintf("failed to validate exclude_cidr_list entry: %v", err)), nil
