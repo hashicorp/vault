@@ -15,13 +15,7 @@
     {{#if (eq attr.type "object")}}
       <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
     {{else}}
-      {{#if (or 
-        (eq attr.name "csr")
-        (eq attr.name "certificate")
-        (eq attr.name "issuingCa")
-        (eq attr.name "caChain")
-        (eq attr.name "privateKey")
-      )}}
+      {{#if attr.options.masked}}
         <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
           <MaskedInput
             @value={{get model attr.name}}
