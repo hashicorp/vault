@@ -2712,21 +2712,6 @@ func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
 	exp := mockExpiration(t)
 	ctx := namespace.RootContext(nil)
 
-	/*
-		makeJob := func() *revocationJob {
-			uuid, err := uuid.GenerateUUID()
-			if err != nil {
-				t.Fatalf("err making uuid: %v", err)
-			}
-
-			job, err := newRevocationJob(ctx, uuid, namespace.RootNamespace, exp)
-			if err != nil {
-				t.Fatalf("err making revocation job: %v", err)
-			}
-
-			return job
-		}*/
-
 	makeJob := func() *revocationJob {
 		leaseID := registerOneLease(t, ctx, exp)
 

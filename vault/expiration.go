@@ -234,9 +234,9 @@ func (r *revocationJob) OnFailure(err error) {
 		r.m.logger.Trace("lease revocation returned unrecoverable error", "lease_id", r.leaseID, "err", err)
 
 		// TODO 1978 below here should be incorporated into markLeaseAsZombie
-		le, err := r.m.loadEntry(r.nsCtx, r.leaseID)
-		if err != nil {
-			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID)
+		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
+		if loadErr != nil {
+			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
 			return
 		}
 
@@ -254,7 +254,7 @@ func (r *revocationJob) OnFailure(err error) {
 			return
 		}
 
-		r.m.markLeaseAsZombie(r.nsCtx, le, err)
+		r.m.markLeaseAsZombie(r.nsCtx, le, errors.New("lease has consumed all retry attempts"))
 		return
 	}
 
