@@ -169,6 +169,22 @@ func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Names
 	}, nil
 }
 
+// errIsUnrecoverable returns true if the logical error is unlikely to resolve
+// automatically or with additional retries
+func errIsUnrecoverable(err error) bool {
+	switch {
+	case errors.Is(err, logical.ErrUnrecoverable),
+		errors.Is(err, logical.ErrUnsupportedOperation),
+		errors.Is(err, logical.ErrUnsupportedPath),
+		errors.Is(err, logical.ErrInvalidRequest),
+		errors.Is(err, logical.ErrPermissionDenied),
+		errors.Is(err, logical.ErrMultiAuthzPending):
+		return true
+	}
+
+	return false
+}
+
 func (r *revocationJob) Execute() error {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 	r.m.core.metricSink.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
@@ -200,22 +216,6 @@ func (r *revocationJob) Execute() error {
 	r.m.coreStateLock.RUnlock()
 
 	return err
-}
-
-// errIsUnrecoverable returns true if the logical error is unlikely to resolve
-// automatically or with additional retries
-func errIsUnrecoverable(err error) bool {
-	switch {
-	case errors.Is(err, logical.ErrUnrecoverable),
-		errors.Is(err, logical.ErrUnsupportedOperation),
-		errors.Is(err, logical.ErrUnsupportedPath),
-		errors.Is(err, logical.ErrInvalidRequest),
-		errors.Is(err, logical.ErrPermissionDenied),
-		errors.Is(err, logical.ErrMultiAuthzPending):
-		return true
-	}
-
-	return false
 }
 
 func (r *revocationJob) OnFailure(err error) {
