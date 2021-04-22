@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add role from database connection automatically populates the database for new role
+```
