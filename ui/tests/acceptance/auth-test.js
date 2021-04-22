@@ -106,18 +106,14 @@ module('Acceptance | auth', function(hooks) {
     assert.dom('[data-test-allow-expiration="true"]').doesNotExist('hides beacon when the api is used again');
   });
 
-  test('it shows the push notification warning only for okta auth method', async function(assert) {
+  test('it shows the push notification warning only for okta auth method when it is selected', async function(assert) {
     await visit('/vault/auth');
-    await fillIn('[data-test-token]', 'password');
     await click('[data-test-auth-submit="true"]');
     assert
       .dom('[data-test-auth-message="push"]')
       .doesNotExist('message is not shown for other authentication methods');
 
     await component.selectMethod('okta');
-    await fillIn('[data-test-username]', 'user@test.com');
-    await fillIn('[data-test-password]', 'password');
-    await click('[data-test-auth-submit="true"]');
     assert.dom('[data-test-auth-message="push"]').exists('shows push notification message');
   });
 });
