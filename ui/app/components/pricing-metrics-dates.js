@@ -15,8 +15,7 @@
  * @param {number} [defaultSpan=12] - setting for default time between start and end input dates
  * @param {number} [retentionMonths=24] - setting for the retention months, which informs valid dates to query by
  */
-import { set } from '@ember/object';
-import { computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import {
