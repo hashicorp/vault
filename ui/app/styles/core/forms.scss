@@ -11,6 +11,13 @@ label {
   }
 }
 
+.masked-font {
+  font-family: obscure;
+  font-size: $size-medium;
+  letter-spacing: 2px;
+  color: $ui-gray-300;
+}
+
 .label {
   color: $grey-darker;
   text-transform: uppercase;

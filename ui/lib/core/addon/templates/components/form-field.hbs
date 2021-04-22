@@ -110,12 +110,9 @@
 {{else if (eq attr.options.editType "file")}}
 {{!-- File Input --}}
   {{text-file
-    index=""
-    fileHelpText=attr.options.helpText
-    textareaHelpText=attr.options.helpText
+    helpText=attr.options.helpText
     file=file
     onChange=(action "setFile")
-    warning=attr.options.warning
     label=labelString
   }}
 {{else if (eq attr.options.editType "ttl")}}
@@ -175,8 +172,11 @@
   }}
 {{else if (eq attr.options.sensitive true)}}
 {{!-- Masked Input --}}
-  <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
-    @onChange={{action (action "setAndBroadcast" valuePath)}} @maskWhileTyping={{if (eq attr.name "bindpass") true}}/>
+  <MaskedInput
+    @value={{or (get model valuePath) attr.options.defaultValue}}
+    @allowCopy="true"
+    @onChange={{action (action "setAndBroadcast" valuePath)}}
+  />
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}
