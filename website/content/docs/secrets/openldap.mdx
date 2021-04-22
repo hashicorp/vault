@@ -76,7 +76,7 @@ rule "charset" {
 2. Request credentials for the "hashicorp" role:
 
    ```sh
-   $ vault read openldap/static-role/hashicorp
+   $ vault read openldap/static-cred/hashicorp
    ```
 
 ### LDAP Password Policy
@@ -201,10 +201,10 @@ executed if the creation fails for any reason. This ensures any entities are rem
 To generate credentials:
 
 ```bash
-$ vault read openldap/cred/dynamic-role
+$ vault read openldap/creds/dynamic-role
 Key                    Value
 ---                    -----
-lease_id               openldap/cred/dynamic-role/HFgd6uKaDomVMvJpYbn9q4q5
+lease_id               openldap/creds/dynamic-role/HFgd6uKaDomVMvJpYbn9q4q5
 lease_duration         1h
 lease_renewable        true
 distinguished_names    [cn=v_token_dynamic-role_FfH2i1c4dO_1611952635,ou=users,dc=learn,dc=example]
