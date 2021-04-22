@@ -107,41 +107,39 @@ consumption:
 	}
 }
 
-func TestCalculateBackoff(t *testing.T) {
-	tests := []struct {
-		previous time.Duration
-		max      time.Duration
-		expMin   time.Duration
-		expMax   time.Duration
-	}{
-		{
-			1000 * time.Millisecond,
-			60000 * time.Millisecond,
-			1500 * time.Millisecond,
-			2000 * time.Millisecond,
-		},
-		{
-			1000 * time.Millisecond,
-			5000 * time.Millisecond,
-			1500 * time.Millisecond,
-			2000 * time.Millisecond,
-		},
-		{
-			4000 * time.Millisecond,
-			5000 * time.Millisecond,
-			3750 * time.Millisecond,
-			5000 * time.Millisecond,
-		},
+func TestAgentBackoff(t *testing.T) {
+	max := 1024 * time.Second
+	backoff := newAgentBackoff(max)
+
+	// Test initial value
+	if backoff.current != initialBackoff {
+		t.Fatalf("expected 1s initial backoff, got: %v", backoff.current)
 	}
 
-	for _, test := range tests {
-		for i := 0; i < 100; i++ {
-			backoff := calculateBackoff(test.previous, test.max)
+	// Test that backoff values are in expected range (75-100% of 2*previous)
+	for i := 0; i < 9; i++ {
+		old := backoff.current
+		backoff.next()
 
-			// Verify that the new backoff is 75-100% of 2*previous, but <= than the max
-			if backoff < test.expMin || backoff > test.expMax {
-				t.Fatalf("expected backoff in range %v to %v, got: %v", test.expMin, test.expMax, backoff)
-			}
+		expMax := 2 * old
+		expMin := 3 * expMax / 4
+
+		if backoff.current < expMin || backoff.current > expMax {
+			t.Fatalf("expected backoff in range %v to %v, got: %v", expMin, expMax, backoff)
 		}
+	}
+
+	// Test that backoff is capped
+	for i := 0; i < 100; i++ {
+		backoff.next()
+		if backoff.current > max {
+			t.Fatalf("backoff exceeded max of 100s: %v", backoff)
+		}
+	}
+
+	// Test reset
+	backoff.reset()
+	if backoff.current != initialBackoff {
+		t.Fatalf("expected 1s backoff after reset, got: %v", backoff.current)
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -72,7 +71,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	// Attempt to retrieve the region, error out if no region is provided.
 	region, err := awsutil.GetRegion("")
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving region: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving region: %w", err)
 	}
 
 	awsConfig := &aws.Config{
@@ -100,7 +99,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	var getUserInput iam.GetUserInput
 	getUserRes, err := iamClient.GetUser(&getUserInput)
 	if err != nil {
-		return nil, errwrap.Wrapf("error calling GetUser: {{err}}", err)
+		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
 	if getUserRes == nil {
 		return nil, fmt.Errorf("nil response from GetUser")
@@ -118,7 +117,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 	createAccessKeyRes, err := iamClient.CreateAccessKey(&createAccessKeyInput)
 	if err != nil {
-		return nil, errwrap.Wrapf("error calling CreateAccessKey: {{err}}", err)
+		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
 	if createAccessKeyRes.AccessKey == nil {
 		return nil, fmt.Errorf("nil response from CreateAccessKey")
@@ -150,7 +149,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	// we need to hold onto the lock.
 	newEntry, err := b.configClientToEntry(clientConf)
 	if err != nil {
-		errs = multierror.Append(errs, errwrap.Wrapf("error generating new client config JSON: {{err}}", err))
+		errs = multierror.Append(errs, fmt.Errorf("error generating new client config JSON: %w", err))
 		return nil, errs
 	}
 
@@ -162,7 +161,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	// before deleting the previous access key to allow work to complete. That would allow
 	// AWS, which is eventually consistent, to finish populating the new key in all places.
 	if err := req.Storage.Put(ctx, newEntry); err != nil {
-		errs = multierror.Append(errs, errwrap.Wrapf("error saving new client config: {{err}}", err))
+		errs = multierror.Append(errs, fmt.Errorf("error saving new client config: %w", err))
 		return nil, errs
 	}
 	storedNewConf = true
@@ -178,7 +177,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		UserName:    getUserRes.User.UserName,
 	}
 	if _, err = iamClient.DeleteAccessKey(&deleteAccessKeyInput); err != nil {
-		errs = multierror.Append(errs, errwrap.Wrapf(fmt.Sprintf("error deleting old access key ID %s: {{err}}", oldAccessKey), err))
+		errs = multierror.Append(errs, fmt.Errorf("error deleting old access key ID %s: %w", oldAccessKey, err))
 		return nil, errs
 	}
 	return &logical.Response{

@@ -32,10 +32,12 @@ const (
 )
 
 // Verify ConsulBackend satisfies the correct interfaces
-var _ physical.Backend = (*ConsulBackend)(nil)
-var _ physical.HABackend = (*ConsulBackend)(nil)
-var _ physical.Lock = (*ConsulLock)(nil)
-var _ physical.Transactional = (*ConsulBackend)(nil)
+var (
+	_ physical.Backend       = (*ConsulBackend)(nil)
+	_ physical.HABackend     = (*ConsulBackend)(nil)
+	_ physical.Lock          = (*ConsulLock)(nil)
+	_ physical.Transactional = (*ConsulBackend)(nil)
+)
 
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as

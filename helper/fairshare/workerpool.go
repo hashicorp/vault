@@ -22,7 +22,9 @@ type worker struct {
 	jobCh  <-chan Job
 	quit   chan struct{}
 	logger log.Logger
-	wg     *sync.WaitGroup
+
+	// waitgroup for testing stop functionality
+	wg *sync.WaitGroup
 }
 
 // start starts the worker listening and working until the quit channel is closed
@@ -87,13 +89,11 @@ func (d *dispatcher) start() {
 	})
 }
 
-// stop stops the worker pool and waits for all workers to finish their jobs
+// stop stops the worker pool asynchronously
 func (d *dispatcher) stop() {
 	d.onceStop.Do(func() {
 		d.logger.Trace("terminating dispatcher")
 		close(d.quit)
-		d.logger.Trace("waiting for worker pool to stop...")
-		d.wg.Wait()
 	})
 }
 

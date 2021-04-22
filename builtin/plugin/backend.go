@@ -194,7 +194,6 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Sto
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes
 // automatic plugin reload.
 func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
-
 	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
 		var merr error
 		resp, merr = b.Backend.HandleRequest(ctx, req)
@@ -207,7 +206,6 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 // HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck
 // that includes automatic plugin reload.
 func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
-
 	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
 		var merr error
 		checkFound, exists, merr = b.Backend.HandleExistenceCheck(ctx, req)

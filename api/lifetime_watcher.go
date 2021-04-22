@@ -392,5 +392,7 @@ func (r *LifetimeWatcher) calculateGrace(leaseDuration time.Duration) {
 	r.grace = time.Duration(jitterMax) + time.Duration(uint64(r.random.Int63())%uint64(jitterMax))
 }
 
-type Renewer = LifetimeWatcher
-type RenewerInput = LifetimeWatcherInput
+type (
+	Renewer      = LifetimeWatcher
+	RenewerInput = LifetimeWatcherInput
+)

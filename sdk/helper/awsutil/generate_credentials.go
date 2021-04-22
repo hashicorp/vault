@@ -62,7 +62,8 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 				AccessKeyID:     c.AccessKey,
 				SecretAccessKey: c.SecretKey,
 				SessionToken:    c.SessionToken,
-			}})
+			},
+		})
 		c.log(hclog.Debug, "added static credential provider", "AccessKey", c.AccessKey)
 
 	case c.AccessKey == "" && c.SecretKey == "":
@@ -92,7 +93,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 			c.log(hclog.Warn, "error assuming role", "roleARN", roleARN, "tokenPath", tokenPath, "sessionName", sessionName, "err", err)
 		}
 
-		//Add the web identity role credential provider
+		// Add the web identity role credential provider
 		providers = append(providers, webIdentityProvider)
 	}
 

@@ -119,7 +119,7 @@ storage_source "src_type" {
 
 storage_destination "dest_type" {
   path = "dest_path"
-}`), 0644)
+}`), 0o644)
 		defer os.Remove(cfgName)
 
 		expCfg := &migratorConfig{
@@ -145,7 +145,7 @@ storage_destination "dest_type" {
 		}
 
 		verifyBad := func(cfg string) {
-			ioutil.WriteFile(cfgName, []byte(cfg), 0644)
+			ioutil.WriteFile(cfgName, []byte(cfg), 0o644)
 			_, err := cmd.loadMigratorConfig(cfgName)
 			if err == nil {
 				t.Fatalf("expected error but none received from: %v", cfg)
@@ -191,7 +191,6 @@ storage_destination "dest_type" {
 storage_destination "dest_type2" {
   path = "dest_path"
 }`)
-
 	})
 	t.Run("DFS Scan", func(t *testing.T) {
 		s, _ := physicalBackends["inmem"](map[string]string{}, nil)

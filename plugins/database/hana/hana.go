@@ -101,7 +101,6 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 		credsutil.Separator("_"),
 		credsutil.ToUpper(),
 	)
-
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}

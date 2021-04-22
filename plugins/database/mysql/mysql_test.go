@@ -487,7 +487,8 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 			statements: []string{defaultMySQLRotateCredentialsSQL},
 		},
 		"default name": {
-			statements: []string{`
+			statements: []string{
+				`
 				ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';`,
 			},
 		},
@@ -569,7 +570,8 @@ func TestMySQL_DeleteUser(t *testing.T) {
 			revokeStmts: []string{defaultMysqlRevocationStmts},
 		},
 		"default username": {
-			revokeStmts: []string{`
+			revokeStmts: []string{
+				`
 				REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{username}}'@'%'; 
 				DROP USER '{{username}}'@'%'`,
 			},
@@ -609,7 +611,8 @@ func TestMySQL_DeleteUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 						GRANT SELECT ON *.* TO '{{name}}'@'%';`,
 					},

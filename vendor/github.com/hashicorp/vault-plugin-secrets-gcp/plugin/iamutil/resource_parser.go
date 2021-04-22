@@ -3,9 +3,10 @@ package iamutil
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-gcp-common/gcputil"
 	"net/url"
 	"strings"
+
+	"github.com/hashicorp/go-gcp-common/gcputil"
 )
 
 const (

@@ -1,0 +1,3 @@
+```release-note:bug
+secret/pki: use case insensitive domain name comparison as per RFC1035 section 2.3.3
+```

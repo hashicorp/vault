@@ -61,7 +61,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 		return nil, nil, nil
 	}
 
-	//c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
+	// c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
 
 	// Fetch the entity
 	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
@@ -83,7 +83,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 
 	policies := make(map[string][]string)
 	if entity != nil {
-		//c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
+		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
 		if len(entity.Policies) != 0 {
@@ -457,7 +457,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return nil, logical.CodedError(403, "namespaces feature not enabled")
 	}
 
-	var walState = &logical.WALState{}
+	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
 	if c.router.LoginPath(ctx, req.Path) {

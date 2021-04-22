@@ -17,7 +17,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.15.3
+GO_VERSION_MIN=1.16.2
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -210,7 +210,7 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	goimports -w $(GOFMT_FILES)
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."

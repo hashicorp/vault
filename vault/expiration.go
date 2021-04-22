@@ -133,18 +133,16 @@ type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *name
 
 // revocationJob should only be created through newRevocationJob()
 type revocationJob struct {
-	leaseID string
-	nsID    string
-	m       *ExpirationManager
-	nsCtx   context.Context
+	leaseID   string
+	ns        *namespace.Namespace
+	m         *ExpirationManager
+	nsCtx     context.Context
+	startTime time.Time
 }
 
-func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *ExpirationManager) (*revocationJob, error) {
+func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Namespace, m *ExpirationManager) (*revocationJob, error) {
 	if leaseID == "" {
 		return nil, fmt.Errorf("cannot have empty lease id")
-	}
-	if nsID == "" {
-		return nil, fmt.Errorf("cannot have empty namespace id")
 	}
 	if m == nil {
 		return nil, fmt.Errorf("cannot have nil expiration manager")
@@ -154,15 +152,17 @@ func newRevocationJob(nsCtx context.Context, leaseID, nsID string, m *Expiration
 	}
 
 	return &revocationJob{
-		leaseID: leaseID,
-		nsID:    nsID,
-		m:       m,
-		nsCtx:   nsCtx,
+		leaseID:   leaseID,
+		ns:        ns,
+		m:         m,
+		nsCtx:     nsCtx,
+		startTime: time.Now(),
 	}, nil
 }
 
 func (r *revocationJob) Execute() error {
-	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", r.nsID}})
+	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
+	r.m.core.metricSink.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 
 	// don't start the timer until the revocation is being executed
 	revokeCtx, cancel := context.WithTimeout(r.nsCtx, DefaultMaxRequestDuration)
@@ -194,8 +194,7 @@ func (r *revocationJob) Execute() error {
 }
 
 func (r *revocationJob) OnFailure(err error) {
-	// TODO vault 1.8 do another one of these metrics for the zombie lease count and such (see metrics section of VLT-145)
-	metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", r.nsID}})
+	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 	r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err)
 
 	r.m.pendingLock.Lock()
@@ -210,7 +209,6 @@ func (r *revocationJob) OnFailure(err error) {
 	pending.revokesAttempted++
 
 	if pending.revokesAttempted >= maxRevokeAttempts {
-		// TODO vault 1.8 mark this as a zombie
 		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
 		return
 	}
@@ -235,7 +233,7 @@ func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, l
 		mountAccessor = mount.Accessor
 	}
 
-	job, err := newRevocationJob(nsCtx, leaseID, ns.ID, m)
+	job, err := newRevocationJob(nsCtx, leaseID, ns, m)
 	if err != nil {
 		m.logger.Warn("error creating revocation job", "error", err)
 		return
@@ -342,7 +340,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 	}
 
-	jobManager := fairshare.NewJobManager("expiration", getNumExpirationWorkers(c, logger), logger.Named("job-manager"))
+	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
 	jobManager.Start()
 
 	exp := &ExpirationManager{
@@ -917,8 +915,24 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
-		if err := m.removeIndexByToken(ctx, le); err != nil {
-			return err
+		var indexToken string
+		// Maintain secondary index by token, except for orphan batch tokens
+		switch le.ClientTokenType {
+		case logical.TokenTypeBatch:
+			te, err := m.tokenStore.lookupBatchTokenInternal(ctx, le.ClientToken)
+			if err != nil {
+				return err
+			}
+			// If it's a non-orphan batch token, assign the secondary index to its
+			// parent
+			indexToken = te.Parent
+		default:
+			indexToken = le.ClientToken
+		}
+		if indexToken != "" {
+			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1366,6 +1380,17 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		Version:         1,
 	}
 
+	var indexToken string
+	// Maintain secondary index by token, except for orphan batch tokens
+	switch {
+	case te.Type != logical.TokenTypeBatch:
+		indexToken = le.ClientToken
+	case te.Parent != "":
+		// If it's a non-orphan batch token, assign the secondary index to its
+		// parent
+		indexToken = te.Parent
+	}
+
 	defer func() {
 		// If there is an error we want to rollback as much as possible (note
 		// that errors here are ignored to do as much cleanup as we can). We
@@ -1384,7 +1409,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
 			}
 
-			if err := m.removeIndexByToken(ctx, le); err != nil {
+			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
 			}
 		}
@@ -1410,16 +1435,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		return "", err
 	}
 
-	// Maintain secondary index by token, except for orphan batch tokens
-	switch {
-	case te.Type != logical.TokenTypeBatch:
-		if err := m.createIndexByToken(ctx, le, le.ClientToken); err != nil {
-			return "", err
-		}
-	case te.Parent != "":
-		// If it's a non-orphan batch token, assign the secondary index to its
-		// parent
-		if err := m.createIndexByToken(ctx, le, te.Parent); err != nil {
+	if indexToken != "" {
+		if err := m.createIndexByToken(ctx, le, indexToken); err != nil {
 			return "", err
 		}
 	}
@@ -1968,10 +1985,10 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 }
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
-func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry) error {
+func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	_, nsID := namespace.SplitIDFromString(le.ClientToken)
+	_, nsID := namespace.SplitIDFromString(token)
 	if nsID != "" {
 		var err error
 		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
@@ -1992,7 +2009,7 @@ func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEnt
 		}
 	}
 
-	saltedID, err := m.tokenStore.SaltID(saltCtx, le.ClientToken)
+	saltedID, err := m.tokenStore.SaltID(saltCtx, token)
 	if err != nil {
 		return err
 	}
@@ -2186,7 +2203,6 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -2224,9 +2240,7 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 // type (though most likely we would only call this from within the "vault" core package.)
 type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path string) bool
 
-var (
-	ErrInRestoreMode = errors.New("expiration manager in restore mode")
-)
+var ErrInRestoreMode = errors.New("expiration manager in restore mode")
 
 // WalkTokens extracts the Auth structure from leases corresponding to tokens.
 // Returning false from the walk function terminates the iteration.

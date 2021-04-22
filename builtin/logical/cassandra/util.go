@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -54,12 +53,12 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
+				return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
 			if err != nil || tlsConfig == nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig: %#v; {{err}}", tlsConfig), err)
+				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig: %#v; %w", tlsConfig, err)
 			}
 			tlsConfig.InsecureSkipVerify = cfg.InsecureTLS
 
@@ -83,13 +82,13 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
+		return nil, fmt.Errorf("error creating session: %w", err)
 	}
 
 	// Verify the info
 	err = session.Query(`LIST USERS`).Exec()
 	if err != nil {
-		return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
+		return nil, fmt.Errorf("error validating connection info: %w", err)
 	}
 
 	return session, nil

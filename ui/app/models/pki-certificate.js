@@ -63,14 +63,20 @@ export default Model.extend({
     defaultValue: false,
   }),
 
-  certificate: attr('string'),
+  certificate: attr('string', {
+    masked: true,
+  }),
   issuingCa: attr('string', {
     label: 'Issuing CA',
+    masked: true,
   }),
   caChain: attr('string', {
     label: 'CA chain',
+    masked: true,
   }),
-  privateKey: attr('string'),
+  privateKey: attr('string', {
+    masked: true,
+  }),
   privateKeyType: attr('string'),
   serialNumber: attr('string'),
 

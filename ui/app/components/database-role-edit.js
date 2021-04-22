@@ -10,15 +10,18 @@ export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
   @service wizard;
+  @service store;
 
   constructor() {
     super(...arguments);
-    console.log(this.wizard.featureState, 'featureSTate');
     if (
       this.wizard.featureState === 'displayConnection' ||
       this.wizard.featureState === 'displayRoleDatabase'
     ) {
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
+    }
+    if (this.args.initialKey) {
+      this.args.model.database = [this.args.initialKey];
     }
   }
 
@@ -39,11 +42,15 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   get databaseType() {
-    if (this.args.model?.database) {
-      // TODO: Calculate this
-      return 'mongodb-database-plugin';
+    const backend = this.args.model?.backend;
+    const dbs = this.args.model?.database || [];
+    if (!backend || dbs.length === 0) {
+      return null;
     }
-    return null;
+    return this.store
+      .queryRecord('database/connection', { id: dbs[0], backend })
+      .then(record => record.plugin_name)
+      .catch(() => null);
   }
 
   @action

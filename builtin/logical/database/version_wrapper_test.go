@@ -927,9 +927,11 @@ func (f fakeStorage) Put(ctx context.Context, entry *logical.StorageEntry) error
 func (f fakeStorage) List(ctx context.Context, s string) ([]string, error) {
 	panic("list not implemented")
 }
+
 func (f fakeStorage) Get(ctx context.Context, s string) (*logical.StorageEntry, error) {
 	panic("get not implemented")
 }
+
 func (f fakeStorage) Delete(ctx context.Context, s string) error {
 	panic("delete not implemented")
 }

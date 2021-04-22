@@ -1,5 +1,5 @@
 TOOL?=vault-plugin-auth-azure
-TEST?=$$(go list ./... | grep -v /vendor/)
+TEST?=$$(go list ./...)
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox
 BUILD_TAGS?=${TOOL}
@@ -35,7 +35,7 @@ test: generate
 # generate runs `go generate` to build the dynamically generated
 # source files.
 generate:
-	@go generate $(go list ./... | grep -v /vendor/)
+	@go generate $(go list ./...)
 
 # bootstrap the build by downloading additional tools
 bootstrap:

@@ -144,7 +144,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 	// If we have PGP keys, perform the encryption
 	if len(sc.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(unsealKeys))
-		for i, _ := range unsealKeys {
+		for i := range unsealKeys {
 			hexEncodedShares[i] = []byte(hex.EncodeToString(unsealKeys[i]))
 		}
 		_, encryptedShares, err := pgpkeys.EncryptShares(hexEncodedShares, sc.PGPKeys)

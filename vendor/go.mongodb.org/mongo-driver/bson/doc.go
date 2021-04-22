@@ -53,7 +53,7 @@
 // 		16. BSON min key unmarshals to an primitive.MinKey.
 // 		17. BSON max key unmarshals to an primitive.MaxKey.
 // 		18. BSON undefined unmarshals to a primitive.Undefined.
-// 		19. BSON null unmarshals to a primitive.Null.
+// 		19. BSON null unmarshals to nil.
 // 		20. BSON DBPointer unmarshals to a primitive.DBPointer.
 // 		21. BSON symbol unmarshals to a primitive.Symbol.
 //
@@ -113,9 +113,10 @@
 //     pulled up one level and will become top-level fields rather than being fields in a nested document. For example, if a
 //     map field named "Map" with value map[string]interface{}{"foo": "bar"} is inlined, the resulting document will be
 //     {"foo": "bar"} instead of {"map": {"foo": "bar"}}. There can only be one inlined map field in a struct. If there are
-//     duplicated fields in the resulting document when an inlined field is marshalled, an error will be returned. This tag
-//     can be used with fields that are pointers to structs. If an inlined pointer field is nil, it will not be marshalled.
-//     For fields that are not maps or structs, this tag is ignored.
+//     duplicated fields in the resulting document when an inlined struct is marshalled, the inlined field will be overwritten.
+//     If there are duplicated fields in the resulting document when an inlined map is marshalled, an error will be returned.
+//     This tag can be used with fields that are pointers to structs. If an inlined pointer field is nil, it will not be
+//     marshalled. For fields that are not maps or structs, this tag is ignored.
 //
 // Marshalling and Unmarshalling
 //
