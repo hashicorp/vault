@@ -530,8 +530,8 @@ func looksLikeDuration(k string) bool {
 type SealStatusOutput struct {
 	api.SealStatusResponse
 	HAEnabled                bool      `json:"ha_enabled"`
-	IsSelf                   bool      `json:"is_self,omitempty""`
-	ActiveTime               time.Time `json:"active_time,omitempty""`
+	IsSelf                   bool      `json:"is_self,omitempty"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
 	LeaderAddress            string    `json:"leader_address,omitempty"`
 	LeaderClusterAddress     string    `json:"leader_cluster_address,omitempty"`
 	PerfStandby              bool      `json:"performance_standby,omitempty"`

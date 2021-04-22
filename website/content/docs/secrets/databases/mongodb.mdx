@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: MongoDB - Database - Secrets Engines
-sidebar_title: MongoDB
 description: |-
   MongoDB is one of the supported plugins for the database secrets engine. This
   plugin generates database credentials dynamically based on configured roles

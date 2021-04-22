@@ -15,9 +15,9 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]struct{}
 	t.Helper()
 
 	activeEntities := map[string]struct{}{
-		"entity0": struct{}{},
-		"entity1": struct{}{},
-		"entity2": struct{}{},
+		"entity0": {},
+		"entity1": {},
+		"entity2": {},
 	}
 	tokens := map[string]uint64{
 		"ns0": 5,
@@ -66,7 +66,6 @@ func WriteToStorage(t *testing.T, c *Core, path string, data []byte) {
 		Key:   path,
 		Value: data,
 	})
-
 	if err != nil {
 		t.Fatalf("Failed to write %s\nto %s\nerror: %v", data, path, err)
 	}

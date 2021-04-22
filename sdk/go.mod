@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.13
+go 1.16
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect

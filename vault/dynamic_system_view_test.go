@@ -290,12 +290,15 @@ type fakeBarrier struct {
 func (b fakeBarrier) Get(context.Context, string) (*logical.StorageEntry, error) {
 	return b.getEntry, b.getErr
 }
+
 func (b fakeBarrier) List(context.Context, string) ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+
 func (b fakeBarrier) Put(context.Context, *logical.StorageEntry) error {
 	return fmt.Errorf("not implemented")
 }
+
 func (b fakeBarrier) Delete(context.Context, string) error {
 	return fmt.Errorf("not implemented")
 }

@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Username Templating
-sidebar_title: Username Templating
 description: >-
   Username templating are used in some secret engines to allow operators to define
   how dynamic usernames are generated.
@@ -17,7 +16,7 @@ See the API documentation for the given secret engine to determine if it support
 details on using it with that engine.
 
 ~> When customizing how usernames are generated, take care to ensure you have enough randomness to ensure uniqueness
-   otherwise multiple calls to create the credentials may interfere with each other.
+otherwise multiple calls to create the credentials may interfere with each other.
 
 In addition to the functionality built into the Go template language, a number of additional functions are available:
 
@@ -79,10 +78,10 @@ may differ from these examples. Additionally, the time is assumed to be 2009-02-
 (unix timestamp: 1234567890) and random characters are the ordered english alphabet: `abcdefghijklmnopqrstuvwxyz`.
 
 -> Note: The space between `{{`/`}}` and the values/functions are optional.
-   For instance: `{{.DisplayName}}` is equivalent to `{{ .DisplayName }}`
+For instance: `{{.DisplayName}}` is equivalent to `{{ .DisplayName }}`
 
-| Field name    | Value |
-| ------------- | ----- |
+| Field name    | Value                     |
+| ------------- | ------------------------- |
 | `DisplayName` | `token-with-display-name` |
 | `RoleName`    | `my_custom_database_role` |
 
@@ -92,10 +91,13 @@ do not include a `.` in front of them: `{{random 20}}`.
 ### Basic Example
 
 **Template**:
+
 ```
 {{.DisplayName}}_{{.RoleName}}
 ```
+
 **Username**:
+
 ```
 token-with-display-name_my_custom_database_role
 ```
@@ -104,15 +106,18 @@ This is a basic example that references the two fields that are provided to the 
 a simple string substitution.
 
 ~> This example does not have any randomness and should not be used when generating dynamic usernames. The purpose is to
-   demonstrate referencing data within the Go template language.
+demonstrate referencing data within the Go template language.
 
 ### Custom Functions
 
 **Template**:
+
 ```
 FOO_{{.DisplayName | replace "-" "_" | uppercase}}_{{.RoleName | replace "-" "_" | uppercase}}_{{timestamp "2006_01_02T15_04_05Z" | replace "-" "_"}}
 ```
+
 **Username**:
+
 ```
 FOO_TOKEN_WITH_DISPLAY_NAME_MY_CUSTOM_DATABASE_ROLE_2009_02_13T11_31_30Z_0700
 ```
@@ -125,10 +130,13 @@ replaces all dashes with underscores.
 ### Truncating to Maximum Length
 
 **Template**:
+
 ```
 {{printf "v_%s_%s_%s_%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 45}}
 ```
+
 **Username**:
+
 ```
 v_token-wi_my_custo_abcdefghijklmnopqrst_1234
 ```

@@ -9,8 +9,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVRollbackCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVRollbackCommand)(nil)
+var (
+	_ cli.Command             = (*KVRollbackCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVRollbackCommand)(nil)
+)
 
 type KVRollbackCommand struct {
 	*BaseCommand

@@ -15,8 +15,7 @@ type clock interface {
 	NewTicker(time.Duration) *time.Ticker
 }
 
-type defaultClock struct {
-}
+type defaultClock struct{}
 
 func (_ defaultClock) Now() time.Time {
 	return time.Now()
@@ -219,7 +218,6 @@ func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 			case <-sendTick.C:
 				break
 			}
-
 		}
 		p.sink.SetGaugeWithLabels(p.key, lv.Value, lv.Labels)
 	}

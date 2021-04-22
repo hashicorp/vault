@@ -18,7 +18,7 @@ func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
-				Default: 259200, //72h
+				Default: 259200, // 72h
 				Description: `The amount of extra time that must have passed beyond the identity's
 expiration, before it is removed from the backend storage.`,
 			},
@@ -152,6 +152,7 @@ type tidyWhitelistIdentityConfig struct {
 const pathConfigTidyIdentityAccessListHelpSyn = `
 Configures the periodic tidying operation of the access list identity entries.
 `
+
 const pathConfigTidyIdentityAccessListHelpDesc = `
 By default, the expired entries in the access list will be attempted to be removed
 periodically. This operation will look for expired items in the list and purges them.

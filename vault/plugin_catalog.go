@@ -374,7 +374,6 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	pluginTypePrefix := pluginType.String() + "/"
 
 	for _, plugin := range keys {
-
 		// Only list user-added plugins if they're of the given type.
 		if entry, err := c.get(ctx, plugin, pluginType); err == nil && entry != nil {
 

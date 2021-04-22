@@ -14,8 +14,10 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-var _ cli.Command = (*OperatorInitCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorInitCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+)
 
 type OperatorInitCommand struct {
 	*BaseCommand

@@ -129,7 +129,6 @@ func (a *AliCloudOSSBackend) Put(ctx context.Context, entry *physical.Entry) err
 	}
 
 	return bucket.PutObject(entry.Key, bytes.NewReader(entry.Value))
-
 }
 
 // Get is used to fetch an entry

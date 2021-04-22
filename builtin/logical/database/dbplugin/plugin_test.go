@@ -39,6 +39,7 @@ func (m *mockPlugin) CreateUser(_ context.Context, statements dbplugin.Statement
 
 	return usernameConf.DisplayName, "test", nil
 }
+
 func (m *mockPlugin) RenewUser(_ context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	err := errors.New("err")
 	if username == "" || expiration.IsZero() {
@@ -51,6 +52,7 @@ func (m *mockPlugin) RenewUser(_ context.Context, statements dbplugin.Statements
 
 	return nil
 }
+
 func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statements, username string) error {
 	err := errors.New("err")
 	if username == "" {
@@ -64,9 +66,11 @@ func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statement
 	delete(m.users, username)
 	return nil
 }
+
 func (m *mockPlugin) RotateRootCredentials(_ context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, nil
 }
+
 func (m *mockPlugin) Init(_ context.Context, conf map[string]interface{}, _ bool) (map[string]interface{}, error) {
 	err := errors.New("err")
 	if len(conf) != 1 {
@@ -75,6 +79,7 @@ func (m *mockPlugin) Init(_ context.Context, conf map[string]interface{}, _ bool
 
 	return conf, nil
 }
+
 func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, _ bool) error {
 	err := errors.New("err")
 	if len(conf) != 1 {
@@ -83,6 +88,7 @@ func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, 
 
 	return nil
 }
+
 func (m *mockPlugin) Close() error {
 	m.users = nil
 	return nil

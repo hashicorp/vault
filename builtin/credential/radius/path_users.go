@@ -31,12 +31,12 @@ func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the RADIUS user.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the user.",
 			},
@@ -116,8 +116,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	var policies = policyutil.ParsePolicies(d.Get("policies"))
+	policies := policyutil.ParsePolicies(d.Get("policies"))
 	for _, policy := range policies {
 		if policy == "root" {
 			return logical.ErrorResponse("root policy cannot be granted by an auth method"), nil

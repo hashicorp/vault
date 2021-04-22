@@ -20,7 +20,6 @@ func TestZooKeeperBackend(t *testing.T) {
 	}
 
 	client, _, err := zk.Connect([]string{addr}, time.Second)
-
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -65,7 +64,6 @@ func TestZooKeeperHABackend(t *testing.T) {
 	}
 
 	client, _, err := zk.Connect([]string{addr}, time.Second)
-
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

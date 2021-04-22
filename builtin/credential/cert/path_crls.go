@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,12 +17,12 @@ func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the certificate",
 			},
 
-			"crl": &framework.FieldSchema{
+			"crl": {
 				Type: framework.TypeString,
 				Description: `The public certificate that should be trusted.
 May be DER or PEM encoded. Note: the expiration time
@@ -55,7 +54,7 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 
 	keys, err := storage.List(ctx, "crls/")
 	if err != nil {
-		return errwrap.Wrapf("error listing CRLs: {{err}}", err)
+		return fmt.Errorf("error listing CRLs: %w", err)
 	}
 	if keys == nil || len(keys) == 0 {
 		return nil
@@ -65,7 +64,7 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 		entry, err := storage.Get(ctx, "crls/"+key)
 		if err != nil {
 			b.crls = nil
-			return errwrap.Wrapf(fmt.Sprintf("error loading CRL %q: {{err}}", key), err)
+			return fmt.Errorf("error loading CRL %q: %w", key, err)
 		}
 		if entry == nil {
 			continue
@@ -74,7 +73,7 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 		err = entry.DecodeJSON(&crlInfo)
 		if err != nil {
 			b.crls = nil
-			return errwrap.Wrapf(fmt.Sprintf("error decoding CRL %q: {{err}}", key), err)
+			return fmt.Errorf("error decoding CRL %q: %w", key, err)
 		}
 		b.crls[key] = crlInfo
 	}
@@ -230,8 +229,7 @@ type CRLInfo struct {
 	Serials map[string]RevokedSerialInfo `json:"serials" structs:"serials" mapstructure:"serials"`
 }
 
-type RevokedSerialInfo struct {
-}
+type RevokedSerialInfo struct{}
 
 const pathCRLsHelpSyn = `
 Manage Certificate Revocation Lists checked during authentication.

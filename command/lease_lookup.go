@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*LeaseLookupCommand)(nil)
-var _ cli.CommandAutocomplete = (*LeaseLookupCommand)(nil)
+var (
+	_ cli.Command             = (*LeaseLookupCommand)(nil)
+	_ cli.CommandAutocomplete = (*LeaseLookupCommand)(nil)
+)
 
 type LeaseLookupCommand struct {
 	*BaseCommand
