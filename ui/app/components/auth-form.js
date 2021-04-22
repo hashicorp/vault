@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
@@ -210,6 +211,10 @@ export default Component.extend(DEFAULTS, {
 
   delayPushMessageReminder: task(function*(backendType) {
     if (backendType === 'okta') {
+      if (Ember.testing) {
+        this.showPushNotificationMessage = true;
+        return;
+      }
       yield timeout(3000); // wait 3 seconds before displaying reminder about checking for push notifications
     }
   }),
@@ -218,6 +223,12 @@ export default Component.extend(DEFAULTS, {
     let clusterId = this.cluster.id;
     try {
       yield this.delayPushMessageReminder.perform(backendType);
+      if (backendType === 'okta') {
+        if (Ember.testing) {
+          this.showLoading = true;
+          return;
+        }
+      }
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
 
       let { isRoot, namespace } = authResponse;

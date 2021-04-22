@@ -83,7 +83,10 @@
           Sign In
         </button>
         {{#if (and showLoading showPushNotificationMessage)}}
-          <p>Please wait. If login is taking longer than usual, you may need to check your device for an MFA notification. Vault will keep trying until timeout.</p>
+          <div class="push-notification" data-test-auth-message="push">
+            <Icon @glyph="info-circle-fill" class="has-text-info"/>
+            <p><strong>Please wait.</strong> If login is taking longer than usual, you may need to check your device for an MFA notification. Vault will keep trying until timeout.</p>
+          </div>
         {{/if}}
     </form>
   {{/if}}
