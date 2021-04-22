@@ -2744,6 +2744,11 @@ func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
 			shouldBeZombie: true,
 		},
 		{
+			err:            logical.ErrRateLimitQuotaExceeded,
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+		{
 			err:            fmt.Errorf("some random recoverable error"),
 			job:            makeJob(),
 			shouldBeZombie: false,
