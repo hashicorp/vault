@@ -1,0 +1,56 @@
+[
+  {
+    "title": "Configuration",
+    "routes": [
+      {
+        "title": "<code>storage</code>",
+        "routes": [
+          {
+            "title": "Alicloud OSS",
+            "path": "configuration/storage/alicloudoss"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Commands",
+    "routes": [
+      {
+        "title": "<code>help</code>",
+        "path": "commands/help"
+      },
+      {
+        "title": "<code>lease</code>",
+        "routes": [
+          {
+            "title": "<code>lookup</code>",
+            "path": "commands/lease/lookup"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Secrets",
+    "routes": [
+      {
+        "title": "Cassandra",
+        "path": "secrets/cassandra"
+      },
+      {
+        "title": "Transform <sup>ENTERPRISE</sup>",
+        "routes": [
+          {
+            "title": "FF3-1 Tweak Usage",
+            "path": "secrets/transform/ff3-tweak-details"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Versus Other Software",
+    "path": "vs"
+  }
+]
