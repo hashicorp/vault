@@ -76,7 +76,7 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		MetricSink:    metricsutil.NewClusterMetricSink("test-cluster", sink),
 		MetricsHelper: metricsutil.NewMetricsHelper(sink, false),
 	}
-	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler, NumCores: 1}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
@@ -84,15 +84,6 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	leaderClient := cluster.Cores[0].Client
-
-	// Make sure the underlying storage is raft and set the metrics sink
-	var clusterSink *metricsutil.ClusterMetricSink
-	if rb, ok := cluster.Cores[0].UnderlyingRawStorage.(*raft.RaftBackend); ok {
-		clusterSink = metricsutil.NewClusterMetricSink("test-cluster", sink)
-		rb.SetMetricsSink(clusterSink)
-	} else {
-		t.Fatalf("should've had a raft backend but instead got %v", rb)
-	}
 
 	// Write a few keys
 	for i := 0; i < 50; i++ {

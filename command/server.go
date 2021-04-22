@@ -37,7 +37,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
@@ -1152,11 +1151,6 @@ func (c *ServerCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
-	}
-
-	// If this is the Raft backend, add the metricSink to it
-	if rb, ok := backend.(*raft.RaftBackend); ok {
-		rb.SetMetricsSink(metricSink)
 	}
 
 	// Prevent server startup if migration is active

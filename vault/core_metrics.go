@@ -10,6 +10,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -93,6 +94,10 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			// Refresh gauge metrics that are looped
 			c.cachedGaugeMetricsEmitter()
 
+			// If we're using a raft backend, emit boltdb metrics
+			if rb, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+				rb.CollectMetrics(c.MetricSink())
+			}
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
 				// Go through the loop again, this time the stop channel case
@@ -132,7 +137,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 					metrics.SetGauge([]string{"identity", "num_entities"}, float32(entities.Entities.Total))
 				}
 			}()
-
 		case <-stopCh:
 			return
 		}
@@ -203,7 +207,6 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 	//
 	// Both active nodes and performance standby nodes call emitMetrics
 	// so we have to handle both.
-
 	metricsInit := []struct {
 		MetricName    []string
 		MetadataLabel []metrics.Label

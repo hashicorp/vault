@@ -150,12 +150,6 @@ type RaftBackend struct {
 	disableAutopilot bool
 
 	autopilotReconcileInterval time.Duration
-
-	// statsDoneCh is for stopping our collection of stats from the underlying boltDB store
-	statsDoneCh chan struct{}
-
-	// metricSink is the destination for metrics
-	metricSink *metricsutil.ClusterMetricSink
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -480,53 +474,32 @@ func (b *RaftBackend) Close() error {
 		return err
 	}
 
-	close(b.statsDoneCh)
-
 	return nil
 }
 
-func (b *RaftBackend) collectMetrics() {
-	if b.metricSink == nil {
-		b.logger.Warn("collectMetrics() called without a metricSink set, aborting")
-		return
-	}
-
-	b.l.Lock()
-	b.statsDoneCh = make(chan struct{})
-	b.l.Unlock()
-
-	go func() {
-		for {
-			select {
-			case <-b.statsDoneCh:
-				return
-			default:
-				b.l.RLock()
-				stats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-				txstats := stats.TxStats
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "free_pages"}, float32(stats.FreePageN))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "pending_pages"}, float32(stats.PendingPageN))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "used_bytes"}, float32(stats.FreelistInuse))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "transaction", "started_read_transactions"}, float32(stats.TxN))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "page", "count"}, float32(txstats.PageCount))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "page", "bytes_allocated"}, float32(txstats.PageAlloc))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "cursor", "count"}, float32(txstats.CursorCount))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "node", "count"}, float32(txstats.NodeCount))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "node", "dereferences"}, float32(txstats.NodeDeref))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "rebalance", "count"}, float32(txstats.Rebalance))
-				b.metricSink.AddSample([]string{"raft", "bolt_store", "rebalance", "time"}, float32(txstats.RebalanceTime))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "split", "count"}, float32(txstats.Split))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "spill", "count"}, float32(txstats.Spill))
-				b.metricSink.AddSample([]string{"raft", "bolt_store", "spill", "time"}, float32(txstats.SpillTime))
-				b.metricSink.SetGauge([]string{"raft", "bolt_store", "write", "count"}, float32(txstats.Write))
-				b.metricSink.AddSample([]string{"raft", "bolt_store", "write", "time"}, float32(txstats.WriteTime))
-				b.l.RUnlock()
-				time.Sleep(time.Second)
-			}
-		}
-	}()
+func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
+	b.l.RLock()
+	stats := b.stableStore.(*raftboltdb.BoltStore).Stats()
+	b.l.RUnlock()
+	txstats := stats.TxStats
+	sink.SetGauge([]string{"raft", "bolt_store", "freelist", "free_pages"}, float32(stats.FreePageN))
+	sink.SetGauge([]string{"raft", "bolt_store", "freelist", "pending_pages"}, float32(stats.PendingPageN))
+	sink.SetGauge([]string{"raft", "bolt_store", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc))
+	sink.SetGauge([]string{"raft", "bolt_store", "freelist", "used_bytes"}, float32(stats.FreelistInuse))
+	sink.SetGauge([]string{"raft", "bolt_store", "transaction", "started_read_transactions"}, float32(stats.TxN))
+	sink.SetGauge([]string{"raft", "bolt_store", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN))
+	sink.SetGauge([]string{"raft", "bolt_store", "page", "count"}, float32(txstats.PageCount))
+	sink.SetGauge([]string{"raft", "bolt_store", "page", "bytes_allocated"}, float32(txstats.PageAlloc))
+	sink.SetGauge([]string{"raft", "bolt_store", "cursor", "count"}, float32(txstats.CursorCount))
+	sink.SetGauge([]string{"raft", "bolt_store", "node", "count"}, float32(txstats.NodeCount))
+	sink.SetGauge([]string{"raft", "bolt_store", "node", "dereferences"}, float32(txstats.NodeDeref))
+	sink.SetGauge([]string{"raft", "bolt_store", "rebalance", "count"}, float32(txstats.Rebalance))
+	sink.AddSample([]string{"raft", "bolt_store", "rebalance", "time"}, float32(txstats.RebalanceTime))
+	sink.SetGauge([]string{"raft", "bolt_store", "split", "count"}, float32(txstats.Split))
+	sink.SetGauge([]string{"raft", "bolt_store", "spill", "count"}, float32(txstats.Spill))
+	sink.AddSample([]string{"raft", "bolt_store", "spill", "time"}, float32(txstats.SpillTime))
+	sink.SetGauge([]string{"raft", "bolt_store", "write", "count"}, float32(txstats.Write))
+	sink.AddSample([]string{"raft", "bolt_store", "write", "time"}, float32(txstats.WriteTime))
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -576,17 +549,6 @@ func (b *RaftBackend) Initialized() bool {
 	init := b.raft != nil
 	b.l.RUnlock()
 	return init
-}
-
-func (b *RaftBackend) SetMetricsSink(sink *metricsutil.ClusterMetricSink) {
-	b.l.Lock()
-	b.metricSink = sink
-	b.l.Unlock()
-
-	// If we're not already collecting metrics, start
-	if b.statsDoneCh == nil {
-		b.collectMetrics()
-	}
 }
 
 // SetTLSKeyring is used to install a new keyring. If the active key has changed
@@ -914,7 +876,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Close the init channel to signal setup has been completed
 	close(b.raftInitCh)
-	b.collectMetrics()
 
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
