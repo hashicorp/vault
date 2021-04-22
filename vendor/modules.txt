@@ -1124,13 +1124,17 @@ go.opentelemetry.io/otel/codes
 go.opentelemetry.io/otel/internal
 go.opentelemetry.io/otel/internal/baggage
 go.opentelemetry.io/otel/internal/global
+go.opentelemetry.io/otel/internal/metric
 go.opentelemetry.io/otel/internal/trace/noop
 go.opentelemetry.io/otel/internal/trace/parent
 go.opentelemetry.io/otel/propagation
 go.opentelemetry.io/otel/semconv
 go.opentelemetry.io/otel/unit
+# go.opentelemetry.io/otel/exporters/stdout v0.19.0
+go.opentelemetry.io/otel/exporters/stdout
 # go.opentelemetry.io/otel/metric v0.19.0
 go.opentelemetry.io/otel/metric
+go.opentelemetry.io/otel/metric/global
 go.opentelemetry.io/otel/metric/number
 go.opentelemetry.io/otel/metric/registry
 # go.opentelemetry.io/otel/sdk v0.19.0
@@ -1139,6 +1143,21 @@ go.opentelemetry.io/otel/sdk/instrumentation
 go.opentelemetry.io/otel/sdk/internal
 go.opentelemetry.io/otel/sdk/resource
 go.opentelemetry.io/otel/sdk/trace
+# go.opentelemetry.io/otel/sdk/export/metric v0.19.0
+go.opentelemetry.io/otel/sdk/export/metric
+go.opentelemetry.io/otel/sdk/export/metric/aggregation
+# go.opentelemetry.io/otel/sdk/metric v0.19.0
+go.opentelemetry.io/otel/sdk/metric
+go.opentelemetry.io/otel/sdk/metric/aggregator
+go.opentelemetry.io/otel/sdk/metric/aggregator/exact
+go.opentelemetry.io/otel/sdk/metric/aggregator/histogram
+go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue
+go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount
+go.opentelemetry.io/otel/sdk/metric/aggregator/sum
+go.opentelemetry.io/otel/sdk/metric/controller/basic
+go.opentelemetry.io/otel/sdk/metric/controller/time
+go.opentelemetry.io/otel/sdk/metric/processor/basic
+go.opentelemetry.io/otel/sdk/metric/selector/simple
 # go.opentelemetry.io/otel/trace v0.19.0
 go.opentelemetry.io/otel/trace
 # go.uber.org/atomic v1.6.0

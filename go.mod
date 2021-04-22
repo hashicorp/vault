@@ -158,7 +158,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
 	go.opentelemetry.io/otel v0.19.0
-	go.opentelemetry.io/otel/exporters/stdout v0.19.0 // indirect
+	go.opentelemetry.io/otel/exporters/stdout v0.19.0
 	go.opentelemetry.io/otel/sdk v0.19.0
 	go.opentelemetry.io/otel/trace v0.19.0
 	go.uber.org/atomic v1.6.0

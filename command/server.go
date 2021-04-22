@@ -872,7 +872,7 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 }
 
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
-func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
+func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) ([]listenerutil.Listener, []*net.TCPAddr, error) {
 
 	clusterAddrs := []*net.TCPAddr{}
 
@@ -888,7 +888,7 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
 			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
-			return 1, nil, nil, errMsg
+			return nil, nil, errMsg
 		}
 
 		if reloadFunc != nil {
@@ -903,14 +903,14 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
 				if err != nil {
 					errMsg = fmt.Errorf("Error resolving cluster_address: %s", err)
-					return 1, nil, nil, errMsg
+					return nil, nil, errMsg
 				}
 				clusterAddrs = append(clusterAddrs, tcpAddr)
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
 					errMsg = fmt.Errorf("Failed to parse tcp listener")
-					return 1, nil, nil, errMsg
+					return nil, nil, errMsg
 				}
 				clusterAddr := &net.TCPAddr{
 					IP:   tcpAddr.IP,
@@ -955,7 +955,7 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
-	return 0, lns, clusterAddrs, nil
+	return lns, clusterAddrs, nil
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -1570,9 +1570,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	status, lns, clusterAddrs, errMsg := c.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
+	lns, clusterAddrs, errMsg := c.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
 
-	if status != 0 {
+	if err != nil {
 		c.UI.Output("Error parsing listener configuration.")
 		c.UI.Error(errMsg.Error())
 		return 1

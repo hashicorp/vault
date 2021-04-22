@@ -3,8 +3,7 @@ package command
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/sdk/version"
-	"go.opentelemetry.io/otel/trace"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -12,11 +11,14 @@ import (
 	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
@@ -109,9 +111,11 @@ var tracer trace.Tracer
 
 // initTracer creates and registers trace provider instance.
 func initTracer(ui cli.Ui) {
+	so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSpanProcessor(diagnose.NewDiagnoseSpanProcessor(ui)),
+		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
+		sdktrace.WithSpanProcessor(diagnose.NewTelemetryCollector()),
 	)
 	otel.SetTracerProvider(tp)
 	tracer = tp.Tracer("vault")
@@ -133,10 +137,10 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 	initTracer(c.UI)
 	ctx := context.Background()
-	ctx, span := diagnose.StartPhase(ctx, "initialization", &diagnose.AnsiTracer{c.UI, true})
+	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
 
-	diagnose.PassFail(ctx, "simple-test", errors.New("nope, didn't work"))
+	diagnose.Error(ctx, errors.New("nope, didn't work"), diagnose.Action("one-off"))
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
 	server := &ServerCommand{
@@ -159,28 +163,21 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		reloadFuncsLock: new(sync.RWMutex),
 	}
 	var config *cserver.Config
-	if func() bool {
-		var err error
-		diagnose.Test(ctx, "Parse configuration",
-			func(ctx context.Context) error {
-				p := diagnose.CurrentPhase(ctx)
-				server.flagConfigs = c.flagConfigs
-				config, err = server.parseConfig()
-				if err != nil {
-					return err
-				}
-				errors := config.Validate("test")
-				for _, cerr := range errors {
-					p.Warn(cerr.String())
-				}
+	err := diagnose.Test(ctx, "Parse configuration",
+		func(ctx context.Context) error {
+			server.flagConfigs = c.flagConfigs
+			var err error
+			config, err = server.parseConfig()
+			if err != nil {
 				return err
-			})
-		if err != nil {
-			return true
-		}
-		return false
-
-	}() {
+			}
+			errors := config.Validate("test")
+			for _, cerr := range errors {
+				diagnose.Warn(ctx, cerr.String())
+			}
+			return err
+		})
+	if err != nil {
 		return 1
 	}
 	// Check Listener Information
@@ -190,52 +187,49 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 
-	status, lns, _, err := server.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
-	diagnose.PassFail(ctx, "initialize-listeners", err)
-	if status != 0 {
-		return 1
-	}
-
-	// Make sure we close all listeners from this point on
-	listenerCloseFunc := func() {
-		for _, ln := range lns {
-			ln.Listener.Close()
-		}
-	}
-
-	defer c.cleanupGuard.Do(listenerCloseFunc)
-
-	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-	for _, ln := range lns {
-		if ln.Config.TLSDisable {
-			span.Warn("TLS is disabled in a Listener config stanza.")
-			continue
-		}
-		if ln.Config.TLSDisableClientCerts {
-			span.Warn("TLS for a listener is turned on without requiring client certs.")
-		}
-
-		// Check ciphersuite and load ca/cert/key files
-		// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
-		// perform an active probe.
-		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+	err = diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+		lns, _, err := server.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
 		if err != nil {
-			span.Error(errors.New("error creating TLS Configuration out of config file: " + err.Error()))
-			return 1
+			return err
+		}
+		// Make sure we close all listeners from this point on
+		listenerCloseFunc := func() {
+			for _, ln := range lns {
+				ln.Listener.Close()
+			}
 		}
 
-		sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-			Listener: ln.Listener,
-			Config:   ln.Config,
-		})
-	}
-	err := diagnose.Test(ctx, "listeners", func(ctx context.Context) error {
+		defer c.cleanupGuard.Do(listenerCloseFunc)
+
+		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
+		for _, ln := range lns {
+			if ln.Config.TLSDisable {
+				diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
+				continue
+			}
+			if ln.Config.TLSDisableClientCerts {
+				diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
+			}
+
+			// Check ciphersuite and load ca/cert/key files
+			// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
+			// perform an active probe.
+			_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+			if err != nil {
+				return fmt.Errorf("error creating TLS Configuration out of config file: %w", err)
+			}
+
+			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+				Listener: ln.Listener,
+				Config:   ln.Config,
+			})
+		}
 		return diagnose.ListenerChecks(sanitizedListeners)
 	})
+
 	if err != nil {
 		return 1
 	}
-
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
