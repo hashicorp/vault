@@ -640,7 +640,6 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 		}
 	}
 
-	var fieldAlias string
 	for _, f := range fields {
 		field, fieldValue := f.field, f.val
 		if !fieldValue.IsValid() {
@@ -678,9 +677,6 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 				unusedKeysVal = append(unusedKeysVal, fieldValue)
 				continue
 			}
-			if strings.HasPrefix(tagParts[1], "alias:") {
-				fieldAlias = tagParts[1][6:]
-			}
 		}
 
 		if tagParts[0] != "" {
@@ -701,10 +697,7 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 		// Track the used keys
 		usedKeys[fieldName] = struct{}{}
 		unusedNodeKeys = removeCaseFold(unusedNodeKeys, fieldName)
-		if fieldAlias != "" {
-			unusedNodeKeys = removeCaseFold(unusedNodeKeys, fieldAlias)
-		}
-		
+
 		// Create the field name and decode. We range over the elements
 		// because we actually want the value.
 		fieldName = fmt.Sprintf("%s.%s", name, fieldName)

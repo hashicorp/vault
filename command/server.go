@@ -6,6 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"io"
 	"io/ioutil"
 	"net"
@@ -36,13 +43,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -873,8 +873,6 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
 func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
-	ctx, span := tracer.Start(ctx, "init-listeners")
-	defer span.End()
 
 	clusterAddrs := []*net.TCPAddr{}
 
@@ -890,7 +888,6 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
 			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
-			span.RecordError(errMsg)
 			return 1, nil, nil, errMsg
 		}
 
@@ -906,7 +903,6 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
 				if err != nil {
 					errMsg = fmt.Errorf("Error resolving cluster_address: %s", err)
-					span.RecordError(errMsg)
 					return 1, nil, nil, errMsg
 				}
 				clusterAddrs = append(clusterAddrs, tcpAddr)
@@ -914,7 +910,6 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
 					errMsg = fmt.Errorf("Failed to parse tcp listener")
-					span.RecordError(errMsg)
 					return 1, nil, nil, errMsg
 				}
 				clusterAddr := &net.TCPAddr{

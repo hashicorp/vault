@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/hashicorp/vault/sdk/version"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	trace2 "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/trace"
 	"strings"
 	"sync"
@@ -26,27 +23,6 @@ const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
 var _ cli.Command = (*OperatorDiagnoseCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
-
-type exporter struct {
-	ui cli.Ui
-}
-
-func (e *exporter) ExportSpans(ctx context.Context, ss []*trace2.SpanSnapshot) error {
-	for _, s := range ss {
-		msg := s.Name + ": " + s.StatusMessage
-		switch s.StatusCode {
-		case codes.Ok:
-			e.ui.Error(same_line + status_ok + msg)
-		case codes.Error:
-			e.ui.Error(same_line + status_failed + msg)
-		}
-	}
-	return nil
-}
-
-func (e *exporter) Shutdown(ctx context.Context) error {
-	return nil
-}
 
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
@@ -128,22 +104,14 @@ func (c *OperatorDiagnoseCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-const status_unknown = "[      ] "
-const status_ok = "\u001b[32m[  ok  ]\u001b[0m "
-const status_failed = "\u001b[31m[failed]\u001b[0m "
-const status_warn = "\u001b[33m[ warn ]\u001b[0m "
-const same_line = "\u001b[F"
-
 var tp *sdktrace.TracerProvider
 var tracer trace.Tracer
 
 // initTracer creates and registers trace provider instance.
 func initTracer(ui cli.Ui) {
-	exp := &exporter{ui}
-	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithSpanProcessor(diagnose.NewDiagnoseSpanProcessor(ui)),
 	)
 	otel.SetTracerProvider(tp)
 	tracer = tp.Tracer("vault")
@@ -163,11 +131,12 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
 	}
+	initTracer(c.UI)
 	ctx := context.Background()
-	defer tp.ForceFlush(ctx)
-	ctx, span := tracer.Start(ctx, "initialization")
+	ctx, span := diagnose.StartPhase(ctx, "initialization", &diagnose.AnsiTracer{c.UI, true})
 	defer span.End()
 
+	diagnose.PassFail(ctx, "simple-test", errors.New("nope, didn't work"))
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
 	server := &ServerCommand{
@@ -192,16 +161,25 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	var config *cserver.Config
 	if func() bool {
 		var err error
-		_, span2 := tracer.Start(ctx, "Parse configuration")
-
-		defer span2.End()
-		server.flagConfigs = c.flagConfigs
-		config, err = server.parseConfig()
+		diagnose.Test(ctx, "Parse configuration",
+			func(ctx context.Context) error {
+				p := diagnose.CurrentPhase(ctx)
+				server.flagConfigs = c.flagConfigs
+				config, err = server.parseConfig()
+				if err != nil {
+					return err
+				}
+				errors := config.Validate("test")
+				for _, cerr := range errors {
+					p.Warn(cerr.String())
+				}
+				return err
+			})
 		if err != nil {
-			traceError(ctx, c.UI, err)
 			return true
 		}
 		return false
+
 	}() {
 		return 1
 	}
@@ -211,10 +189,10 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	disableClustering := config.HAStorage.DisableClustering
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	status, lns, _, errMsg := server.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
 
+	status, lns, _, err := server.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
+	diagnose.PassFail(ctx, "initialize-listeners", err)
 	if status != 0 {
-		traceError(ctx, c.UI, errMsg)
 		return 1
 	}
 
@@ -230,11 +208,11 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, ln := range lns {
 		if ln.Config.TLSDisable {
-			traceWarn(ctx, c.UI, "WARNING! TLS is disabled in a Listener config stanza.")
+			span.Warn("TLS is disabled in a Listener config stanza.")
 			continue
 		}
 		if ln.Config.TLSDisableClientCerts {
-			c.UI.Warn("WARNING! TLS for a listener is turned on without requiring client certs.")
+			span.Warn("TLS for a listener is turned on without requiring client certs.")
 		}
 
 		// Check ciphersuite and load ca/cert/key files
@@ -242,7 +220,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		// perform an active probe.
 		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
 		if err != nil {
-			traceError(ctx, c.UI, errors.New("error creating TLS Configuration out of config file: "+err.Error()))
+			span.Error(errors.New("error creating TLS Configuration out of config file: " + err.Error()))
 			return 1
 		}
 
@@ -251,9 +229,10 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			Config:   ln.Config,
 		})
 	}
-	err := diagnose.ListenerChecks(sanitizedListeners)
+	err := diagnose.Test(ctx, "listeners", func(ctx context.Context) error {
+		return diagnose.ListenerChecks(sanitizedListeners)
+	})
 	if err != nil {
-		traceError(ctx, c.UI, err)
 		return 1
 	}
 
@@ -262,24 +241,12 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	// TODO: SetupTelemetry
 	// TODO: check for storage backend
 
-	_, err = server.setupStorage(config)
+	err = diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+		_, err := server.setupStorage(config)
+		return err
+	})
 	if err != nil {
-		traceError(ctx, c.UI, err)
 		return 1
 	}
 	return 0
-}
-
-func traceError(ctx context.Context, ui cli.Ui, err error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetStatus(codes.Error, err.Error())
-	span.RecordError(err)
-	ui.Output(same_line + status_failed)
-	ui.Output(err.Error())
-}
-
-func traceWarn(ctx context.Context, ui cli.Ui, s string) {
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("warning", trace.WithAttributes(attribute.KeyValue{Key: "message", Value: attribute.StringValue(s)}))
-	ui.Warn(s)
 }

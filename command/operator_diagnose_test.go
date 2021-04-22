@@ -3,11 +3,9 @@
 package command
 
 import (
+	"github.com/mitchellh/cli"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/mitchellh/cli"
 )
 
 func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseCommand) {
@@ -85,6 +83,5 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				}
 			})
 		}
-		time.Sleep(5 * time.Second)
 	})
 }
