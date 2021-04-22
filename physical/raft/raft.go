@@ -501,9 +501,9 @@ func (b *RaftBackend) collectMetrics() {
 			case <-b.statsDoneCh:
 				return
 			default:
+				b.l.RLock()
 				stats := b.stableStore.(*raftboltdb.BoltStore).Stats()
 				txstats := stats.TxStats
-				b.l.RLock()
 				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "free_pages"}, float32(stats.FreePageN))
 				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "pending_pages"}, float32(stats.PendingPageN))
 				b.metricSink.SetGauge([]string{"raft", "bolt_store", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc))
