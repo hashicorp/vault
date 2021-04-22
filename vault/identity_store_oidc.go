@@ -50,6 +50,7 @@ type namedKey struct {
 	RotationPeriod   time.Duration    `json:"rotation_period"`
 	KeyRing          []*expireableKey `json:"key_ring"`
 	SigningKey       *jose.JSONWebKey `json:"signing_key"`
+	NextSigningKey   *jose.JSONWebKey `json:"next_signing_key"`
 	NextRotation     time.Time        `json:"next_rotation"`
 	AllowedClientIDs []string         `json:"allowed_client_ids"`
 }
@@ -515,7 +516,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		key.NextRotation = nextRotation
 	}
 
-	// generate keys if creating a new key or changing algorithms
+	// generate current and next keys if creating a new key or changing algorithms
 	if key.Algorithm != prevAlgorithm {
 		signingKey, err := generateKeys(key.Algorithm)
 		if err != nil {
@@ -528,6 +529,19 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
 		}
+
+		nextSigningKey, err := generateKeys(key.Algorithm)
+		if err != nil {
+			return nil, err
+		}
+
+		key.NextSigningKey = nextSigningKey
+		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: nextSigningKey.Public().KeyID})
+
+		if err := saveOIDCPublicKey(ctx, req.Storage, nextSigningKey.Public()); err != nil {
+			return nil, err
+		}
+
 	}
 
 	if err := i.oidcCache.Flush(ns); err != nil {
@@ -1313,11 +1327,11 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 	}
 
 	// generate new key
-	signingKey, err := generateKeys(k.Algorithm)
+	nextSigningKey, err := generateKeys(k.Algorithm)
 	if err != nil {
 		return err
 	}
-	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
+	if err := saveOIDCPublicKey(ctx, s, nextSigningKey.Public()); err != nil {
 		return err
 	}
 
@@ -1330,8 +1344,9 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 			break
 		}
 	}
-	k.SigningKey = signingKey
-	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.KeyID})
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: nextSigningKey.KeyID})
+	k.SigningKey = k.NextSigningKey
+	k.NextSigningKey = nextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
 
 	// store named key (it was modified when rotate was called on it)
