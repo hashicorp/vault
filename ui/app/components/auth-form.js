@@ -190,7 +190,6 @@ export default Component.extend(DEFAULTS, {
   }).withTestWaiter(),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
-  showPushNotificationMessage: alias('delayPushMessageReminder.isIdle'),
 
   handleError(e, prefixMessage = true) {
     this.set('loading', false);
@@ -209,28 +208,11 @@ export default Component.extend(DEFAULTS, {
     this.set('error', `${message}${errors.join('.')}`);
   },
 
-  delayPushMessageReminder: task(function*(backendType) {
-    if (backendType === 'okta') {
-      if (Ember.testing) {
-        this.showPushNotificationMessage = true;
-        return;
-      }
-      yield timeout(3000); // wait 3 seconds before displaying reminder about checking for push notifications
-    }
-  }),
-
   authenticate: task(function*(backendType, data) {
     let clusterId = this.cluster.id;
     try {
       yield this.delayPushMessageReminder.perform(backendType);
-      if (backendType === 'okta') {
-        if (Ember.testing) {
-          this.showLoading = true;
-          return;
-        }
-      }
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
-
       let { isRoot, namespace } = authResponse;
       let transition;
       let { redirectTo } = this;

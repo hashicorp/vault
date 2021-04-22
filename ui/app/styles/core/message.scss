@@ -119,6 +119,15 @@
   &.has-top {
     margin-top: 1rem;
   }
+
+  &.size-small {
+    padding-bottom: $size-8;
+    font-size: $size-7;
+  }
+
+  &.padding-top {
+    padding-top: $size-8;
+  }
 }
 
 .has-text-highlight {
