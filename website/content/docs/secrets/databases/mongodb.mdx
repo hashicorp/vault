@@ -98,6 +98,12 @@ from MongoDB with the exception that the Vault parameters are the contents of th
 the two options are independent of each other. See the [MongoDB Configuration Options](https://docs.mongodb.com/manual/reference/program/mongo/)
 for more information.
 
+## Learn
+
+Refer to [Database Secrets Engine with
+MongoDB](https://learn.hashicorp.com/tutorials/vault/database-mongodb) for a
+step-by-step tutorial.
+
 ## API
 
 The full list of configurable options can be seen in the [MongoDB database
