@@ -459,8 +459,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		key.RotationPeriod = time.Duration(d.Get("rotation_period").(int)) * time.Second
 	}
 
-	if key.RotationPeriod < 1*time.Minute {
-		return logical.ErrorResponse("rotation_period must be at least one minute"), nil
+	if key.RotationPeriod < 2*time.Minute {
+		return logical.ErrorResponse("rotation_period must be at least two minutes"), nil
 	}
 
 	if verificationTTLRaw, ok := d.GetOk("verification_ttl"); ok {
