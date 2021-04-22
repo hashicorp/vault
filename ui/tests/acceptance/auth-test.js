@@ -108,12 +108,15 @@ module('Acceptance | auth', function(hooks) {
 
   test('it shows the push notification warning only for okta auth method when it is selected', async function(assert) {
     await visit('/vault/auth');
-    await click('[data-test-auth-submit="true"]');
+    await component.selectMethod('token');
     assert
       .dom('[data-test-auth-message="push"]')
       .doesNotExist('message is not shown for other authentication methods');
 
     await component.selectMethod('okta');
     assert.dom('[data-test-auth-message="push"]').exists('shows push notification message');
+
+    await component.selectMethod('token');
+    assert.dom('[data-test-auth-message="push"]').doesNotExist('message has been cleared');
   });
 });
