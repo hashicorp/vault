@@ -306,7 +306,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	//mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+	// mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
 	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
 	server := &http.Server{

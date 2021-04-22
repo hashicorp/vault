@@ -16,7 +16,7 @@ import (
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "roles/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -26,7 +26,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathRoleHelpSyn,
 			HelpDescription: pathRoleHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-roles/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -41,7 +41,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern:        "roles/" + framework.GenericNameRegex("name"),
 			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -56,7 +56,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathRoleHelpDesc,
 		},
 
-		&framework.Path{
+		{
 			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,

@@ -409,7 +409,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
 		}
 		var claims squarejwt.Claims
-		var allClaims = make(map[string]interface{})
+		allClaims := make(map[string]interface{})
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
 			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
 		}

@@ -88,8 +88,9 @@ func (m *ClusterMetricSink) MeasureSinceWithLabels(key []string, start time.Time
 
 // BlackholeSink is a default suitable for use in unit tests.
 func BlackholeSink() *ClusterMetricSink {
-	sink, _ := metrics.New(metrics.DefaultConfig(""),
-		&metrics.BlackholeSink{})
+	conf := metrics.DefaultConfig("")
+	conf.EnableRuntimeMetrics = false
+	sink, _ := metrics.New(conf, &metrics.BlackholeSink{})
 	cms := &ClusterMetricSink{
 		ClusterName: atomic.Value{},
 		Sink:        sink,
@@ -128,7 +129,9 @@ func NamespaceLabel(ns *namespace.Namespace) metrics.Label {
 	case ns.ID == namespace.RootNamespaceID:
 		return metrics.Label{"namespace", "root"}
 	default:
-		return metrics.Label{"namespace",
-			strings.Trim(ns.Path, "/")}
+		return metrics.Label{
+			"namespace",
+			strings.Trim(ns.Path, "/"),
+		}
 	}
 }

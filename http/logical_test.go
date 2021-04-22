@@ -279,6 +279,7 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	})
 	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
 }
+
 func TestLogical_RequestSizeDisableLimit(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestListener(t)
@@ -497,5 +498,4 @@ func TestLogical_ShouldParseForm(t *testing.T) {
 			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
 		}
 	}
-
 }

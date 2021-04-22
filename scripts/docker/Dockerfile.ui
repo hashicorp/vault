@@ -3,7 +3,7 @@
 # we're explicitly compiling for 'linux/amd64'
 FROM debian:buster AS builder
 
-ARG VERSION=1.15.11
+ARG VERSION=1.16.2
 ARG CGO_ENABLED=0
 ARG BUILD_TAGS
 ENV JOBS=2
@@ -42,7 +42,7 @@ RUN make bootstrap static-dist \
 
 # Docker Image
 
-FROM alpine:3.10
+FROM alpine:3.13
 
 # Create a vault user and group first so the IDs get set the same way,
 # even as the rest of this may change over time.

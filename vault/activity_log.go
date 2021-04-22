@@ -313,7 +313,7 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 		// Rotate to next segment
 		a.currentSegment.entitySequenceNumber += 1
 		if len(excessEntities) > activitySegmentEntityCapacity {
-			a.logger.Warn("too many new active entities %v, dropping tail", len(excessEntities))
+			a.logger.Warn("too many new active entities, dropping tail", "entities", len(excessEntities))
 			excessEntities = excessEntities[:activitySegmentEntityCapacity]
 		}
 		a.currentSegment.currentEntities.Entities = excessEntities
@@ -1177,7 +1177,6 @@ func (a *ActivityLog) activeFragmentWorker() {
 			endOfMonth.Reset(delta)
 		}
 	}
-
 }
 
 type ActivityIntentLog struct {
@@ -1358,7 +1357,6 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
 
 	// TODO: check if current segment is full and should be written
-
 }
 
 type ClientCountResponse struct {

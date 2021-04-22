@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -16,11 +15,11 @@ func secretDynamicKey(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretDynamicKeyType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username in host",
 			},
-			"ip": &framework.FieldSchema{
+			"ip": {
 				Type:        framework.TypeString,
 				Description: "IP address of host",
 			},
@@ -49,13 +48,13 @@ func (b *backend) secretDynamicKeyRevoke(ctx context.Context, req *logical.Reque
 	intSec := &sec{}
 	err := mapstructure.Decode(req.Secret.InternalData, intSec)
 	if err != nil {
-		return nil, errwrap.Wrapf("secret internal data could not be decoded: {{err}}", err)
+		return nil, fmt.Errorf("secret internal data could not be decoded: %w", err)
 	}
 
 	// Fetch the host key using the key name
 	hostKey, err := b.getKey(ctx, req.Storage, intSec.HostKeyName)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("key %q not found error: {{err}}", intSec.HostKeyName), err)
+		return nil, fmt.Errorf("key %q not found error: %w", intSec.HostKeyName, err)
 	}
 	if hostKey == nil {
 		return nil, fmt.Errorf("key %q not found", intSec.HostKeyName)

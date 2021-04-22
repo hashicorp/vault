@@ -375,5 +375,4 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	if !strutil.EquivalentSlices(policies, []string{"foo", "bar"}) {
 		t.Fatalf("policy mismatch, got policies: %v", policies)
 	}
-
 }

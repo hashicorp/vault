@@ -152,11 +152,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	return resp, nil
-
 }
 
 func (b *backend) getConfig(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
-
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err

@@ -9,7 +9,7 @@ export default AuthConfig.extend({
   useOpenAPI: true,
   certificate: attr({
     label: 'Certificate',
-    editType: 'textarea',
+    editType: 'file',
   }),
   fieldGroups: computed('newFields', function() {
     let groups = [

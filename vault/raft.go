@@ -40,6 +40,17 @@ var (
 	TestingUpdateClusterAddr uint32
 )
 
+// GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
+func (c *Core) GetRaftNodeID() string {
+	rb := c.getRaftBackend()
+
+	if rb == nil {
+		return ""
+	} else {
+		return rb.NodeID()
+	}
+}
+
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -169,7 +180,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 	disableAutopilot := c.disableAutopilot
-	if c.isRaftHAOnly() || c.IsDRSecondary() {
+	if c.IsDRSecondary() {
 		disableAutopilot = true
 	}
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)

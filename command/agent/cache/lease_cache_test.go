@@ -631,7 +631,6 @@ func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 		t.Fatalf("request timed out: %s", ctx.Err())
 	case <-wgDoneCh:
 	}
-
 }
 
 func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
@@ -927,7 +926,6 @@ func TestRegisterAutoAuth_sameToken(t *testing.T) {
 }
 
 func Test_hasExpired(t *testing.T) {
-
 	responses := []*SendResponse{
 		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
 		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 60}`),
@@ -985,7 +983,6 @@ func Test_hasExpired(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, expired)
 	}
-
 }
 
 func TestLeaseCache_hasExpired_wrong_type(t *testing.T) {

@@ -76,12 +76,12 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.
-		3: plugin.PluginSet{
+		3: {
 			"backend": &GRPCBackendPlugin{
 				MetadataMode: isMetadataMode,
 			},
 		},
-		4: plugin.PluginSet{
+		4: {
 			"backend": &GRPCBackendPlugin{
 				MetadataMode: isMetadataMode,
 			},
