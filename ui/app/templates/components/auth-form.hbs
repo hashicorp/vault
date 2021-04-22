@@ -1,11 +1,4 @@
 <div class="auth-form">
-  {{#if showLoading}}
-    {{#unless (eq selectedAuthBackend.type "okta")}}
-      <div class="vault-loader">
-        <VaultLogoSpinner />
-      </div>
-    {{/unless}}
-  {{/if}}
   {{#if hasMethodsWithPath}}
     <nav class="tabs is-marginless">
       <ul>
@@ -49,7 +42,7 @@
       <AlertInline 
         @sizeSmall=true
         @type="info" 
-        @message="If Okta login takes longer than usual, you may need to check your device for an MFA notification."
+        @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
         data-test-auth-message="push"
       />
     {{/if}}
@@ -87,10 +80,10 @@
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
         {{/if}}
-        <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading has-bottom-margin-s'}}" id="auth-submit">
+        <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
           Sign In
         </button>
     </form>
   {{/if}}
-</div>
+  </div>
 </div>
