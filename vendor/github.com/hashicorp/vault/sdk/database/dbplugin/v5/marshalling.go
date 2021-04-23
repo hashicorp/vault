@@ -1,12 +1,21 @@
 package dbplugin
 
 import (
+	"encoding/json"
 	"math"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func mapToStruct(m map[string]interface{}) (*structpb.Struct, error) {
+	// Convert any json.Number typed values to string, since the type
+	// does not have a conversion mapping defined in structpb
+	for k, v := range m {
+		if n, ok := v.(json.Number); ok {
+			m[k] = n.String()
+		}
+	}
+
 	return structpb.NewStruct(m)
 }
 
