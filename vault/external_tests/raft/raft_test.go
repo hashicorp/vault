@@ -105,7 +105,7 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 	// To validate our metrics are being sent, we check for the presence of one
 	noBoltDBMetrics := true
 	for _, c := range intervals[0].Gauges {
-		if c.Name == "raft.bolt_store.freelist.free_pages" {
+		if c.Name == "raft.logstore.bolt.freelist.free_pages" {
 			noBoltDBMetrics = false
 			break
 		}
