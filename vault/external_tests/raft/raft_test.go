@@ -109,7 +109,7 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 	t.Log("checking gauges for raft boltdb metrics")
 	for _, c := range intervals[0].Gauges {
 		t.Logf("gauge name - %s\n", c.Name)
-		if c.Name == "raft.logstore.bolt.freelist.free_pages" {
+		if strings.HasPrefix(c.Name, "raft_storage.bolt.") {
 			noBoltDBMetrics = false
 			break
 		}
