@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
 	"net/url"
 	"sort"
 	"strings"
@@ -510,8 +512,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return logical.ErrorResponse("unknown signing algorithm %q", key.Algorithm), nil
 	}
 
+	now := time.Now()
+
 	// Update next rotation time if it is unset or now earlier than previously set.
-	nextRotation := time.Now().Add(key.RotationPeriod)
+	nextRotation := now.Add(key.RotationPeriod)
 	if key.NextRotation.IsZero() || nextRotation.Before(key.NextRotation) {
 		key.NextRotation = nextRotation
 	}
@@ -523,8 +527,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 			return nil, err
 		}
 
+		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 		key.SigningKey = signingKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
+		key.KeyRing = append(key.KeyRing, &expireableKey{
+			KeyID:    signingKey.Public().KeyID,
+			ExpireAt: now.Add(key.RotationPeriod).Add(key.VerificationTTL),
+		})
 
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
@@ -535,8 +543,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 			return nil, err
 		}
 
+		i.Logger().Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
 		key.NextSigningKey = nextSigningKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: nextSigningKey.Public().KeyID})
+		key.KeyRing = append(key.KeyRing, &expireableKey{
+			KeyID:    nextSigningKey.Public().KeyID,
+			ExpireAt: now.Add(key.RotationPeriod).Add(key.RotationPeriod).Add(key.VerificationTTL),
+		})
 
 		if err := saveOIDCPublicKey(ctx, req.Storage, nextSigningKey.Public()); err != nil {
 			return nil, err
@@ -544,6 +556,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	}
 
+	// TKTK storing the cache control max value in the i.oidcCache,
+	// and populating it only in the periodicFunc background worker means
+	// up to 60 seconds of `Cache-control: none` at Vault startup and
+	// anytime a key configuration isn't changed, which is a problem
 	if err := i.oidcCache.Flush(ns); err != nil {
 		return nil, err
 	}
@@ -725,7 +741,7 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		verificationTTLOverride = time.Duration(ttlRaw.(int)) * time.Second
 	}
 
-	if err := storedNamedKey.rotate(ctx, req.Storage, verificationTTLOverride); err != nil {
+	if err := storedNamedKey.rotate(ctx, i.Logger(), req.Storage, verificationTTLOverride); err != nil {
 		return nil, err
 	}
 
@@ -1207,18 +1223,37 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		return nil, err
 	}
 	if len(keys) > 0 {
-		v, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
+		// if maxJwksClientCache is set use that, otherwise fall back on the more conservative
+		// nextRun values
+		maxJwksClientCache, ok, err := i.oidcCache.Get(noNamespace, "maxJwksClientCache")
 		if err != nil {
 			return nil, err
 		}
 
 		if ok {
-			now := time.Now()
-			expireAt := v.(time.Time)
-			if expireAt.After(now) {
-				expireInSeconds := expireAt.Sub(time.Now()).Seconds()
-				expireInString := fmt.Sprintf("max-age=%.0f", expireInSeconds)
-				resp.Data[logical.HTTPRawCacheControl] = expireInString
+			maxDuration := int64(maxJwksClientCache.(time.Duration))
+			randDuration, err := rand.Int(rand.Reader, big.NewInt(maxDuration))
+			if err != nil {
+				return nil, err
+			}
+			// truncate to seconds
+			durationInSeconds := time.Duration(randDuration.Int64()).Seconds()
+			durationInString := fmt.Sprintf("max-age=%.0f", durationInSeconds)
+			resp.Data[logical.HTTPRawCacheControl] = durationInString
+		} else {
+			v, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
+			if err != nil {
+				return nil, err
+			}
+
+			if ok {
+				now := time.Now()
+				expireAt := v.(time.Time)
+				if expireAt.After(now) {
+					expireInSeconds := expireAt.Sub(time.Now()).Seconds()
+					expireInString := fmt.Sprintf("max-age=%.0f", expireInSeconds)
+					resp.Data[logical.HTTPRawCacheControl] = expireInString
+				}
 			}
 		}
 	}
@@ -1316,10 +1351,9 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 	return introspectionResp("")
 }
 
-// namedKey.rotate(overrides) performs a key rotation on a namedKey and returns the
-// verification_ttl that was applied. verification_ttl can be overridden with an
-// overrideVerificationTTL value >= 0
-func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL time.Duration) error {
+// namedKey.rotate(overrides) performs a key rotation on a namedKey.
+// verification_ttl can be overridden with an overrideVerificationTTL value >= 0
+func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.Storage, overrideVerificationTTL time.Duration) error {
 	verificationTTL := k.VerificationTTL
 
 	if overrideVerificationTTL >= 0 {
@@ -1334,17 +1368,16 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 	if err := saveOIDCPublicKey(ctx, s, nextSigningKey.Public()); err != nil {
 		return err
 	}
+	logger.Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
 
 	now := time.Now()
-
-	// set the previous public key's expiry time
-	for _, key := range k.KeyRing {
-		if key.KeyID == k.SigningKey.KeyID {
-			key.ExpireAt = now.Add(verificationTTL)
-			break
-		}
-	}
-	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: nextSigningKey.KeyID})
+	k.KeyRing = append(k.KeyRing, &expireableKey{
+		KeyID: nextSigningKey.KeyID,
+		// this token won't start being used for 1 rotation period,
+		// will be used for 1 rotation period after that,
+		// and should be deleted verificationTTL after it is no longer used
+		ExpireAt: now.Add(k.RotationPeriod).Add(k.RotationPeriod).Add(verificationTTL),
+	})
 	k.SigningKey = k.NextSigningKey
 	k.NextSigningKey = nextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
@@ -1358,6 +1391,7 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 		return err
 	}
 
+	logger.Debug("rotated OIDC public key. now using", "key_id", k.SigningKey.Public().KeyID)
 	return nil
 }
 
@@ -1590,24 +1624,35 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	return nextExpiration, nil
 }
 
-func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (time.Time, error) {
+func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (nextRotation time.Time, maxJwksClientCacheDuration time.Duration, err error) {
 	// soonestRotation will be the soonest rotation time of all keys. Initialize
 	// here to a relatively distant time.
 	now := time.Now()
 	soonestRotation := now.Add(24 * time.Hour)
+
+	// the OIDC JWKS endpoint returns a Cache-Control HTTP header time
+	// between 0 and the minimum verificationTTL or minimum rotationPeriod out
+	// of all keys, whichever value is lower.
+	//
+	// This smooths calls from services validating JWTs to Vault, while
+	// ensuring that operators can assert that servers honoring the Cache-Control
+	// header will always have a superset of all valid keys, and not trust
+	// any keys longer than a jwksCacheControlMax duration after a key is rotated
+	// out of signing use
+	jwksClientCacheDuration := time.Duration(math.MaxInt64)
 
 	i.oidcLock.Lock()
 	defer i.oidcLock.Unlock()
 
 	keys, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
-		return now, err
+		return now, jwksClientCacheDuration, err
 	}
 
 	for _, k := range keys {
 		entry, err := s.Get(ctx, namedKeyConfigPath+k)
 		if err != nil {
-			return now, err
+			return now, jwksClientCacheDuration, err
 		}
 
 		if entry == nil {
@@ -1616,9 +1661,17 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 
 		var key namedKey
 		if err := entry.DecodeJSON(&key); err != nil {
-			return now, err
+			return now, jwksClientCacheDuration, err
 		}
 		key.name = k
+
+		if key.VerificationTTL < jwksClientCacheDuration {
+			jwksClientCacheDuration = key.VerificationTTL
+		}
+
+		if key.RotationPeriod < jwksClientCacheDuration {
+			jwksClientCacheDuration = key.RotationPeriod
+		}
 
 		// Future key rotation that is the earliest we've seen.
 		if now.Before(key.NextRotation) && key.NextRotation.Before(soonestRotation) {
@@ -1628,8 +1681,8 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 		// Key that is due to be rotated.
 		if now.After(key.NextRotation) {
 			i.Logger().Debug("rotating OIDC key", "key", key.name)
-			if err := key.rotate(ctx, s, -1); err != nil {
-				return now, err
+			if err := key.rotate(ctx, i.Logger(), s, -1); err != nil {
+				return now, jwksClientCacheDuration, err
 			}
 
 			// Possibly save the new rotation time
@@ -1639,11 +1692,14 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 		}
 	}
 
-	return soonestRotation, nil
+	return soonestRotation, jwksClientCacheDuration, nil
 }
 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
+// TKTK consider offsetting nextRun to be 60 seconds early and then
+// TKTK sleepingthe remaining upto 60 seconds until the actual rotation time
+// TKTK but only if this function is called in a non blocking way
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	var nextRun time.Time
 	now := time.Now()
@@ -1666,7 +1722,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// Initialize to a fairly distant next run time. This will be brought in
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
-
+		minJwksClientCacheDuration := time.Duration(math.MaxInt64)
 		for _, ns := range i.listNamespaces() {
 			nsPath := ns.Path
 
@@ -1676,7 +1732,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				continue
 			}
 
-			nextRotation, err := i.oidcKeyRotation(ctx, s)
+			nextRotation, jwksClientCacheDuration, err := i.oidcKeyRotation(ctx, s)
 			if err != nil {
 				i.Logger().Warn("error rotating OIDC keys", "err", err)
 			}
@@ -1698,10 +1754,20 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 			if nextExpiration.Before(nextRun) {
 				nextRun = nextExpiration
 			}
+
+			if jwksClientCacheDuration < minJwksClientCacheDuration {
+				minJwksClientCacheDuration = jwksClientCacheDuration
+			}
 		}
 		if err := i.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
 			i.Logger().Error("error setting oidc cache", "err", err)
 		}
+		if minJwksClientCacheDuration < math.MaxInt64 {
+			if err := i.oidcCache.SetDefault(noNamespace, "maxJwksClientCache", minJwksClientCacheDuration); err != nil {
+				i.Logger().Error("error setting maxJwksClientCache in oidc cache", "err", err)
+			}
+		}
+
 	}
 }
 
