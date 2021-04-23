@@ -1,13 +1,11 @@
 ---
 layout: api
 page_title: /sys/storage/raft/autopilot - HTTP API
-sidebar_title: <code>/sys/storage/raft/autopilot</code>
 description: |-
 
   The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Raft storage backend.
 
   These endpoints are inactive on DR secondaries currently.
-
 ---
 
 ## Get Cluster State
@@ -16,7 +14,7 @@ This endpoint is used to retrieve the raft cluster state. See the [docs page](/d
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
-| `GET` | `/sys/storage/raft/autopilot/state` |
+| `GET`  | `/sys/storage/raft/autopilot/state` |
 
 ### Sample Request
 
@@ -74,11 +72,7 @@ $ curl \
     }
   },
   "Leader": "raft1",
-  "Voters": [
-    "raft1",
-    "raft2",
-    "raft3"
-  ],
+  "Voters": ["raft1", "raft2", "raft3"],
   "NonVoters": null
 }
 ```
@@ -87,9 +81,9 @@ $ curl \
 
 This endpoint is used to get the configuration of the autopilot subsystem of integrated storage.
 
-| Method | Path                                       |
-| :----- | :----------------------------------------- |
-| `GET` | `/sys/storage/raft/autopilot/configuration` |
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
+| `GET`  | `/sys/storage/raft/autopilot/configuration` |
 
 ### Sample Request
 
@@ -113,10 +107,11 @@ $ curl \
 ```
 
 ## Set Configuration
+
 This endpoint is used to modify the configuration of the autopilot subsystem of integrated storage.
 
-| Method | Path                                       |
-| :----- | :----------------------------------------- |
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
 | `POST` | `/sys/storage/raft/autopilot/configuration` |
 
 ### Parameters
@@ -156,11 +151,11 @@ $ curl \
 
 ```json
 {
-  "cleanup_dead_servers":true,
-  "last_contact_threshold":"10s",
-  "dead_server_last_contact_threshold":"24h",
-  "max_trailing_logs":"1000",
-  "min_quorum":"3",
-  "server_stabilization_time": "10s",
+  "cleanup_dead_servers": true,
+  "last_contact_threshold": "10s",
+  "dead_server_last_contact_threshold": "24h",
+  "max_trailing_logs": "1000",
+  "min_quorum": "3",
+  "server_stabilization_time": "10s"
 }
 ```

@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRotateCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRotateCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRotateCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRotateCommand)(nil)
+)
 
 type OperatorRotateCommand struct {
 	*BaseCommand

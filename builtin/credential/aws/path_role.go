@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -16,9 +15,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-var (
-	currentRoleStorageVersion = 3
-)
+var currentRoleStorageVersion = 3
 
 func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
@@ -292,11 +289,11 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 
 	needUpgrade, err := b.upgradeRole(ctx, s, result)
 	if err != nil {
-		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
+		return nil, fmt.Errorf("error upgrading roleEntry: %w", err)
 	}
 	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		if err = b.setRole(ctx, s, roleName, result); err != nil {
-			return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
+			return nil, fmt.Errorf("error saving upgraded roleEntry: %w", err)
 		}
 	}
 
@@ -333,7 +330,6 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 
 // initialize is used to initialize the AWS roles
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
-
 	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
 		return nil
@@ -413,7 +409,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		for _, roleName := range roleNames {
 			// make sure the context hasn't been canceled
 			if ctx.Err() != nil {
-				return false, err
+				return false, ctx.Err()
 			}
 			_, err := b.roleInternal(ctx, s, roleName)
 			if err != nil {
@@ -577,7 +573,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 
 	err := req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 	if err != nil {
-		return nil, errwrap.Wrapf("error deleting role: {{err}}", err)
+		return nil, fmt.Errorf("error deleting role: %w", err)
 	}
 
 	b.roleCache.Delete(roleName)
@@ -926,7 +922,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if roleEntry.HMACKey == "" {
 		roleEntry.HMACKey, err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to generate role HMAC key: {{err}}", err)
+			return nil, fmt.Errorf("failed to generate role HMAC key: %w", err)
 		}
 	}
 

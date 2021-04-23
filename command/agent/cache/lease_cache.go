@@ -112,12 +112,13 @@ type inflightRequest struct {
 
 	// remaining is the number of remaining inflight request that needs to
 	// be processed before this object can be cleaned up
-	remaining atomic.Uint64
+	remaining *atomic.Uint64
 }
 
 func newInflightRequest() *inflightRequest {
 	return &inflightRequest{
-		ch: make(chan struct{}),
+		ch:        make(chan struct{}),
+		remaining: atomic.NewUint64(0),
 	}
 }
 

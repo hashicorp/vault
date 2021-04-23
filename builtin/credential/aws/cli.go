@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
@@ -128,7 +127,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	loginData["role"] = role
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, loginData)
-
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +154,7 @@ func RetrieveCreds(accessKey, secretKey, sessionToken string, logger hclog.Logge
 
 	_, err = creds.Get()
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to retrieve credentials from credential chain: {{err}}", err)
+		return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %w", err)
 	}
 	return creds, nil
 }

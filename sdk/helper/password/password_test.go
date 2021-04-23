@@ -9,7 +9,7 @@ type testCase struct {
 }
 
 func TestRemoveiTermDelete(t *testing.T) {
-	var tests = []testCase{
+	tests := []testCase{
 		{"NoDelete", "TestingStuff", "TestingStuff"},
 		{"SingleDelete", "Testing\x7fStuff", "Testing\x7fStuff"},
 		{"DeleteFirst", "\x7fTestingStuff", "\x7fTestingStuff"},

@@ -9,8 +9,10 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-const csLen = byte(len(charset))
+const (
+	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	csLen   = byte(len(charset))
+)
 
 // Random generates a random string using base-62 characters.
 // Resulting entropy is ~5.95 bits/character.

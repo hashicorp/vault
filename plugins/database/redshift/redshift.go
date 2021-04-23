@@ -132,7 +132,6 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
-
 	}
 	defer func() {
 		tx.Rollback()
@@ -438,7 +437,7 @@ $$;`)
 
 	// again, here, we do not stop on error, as we want to remove as
 	// many permissions as possible right now
-	var lastStmtError *multierror.Error //error
+	var lastStmtError *multierror.Error // error
 	for _, query := range revocationStmts {
 		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = multierror.Append(lastStmtError, err)

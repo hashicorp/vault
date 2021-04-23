@@ -64,7 +64,8 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 			"INFLUXDB_DB=vault",
 			"INFLUXDB_ADMIN_USER=" + c.Username,
 			"INFLUXDB_ADMIN_PASSWORD=" + c.Password,
-			"INFLUXDB_HTTP_AUTH_ENABLED=true"},
+			"INFLUXDB_HTTP_AUTH_ENABLED=true",
+		},
 		Ports: []string{"8086/tcp"},
 	})
 	if err != nil {

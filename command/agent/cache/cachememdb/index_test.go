@@ -11,7 +11,6 @@ import (
 )
 
 func TestSerializeDeserialize(t *testing.T) {
-
 	testIndex := &Index{
 		ID:            "testid",
 		Token:         "testtoken",

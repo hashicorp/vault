@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/pprof - HTTP API
-sidebar_title: <code>/sys/pprof</code>
 description: The `/sys/pprof` endpoint is used to query profiling information.
 ---
 
@@ -25,6 +24,44 @@ This endpoint returns an HTML page listing the available profiles.
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/
+```
+
+## Allocs
+
+This endpoint returns a sampling of historical memory allocations over the life
+of the program.
+
+| Method | Path              |
+| :----- | :---------------- |
+| `GET`  | `/sys/pprof/allocs` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/allocs
+```
+
+## Block
+
+This endpoint returns a sampling of goroutines involved in blocking on
+synchronization primitives.
+
+It is included for completeness, but since Vault doesn't normally enable
+collection of this data, it won't return anything useful with the standard
+Vault binary.
+
+| Method | Path              |
+| :----- | :---------------- |
+| `GET`  | `/sys/pprof/block` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/block
 ```
 
 ## Cmdline
@@ -52,6 +89,12 @@ This endpoint returns stack traces of all current goroutines.
 | :----- | :--------------------- |
 | `GET`  | `/sys/pprof/goroutine` |
 
+### Parameters
+
+- `debug` `(int: 0)` - Specifies special arguments for the collection.
+A value of `2` results in the stack traces being returned as text
+instead of the default pprof format.
+
 ### Sample Request
 
 ```shell-session
@@ -74,6 +117,26 @@ This endpoint returns a sampling of memory allocations of live object.
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/heap
+```
+
+## Mutex
+
+This endpoint returns a sampling of goroutines holding contended mutexes.
+
+It is included for completeness, but since Vault doesn't normally enable
+collection of this data, it won't return anything useful with the standard
+Vault binary.
+
+| Method | Path              |
+| :----- | :---------------- |
+| `GET`  | `/sys/pprof/mutex` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/mutex
 ```
 
 ## Profile
@@ -114,6 +177,24 @@ $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/pprof/symbol
 ```
+
+## Threadcreate
+
+This endpoint returns stack traces of goroutines that led to the creation of
+new OS threads.
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `GET`  | `/sys/pprof/threadcreate` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/threadcreate
+```
+
 
 ## Trace
 

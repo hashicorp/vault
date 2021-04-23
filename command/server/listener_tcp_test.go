@@ -75,7 +75,6 @@ func TestTCPListener_tls(t *testing.T) {
 				conf.Certificates = []tls.Certificate{clientCert}
 			}
 			conn, err := tls.Dial("tcp", ln.Addr().String(), conf)
-
 			if err != nil {
 				return nil, err
 			}
@@ -158,7 +157,6 @@ func TestTCPListener_tls13(t *testing.T) {
 				conf.Certificates = []tls.Certificate{clientCert}
 			}
 			conn, err := tls.Dial("tcp", ln.Addr().String(), conf)
-
 			if err != nil {
 				return nil, err
 			}
