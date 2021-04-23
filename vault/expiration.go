@@ -2345,7 +2345,7 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	return nil
 }
 
-// must be called with m.pendingLock helds
+// must be called with m.pendingLock held
 func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
 	if info, ok := m.pending.Load(leaseID); ok {
 		pending := info.(pendingInfo)
