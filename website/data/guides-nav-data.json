@@ -64,6 +64,14 @@
       {
         "title": "Vault Cluster Monitoring",
         "path": "operations/monitoring"
+      },
+      {
+        "title": "Vault Deployment Guide",
+        "path": "operations/deployment-guide"
+      },
+      {
+        "title": "Performance Standby Nodes",
+        "path": "operations/performance-nodes"
       }
     ]
   },
@@ -81,6 +89,10 @@
       {
         "title": "Policies",
         "path": "identity/policies"
+      },
+      {
+        "title": "ACL Policy Path Templating",
+        "path": "identity/policy-templating"
       },
       {
         "title": "AppRole Pull Authentication",

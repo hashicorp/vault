@@ -248,9 +248,9 @@ func (r *revocationJob) OnFailure(err error) {
 	pending.revokesAttempted++
 	if pending.revokesAttempted >= maxRevokeAttempts {
 		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
-		le, err := r.m.loadEntry(r.nsCtx, r.leaseID)
-		if err != nil {
-			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID)
+		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
+		if loadErr != nil {
+			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
 			return
 		}
 
