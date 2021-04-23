@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	bolt "go.etcd.io/bbolt"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -478,14 +479,21 @@ func (b *RaftBackend) Close() error {
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
-	b.logger.Trace("acquiring raft backend read lock to collect metrics")
+	b.logger.Trace("acquiring raft backend read lock to generate stats")
 	b.l.RLock()
-	stats := b.stableStore.(*raftboltdb.BoltStore).Stats()
+	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
+	fsmStats := b.fsm.db.Stats()
 	b.l.RUnlock()
 	b.logger.Trace("raft backend read lock released")
 	b.logger.Trace("emitting raft backend metrics")
+	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
+	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+	b.logger.Trace("raft backend metrics emitted")
+}
+
+func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
 	txstats := stats.TxStats
-	labels := []metricsutil.Label{{"database", "logstore"}}
+	labels := []metricsutil.Label{{"database", database}}
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
@@ -504,7 +512,6 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
 	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
-	b.logger.Trace("raft backend metrics emitted")
 }
 
 // RaftServer has information about a server in the Raft configuration
