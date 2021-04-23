@@ -239,7 +239,7 @@ github.com/briankassouf/jose/jws
 github.com/briankassouf/jose/jwt
 # github.com/cenkalti/backoff v2.2.1+incompatible
 github.com/cenkalti/backoff
-# github.com/cenkalti/backoff/v3 v3.0.0
+# github.com/cenkalti/backoff/v3 v3.2.2
 ## explicit
 github.com/cenkalti/backoff/v3
 # github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f

@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/cenkalti/backoff/v3"
 )
 
 var (
@@ -229,28 +231,25 @@ func (r *LifetimeWatcher) Renew() {
 	r.Start()
 }
 
-// renewAuth is a helper for renewing authentication.
-func (r *LifetimeWatcher) doRenew() error {
-	var nonRenewable bool
-	var tokenMode bool
-	var initLeaseDuration int
-	var credString string
-	var renewFunc func(string, int) (*Secret, error)
+type renewFunc func(string, int) (*Secret, error)
 
+// doRenew is a helper for renewing authentication.
+func (r *LifetimeWatcher) doRenew() error {
+	defaultInitialRetryInterval := 10 * time.Second
 	switch {
 	case r.secret.Auth != nil:
-		tokenMode = true
-		nonRenewable = !r.secret.Auth.Renewable
-		initLeaseDuration = r.secret.Auth.LeaseDuration
-		credString = r.secret.Auth.ClientToken
-		renewFunc = r.client.Auth().Token().RenewTokenAsSelf
+		return r.doRenewWithOptions(true, !r.secret.Auth.Renewable,
+			r.secret.Auth.LeaseDuration, r.secret.Auth.ClientToken,
+			r.client.Auth().Token().RenewTokenAsSelf, defaultInitialRetryInterval)
 	default:
-		nonRenewable = !r.secret.Renewable
-		initLeaseDuration = r.secret.LeaseDuration
-		credString = r.secret.LeaseID
-		renewFunc = r.client.Sys().Renew
+		return r.doRenewWithOptions(false, !r.secret.Renewable,
+			r.secret.LeaseDuration, r.secret.LeaseID,
+			r.client.Sys().Renew, defaultInitialRetryInterval)
 	}
+}
 
+func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, initLeaseDuration int, credString string,
+	renew renewFunc, initialRetryInterval time.Duration) error {
 	if credString == "" ||
 		(nonRenewable && r.renewBehavior == RenewBehaviorErrorOnErrors) {
 		return r.errLifetimeWatcherNotRenewable
@@ -259,6 +258,7 @@ func (r *LifetimeWatcher) doRenew() error {
 	initialTime := time.Now()
 	priorDuration := time.Duration(initLeaseDuration) * time.Second
 	r.calculateGrace(priorDuration)
+	var errorBackoff backoff.BackOff
 
 	for {
 		// Check if we are stopped.
@@ -270,6 +270,8 @@ func (r *LifetimeWatcher) doRenew() error {
 
 		var leaseDuration time.Duration
 		fallbackLeaseDuration := initialTime.Add(priorDuration).Sub(time.Now())
+		var renewal *Secret
+		var err error
 
 		switch {
 		case nonRenewable || r.renewBehavior == RenewBehaviorRenewDisabled:
@@ -279,7 +281,7 @@ func (r *LifetimeWatcher) doRenew() error {
 
 		default:
 			// Renew the token
-			renewal, err := renewFunc(credString, r.increment)
+			renewal, err = renew(credString, r.increment)
 			if err != nil || renewal == nil || (tokenMode && renewal.Auth == nil) {
 				if r.renewBehavior == RenewBehaviorErrorOnErrors {
 					if err != nil {
@@ -290,15 +292,31 @@ func (r *LifetimeWatcher) doRenew() error {
 					}
 				}
 
-				leaseDuration = fallbackLeaseDuration
+				// Calculate remaining duration until inital token lease expires
+				leaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
+				if errorBackoff == nil {
+					errorBackoff = &backoff.ExponentialBackOff{
+						MaxElapsedTime:      leaseDuration,
+						RandomizationFactor: backoff.DefaultRandomizationFactor,
+						InitialInterval:     initialRetryInterval,
+						MaxInterval:         5 * time.Minute,
+						Multiplier:          2,
+						Clock:               backoff.SystemClock,
+					}
+					errorBackoff.Reset()
+				}
 				break
 			}
+			errorBackoff = nil
 
 			// Push a message that a renewal took place.
 			select {
 			case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
 			default:
 			}
+
+			// Reset initial time
+			initialTime = time.Now()
 
 			// Possibly error if we are not renewable
 			if ((tokenMode && !renewal.Auth.Renewable) || (!tokenMode && !renewal.Renewable)) &&
@@ -307,25 +325,34 @@ func (r *LifetimeWatcher) doRenew() error {
 			}
 
 			// Grab the lease duration
-			newDuration := renewal.LeaseDuration
+			initLeaseDuration = renewal.LeaseDuration
 			if tokenMode {
-				newDuration = renewal.Auth.LeaseDuration
+				initLeaseDuration = renewal.Auth.LeaseDuration
 			}
 
-			leaseDuration = time.Duration(newDuration) * time.Second
+			leaseDuration = time.Duration(initLeaseDuration) * time.Second
 		}
 
-		// We keep evaluating a new grace period so long as the lease is
-		// extending. Once it stops extending, we've hit the max and need to
-		// rely on the grace duration.
-		if leaseDuration > priorDuration {
-			r.calculateGrace(leaseDuration)
-		}
-		priorDuration = leaseDuration
+		var sleepDuration time.Duration
 
-		// The sleep duration is set to 2/3 of the current lease duration plus
-		// 1/3 of the current grace period, which adds jitter.
-		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
+		if errorBackoff != nil {
+			sleepDuration = errorBackoff.NextBackOff()
+			if sleepDuration == backoff.Stop {
+				return err
+			}
+		} else {
+			// We keep evaluating a new grace period so long as the lease is
+			// extending. Once it stops extending, we've hit the max and need to
+			// rely on the grace duration.
+			if leaseDuration > priorDuration {
+				r.calculateGrace(leaseDuration)
+			}
+			priorDuration = leaseDuration
+
+			// The sleep duration is set to 2/3 of the current lease duration plus
+			// 1/3 of the current grace period, which adds jitter.
+			sleepDuration = time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
+		}
 
 		// If we are within grace, return now; or, if the amount of time we
 		// would sleep would land us in the grace period. This helps with short
