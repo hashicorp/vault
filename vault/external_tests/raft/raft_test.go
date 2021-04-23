@@ -104,9 +104,11 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 
 	// To validate our metrics are being sent, we check for the presence of one.
 	// First we sleep for a second though to make sure some have been emitted.
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 	noBoltDBMetrics := true
+	t.Log("checking gauges for raft boltdb metrics")
 	for _, c := range intervals[0].Gauges {
+		t.Logf("gauge name - %s\n", c.Name)
 		if c.Name == "raft.logstore.bolt.freelist.free_pages" {
 			noBoltDBMetrics = false
 			break
