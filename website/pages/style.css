@@ -101,3 +101,7 @@
 .g-content {
   --brand-text: var(--vagrant) !important;
 }
+.g-docs-sidenav {
+  --brand: var(--vagrant) !important;
+  --brand-text: var(--vagrant) !important;
+}
