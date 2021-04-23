@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -15,10 +16,6 @@ import (
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
@@ -106,21 +103,6 @@ func (c *OperatorDiagnoseCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-var tp *sdktrace.TracerProvider
-var tracer trace.Tracer
-
-// initTracer creates and registers trace provider instance.
-func initTracer(ui cli.Ui) {
-	so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
-	tp = sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
-		sdktrace.WithSpanProcessor(diagnose.NewTelemetryCollector()),
-	)
-	otel.SetTracerProvider(tp)
-	tracer = tp.Tracer("vault")
-}
-
 func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
@@ -135,10 +117,14 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
 	}
-	initTracer(c.UI)
+	diagnose.Init()
 	ctx := context.Background()
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
-	defer span.End()
+	defer func() {
+		span.End()
+		r := diagnose.Shutdown()
+		r.Write(os.Stdout)
+	}()
 
 	diagnose.Error(ctx, errors.New("nope, didn't work"), diagnose.Action("one-off"))
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
@@ -183,7 +169,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
-	disableClustering := config.HAStorage.DisableClustering
+	disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 

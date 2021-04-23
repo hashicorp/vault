@@ -2,10 +2,23 @@ package diagnose
 
 import (
 	"context"
-	"fmt"
+	"io"
+	"strings"
+
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	status_unknown = "[      ] "
+	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
+	status_failed  = "\u001b[31m[failed]\u001b[0m "
+	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
+	same_line      = "\u001b[F"
+	errorStatus    = "error"
+	warnStatus     = "warn"
+	okStatus       = "ok"
 )
 
 type Result struct {
@@ -47,7 +60,6 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 				t.RootResult = r
 			}
 		}
-		fmt.Printf("%v", t.RootResult)
 	}
 }
 
@@ -74,7 +86,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						r.Warnings = append(r.Warnings, a.Value.AsString())
 					}
 				}
-			} else if e.Name == "error" {
+			} else if e.Name == errorStatus {
 				var message string
 				var action string
 				for _, a := range e.Attributes {
@@ -88,7 +100,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				if message != "" && action != "" {
 					r.Children = append(r.Children, &Result{
 						Name:    action,
-						Status:  "error",
+						Status:  errorStatus,
 						Message: message,
 					})
 
@@ -98,14 +110,55 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 		switch s.StatusCode() {
 		case codes.Unset:
 			if len(r.Warnings) > 0 {
-				r.Status = "warning"
+				r.Status = warnStatus
 			} else {
-				r.Status = codes.Ok.String()
+				r.Status = okStatus
 			}
-		default:
-			r.Status = s.StatusCode().String()
+		case codes.Ok:
+			r.Status = okStatus
+		case codes.Error:
+			r.Status = errorStatus
 		}
 		t.results[id] = r
 	}
 	return r
+}
+
+func (r *Result) Write(writer io.Writer) error {
+	var sb strings.Builder
+	r.write(&sb, 0)
+	_, err := writer.Write([]byte(sb.String()))
+	return err
+}
+
+func (r *Result) write(sb *strings.Builder, depth int) {
+	for i := 0; i < depth; i++ {
+		sb.WriteRune('\t')
+	}
+	switch r.Status {
+	case okStatus:
+		sb.WriteString(status_ok)
+	case warnStatus:
+		sb.WriteString(status_warn)
+	case errorStatus:
+		sb.WriteString(status_failed)
+	}
+	sb.WriteString(r.Name)
+
+	if r.Message != "" || len(r.Warnings) > 0 {
+		sb.WriteString(": ")
+	}
+	sb.WriteString(r.Message)
+	for _, w := range r.Warnings {
+		for i := 0; i < depth; i++ {
+			sb.WriteRune('\t')
+		}
+		sb.WriteString("  ")
+		sb.WriteString(w)
+		sb.WriteRune('\n')
+	}
+	sb.WriteRune('\n')
+	for _, c := range r.Children {
+		c.write(sb, depth+1)
+	}
 }
