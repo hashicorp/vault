@@ -1,3 +1,3 @@
 ```release-note:bug
-secrets/database: Fix marshalling to allow providing integer arguments to the `max_open_connections` and `max_idle_connections` fields.
+secrets/database: Fix marshalling to allow providing numeric arguments to external database plugins.
 ```
