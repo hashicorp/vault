@@ -3,9 +3,10 @@
 package command
 
 import (
-	"github.com/mitchellh/cli"
 	"strings"
 	"testing"
+
+	"github.com/mitchellh/cli"
 )
 
 func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseCommand) {
@@ -66,7 +67,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testOperatorDiagnoseCommand(t)
-				initTracer(ui)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)

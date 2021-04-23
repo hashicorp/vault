@@ -53,11 +53,15 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 		// Deep first walk the span structs to construct the top down tree results we want
 		for _, s := range t.spans {
 			r := t.getOrBuildResult(s.SpanContext().SpanID())
-			if s.Parent().HasSpanID() {
-				p := t.getOrBuildResult(s.Parent().SpanID())
-				p.Children = append(p.Children, r)
-			} else {
-				t.RootResult = r
+			if r != nil {
+				if s.Parent().HasSpanID() {
+					p := t.getOrBuildResult(s.Parent().SpanID())
+					if p != nil {
+						p.Children = append(p.Children, r)
+					}
+				} else {
+					t.RootResult = r
+				}
 			}
 		}
 	}
@@ -73,6 +77,9 @@ func (t *TelemetryCollector) ForceFlush(ctx context.Context) error {
 
 func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 	s := t.spans[id]
+	if s == nil {
+		return nil
+	}
 	r, ok := t.results[id]
 	if !ok {
 		r = &Result{
