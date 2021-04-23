@@ -85,7 +85,7 @@ func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapsh
 
 	// Ensure our path exists
 	path := filepath.Join(base, snapPath)
-	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(path, 0o755); err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("snapshot path not accessible: %v", err)
 	}
 
@@ -210,7 +210,7 @@ func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error)
 	}
 
 	filename := filepath.Join(f.path, id, databaseFilename)
-	boltDB, err := bolt.Open(filename, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(filename, 0o666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
 	}
@@ -323,14 +323,14 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 	s.logger.Info("creating new snapshot", "path", path)
 
 	// Make the directory
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0o755); err != nil {
 		s.logger.Error("failed to make snapshot directory", "error", err)
 		return err
 	}
 
 	// Create the BoltDB file
 	dbPath := filepath.Join(path, databaseFilename)
-	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}

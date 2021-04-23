@@ -24,8 +24,10 @@ import (
 )
 
 // Verify Backend satisfies the correct interfaces
-var _ physical.Backend = (*Backend)(nil)
-var _ physical.Transactional = (*Backend)(nil)
+var (
+	_ physical.Backend       = (*Backend)(nil)
+	_ physical.Transactional = (*Backend)(nil)
+)
 
 const (
 	// envDatabase is the name of the environment variable to search for the

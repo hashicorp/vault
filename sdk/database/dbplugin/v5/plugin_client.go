@@ -34,7 +34,7 @@ func (dc *DatabasePluginClient) Close() error {
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
-		5: plugin.PluginSet{
+		5: {
 			"database": new(GRPCDatabasePlugin),
 		},
 	}

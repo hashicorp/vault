@@ -12,6 +12,7 @@ export default create({
   toggleVerify: clickable('[data-test-input="verify_connection"]'),
   url: fillable('[data-test-input="connection_url"'),
   save: clickable('[data-test-secret-save=""]'),
+  addRole: clickable('[data-test-secret-create="true"]'), // only from connection show
   enable: clickable('[data-test-enable-connection=""]'),
   edit: clickable('[data-test-edit-link="true"]'),
   delete: clickable('[data-test-database-connection-delete]'),

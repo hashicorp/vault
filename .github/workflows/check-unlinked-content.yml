@@ -1,0 +1,26 @@
+#
+# This GitHub action checks that all .mdx files in the
+# the website/content directory are being published.
+# It fails if any of these files are not included
+# in the expected nav-data.json file.
+#
+# To resolve failed checks, add the listed paths
+# to the corresponding nav-data.json file
+# in website/data.
+
+name: "website: Check unlinked content"
+on:
+  pull_request:
+    paths:
+      - "website/**"
+
+jobs:
+  check-unlinked-content:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+      - name: Check that all content files are included in navigation
+        run: node .github/workflows/check-unlinked-content.js

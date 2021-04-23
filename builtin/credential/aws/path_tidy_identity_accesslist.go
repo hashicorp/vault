@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -70,7 +69,7 @@ func (b *backend) tidyAccessListIdentity(ctx context.Context, req *logical.Reque
 			for _, instanceID := range identities {
 				identityEntry, err := s.Get(ctx, identityAccessListStorage+instanceID)
 				if err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error fetching identity of instanceID %q: {{err}}", instanceID), err)
+					return fmt.Errorf("error fetching identity of instanceID %q: %w", instanceID, err)
 				}
 
 				if identityEntry == nil {
@@ -88,7 +87,7 @@ func (b *backend) tidyAccessListIdentity(ctx context.Context, req *logical.Reque
 
 				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
 					if err := s.Delete(ctx, identityAccessListStorage+instanceID); err != nil {
-						return errwrap.Wrapf(fmt.Sprintf("error deleting identity of instanceID %q from storage: {{err}}", instanceID), err)
+						return fmt.Errorf("error deleting identity of instanceID %q from storage: %w", instanceID, err)
 					}
 				}
 			}

@@ -3,15 +3,14 @@
 package foundationdb
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"bytes"
-	"encoding/binary"
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
@@ -53,10 +52,12 @@ var (
 )
 
 // Verify FDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*FDBBackend)(nil)
-var _ physical.Transactional = (*FDBBackend)(nil)
-var _ physical.HABackend = (*FDBBackend)(nil)
-var _ physical.Lock = (*FDBBackendLock)(nil)
+var (
+	_ physical.Backend       = (*FDBBackend)(nil)
+	_ physical.Transactional = (*FDBBackend)(nil)
+	_ physical.HABackend     = (*FDBBackend)(nil)
+	_ physical.Lock          = (*FDBBackendLock)(nil)
+)
 
 // FDBBackend is a physical backend that stores data at a specific
 // prefix within FoundationDB.
@@ -424,7 +425,6 @@ func (f *FDBBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry)
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return errwrap.Wrapf("transaction failed: {{err}}", err)
 	}
@@ -477,7 +477,6 @@ func (f *FDBBackend) Get(ctx context.Context, key string) (*physical.Entry, erro
 
 		return value, nil
 	})
-
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("get failed for item %s: {{err}}", key), err)
 	}
@@ -551,7 +550,6 @@ func (f *FDBBackend) List(ctx context.Context, prefix string) ([]string, error) 
 
 		return dirList, nil
 	})
-
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("could not list prefix %s: {{err}}", prefix), err)
 	}
@@ -690,7 +688,6 @@ func (fl *FDBBackendLock) acquireTryLock(acquired chan struct{}, errors chan err
 
 		return true, nil
 	})
-
 	if err != nil {
 		errors <- err
 		return false, err
@@ -752,7 +749,6 @@ func (fl *FDBBackendLock) maintainLock(lost <-chan struct{}) {
 
 				return nil, nil
 			})
-
 			if err != nil {
 				fl.f.logger.Error("lock maintain", "error", err)
 			}
@@ -789,7 +785,6 @@ func (fl *FDBBackendLock) watchLock(lost chan struct{}) {
 
 			return future, nil
 		})
-
 		if err != nil {
 			fl.f.logger.Error("lock watch", "error", err)
 			break
@@ -859,7 +854,6 @@ func (fl *FDBBackendLock) Unlock() error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return errwrap.Wrapf("unlock failed: {{err}}", err)
 	}
@@ -876,7 +870,6 @@ func (fl *FDBBackendLock) Value() (bool, string, error) {
 
 		return tupleContent, nil
 	})
-
 	if err != nil {
 		return false, "", errwrap.Wrapf(fmt.Sprintf("get lock value failed for lock %s: {{err}}", fl.key), err)
 	}

@@ -216,7 +216,6 @@ func getAccountID() (string, error) {
 
 	params := &sts.GetCallerIdentityInput{}
 	res, err := svc.GetCallerIdentity(params)
-
 	if err != nil {
 		return "", err
 	}
@@ -912,10 +911,12 @@ const testS3Policy = `{
     ]
 }`
 
-const adminAccessPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
-const ec2PolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
-const iamPolicyArn = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
-const dynamoPolicyArn = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
+const (
+	adminAccessPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
+	ec2PolicyArn         = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+	iamPolicyArn         = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+	dynamoPolicyArn      = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
+)
 
 func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{

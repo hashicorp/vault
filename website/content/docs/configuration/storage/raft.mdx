@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Integrated Storage - Storage Backends - Configuration
-sidebar_title: Integrated Storage (Raft)
 description: |-
 
   The Integrated Storage (Raft) backend is used to persist Vault's data. Unlike all the other
@@ -124,6 +123,10 @@ set `disable_mlock` to `true`, and to disable memory swapping on the system.
 - `auto_join_port` `(uint: "")` - The optional port used for addressed discovered
   via auto-join.
 
+- `leader_tls_servername` `(string: "")` - TLS servername to use when connecting with HTTPS.
+  Should match one of the names in the DNS SANs of the remote server certificate.
+  See also [Integrated Storage and TLS](https://www.vaultproject.io/docs/concepts/integrated-storage#autojoin-with-tls-servername)
+
 - `leader_ca_cert_file` `(string: "")` - File path to the CA cert of the
   possible leader node.
 
@@ -183,5 +186,11 @@ storage "raft" {
   }
 }
 ```
+
+## Learn
+
+Refer to [Integrated
+Storage](https://learn.hashicorp.com/collections/vault/raft) for a collection of
+tutorials on integrated storage.
 
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'

@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault
 
-go 1.13
+go 1.16
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -23,7 +23,7 @@ require (
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-metrics v0.3.4
-	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
+	github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 	github.com/aws/aws-sdk-go v1.37.19
@@ -49,7 +49,7 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
-	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
@@ -83,7 +83,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.8.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.9.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.9.2
+	github.com/hashicorp/vault-plugin-auth-jwt v0.9.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.7.0
@@ -156,12 +156,13 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
 	go.uber.org/atomic v1.6.0
+	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	golang.org/x/text v0.3.5 // indirect
-	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
+	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
@@ -169,4 +170,5 @@ require (
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
+	mvdan.cc/gofumpt v0.1.1
 )

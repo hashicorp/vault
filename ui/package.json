@@ -105,6 +105,7 @@
     "ember-maybe-import-regenerator": "^0.1.6",
     "ember-maybe-in-element": "^0.4.0",
     "ember-power-select-with-create": "^0.6.2",
+    "ember-promise-helpers": "^1.0.9",
     "ember-qunit": "^4.6.0",
     "ember-radio-button": "^2.0.1",
     "ember-resolver": "^8.0.0",

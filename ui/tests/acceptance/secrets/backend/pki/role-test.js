@@ -1,5 +1,5 @@
 import { currentRouteName, settled, visit } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';
@@ -14,7 +14,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     return authPage.login();
   });
 
-  test('it creates a role and redirects', async function(assert) {
+  skip('it creates a role and redirects', async function(assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();

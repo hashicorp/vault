@@ -1,36 +1,16 @@
-{{#unless
-  (or
-    (eq @attr.type "boolean")
-    (contains
-      @attr.options.editType
-      (array
-        "boolean"
-        "optionalText"
-        "searchSelect"
-        "mountAccessor"
-        "kv"
-        "file"
-        "ttl"
-        "stringArray"
-        "json"
-      )
-    )
-  )
-}}
-  <label for="{{@attr.name}}" class="is-label" data-test-readonly-label>
-    {{labelString}}
-    {{#if @attr.options.helpText}}
-      {{#info-tooltip}}
-        <span data-test-help-text>
-          {{@attr.options.helpText}}
-        </span>
-      {{/info-tooltip}}
-    {{/if}}
-  </label>
-  {{#if @attr.options.subText}}
-    <p class="sub-text">{{@attr.options.subText}}</p>
+<label for="{{@attr.name}}" class="is-label" data-test-readonly-label>
+  {{labelString}}
+  {{#if @attr.options.helpText}}
+    {{#info-tooltip}}
+      <span data-test-help-text>
+        {{@attr.options.helpText}}
+      </span>
+    {{/info-tooltip}}
   {{/if}}
-{{/unless}}
+</label>
+{{#if @attr.options.subText}}
+  <p class="sub-text">{{@attr.options.subText}}</p>
+{{/if}}
 
 {{#if @attr.options.possibleValues}}
   <div class="control is-expanded field is-readOnly">

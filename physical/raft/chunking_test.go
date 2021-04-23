@@ -232,5 +232,4 @@ func TestRaft_Chunking_AppliedIndex(t *testing.T) {
 			t.Fatal("value is corrupt")
 		}
 	}
-
 }

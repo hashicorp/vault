@@ -3,8 +3,9 @@ package transit
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/vault/sdk/logical"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_BatchDecryption(t *testing.T) {

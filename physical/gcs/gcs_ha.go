@@ -17,8 +17,10 @@ import (
 )
 
 // Verify Backend satisfies the correct interfaces
-var _ physical.HABackend = (*Backend)(nil)
-var _ physical.Lock = (*Lock)(nil)
+var (
+	_ physical.HABackend = (*Backend)(nil)
+	_ physical.Lock      = (*Lock)(nil)
+)
 
 const (
 	// LockRenewInterval is the time to wait between lock renewals.

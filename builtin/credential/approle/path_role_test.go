@@ -1890,7 +1890,6 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			// Construct the storage entry object based on our test case.
 			tokenTypeKV := ""
 			if !tt.storageValMissing {
