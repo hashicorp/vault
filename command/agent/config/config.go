@@ -131,6 +131,14 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
+	// Attribute
+	ast.Walk(obj, func(n ast.Node) (ast.Node, bool) {
+		if k, ok := n.(*ast.ObjectKey); ok {
+			k.Token.Pos.Filename = path
+		}
+		return n, true
+	})
+
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {

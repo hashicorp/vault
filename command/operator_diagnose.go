@@ -155,7 +155,11 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Output(err.Error())
 		return 1
 	}
-
+	errors := config.Validate("test")
+	for _, cerr := range errors {
+		c.UI.Output(same_line + status_warn + phase)
+		c.UI.Output(cerr.String())
+	}
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 

@@ -11,6 +11,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
@@ -257,7 +258,7 @@ func testParseEntropy(t *testing.T, oss bool) {
 				mode = "augmentation"
 				}`,
 			outErr:     nil,
-			outEntropy: configutil.Entropy{configutil.EntropyAugmentation},
+			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
 		},
 		{
 			inConfig: `entropy "seal" {
@@ -453,6 +454,41 @@ func testLoadConfigFile(t *testing.T) {
 	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func testUnknownFieldValidation(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := []configutil.ConfigError{
+		{
+			Problem:  "unknown field bad_value found in configuration",
+			Position: token.Pos{},
+		},
+	}
+	errors := config.Validate("./test-fixtures/config.hcl")
+
+outer:
+	for _, er1 := range errors {
+		for _, ex := range expected {
+			// Only test the string, pos may change
+			if ex.Problem == er1.Problem {
+				continue outer
+			}
+		}
+		t.Fatalf("found unexpected error: %v", er1.String())
+	}
+outer2:
+	for _, ex := range expected {
+		for _, er1 := range errors {
+			if ex.Problem == er1.Problem {
+				continue outer2
+			}
+		}
+		t.Fatalf("could not find expected error: %v", ex.String())
 	}
 }
 
