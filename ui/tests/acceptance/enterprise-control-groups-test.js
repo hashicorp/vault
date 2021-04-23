@@ -146,7 +146,6 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await visit(url);
     await settled();
     accessor = controlGroupComponent.accessor;
-    console.log({ accessor });
     controlGroupToken = controlGroupComponent.token;
     await authPage.logout();
     await settled();
