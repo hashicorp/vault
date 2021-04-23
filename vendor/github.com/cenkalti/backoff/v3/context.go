@@ -7,7 +7,7 @@ import (
 
 // BackOffContext is a backoff policy that stops retrying after the context
 // is canceled.
-type BackOffContext interface { // nolint: golint
+type BackOffContext interface {
 	BackOff
 	Context() context.Context
 }
@@ -20,7 +20,7 @@ type backOffContext struct {
 // WithContext returns a BackOffContext with context ctx
 //
 // ctx must not be nil
-func WithContext(b BackOff, ctx context.Context) BackOffContext { // nolint: golint
+func WithContext(b BackOff, ctx context.Context) BackOffContext {
 	if ctx == nil {
 		panic("nil context")
 	}
@@ -38,14 +38,11 @@ func WithContext(b BackOff, ctx context.Context) BackOffContext { // nolint: gol
 	}
 }
 
-func getContext(b BackOff) context.Context {
+func ensureContext(b BackOff) BackOffContext {
 	if cb, ok := b.(BackOffContext); ok {
-		return cb.Context()
+		return cb
 	}
-	if tb, ok := b.(*backOffTries); ok {
-		return getContext(tb.delegate)
-	}
-	return context.Background()
+	return WithContext(b, context.Background())
 }
 
 func (b *backOffContext) Context() context.Context {
@@ -59,7 +56,7 @@ func (b *backOffContext) NextBackOff() time.Duration {
 	default:
 	}
 	next := b.BackOff.NextBackOff()
-	if deadline, ok := b.ctx.Deadline(); ok && deadline.Sub(time.Now()) < next { // nolint: gosimple
+	if deadline, ok := b.ctx.Deadline(); ok && deadline.Sub(time.Now()) < next {
 		return Stop
 	}
 	return next

@@ -103,14 +103,13 @@ func (t systemClock) Now() time.Time {
 var SystemClock = systemClock{}
 
 // Reset the interval back to the initial retry interval and restarts the timer.
-// Reset must be called before using b.
 func (b *ExponentialBackOff) Reset() {
 	b.currentInterval = b.InitialInterval
 	b.startTime = b.Clock.Now()
 }
 
 // NextBackOff calculates the next backoff interval using the formula:
-// 	Randomized interval = RetryInterval * (1 ± RandomizationFactor)
+// 	Randomized interval = RetryInterval +/- (RandomizationFactor * RetryInterval)
 func (b *ExponentialBackOff) NextBackOff() time.Duration {
 	// Make sure we have not gone over the maximum elapsed time.
 	if b.MaxElapsedTime != 0 && b.GetElapsedTime() > b.MaxElapsedTime {

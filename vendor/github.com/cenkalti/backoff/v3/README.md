@@ -9,10 +9,7 @@ The retries exponentially increase and stop increasing when a certain threshold 
 
 ## Usage
 
-Import path is `github.com/cenkalti/backoff/v3`. Please note the version part at the end.
-
-godoc.org does not support modules yet,
-so you can use https://godoc.org/gopkg.in/cenkalti/backoff.v3 to view the documentation.
+See https://godoc.org/github.com/cenkalti/backoff#pkg-examples
 
 ## Contributing
 
