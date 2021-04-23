@@ -63,6 +63,16 @@ quickly merge or address your contributions.
 
 ## Pull requests
 
+First, consider opening an issue (see above) to discuss the approach you'd like 
+to take to address your feature or fix.  It may be that we're working on something 
+similar, so this may help to avoid duplicating efforts. 
+
+Your pull request should have a description of what it accomplishes, how it does so,
+and why you chose the approach you did.  PRs should include unit tests that validate
+correctness and the existing tests must pass.
+
+
+### Changelog Entries
 Please include a file within your PR named `changelog/#.txt`, where `#` is your
 pull request ID.  There are many examples under [changelog](changelog/), but
 the general format is
