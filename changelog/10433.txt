@@ -1,3 +1,4 @@
 ```release-note:bug
 secrets/database/mysql: Fixes issue where the DisplayName within generated usernames was the incorrect length
 ```
+
