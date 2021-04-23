@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix for concurrent remounting of mount table entries.
+```
