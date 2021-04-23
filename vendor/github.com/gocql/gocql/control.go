@@ -125,7 +125,7 @@ func hostInfo(addr string, defaultPort int) ([]*HostInfo, error) {
 	if err != nil {
 		return nil, err
 	} else if len(ips) == 0 {
-		return nil, fmt.Errorf("No IP's returned from DNS lookup for %q", addr)
+		return nil, fmt.Errorf("no IP's returned from DNS lookup for %q", addr)
 	}
 
 	// Filter to v4 addresses if any present
@@ -177,7 +177,7 @@ func (c *controlConn) shuffleDial(endpoints []*HostInfo) (*Conn, error) {
 			return conn, nil
 		}
 
-		Logger.Printf("gocql: unable to dial control conn %v: %v\n", host.ConnectAddress(), err)
+		Logger.Printf("gocql: unable to dial control conn %v:%v: %v\n", host.ConnectAddress(), host.Port(), err)
 	}
 
 	return nil, err
@@ -285,8 +285,6 @@ func (c *controlConn) setupConn(conn *Conn) error {
 	}
 
 	c.conn.Store(ch)
-	c.session.handleNodeUp(host.ConnectAddress(), host.Port(), false)
-
 	return nil
 }
 
@@ -452,6 +450,8 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 
 	for {
 		iter = c.withConn(func(conn *Conn) *Iter {
+			// we want to keep the query on the control connection
+			q.conn = conn
 			return conn.executeQuery(context.TODO(), q)
 		})
 

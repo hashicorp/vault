@@ -9,56 +9,113 @@ const AVAILABLE_PLUGIN_TYPES = [
     value: 'mongodb-database-plugin',
     displayName: 'MongoDB',
     fields: [
-      { attr: 'name' },
       { attr: 'plugin_name' },
+      { attr: 'name' },
+      { attr: 'connection_url' },
+      { attr: 'verify_connection' },
       { attr: 'password_policy' },
-      { attr: 'username', group: 'pluginConfig' },
-      { attr: 'password', group: 'pluginConfig' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'write_concern' },
-      { attr: 'creation_statements' },
+      { attr: 'username', group: 'pluginConfig', show: false },
+      { attr: 'password', group: 'pluginConfig', show: false },
+      { attr: 'write_concern', group: 'pluginConfig' },
+      { attr: 'username_template', group: 'pluginConfig' },
+      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'root_rotation_statements', group: 'statements' },
+    ],
+  },
+  {
+    value: 'mssql-database-plugin',
+    displayName: 'MSSQL',
+    fields: [
+      { attr: 'plugin_name' },
+      { attr: 'name' },
+      { attr: 'connection_url' },
+      { attr: 'verify_connection' },
+      { attr: 'password_policy' },
+      { attr: 'username', group: 'pluginConfig', show: false },
+      { attr: 'password', group: 'pluginConfig', show: false },
+      { attr: 'username_template', group: 'pluginConfig' },
+      { attr: 'max_open_connections', group: 'pluginConfig' },
+      { attr: 'max_idle_connections', group: 'pluginConfig' },
+      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
+      { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
 ];
+
+/**
+ * fieldsToGroups helper fn
+ * @param {array} arr any subset of "fields" from AVAILABLE_PLUGIN_TYPES
+ * @param {*} key item by which to group the fields. If item has no group it will be under "default"
+ * @returns array of objects where the key is default or the name of the option group, and the value is an array of attr names
+ */
+const fieldsToGroups = function(arr, key = 'subgroup') {
+  const fieldGroups = [];
+  const byGroup = arr.reduce(function(rv, x) {
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+  Object.keys(byGroup).forEach(key => {
+    const attrsArray = byGroup[key].map(obj => obj.attr);
+    const group = key === 'undefined' ? 'default' : key;
+    fieldGroups.push({ [group]: attrsArray });
+  });
+  return fieldGroups;
+};
 
 export default Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
+  // required
   name: attr('string', {
     label: 'Connection Name',
   }),
   plugin_name: attr('string', {
     label: 'Database plugin',
     possibleValues: AVAILABLE_PLUGIN_TYPES,
+    noDefault: true,
   }),
+
+  // standard
   verify_connection: attr('boolean', {
+    label: 'Connection will be verified',
     defaultValue: true,
   }),
   allowed_roles: attr('array', {
     readOnly: true,
   }),
-
   password_policy: attr('string', {
+    label: 'Use custom password policy',
     editType: 'optionalText',
-    subText:
+    subText: 'Specify the name of an existing password policy.',
+    defaultSubText:
       'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
+    defaultShown: 'Default',
+    docLink: 'https://www.vaultproject.io/docs/concepts/password-policies',
   }),
 
-  hosts: attr('string', {}),
-  host: attr('string', {}),
-  url: attr('string', {}),
-  port: attr('string', {}),
-  // connection_details
-  username: attr('string', {}),
-  password: attr('string', {
-    editType: 'password',
-  }),
+  // common fields
   connection_url: attr('string', {
+    subText: 'The connection string used to connect to the database.',
+  }),
+  url: attr('string', {
     subText:
       'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
   }),
+  username: attr('string', {
+    subText: 'Optional. The name of the user to use as the "root" user when connecting to the database.',
+  }),
+  password: attr('string', {
+    subText:
+      'Optional. The password to use when connecting to the database. Typically used in the connection_url field via the templating directive {{password}}.',
+    editType: 'password',
+  }),
 
+  // optional
+  hosts: attr('string', {}),
+  host: attr('string', {}),
+  port: attr('string', {}),
   write_concern: attr('string', {
     subText: 'Optional. Must be in JSON. See our documentation for help.',
     editType: 'json',
@@ -66,17 +123,33 @@ export default Model.extend({
     defaultShown: 'Default',
     // defaultValue: '# For example: { "wmode": "majority", "wtimeout": 5000 }',
   }),
-  max_open_connections: attr('string', {}),
-  max_idle_connections: attr('string'),
-  max_connection_lifetime: attr('string'),
+  username_template: attr('string', {
+    editType: 'optionalText',
+    subText: 'Enter the custom username template to use.',
+    defaultSubText:
+      'Template describing how dynamic usernames are generated. Vault will use the default for this plugin.',
+    docLink: 'https://www.vaultproject.io/docs/concepts/username-templating',
+    defaultShown: 'Default',
+  }),
+  max_open_connections: attr('number', {
+    defaultValue: 4,
+  }),
+  max_idle_connections: attr('number', {
+    defaultValue: 0,
+  }),
+  max_connection_lifetime: attr('string', {
+    defaultValue: '0s',
+  }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
-    subText: 'x509 certificate for connecting to the database.',
+    helpText:
+      'x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.',
     editType: 'file',
   }),
   tls_ca: attr('string', {
     label: 'TLS CA',
-    subText: 'x509 CA file for validating the certificate presented by the MongoDB server.',
+    helpText:
+      'x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.',
     editType: 'file',
   }),
   root_rotation_statements: attr({
@@ -85,65 +158,44 @@ export default Model.extend({
     defaultShown: 'Default',
   }),
 
-  allowedFields: computed(function() {
-    return [
-      // required
-      'plugin_name',
-      'name',
-      // fields
-      'connection_url', // * MongoDB, HanaDB, MSSQL, MySQL/MariaDB, Oracle, PostgresQL, Redshift
-      'verify_connection', // default true
-      'password_policy', // default ""
-
-      // plugin config
-      'username',
-      'password',
-
-      'hosts',
-      'host',
-      'url',
-      'port',
-      'write_concern',
-      'max_open_connections',
-      'max_idle_connections',
-      'max_connection_lifetime',
-      'tls',
-      'tls_ca',
-    ];
-  }),
-
-  // for both create and edit fields
-  mainFields: computed('plugin_name', function() {
-    return ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy', 'pluginConfig'];
-  }),
-
   showAttrs: computed('plugin_name', function() {
-    const f = [
-      'name',
-      'plugin_name',
-      'connection_url',
-      'write_concern',
-      'verify_connection',
-      'allowed_roles',
-    ];
-    return expandAttributeMeta(this, f);
+    const fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
+      .fields.filter(f => f.show !== false)
+      .map(f => f.attr);
+    fields.push('allowed_roles');
+    return expandAttributeMeta(this, fields);
+  }),
+
+  fieldAttrs: computed('plugin_name', function() {
+    // for both create and edit fields
+    let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
+    if (this.plugin_name) {
+      fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
+        .fields.filter(f => !f.group)
+        .map(field => field.attr);
+    }
+    return expandAttributeMeta(this, fields);
   }),
 
   pluginFieldGroups: computed('plugin_name', function() {
     if (!this.plugin_name) {
       return null;
     }
-    let groups = [{ default: ['username', 'password', 'write_concern'] }];
-    // TODO: Get plugin options based on plugin
-    groups.push({
-      'TLS options': ['tls', 'tls_ca'],
-    });
+    let pluginFields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name).fields.filter(
+      f => f.group === 'pluginConfig'
+    );
+    let groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
 
-  fieldAttrs: computed('mainFields', function() {
-    // Main Field Attrs only
-    return expandAttributeMeta(this, this.mainFields);
+  statementFields: computed('plugin_name', function() {
+    if (!this.plugin_name) {
+      return expandAttributeMeta(this, ['root_rotation_statements']);
+    }
+    let fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
+      .fields.filter(f => f.group === 'statements')
+      .map(field => field.attr);
+    return expandAttributeMeta(this, fields);
   }),
 
   /* CAPABILITIES */

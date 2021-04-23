@@ -117,7 +117,6 @@ func (m *RollbackManager) run() {
 
 // triggerRollbacks is used to trigger the rollbacks across all the backends
 func (m *RollbackManager) triggerRollbacks() {
-
 	backends := m.backends()
 
 	for _, e := range backends {

@@ -9,8 +9,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/hkdf"
 	"io"
+
+	"golang.org/x/crypto/hkdf"
 
 	"golang.org/x/crypto/curve25519"
 )

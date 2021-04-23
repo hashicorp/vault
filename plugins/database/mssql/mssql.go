@@ -392,6 +392,7 @@ BEGIN
   DROP LOGIN [%s]
 END
 `
+
 const alterLoginSQL = `
 ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `

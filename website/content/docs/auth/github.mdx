@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: GitHub - Auth Methods
-sidebar_title: GitHub
 description: The GitHub auth method allows authentication with Vault using GitHub.
 ---
 

@@ -53,7 +53,6 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	logCh, err := client.Sys().Monitor(ctx, "DEBUG")
-
 	if err != nil {
 		t.Fatal(err)
 	}

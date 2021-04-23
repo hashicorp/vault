@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*MonitorCommand)(nil)
-var _ cli.CommandAutocomplete = (*MonitorCommand)(nil)
+var (
+	_ cli.Command             = (*MonitorCommand)(nil)
+	_ cli.CommandAutocomplete = (*MonitorCommand)(nil)
+)
 
 type MonitorCommand struct {
 	*BaseCommand

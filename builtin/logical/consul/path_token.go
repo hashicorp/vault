@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -19,7 +18,7 @@ func pathToken(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
@@ -36,7 +35,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if entry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("role %q not found", role)), nil
@@ -90,8 +89,8 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		return s, nil
 	}
 
-	//Create an ACLToken for Consul 1.4 and above
-	var policyLink = []*api.ACLTokenPolicyLink{}
+	// Create an ACLToken for Consul 1.4 and above
+	policyLink := []*api.ACLTokenPolicyLink{}
 	for _, policyName := range result.Policies {
 		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
 			Name: policyName,

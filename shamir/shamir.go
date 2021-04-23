@@ -90,7 +90,7 @@ func div(a, b uint8) uint8 {
 
 	log_a := logTable[a]
 	log_b := logTable[b]
-	diff := ((int(log_a) - int(log_b))+255)%255
+	diff := ((int(log_a) - int(log_b)) + 255) % 255
 
 	ret := int(expTable[diff])
 

@@ -8,7 +8,6 @@ import (
 )
 
 func Test_ParseLogFormat(t *testing.T) {
-
 	type testData struct {
 		format      string
 		expected    LogFormat
@@ -37,7 +36,6 @@ func Test_ParseLogFormat(t *testing.T) {
 }
 
 func Test_ParseEnv_VAULT_LOG_FORMAT(t *testing.T) {
-
 	oldVLF := os.Getenv("VAULT_LOG_FORMAT")
 	defer os.Setenv("VAULT_LOG_FORMAT", oldVLF)
 
@@ -45,7 +43,6 @@ func Test_ParseEnv_VAULT_LOG_FORMAT(t *testing.T) {
 }
 
 func Test_ParseEnv_LOGXI_FORMAT(t *testing.T) {
-
 	oldVLF := os.Getenv("VAULT_LOG_FORMAT")
 	defer os.Setenv("VAULT_LOG_FORMAT", oldVLF)
 
@@ -57,16 +54,17 @@ func Test_ParseEnv_LOGXI_FORMAT(t *testing.T) {
 }
 
 func testParseEnvLogFormat(t *testing.T, name string) {
-
 	env := []string{
 		"json", "vauLT_Json", "VAULT-JSON", "vaulTJSon",
 		"standard", "STANDARD",
-		"bogus"}
+		"bogus",
+	}
 
 	formats := []LogFormat{
 		JSONFormat, JSONFormat, JSONFormat, JSONFormat,
 		StandardFormat, StandardFormat,
-		UnspecifiedFormat}
+		UnspecifiedFormat,
+	}
 
 	for i, e := range env {
 		os.Setenv(name, e)

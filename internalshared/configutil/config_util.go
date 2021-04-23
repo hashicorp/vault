@@ -10,8 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
-type EntSharedConfig struct {
-}
+type EntSharedConfig struct{}
 
 type UnusedKeyMap map[string][]token.Pos
 

@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -20,8 +19,10 @@ import (
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
-var _ cli.Command = (*OperatorDiagnoseCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorDiagnoseCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorDiagnoseCommand)(nil)
+)
 
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
@@ -169,15 +170,20 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
-	disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
-	infoKeys := make([]string, 0, 10)
-	info := make(map[string]string)
-
 	err = diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+
+		// Check Listener Information
+		// TODO: Run Diagnose checks on the actual net.Listeners
+
+		disableClustering := config.HAStorage.DisableClustering
+		infoKeys := make([]string, 0, 10)
+		info := make(map[string]string)
 		lns, _, err := server.InitListeners(ctx, config, disableClustering, &infoKeys, &info)
+
 		if err != nil {
 			return err
 		}
+
 		// Make sure we close all listeners from this point on
 		listenerCloseFunc := func() {
 			for _, ln := range lns {
@@ -202,7 +208,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			// perform an active probe.
 			_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
 			if err != nil {
-				return fmt.Errorf("error creating TLS Configuration out of config file: %w", err)
+				return err
 			}
 
 			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
@@ -216,6 +222,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	if err != nil {
 		return 1
 	}
+
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry

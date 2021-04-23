@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Integrated Storage Autopilot
-sidebar_title: Autopilot
 description: Learn about the autopilot subsystem of integrated raft storage in Vault.
 ---
 
@@ -36,10 +35,11 @@ in a single call. This API can be used for monitoring for cluster health.
 ### Follower Health
 
 Follower node health is determined by 2 factors.
+
 - Its ability to heartbeat to leader node at regular intervals. Tuned using
-`last_contact_threshold` (see below).
+  `last_contact_threshold` (see below).
 - Its ability to keep up with data replication from the leader node. Tuned using
-`max_trailing_logs` (see below).
+  `max_trailing_logs` (see below).
 
 ### Default Configuration
 
@@ -57,7 +57,7 @@ behavior. Autopilot gets initialized with the following default values.
 - `dead_server_last_contact_threshold` - `24h`
 
 - `min_quorum` - This doesn't default to anything and will need to be set to at
-least 3 when `cleanup_dead_servers` is set as `true`.
+  least 3 when `cleanup_dead_servers` is set as `true`.
 
 - `max_trailing_logs` - `1000`
 
@@ -71,3 +71,9 @@ Performance secondary clusters have their own Autopilot configuration, managed
 independently of their primary.
 
 DR secondary clusters do not currently support Autopilot.
+
+## Learn
+
+Refer to [Integrated Storage
+Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot) for a
+step-by-step tutorial.

@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,8 +55,10 @@ import (
 	"google.golang.org/grpc/grpclog"
 )
 
-var _ cli.Command = (*ServerCommand)(nil)
-var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+var (
+	_ cli.Command             = (*ServerCommand)(nil)
+	_ cli.CommandAutocomplete = (*ServerCommand)(nil)
+)
 
 var memProfilerEnabled = false
 
@@ -873,7 +876,6 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
 func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) ([]listenerutil.Listener, []*net.TCPAddr, error) {
-
 	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
@@ -930,7 +932,7 @@ func (c *ServerCommand) InitListeners(ctx context.Context, config *server.Config
 		if lnConfig.MaxRequestDuration == 0 {
 			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
-		props["max_request_duration"] = fmt.Sprintf("%s", lnConfig.MaxRequestDuration.String())
+		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
 		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
@@ -1229,7 +1231,7 @@ func (c *ServerCommand) Run(args []string) int {
 				}),
 			})
 			var sealInfoKeys []string
-			var sealInfoMap = map[string]string{}
+			sealInfoMap := map[string]string{}
 			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
@@ -1246,7 +1248,7 @@ func (c *ServerCommand) Run(args []string) int {
 				})
 			}
 
-			var infoPrefix = ""
+			infoPrefix := ""
 			if configSeal.Disabled {
 				unwrapSeal = seal
 				infoPrefix = "Old "
@@ -1283,37 +1285,39 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
-		RawConfig:                 config,
-		Physical:                  backend,
-		RedirectAddr:              config.Storage.RedirectAddr,
-		StorageType:               config.Storage.Type,
-		HAPhysical:                nil,
-		ServiceRegistration:       configSR,
-		Seal:                      barrierSeal,
-		UnwrapSeal:                unwrapSeal,
-		AuditBackends:             c.AuditBackends,
-		CredentialBackends:        c.CredentialBackends,
-		LogicalBackends:           c.LogicalBackends,
-		Logger:                    c.logger,
-		DisableSentinelTrace:      config.DisableSentinelTrace,
-		DisableCache:              config.DisableCache,
-		DisableMlock:              config.DisableMlock,
-		MaxLeaseTTL:               config.MaxLeaseTTL,
-		DefaultLeaseTTL:           config.DefaultLeaseTTL,
-		ClusterName:               config.ClusterName,
-		CacheSize:                 config.CacheSize,
-		PluginDirectory:           config.PluginDirectory,
-		EnableUI:                  config.EnableUI,
-		EnableRaw:                 config.EnableRawEndpoint,
-		DisableSealWrap:           config.DisableSealWrap,
-		DisablePerformanceStandby: config.DisablePerformanceStandby,
-		DisableIndexing:           config.DisableIndexing,
-		AllLoggers:                c.allLoggers,
-		BuiltinRegistry:           builtinplugins.Registry,
-		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
-		MetricsHelper:             metricsHelper,
-		MetricSink:                metricSink,
-		SecureRandomReader:        secureRandomReader,
+		RawConfig:                      config,
+		Physical:                       backend,
+		RedirectAddr:                   config.Storage.RedirectAddr,
+		StorageType:                    config.Storage.Type,
+		HAPhysical:                     nil,
+		ServiceRegistration:            configSR,
+		Seal:                           barrierSeal,
+		UnwrapSeal:                     unwrapSeal,
+		AuditBackends:                  c.AuditBackends,
+		CredentialBackends:             c.CredentialBackends,
+		LogicalBackends:                c.LogicalBackends,
+		Logger:                         c.logger,
+		DisableSentinelTrace:           config.DisableSentinelTrace,
+		DisableCache:                   config.DisableCache,
+		DisableMlock:                   config.DisableMlock,
+		MaxLeaseTTL:                    config.MaxLeaseTTL,
+		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		ClusterName:                    config.ClusterName,
+		CacheSize:                      config.CacheSize,
+		PluginDirectory:                config.PluginDirectory,
+		EnableUI:                       config.EnableUI,
+		EnableRaw:                      config.EnableRawEndpoint,
+		DisableSealWrap:                config.DisableSealWrap,
+		DisablePerformanceStandby:      config.DisablePerformanceStandby,
+		DisableIndexing:                config.DisableIndexing,
+		AllLoggers:                     c.allLoggers,
+		BuiltinRegistry:                builtinplugins.Registry,
+		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
+		MetricsHelper:                  metricsHelper,
+		MetricSink:                     metricSink,
+		SecureRandomReader:             secureRandomReader,
+		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
+		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -1795,7 +1799,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 						"Development mode should NOT be used in production installations!"))
 					c.UI.Warn("")
 				})
-			})}
+			}),
+		}
 		c.logger.RegisterSink(qw)
 	}
 
@@ -1968,9 +1973,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 
 		case <-c.SigUSR2Ch:
-			buf := make([]byte, 32*1024*1024)
-			n := runtime.Stack(buf[:], true)
-			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
+			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
 
@@ -2246,7 +2250,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		return 1
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0755); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o755); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
 		return 1
 	}
@@ -2478,7 +2482,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
@@ -2541,7 +2545,6 @@ type StorageMigrationStatus struct {
 
 func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) {
 	entry, err := b.Get(context.Background(), storageMigrationLock)
-
 	if err != nil {
 		return nil, err
 	}

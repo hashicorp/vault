@@ -21,6 +21,11 @@ type ListenerTelemetry struct {
 	UnauthenticatedMetricsAccessRaw interface{} `hcl:"unauthenticated_metrics_access"`
 }
 
+type ListenerProfiling struct {
+	UnauthenticatedPProfAccess    bool        `hcl:"-"`
+	UnauthenticatedPProfAccessRaw interface{} `hcl:"unauthenticated_pprof_access"`
+}
+
 // Listener is the listener configuration for the server.
 type Listener struct {
 	UnusedKeys []string `hcl:",unusedKeys"`
@@ -82,6 +87,7 @@ type Listener struct {
 	SocketGroup string `hcl:"socket_group"`
 
 	Telemetry ListenerTelemetry `hcl:"telemetry"`
+	Profiling ListenerProfiling `hcl:"profiling"`
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
@@ -313,6 +319,17 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
+			}
+		}
+
+		// Profiling
+		{
+			if l.Profiling.UnauthenticatedPProfAccessRaw != nil {
+				if l.Profiling.UnauthenticatedPProfAccess, err = parseutil.ParseBool(l.Profiling.UnauthenticatedPProfAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for profiling.unauthenticated_pprof_access: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.Profiling.UnauthenticatedPProfAccessRaw = nil
 			}
 		}
 
