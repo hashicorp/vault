@@ -2633,13 +2633,13 @@ func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
 	expectedLeaseTimes.ExpireTime = expectedLeaseTimes.ExpireTime.Round(0)
 	expectedLeaseTimes.LastRenewalTime = expectedLeaseTimes.LastRenewalTime.Round(0)
 
-	if zombieLeaseTimes.IssueTime != expectedLeaseTimes.IssueTime {
+	if !zombieLeaseTimes.IssueTime.Equal(expectedLeaseTimes.IssueTime) {
 		t.Errorf("bad issue time. expected %v, got %v", expectedLeaseTimes.IssueTime, zombieLeaseTimes.IssueTime)
 	}
-	if zombieLeaseTimes.ExpireTime != expectedLeaseTimes.ExpireTime {
+	if !zombieLeaseTimes.ExpireTime.Equal(expectedLeaseTimes.ExpireTime) {
 		t.Errorf("bad expire time. expected %v, got %v", expectedLeaseTimes.ExpireTime, zombieLeaseTimes.ExpireTime)
 	}
-	if zombieLeaseTimes.LastRenewalTime != expectedLeaseTimes.LastRenewalTime {
+	if !zombieLeaseTimes.LastRenewalTime.Equal(expectedLeaseTimes.LastRenewalTime) {
 		t.Errorf("bad last renew time. expected %v, got %v", expectedLeaseTimes.LastRenewalTime, zombieLeaseTimes.LastRenewalTime)
 	}
 }
