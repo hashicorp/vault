@@ -102,7 +102,9 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		t.Skip("Detected interval crossing.")
 	}
 
-	// To validate our metrics are being sent, we check for the presence of one
+	// To validate our metrics are being sent, we check for the presence of one.
+	// First we sleep for a second though to make sure some have been emitted.
+	time.Sleep(time.Second)
 	noBoltDBMetrics := true
 	for _, c := range intervals[0].Gauges {
 		if c.Name == "raft.logstore.bolt.freelist.free_pages" {
