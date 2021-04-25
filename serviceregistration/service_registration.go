@@ -18,8 +18,8 @@ import (
 )
 
 type State struct {
-	VaultVersion                                            string
-	IsInitialized, IsSealed, IsActive, IsPerformanceStandby bool
+	VaultVersion                                                         string
+	IsInitialized, IsSealed, IsActive, IsPerformanceStandby, RunDiagnose bool
 }
 
 // Factory is the factory function to create a ServiceRegistration.

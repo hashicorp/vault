@@ -78,6 +78,7 @@ type serviceRegistration struct {
 	isInitialized *atomicB.Bool
 }
 
+// ROY
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
 func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State) (sr.ServiceRegistration, error) {
 	// Allow admins to disable consul integration

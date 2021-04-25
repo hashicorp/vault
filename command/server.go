@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	diaglog "github.com/hashicorp/vault/helper/log"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -94,7 +95,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.InterceptLogger
+	logger      diaglog.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -398,7 +399,7 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *ServerCommand) flushLog() {
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+	c.logger.InterceptLogger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
 		Output: c.logOutput,
 	}, c.gatedWriter)
 }
@@ -444,13 +445,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	c.logger = log.NewInterceptLogger(&log.LoggerOptions{
-		Output: c.gatedWriter,
-		Level:  level,
-		// Note that if logFormat is either unspecified or standard, then
-		// the resulting logger's format will be standard.
-		JSONFormat: logFormat == logging.JSONFormat,
-	})
+	c.logger = diaglog.InterceptLogger{
+		InterceptLogger: log.NewInterceptLogger(&log.LoggerOptions{
+			Output: c.gatedWriter,
+			Level:  level,
+			// Note that if logFormat is either unspecified or standard, then
+			// the resulting logger's format will be standard.
+			JSONFormat: logFormat == logging.JSONFormat,
+		}),
+	}
 
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
@@ -722,7 +725,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	return 0
 }
 
-func logProxyEnvironmentVariables(logger hclog.Logger) {
+func logProxyEnvironmentVariables(logger log.Logger) {
 	proxyCfg := httpproxy.FromEnvironment()
 	cfgMap := map[string]string{
 		"http_proxy":  proxyCfg.HTTPProxy,
@@ -864,7 +867,9 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 		}
 	}
 
-	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	namedStorageLogger := diaglog.Logger{
+		Logger: c.logger.Named("storage." + config.Storage.Type),
+	}
 	c.allLoggers = append(c.allLoggers, namedStorageLogger)
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
 	if err != nil {
@@ -1064,19 +1069,23 @@ func (c *ServerCommand) Run(args []string) int {
 	config.LogFormat = logFormat.String()
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Output: c.gatedWriter,
-			Level:  log.Trace,
-		})
+		c.logger = diaglog.InterceptLogger{
+			InterceptLogger: log.NewInterceptLogger(&log.LoggerOptions{
+				Mutex:  &sync.Mutex{},
+				Output: c.gatedWriter,
+				Level:  log.Trace,
+			}),
+		}
 	} else {
-		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
-			Output: c.gatedWriter,
-			Level:  level,
-			// Note that if logFormat is either unspecified or standard, then
-			// the resulting logger's format will be standard.
-			JSONFormat: logFormat == logging.JSONFormat,
-		})
+		c.logger = diaglog.InterceptLogger{
+			InterceptLogger: log.NewInterceptLogger(&log.LoggerOptions{
+				Output: c.gatedWriter,
+				Level:  level,
+				// Note that if logFormat is either unspecified or standard, then
+				// the resulting logger's format will be standard.
+				JSONFormat: logFormat == logging.JSONFormat,
+			}),
+		}
 	}
 
 	// Ensure logging is flushed if initialization fails
@@ -1095,6 +1104,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
+
 	c.allLoggers = append(c.allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
 		logger: namedGRPCLogFaker,
@@ -1146,7 +1156,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
-	// Initialize the storage backend
+	// Initialize the storage backend // ROY
 	backend, err := c.setupStorage(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1160,9 +1170,10 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the Service Discovery, if there is one
+	// ROY
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
-		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
+		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type] // ROY
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
 			return 1
@@ -1179,7 +1190,9 @@ func (c *ServerCommand) Run(args []string) int {
 			IsSealed:             true,
 			IsActive:             false,
 			IsPerformanceStandby: false,
+			RunDiagnose:          (c.flagDiagnose != notSetValue),
 		}
+		// ROY
 		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
