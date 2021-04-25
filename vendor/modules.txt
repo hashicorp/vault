@@ -357,9 +357,6 @@ github.com/dsnet/compress/internal/prefix
 ## explicit
 github.com/duosecurity/duo_api_golang
 github.com/duosecurity/duo_api_golang/authapi
-# github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
-## explicit
-github.com/elazarl/go-bindata-assetfs
 # github.com/fatih/color v1.9.0
 ## explicit
 github.com/fatih/color
@@ -499,9 +496,6 @@ github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.1.0
 ## explicit
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
-## explicit
-github.com/hashicorp/go-bindata
 # github.com/hashicorp/go-cleanhttp v0.5.2
 ## explicit
 github.com/hashicorp/go-cleanhttp
