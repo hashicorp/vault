@@ -78,18 +78,15 @@ type Config struct {
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 }
 
+const (
+	sectionSeal = "Seal"
+)
+
 func (c *Config) Validate(source string) []configutil.ConfigError {
 	results := configutil.ValidateUnusedFields(c.UnusedKeys, source)
 	if c.Telemetry != nil {
 		results = append(results, c.Telemetry.Validate(source)...)
 	}
-	/*// Look for incorrect section counts
-	if c, ok := c.Sections[sectionSeal]; ok && c > 2 {
-		results = append(results, configutil.ConfigError{
-			Problem:  "",
-			Position: token.Pos{},
-		}
-	}*/
 	return results
 }
 

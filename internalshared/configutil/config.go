@@ -73,14 +73,6 @@ func ParseConfig(d string) (*SharedConfig, error) {
 	// Start building the result
 	var result SharedConfig
 
-	// Tabulate section counts
-	if ol, ok := obj.Node.(*ast.ObjectList); ok {
-		result.Sections = make(map[string][]token.Pos)
-		for _, s := range ol.Items {
-			key := s.Keys[0].Token.Text
-			result.Sections[key] = append(result.Sections[key], s.Pos())
-		}
-	}
 	if err := hcl.DecodeObject(&result, obj); err != nil {
 		return nil, err
 	}
