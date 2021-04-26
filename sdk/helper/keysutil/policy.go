@@ -31,6 +31,7 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/hkdf"
+	_ "golang.org/x/crypto/sha3"
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
@@ -38,6 +39,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -59,6 +63,7 @@ const (
 	KeyType_ECDSA_P521
 	KeyType_AES128_GCM96
 	KeyType_RSA3072
+	KeyType_ECDSA_secp256k1
 )
 
 const (
@@ -109,7 +114,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_secp256k1:
 		return true
 	}
 	return false
@@ -153,6 +158,8 @@ func (kt KeyType) String() string {
 		return "rsa-3072"
 	case KeyType_RSA4096:
 		return "rsa-4096"
+	case KeyType_ECDSA_secp256k1:
+		return "ecdsa-secp256k1"
 	}
 
 	return "[unknown]"
@@ -1163,6 +1170,37 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
+	case KeyType_ECDSA_secp256k1:
+		switch hashAlgorithm {
+		case HashTypeKeccak256:
+		default:
+			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
+		}
+
+		key := keyParams.Key
+		hexKey := hexutil.Encode(key)[2:]
+
+		privateKey, err := ethcrypto.HexToECDSA(hexKey)
+		if err != nil {
+			return nil, err
+		}
+
+		hash := ethcrypto.Keccak256Hash(input)
+
+		signature, err := ethcrypto.Sign(hash.Bytes(), privateKey)
+		if err != nil {
+			return nil, err
+		}
+		hexSig := hexutil.Encode(signature)
+		// sig = []byte(hexSig)
+
+		res := &SigningResult{
+			Signature: p.getVersionPrefix(ver) + hexSig,
+			PublicKey: pubKey,
+		}
+
+		return res, nil
+
 	default:
 		return nil, fmt.Errorf("unsupported key type %v", p.Type)
 	}
@@ -1175,6 +1213,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	case MarshalingTypeJWS:
 		encoded = base64.RawURLEncoding.EncodeToString(sig)
 	}
+
 	res := &SigningResult{
 		Signature: p.getVersionPrefix(ver) + encoded,
 		PublicKey: pubKey,
@@ -1444,6 +1483,16 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		if err != nil {
 			return err
 		}
+
+	case KeyType_ECDSA_secp256k1:
+		privateKey, _ := ethcrypto.GenerateKey()
+		privateKeyBytes := ethcrypto.FromECDSA(privateKey)
+		publicKey := privateKey.Public()
+		publicKeyECDSA, _ := publicKey.(*ecdsa.PublicKey)
+		pub := ethcrypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+		entry.Key = privateKeyBytes
+		entry.FormattedPublicKey = pub
+
 	}
 
 	if p.ConvergentEncryption {

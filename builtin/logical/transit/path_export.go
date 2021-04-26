@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const (
@@ -185,6 +187,9 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 			return encodeRSAPrivateKey(key.RSAKey), nil
+
+		case keysutil.KeyType_ECDSA_secp256k1:
+			return hexutil.Encode(key.Key)[2:], nil
 		}
 	}
 
