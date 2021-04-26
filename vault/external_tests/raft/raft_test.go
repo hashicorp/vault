@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -70,13 +72,36 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	return cluster
 }
 
+type SysMetricsJSON struct {
+	Gauges []GaugeJSON `json:"Gauges"`
+}
+
+type GaugeJSON struct {
+	Name   string                 `json:"Name"`
+	Value  int                    `json:"Value"`
+	Labels map[string]interface{} `json:"Labels"`
+}
+
 func TestRaft_BoltDBMetrics(t *testing.T) {
-	sink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-	conf := vault.CoreConfig{
-		MetricSink:    metricsutil.NewClusterMetricSink("test-cluster", sink),
-		MetricsHelper: metricsutil.NewMetricsHelper(sink, false),
+	//sink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	//conf := vault.CoreConfig{
+	//	MetricSink:    metricsutil.NewClusterMetricSink("test-cluster", sink),
+	//	MetricsHelper: metricsutil.NewMetricsHelper(sink, false),
+	//}
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
+		HandlerFunc:            vaulthttp.Handler,
+		NumCores:               1,
+		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Telemetry: configutil.ListenerTelemetry{
+					UnauthenticatedMetricsAccess: true,
+				},
+			},
+		},
 	}
-	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler, NumCores: 1}
+
 	teststorage.RaftBackendSetup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
@@ -95,21 +120,24 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		}
 	}
 
-	intervals := sink.Data()
-
-	// Test crossed an interval boundary, don't try to deal with it.
-	if len(intervals) > 1 {
-		t.Skip("Detected interval crossing.")
+	r := leaderClient.NewRequest("GET", "/v1/sys/metrics")
+	var data SysMetricsJSON
+	resp, err := leaderClient.RawRequestWithContext(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if err := json.Unmarshal(bodyBytes, &data); err != nil {
+		t.Fatal(err)
 	}
 
-	// To validate our metrics are being sent, we check for the presence of one.
-	// First we sleep for a second though to make sure some have been emitted.
-	time.Sleep(2 * time.Second)
 	noBoltDBMetrics := true
-	t.Log("checking gauges for raft boltdb metrics")
-	for _, c := range intervals[0].Gauges {
-		t.Logf("gauge name - %s\n", c.Name)
-		if strings.HasPrefix(c.Name, "raft_storage.bolt.") {
+	for _, g := range data.Gauges {
+		if strings.HasPrefix(g.Name, "raft_storage.bolt.") {
 			noBoltDBMetrics = false
 			break
 		}
@@ -1197,5 +1225,14 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	for i := range cluster.Cores {
 		verifyInitStatus(i, true)
+	}
+}
+
+func testMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
+		clusterSink.GaugeInterval = gaugeInterval
+		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
 	}
 }
