@@ -1,13 +1,17 @@
 package command
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
@@ -223,10 +227,34 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	phase = "Access storage"
 	c.UI.Output(status_unknown + phase)
-	_, err = server.setupStorage(config)
-	storageErrors = append(storageErrors, err.Error())
+	b, err := server.setupStorage(config)
 	if err != nil {
+		storageErrors = append(storageErrors, err.Error())
+	}
 
+	// Attempt to use storage backend
+	c2 := make(chan string, 1)
+	go func() {
+		b.Put(context.Background(), &physical.Entry{Key: "diagnose", Value: []byte("diagnose")})
+		c2 <- "success"
+	}()
+	select {
+	case _ = <-c2:
+		val, err := b.Get(context.Background(), "diagnose")
+		if err != nil {
+			storageErrors = append(storageErrors, err.Error())
+		} else {
+			if val.Key != "diagnose" && string(val.Value) != "diagnose" {
+				storageErrors = append(storageErrors, fmt.Sprintf("Storage get and put gave wrong values: expecting diagnose, but got %s, %s", val.Key, val.Value))
+			} else {
+				err = b.Delete(context.Background(), "diagnose")
+				if err != nil {
+					storageErrors = append(storageErrors, err.Error())
+				}
+			}
+		}
+	case <-time.After(20 * time.Second):
+		storageErrors = append(storageErrors, fmt.Sprint("Storage get timed out after 20 seconds."))
 	}
 
 	// Initialize the Service Discovery, if there is one
@@ -234,7 +262,6 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
 		if err != nil {
 			storageErrors = append(storageErrors, err.Error())
-
 		}
 	}
 	if storageErrors != nil && len(storageErrors) > 0 {
