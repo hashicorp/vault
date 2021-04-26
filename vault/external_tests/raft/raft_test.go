@@ -12,12 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -72,11 +70,12 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 }
 
 func TestRaft_BoltDBMetrics(t *testing.T) {
+	t.Parallel()
 	conf := vault.CoreConfig{}
 	opts := vault.TestClusterOptions{
 		HandlerFunc:            vaulthttp.Handler,
 		NumCores:               1,
-		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 		DefaultHandlerProperties: vault.HandlerProperties{
 			ListenerConfig: &configutil.Listener{
 				Telemetry: configutil.ListenerTelemetry{
@@ -104,19 +103,17 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		}
 	}
 
-	// Metrics are emitted every second so pause briefly to make sure some have been emitted
-	t.Log("sleeping for 2 seconds to let metrics be emitted")
-	time.Sleep(2 * time.Second)
-	cluster.Logger.Trace("retrieving metrics")
+	// Even though there is a long delay between when we start the node and when we check for these metrics,
+	// the core metrics loop isn't started until postUnseal, which happens after said delay. This means we
+	// need a small artificial delay here as well, otherwise we won't see any metrics emitted.
+	time.Sleep(5 * time.Second)
 	data, err := testhelpers.SysMetricsReq(leaderClient, cluster, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	noBoltDBMetrics := true
-	cluster.Logger.Trace("iterating the retrieved metrics")
 	for _, g := range data.Gauges {
-		cluster.Logger.Trace("gauge", "name", g.Name)
 		if strings.HasPrefix(g.Name, "raft_storage.bolt.") {
 			noBoltDBMetrics = false
 			break
@@ -1205,14 +1202,5 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	for i := range cluster.Cores {
 		verifyInitStatus(i, true)
-	}
-}
-
-func testMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
-	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
-		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
-		clusterSink.GaugeInterval = gaugeInterval
-		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
 	}
 }

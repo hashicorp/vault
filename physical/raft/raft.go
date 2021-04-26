@@ -479,16 +479,12 @@ func (b *RaftBackend) Close() error {
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
-	b.logger.Trace("acquiring raft backend read lock to generate stats")
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
 	fsmStats := b.fsm.db.Stats()
 	b.l.RUnlock()
-	b.logger.Trace("raft backend read lock released")
-	b.logger.Trace("emitting raft backend metrics")
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
-	b.logger.Trace("raft backend metrics emitted")
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {

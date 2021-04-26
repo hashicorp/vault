@@ -8,9 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
@@ -26,7 +24,7 @@ func TestMountTableMetrics(t *testing.T) {
 		KeepStandbysSealed:     false,
 		HandlerFunc:            vaulthttp.Handler,
 		NumCores:               2,
-		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 	})
 
 	cluster.Start()
@@ -106,15 +104,6 @@ func gaugeConditionCheck(comparator string, compareVal int, compareToVal int) er
 	return nil
 }
 
-func testMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
-	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
-		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
-		clusterSink.GaugeInterval = gaugeInterval
-		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
-	}
-}
-
 func TestLeaderReElectionMetrics(t *testing.T) {
 	clusterName := "mycluster"
 	conf := &vault.CoreConfig{
@@ -125,7 +114,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		KeepStandbysSealed:     false,
 		HandlerFunc:            vaulthttp.Handler,
 		NumCores:               2,
-		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 	})
 
 	cluster.Start()
