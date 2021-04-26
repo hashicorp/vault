@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"golang.org/x/oauth2"
-	iam "google.golang.org/api/iam/v1"
+	iam "google.golang.org/api/iamcredentials/v1"
 )
 
 const (
@@ -180,13 +180,6 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 			return
 		}
 
-		project := "-"
-		if g.project != "" {
-			project = g.project
-		} else if credentials != nil {
-			project = credentials.ProjectId
-		}
-
 		ttlMin := int64(defaultIamMaxJwtExpMinutes)
 		if g.jwtExp != 0 {
 			ttlMin = g.jwtExp
@@ -214,7 +207,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 			return
 		}
 
-		resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
+		resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccount)
 		resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, jwtReq).Do()
 		if err != nil {
 			retErr = errwrap.Wrapf(fmt.Sprintf("unable to sign JWT for %s using given Vault credentials: {{err}}", resourceName), err)
