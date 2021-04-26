@@ -87,7 +87,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	if ok && disableReg != "" {
 		b, err := parseutil.ParseBool(disableReg)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing disable_registration parameter: %w", err)
 		}
 		disableRegistration = b
 	}
@@ -516,11 +516,11 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	}
 
 	if err := agent.ServiceRegister(service); err != nil {
-		return "", errwrap.Wrapf(`service registration failed: {{err}}`, err)
+		return "", fmt.Errorf(`service registration failed: %w`, err)
 	}
 
 	if err := agent.CheckRegister(sealedCheck); err != nil {
-		return serviceID, errwrap.Wrapf(`service check registration failed: {{err}}`, err)
+		return serviceID, fmt.Errorf(`service check registration failed: %w`, err)
 	}
 
 	return serviceID, nil
@@ -564,7 +564,7 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
+		return fmt.Errorf("failed to parse redirect URL %q: %w", addr, err)
 	}
 
 	var portStr string
@@ -578,12 +578,12 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 			portStr = "-1"
 			c.redirectHost = url.Path
 		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
+			return fmt.Errorf("failed to find a host:port in redirect address %q: %w", url.Host, err)
 		}
 	}
 	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
 	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+		return fmt.Errorf("failed to parse valid port %q: %w", portStr, err)
 	}
 
 	return nil
