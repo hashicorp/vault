@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	sr "github.com/hashicorp/vault/serviceregistration"
+	"github.com/hashicorp/vault/vault/diagnose"
 	atomicB "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
@@ -146,6 +147,39 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
+	SetupSecureTLS(consulConf, conf, logger, false)
+
+	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
+	client, err := api.NewClient(consulConf)
+	if err != nil {
+		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+	}
+
+	// Setup the backend
+	c := &serviceRegistration{
+		Client: client,
+
+		logger:              logger,
+		serviceName:         service,
+		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceAddress:      serviceAddr,
+		checkTimeout:        checkTimeout,
+		disableRegistration: disableRegistration,
+
+		notifyActiveCh:      make(chan struct{}),
+		notifySealedCh:      make(chan struct{}),
+		notifyPerfStandbyCh: make(chan struct{}),
+		notifyInitializedCh: make(chan struct{}),
+
+		isActive:      atomicB.NewBool(state.IsActive),
+		isSealed:      atomicB.NewBool(state.IsSealed),
+		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
+		isInitialized: atomicB.NewBool(state.IsInitialized),
+	}
+	return c, nil
+}
+
+func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -179,47 +213,33 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	}
 
 	if consulConf.Scheme == "https" {
+
+		if isDiagnose {
+			certPath, okCert := conf["tls_cert_file"]
+			keyPath, okKey := conf["tls_key_file"]
+			if okCert && okKey {
+				err := diagnose.TLSFileChecks(certPath, keyPath)
+				if err != nil {
+					return err
+				}
+			} else {
+				return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+			}
+		}
+
 		// Use the parsed Address instead of the raw conf['address']
 		tlsClientConfig, err := tlsutil.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		consulConf.Transport.TLSClientConfig = tlsClientConfig
 		if err := http2.ConfigureTransport(consulConf.Transport); err != nil {
-			return nil, err
+			return err
 		}
 		logger.Debug("configured TLS")
 	}
-
-	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
-	client, err := api.NewClient(consulConf)
-	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
-	}
-
-	// Setup the backend
-	c := &serviceRegistration{
-		Client: client,
-
-		logger:              logger,
-		serviceName:         service,
-		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
-		serviceAddress:      serviceAddr,
-		checkTimeout:        checkTimeout,
-		disableRegistration: disableRegistration,
-
-		notifyActiveCh:      make(chan struct{}),
-		notifySealedCh:      make(chan struct{}),
-		notifyPerfStandbyCh: make(chan struct{}),
-		notifyInitializedCh: make(chan struct{}),
-
-		isActive:      atomicB.NewBool(state.IsActive),
-		isSealed:      atomicB.NewBool(state.IsSealed),
-		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
-		isInitialized: atomicB.NewBool(state.IsInitialized),
-	}
-	return c, nil
+	return nil
 }
 
 func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {

@@ -1154,7 +1154,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Prevent server startup if migration is active
-	// TODO: how to incorporate this check into Diagnose?
+	// TODO: Use logs with OpenTelemetry to Integrate this into Diagnose
 	if c.storageMigrationActive(backend) {
 		return 1
 	}

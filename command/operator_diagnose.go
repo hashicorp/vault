@@ -4,10 +4,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/version"
+	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -217,12 +219,29 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	// TODO: check for storage backend
 	c.UI.Output(same_line + status_ok + phase)
 
+	var storageErrors []string
+
 	phase = "Access storage"
 	c.UI.Output(status_unknown + phase)
 	_, err = server.setupStorage(config)
+	storageErrors = append(storageErrors, err.Error())
 	if err != nil {
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output(err.Error())
+
+	}
+
+	// Initialize the Service Discovery, if there is one
+	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
+		if err != nil {
+			storageErrors = append(storageErrors, err.Error())
+
+		}
+	}
+	if storageErrors != nil && len(storageErrors) > 0 {
+		for _, err := range storageErrors {
+			c.UI.Output(same_line + status_failed + phase)
+			c.UI.Output(err)
+		}
 		return 1
 	}
 	c.UI.Output(same_line + status_ok + phase)
