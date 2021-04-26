@@ -48,9 +48,9 @@ func NewTelemetryCollector() *TelemetryCollector {
 	}
 }
 
-func (t *TelemetryCollector) OnStart(parent context.Context, s sdktrace.ReadWriteSpan) {
+// OnStart tracks spans by id for later retrieval
+func (t *TelemetryCollector) OnStart(_ context.Context, s sdktrace.ReadWriteSpan) {
 	t.spans[s.SpanContext().SpanID()] = s
-
 }
 
 func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
@@ -72,12 +72,14 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 	}
 }
 
+// required to implement SpanProcessor, but noops for our purposes
 func (t *TelemetryCollector) Shutdown(ctx context.Context) error {
-	return errUnimplemented
+	return nil
 }
 
+// required to implement SpanProcessor, but noops for our purposes
 func (t *TelemetryCollector) ForceFlush(ctx context.Context) error {
-	return errUnimplemented
+	return nil
 }
 
 func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {

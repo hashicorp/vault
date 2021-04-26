@@ -65,10 +65,6 @@ func Warn(ctx context.Context, msg string) {
 	span.AddEvent(warningEventName, trace.WithAttributes(attribute.String("message", msg)))
 }
 
-func Action(actionName string) trace.LifeCycleOption {
-	return trace.WithAttributes(attribute.String(actionKey, actionName))
-}
-
 // Test creates a new named span, and executes the provided function within it.  If the function returns an error,
 // the span is considered to have failed.
 func Test(ctx context.Context, spanName string, function func(context.Context) error, options ...trace.SpanOption) error {
