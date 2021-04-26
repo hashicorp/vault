@@ -38,6 +38,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
+			c.logger.Trace("emitting metrics")
 			if !c.PerfStandby() {
 				c.metricsMutex.Lock()
 				// Emit on active node only
@@ -96,6 +97,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 			// If we're using a raft backend, emit boltdb metrics
 			if rb, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+				c.logger.Trace("emitting metrics: raft")
 				rb.CollectMetrics(c.MetricSink())
 			}
 		case <-writeTimer:
