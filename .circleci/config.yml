@@ -1236,6 +1236,7 @@ jobs:
                 -parallel=20 \
                  \
                 -run TestRaft_BoltDBMetrics \
+                -count 10 \
                 github.com/hashicorp/vault/vault/external_tests/raft
           fi
         name: Run Go tests
@@ -1383,6 +1384,7 @@ jobs:
                 -parallel=20 \
                  \
                 -run TestRaft_BoltDBMetrics \
+                -count 10 \
                 github.com/hashicorp/vault/vault/external_tests/raft
           fi
         name: Run Go tests

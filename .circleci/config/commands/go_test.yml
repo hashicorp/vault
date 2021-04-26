@@ -123,6 +123,7 @@ steps:
               -parallel=20 \
               << parameters.extra_flags >> \
               -run TestRaft_BoltDBMetrics \
+              -count 10 \
               github.com/hashicorp/vault/vault/external_tests/raft
         fi
 
