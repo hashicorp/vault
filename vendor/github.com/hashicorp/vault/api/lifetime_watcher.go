@@ -292,7 +292,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 					}
 				}
 
-				// Calculate remaining duration until inital token lease expires
+				// Calculate remaining duration until initial token lease expires
 				leaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
 				if errorBackoff == nil {
 					errorBackoff = &backoff.ExponentialBackOff{
