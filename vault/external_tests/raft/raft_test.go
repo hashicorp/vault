@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -66,6 +67,62 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_BoltDBMetrics(t *testing.T) {
+	t.Parallel()
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
+		HandlerFunc:            vaulthttp.Handler,
+		NumCores:               1,
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Telemetry: configutil.ListenerTelemetry{
+					UnauthenticatedMetricsAccess: true,
+				},
+			},
+		},
+	}
+
+	teststorage.RaftBackendSetup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	leaderClient := cluster.Cores[0].Client
+
+	// Write a few keys
+	for i := 0; i < 50; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			fmt.Sprintf("foo%d", i): fmt.Sprintf("bar%d", i),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Even though there is a long delay between when we start the node and when we check for these metrics,
+	// the core metrics loop isn't started until postUnseal, which happens after said delay. This means we
+	// need a small artificial delay here as well, otherwise we won't see any metrics emitted.
+	time.Sleep(5 * time.Second)
+	data, err := testhelpers.SysMetricsReq(leaderClient, cluster, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noBoltDBMetrics := true
+	for _, g := range data.Gauges {
+		if strings.HasPrefix(g.Name, "raft_storage.bolt.") {
+			noBoltDBMetrics = false
+			break
+		}
+	}
+
+	if noBoltDBMetrics {
+		t.Fatal("expected to find boltdb metrics being emitted from the raft backend, but there were none")
+	}
 }
 
 func TestRaft_RetryAutoJoin(t *testing.T) {

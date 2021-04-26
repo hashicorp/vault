@@ -12,9 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-
+	"github.com/armon/go-metrics"
 	raftlib "github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
@@ -655,6 +656,15 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	// the response.
 	if len(expected) != 0 {
 		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+	}
+}
+
+func TestMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
+		clusterSink.GaugeInterval = gaugeInterval
+		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
 	}
 }
 
