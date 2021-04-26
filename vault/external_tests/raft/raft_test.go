@@ -104,13 +104,19 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		}
 	}
 
+	// Metrics are emitted every second so pause briefly to make sure some have been emitted
+	t.Log("sleeping for 2 seconds to let metrics be emitted")
+	time.Sleep(2 * time.Second)
+	cluster.Logger.Trace("retrieving metrics")
 	data, err := testhelpers.SysMetricsReq(leaderClient, cluster, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	noBoltDBMetrics := true
+	cluster.Logger.Trace("iterating the retrieved metrics")
 	for _, g := range data.Gauges {
+		cluster.Logger.Trace("gauge", "name", g.Name)
 		if strings.HasPrefix(g.Name, "raft_storage.bolt.") {
 			noBoltDBMetrics = false
 			break
