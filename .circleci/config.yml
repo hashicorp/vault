@@ -1235,6 +1235,7 @@ jobs:
                 -timeout=60m \
                 -parallel=20 \
                  \
+                -run TestRaft_BoltDBMetrics \
                 github.com/hashicorp/vault/vault/external_tests/raft
           fi
         name: Run Go tests
@@ -1381,6 +1382,7 @@ jobs:
                 -timeout=60m \
                 -parallel=20 \
                  \
+                -run TestRaft_BoltDBMetrics \
                 github.com/hashicorp/vault/vault/external_tests/raft
           fi
         name: Run Go tests

@@ -122,6 +122,7 @@ steps:
               -timeout=60m \
               -parallel=20 \
               << parameters.extra_flags >> \
+              -run TestRaft_BoltDBMetrics \
               github.com/hashicorp/vault/vault/external_tests/raft
         fi
 
