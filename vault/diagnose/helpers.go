@@ -51,7 +51,7 @@ func Fail(ctx context.Context, message string) {
 	span.SetStatus(codes.Error, message)
 }
 
-// Fail records an error in the current span (but unlike Fail, doesn't set the overall span status to Error)
+// Error records an error in the current span (but unlike Fail, doesn't set the overall span status to Error)
 func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err, options...)
