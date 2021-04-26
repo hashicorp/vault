@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -72,22 +71,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	return cluster
 }
 
-type SysMetricsJSON struct {
-	Gauges []GaugeJSON `json:"Gauges"`
-}
-
-type GaugeJSON struct {
-	Name   string                 `json:"Name"`
-	Value  int                    `json:"Value"`
-	Labels map[string]interface{} `json:"Labels"`
-}
-
 func TestRaft_BoltDBMetrics(t *testing.T) {
-	//sink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-	//conf := vault.CoreConfig{
-	//	MetricSink:    metricsutil.NewClusterMetricSink("test-cluster", sink),
-	//	MetricsHelper: metricsutil.NewMetricsHelper(sink, false),
-	//}
 	conf := vault.CoreConfig{}
 	opts := vault.TestClusterOptions{
 		HandlerFunc:            vaulthttp.Handler,
@@ -120,18 +104,8 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		}
 	}
 
-	r := leaderClient.NewRequest("GET", "/v1/sys/metrics")
-	var data SysMetricsJSON
-	resp, err := leaderClient.RawRequestWithContext(context.Background(), r)
+	data, err := testhelpers.SysMetricsReq(leaderClient, cluster, true)
 	if err != nil {
-		t.Fatal(err)
-	}
-	bodyBytes, err := ioutil.ReadAll(resp.Response.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if err := json.Unmarshal(bodyBytes, &data); err != nil {
 		t.Fatal(err)
 	}
 
