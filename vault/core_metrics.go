@@ -18,7 +18,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
 
 	identityCountTimer := time.Tick(time.Minute * 10)
-	// Only emit on active node of cluster that is not a DR cecondary.
+	// Only emit on active node of cluster that is not a DR secondary.
 	if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
 		identityCountTimer = nil
 	}
@@ -58,6 +58,36 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
+			}
+
+			if perfStandby := c.PerfStandby(); perfStandby {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "performance_standby"}, 1, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "performance_standby"}, 0, nil)
+			}
+
+			if c.ReplicationState().HasState(consts.ReplicationPerformancePrimary) {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "performance", "primary"}, 1, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "performance", "primary"}, 0, nil)
+			}
+
+			if c.IsPerfSecondary() {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "performance", "secondary"}, 1, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "performance", "secondary"}, 0, nil)
+			}
+
+			if c.ReplicationState().HasState(consts.ReplicationDRPrimary) {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "primary"}, 1, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "primary"}, 0, nil)
+			}
+
+			if c.IsDRSecondary() {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 1, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 0, nil)
 			}
 
 			// Refresh gauge metrics that are looped
