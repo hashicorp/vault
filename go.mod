@@ -33,13 +33,14 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/containerd/containerd v1.4.3 // indirect
-	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-semver v0.3.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
+	github.com/ethereum/go-ethereum v1.10.2 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
@@ -50,7 +51,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.4.3
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.25.2
@@ -71,7 +72,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hashicorp/golang-lru v0.5.4
+	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/hashicorp/hcl v1.0.1-vault
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.2.0
@@ -103,7 +104,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6
-	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
+	github.com/influxdata/influxdb v1.8.3
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
@@ -146,7 +147,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v3.21.1+incompatible
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
@@ -158,7 +159,7 @@ require (
 	go.uber.org/atomic v1.6.0
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
+	golang.org/x/net v0.0.0-20210220033124-5f55cee0dc0d
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	golang.org/x/text v0.3.5 // indirect
