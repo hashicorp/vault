@@ -259,6 +259,14 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	// Initialize the Service Discovery, if there is one
 	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+
+		// Verify that consul is connecting to local agent, versus directly to a remote server
+		// We can only assume that the local address is a server, not a client.
+		serviceRegistrationAddr := config.HAStorage.Config["address"]
+		if !strings.Contains(serviceRegistrationAddr, "localhost") && !strings.Contains(serviceRegistrationAddr, "127.0.0.1") {
+			storageErrors = append(storageErrors, "Consul storage does not connect to local agent, but directly to server.")
+		}
+
 		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
 		if err != nil {
 			storageErrors = append(storageErrors, err.Error())
