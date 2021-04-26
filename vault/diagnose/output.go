@@ -2,6 +2,7 @@ package diagnose
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 
@@ -20,6 +21,8 @@ const (
 	warnStatus     = "warn"
 	okStatus       = "ok"
 )
+
+var errUnimplemented = errors.New("unimplemented")
 
 type Result struct {
 	Name     string
@@ -70,11 +73,11 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 }
 
 func (t *TelemetryCollector) Shutdown(ctx context.Context) error {
-	return nil
+	return errUnimplemented
 }
 
 func (t *TelemetryCollector) ForceFlush(ctx context.Context) error {
-	return nil
+	return errUnimplemented
 }
 
 func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
@@ -142,30 +145,34 @@ func (r *Result) Write(writer io.Writer) error {
 }
 
 func (r *Result) write(sb *strings.Builder, depth int) {
-	for i := 0; i < depth; i++ {
-		sb.WriteRune('\t')
-	}
-	switch r.Status {
-	case okStatus:
-		sb.WriteString(status_ok)
-	case warnStatus:
-		sb.WriteString(status_warn)
-	case errorStatus:
-		sb.WriteString(status_failed)
-	}
-	sb.WriteString(r.Name)
-
-	if r.Message != "" || len(r.Warnings) > 0 {
-		sb.WriteString(": ")
-	}
-	sb.WriteString(r.Message)
-	for _, w := range r.Warnings {
+	if r.Status != warnStatus || (len(r.Warnings) == 0 && r.Message != "") {
 		for i := 0; i < depth; i++ {
 			sb.WriteRune('\t')
 		}
-		sb.WriteString("  ")
-		sb.WriteString(w)
+		switch r.Status {
+		case okStatus:
+			sb.WriteString(status_ok)
+		case warnStatus:
+			sb.WriteString(status_warn)
+		case errorStatus:
+			sb.WriteString(status_failed)
+		}
+		sb.WriteString(r.Name)
+
+		if r.Message != "" || len(r.Warnings) > 0 {
+			sb.WriteString(": ")
+		}
+		sb.WriteString(r.Message)
+	}
+	for _, w := range r.Warnings {
 		sb.WriteRune('\n')
+		for i := 0; i < depth; i++ {
+			sb.WriteRune('\t')
+		}
+		sb.WriteString(status_warn)
+		sb.WriteString(r.Name)
+		sb.WriteString(": ")
+		sb.WriteString(w)
 	}
 	sb.WriteRune('\n')
 	for _, c := range r.Children {

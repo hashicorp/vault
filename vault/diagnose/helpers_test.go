@@ -3,6 +3,7 @@ package diagnose
 import (
 	"context"
 	"errors"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -39,6 +40,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 	if !reflect.DeepEqual(results, expected) {
 		t.Fail()
 	}
+	results.Write(os.Stdout)
 }
 
 const coffeeLeft = 3
