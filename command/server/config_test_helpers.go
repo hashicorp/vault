@@ -247,7 +247,7 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 }
 
 func testParseEntropy(t *testing.T, oss bool) {
-	var tests = []struct {
+	tests := []struct {
 		inConfig   string
 		outErr     error
 		outEntropy configutil.Entropy
@@ -441,6 +441,11 @@ func testLoadConfigFile(t *testing.T) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		EnableResponseHeaderHostname:      true,
+		EnableResponseHeaderHostnameRaw:   true,
+		EnableResponseHeaderRaftNodeID:    true,
+		EnableResponseHeaderRaftNodeIDRaw: true,
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -606,28 +611,31 @@ func testConfig_Sanitized(t *testing.T) {
 	sanitizedConfig := config.Sanitized()
 
 	expected := map[string]interface{}{
-		"api_addr":                     "top_level_api_addr",
-		"cache_size":                   0,
-		"cluster_addr":                 "top_level_cluster_addr",
-		"cluster_cipher_suites":        "",
-		"cluster_name":                 "testcluster",
-		"default_lease_ttl":            10 * time.Hour,
-		"default_max_request_duration": 0 * time.Second,
-		"disable_cache":                true,
-		"disable_clustering":           false,
-		"disable_indexing":             false,
-		"disable_mlock":                true,
-		"disable_performance_standby":  false,
-		"disable_printable_check":      false,
-		"disable_sealwrap":             true,
-		"raw_storage_endpoint":         true,
-		"disable_sentinel_trace":       true,
-		"enable_ui":                    true,
+		"api_addr":                            "top_level_api_addr",
+		"cache_size":                          0,
+		"cluster_addr":                        "top_level_cluster_addr",
+		"cluster_cipher_suites":               "",
+		"cluster_name":                        "testcluster",
+		"default_lease_ttl":                   10 * time.Hour,
+		"default_max_request_duration":        0 * time.Second,
+		"disable_cache":                       true,
+		"disable_clustering":                  false,
+		"disable_indexing":                    false,
+		"disable_mlock":                       true,
+		"disable_performance_standby":         false,
+		"disable_printable_check":             false,
+		"disable_sealwrap":                    true,
+		"raw_storage_endpoint":                true,
+		"disable_sentinel_trace":              true,
+		"enable_ui":                           true,
+		"enable_response_header_hostname":     false,
+		"enable_response_header_raft_node_id": false,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
 			"redirect_addr":      "top_level_api_addr",
-			"type":               "consul"},
+			"type":               "consul",
+		},
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
@@ -707,8 +715,15 @@ listener "tcp" {
 	tls_key_file = "./certs/server.key"
 	tls_client_ca_file = "./certs/rootca.crt"
 	tls_min_version = "tls12"
+	tls_max_version = "tls13"
 	tls_require_and_verify_client_cert = true
 	tls_disable_client_certs = true
+    telemetry {
+      unauthenticated_metrics_access = true
+    }
+    profiling {
+      unauthenticated_pprof_access = true
+    }
 }`))
 
 	config := Config{
@@ -737,8 +752,15 @@ listener "tcp" {
 					TLSKeyFile:                    "./certs/server.key",
 					TLSClientCAFile:               "./certs/rootca.crt",
 					TLSMinVersion:                 "tls12",
+					TLSMaxVersion:                 "tls13",
 					TLSRequireAndVerifyClientCert: true,
 					TLSDisableClientCerts:         true,
+					Telemetry: configutil.ListenerTelemetry{
+						UnauthenticatedMetricsAccess: true,
+					},
+					Profiling: configutil.ListenerProfiling{
+						UnauthenticatedPProfAccess: true,
+					},
 				},
 			},
 		},
@@ -769,7 +791,7 @@ func testParseSeals(t *testing.T) {
 				},
 			},
 			Seals: []*configutil.KMS{
-				&configutil.KMS{
+				{
 					Type:    "pkcs11",
 					Purpose: []string{"many", "purposes"},
 					Config: map[string]string{
@@ -784,7 +806,7 @@ func testParseSeals(t *testing.T) {
 						"generate_key":           "true",
 					},
 				},
-				&configutil.KMS{
+				{
 					Type:     "pkcs11",
 					Purpose:  []string{"single"},
 					Disabled: true,

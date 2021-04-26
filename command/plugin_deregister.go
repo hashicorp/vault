@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PluginDeregisterCommand)(nil)
-var _ cli.CommandAutocomplete = (*PluginDeregisterCommand)(nil)
+var (
+	_ cli.Command             = (*PluginDeregisterCommand)(nil)
+	_ cli.CommandAutocomplete = (*PluginDeregisterCommand)(nil)
+)
 
 type PluginDeregisterCommand struct {
 	*BaseCommand

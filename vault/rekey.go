@@ -457,7 +457,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// If PGP keys are passed in, encrypt shares with corresponding PGP keys.
 	if len(c.barrierRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
-		for i, _ := range results.SecretShares {
+		for i := range results.SecretShares {
 			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
 		}
 		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(hexEncodedShares, c.barrierRekeyConfig.PGPKeys)
@@ -701,7 +701,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	if len(c.recoveryRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
-		for i, _ := range results.SecretShares {
+		for i := range results.SecretShares {
 			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
 		}
 		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(hexEncodedShares, c.recoveryRekeyConfig.PGPKeys)

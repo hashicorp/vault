@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -20,15 +19,15 @@ func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "(creds|sts)/" + framework.GenericNameWithAtRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
-			"role_arn": &framework.FieldSchema{
+			"role_arn": {
 				Type:        framework.TypeString,
 				Description: "ARN of role to assume when credential_type is " + assumedRoleCred,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
@@ -51,7 +50,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// Read the policy
 	role, err := b.roleRead(ctx, req.Storage, roleName, true)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf(

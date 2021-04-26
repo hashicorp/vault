@@ -90,7 +90,7 @@ func (dc *DockerCluster) Teardown() error {
 		}
 	}
 
-	//clean up networks
+	// clean up networks
 	if dc.networkID != "" {
 		cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(dockerVersion))
 		if err != nil {
@@ -349,7 +349,7 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	dc.CACertPEM = pem.EncodeToMemory(CACertPEMBlock)
 
 	dc.CACertPEMFile = filepath.Join(dc.tmpDir, "ca", "ca.pem")
-	err = ioutil.WriteFile(dc.CACertPEMFile, dc.CACertPEM, 0755)
+	err = ioutil.WriteFile(dc.CACertPEMFile, dc.CACertPEM, 0o755)
 	if err != nil {
 		return err
 	}
@@ -415,13 +415,13 @@ func (n *dockerClusterNode) setupCert() error {
 	})
 
 	n.ServerCertPEMFile = filepath.Join(n.WorkDir, "cert.pem")
-	err = ioutil.WriteFile(n.ServerCertPEMFile, n.ServerCertPEM, 0755)
+	err = ioutil.WriteFile(n.ServerCertPEMFile, n.ServerCertPEM, 0o755)
 	if err != nil {
 		return err
 	}
 
 	n.ServerKeyPEMFile = filepath.Join(n.WorkDir, "key.pem")
-	err = ioutil.WriteFile(n.ServerKeyPEMFile, n.ServerKeyPEM, 0755)
+	err = ioutil.WriteFile(n.ServerKeyPEMFile, n.ServerKeyPEM, 0o755)
 	if err != nil {
 		return err
 	}
@@ -573,7 +573,7 @@ func (n *dockerClusterNode) start(cli *docker.Client, caDir, netName string, net
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(n.WorkDir, "local.json"), cfgJSON, 0644)
+	err = ioutil.WriteFile(filepath.Join(n.WorkDir, "local.json"), cfgJSON, 0o644)
 	if err != nil {
 		return err
 	}
@@ -693,7 +693,7 @@ var DefaultNumCores = 1
 func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) error {
 	if opts != nil && opts.tmpDir != "" {
 		if _, err := os.Stat(opts.tmpDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(opts.tmpDir, 0700); err != nil {
+			if err := os.MkdirAll(opts.tmpDir, 0o700); err != nil {
 				return err
 			}
 		}
@@ -706,7 +706,7 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 		cluster.tmpDir = tempDir
 	}
 	caDir := filepath.Join(cluster.tmpDir, "ca")
-	if err := os.MkdirAll(caDir, 0755); err != nil {
+	if err := os.MkdirAll(caDir, 0o755); err != nil {
 		return err
 	}
 
@@ -729,7 +729,7 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 			WorkDir: filepath.Join(cluster.tmpDir, nodeID),
 		}
 		cluster.ClusterNodes = append(cluster.ClusterNodes, node)
-		if err := os.MkdirAll(node.WorkDir, 0700); err != nil {
+		if err := os.MkdirAll(node.WorkDir, 0o700); err != nil {
 			return err
 		}
 	}

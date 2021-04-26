@@ -13,6 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
@@ -24,11 +30,6 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -40,10 +41,12 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
 // Verify RaftBackend satisfies the correct interfaces
-var _ physical.Backend = (*RaftBackend)(nil)
-var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physical.HABackend = (*RaftBackend)(nil)
-var _ physical.Lock = (*RaftLock)(nil)
+var (
+	_ physical.Backend       = (*RaftBackend)(nil)
+	_ physical.Transactional = (*RaftBackend)(nil)
+	_ physical.HABackend     = (*RaftBackend)(nil)
+	_ physical.Lock          = (*RaftLock)(nil)
+)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -269,7 +272,7 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o755)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -317,7 +320,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
 				return nil, err
 			}
 
@@ -505,8 +508,9 @@ type RaftConfigurationResponse struct {
 
 // Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
-	ID      string `json:"id"`
-	Address string `json:"address"`
+	ID       string `json:"id"`
+	Address  string `json:"address"`
+	Suffrage int    `json:"suffrage"`
 }
 
 // NodeID returns the identifier of the node
@@ -561,8 +565,9 @@ func (b *RaftBackend) Bootstrap(peers []Peer) error {
 
 	for i, p := range peers {
 		raftConfig.Servers[i] = raft.Server{
-			ID:      raft.ServerID(p.ID),
-			Address: raft.ServerAddress(p.Address),
+			ID:       raft.ServerID(p.ID),
+			Address:  raft.ServerAddress(p.Address),
+			Suffrage: raft.ServerSuffrage(p.Suffrage),
 		}
 	}
 
@@ -612,6 +617,15 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 			return err
 		}
 		config.TrailingLogs = uint64(trailingLogs)
+	}
+	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	if ok {
+		var err error
+		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		if err != nil {
+			return err
+		}
+		config.SnapshotInterval = snapshotInterval
 	}
 
 	config.NoSnapshotRestoreOnStart = true
@@ -681,7 +695,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	raftConfig.SnapshotInterval = 5 * time.Second
 	if err := b.applyConfigSettings(raftConfig); err != nil {
 		return err
 	}
@@ -1015,8 +1028,9 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	ret := make([]Peer, len(future.Configuration().Servers))
 	for i, s := range future.Configuration().Servers {
 		ret[i] = Peer{
-			ID:      string(s.ID),
-			Address: string(s.Address),
+			ID:       string(s.ID),
+			Address:  string(s.Address),
+			Suffrage: int(s.Suffrage),
 		}
 	}
 
@@ -1100,7 +1114,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	// snapshot applied to a quorum of nodes.
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: restoreCallbackOp,
 			},
 		},
@@ -1119,7 +1133,7 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: deleteOp,
 				Key:    path,
 			},
@@ -1165,7 +1179,7 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: putOp,
 				Key:    entry.Key,
 				Value:  entry.Value,
@@ -1376,7 +1390,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		case <-stopCh:
 			return nil, nil
 		}
-
 	}
 
 	l.b.l.RLock()
@@ -1394,7 +1407,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	if l.b.raft.State() == raft.Leader {
 		err := l.b.applyLog(context.Background(), &LogData{
 			Operations: []*LogOperation{
-				&LogOperation{
+				{
 					OpType: putOp,
 					Key:    l.key,
 					Value:  l.value,
@@ -1418,7 +1431,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				l.b.l.RLock()
 				err := l.b.applyLog(context.Background(), &LogData{
 					Operations: []*LogOperation{
-						&LogOperation{
+						{
 							OpType: putOp,
 							Key:    l.key,
 							Value:  l.value,

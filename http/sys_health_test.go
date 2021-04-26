@@ -2,7 +2,6 @@ package http
 
 import (
 	"io/ioutil"
-
 	"net/http"
 	"net/url"
 	"reflect"
@@ -118,7 +117,6 @@ func TestSysHealth_get(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
-
 }
 
 func TestSysHealth_customcodes(t *testing.T) {

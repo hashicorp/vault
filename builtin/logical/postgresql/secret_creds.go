@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -21,12 +20,12 @@ func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password",
 			},
@@ -219,10 +218,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 		// can't drop if not all privileges are revoked
 		if rows.Err() != nil {
-			return nil, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
+			return nil, fmt.Errorf("could not generate revocation statements for all rows: %w", rows.Err())
 		}
 		if lastStmtError != nil {
-			return nil, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
+			return nil, fmt.Errorf("could not perform all revocation statements: %w", lastStmtError)
 		}
 
 		// Drop this user

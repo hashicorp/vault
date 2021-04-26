@@ -20,12 +20,12 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"creation_cql": &framework.FieldSchema{
+			"creation_cql": {
 				Type:    framework.TypeString,
 				Default: defaultCreationCQL,
 				Description: `CQL to create a user and optionally grant
@@ -38,7 +38,7 @@ file. Valid template values are '{{username}}' and
 '{{password}}' -- the single quotes are important!`,
 			},
 
-			"rollback_cql": &framework.FieldSchema{
+			"rollback_cql": {
 				Type:    framework.TypeString,
 				Default: defaultRollbackCQL,
 				Description: `CQL to roll back an account operation. This will
@@ -51,13 +51,13 @@ template values are '{{username}}' and
 '{{password}}' -- the single quotes are important!`,
 			},
 
-			"lease": &framework.FieldSchema{
+			"lease": {
 				Type:        framework.TypeString,
 				Default:     "4h",
 				Description: "The lease length; defaults to 4 hours",
 			},
 
-			"consistency": &framework.FieldSchema{
+			"consistency": {
 				Type:        framework.TypeString,
 				Default:     "Quorum",
 				Description: "The consistency level for the operations; defaults to Quorum.",

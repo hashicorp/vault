@@ -5,13 +5,20 @@
         Public key
       </label>
       <div class="control">
-        <Textarea @name="publicKey" @id="publicKey" class="textarea" @value={{model.publicKey}} @readonly={{true}} data-test-ssh-input="public-key" />
+        <MaskedInput
+          @name="publickey"
+          @id="publicKey"
+          @value={{model.publicKey}}
+          @displayOnly={{true}}
+          @allowCopy={{true}}
+          data-test-ssh-input="public-key"
+        />
       </div>
     </div>
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton @clipboardTarget="#publicKey" @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Public Key copied!")}}>
+      <CopyButton @clipboardText={{model.publicKey}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Public Key copied!")}}>
         Copy
       </CopyButton>
     </div>

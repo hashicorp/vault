@@ -263,6 +263,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     const preferAdvancedEdit =
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
     const backendType = this.backendType();
     model.secret.setProperties({ backend });
@@ -301,6 +302,7 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let { mode, model } = this.controller;
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();

@@ -68,6 +68,12 @@ type Config struct {
 
 	DisableSentinelTrace    bool        `hcl:"-"`
 	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace"`
+
+	EnableResponseHeaderHostname    bool        `hcl:"-"`
+	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
+
+	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
+	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -245,6 +251,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableIndexing = c2.DisableIndexing
 	}
 
+	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
+	if c2.EnableResponseHeaderHostname {
+		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
+	}
+
+	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
+	if c2.EnableResponseHeaderRaftNodeID {
+		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
 	// Use values from top-level configuration for storage if set
 	if storage := result.Storage; storage != nil {
 		if result.APIAddr != "" {
@@ -402,6 +418,18 @@ func ParseConfig(d string) (*Config, error) {
 
 	if result.DisableIndexingRaw != nil {
 		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableResponseHeaderHostnameRaw != nil {
+		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
+		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -742,6 +770,10 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sealwrap": c.DisableSealWrap,
 
 		"disable_indexing": c.DisableIndexing,
+
+		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
+
+		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

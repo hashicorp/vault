@@ -139,5 +139,4 @@ func ReadPGPFile(path string) (string, error) {
 		return buf.String(), nil
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
-
 }

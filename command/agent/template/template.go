@@ -65,10 +65,6 @@ type Server struct {
 
 	logger        hclog.Logger
 	exitAfterAuth bool
-
-	// testingLimitRetry is used for tests to limit the number of retries
-	// performed by the template server
-	testingLimitRetry int
 }
 
 // NewServer returns a new configured server
@@ -164,19 +160,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					},
 				}
 
-				if ts.config.AgentConfig.TemplateRetry != nil && ts.config.AgentConfig.TemplateRetry.Enabled {
-					ctv.Vault.Retry = &ctconfig.RetryConfig{
-						Attempts:   &ts.config.AgentConfig.TemplateRetry.Attempts,
-						Backoff:    &ts.config.AgentConfig.TemplateRetry.Backoff,
-						MaxBackoff: &ts.config.AgentConfig.TemplateRetry.MaxBackoff,
-						Enabled:    &ts.config.AgentConfig.TemplateRetry.Enabled,
-					}
-				} else if ts.testingLimitRetry != 0 {
-					// If we're testing, limit retries to 3 attempts to avoid
-					// long test runs from exponential back-offs
-					ctv.Vault.Retry = &ctconfig.RetryConfig{Attempts: &ts.testingLimitRetry}
-				}
-
 				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
@@ -255,8 +238,21 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
+	// The cache does its own retry management based on sc.AgentConfig.Retry,
+	// so we only want to set this up for templating if we're not routing
+	// templating through the cache.  We do need to assign something to Retry
+	// though or it will use its default of 12 retries.
+	var attempts int
+	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
+		attempts = sc.AgentConfig.Vault.Retry.NumRetries
+	}
+
 	// Use the cache if available or fallback to the Vault server values.
+	// For now we're only routing templating through the cache when persistence
+	// is enabled. The templating engine and the cache have some inconsistencies
+	// that need to be fixed for 1.7x/1.8
 	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
+		attempts = 0
 		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"
@@ -285,6 +281,11 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 			CaCert:  &sc.AgentConfig.Vault.CACert,
 			CaPath:  &sc.AgentConfig.Vault.CAPath,
 		}
+	}
+	enabled := attempts > 0
+	conf.Vault.Retry = &ctconfig.RetryConfig{
+		Attempts: &attempts,
+		Enabled:  &enabled,
 	}
 
 	conf.Finalize()

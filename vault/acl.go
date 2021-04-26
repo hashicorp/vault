@@ -681,7 +681,7 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {
-			//logger.Warn("token is root, skipping checks")
+			// logger.Warn("token is root, skipping checks")
 			ret.Allowed = true
 			return ret
 		}

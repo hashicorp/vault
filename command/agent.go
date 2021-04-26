@@ -52,8 +52,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AgentCommand)(nil)
-var _ cli.CommandAutocomplete = (*AgentCommand)(nil)
+var (
+	_ cli.Command             = (*AgentCommand)(nil)
+	_ cli.CommandAutocomplete = (*AgentCommand)(nil)
+)
 
 type AgentCommand struct {
 	*BaseCommand
@@ -234,13 +236,6 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	// create an empty Vault configuration if none was loaded from file. The
-	// follow-up setStringFlag calls will populate with defaults if otherwise
-	// omitted
-	if config.Vault == nil {
-		config.Vault = new(agentConfig.Vault)
-	}
-
 	exitAfterAuth := config.ExitAfterAuth
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == "exit-after-auth" {
@@ -419,6 +414,13 @@ func (c *AgentCommand) Run(args []string) int {
 			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
 			return 1
 		}
+	}
+
+	// We do this after auto-auth has been configured, because we don't want to
+	// confuse the issue of retries for auth failures which have their own
+	// config and are handled a bit differently.
+	if os.Getenv(api.EnvVaultMaxRetries) == "" {
+		client.SetMaxRetries(config.Vault.Retry.NumRetries)
 	}
 
 	enforceConsistency := cache.EnforceConsistencyNever
@@ -659,7 +661,7 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		var proxyVaultToken = !config.Cache.ForceAutoAuthToken
+		proxyVaultToken := !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
@@ -721,9 +723,8 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Inform any tests that the server is ready
-	select {
-	case c.startedCh <- struct{}{}:
-	default:
+	if c.startedCh != nil {
+		close(c.startedCh)
 	}
 
 	// Listen for signals
@@ -877,7 +878,6 @@ func (c *AgentCommand) Run(args []string) int {
 // the request header that is used for SSRF protection.
 func verifyRequestHeader(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
@@ -945,7 +945,7 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
