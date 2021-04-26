@@ -16,6 +16,7 @@ const (
 	HashTypeSHA2256
 	HashTypeSHA2384
 	HashTypeSHA2512
+	HashTypeKeccak256
 )
 
 type MarshalingType uint32
@@ -28,19 +29,20 @@ const (
 
 var (
 	HashTypeMap = map[string]HashType{
-		"sha1":     HashTypeSHA1,
-		"sha2-224": HashTypeSHA2224,
-		"sha2-256": HashTypeSHA2256,
-		"sha2-384": HashTypeSHA2384,
-		"sha2-512": HashTypeSHA2512,
+		"sha1":       HashTypeSHA1,
+		"sha2-224":   HashTypeSHA2224,
+		"sha2-256":   HashTypeSHA2256,
+		"sha2-384":   HashTypeSHA2384,
+		"sha2-512":   HashTypeSHA2512,
+		"keccak-256": HashTypeKeccak256,
 	}
 
 	HashFuncMap = map[HashType]func() hash.Hash{
-		HashTypeSHA1:    sha1.New,
-		HashTypeSHA2224: sha256.New224,
-		HashTypeSHA2256: sha256.New,
-		HashTypeSHA2384: sha512.New384,
-		HashTypeSHA2512: sha512.New,
+		HashTypeSHA1:      sha1.New,
+		HashTypeSHA2224:   sha256.New224,
+		HashTypeSHA2256:   sha256.New,
+		HashTypeSHA2384:   sha512.New384,
+		HashTypeSHA2512:   sha512.New,
 	}
 
 	MarshalingTypeMap = map[string]MarshalingType{
