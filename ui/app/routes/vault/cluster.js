@@ -75,6 +75,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
       yield timeout(POLL_INTERVAL_MS);
       try {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         yield this.controller.model.reload();
         yield this.transitionToTargetRoute();
       } catch (e) {
