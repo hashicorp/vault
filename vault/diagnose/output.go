@@ -94,13 +94,14 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 			Message: s.StatusMessage(),
 		}
 		for _, e := range s.Events() {
-			if e.Name == warningEventName {
+			switch e.Name {
+			case warningEventName:
 				for _, a := range e.Attributes {
 					if a.Key == "message" {
 						r.Warnings = append(r.Warnings, a.Value.AsString())
 					}
 				}
-			} else if e.Name == errorStatus {
+			case errorStatus:
 				var message string
 				var action string
 				for _, a := range e.Attributes {
@@ -118,6 +119,63 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						Message: message,
 					})
 
+				}
+			case spotCheckOkEventName:
+				var checkName string
+				var message string
+				for _, a := range e.Attributes {
+					switch a.Key {
+					case "name":
+						checkName = a.Value.AsString()
+					case "message":
+						message = a.Value.AsString()
+					}
+				}
+				if checkName != "" {
+					r.Children = append(r.Children,
+						&Result{
+							Name:    checkName,
+							Status:  okStatus,
+							Message: message,
+						})
+				}
+			case spotCheckWarnEventName:
+				var checkName string
+				var message string
+				for _, a := range e.Attributes {
+					switch a.Key {
+					case "name":
+						checkName = a.Value.AsString()
+					case "message":
+						message = a.Value.AsString()
+					}
+				}
+				if checkName != "" {
+					r.Children = append(r.Children,
+						&Result{
+							Name:    checkName,
+							Status:  warnStatus,
+							Message: message,
+						})
+				}
+			case spotCheckErrorEventName:
+				var checkName string
+				var message string
+				for _, a := range e.Attributes {
+					switch a.Key {
+					case "name":
+						checkName = a.Value.AsString()
+					case "error":
+						message = a.Value.AsString()
+					}
+				}
+				if checkName != "" {
+					r.Children = append(r.Children,
+						&Result{
+							Name:    checkName,
+							Status:  errorStatus,
+							Message: message,
+						})
 				}
 			}
 		}

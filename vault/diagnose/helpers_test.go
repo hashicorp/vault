@@ -60,10 +60,7 @@ func makeCoffee(ctx context.Context) error {
 		return err
 	}
 
-	err = pickScone(ctx)
-	if err != nil {
-		Warn(ctx, err.Error())
-	}
+	SpotCheck(ctx, "pick-scone", pickScone)
 
 	return nil
 }
@@ -81,6 +78,6 @@ func brewCoffee(ctx context.Context) error {
 	return nil
 }
 
-func pickScone(ctx context.Context) error {
+func pickScone() error {
 	return errors.New("no scones")
 }
