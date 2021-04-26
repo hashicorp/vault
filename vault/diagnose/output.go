@@ -29,6 +29,8 @@ type Result struct {
 	Children []*Result
 }
 
+// TelemetryCollector is an otel SpanProcessor that gathers spans and once the outermost
+// span ends, walks the otel traces in order to produce a top-down tree of Diagnose results.
 type TelemetryCollector struct {
 	spans      map[trace.SpanID]sdktrace.ReadOnlySpan
 	rootSpan   sdktrace.ReadOnlySpan
@@ -131,6 +133,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 	return r
 }
 
+// Write outputs a human readable version of the results tree
 func (r *Result) Write(writer io.Writer) error {
 	var sb strings.Builder
 	r.write(&sb, 0)
