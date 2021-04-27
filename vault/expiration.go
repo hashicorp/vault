@@ -2361,6 +2361,10 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 
 // note: must be called with pending lock held
 func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntry, err error) {
+	if le == nil {
+		m.logger.Warn("attempted to mark nil lease as zombie")
+		return
+	}
 	if le.isZombie() {
 		m.logger.Info("attempted to re-mark lease as zombie", "original_error", le.RevokeErr, "new_error", err.Error())
 		return
