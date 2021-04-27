@@ -9,6 +9,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/sdk/version"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
@@ -226,12 +227,31 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
 		return 1
 	}
+
+	if config.Storage != nil && config.Storage.Type == storageTypeConsul {
+		err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+		if err != nil {
+			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
+			return 1
+		}
+	}
+
+	if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
+		err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+		if err != nil {
+			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
+			return 1
+		}
+	}
+
 	c.UI.Output(same_line + status_ok + phase)
 
 	// Initialize the Service Discovery, if there is one
 	phase = "Service discovery"
 	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
+		// SetupSecureTLS for service discovery uses the same cert and key to set up physical
+		// storage. See the consul package in physical for details.
+		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
 		if err != nil {
 			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
 			return 1

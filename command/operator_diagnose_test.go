@@ -49,8 +49,32 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{
 				"-config", "./server/test-fixtures/tls_config_ok.hcl",
 			},
-			[]string{"arse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Check Listeners\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Service discovery"},
+			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Check Listeners\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Service discovery"},
 			0,
+		},
+		{
+			"diagnose_invalid_https_storage",
+			[]string{
+				"-config", "./server/test-fixtures/config_bad_https_storage.hcl",
+			},
+			[]string{"Access storage\nfailed to verify certificate: x509: certificate has expired or is not yet valid:"},
+			1,
+		},
+		{
+			"diagnose_invalid_https_hastorage",
+			[]string{
+				"-config", "./server/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
+			},
+			[]string{"Access storage\nfailed to verify certificate: x509: certificate has expired or is not yet valid:"},
+			1,
+		},
+		{
+			"diagnose_invalid_https_sr",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",
+			},
+			[]string{"Service discovery\nfailed to verify certificate: x509: certificate has expired or is not yet valid:"},
+			1,
 		},
 	}
 
