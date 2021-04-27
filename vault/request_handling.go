@@ -1203,7 +1203,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			auth.EntityID = entity.ID
-			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases)
+			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.Alias.MountAccessor, auth.EntityID, auth.GroupAliases)
 			if err != nil {
 				return nil, nil, err
 			}
