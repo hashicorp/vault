@@ -2,6 +2,7 @@ package dbplugin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
@@ -58,6 +59,29 @@ func TestGRPCClient_Initialize(t *testing.T) {
 				Config: map[string]interface{}{
 					"foo": "bar",
 					"baz": "biz",
+				},
+			},
+			assertErr: assertErrNil,
+		},
+		"JSON number type in initialize request": {
+			client: fakeClient{
+				initResp: &proto.InitializeResponse{
+					ConfigData: marshal(t, map[string]interface{}{
+						"foo": "bar",
+						"max": "10",
+					}),
+				},
+			},
+			req: InitializeRequest{
+				Config: map[string]interface{}{
+					"foo": "bar",
+					"max": json.Number("10"),
+				},
+			},
+			expectedResp: InitializeResponse{
+				Config: map[string]interface{}{
+					"foo": "bar",
+					"max": "10",
 				},
 			},
 			assertErr: assertErrNil,

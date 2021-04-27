@@ -5,8 +5,6 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -15,24 +13,27 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
 type RaftClusterOpts struct {
-	DisableFollowerJoins  bool
-	InmemCluster          bool
-	EnableAutopilot       bool
-	PhysicalFactoryConfig map[string]interface{}
-	DisablePerfStandby    bool
+	DisableFollowerJoins           bool
+	InmemCluster                   bool
+	EnableAutopilot                bool
+	PhysicalFactoryConfig          map[string]interface{}
+	DisablePerfStandby             bool
+	EnableResponseHeaderRaftNodeID bool
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -44,7 +45,8 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
-		DisableAutopilot: !ropts.EnableAutopilot,
+		DisableAutopilot:               !ropts.EnableAutopilot,
+		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 	}
 
 	var opts = vault.TestClusterOptions{
@@ -284,6 +286,64 @@ func TestRaft_RemovePeer(t *testing.T) {
 	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
+}
+
+func TestRaft_NodeIDHeader(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		ropts         *RaftClusterOpts
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			ropts:         nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			ropts: &RaftClusterOpts{
+				EnableResponseHeaderRaftNodeID: true,
+			},
+			headerPresent: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cluster := raftCluster(t, tc.ropts)
+			defer cluster.Cleanup()
+
+			for i, c := range cluster.Cores {
+				if c.Core.Sealed() {
+					t.Fatalf("failed to unseal core %d", i)
+				}
+
+				client := c.Client
+				req := client.NewRequest("GET", "/v1/sys/seal-status")
+				resp, err := client.RawRequest(req)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				if resp == nil {
+					t.Fatalf("nil response")
+				}
+
+				rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+				nodeID := c.Core.GetRaftNodeID()
+
+				if tc.headerPresent && rniHeader == "" {
+					t.Fatal("missing 'X-Vault-Raft-Node-ID' header entry in response")
+				}
+				if tc.headerPresent && rniHeader != nodeID {
+					t.Fatalf("got the wrong raft node id. expected %s to equal %s", rniHeader, nodeID)
+				}
+				if !tc.headerPresent && rniHeader != "" {
+					t.Fatal("didn't expect 'X-Vault-Raft-Node-ID' header but it was present anyway")
+				}
+			}
+		})
+	}
 }
 
 func TestRaft_Configuration(t *testing.T) {
