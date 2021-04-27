@@ -33,7 +33,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{
 				"-config", "./server/test-fixtures/config_diagnose_ok.hcl",
 			},
-			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n"},
+			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Check Listeners\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Service discovery\n"},
 			0,
 		},
 		{
@@ -41,7 +41,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{
 				"-config", "./server/test-fixtures/nostore_config.hcl",
 			},
-			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[31m[failed]\x1b[0m Access storage\nA storage backend must be specified\n"},
+			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Check Listeners\n\x1b[F\x1b[31m[failed]\x1b[0m Access storage\nA storage backend must be specified"},
 			1,
 		},
 		{
@@ -49,7 +49,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{
 				"-config", "./server/test-fixtures/tls_config_ok.hcl",
 			},
-			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n"},
+			[]string{"arse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Check Listeners\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Service discovery"},
 			0,
 		},
 	}

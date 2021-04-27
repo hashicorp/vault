@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -120,6 +121,7 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 }
 
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
+
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
@@ -148,27 +150,25 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	phase := "Parse configuration"
-	c.UI.Output(status_unknown + phase)
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output("Error while reading configuration files:")
-		c.UI.Output(err.Error())
+		c.outputErrorsAndWarnings(fmt.Sprintf("Error while reading configuration files: %s", err.Error()), phase, nil)
 		return 1
 	}
+	c.UI.Output(same_line + status_ok + phase)
 
 	// Check Listener Information
+	phase = "Check Listeners"
 	// TODO: Run Diagnose checks on the actual net.Listeners
-
+	var warnings []string
 	disableClustering := config.HAStorage.DisableClustering
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 
 	if status != 0 {
-		c.UI.Output("Error parsing listener configuration.")
-		c.UI.Error(errMsg.Error())
+		c.outputErrorsAndWarnings(fmt.Sprintf("Error parsing listener configuration. %s", errMsg.Error()), phase, nil)
 		return 1
 	}
 
@@ -184,11 +184,11 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, ln := range lns {
 		if ln.Config.TLSDisable {
-			c.UI.Warn("WARNING! TLS is disabled in a Listener config stanza.")
+			warnings = append(warnings, "WARNING! TLS is disabled in a Listener config stanza.")
 			continue
 		}
 		if ln.Config.TLSDisableClientCerts {
-			c.UI.Warn("WARNING! TLS for a listener is turned on without requiring client certs.")
+			warnings = append(warnings, "WARNING! TLS for a listener is turned on without requiring client certs.")
 		}
 
 		// Check ciphersuite and load ca/cert/key files
@@ -196,8 +196,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		// perform an active probe.
 		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
 		if err != nil {
-			c.UI.Output("Error creating TLS Configuration out of config file: ")
-			c.UI.Output(err.Error())
+			c.outputErrorsAndWarnings(fmt.Sprintf("Error creating TLS Configuration out of config file:  %s", err.Error()), phase, warnings)
 			return 1
 		}
 
@@ -208,43 +207,49 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 	err = diagnose.ListenerChecks(sanitizedListeners)
 	if err != nil {
-		c.UI.Output("Diagnose caught configuration errors: ")
-		c.UI.Output(err.Error())
+		c.outputErrorsAndWarnings(fmt.Sprintf("Diagnose caught configuration errors:  %s", err.Error()), phase, warnings)
 		return 1
 	}
+
+	c.UI.Output(same_line + status_ok + phase)
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
 	// TODO: check for storage backend
-	c.UI.Output(same_line + status_ok + phase)
-
-	var storageErrors []string
 
 	phase = "Access storage"
-	c.UI.Output(status_unknown + phase)
+	warnings = nil
+
 	_, err = server.setupStorage(config)
-	storageErrors = append(storageErrors, err.Error())
 	if err != nil {
-
-	}
-
-	// Initialize the Service Discovery, if there is one
-	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
-		if err != nil {
-			storageErrors = append(storageErrors, err.Error())
-
-		}
-	}
-	if storageErrors != nil && len(storageErrors) > 0 {
-		for _, err := range storageErrors {
-			c.UI.Output(same_line + status_failed + phase)
-			c.UI.Output(err)
-		}
+		c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
 		return 1
 	}
 	c.UI.Output(same_line + status_ok + phase)
 
+	// Initialize the Service Discovery, if there is one
+	phase = "Service discovery"
+	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
+		if err != nil {
+			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
+			return 1
+		}
+	}
+	c.UI.Output(same_line + status_ok + phase)
+
 	return 0
+}
+
+func (c *OperatorDiagnoseCommand) outputErrorsAndWarnings(err, phase string, warnings []string) {
+
+	c.UI.Output(same_line + status_failed + phase)
+
+	if warnings != nil && len(warnings) > 0 {
+		for _, warning := range warnings {
+			c.UI.Warn(warning)
+		}
+	}
+	c.UI.Error(err)
 }
