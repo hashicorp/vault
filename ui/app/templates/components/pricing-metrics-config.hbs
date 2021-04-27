@@ -1,7 +1,7 @@
 {{#if (eq mode "edit")}}
   <form onsubmit={{action "onSaveChanges"}} data-test-pricing-metrics-config-form>
     <div class="box is-sideless is-fullwidth is-marginless">
-      {{message-error model=model errorMessage=error}}
+      <MessageError @model={{model}} @errorMessage={{error}} />
       {{#each model.configAttrs as |attr|}}
         <FormField
           data-test-field
@@ -20,12 +20,11 @@
         >
           Save
         </button>
-        {{#link-to
-          "vault.cluster.metrics.config"
-          class="button"
-        }}
+        <LinkTo
+          @route="vault.cluster.metrics.config"
+          class="button">
           Cancel
-        {{/link-to}}
+        </LinkTo>
       </div>
     </div>
   </form>

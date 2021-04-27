@@ -51,17 +51,14 @@ func (c *LogCache) StoreLog(log *Log) error {
 }
 
 func (c *LogCache) StoreLogs(logs []*Log) error {
-	err := c.store.StoreLogs(logs)
-	// Insert the logs into the ring buffer, but only on success
-	if err != nil {
-		return fmt.Errorf("unable to store logs within log store, err: %q", err)
-	}
+	// Insert the logs into the ring buffer
 	c.l.Lock()
 	for _, l := range logs {
 		c.cache[l.Index%uint64(len(c.cache))] = l
 	}
 	c.l.Unlock()
-	return nil
+
+	return c.store.StoreLogs(logs)
 }
 
 func (c *LogCache) FirstIndex() (uint64, error) {

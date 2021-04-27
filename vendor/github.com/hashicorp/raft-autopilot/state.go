@@ -71,30 +71,16 @@ func (a *Autopilot) gatherNextStateInputs(ctx context.Context) (*nextStateInputs
 	}
 	inputs.RaftConfig = raftConfig
 
-	// get the known servers which may include left/failed ones
-	inputs.KnownServers = a.delegate.KnownServers()
-
-	// Try to retrieve leader id from the delegate.
-	for id, srv := range inputs.KnownServers {
-		if srv.IsLeader {
-			inputs.LeaderID = id
+	leader := a.raft.Leader()
+	for _, s := range inputs.RaftConfig.Servers {
+		if s.Address == leader {
+			inputs.LeaderID = s.ID
 			break
 		}
 	}
 
-	// Delegate setting the leader information is optional. If leader detection is
-	// not successful, fallback on raft config to do the same.
 	if inputs.LeaderID == "" {
-		leader := a.raft.Leader()
-		for _, s := range inputs.RaftConfig.Servers {
-			if s.Address == leader {
-				inputs.LeaderID = s.ID
-				break
-			}
-		}
-		if inputs.LeaderID == "" {
-			return nil, fmt.Errorf("cannot detect the current leader server id from its address: %s", leader)
-		}
+		return nil, fmt.Errorf("cannot detect the current leader server id from its address: %s", leader)
 	}
 
 	// get the latest Raft index - this should be kept close to the call to
@@ -114,6 +100,9 @@ func (a *Autopilot) gatherNextStateInputs(ctx context.Context) (*nextStateInputs
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
+
+	// get the known servers which may include left/failed ones
+	inputs.KnownServers = a.delegate.KnownServers()
 
 	// in most cases getting the known servers should be quick but as we cannot
 	// account for every potential delegate and prevent them from making

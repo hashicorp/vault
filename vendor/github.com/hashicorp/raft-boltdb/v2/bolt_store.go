@@ -1,16 +1,16 @@
-package logstore
+package raftboltdb
 
 import (
 	"errors"
 
 	"github.com/hashicorp/raft"
-	bolt "go.etcd.io/bbolt"
+	"go.etcd.io/bbolt"
 )
 
 const (
 	// Permissions to use on the db file. This is only used if the
 	// database file does not exist and needs to be created.
-	dbFileMode = 0o600
+	dbFileMode = 0600
 )
 
 var (
@@ -22,25 +22,25 @@ var (
 	ErrKeyNotFound = errors.New("not found")
 )
 
-// BoltStore provides access to BoltDB for Raft to store and retrieve
+// BoltStore provides access to Bbolt for Raft to store and retrieve
 // log entries. It also provides key/value storage, and can be used as
 // a LogStore and StableStore.
 type BoltStore struct {
 	// conn is the underlying handle to the db.
-	conn *bolt.DB
+	conn *bbolt.DB
 
 	// The path to the Bolt database file
 	path string
 }
 
-// Options contains all the configuration used to open the BoltDB
+// Options contains all the configuration used to open the Bbolt
 type Options struct {
-	// Path is the file path to the BoltDB to use
+	// Path is the file path to the Bbolt to use
 	Path string
 
-	// BoltOptions contains any specific BoltDB options you might
+	// BoltOptions contains any specific Bbolt options you might
 	// want to specify [e.g. open timeout]
-	BoltOptions *bolt.Options
+	BoltOptions *bbolt.Options
 
 	// NoSync causes the database to skip fsync calls after each
 	// write to the log. This is unsafe, so it should be used
@@ -60,10 +60,10 @@ func NewBoltStore(path string) (*BoltStore, error) {
 	return New(Options{Path: path})
 }
 
-// New uses the supplied options to open the BoltDB and prepare it for use as a raft backend.
+// New uses the supplied options to open the Bbolt and prepare it for use as a raft backend.
 func New(options Options) (*BoltStore, error) {
 	// Try to connect
-	handle, err := bolt.Open(options.Path, dbFileMode, options.BoltOptions)
+	handle, err := bbolt.Open(options.Path, dbFileMode, options.BoltOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +105,10 @@ func (b *BoltStore) initialize() error {
 	return tx.Commit()
 }
 
+func (b *BoltStore) Stats() bbolt.Stats {
+	return b.conn.Stats()
+}
+
 // Close is used to gracefully close the DB connection.
 func (b *BoltStore) Close() error {
 	return b.conn.Close()
@@ -142,7 +146,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 	}
 }
 
-// GetLog is used to retrieve a log from BoltDB at a given index.
+// GetLog is used to retrieve a log from Bbolt at a given index.
 func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
@@ -156,7 +160,6 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	if val == nil {
 		return raft.ErrLogNotFound
 	}
-
 	return decodeMsgPack(val, log)
 }
 
@@ -179,7 +182,6 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 		if err != nil {
 			return err
 		}
-
 		bucket := tx.Bucket(dbLogs)
 		if err := bucket.Put(key, val.Bytes()); err != nil {
 			return err
@@ -245,7 +247,6 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 	if val == nil {
 		return nil, ErrKeyNotFound
 	}
-
 	return append([]byte(nil), val...), nil
 }
 

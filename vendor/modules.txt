@@ -547,7 +547,7 @@ github.com/hashicorp/go-kms-wrapping/entropy
 # github.com/hashicorp/go-memdb v1.0.2
 ## explicit
 github.com/hashicorp/go-memdb
-# github.com/hashicorp/go-msgpack v1.1.5
+# github.com/hashicorp/go-msgpack v0.5.5
 ## explicit
 github.com/hashicorp/go-msgpack/codec
 # github.com/hashicorp/go-multierror v1.1.0
@@ -606,12 +606,15 @@ github.com/hashicorp/mdns
 ## explicit
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.3.0
+# github.com/hashicorp/raft v1.2.0
 ## explicit
 github.com/hashicorp/raft
-# github.com/hashicorp/raft-autopilot v0.1.3
+# github.com/hashicorp/raft-autopilot v0.1.2
 ## explicit
 github.com/hashicorp/raft-autopilot
+# github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
+## explicit
+github.com/hashicorp/raft-boltdb/v2
 # github.com/hashicorp/raft-snapshot v1.0.3
 ## explicit
 github.com/hashicorp/raft-snapshot
