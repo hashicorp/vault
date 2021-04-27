@@ -6,6 +6,10 @@ This plugin provides unique, short-lived credentials for Elasticsearch using nat
 To take advantage of this plugin, you must first enable Elasticsearch's native realm of security by activating X-Pack. These
 instructions will walk you through doing this using ElasticSearch 7.1.1.
 
+### Version compatibility
+
+If you would like to install a different version of this plugin to that which is bundled with Vault, versions v0.6.0 onwards of this plugin are incompatible with Vault versions before 1.6.0 due to an update of the database plugin interface.
+
 ### Enable X-Pack Security in Elasticsearch
 
 Read [Securing the Elastic Stack](https://www.elastic.co/guide/en/elastic-stack-overview/7.1/elasticsearch-security.html) and 

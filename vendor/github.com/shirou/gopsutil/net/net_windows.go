@@ -547,7 +547,7 @@ func getUDPConnections(family uint32) ([]ConnectionStat, error) {
 			mibs := (*mibUDPRowOwnerPid)(unsafe.Pointer(&buf[index]))
 			ns := mibs.convertToConnectionStat()
 			stats = append(stats, ns)
-		case kindUDP4.family:
+		case kindUDP6.family:
 			mibs := (*mibUDP6RowOwnerPid)(unsafe.Pointer(&buf[index]))
 			ns := mibs.convertToConnectionStat()
 			stats = append(stats, ns)

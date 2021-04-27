@@ -1,0 +1,146 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{mode}} @root={{@root}} @showCurrent={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq @mode "create") }}
+        Create Role
+      {{else if (eq @mode "edit")}}
+        Edit Role
+      {{else}}
+        {{@model.id}}
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq @mode 'show')}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if @model.canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action 'delete'}}
+        @confirmTitle="Delete role?"
+        @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
+        @confirmButtonText="Delete"
+        data-test-database-role-delete
+      >
+        Delete role
+      </ConfirmAction>
+      <div class="toolbar-separator" />
+      {{/if}}
+      {{#if @model.canGenerateCredentials}}
+      <button 
+        type="button"
+        class="toolbar-link"
+        {{on 'click' (fn this.generateCreds @model.id)}}
+        data-test-database-role-generate-creds
+      >
+        Generate credentials
+      </button>
+      {{/if}}
+      {{#if @model.canEditRole}}
+      <ToolbarSecretLink
+        @secret={{concat 'role/' @model.id}}
+        @mode="edit"
+        @replace=true
+        @queryParams={{query-params itemType="role"}}
+        @data-test-edit-link=true
+      >
+        Edit role
+      </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+  {{#each @model.showFields as |attr|}}
+    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get @model attr.name)}}
+        />
+      {{else}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{or (get @model attr.name) defaultDisplay}}
+          @isLink={{eq attr.name 'database'}}
+        />
+      {{/if}}
+    {{/let}}
+  {{/each}}
+{{else}}
+  {{!-- Edit or Create --}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <form {{on 'submit' this.handleCreateEditRole}}>
+      {{#each @model.fieldAttrs as |attr|}}
+        {{#if (eq @mode 'edit')}}
+          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+        {{else if (not-eq attr.options.readOnly true)}}
+          {{form-field data-test-field attr=attr model=@model}}
+          {{!-- TODO: If database && !updateDB show warning --}}
+          {{#if (get this.warningMessages attr.name)}}
+            <AlertBanner @type="warning" @message={{get this.warningMessages attr.name}} />
+          {{/if}}
+        {{/if}}
+      {{/each}}
+
+      <DatabaseRoleSettingForm
+        @attrs={{@model.roleSettingAttrs}}
+        @roleType={{@model.type}}
+        @model={{@model}}
+        @mode={{@mode}}
+        @dbType={{await this.databaseType}}
+      />
+
+      <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+        <div class="field is-grouped">
+          <div class="control">
+            {{#if (is-empty-value this.warningMessages)}}
+              <button
+                data-test-secret-save
+                type="submit"
+                disabled={{this.loading}}
+                class="button is-primary {{if this.loading 'is-loading'}}"
+              >
+                {{#if (eq @mode 'create')}}
+                  Create role
+                {{else}}
+                  Save
+                {{/if}}
+              </button>
+            {{else}}
+              <ToolTip @horizontalPosition="left" as |T|>
+                <T.trigger>
+                  <button
+                    data-test-secret-save
+                    type="submit"
+                    disabled={{true}}
+                    class="button is-primary"
+                  >
+                    Save
+                  </button>
+                </T.trigger>
+                <T.content @class="tool-tip">
+                  <div class="box">
+                    You don't have permissions required to {{if (eq @mode 'create') "create" "update"}} this role. See form for details.
+                  </div>
+                </T.content>
+              </ToolTip>
+            {{/if}}
+          </div>
+          <div class="control">
+            <SecretLink @mode="list" @class="button">
+              Cancel
+            </SecretLink>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+{{/if}}

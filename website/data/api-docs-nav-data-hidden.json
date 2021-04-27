@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Secrets Engines",
+    "routes": [
+      {
+        "title": "Cassandra",
+        "path": "secret/cassandra"
+      }
+    ]
+  },
+  {
+    "title": "System Backend",
+    "routes": [
+      {
+        "title": "<code>/sys/generate-recovery-token</code>",
+        "path": "system/generate-recovery-token"
+      }
+    ]
+  }
+]

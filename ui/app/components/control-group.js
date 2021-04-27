@@ -1,7 +1,7 @@
 import { inject as service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
-import { computed, get } from '@ember/object';
+import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default Component.extend({
@@ -38,8 +38,8 @@ export default Component.extend({
     if (this.currentUserIsRequesting) {
       return 'You';
     }
-    if (entity && get(entity, 'name')) {
-      return get(entity, 'name');
+    if (entity && entity.name) {
+      return entity.name;
     }
     return 'Someone';
   }),

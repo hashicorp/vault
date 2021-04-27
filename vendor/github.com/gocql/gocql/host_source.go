@@ -147,13 +147,6 @@ func (h *HostInfo) Peer() net.IP {
 	return h.peer
 }
 
-func (h *HostInfo) setPeer(peer net.IP) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.peer = peer
-	return h
-}
-
 func (h *HostInfo) invalidConnectAddr() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -233,13 +226,6 @@ func (h *HostInfo) DataCenter() string {
 	return dc
 }
 
-func (h *HostInfo) setDataCenter(dataCenter string) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.dataCenter = dataCenter
-	return h
-}
-
 func (h *HostInfo) Rack() string {
 	h.mu.RLock()
 	rack := h.rack
@@ -247,24 +233,10 @@ func (h *HostInfo) Rack() string {
 	return rack
 }
 
-func (h *HostInfo) setRack(rack string) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.rack = rack
-	return h
-}
-
 func (h *HostInfo) HostID() string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.hostId
-}
-
-func (h *HostInfo) setHostID(hostID string) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.hostId = hostID
-	return h
 }
 
 func (h *HostInfo) WorkLoad() string {
@@ -303,13 +275,6 @@ func (h *HostInfo) Version() cassVersion {
 	return h.version
 }
 
-func (h *HostInfo) setVersion(major, minor, patch int) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.version = cassVersion{major, minor, patch}
-	return h
-}
-
 func (h *HostInfo) State() nodeState {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -329,24 +294,10 @@ func (h *HostInfo) Tokens() []string {
 	return h.tokens
 }
 
-func (h *HostInfo) setTokens(tokens []string) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.tokens = tokens
-	return h
-}
-
 func (h *HostInfo) Port() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.port
-}
-
-func (h *HostInfo) setPort(port int) *HostInfo {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.port = port
-	return h
 }
 
 func (h *HostInfo) update(from *HostInfo) {
@@ -689,7 +640,7 @@ func (r *ringDescriber) refreshRing() error {
 
 	// TODO: move this to session
 	for _, h := range hosts {
-		if filter := r.session.cfg.HostFilter; filter != nil && !filter.Accept(h) {
+		if r.session.cfg.filterHost(h) {
 			continue
 		}
 

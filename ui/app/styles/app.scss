@@ -1,3 +1,12 @@
 @import 'ember-basic-dropdown';
 @import 'ember-power-select';
 @import './core';
+
+@mixin font-face($name) {
+  @font-face {
+    font-family: $name;
+    src: url('/ui/fonts/#{$name}.woff2') format('woff2'), url('/ui/fonts/#{$name}.woff') format('woff');
+  }
+}
+
+@include font-face('obscure');

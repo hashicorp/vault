@@ -17,12 +17,14 @@ import (
 )
 
 // Verify interfaces are satisfied
-var _ physical.Backend = (*InmemBackend)(nil)
-var _ physical.HABackend = (*InmemHABackend)(nil)
-var _ physical.HABackend = (*TransactionalInmemHABackend)(nil)
-var _ physical.Lock = (*InmemLock)(nil)
-var _ physical.Transactional = (*TransactionalInmemBackend)(nil)
-var _ physical.Transactional = (*TransactionalInmemHABackend)(nil)
+var (
+	_ physical.Backend       = (*InmemBackend)(nil)
+	_ physical.HABackend     = (*InmemHABackend)(nil)
+	_ physical.HABackend     = (*TransactionalInmemHABackend)(nil)
+	_ physical.Lock          = (*InmemLock)(nil)
+	_ physical.Transactional = (*TransactionalInmemBackend)(nil)
+	_ physical.Transactional = (*TransactionalInmemHABackend)(nil)
+)
 
 var (
 	PutDisabledError    = errors.New("put operations disabled in inmem backend")

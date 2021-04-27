@@ -249,7 +249,7 @@ func (iv IndexView) CreateMany(ctx context.Context, models []IndexModel, opts ..
 
 	err = op.Execute(ctx)
 	if err != nil {
-		return nil, err
+		return nil, replaceErrors(err)
 	}
 
 	return names, nil

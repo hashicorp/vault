@@ -12,13 +12,16 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
 const (
 	couchbaseTypeName        = "couchbase"
 	defaultCouchbaseUserRole = `{"Roles": [{"role":"ro_admin"}]}`
 	defaultTimeout           = 20000 * time.Millisecond
-	maxKeyLength             = 64
+
+	defaultUserNameTemplate = `V_{{.DisplayName | uppercase | truncate 64}}_{{.RoleName | uppercase | truncate 64}}_{{random 20 | uppercase}}_{{unix_time}}`
 )
 
 var (
@@ -30,6 +33,8 @@ var (
 type CouchbaseDB struct {
 	*couchbaseDBConnectionProducer
 	credsutil.CredentialsProducer
+
+	usernameProducer template.StringTemplate
 }
 
 // Type that combines the Couchbase Roles and Groups representing specific account permissions. Used to pass roles and or
@@ -59,7 +64,21 @@ func new() *CouchbaseDB {
 }
 
 func (c *CouchbaseDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
-	err := c.couchbaseDBConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	c.usernameProducer = up
+
+	err = c.couchbaseDBConnectionProducer.Initialize(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
@@ -74,9 +93,7 @@ func (c *CouchbaseDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) 
 	c.Lock()
 	defer c.Unlock()
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, maxKeyLength),
-		credsutil.RoleName(req.UsernameConfig.RoleName, maxKeyLength))
+	username, err := c.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
 	}

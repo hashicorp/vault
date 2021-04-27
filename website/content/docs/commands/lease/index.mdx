@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: lease - Command
-sidebar_title: <code>lease</code>
 description: |-
   The "lease" command groups subcommands for interacting with leases attached to
   secrets.
@@ -13,6 +12,20 @@ The `lease` command groups subcommands for interacting with leases attached to
 secrets. For leases attached to tokens, use the [`vault token`](/docs/commands/token) subcommand.
 
 ## Examples
+
+Lookup a lease:
+
+```shell-session
+$ vault lease lookup database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
+Key             Value
+---             -----
+expire_time     2021-03-17T11:55:50.755313-05:00
+id              database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
+issue_time      2021-03-17T11:45:50.755312-05:00
+last_renewal    <nil>
+renewable       true
+ttl             9m52s
+```
 
 Renew a lease:
 
@@ -40,6 +53,7 @@ Usage: vault lease <subcommand> [options] [args]
   # ...
 
 Subcommands:
+    lookup    Lookup lease information by lease id
     renew     Renews the lease of a secret
     revoke    Revokes leases and secrets
 ```

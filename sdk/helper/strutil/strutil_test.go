@@ -86,7 +86,6 @@ func TestStrutil_ListContainsGlob(t *testing.T) {
 	if !StrListContainsGlob(haystack, "_test_") {
 		t.Fatalf("Value should exist")
 	}
-
 }
 
 func TestStrutil_ListContains(t *testing.T) {
@@ -152,7 +151,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -164,7 +163,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -173,7 +172,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -182,7 +181,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -211,7 +210,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -224,7 +223,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -237,7 +236,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -250,7 +249,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 }
@@ -326,23 +325,23 @@ func TestGlobbedStringsMatch(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{"", "", true},
-		tCase{"*", "*", true},
-		tCase{"**", "**", true},
-		tCase{"*t", "t", true},
-		tCase{"*t", "test", true},
-		tCase{"t*", "test", true},
-		tCase{"*test", "test", true},
-		tCase{"*test", "a test", true},
-		tCase{"test", "a test", false},
-		tCase{"*test", "tests", false},
-		tCase{"test*", "test", true},
-		tCase{"test*", "testsss", true},
-		tCase{"test**", "testsss", false},
-		tCase{"test**", "test*", true},
-		tCase{"**test", "*test", true},
-		tCase{"TEST", "test", false},
-		tCase{"test", "test", true},
+		{"", "", true},
+		{"*", "*", true},
+		{"**", "**", true},
+		{"*t", "t", true},
+		{"*t", "test", true},
+		{"t*", "test", true},
+		{"*test", "test", true},
+		{"*test", "a test", true},
+		{"test", "a test", false},
+		{"*test", "tests", false},
+		{"test*", "test", true},
+		{"test*", "testsss", true},
+		{"test**", "testsss", false},
+		{"test**", "test*", true},
+		{"**test", "*test", true},
+		{"TEST", "test", false},
+		{"test", "test", true},
 	}
 
 	for _, tc := range tCases {
@@ -424,11 +423,11 @@ func TestStrUtil_RemoveDuplicates(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{[]string{}, []string{}, false},
-		tCase{[]string{}, []string{}, true},
-		tCase{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
-		tCase{[]string{"A", "b", "a"}, []string{"A", "a", "b"}, false},
-		tCase{[]string{"A", "b", "a"}, []string{"a", "b"}, true},
+		{[]string{}, []string{}, false},
+		{[]string{}, []string{}, true},
+		{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
+		{[]string{"A", "b", "a"}, []string{"A", "a", "b"}, false},
+		{[]string{"A", "b", "a"}, []string{"a", "b"}, true},
 	}
 
 	for _, tc := range tCases {
@@ -448,14 +447,14 @@ func TestStrUtil_RemoveDuplicatesStable(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{[]string{}, []string{}, false},
-		tCase{[]string{}, []string{}, true},
-		tCase{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
-		tCase{[]string{"A", "b", "a"}, []string{"A", "b", "a"}, false},
-		tCase{[]string{"A", "b", "a"}, []string{"A", "b"}, true},
-		tCase{[]string{" ", "d", "c", "d"}, []string{"d", "c"}, false},
-		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", "y"}, true},
-		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", " z", "y"}, false},
+		{[]string{}, []string{}, false},
+		{[]string{}, []string{}, true},
+		{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
+		{[]string{"A", "b", "a"}, []string{"A", "b", "a"}, false},
+		{[]string{"A", "b", "a"}, []string{"A", "b"}, true},
+		{[]string{" ", "d", "c", "d"}, []string{"d", "c"}, false},
+		{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", "y"}, true},
+		{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", " z", "y"}, false},
 	}
 
 	for _, tc := range tCases {
@@ -475,13 +474,13 @@ func TestStrUtil_ParseStringSlice(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{"", "", []string{}},
-		tCase{"   ", ",", []string{}},
-		tCase{",   ", ",", []string{"", ""}},
-		tCase{"a", ",", []string{"a"}},
-		tCase{" a, b,   c   ", ",", []string{"a", "b", "c"}},
-		tCase{" a; b;   c   ", ";", []string{"a", "b", "c"}},
-		tCase{" a :: b  ::   c   ", "::", []string{"a", "b", "c"}},
+		{"", "", []string{}},
+		{"   ", ",", []string{}},
+		{",   ", ",", []string{"", ""}},
+		{"a", ",", []string{"a"}},
+		{" a, b,   c   ", ",", []string{"a", "b", "c"}},
+		{" a; b;   c   ", ";", []string{"a", "b", "c"}},
+		{" a :: b  ::   c   ", "::", []string{"a", "b", "c"}},
 	}
 
 	for _, tc := range tCases {
@@ -597,5 +596,71 @@ func TestStrUtil_EqualStringMaps(t *testing.T) {
 		if actual != test.result {
 			t.Fatalf("case %d, expected %v, got %v", i, test.result, actual)
 		}
+	}
+}
+
+func TestGetString(t *testing.T) {
+	type testCase struct {
+		m   map[string]interface{}
+		key string
+
+		expectedStr string
+		expectErr   bool
+	}
+
+	tests := map[string]testCase{
+		"nil map": {
+			m:           nil,
+			key:         "foo",
+			expectedStr: "",
+			expectErr:   true,
+		},
+		"empty key": {
+			m: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:         "",
+			expectedStr: "",
+			expectErr:   true,
+		},
+		"missing key": {
+			m: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:         "baz",
+			expectedStr: "",
+			expectErr:   false,
+		},
+		"value is not a string": {
+			m: map[string]interface{}{
+				"foo": 42,
+			},
+			key:         "foo",
+			expectedStr: "",
+			expectErr:   true,
+		},
+		"happy path": {
+			m: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:         "foo",
+			expectedStr: "bar",
+			expectErr:   false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual, err := GetString(test.m, test.key)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if actual != test.expectedStr {
+				t.Fatalf("Actual: [%s] Expected: [%s]", actual, test.expectedStr)
+			}
+		})
 	}
 }

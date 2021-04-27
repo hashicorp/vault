@@ -8,9 +8,13 @@ import HcpCalloutSection from 'components/hcp-callout-section'
 //  Imports below are used in getStaticProps only
 import RAW_CONTENT from './content.json'
 import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
   const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
   return { props: { content } }
 }
 
@@ -26,8 +30,9 @@ export default function Homepage({ content }) {
           buttons={[
             {
               external: false,
-              title: 'Get Started',
-              url: 'https://www.vaultproject.io/intro/getting-started',
+              title: 'Try Cloud',
+              url:
+                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
             },
             {
               external: false,
@@ -36,9 +41,8 @@ export default function Homepage({ content }) {
             },
             {
               type: 'inbound',
-              title: 'Try Cloud',
-              url:
-                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
+              title: 'Get Started with Vault',
+              url: 'https://www.vaultproject.io/intro/getting-started',
               theme: { variant: 'tertiary' },
             },
           ]}
@@ -56,35 +60,7 @@ export default function Homepage({ content }) {
         {/* Before-After Diagram */}
 
         <section className="g-container before-after">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1579635889-static-infrastructure.svg',
-              format: 'svg',
-            }}
-            beforeHeadline="Static Infrastructure"
-            beforeContent={`Datacenters with inherently high-trust networks with clear network perimeters.
-
-#### Traditional Approach
-
-- High trust networks
-- A clear network perimeter
-- Security enforced by IP Address`}
-            afterImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg',
-              format: 'svg',
-            }}
-            afterHeadline="Dynamic Infrastructure"
-            afterContent={`Multiple clouds and private datacenters without a clear network perimeter.
-
-#### Vault Approach
-
-
-- Low-trust networks in public clouds
-- Unknown network perimeter across clouds
-- Security enforced by Identity`}
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </section>
 
         {/* Use cases */}
@@ -151,7 +127,7 @@ export default function Homepage({ content }) {
           id="cloud-offerings"
           title="HCP Vault"
           chin="Available on AWS"
-          description="HCP Vault allows organizations to get up and running quickly, providing immediate access to Vault’s best-in-class secrets management and encryption capabilities, with the platform providing the resilience and operational excellence so you do not have to manage Vault yourself."
+          description="HCP Vault provides all of the power and security of Vault, without the complexity and overhead of managing it yourself. Access Vault’s best-in-class secrets management and encryption capabilities instantly and onboard applications and teams easily."
           image={require('./img/hcp-vault.svg?url')}
           links={[
             {

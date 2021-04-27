@@ -96,7 +96,6 @@ func TestCockroachDBBackend(t *testing.T) {
 		"connection_url": config.URL().String(),
 		"table":          config.TableName,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}

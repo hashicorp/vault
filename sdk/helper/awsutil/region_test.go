@@ -186,7 +186,6 @@ func setEnvRegion(t *testing.T, region string) (cleanup func()) {
 }
 
 func setConfigFileRegion(t *testing.T, region string) (cleanup func()) {
-
 	var cleanupFuncs []func()
 
 	cleanup = func() {
@@ -220,13 +219,13 @@ func setConfigFileRegion(t *testing.T, region string) (cleanup func()) {
 		})
 	} else {
 		cleanupFuncs = append(cleanupFuncs, func() {
-			if err := ioutil.WriteFile(pathToConfig, preExistingConfig, 0644); err != nil {
+			if err := ioutil.WriteFile(pathToConfig, preExistingConfig, 0o644); err != nil {
 				t.Fatal(err)
 			}
 		})
 	}
 	fileBody := fmt.Sprintf(testConfigFile, region)
-	if err := ioutil.WriteFile(pathToConfig, []byte(fileBody), 0644); err != nil {
+	if err := ioutil.WriteFile(pathToConfig, []byte(fileBody), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

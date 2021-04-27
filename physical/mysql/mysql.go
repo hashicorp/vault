@@ -28,9 +28,11 @@ import (
 )
 
 // Verify MySQLBackend satisfies the correct interfaces
-var _ physical.Backend = (*MySQLBackend)(nil)
-var _ physical.HABackend = (*MySQLBackend)(nil)
-var _ physical.Lock = (*MySQLHALock)(nil)
+var (
+	_ physical.Backend   = (*MySQLBackend)(nil)
+	_ physical.HABackend = (*MySQLBackend)(nil)
+	_ physical.Lock      = (*MySQLHALock)(nil)
+)
 
 // Unreserved tls key
 // Reserved values are "true", "false", "skip-verify"
@@ -103,7 +105,6 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Check table exists
 	var tableExist bool
 	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
-
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
 	}
@@ -148,7 +149,6 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		// Check table exists
 		var lockTableExist bool
 		lockTableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", locktable, database)
-
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
 		}
@@ -514,7 +514,6 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	lock, err := NewMySQLLock(i.in, i.logger, key, value)
-
 	if err != nil {
 		failLock <- err
 		return

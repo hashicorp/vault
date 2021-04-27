@@ -1,0 +1,355 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{mode}} @root={{@root}} @showCurrent={{true}}  />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq @mode "create") }}
+        Create Connection
+      {{else if (eq @mode "edit")}}
+        Edit Connection
+      {{else}}
+        {{@model.id}}
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq @mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if @model.canDelete}}
+      <button
+        type="button"
+        class="toolbar-link"
+        {{on 'click' this.delete}}
+        data-test-database-connection-delete
+      >
+        Delete connection
+      </button>
+      {{/if}}
+      {{#if @model.canReset}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action 'reset'}}
+        @confirmTitle="Reset connection?"
+        @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
+        @confirmButtonText="Reset"
+        data-test-database-connection-reset
+      >
+        Reset connection
+      </ConfirmAction>
+      {{/if}}
+      {{#if (or @model.canReset @model.canDelete)}}
+      <div class="toolbar-separator" />
+      {{/if}}
+      {{#if @model.canRotateRoot }}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{this.rotate}}
+          @confirmTitle="Rotate credentials?"
+          @confirmMessage={{'This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'}}
+          @confirmButtonText="Rotate"
+          data-test-database-connection-rotate
+        >
+          Rotate root credentials
+        </ConfirmAction>
+      {{/if}}
+      {{#if @model.canAddRole}}
+      <ToolbarSecretLink
+        @secret=''
+        @mode="create"
+        @type="add"
+        @queryParams={{query-params initialKey=@model.name itemType="role"}}
+        @data-test-secret-create=true
+      >
+        Add role
+      </ToolbarSecretLink>
+      {{/if}}
+      {{#if @model.canEdit}}
+      <ToolbarSecretLink
+        @secret={{@model.id}}
+        @mode="edit"
+        @data-test-edit-link=true
+        @replace=true
+      >
+        Edit configuration
+      </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (eq @mode 'create')}}
+  <form {{on 'submit' this.handleCreateConnection}}>
+    {{#each @model.fieldAttrs as |attr|}}
+      {{#if (not-eq attr.options.readOnly true)}}
+        {{form-field data-test-field attr=attr model=@model}}
+      {{/if}}
+    {{/each}}
+    
+    {{!-- Plugin Config Section --}}
+    <div class="form-section box is-shadowless is-fullwidth">
+      <fieldset class="form-fieldset">
+        <legend class="title is-5">Plugin config</legend>
+        {{#unless @model.pluginFieldGroups}}
+          <EmptyState
+            @title="No plugin selected"
+            @message="Select a plugin type to be able to configure it."
+          />
+        {{else}}
+          {{#each @model.pluginFieldGroups as |fieldGroup|}}
+            {{#each-in fieldGroup as |group fields|}}
+              {{#if (eq group "default")}}
+                <div class="columns is-desktop is-multiline">
+                {{#each fields as |attr|}}
+                  {{#if (contains
+                    attr.name
+                    (array
+                      "max_open_connections"
+                      "max_idle_connections"
+                      "max_connection_lifetime"
+                    )
+                  )}}
+                    <div class="column is-one-third">
+                      {{form-field data-test-field attr=attr model=@model}}
+                    </div>
+                  {{else}}
+                    <div class="column is-full">
+                      {{form-field data-test-field attr=attr model=@model}}
+                    </div>
+                  {{/if}}
+                {{/each}}
+                </div>
+              {{else}}
+                <ToggleButton @class="is-block" @toggleAttr={{concat "show" (camelize group)}} @toggleTarget={{this}} @openLabel={{concat "Hide " group}} @closedLabel={{group}} @data-test-toggle-group={{group}} />
+                {{#if (get this (concat "show" (camelize group)))}}
+                  <div class="box is-marginless">
+                    {{#each fields as |attr|}}
+                      {{form-field data-test-field attr=attr model=@model}}
+                    {{/each}}
+                  </div>
+                {{/if}}
+              {{/if}}
+            {{/each-in}}
+          {{/each}}
+        {{/unless}}
+      </fieldset>
+    </div>
+
+    {{!-- Statements Section --}}
+    {{#unless (and @model.plugin_name (not @model.statementFields))}}
+      <div class="form-section box is-shadowless is-fullwidth">
+        <h3 class="title is-5">Statements</h3>
+        {{#if (eq @model.statementFields null)}}
+          <EmptyState
+            @title="No plugin selected"
+            @message="Select a plugin type to be able to configure it."
+          />
+        {{else}}
+          {{#each @model.statementFields as |attr|}}
+          {{log attr}}
+            {{form-field data-test-field attr=attr model=@model}}
+          {{/each}}
+        {{/if}}
+      </div>
+    {{/unless}}
+
+    <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+      <div class="field is-grouped">
+        <div class="control">
+          <button
+            data-test-secret-save
+            type="submit"
+            disabled={{buttonDisabled}}
+            class="button is-primary"
+          >
+            Create database
+          </button>
+        </div>
+        <div class="control">
+          <SecretLink @mode="list" @class="button">
+            Cancel
+          </SecretLink>
+        </div>
+      </div>
+    </div>
+  </form>
+{{else if (eq @mode 'edit')}}
+  <form {{on 'submit' this.handleUpdateConnection}}>
+    {{#each @model.fieldAttrs as |attr|}}
+      {{#if (or (eq attr.name 'name') (eq attr.name 'plugin_name'))}}
+        <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+      {{else if (not-eq attr.options.readOnly true)}}
+        {{form-field data-test-field attr=attr model=@model}}
+      {{/if}}
+    {{/each}}
+
+    {{!-- Plugin Config Edit --}}
+    <div class="form-section box is-shadowless is-fullwidth">
+      <fieldset class="form-fieldset">
+        <legend class="title is-5">Plugin config</legend>
+        {{#each @model.pluginFieldGroups as |fieldGroup|}}
+          {{#each-in fieldGroup as |group fields|}}
+            {{#if (eq group "default")}}
+              <div class="columns is-desktop is-multiline">
+                {{#each fields as |attr|}}
+                  {{#if (contains
+                    attr.name
+                    (array
+                      "max_open_connections"
+                      "max_idle_connections"
+                      "max_connection_lifetime"
+                    )
+                  )}}
+                    <div class="column is-one-third">
+                      {{form-field data-test-field attr=attr model=@model}}
+                    </div>
+                  {{else if (eq attr.name "password")}}
+                    <div class="column is-full">
+                      <label for="{{attr.name}}" class="is-label">
+                        {{capitalize (or attr.options.label attr.name)}}
+                      </label>
+                      <div class="field">
+                        <Toggle
+                          @name="show-{{attr.name}}"
+                          @status="success"
+                          @size="small"
+                          @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
+                          @checked={{this.showPasswordField}}
+                          data-test-toggle={{attr.name}}
+                        >
+                          <span class="ttl-picker-label has-text-grey">Update password</span><br/>
+                          <div class="description has-text-grey">
+                            <span>{{if this.showPasswordField 'The new password that will be used when connecting to the database' 'Vault will use the existing password'}}</span>
+                          </div>
+                          {{#if this.showPasswordField}}
+                            <Input
+                              {{on "change" (fn this.updatePassword attr.name)}}
+                              @type="password"
+                              @value={{get @model attr.name}}
+                              @name={{attr.name}}
+                              class="input"
+                              {{!-- Prevents browsers from auto-filling --}}
+                              @autocomplete="new-password"
+                              @spellcheck="false" />
+                          {{/if}}
+                        </Toggle>
+                      </div>
+                    </div>
+                  {{else}}
+                    <div class="column is-full">
+                      {{form-field data-test-field attr=attr model=@model}}
+                    </div>
+                  {{/if}}
+                {{/each}}
+              </div>
+            {{else}}
+              <ToggleButton @class="is-block" @toggleAttr={{concat "show" (camelize group)}} @toggleTarget={{this}} @openLabel={{concat "Hide " group}} @closedLabel={{group}} @data-test-toggle-group={{group}} />
+              {{#if (get this (concat "show" (camelize group)))}}
+                <div class="box is-marginless">
+                  {{#each fields as |attr|}}
+                    {{form-field data-test-field attr=attr model=@model}}
+                  {{/each}}
+                </div>
+              {{/if}}
+            {{/if}}
+          {{/each-in}}
+        {{/each}}
+      </fieldset>
+    </div>
+
+    {{!-- Statements Edit Section --}}
+    {{#unless (and @model.plugin_name (not @model.statementFields))}}
+      <div class="form-section box is-shadowless is-fullwidth">
+        <fieldset class="form-fieldset">
+          <legend class="title is-5">Statements</legend>
+          {{#each @model.statementFields as |attr|}}
+            {{form-field data-test-field attr=attr model=@model}}
+          {{/each}}
+        </fieldset>
+      </div>
+    {{/unless}}
+
+    <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+      <div class="field is-grouped">
+        <div class="control">
+          <button
+            data-test-secret-save
+            type="submit"
+            disabled={{buttonDisabled}}
+            class="button is-primary"
+          >
+            Save
+          </button>
+        </div>
+        <div class="control">
+          <SecretLink @mode="list" @class="button">
+            Cancel
+          </SecretLink>
+        </div>
+      </div>
+    </div>
+  </form>
+{{else}}
+  {{#each @model.showAttrs as |attr|}}
+    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow 
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get @model attr.name)}} 
+        />
+      {{else if (eq attr.type "array")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{or (get @model attr.name) defaultDisplay}}
+          @isLink={{true}}
+          @queryParam="role"
+          @type={{attr.type}}
+        />
+      {{else}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{attr.options.defaultShown}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{or (get @model attr.name) defaultDisplay}}
+        />
+      {{/if}}
+    {{/let}}
+  {{/each}}
+{{/if}}
+
+<Modal
+  @title="Rotate your root credentials?"
+  @onClose={{action 'continueWithoutRotate'}}
+  @isActive={{this.showSaveModal}}
+  @type="info"
+  @showCloseButton={{false}}
+>
+  <section class="modal-card-body">
+    <p class="has-bottom-margin-s">It’s best practice to rotate the root credential immediately after the initial configuration of each database. Once rotated, <strong>only Vault knows the new root password</strong>.</p>
+    <p>Would you like to rotate your new credentials? You can also do this later.</p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      type="button"
+      class="button is-primary"
+      {{on 'click' this.continueWithRotate}}
+      data-test-enable-rotate-connection
+    >
+      Rotate and enable
+    </button>
+    <button
+      type="button"
+      class="button is-secondary"
+      {{on 'click' this.continueWithoutRotate}}
+      data-test-enable-connection
+    >
+      Enable without rotating
+    </button>
+  </footer>
+</Modal>

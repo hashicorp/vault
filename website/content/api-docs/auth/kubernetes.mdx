@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: Kubernetes - Auth Methods - HTTP API
-sidebar_title: Kubernetes
 description: This is the API documentation for the Vault Kubernetes auth method plugin.
 ---
 
@@ -39,7 +38,7 @@ access the Kubernetes API.
   extracted. Not every installation of Kubernetes exposes these
   keys.
 - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
-  use `kubernetes.io/serviceaccount` as the default issuer.
+  use `kubernetes/serviceaccount` as the default issuer.
 - `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 
@@ -119,11 +118,9 @@ entities attempting to login.
 
 - `name` `(string: <required>)` - Name of the role.
 - `bound_service_account_names` `(array: <required>)` - List of service account
-  names able to access this role. If set to "\*" all names are allowed, both this
-  and bound_service_account_namespaces can not be "\*".
+  names able to access this role. If set to "\*" all names are allowed.
 - `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
-  allowed to access this role. If set to "\*" all namespaces are allowed, both
-  this and bound_service_account_names can not be set to "\*".
+  allowed to access this role. If set to "\*" all namespaces are allowed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 
 @include 'tokenfields.mdx'

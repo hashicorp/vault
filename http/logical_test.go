@@ -4,12 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,6 +13,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
@@ -107,6 +108,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core1.Shutdown()
 	keys, root := vault.TestCoreInit(t, core1)
 	for _, key := range keys {
 		if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
@@ -129,6 +131,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -276,6 +279,7 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	})
 	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
 }
+
 func TestLogical_RequestSizeDisableLimit(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestListener(t)
@@ -283,8 +287,8 @@ func TestLogical_RequestSizeDisableLimit(t *testing.T) {
 		Core: core,
 		ListenerConfig: &configutil.Listener{
 			MaxRequestSize: -1,
-			Address: "127.0.0.1",
-			TLSDisable: true,
+			Address:        "127.0.0.1",
+			TLSDisable:     true,
 		},
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
@@ -297,9 +301,8 @@ func TestLogical_RequestSizeDisableLimit(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
-	testResponseStatus(t, resp,http.StatusNoContent)
+	testResponseStatus(t, resp, http.StatusNoContent)
 }
-
 
 func TestLogical_ListSuffix(t *testing.T) {
 	core, _, rootToken := vault.TestCoreUnsealed(t)
@@ -367,7 +370,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	respondLogical(w, nil, nil, resp404, false)
+	respondLogical(nil, w, nil, nil, resp404, false)
 
 	if w.Code != 404 {
 		t.Fatalf("Bad Status code: %d", w.Code)
@@ -495,5 +498,4 @@ func TestLogical_ShouldParseForm(t *testing.T) {
 			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
 		}
 	}
-
 }

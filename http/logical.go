@@ -153,7 +153,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
 	req := &logical.Request{
@@ -219,27 +219,33 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
+
+	rawRequired := r.Header.Values(VaultIndexHeaderName)
+	if len(rawRequired) != 0 && core.MissingRequiredState(rawRequired) {
+		return nil, nil, http.StatusPreconditionFailed, fmt.Errorf("required index state not present")
+	}
+
 	req, err = requestAuth(core, r, req)
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 			return nil, nil, http.StatusForbidden, nil
 		}
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("error performing token check: %w", err)
 	}
 
 	req, err = requestWrapInfo(r, req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing X-Vault-Wrap-TTL header: %w", err)
 	}
 
 	err = parseMFAHeader(req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse X-Vault-MFA header: %w", err)
 	}
 
 	err = requestPolicyOverride(r, req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse %s header: %w", PolicyOverrideHeaderName, err)
 	}
 
 	return req, origBody, 0, nil
@@ -453,13 +459,13 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		default:
 			// Build and return the proper response if everything is fine.
-			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
+			respondLogical(core, w, r, req, resp, injectDataIntoTopLevel)
 			return
 		}
 	})
 }
 
-func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response, injectDataIntoTopLevel bool) {
+func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response, injectDataIntoTopLevel bool) {
 	var httpResp *logical.HTTPResponse
 	var ret interface{}
 
@@ -508,6 +514,8 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 			ret = injector
 		}
 	}
+
+	adjustResponse(core, w, req)
 
 	// Respond
 	respondOk(w, ret)

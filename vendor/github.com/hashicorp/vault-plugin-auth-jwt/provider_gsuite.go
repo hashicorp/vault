@@ -6,25 +6,28 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"golang.org/x/oauth2/jwt"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/option"
 )
 
 // GSuiteProvider provides G Suite-specific configuration and behavior.
 type GSuiteProvider struct {
-	config    GSuiteProviderConfig // Configuration for the provider
-	jwtConfig *jwt.Config          // Google JWT configuration
-	adminSvc  *admin.Service       // Google admin service
+	// Configuration for the provider
+	config GSuiteProviderConfig
+
+	// Google admin service
+	adminSvc *admin.Service
 }
 
 // GSuiteProviderConfig represents the configuration for a GSuiteProvider.
 type GSuiteProviderConfig struct {
-	// Path to a Google service account key file. Required.
-	ServiceAccountFilePath string `mapstructure:"gsuite_service_account"`
+	// The path to or contents of a Google service account key file. Required.
+	ServiceAccount string `mapstructure:"gsuite_service_account"`
 
 	// Email address of a G Suite admin to impersonate. Required.
 	AdminImpersonateEmail string `mapstructure:"gsuite_admin_impersonate"`
@@ -40,9 +43,6 @@ type GSuiteProviderConfig struct {
 
 	// Comma-separated list of G Suite custom schemas to fetch as claims.
 	UserCustomSchemas string `mapstructure:"user_custom_schemas"`
-
-	// JSON contents of a Google service account key file.
-	serviceAccountKeyJSON []byte
 }
 
 // Initialize initializes the GSuiteProvider by validating and creating configuration.
@@ -53,23 +53,10 @@ func (g *GSuiteProvider) Initialize(ctx context.Context, jc *jwtConfig) error {
 		return err
 	}
 
-	// Read the Google service account key file
-	keyJSON, err := ioutil.ReadFile(config.ServiceAccountFilePath)
-	if err != nil {
-		return err
-	}
-	config.serviceAccountKeyJSON = keyJSON
-
-	return g.initialize(ctx, config)
-}
-
-func (g *GSuiteProvider) initialize(ctx context.Context, config GSuiteProviderConfig) error {
-	var err error
-
 	// Validate configuration
-	if config.ServiceAccountFilePath == "" {
-		return errors.New("'gsuite_service_account' must be set to the file path for a " +
-			"service account key")
+	if config.ServiceAccount == "" {
+		return errors.New("'gsuite_service_account' must be either the path to or contents of " +
+			"a JSON service account key file")
 	}
 	if config.AdminImpersonateEmail == "" {
 		return errors.New("'gsuite_admin_impersonate' must be set to an email address of a " +
@@ -79,32 +66,51 @@ func (g *GSuiteProvider) initialize(ctx context.Context, config GSuiteProviderCo
 		return errors.New("'gsuite_recurse_max_depth' must be a positive integer")
 	}
 
-	// Create the google JWT config from the service account key file
-	if g.jwtConfig, err = google.JWTConfigFromJSON(config.serviceAccountKeyJSON,
-		admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope); err != nil {
-		return err
+	// A file path or JSON string may be provided for the service account parameter.
+	// Check to see if a file exists at the given path, and if so, read its contents.
+	// Otherwise, assume the service account has been provided as a JSON string.
+	var err error
+	keyJSON := []byte(config.ServiceAccount)
+	if fileExists(config.ServiceAccount) {
+		keyJSON, err = ioutil.ReadFile(config.ServiceAccount)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Set the subject to impersonate and config
-	g.jwtConfig.Subject = config.AdminImpersonateEmail
-	g.config = config
+	// Set the requested scopes
+	scopes := []string{
+		admin.AdminDirectoryGroupReadonlyScope,
+		admin.AdminDirectoryUserReadonlyScope,
+	}
+
+	// Create the google JWT config from the service account
+	jwtConfig, err := google.JWTConfigFromJSON(keyJSON, scopes...)
+	if err != nil {
+		return fmt.Errorf("error parsing service account JSON: %w", err)
+	}
+
+	// Set the subject to impersonate
+	jwtConfig.Subject = config.AdminImpersonateEmail
 
 	// Create a new admin service for requests to Google admin APIs
-	g.adminSvc, err = admin.NewService(ctx, option.WithHTTPClient(g.jwtConfig.Client(ctx)))
+	svc, err := admin.NewService(ctx, option.WithHTTPClient(jwtConfig.Client(ctx)))
 	if err != nil {
 		return err
 	}
 
+	g.adminSvc = svc
+	g.config = config
 	return nil
 }
 
 // SensitiveKeys returns keys that should be redacted when reading the config of this provider
 func (g *GSuiteProvider) SensitiveKeys() []string {
-	return []string{}
+	return []string{"gsuite_service_account"}
 }
 
 // FetchGroups fetches and returns groups from G Suite.
-func (g *GSuiteProvider) FetchGroups(ctx context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
+func (g *GSuiteProvider) FetchGroups(ctx context.Context, b *jwtAuthBackend, allClaims map[string]interface{}, role *jwtRole, _ oauth2.TokenSource) (interface{}, error) {
 	if !g.config.FetchGroups {
 		return nil, nil
 	}
@@ -212,4 +218,10 @@ func (g *GSuiteProvider) getUserClaim(b *jwtAuthBackend, allClaims map[string]in
 	}
 
 	return userClaim, nil
+}
+
+// fileExists returns true if a file exists at the given path.
+func fileExists(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi != nil && !fi.IsDir()
 }

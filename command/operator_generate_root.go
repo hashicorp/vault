@@ -20,8 +20,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorGenerateRootCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorGenerateRootCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
+)
 
 type generateRootKind int
 

@@ -131,8 +131,8 @@ export default Store.extend({
       lastPage,
       nextPage: clamp(currentPage + 1, 1, lastPage),
       prevPage: clamp(currentPage - 1, 1, lastPage),
-      total: get(dataset, 'length') || 0,
-      filteredTotal: get(data, 'length') || 0,
+      total: dataset.length || 0,
+      filteredTotal: data.length || 0,
     };
 
     return response;
