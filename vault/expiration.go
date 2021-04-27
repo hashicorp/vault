@@ -169,6 +169,22 @@ func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Names
 	}, nil
 }
 
+// errIsUnrecoverable returns true if the logical error is unlikely to resolve
+// automatically or with additional retries
+func errIsUnrecoverable(err error) bool {
+	switch {
+	case errors.Is(err, logical.ErrUnrecoverable),
+		errors.Is(err, logical.ErrUnsupportedOperation),
+		errors.Is(err, logical.ErrUnsupportedPath),
+		errors.Is(err, logical.ErrInvalidRequest),
+		errors.Is(err, logical.ErrPermissionDenied),
+		errors.Is(err, logical.ErrMultiAuthzPending):
+		return true
+	}
+
+	return false
+}
+
 func (r *revocationJob) Execute() error {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 	r.m.core.metricSink.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
@@ -214,9 +230,22 @@ func (r *revocationJob) OnFailure(err error) {
 		return
 	}
 
+	if errIsUnrecoverable(err) {
+		r.m.logger.Trace("lease revocation returned unrecoverable error", "lease_id", r.leaseID, "err", err)
+
+		// TODO 1978 below here should be incorporated into markLeaseAsZombie
+		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
+		if loadErr != nil {
+			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
+			return
+		}
+
+		r.m.markLeaseAsZombie(r.nsCtx, le, err)
+		return
+	}
+
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
-
 	if pending.revokesAttempted >= maxRevokeAttempts {
 		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
@@ -1776,7 +1805,7 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 	// Handle standard revocation via backends
 	resp, err := m.router.Route(nsCtx, logical.RevokeRequest(le.Path, le.Secret, le.Data))
 	if err != nil || (resp != nil && resp.IsError()) {
-		return errwrap.Wrapf(fmt.Sprintf("failed to revoke entry: resp: %#v err: {{err}}", resp), err)
+		return fmt.Errorf("failed to revoke entry: resp: %#v err: %w", resp, err)
 	}
 	return nil
 }
