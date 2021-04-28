@@ -3,17 +3,20 @@
 package command
 
 import (
+	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/vault/diagnose"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/mitchellh/cli"
 )
 
-func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseCommand) {
+func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &OperatorDiagnoseCommand{
+	return &OperatorDiagnoseCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
@@ -23,17 +26,37 @@ func testOperatorDiagnoseCommand(tb testing.TB) (*cli.MockUi, *OperatorDiagnoseC
 func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name         string
-		args         []string
-		outFragments []string
-		code         int
+		name     string
+		args     []string
+		expected diagnose.Result
+		code     int
 	}{
 		{
 			"diagnose_ok",
 			[]string{
 				"-config", "./server/test-fixtures/config_diagnose_ok.hcl",
 			},
-			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n"},
+			diagnose.Result{
+				Name:   "initialization",
+				Status: diagnose.OkStatus,
+				Children: []*diagnose.Result{
+					{
+						Name:   "parse-config",
+						Status: diagnose.OkStatus,
+					},
+					{
+						Name:   "init-listeners",
+						Status: diagnose.WarningStatus,
+						Warnings: []string{
+							"TLS is disabled in a Listener config stanza.",
+						},
+					},
+					{
+						Name:   "storage",
+						Status: diagnose.OkStatus,
+					},
+				},
+			},
 			0,
 		},
 		{
@@ -41,7 +64,28 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{
 				"-config", "./server/test-fixtures/nostore_config.hcl",
 			},
-			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[31m[failed]\x1b[0m Access storage\nA storage backend must be specified\n"},
+			diagnose.Result{
+				Name:   "initialization",
+				Status: diagnose.OkStatus,
+				Children: []*diagnose.Result{
+					{
+						Name:   "parse-config",
+						Status: diagnose.OkStatus,
+					},
+					{
+						Name:   "init-listeners",
+						Status: diagnose.WarningStatus,
+						Warnings: []string{
+							"TLS is disabled in a Listener config stanza.",
+						},
+					},
+					{
+						Name:    "storage",
+						Status:  diagnose.ErrorStatus,
+						Message: "A storage backend must be specified",
+					},
+				},
+			},
 			1,
 		},
 		{
@@ -49,7 +93,24 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]string{
 				"-config", "./server/test-fixtures/tls_config_ok.hcl",
 			},
-			[]string{"Parse configuration\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Parse configuration\n[      ] Access storage\n\x1b[F\x1b[32m[  ok  ]\x1b[0m Access storage\n"},
+			diagnose.Result{
+				Name:   "initialization",
+				Status: diagnose.OkStatus,
+				Children: []*diagnose.Result{
+					{
+						Name:   "parse-config",
+						Status: diagnose.OkStatus,
+					},
+					{
+						Name:   "init-listeners",
+						Status: diagnose.OkStatus,
+					},
+					{
+						Name:   "storage",
+						Status: diagnose.OkStatus,
+					},
+				},
+			},
 			0,
 		},
 	}
@@ -62,11 +123,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
-
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testOperatorDiagnoseCommand(t)
+				diagnose.Init()
+				cmd := testOperatorDiagnoseCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -74,12 +135,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					t.Errorf("%s: expected %d to be %d", tc.name, code, tc.code)
 				}
 
-				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-
-				for _, outputFragment := range tc.outFragments {
-					if !strings.Contains(combined, outputFragment) {
-						t.Errorf("%s: expected %q to contain %q", tc.name, combined, outputFragment)
-					}
+				result := diagnose.Shutdown()
+				result.ZeroTimes()
+				if !reflect.DeepEqual(tc.expected, *result) {
+					t.Fatalf("result mismatch: %s", strings.Join(deep.Equal(tc.expected, *result), "\n"))
 				}
 			})
 		}

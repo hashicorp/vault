@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sort"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -17,19 +19,39 @@ const (
 	status_failed  = "\u001b[31m[failed]\u001b[0m "
 	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
 	same_line      = "\u001b[F"
-	errorStatus    = "error"
-	warnStatus     = "warn"
-	okStatus       = "ok"
+	ErrorStatus    = "error"
+	WarningStatus  = "warn"
+	OkStatus       = "ok"
 )
 
 var errUnimplemented = errors.New("unimplemented")
 
 type Result struct {
+	Time     time.Time
 	Name     string
 	Warnings []string
 	Status   string
 	Message  string
 	Children []*Result
+}
+
+func (r *Result) sortChildren() {
+	if len(r.Children) > 0 {
+		sort.SliceStable(r.Children, func(i, j int) bool {
+			return r.Children[i].Time.Before(r.Children[j].Time)
+		})
+		for _, c := range r.Children {
+			c.sortChildren()
+		}
+	}
+}
+
+func (r *Result) ZeroTimes() {
+	var zero time.Time
+	r.Time = zero
+	for _, c := range r.Children {
+		c.ZeroTimes()
+	}
 }
 
 // TelemetryCollector is an otel SpanProcessor that gathers spans and once the outermost
@@ -55,7 +77,7 @@ func (t *TelemetryCollector) OnStart(_ context.Context, s sdktrace.ReadWriteSpan
 
 func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 	if !e.Parent().HasSpanID() {
-		// Deep first walk the span structs to construct the top down tree results we want
+		// First walk the span structs to construct the top down tree results we want
 		for _, s := range t.spans {
 			r := t.getOrBuildResult(s.SpanContext().SpanID())
 			if r != nil {
@@ -69,6 +91,9 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 				}
 			}
 		}
+
+		// Then walk the results sorting children by time
+		t.RootResult.sortChildren()
 	}
 }
 
@@ -92,16 +117,17 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 		r = &Result{
 			Name:    s.Name(),
 			Message: s.StatusMessage(),
+			Time:    s.StartTime(),
 		}
 		for _, e := range s.Events() {
 			switch e.Name {
 			case warningEventName:
 				for _, a := range e.Attributes {
-					if a.Key == "message" {
+					if a.Key == messageKey {
 						r.Warnings = append(r.Warnings, a.Value.AsString())
 					}
 				}
-			case errorStatus:
+			case ErrorStatus:
 				var message string
 				var action string
 				for _, a := range e.Attributes {
@@ -115,7 +141,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				if message != "" && action != "" {
 					r.Children = append(r.Children, &Result{
 						Name:    action,
-						Status:  errorStatus,
+						Status:  ErrorStatus,
 						Message: message,
 					})
 
@@ -135,8 +161,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 					r.Children = append(r.Children,
 						&Result{
 							Name:    checkName,
-							Status:  okStatus,
+							Status:  OkStatus,
 							Message: message,
+							Time:    e.Time,
 						})
 				}
 			case spotCheckWarnEventName:
@@ -154,8 +181,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 					r.Children = append(r.Children,
 						&Result{
 							Name:    checkName,
-							Status:  warnStatus,
+							Status:  WarningStatus,
 							Message: message,
+							Time:    e.Time,
 						})
 				}
 			case spotCheckErrorEventName:
@@ -173,8 +201,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 					r.Children = append(r.Children,
 						&Result{
 							Name:    checkName,
-							Status:  errorStatus,
+							Status:  ErrorStatus,
 							Message: message,
+							Time:    e.Time,
 						})
 				}
 			}
@@ -182,14 +211,14 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 		switch s.StatusCode() {
 		case codes.Unset:
 			if len(r.Warnings) > 0 {
-				r.Status = warnStatus
+				r.Status = WarningStatus
 			} else {
-				r.Status = okStatus
+				r.Status = OkStatus
 			}
 		case codes.Ok:
-			r.Status = okStatus
+			r.Status = OkStatus
 		case codes.Error:
-			r.Status = errorStatus
+			r.Status = ErrorStatus
 		}
 		t.results[id] = r
 	}
@@ -205,16 +234,16 @@ func (r *Result) Write(writer io.Writer) error {
 }
 
 func (r *Result) write(sb *strings.Builder, depth int) {
-	if r.Status != warnStatus || (len(r.Warnings) == 0 && r.Message != "") {
+	if r.Status != WarningStatus || (len(r.Warnings) == 0 && r.Message != "") {
 		for i := 0; i < depth; i++ {
 			sb.WriteRune('\t')
 		}
 		switch r.Status {
-		case okStatus:
+		case OkStatus:
 			sb.WriteString(status_ok)
-		case warnStatus:
+		case WarningStatus:
 			sb.WriteString(status_warn)
-		case errorStatus:
+		case ErrorStatus:
 			sb.WriteString(status_failed)
 		}
 		sb.WriteString(r.Name)

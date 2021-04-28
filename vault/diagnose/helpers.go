@@ -16,6 +16,8 @@ const (
 	spotCheckWarnEventName  = "spot-check-warn"
 	spotCheckErrorEventName = "spot-check-error"
 	errorMessageKey         = attribute.Key("error.message")
+	nameKey                 = attribute.Key("name")
+	messageKey              = attribute.Key("message")
 )
 
 var tp *sdktrace.TracerProvider
@@ -64,7 +66,7 @@ func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 // Warn records a warning on the current span
 func Warn(ctx context.Context, msg string) {
 	span := trace.SpanFromContext(ctx)
-	span.AddEvent(warningEventName, trace.WithAttributes(attribute.String("message", msg)))
+	span.AddEvent(warningEventName, trace.WithAttributes(messageKey.String(msg)))
 }
 
 func SpotOk(ctx context.Context, checkName, message string) {
@@ -75,19 +77,20 @@ func SpotWarn(ctx context.Context, checkName, message string) {
 	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message)
 }
 
-func SpotError(ctx context.Context, checkName string, err error) {
+func SpotError(ctx context.Context, checkName string, err error) error {
 	var message string
 	if err != nil {
 		message = err.Error()
 	}
 	addSpotCheckResult(ctx, spotCheckErrorEventName, checkName, message)
+	return err
 }
 
 func addSpotCheckResult(ctx context.Context, eventName, checkName, message string) {
 	span := trace.SpanFromContext(ctx)
-	attrs := []trace.EventOption{trace.WithAttributes(attribute.String("name", checkName))}
+	attrs := []trace.EventOption{trace.WithAttributes(nameKey.String(checkName))}
 	if message != "" {
-		attrs = append(attrs, trace.WithAttributes(attribute.String("message", message)))
+		attrs = append(attrs, trace.WithAttributes(messageKey.String(message)))
 	}
 	span.AddEvent(eventName, attrs...)
 }

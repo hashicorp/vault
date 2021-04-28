@@ -11,7 +11,7 @@ import (
 func TestDiagnoseOtelResults(t *testing.T) {
 	expected := &Result{
 		Name:   "make-coffee",
-		Status: warnStatus,
+		Status: WarningStatus,
 		Warnings: []string{
 			"coffee getting low",
 			"no scones",
@@ -19,11 +19,11 @@ func TestDiagnoseOtelResults(t *testing.T) {
 		Children: []*Result{
 			{
 				Name:   "warm-milk",
-				Status: okStatus,
+				Status: OkStatus,
 			},
 			{
 				Name:   "brew-coffee",
-				Status: okStatus,
+				Status: OkStatus,
 			},
 		},
 	}
