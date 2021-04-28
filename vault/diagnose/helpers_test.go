@@ -33,7 +33,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 			},
 		},
 	}
-	Init()
+	New()
 
 	func() {
 		ctx, span := StartSpan(context.Background(), "make-coffee")
@@ -42,7 +42,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 		makeCoffee(ctx)
 	}()
 
-	results := Shutdown()
+	results := Shutdown(context.Background())
 	results.ZeroTimes()
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
