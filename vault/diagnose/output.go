@@ -151,9 +151,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				var message string
 				for _, a := range e.Attributes {
 					switch a.Key {
-					case "name":
+					case nameKey:
 						checkName = a.Value.AsString()
-					case "message":
+					case messageKey:
 						message = a.Value.AsString()
 					}
 				}
@@ -171,9 +171,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				var message string
 				for _, a := range e.Attributes {
 					switch a.Key {
-					case "name":
+					case nameKey:
 						checkName = a.Value.AsString()
-					case "message":
+					case messageKey:
 						message = a.Value.AsString()
 					}
 				}
@@ -191,9 +191,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				var message string
 				for _, a := range e.Attributes {
 					switch a.Key {
-					case "name":
+					case nameKey:
 						checkName = a.Value.AsString()
-					case "error":
+					case messageKey:
 						message = a.Value.AsString()
 					}
 				}
