@@ -20,7 +20,7 @@ const (
 )
 
 var diagnoseSession = struct{}{}
-var noopTracer trace.Tracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
+var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
 
 type Session struct {
 	tc     *TelemetryCollector
