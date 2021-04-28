@@ -52,18 +52,19 @@ func New() *Session {
 	return sess
 }
 
-func WithDiagnose(ctx context.Context, sess *Session) context.Context {
+// Context returns a new context with a defined diagnose session
+func Context(ctx context.Context, sess *Session) context.Context {
 	return context.WithValue(ctx, diagnoseSession, sess)
 }
 
-// Ends the Diagnose session, returning the root of the result tree.  This will be empty until
+// Finalize ends the Diagnose session, returning the root of the result tree.  This will be empty until
 // the outermost span ends.
 func (s *Session) Finalize(ctx context.Context) *Result {
 	s.tp.ForceFlush(ctx)
 	return s.tc.RootResult
 }
 
-// Start a "diagnose" span, which is really just an Otel Tracing span.
+// StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {

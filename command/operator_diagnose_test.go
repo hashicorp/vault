@@ -25,6 +25,7 @@ func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
 }
 
 func TestOperatorDiagnoseCommand_Run(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name     string
 		args     []string

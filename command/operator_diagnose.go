@@ -130,7 +130,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
-	ctx := diagnose.WithDiagnose(context.Background(), c.diagnose)
+	ctx := diagnose.Context(context.Background(), c.diagnose)
 	err := c.offlineDiagnostics(ctx)
 
 	if err != nil {
