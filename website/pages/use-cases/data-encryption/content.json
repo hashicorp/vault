@@ -1,13 +1,13 @@
 {
   "beforeAfterDiagram": {
     "beforeImage": {
-      "url": "https://www.datocms-assets.com/2885/1539885046-data-protectionchallenge.svg",
+      "url": "/img/use-cases/data-encryption/data-encryption-challenge.svg",
       "format": "svg"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly",
     "afterImage": {
-      "url": "https://www.datocms-assets.com/2885/1539885039-data-protectionsolution.svg",
+      "url": "/img/use-cases/data-encryption/data-encryption-solution.svg",
       "format": "svg"
     },
     "afterHeadline": "The Solution",
@@ -20,7 +20,7 @@
         "content": "Encrypt application data during transit and rest with AES 256-bit CBC data encryption and TLS in transit."
       },
       "image": {
-        "url": "https://www.datocms-assets.com/2885/1539314348-eaas.png"
+        "url": "/img/use-cases/data-encryption/encryption-features.svg"
       }
     },
     {
@@ -30,7 +30,8 @@
         "textSide": "right"
       },
       "image": {
-        "url": "https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png"
+        "url": "/img/use-cases/data-encryption/encryption-keyrolling@3x.png",
+        "format": "png"
       }
     }
   ]
