@@ -5,10 +5,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/sdk/version"
+	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -23,6 +26,7 @@ var (
 
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
+	diagnose *diagnose.Session
 
 	flagDebug    bool
 	flagSkips    []string
@@ -119,14 +123,14 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 }
 
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
+
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
-	ctx := context.Background()
-	diagnose.Init()
+	ctx := diagnose.WithDiagnose(context.Background(), c.diagnose)
 	err := c.offlineDiagnostics(ctx)
 
 	if err != nil {
@@ -167,11 +171,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	} else {
 		diagnose.SpotOk(ctx, "parse-config", "")
 	}
-
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
-	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
@@ -214,11 +217,50 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			})
 		}
 		return diagnose.ListenerChecks(sanitizedListeners)
-	})
-
-	return diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		_, err = server.setupStorage(config)
+	}); err != nil {
 		return err
+	}
+
+	// Errors in these items could stop Vault from starting but are not yet covered:
+	// TODO: logging configuration
+	// TODO: SetupTelemetry
+	// TODO: check for storage backend
+
+	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+
+		_, err = server.setupStorage(config)
+		if err != nil {
+			return err
+		}
+
+		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		// Initialize the Service Discovery, if there is one
+		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
+			// storage. See the consul package in physical for details.
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
-	return nil
 }

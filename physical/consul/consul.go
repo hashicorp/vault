@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/diagnose"
 	"golang.org/x/net/http2"
 )
 
@@ -129,6 +130,29 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
+	SetupSecureTLS(consulConf, conf, logger, false)
+
+	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
+	client, err := api.NewClient(consulConf)
+	if err != nil {
+		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+	}
+
+	// Setup the backend
+	c := &ConsulBackend{
+		path:            path,
+		client:          client,
+		kv:              client.KV(),
+		permitPool:      physical.NewPermitPool(maxParInt),
+		consistencyMode: consistencyMode,
+
+		sessionTTL:   sessionTTL,
+		lockWaitTime: lockWaitTime,
+	}
+	return c, nil
+}
+
+func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -162,37 +186,32 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	}
 
 	if consulConf.Scheme == "https" {
+		if isDiagnose {
+			certPath, okCert := conf["tls_cert_file"]
+			keyPath, okKey := conf["tls_key_file"]
+			if okCert && okKey {
+				err := diagnose.TLSFileChecks(certPath, keyPath)
+				if err != nil {
+					return err
+				}
+			} else {
+				return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+			}
+		}
+
 		// Use the parsed Address instead of the raw conf['address']
 		tlsClientConfig, err := tlsutil.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		consulConf.Transport.TLSClientConfig = tlsClientConfig
 		if err := http2.ConfigureTransport(consulConf.Transport); err != nil {
-			return nil, err
+			return err
 		}
 		logger.Debug("configured TLS")
 	}
-
-	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
-	client, err := api.NewClient(consulConf)
-	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
-	}
-
-	// Setup the backend
-	c := &ConsulBackend{
-		path:            path,
-		client:          client,
-		kv:              client.KV(),
-		permitPool:      physical.NewPermitPool(maxParInt),
-		consistencyMode: consistencyMode,
-
-		sessionTTL:   sessionTTL,
-		lockWaitTime: lockWaitTime,
-	}
-	return c, nil
+	return nil
 }
 
 // Used to run multiple entries via a transaction

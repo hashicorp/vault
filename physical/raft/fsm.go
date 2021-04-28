@@ -61,7 +61,7 @@ type FSMApplyResponse struct {
 	Success bool
 }
 
-// FSM is Vault's primary state storage. It writes updates to an bolt db file
+// FSM is Vault's primary state storage. It writes updates to a bolt db file
 // that lives on local disk. FSM implements raft.FSM and physical.Backend
 // interfaces.
 type FSM struct {
