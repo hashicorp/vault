@@ -21,6 +21,11 @@ type ListenerTelemetry struct {
 	UnauthenticatedMetricsAccessRaw interface{} `hcl:"unauthenticated_metrics_access"`
 }
 
+type ListenerProfiling struct {
+	UnauthenticatedPProfAccess    bool        `hcl:"-"`
+	UnauthenticatedPProfAccessRaw interface{} `hcl:"unauthenticated_pprof_access"`
+}
+
 // Listener is the listener configuration for the server.
 type Listener struct {
 	RawConfig map[string]interface{}
@@ -43,6 +48,7 @@ type Listener struct {
 	TLSCertFile                      string      `hcl:"tls_cert_file"`
 	TLSKeyFile                       string      `hcl:"tls_key_file"`
 	TLSMinVersion                    string      `hcl:"tls_min_version"`
+	TLSMaxVersion                    string      `hcl:"tls_max_version"`
 	TLSCipherSuites                  []uint16    `hcl:"-"`
 	TLSCipherSuitesRaw               string      `hcl:"tls_cipher_suites"`
 	TLSPreferServerCipherSuites      bool        `hcl:"-"`
@@ -80,6 +86,7 @@ type Listener struct {
 	SocketGroup string `hcl:"socket_group"`
 
 	Telemetry ListenerTelemetry `hcl:"telemetry"`
+	Profiling ListenerProfiling `hcl:"profiling"`
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
@@ -145,10 +152,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			if l.MaxRequestSizeRaw != nil {
 				if l.MaxRequestSize, err = parseutil.ParseInt(l.MaxRequestSizeRaw); err != nil {
 					return multierror.Prefix(fmt.Errorf("error parsing max_request_size: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				if l.MaxRequestSize < 0 {
-					return multierror.Prefix(errors.New("max_request_size cannot be negative"), fmt.Sprintf("listeners.%d", i))
 				}
 
 				l.MaxRequestSizeRaw = nil
@@ -315,6 +318,17 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
+			}
+		}
+
+		// Profiling
+		{
+			if l.Profiling.UnauthenticatedPProfAccessRaw != nil {
+				if l.Profiling.UnauthenticatedPProfAccess, err = parseutil.ParseBool(l.Profiling.UnauthenticatedPProfAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for profiling.unauthenticated_pprof_access: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.Profiling.UnauthenticatedPProfAccessRaw = nil
 			}
 		}
 

@@ -10,6 +10,23 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
+const (
+	// 10% shy of the NIST recommended maximum, leaving a buffer to account for
+	// tracking losses.
+	absoluteOperationMaximum = int64(3_865_470_566)
+	absoluteOperationMinimum = int64(1_000_000)
+	minimumRotationInterval  = 24 * time.Hour
+)
+
+var (
+	defaultRotationConfig = KeyRotationConfig{
+		MaxOperations: absoluteOperationMaximum,
+	}
+	disabledRotationConfig = KeyRotationConfig{
+		Disabled: true,
+	}
+)
+
 // Keyring is used to manage multiple encryption keys used by
 // the barrier. New keys can be installed and each has a sequential term.
 // The term used to encrypt a key is prefixed to the key written out.
@@ -19,15 +36,17 @@ import (
 // when a new key is added to the keyring, we can encrypt with the master key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey  []byte
-	keys       map[uint32]*Key
-	activeTerm uint32
+	masterKey      []byte
+	keys           map[uint32]*Key
+	activeTerm     uint32
+	rotationConfig KeyRotationConfig
 }
 
 // EncodedKeyring is used for serialization of the keyring
 type EncodedKeyring struct {
-	MasterKey []byte
-	Keys      []*Key
+	MasterKey      []byte
+	Keys           []*Key
+	RotationConfig KeyRotationConfig
 }
 
 // Key represents a single term, along with the key used.
@@ -36,6 +55,13 @@ type Key struct {
 	Version     int
 	Value       []byte
 	InstallTime time.Time
+	Encryptions uint64 `json:"encryptions,omitempty"`
+}
+
+type KeyRotationConfig struct {
+	Disabled      bool
+	MaxOperations int64
+	Interval      time.Duration
 }
 
 // Serialize is used to create a byte encoded key
@@ -55,8 +81,9 @@ func DeserializeKey(buf []byte) (*Key, error) {
 // NewKeyring creates a new keyring
 func NewKeyring() *Keyring {
 	k := &Keyring{
-		keys:       make(map[uint32]*Key),
-		activeTerm: 0,
+		keys:           make(map[uint32]*Key),
+		activeTerm:     0,
+		rotationConfig: defaultRotationConfig,
 	}
 	return k
 }
@@ -64,9 +91,10 @@ func NewKeyring() *Keyring {
 // Clone returns a new copy of the keyring
 func (k *Keyring) Clone() *Keyring {
 	clone := &Keyring{
-		masterKey:  k.masterKey,
-		keys:       make(map[uint32]*Key, len(k.keys)),
-		activeTerm: k.activeTerm,
+		masterKey:      k.masterKey,
+		keys:           make(map[uint32]*Key, len(k.keys)),
+		activeTerm:     k.activeTerm,
+		rotationConfig: k.rotationConfig,
 	}
 	for idx, key := range k.keys {
 		clone.keys[idx] = key
@@ -99,6 +127,14 @@ func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 	if key.Term > clone.activeTerm {
 		clone.activeTerm = key.Term
 	}
+
+	// Zero out encryption estimates for previous terms
+	for term, key := range clone.keys {
+		if term != clone.activeTerm {
+			key.Encryptions = 0
+		}
+	}
+
 	return clone, nil
 }
 
@@ -153,7 +189,8 @@ func (k *Keyring) MasterKey() []byte {
 func (k *Keyring) Serialize() ([]byte, error) {
 	// Create the encoded entry
 	enc := EncodedKeyring{
-		MasterKey: k.masterKey,
+		MasterKey:      k.masterKey,
+		RotationConfig: k.rotationConfig,
 	}
 	for _, key := range k.keys {
 		enc.Keys = append(enc.Keys, key)
@@ -175,6 +212,8 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Create a new keyring
 	k := NewKeyring()
 	k.masterKey = enc.MasterKey
+	k.rotationConfig = enc.RotationConfig
+	k.rotationConfig.Sanitize()
 	for _, key := range enc.Keys {
 		k.keys[key.Term] = key
 		if key.Term > k.activeTerm {
@@ -200,4 +239,31 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	for _, key := range k.keys {
 		memzero(key.Value)
 	}
+}
+
+func (c KeyRotationConfig) Clone() KeyRotationConfig {
+	clone := KeyRotationConfig{
+		MaxOperations: c.MaxOperations,
+		Interval:      c.Interval,
+		Disabled:      c.Disabled,
+	}
+
+	clone.Sanitize()
+	return clone
+}
+
+func (c *KeyRotationConfig) Sanitize() {
+	if c.MaxOperations == 0 || c.MaxOperations > absoluteOperationMaximum {
+		c.MaxOperations = absoluteOperationMaximum
+	}
+	if c.MaxOperations < absoluteOperationMinimum {
+		c.MaxOperations = absoluteOperationMinimum
+	}
+	if c.Interval > 0 && c.Interval < minimumRotationInterval {
+		c.Interval = minimumRotationInterval
+	}
+}
+
+func (c *KeyRotationConfig) Equals(config KeyRotationConfig) bool {
+	return c.MaxOperations == config.MaxOperations && c.Interval == config.Interval
 }

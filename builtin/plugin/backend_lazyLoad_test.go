@@ -15,7 +15,6 @@ import (
 )
 
 func TestBackend_lazyLoad(t *testing.T) {
-
 	// normal load
 	var invocations int
 	b := testLazyLoad(t, func() error {
@@ -47,7 +46,6 @@ func TestBackend_lazyLoad(t *testing.T) {
 }
 
 func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
-
 	sysView := newTestSystemView()
 
 	ctx := context.Background()
@@ -148,12 +146,15 @@ func (b *testBackend) Logger() hclog.Logger {
 func (b *testBackend) HandleRequest(context.Context, *logical.Request) (*logical.Response, error) {
 	panic("not needed")
 }
+
 func (b *testBackend) System() logical.SystemView {
 	panic("not needed")
 }
+
 func (b *testBackend) HandleExistenceCheck(context.Context, *logical.Request) (bool, bool, error) {
 	panic("not needed")
 }
+
 func (b *testBackend) InvalidateKey(context.Context, string) {
 	panic("not needed")
 }
@@ -174,7 +175,6 @@ func newTestSystemView() testSystemView {
 }
 
 func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error) {
-
 	return &pluginutil.PluginRunner{
 		Name:    "test-plugin-runner",
 		Builtin: true,

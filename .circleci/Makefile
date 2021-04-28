@@ -10,6 +10,14 @@ CONFIG ?= ci-config
 VERIFY ?= ci-verify
 
 CIRCLECI := circleci --skip-update-check
+ifeq ($(DEBUG_CIRCLECI_CLI),YES)
+CIRCLECI += --debug
+endif
+
+# For config processing, always refer to circleci.com not self-hosted circleci,
+# because self-hosted does not currently support the necessary API.
+CIRCLECI_CLI_HOST := https://circleci.com
+export CIRCLECI_CLI_HOST
 
 # Set up some documentation/help message variables.
 # We do not attempt to install the CircleCI CLI from this Makefile.
@@ -70,6 +78,8 @@ define GEN_CONFIG
 	@mv -f $@.tmp $@
 endef
 
+# Always re-generate the config, as we can't trust timestamps with git.
+.PHONY: $(OUT)
 $(OUT): $(CONFIG_SOURCE) 
 	$(GEN_CONFIG)
 	@echo "$@ updated"

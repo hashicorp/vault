@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -50,9 +49,7 @@ const (
 	reconcileTimeout = 60 * time.Second
 )
 
-var (
-	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
-)
+var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 
 // serviceRegistration is a ServiceRegistration that advertises the state of
 // Vault to Consul.
@@ -88,7 +85,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	if ok && disableReg != "" {
 		b, err := parseutil.ParseBool(disableReg)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing disable_registration parameter: %w", err)
 		}
 		disableRegistration = b
 	}
@@ -197,7 +194,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+		return nil, fmt.Errorf("client setup failed: %w", err)
 	}
 
 	// Setup the backend
@@ -327,12 +324,12 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 	// demuxer share a lock to synchronize information at the beginning
 	// and end of a handler's life (or after a handler wakes up from
 	// sleeping during a back-off/retry).
-	var shutdown bool
+	var shutdown atomicB.Bool
 	var registeredServiceID string
 	checkLock := new(int32)
 	serviceRegLock := new(int32)
 
-	for !shutdown {
+	for !shutdown.Load() {
 		select {
 		case <-c.notifyActiveCh:
 			// Run reconcile immediately upon active state change notification
@@ -356,7 +353,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 				// Enter handler with serviceRegLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
-					for !shutdown {
+					for !shutdown.Load() {
 						serviceID, err := c.reconcileConsul(registeredServiceID)
 						if err != nil {
 							if c.logger.IsWarn() {
@@ -382,7 +379,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 				// Enter handler with checkLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
-					for !shutdown {
+					for !shutdown.Load() {
 						if err := c.runCheck(c.isSealed.Load()); err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("check unable to talk with Consul backend", "error", err)
@@ -396,7 +393,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			}
 		case <-shutdownCh:
 			c.logger.Info("shutting down consul backend")
-			shutdown = true
+			shutdown.Store(true)
 		}
 	}
 
@@ -498,11 +495,11 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	}
 
 	if err := agent.ServiceRegister(service); err != nil {
-		return "", errwrap.Wrapf(`service registration failed: {{err}}`, err)
+		return "", fmt.Errorf(`service registration failed: %w`, err)
 	}
 
 	if err := agent.CheckRegister(sealedCheck); err != nil {
-		return serviceID, errwrap.Wrapf(`service check registration failed: {{err}}`, err)
+		return serviceID, fmt.Errorf(`service check registration failed: %w`, err)
 	}
 
 	return serviceID, nil
@@ -546,7 +543,7 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
+		return fmt.Errorf("failed to parse redirect URL %q: %w", addr, err)
 	}
 
 	var portStr string
@@ -560,12 +557,12 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 			portStr = "-1"
 			c.redirectHost = url.Path
 		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
+			return fmt.Errorf("failed to find a host:port in redirect address %q: %w", url.Host, err)
 		}
 	}
 	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
 	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+		return fmt.Errorf("failed to parse valid port %q: %w", portStr, err)
 	}
 
 	return nil

@@ -6,11 +6,11 @@ EXTERNAL_TOOLS=\
 BUILD_TAGS?=${TOOL}
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
+default: dev
+
 # bin generates the releaseable binaries for this plugin
 bin: fmtcheck generate
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
-
-default: dev
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin.

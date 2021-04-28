@@ -524,10 +524,10 @@ module('Unit | Machine | secrets-machine', function() {
       event: 'CONTINUE',
       params: 'database',
       expectedResults: {
-        value: 'list',
+        value: 'details',
         actions: [
-          { type: 'render', level: 'step', component: 'wizard/secrets-list' },
           { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+          { type: 'render', level: 'step', component: 'wizard/secrets-details' },
         ],
       },
     },

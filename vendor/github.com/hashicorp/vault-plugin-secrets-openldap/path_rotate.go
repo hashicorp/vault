@@ -116,7 +116,7 @@ func (b *backend) pathRotateRoleCredentialsUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
 
-	role, err := b.StaticRole(ctx, req.Storage, name)
+	role, err := b.staticRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}

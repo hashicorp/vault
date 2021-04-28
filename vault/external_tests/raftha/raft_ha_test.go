@@ -55,7 +55,7 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 
 func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundler, addClientCerts bool) {
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 
 	teststorage.RaftHASetup(&conf, &opts, bundler)
 	cluster := vault.NewTestCluster(t, &conf, &opts)

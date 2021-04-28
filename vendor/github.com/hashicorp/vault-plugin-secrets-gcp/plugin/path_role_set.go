@@ -2,17 +2,12 @@ package gcpsecrets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/api/iam/v1"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -122,13 +117,8 @@ func pathRoleSetRotateKey(b *backend) *framework.Path {
 
 func (b *backend) pathRoleSetExistenceCheck(rolesetFieldName string) framework.ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
-		// check for either name or roleset
-		nameRaw, ok := d.GetOk(rolesetFieldName)
-		if !ok {
-			return false, errors.New("roleset name is required")
-		}
-
-		rs, err := getRoleSet(nameRaw.(string), ctx, req.Storage)
+		rsName := d.Get(rolesetFieldName).(string)
+		rs, err := getRoleSet(rsName, ctx, req.Storage)
 		if err != nil {
 			return false, err
 		}
@@ -138,12 +128,8 @@ func (b *backend) pathRoleSetExistenceCheck(rolesetFieldName string) framework.E
 }
 
 func (b *backend) pathRoleSetRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return logical.ErrorResponse("name is required"), nil
-	}
-
-	rs, err := getRoleSet(nameRaw.(string), ctx, req.Storage)
+	name := d.Get("name").(string)
+	rs, err := getRoleSet(name, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -170,12 +156,11 @@ func (b *backend) pathRoleSetRead(ctx context.Context, req *logical.Request, d *
 	}, nil
 }
 
-func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return logical.ErrorResponse("name is required"), nil
-	}
-	rsName := nameRaw.(string)
+func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, err error) {
+	rsName := d.Get("name").(string)
+
+	b.rolesetLock.Lock()
+	defer b.rolesetLock.Unlock()
 
 	rs, err := getRoleSet(rsName, ctx, req.Storage)
 	if err != nil {
@@ -185,93 +170,38 @@ func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d
 		return nil, nil
 	}
 
-	b.rolesetLock.Lock()
-	defer b.rolesetLock.Unlock()
+	resources := rs.boundResources()
 
-	if rs.AccountId != nil {
-		_, err := framework.PutWAL(ctx, req.Storage, walTypeAccount, &walAccount{
-			RoleSet: rsName,
-			Id:      *rs.AccountId,
-		})
-		if err != nil {
-			return nil, errwrap.Wrapf("unable to create WAL entry to clean up service account: {{err}}", err)
-		}
-
-		for resName, roleSet := range rs.Bindings {
-			_, err := framework.PutWAL(ctx, req.Storage, walTypeIamPolicy, &walIamPolicy{
-				RoleSet:   rsName,
-				AccountId: *rs.AccountId,
-				Resource:  resName,
-				Roles:     roleSet.ToSlice(),
-			})
-			if err != nil {
-				return nil, errwrap.Wrapf("unable to create WAL entry to clean up service account bindings: {{err}}", err)
-			}
-		}
-
-		if rs.TokenGen != nil {
-			_, err := framework.PutWAL(ctx, req.Storage, walTypeAccount, &walAccountKey{
-				RoleSet:            rsName,
-				ServiceAccountName: rs.AccountId.ResourceName(),
-				KeyName:            rs.TokenGen.KeyName,
-			})
-			if err != nil {
-				return nil, errwrap.Wrapf("unable to create WAL entry to clean up service account key: {{err}}", err)
-			}
-		}
-	}
-
-	if err := req.Storage.Delete(ctx, fmt.Sprintf("roleset/%s", nameRaw)); err != nil {
-		return nil, err
-	}
-
-	// Clean up resources:
-	httpC, err := b.HTTPClient(req.Storage)
+	// Add WALs
+	walIds, err := b.addWalsForRoleSetResources(ctx, req, rs.Name, resources)
 	if err != nil {
+		return nil, errwrap.Wrapf(fmt.Sprintf("unable to create WALs for role set GCP resources %s: {{err}}", rsName), err)
+	}
+
+	// Delete roleset
+	b.Logger().Debug("deleting roleset from storage", "name", rsName)
+	if err := req.Storage.Delete(ctx, fmt.Sprintf("roleset/%s", rsName)); err != nil {
 		return nil, err
 	}
 
-	iamAdmin, err := iam.NewService(ctx, option.WithHTTPClient(httpC))
-	if err != nil {
-		return nil, err
+	// Try to clean up resources.
+	if cleanupErr := b.tryDeleteRoleSetResources(ctx, req, resources, walIds); cleanupErr != nil {
+		b.Logger().Warn(
+			"unable to clean up unused GCP resources from deleted roleset. WALs exist to clean up but ignoring error",
+			"roleset", rsName, "errors", cleanupErr)
+		return &logical.Response{Warnings: []string{cleanupErr.Error()}}, nil
 	}
 
-	apiHandle := iamutil.GetApiHandle(httpC, useragent.String())
-
-	warnings := make([]string, 0)
-	if rs.AccountId != nil {
-		if err := b.deleteTokenGenKey(ctx, iamAdmin, rs.TokenGen); err != nil {
-			w := fmt.Sprintf("unable to delete key under service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.ResourceName(), err)
-			warnings = append(warnings, w)
-		}
-
-		if err := b.deleteServiceAccount(ctx, iamAdmin, rs.AccountId); err != nil {
-			w := fmt.Sprintf("unable to delete service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.ResourceName(), err)
-			warnings = append(warnings, w)
-		}
-
-		if merr := b.removeBindings(ctx, apiHandle, rs.AccountId.EmailOrId, rs.Bindings); merr != nil {
-			for _, err := range merr.Errors {
-				w := fmt.Sprintf("unable to delete IAM policy bindings for service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.EmailOrId, err)
-				warnings = append(warnings, w)
-			}
-		}
-	}
-
-	if len(warnings) > 0 {
-		return &logical.Response{Warnings: warnings}, nil
-	}
-
+	b.Logger().Debug("successfully deleted roleset and GCP resources", "name", rsName)
 	return nil, nil
 }
 
 func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var warnings []string
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return logical.ErrorResponse("name is required"), nil
-	}
-	name := nameRaw.(string)
+	name := d.Get("name").(string)
+
+	b.rolesetLock.Lock()
+	defer b.rolesetLock.Unlock()
 
 	rs, err := getRoleSet(name, ctx, req.Storage)
 	if err != nil {
@@ -293,7 +223,7 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 		case SecretTypeKey, SecretTypeAccessToken:
 			rs.SecretType = secretType
 		default:
-			return logical.ErrorResponse(fmt.Sprintf(`invalid "secret_type" value: "%s"`, secretType)), nil
+			return logical.ErrorResponse(`invalid "secret_type" value: "%s"`, secretType), nil
 		}
 	} else {
 		secretTypeRaw, ok := d.GetOk("secret_type")
@@ -308,7 +238,7 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 	if ok {
 		project = projectRaw.(string)
 		if !isCreate && rs.AccountId.Project != project {
-			return logical.ErrorResponse(fmt.Sprintf("cannot change project for existing role set (old: %s, new: %s)", rs.AccountId.Project, project)), nil
+			return logical.ErrorResponse("cannot change project for existing role set (old: %s, new: %s)", rs.AccountId.Project, project), nil
 		}
 		if len(project) == 0 {
 			return logical.ErrorResponse("given empty project"), nil
@@ -376,14 +306,14 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 	var bindings ResourceBindings
 	bindings, err = util.ParseBindings(bRaw.(string))
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("unable to parse bindings: %v", err)), nil
+		return logical.ErrorResponse("unable to parse bindings: %v", err), nil
 	}
 	if len(bindings) == 0 {
 		return logical.ErrorResponse("unable to parse any bindings from given bindings HCL"), nil
 	}
 	rs.RawBindings = bRaw.(string)
 
-	updateWarns, err := b.saveRoleSetWithNewAccount(ctx, req.Storage, rs, project, bindings, scopes)
+	updateWarns, err := b.saveRoleSetWithNewAccount(ctx, req, rs, project, bindings, scopes)
 	if updateWarns != nil {
 		warnings = append(warnings, updateWarns...)
 	}
@@ -404,18 +334,17 @@ func (b *backend) pathRoleSetList(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathRoleSetRotateAccount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return logical.ErrorResponse("name is required"), nil
-	}
-	name := nameRaw.(string)
+	name := d.Get("name").(string)
+
+	b.rolesetLock.Lock()
+	defer b.rolesetLock.Unlock()
 
 	rs, err := getRoleSet(name, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if rs == nil {
-		return logical.ErrorResponse(fmt.Sprintf("roleset '%s' not found", name)), nil
+		return logical.ErrorResponse("roleset '%s' not found", name), nil
 	}
 
 	var scopes []string
@@ -423,7 +352,7 @@ func (b *backend) pathRoleSetRotateAccount(ctx context.Context, req *logical.Req
 		scopes = rs.TokenGen.Scopes
 	}
 
-	warnings, err := b.saveRoleSetWithNewAccount(ctx, req.Storage, rs, rs.AccountId.Project, nil, scopes)
+	warnings, err := b.saveRoleSetWithNewAccount(ctx, req, rs, rs.AccountId.Project, rs.Bindings, scopes)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	} else if warnings != nil && len(warnings) > 0 {
@@ -433,18 +362,17 @@ func (b *backend) pathRoleSetRotateAccount(ctx context.Context, req *logical.Req
 }
 
 func (b *backend) pathRoleSetRotateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return logical.ErrorResponse("name is required"), nil
-	}
-	name := nameRaw.(string)
+	name := d.Get("name").(string)
+
+	b.rolesetLock.Lock()
+	defer b.rolesetLock.Unlock()
 
 	rs, err := getRoleSet(name, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if rs == nil {
-		return logical.ErrorResponse(fmt.Sprintf("roleset '%s' not found", name)), nil
+		return logical.ErrorResponse("roleset '%s' not found", name), nil
 	}
 
 	if rs.SecretType != SecretTypeAccessToken {
@@ -454,7 +382,7 @@ func (b *backend) pathRoleSetRotateKey(ctx context.Context, req *logical.Request
 	if rs.TokenGen != nil {
 		scopes = rs.TokenGen.Scopes
 	}
-	warn, err := b.saveRoleSetWithNewTokenKey(ctx, req.Storage, rs, scopes)
+	warn, err := b.saveRoleSetWithNewTokenKey(ctx, req, rs, scopes)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -549,7 +477,7 @@ generated previously.
 
 const pathRoleSetRotateKeyHelpSyn = `Rotate the service account key used to generate access tokens for a roleset.`
 const pathRoleSetRotateKeyHelpDesc = `
-This path allows you to rotate (i.e. recreate) the service account key 
+This path allows you to rotate (i.e. recreate) the service account key
 used to generate access tokens under a given role set. This path only
 applies to role sets that generate access tokens and will not delete
 the associated service account.`

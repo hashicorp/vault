@@ -7,7 +7,7 @@ const CREATE_FIELDS = [
   'validPrincipals',
   'certType',
   'criticalOptions',
-  'extension',
+  'extensions',
   'ttl',
 ];
 
@@ -35,7 +35,7 @@ export default Model.extend({
     label: 'Key ID',
   }),
   criticalOptions: attr('object'),
-  extension: attr('object'),
+  extensions: attr('object'),
 
   leaseId: attr('string', {
     label: 'Lease ID',

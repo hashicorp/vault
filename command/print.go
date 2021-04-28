@@ -7,8 +7,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PrintCommand)(nil)
-var _ cli.CommandAutocomplete = (*PrintCommand)(nil)
+var (
+	_ cli.Command             = (*PrintCommand)(nil)
+	_ cli.CommandAutocomplete = (*PrintCommand)(nil)
+)
 
 type PrintCommand struct {
 	*BaseCommand

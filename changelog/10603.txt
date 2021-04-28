@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/db/snowflake: Added support for Snowflake to the Database Secret Engine
+```

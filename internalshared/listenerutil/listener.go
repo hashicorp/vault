@@ -111,10 +111,23 @@ PASSPHRASECORRECT:
 		l.TLSMinVersion = "tls12"
 	}
 
+	if l.TLSMaxVersion == "" {
+		l.TLSMaxVersion = "tls13"
+	}
+
 	var ok bool
 	tlsConf.MinVersion, ok = tlsutil.TLSLookup[l.TLSMinVersion]
 	if !ok {
 		return nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMinVersion)
+	}
+
+	tlsConf.MaxVersion, ok = tlsutil.TLSLookup[l.TLSMaxVersion]
+	if !ok {
+		return nil, nil, fmt.Errorf("'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMaxVersion)
+	}
+
+	if tlsConf.MaxVersion < tlsConf.MinVersion {
+		return nil, nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
 	if len(l.TLSCipherSuites) > 0 {

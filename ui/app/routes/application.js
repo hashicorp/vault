@@ -8,6 +8,7 @@ export default Route.extend({
   routing: service('router'),
   wizard: service(),
   namespaceService: service('namespace'),
+  featureFlagService: service('featureFlag'),
 
   actions: {
     willTransition() {
@@ -47,6 +48,7 @@ export default Route.extend({
 
       // if we have queryParams, update the namespace so that the observer can fire on the controller
       if (queryParams) {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         this.controllerFor('vault.cluster').set('namespaceQueryParam', queryParams.namespace || '');
       }
 
@@ -80,5 +82,16 @@ export default Route.extend({
       });
       return true;
     },
+  },
+
+  async beforeModel() {
+    const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+      method: 'GET',
+    });
+    if (result.status === 200) {
+      const body = await result.json();
+      const flags = body.feature_flags || [];
+      this.featureFlagService.setFeatureFlags(flags);
+    }
   },
 });

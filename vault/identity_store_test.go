@@ -653,7 +653,6 @@ func expectSingleCount(t *testing.T, sink *metrics.InmemSink, keyPrefix string) 
 	if counter.Sum != 1.0 {
 		t.Errorf("Counter sum %v is not 1.", counter.Sum)
 	}
-
 }
 
 func TestIdentityStore_NewEntityCounter(t *testing.T) {

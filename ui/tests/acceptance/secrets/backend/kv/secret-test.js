@@ -1,4 +1,4 @@
-import { visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import { click, visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -20,7 +20,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create meep', function(hooks) {
+module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -65,6 +65,7 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
     await mountSecrets
       .next()
       .path(enginePath)
+      .toggleOptions()
       .version(1)
       .submit();
     await listPage.create();
@@ -83,6 +84,7 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
     await mountSecrets
       .next()
       .path(enginePath)
+      .toggleOptions()
       .version(1)
       .submit();
     await listPage.create();
@@ -137,6 +139,7 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
     await mountSecrets
       .next()
       .path(enginePath)
+      .toggleOptions()
       .version(1)
       .submit();
     await listPage.create();
@@ -286,6 +289,34 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
         `${path}: show page renders correctly`
       );
     }
+  });
+
+  test('create secret with space shows version data', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'space space';
+    // mount version 2
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .submit();
+    await settled();
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
+    await settled();
+    await click('[data-test-popup-menu-trigger="history"]');
+    await settled();
+    await click('[data-test-version-history]');
+    await settled();
+    assert.dom('[data-test-list-item-content]').exists('renders the version and not an error state');
+    // click on version
+    await click('[data-test-popup-menu-trigger="true"]');
+    await click('[data-test-version]');
+    await settled();
+    // perform encode function that should be done by the encodePath
+    let encodedSecretPath = secretPath.replace(/ /g, '%20');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
   });
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI

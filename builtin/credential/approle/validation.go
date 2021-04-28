@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -79,7 +78,12 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 		if len(roleBoundCIDRList) != 0 {
 			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
 			if !subset || err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: {{err}}", roleBoundCIDRList, secretIDCIDRs), err)
+				return fmt.Errorf(
+					"failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %w",
+					roleBoundCIDRList,
+					secretIDCIDRs,
+					err,
+				)
 			}
 		}
 	}
@@ -151,7 +155,7 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 
 	if persistNeeded {
 		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC, &result); err != nil {
-			return nil, errwrap.Wrapf("failed to upgrade role storage entry {{err}}", err)
+			return nil, fmt.Errorf("failed to upgrade role storage entry %w", err)
 		}
 	}
 
@@ -194,11 +198,11 @@ func (b *backend) nonLockedSetSecretIDStorageEntry(ctx context.Context, s logica
 func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, roleName, secretID, hmacKey, roleSecretIDPrefix string, secretEntry *secretIDStorageEntry) (*secretIDStorageEntry, error) {
 	secretIDHMAC, err := createHMAC(hmacKey, secretID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of secret ID: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of secret ID: %w", err)
 	}
 	roleNameHMAC, err := createHMAC(hmacKey, roleName)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	lock := b.secretIDLock(secretIDHMAC)
@@ -238,15 +242,8 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	secretEntry.CreationTime = currentTime
 	secretEntry.LastUpdatedTime = currentTime
 
-	// If SecretIDTTL is not specified or if it crosses the backend mount's limit,
-	// cap the expiration to backend's max. Otherwise, use it to determine the
-	// expiration time.
-	if secretEntry.SecretIDTTL < time.Duration(0) || secretEntry.SecretIDTTL > b.System().MaxLeaseTTL() {
-		secretEntry.ExpirationTime = currentTime.Add(b.System().MaxLeaseTTL())
-	} else if secretEntry.SecretIDTTL != time.Duration(0) {
-		// Set the ExpirationTime only if SecretIDTTL was set. SecretIDs should not
-		// expire by default.
-		secretEntry.ExpirationTime = currentTime.Add(secretEntry.SecretIDTTL)
+	if ttl := b.deriveSecretIDTTL(secretEntry.SecretIDTTL); ttl != time.Duration(0) {
+		secretEntry.ExpirationTime = currentTime.Add(ttl)
 	}
 
 	// Before storing the SecretID, store its accessor.
@@ -259,6 +256,20 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	}
 
 	return secretEntry, nil
+}
+
+// deriveSecretIDTTL determines the secret ID TTL to use based on the system's
+// max lease TTL.
+//
+// If SecretIDTTL is negative or if it crosses the backend mount's limit,
+// return to backend's max lease TTL. Otherwise, return the provided secretIDTTL
+// value.
+func (b *backend) deriveSecretIDTTL(secretIDTTL time.Duration) time.Duration {
+	if secretIDTTL < time.Duration(0) || secretIDTTL > b.System().MaxLeaseTTL() {
+		return b.System().MaxLeaseTTL()
+	}
+
+	return secretIDTTL
 }
 
 // secretIDAccessorEntry is used to read the storage entry that maps an
@@ -328,7 +339,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	}); err != nil {
 		return err
 	} else if err = s.Put(ctx, entry); err != nil {
-		return errwrap.Wrapf("failed to persist accessor index entry: {{err}}", err)
+		return fmt.Errorf("failed to persist accessor index entry: %w", err)
 	}
 
 	return nil
@@ -353,7 +364,7 @@ func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 
 	// Delete the accessor of the SecretID first
 	if err := s.Delete(ctx, entryIndex); err != nil {
-		return errwrap.Wrapf("failed to delete accessor storage entry: {{err}}", err)
+		return fmt.Errorf("failed to delete accessor storage entry: %w", err)
 	}
 
 	return nil
@@ -364,7 +375,7 @@ func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 func (b *backend) flushRoleSecrets(ctx context.Context, s logical.Storage, roleName, hmacKey, roleSecretIDPrefix string) error {
 	roleNameHMAC, err := createHMAC(hmacKey, roleName)
 	if err != nil {
-		return errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	// Acquire the custom lock to perform listing of SecretIDs
@@ -382,7 +393,7 @@ func (b *backend) flushRoleSecrets(ctx context.Context, s logical.Storage, roleN
 		entryIndex := fmt.Sprintf("%s%s/%s", roleSecretIDPrefix, roleNameHMAC, secretIDHMAC)
 		if err := s.Delete(ctx, entryIndex); err != nil {
 			lock.Unlock()
-			return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
+			return fmt.Errorf("error deleting SecretID %q from storage: %w", secretIDHMAC, err)
 		}
 		lock.Unlock()
 	}

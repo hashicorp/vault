@@ -590,7 +590,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				err = os.Mkdir(outputPath, 0755)
+				err = os.Mkdir(outputPath, 0o755)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -685,6 +685,7 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 		case fh.Name == filepath.Join(basePath, "index.json"):
 		case fh.Name == filepath.Join(basePath, "replication_status.json"):
 		case fh.Name == filepath.Join(basePath, "server_status.json"):
+		case fh.Name == filepath.Join(basePath, "vault.log"):
 		default:
 			return fmt.Errorf("unexpected file: %s", fh.Name)
 		}

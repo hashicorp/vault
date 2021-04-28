@@ -56,6 +56,9 @@ module.exports = function(environment) {
     ENV.APP.rootElement = '#ember-testing';
     ENV.APP.autoboot = false;
     ENV.flashMessageDefaults.timeout = 50;
+    ENV['ember-cli-mirage'] = {
+      enabled: false,
+    };
   }
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;
@@ -64,6 +67,7 @@ module.exports = function(environment) {
     ENV.contentSecurityPolicy = {
       'connect-src': ["'self'"],
       'img-src': ["'self'", 'data:'],
+      'font-src': ["'self'"],
       'form-action': ["'none'"],
       'script-src': ["'self'"],
       'style-src': ["'unsafe-inline'", "'self'"],

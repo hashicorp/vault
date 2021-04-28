@@ -26,12 +26,12 @@
   </InfoTableRow>
   <InfoTableRow @label="Created" @value={{model.creationTime}}>
     <time datetime={{model.creationTime}} title={{model.creationTime}}>
-      {{date-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
+      {{date-format model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
   </InfoTableRow>
   <InfoTableRow @label="Last Updated" @value={{model.lastUpdateTime}}>
     <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
-      {{date-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
+      {{date-format model.lastUpdateTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
   </InfoTableRow>
 </div>

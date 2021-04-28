@@ -108,7 +108,14 @@ func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 
 func TestTokenStore_CubbyholeTidy(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
+	testTokenStore_CubbyholeTidy(t, c, root, namespace.RootContext(nil))
+}
+
+func testTokenStore_CubbyholeTidy(t *testing.T, c *Core, root string, nsCtx context.Context) {
 	ts := c.tokenStore
+
+	backend := c.router.MatchingBackend(nsCtx, cubbyholeMountPath)
+	view := c.router.MatchingStorageByAPIPath(nsCtx, cubbyholeMountPath)
 
 	for i := 1; i <= 20; i++ {
 		// Create 20 tokens
@@ -121,7 +128,7 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 			},
 		}
 
-		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		resp := testMakeTokenViaRequestContext(t, nsCtx, ts, tokenReq)
 		token := resp.Auth.ClientToken
 
 		// Supplying token ID forces SHA1 hashing to be used
@@ -139,14 +146,14 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			resp, err := ts.cubbyholeBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			resp, err := backend.HandleRequest(nsCtx, &logical.Request{
 				ClientToken: invalidToken,
 				Operation:   logical.UpdateOperation,
 				Path:        "cubbyhole/sample/data",
 				Data: map[string]interface{}{
 					"foo": "bar",
 				},
-				Storage: ts.cubbyholeBackend.storageView,
+				Storage: view,
 			})
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
@@ -157,7 +164,7 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 		if i%2 == 0 {
 			continue
 		}
-		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		resp, err := c.HandleRequest(nsCtx, &logical.Request{
 			ClientToken: token,
 			Operation:   logical.UpdateOperation,
 			Path:        "cubbyhole/sample/data",
@@ -170,8 +177,18 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 		}
 	}
 
+	// List all the cubbyhole storage keys
+	cubbyholeKeys, err := view.List(nsCtx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(cubbyholeKeys) != 14 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 14, actual: %d", len(cubbyholeKeys))
+	}
+
 	// Tidy cubbyhole storage
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	resp, err := ts.HandleRequest(nsCtx, &logical.Request{
 		Path:      "tidy",
 		Operation: logical.UpdateOperation,
 	})
@@ -183,7 +200,7 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// List all the cubbyhole storage keys
-	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	cubbyholeKeys, err = view.List(nsCtx, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -523,7 +540,12 @@ func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl str
 
 func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request) *logical.Response {
 	t.Helper()
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	return testMakeTokenViaRequestContext(t, namespace.RootContext(nil), ts, req)
+}
+
+func testMakeTokenViaRequestContext(t testing.TB, ctx context.Context, ts *TokenStore, req *logical.Request) *logical.Response {
+	t.Helper()
+	resp, err := ts.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,18 +557,23 @@ func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request)
 		return resp
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	te := &logical.TokenEntry{
 		Path:        resp.Auth.CreationPath,
-		NamespaceID: namespace.RootNamespaceID,
+		NamespaceID: ns.ID,
 	}
 
 	if resp.Auth.TokenType != logical.TokenTypeBatch {
-		if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), te, resp.Auth); err != nil {
+		if err := ts.expiration.RegisterAuth(ctx, te, resp.Auth); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	te, err = ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	te, err = ts.Lookup(ctx, resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1928,16 +1955,11 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
-		"ttl": "5m",
+		"ttl":      "5m",
+		"policies": "root",
 	}
+	resp := testMakeTokenViaRequest(t, ts, req)
 
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v; resp: %#v", err, resp)
-	}
-	if resp == nil || resp.Auth == nil {
-		t.Fatalf("failed to create a root token using another root token")
-	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"root"}) {
 		t.Fatalf("bad: policies: expected: root; actual: %s", resp.Auth.Policies)
 	}
@@ -1949,9 +1971,13 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 	req.Data = map[string]interface{}{
 		"ttl": "0",
 	}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatalf("expected error")
+	}
+	expectedErr := "expiring root tokens cannot create non-expiring root tokens"
+	if resp.Data["error"].(string) != expectedErr {
+		t.Fatalf("got err=%v, expected=%v", resp.Data["error"], expectedErr)
 	}
 }
 
@@ -2702,6 +2728,99 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 	}
 	if !policyFound {
 		t.Fatalf("Policy '%s' not derived by entity but should be. Auth %#v", testPolicyName, resp.Auth)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	i := core.identityStore
+	ctx := namespace.RootContext(nil)
+	testPolicyName := "testpolicy"
+	entityAliasName := "tEStEntityAliaS"
+	entityAliasNameLower := "testentityalias"
+	testRoleName := "test"
+
+	// Create manually an entity
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":     "testentity",
+			"policies": []string{testPolicyName},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Find mount accessor
+	resp, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "auth",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	tokenMountAccessor := resp.Data["token/"].(map[string]interface{})["accessor"].(string)
+
+	// Create manually an entity alias
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity-alias",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":           entityAliasName,
+			"canonical_id":   entityID,
+			"mount_accessor": tokenMountAccessor,
+		},
+	})
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
+
+	// Create token role
+	resp, err = core.HandleRequest(ctx, &logical.Request{
+		Path:        "auth/token/roles/" + testRoleName,
+		ClientToken: root,
+		Operation:   logical.CreateOperation,
+		Data: map[string]interface{}{
+			"orphan":                 true,
+			"period":                 "72h",
+			"path_suffix":            "happenin",
+			"bound_cidrs":            []string{"0.0.0.0/0"},
+			"allowed_entity_aliases": []string{"test1", "test2", entityAliasName},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	respMixedCase, err := core.HandleRequest(ctx, &logical.Request{
+		Path:        "auth/token/create/" + testRoleName,
+		Operation:   logical.UpdateOperation,
+		ClientToken: root,
+		Data: map[string]interface{}{
+			"entity_alias": entityAliasName,
+		},
+	})
+	if respMixedCase.Auth.EntityID != entityID {
+		t.Fatalf("expected '%s' got '%s'", entityID, respMixedCase.Auth.EntityID)
+	}
+
+	// lowercase entity alias should match a mixed case alias
+	respLowerCase, err := core.HandleRequest(ctx, &logical.Request{
+		Path:        "auth/token/create/" + testRoleName,
+		Operation:   logical.UpdateOperation,
+		ClientToken: root,
+		Data: map[string]interface{}{
+			"entity_alias": entityAliasNameLower,
+		},
+	})
+
+	// A token created with the mixed case alias should return the same entity
+	// id as the normal case response.
+	if respLowerCase.Auth.EntityID != entityID {
+		t.Fatalf("expected '%s' got '%s'", entityID, respLowerCase.Auth.EntityID)
 	}
 }
 
@@ -3959,7 +4078,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 func TestTokenStore_RoleTokenFields(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	//c, _, root := TestCoreUnsealed(t)
+	// c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	rootContext := namespace.RootContext(context.Background())
 
@@ -4374,6 +4493,7 @@ func testTokenStore_NumUses_SelfLookupHelper(t *testing.T, core *Core, clientTok
 		t.Fatalf("num_uses mismatch (expected %d, got %d)", expectedNumUses, actualNumUses)
 	}
 }
+
 func TestTokenStore_NumUses(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 	roleNumUses := 10

@@ -33,11 +33,11 @@ func (b *Backend) pathRoles() *framework.Path {
 			},
 			"ip_addresses": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: fmt.Sprintf("IP address to be added to the whitelist for the API key. Optional for %s and %s keys.", orgProgrammaticAPIKey, projectProgrammaticAPIKey),
+				Description: fmt.Sprintf("IP address to be added to the access list for the API key. Optional for %s and %s keys.", orgProgrammaticAPIKey, projectProgrammaticAPIKey),
 			},
 			"cidr_blocks": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: fmt.Sprintf("Whitelist entry in CIDR notation to be added for the API key. Optional for %s and %s keys.", orgProgrammaticAPIKey, projectProgrammaticAPIKey),
+				Description: fmt.Sprintf("Access list entry in CIDR notation to be added for the API key. Optional for %s and %s keys.", orgProgrammaticAPIKey, projectProgrammaticAPIKey),
 			},
 			"project_roles": {
 				Type:        framework.TypeCommaStringSlice,
@@ -105,7 +105,7 @@ func (b *Backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		credentialEntry.OrganizationID = organizationIDRaw.(string)
 	}
 
-	getAPIWhitelistArgs(credentialEntry, d)
+	getAPIAccessListArgs(credentialEntry, d)
 
 	if projectIDRaw, ok := d.GetOk("project_id"); ok {
 		projectID := projectIDRaw.(string)
@@ -149,7 +149,7 @@ func (b *Backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	return &resp, nil
 }
 
-func getAPIWhitelistArgs(credentialEntry *atlasCredentialEntry, d *framework.FieldData) {
+func getAPIAccessListArgs(credentialEntry *atlasCredentialEntry, d *framework.FieldData) {
 
 	if cidrBlocks, ok := d.GetOk("cidr_blocks"); ok {
 		credentialEntry.CIDRBlocks = cidrBlocks.([]string)
@@ -247,7 +247,7 @@ The "roles" parameter specifies the MongoDB Atlas Programmatic Key roles that sh
 to the Programmatic API keys created for a given role. At least one role should be provided
 and must be valid for key level (project or org).
 
-"ip_addresses" and "cidr_blocks" are used to add whitelist entries for the API key.
+"ip_addresses" and "cidr_blocks" are used to add access list entries for the API key.
 
 "project_roles" is used when both "organization_id" and "project_id" are supplied. 
 And it's a list of roles that the API Key should be granted. A minimum of one role 

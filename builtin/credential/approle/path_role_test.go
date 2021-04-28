@@ -1890,7 +1890,6 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			// Construct the storage entry object based on our test case.
 			tokenTypeKV := ""
 			if !tt.storageValMissing {
@@ -1927,6 +1926,95 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 			}
 			if diff := deep.Equal(resEntry, exp); diff != nil {
 				t.Fatal(diff)
+			}
+		})
+	}
+}
+
+func TestAppRole_SecretID_WithTTL(t *testing.T) {
+	tests := []struct {
+		name      string
+		roleName  string
+		ttl       int64
+		sysTTLCap bool
+	}{
+		{
+			"zero ttl",
+			"role-zero-ttl",
+			0,
+			false,
+		},
+		{
+			"custom ttl",
+			"role-custom-ttl",
+			60,
+			false,
+		},
+		{
+			"system ttl capped",
+			"role-sys-ttl-cap",
+			700000000,
+			true,
+		},
+	}
+
+	b, storage := createBackendWithStorage(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create role
+			roleData := map[string]interface{}{
+				"policies":      "default",
+				"secret_id_ttl": tt.ttl,
+			}
+
+			roleReq := &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "role/" + tt.roleName,
+				Storage:   storage,
+				Data:      roleData,
+			}
+			resp, err := b.HandleRequest(context.Background(), roleReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			// Generate secret ID
+			secretIDReq := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "role/" + tt.roleName + "/secret-id",
+				Storage:   storage,
+			}
+			resp, err = b.HandleRequest(context.Background(), secretIDReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			// Extract the "ttl" value from the response data if it exists
+			ttlRaw, okTTL := resp.Data["secret_id_ttl"]
+			if !okTTL {
+				t.Fatalf("expected TTL value in response")
+			}
+
+			var (
+				respTTL int64
+				ok      bool
+			)
+			respTTL, ok = ttlRaw.(int64)
+			if !ok {
+				t.Fatalf("expected ttl to be an integer, got: %s", err)
+			}
+
+			// Verify secret ID response for different cases
+			switch {
+			case tt.sysTTLCap:
+				if respTTL != int64(b.System().MaxLeaseTTL().Seconds()) {
+					t.Fatalf("expected TTL value to be system's max lease TTL, got: %d", respTTL)
+				}
+			default:
+				if respTTL != tt.ttl {
+					t.Fatalf("expected TTL value to be %d, got: %d", tt.ttl, respTTL)
+				}
 			}
 		})
 	}

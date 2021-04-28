@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
@@ -104,7 +104,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   });
 
   test('cert config: sign intermediate and set signed intermediate', async function(assert) {
-    // TODO confirmed worked, issue with timing.
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
@@ -113,7 +112,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.form.generateCA('Intermediate CA', 'intermediate');
     await settled();
     // cache csr
-    csrVal = page.form.csr;
+    await click('.masked-input-toggle');
+    csrVal = document.querySelector('.masked-value').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: rootPath });
@@ -122,7 +122,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
-    intermediateCert = page.form.certificate;
+    await click('.masked-input-toggle');
+    intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: intermediatePath });
@@ -131,6 +132,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.submit();
     await settled();
-    assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');
+    assert.dom('[data-test-go-replace-ca]').exists();
   });
 });

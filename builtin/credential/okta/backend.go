@@ -12,6 +12,11 @@ import (
 	"github.com/okta/okta-sdk-golang/v2/okta"
 )
 
+const (
+	mfaPushMethod = "push"
+	mfaTOTPMethod = "token:software:totp"
+)
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -57,7 +62,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp string) ([]string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
@@ -160,30 +165,53 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		// active factor enrollment). This bypass removes visibility
 		// into the authenticating user's password expiry, but still ensures the
 		// credentials are valid and the user is not locked out.
+		//
+		// API reference: https://developer.okta.com/docs/reference/api/authn/#verify-factor
 		if cfg.BypassOktaMFA {
 			result.Status = "SUCCESS"
 			break
 		}
 
-		factorAvailable := false
+		var selectedFactor, totpFactor, pushFactor *mfaFactor
 
-		var selectedFactor mfaFactor
-		// only okta push is currently supported
+		// Scan for available factors
 		for _, v := range result.Embedded.Factors {
-			if v.Type == "push" && v.Provider == "OKTA" {
-				factorAvailable = true
-				selectedFactor = v
+			v := v // create a new copy since we'll be taking the address later
+
+			if v.Provider != "OKTA" {
+				continue
+			}
+
+			switch v.Type {
+			case mfaTOTPMethod:
+				totpFactor = &v
+			case mfaPushMethod:
+				pushFactor = &v
 			}
 		}
 
-		if !factorAvailable {
-			return nil, logical.ErrorResponse("Okta Verify Push factor is required in order to perform MFA"), nil, nil
+		// Okta push and totp are currently supported. If a totp passcode is provided during
+		// login and is supported, that will be the preferred method.
+		switch {
+		case totpFactor != nil && totp != "":
+			selectedFactor = totpFactor
+		case pushFactor != nil:
+			selectedFactor = pushFactor
+		case totpFactor != nil && totp == "":
+			return nil, logical.ErrorResponse("'totp' passcode parameter is required to perform MFA"), nil, nil
+		default:
+			return nil, logical.ErrorResponse("Okta Verify Push or TOTP factor is required in order to perform MFA"), nil, nil
 		}
 
 		requestPath := fmt.Sprintf("authn/factors/%s/verify", selectedFactor.Id)
+
 		payload := map[string]interface{}{
 			"stateToken": result.StateToken,
 		}
+		if selectedFactor.Type == mfaTOTPMethod {
+			payload["passCode"] = totp
+		}
+
 		verifyReq, err := shim.NewRequest("POST", requestPath, payload)
 		if err != nil {
 			return nil, nil, nil, err

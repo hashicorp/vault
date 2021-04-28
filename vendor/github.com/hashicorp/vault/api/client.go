@@ -25,26 +25,30 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const EnvVaultAddress = "VAULT_ADDR"
-const EnvVaultAgentAddr = "VAULT_AGENT_ADDR"
-const EnvVaultCACert = "VAULT_CACERT"
-const EnvVaultCAPath = "VAULT_CAPATH"
-const EnvVaultClientCert = "VAULT_CLIENT_CERT"
-const EnvVaultClientKey = "VAULT_CLIENT_KEY"
-const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-const EnvVaultSRVLookup = "VAULT_SRV_LOOKUP"
-const EnvVaultSkipVerify = "VAULT_SKIP_VERIFY"
-const EnvVaultNamespace = "VAULT_NAMESPACE"
-const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
-const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
-const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
-const EnvVaultToken = "VAULT_TOKEN"
-const EnvVaultMFA = "VAULT_MFA"
-const EnvRateLimit = "VAULT_RATE_LIMIT"
+const (
+	EnvVaultAddress       = "VAULT_ADDR"
+	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
+	EnvVaultCACert        = "VAULT_CACERT"
+	EnvVaultCAPath        = "VAULT_CAPATH"
+	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
+	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
+	EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultSRVLookup     = "VAULT_SRV_LOOKUP"
+	EnvVaultSkipVerify    = "VAULT_SKIP_VERIFY"
+	EnvVaultNamespace     = "VAULT_NAMESPACE"
+	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
+	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
+	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
+	EnvVaultToken         = "VAULT_TOKEN"
+	EnvVaultMFA           = "VAULT_MFA"
+	EnvRateLimit          = "VAULT_RATE_LIMIT"
+)
 
 // Deprecated values
-const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
-const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+const (
+	EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
+	EnvVaultInsecure     = "VAULT_SKIP_VERIFY"
+)
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -149,6 +153,8 @@ func DefaultConfig() *Config {
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultPooledClient(),
 		Timeout:    time.Second * 60,
+		MaxRetries: 2,
+		Backoff:    retryablehttp.LinearJitterBackoff,
 	}
 
 	transport := config.HttpClient.Transport.(*http.Transport)
@@ -177,9 +183,6 @@ func DefaultConfig() *Config {
 		// function (to prevent redirects) passing through to it.
 		return http.ErrUseLastResponse
 	}
-
-	config.Backoff = retryablehttp.LinearJitterBackoff
-	config.MaxRetries = 2
 
 	return config
 }
@@ -360,7 +363,6 @@ func (c *Config) ReadEnvironment() error {
 }
 
 func parseRateLimit(val string) (rate float64, burst int, err error) {
-
 	_, err = fmt.Sscanf(val, "%f:%d", &rate, &burst)
 	if err != nil {
 		rate, err = strconv.ParseFloat(val, 64)
@@ -371,7 +373,6 @@ func parseRateLimit(val string) (rate float64, burst int, err error) {
 	}
 
 	return rate, burst, err
-
 }
 
 // Client is the client to the Vault API. Create a client with NewClient.
@@ -384,6 +385,8 @@ type Client struct {
 	wrappingLookupFunc WrappingLookupFunc
 	mfaCreds           []string
 	policyOverride     bool
+	requestCallbacks   []RequestCallback
+	responseCallbacks  []ResponseCallback
 }
 
 // NewClient returns a new client for the given configuration.
@@ -461,6 +464,28 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	return client, nil
+}
+
+func (c *Client) CloneConfig() *Config {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	newConfig := DefaultConfig()
+	newConfig.Address = c.config.Address
+	newConfig.AgentAddress = c.config.AgentAddress
+	newConfig.MaxRetries = c.config.MaxRetries
+	newConfig.Timeout = c.config.Timeout
+	newConfig.Backoff = c.config.Backoff
+	newConfig.CheckRetry = c.config.CheckRetry
+	newConfig.Limiter = c.config.Limiter
+	newConfig.OutputCurlString = c.config.OutputCurlString
+	newConfig.SRVLookup = c.config.SRVLookup
+
+	// we specifically want a _copy_ of the client here, not a pointer to the original one
+	newClient := *c.config.HttpClient
+	newConfig.HttpClient = &newClient
+
+	return newConfig
 }
 
 // Sets the address of Vault in the client. The format of address should be
@@ -770,7 +795,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	policyOverride := c.policyOverride
 	c.modifyLock.RUnlock()
 
-	var host = addr.Host
+	host := addr.Host
 	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
 	// record and take the highest match; this is not designed for high-availability, just discovery
 	// Internet Draft specifies that the SRV record is ignored if a port is given
@@ -844,6 +869,10 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	c.modifyLock.RUnlock()
 
+	for _, cb := range c.requestCallbacks {
+		cb(r)
+	}
+
 	if limiter != nil {
 		limiter.Wait(ctx)
 	}
@@ -885,7 +914,7 @@ START:
 	}
 
 	if checkRetry == nil {
-		checkRetry = retryablehttp.DefaultRetryPolicy
+		checkRetry = DefaultRetryPolicy
 	}
 
 	client := &retryablehttp.Client{
@@ -946,9 +975,96 @@ START:
 		goto START
 	}
 
+	if result != nil {
+		for _, cb := range c.responseCallbacks {
+			cb(result)
+		}
+	}
 	if err := result.Error(); err != nil {
 		return result, err
 	}
 
 	return result, nil
+}
+
+type (
+	RequestCallback  func(*Request)
+	ResponseCallback func(*Response)
+)
+
+// WithRequestCallbacks makes a shallow clone of Client, modifies it to use
+// the given callbacks, and returns it.  Each of the callbacks will be invoked
+// on every outgoing request.  A client may be used to issue requests
+// concurrently; any locking needed by callbacks invoked concurrently is the
+// callback's responsibility.
+func (c *Client) WithRequestCallbacks(callbacks ...RequestCallback) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.requestCallbacks = callbacks
+	return &c2
+}
+
+// WithResponseCallbacks makes a shallow clone of Client, modifies it to use
+// the given callbacks, and returns it.  Each of the callbacks will be invoked
+// on every received response.  A client may be used to issue requests
+// concurrently; any locking needed by callbacks invoked concurrently is the
+// callback's responsibility.
+func (c *Client) WithResponseCallbacks(callbacks ...ResponseCallback) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.responseCallbacks = callbacks
+	return &c2
+}
+
+// RecordState returns a response callback that will record the state returned
+// by Vault in a response header.
+func RecordState(state *string) ResponseCallback {
+	return func(resp *Response) {
+		*state = resp.Header.Get("X-Vault-Index")
+	}
+}
+
+// RequireState returns a request callback that will add a request header to
+// specify the state we require of Vault. This state was obtained from a
+// response header seen previous, probably captured with RecordState.
+func RequireState(states ...string) RequestCallback {
+	return func(req *Request) {
+		for _, s := range states {
+			req.Headers.Add("X-Vault-Index", s)
+		}
+	}
+}
+
+// ForwardInconsistent returns a request callback that will add a request
+// header which says: if the state required isn't present on the node receiving
+// this request, forward it to the active node.  This should be used in
+// conjunction with RequireState.
+func ForwardInconsistent() RequestCallback {
+	return func(req *Request) {
+		req.Headers.Set("X-Vault-Inconsistent", "forward-active-node")
+	}
+}
+
+// ForwardAlways returns a request callback which adds a header telling any
+// performance standbys handling the request to forward it to the active node.
+// This feature must be enabled in Vault's configuration.
+func ForwardAlways() RequestCallback {
+	return func(req *Request) {
+		req.Headers.Set("X-Vault-Forward", "active-node")
+	}
+}
+
+// DefaultRetryPolicy is the default retry policy used by new Client objects.
+// It is the same as retryablehttp.DefaultRetryPolicy except that it also retries
+// 412 requests, which are returned by Vault when a X-Vault-Index header isn't
+// satisfied.
+func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	retry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	if err != nil || retry {
+		return retry, err
+	}
+	if resp != nil && resp.StatusCode == 412 {
+		return true, nil
+	}
+	return false, nil
 }
