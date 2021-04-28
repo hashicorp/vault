@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"io"
 )
 
 const (
@@ -20,6 +21,10 @@ const (
 	messageKey              = attribute.Key("message")
 )
 
+var (
+	MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
+)
+
 var tp *sdktrace.TracerProvider
 var tracer trace.Tracer
 var tc *TelemetryCollector
@@ -27,8 +32,8 @@ var tc *TelemetryCollector
 // Init initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
 // synchronously receives and tracks OpenTelemetry spans in order to provide a tree structure of results
 // when the outermost span ends.
-func Init() {
-	tc = NewTelemetryCollector()
+func Init(w io.Writer) {
+	tc = NewTelemetryCollector(w)
 	//so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -69,26 +74,26 @@ func Warn(ctx context.Context, msg string) {
 	span.AddEvent(warningEventName, trace.WithAttributes(messageKey.String(msg)))
 }
 
-func SpotOk(ctx context.Context, checkName, message string) {
-	addSpotCheckResult(ctx, spotCheckOkEventName, checkName, message)
+func SpotOk(ctx context.Context, checkName, message string, options ...trace.EventOption) {
+	addSpotCheckResult(ctx, spotCheckOkEventName, checkName, message, options...)
 }
 
-func SpotWarn(ctx context.Context, checkName, message string) {
-	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message)
+func SpotWarn(ctx context.Context, checkName, message string, options ...trace.EventOption) {
+	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message, options...)
 }
 
-func SpotError(ctx context.Context, checkName string, err error) error {
+func SpotError(ctx context.Context, checkName string, err error, options ...trace.EventOption) error {
 	var message string
 	if err != nil {
 		message = err.Error()
 	}
-	addSpotCheckResult(ctx, spotCheckErrorEventName, checkName, message)
+	addSpotCheckResult(ctx, spotCheckErrorEventName, checkName, message, options...)
 	return err
 }
 
-func addSpotCheckResult(ctx context.Context, eventName, checkName, message string) {
+func addSpotCheckResult(ctx context.Context, eventName, checkName, message string, options ...trace.EventOption) {
 	span := trace.SpanFromContext(ctx)
-	attrs := []trace.EventOption{trace.WithAttributes(nameKey.String(checkName))}
+	attrs := append(options, trace.WithAttributes(nameKey.String(checkName)))
 	if message != "" {
 		attrs = append(attrs, trace.WithAttributes(messageKey.String(message)))
 	}

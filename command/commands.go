@@ -347,6 +347,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
 				BaseCommand: getBaseCommand(),

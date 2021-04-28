@@ -126,7 +126,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				diagnose.Init()
 				cmd := testOperatorDiagnoseCommand(t)
 				cmd.client = client
 

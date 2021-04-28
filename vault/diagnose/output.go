@@ -3,6 +3,7 @@ package diagnose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -57,14 +58,16 @@ func (r *Result) ZeroTimes() {
 // TelemetryCollector is an otel SpanProcessor that gathers spans and once the outermost
 // span ends, walks the otel traces in order to produce a top-down tree of Diagnose results.
 type TelemetryCollector struct {
+	ui         io.Writer
 	spans      map[trace.SpanID]sdktrace.ReadOnlySpan
 	rootSpan   sdktrace.ReadOnlySpan
 	results    map[trace.SpanID]*Result
 	RootResult *Result
 }
 
-func NewTelemetryCollector() *TelemetryCollector {
+func NewTelemetryCollector(w io.Writer) *TelemetryCollector {
 	return &TelemetryCollector{
+		ui:      w,
 		spans:   make(map[trace.SpanID]sdktrace.ReadOnlySpan),
 		results: make(map[trace.SpanID]*Result),
 	}
@@ -73,6 +76,18 @@ func NewTelemetryCollector() *TelemetryCollector {
 // OnStart tracks spans by id for later retrieval
 func (t *TelemetryCollector) OnStart(_ context.Context, s sdktrace.ReadWriteSpan) {
 	t.spans[s.SpanContext().SpanID()] = s
+	if isMainSection(s) {
+		fmt.Fprintf(t.ui, status_unknown+s.Name())
+	}
+}
+
+func isMainSection(s sdktrace.ReadOnlySpan) bool {
+	for _, a := range s.Attributes() {
+		if a.Key == "diagnose" && a.Value.AsString() == "main-section" {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
@@ -94,6 +109,11 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 
 		// Then walk the results sorting children by time
 		t.RootResult.sortChildren()
+	} else if isMainSection(e) {
+		r := t.getOrBuildResult(e.SpanContext().SpanID())
+		if r != nil {
+			fmt.Fprintf(t.ui, same_line+r.String()+"\n\n")
+		}
 	}
 }
 
@@ -234,10 +254,19 @@ func (r *Result) Write(writer io.Writer) error {
 }
 
 func (r *Result) write(sb *strings.Builder, depth int) {
+	for i := 0; i < depth; i++ {
+		sb.WriteRune('\t')
+	}
+	sb.WriteString(r.String())
+	sb.WriteRune('\n')
+	for _, c := range r.Children {
+		c.write(sb, depth+1)
+	}
+}
+
+func (r *Result) String() string {
+	var sb strings.Builder
 	if r.Status != WarningStatus || (len(r.Warnings) == 0 && r.Message != "") {
-		for i := 0; i < depth; i++ {
-			sb.WriteRune('\t')
-		}
 		switch r.Status {
 		case OkStatus:
 			sb.WriteString(status_ok)
@@ -254,17 +283,13 @@ func (r *Result) write(sb *strings.Builder, depth int) {
 		sb.WriteString(r.Message)
 	}
 	for _, w := range r.Warnings {
+		//TODO: Indentation
 		sb.WriteRune('\n')
-		for i := 0; i < depth; i++ {
-			sb.WriteRune('\t')
-		}
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
 		sb.WriteString(w)
 	}
-	sb.WriteRune('\n')
-	for _, c := range r.Children {
-		c.write(sb, depth+1)
-	}
+	return sb.String()
+
 }

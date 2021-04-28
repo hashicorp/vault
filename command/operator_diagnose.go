@@ -2,8 +2,10 @@ package command
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -126,7 +128,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := context.Background()
-	diagnose.Init()
+	diagnose.Init(os.Stdout)
 	err := c.offlineDiagnostics(ctx)
 
 	if err != nil {
@@ -163,9 +165,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		return diagnose.SpotError(ctx, "parse-config", err)
+		return diagnose.SpotError(ctx, "parse-config", err, diagnose.MainSection)
 	} else {
-		diagnose.SpotOk(ctx, "parse-config", "")
+		diagnose.SpotOk(ctx, "parse-config", "", diagnose.MainSection)
 	}
 
 	// Check Listener Information
@@ -213,12 +215,13 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				Config:   ln.Config,
 			})
 		}
+		time.Sleep(3 * time.Second)
 		return diagnose.ListenerChecks(sanitizedListeners)
-	})
+	}, diagnose.MainSection)
 
 	return diagnose.Test(ctx, "storage", func(ctx context.Context) error {
 		_, err = server.setupStorage(config)
 		return err
-	})
+	}, diagnose.MainSection)
 	return nil
 }
