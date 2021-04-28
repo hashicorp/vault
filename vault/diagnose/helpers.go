@@ -95,14 +95,20 @@ func Warn(ctx context.Context, msg string) {
 	span.AddEvent(warningEventName, trace.WithAttributes(messageKey.String(msg)))
 }
 
+// SpotOk adds an Ok result without adding a new Span.  This should be used for instantaneous checks with no
+// possible sub-spans
 func SpotOk(ctx context.Context, checkName, message string) {
 	addSpotCheckResult(ctx, spotCheckOkEventName, checkName, message)
 }
 
+// SpotWarn adds a Warning result without adding a new Span.  This should be used for instantaneous checks with no
+// possible sub-spans
 func SpotWarn(ctx context.Context, checkName, message string) {
 	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message)
 }
 
+// SpotError adds an Error result without adding a new Span.  This should be used for instantaneous checks with no
+// possible sub-spans
 func SpotError(ctx context.Context, checkName string, err error) error {
 	var message string
 	if err != nil {
