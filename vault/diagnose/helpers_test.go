@@ -33,16 +33,17 @@ func TestDiagnoseOtelResults(t *testing.T) {
 			},
 		},
 	}
-	New()
+	sess := New()
+	ctx := Context(context.Background(), sess)
 
 	func() {
-		ctx, span := StartSpan(context.Background(), "make-coffee")
+		ctx, span := StartSpan(ctx, "make-coffee")
 		defer span.End()
 
 		makeCoffee(ctx)
 	}()
 
-	results := Shutdown(context.Background())
+	results := sess.Finalize(ctx)
 	results.ZeroTimes()
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
