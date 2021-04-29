@@ -456,7 +456,6 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.EntityActivityLog)) error {
-
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -486,7 +485,6 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.TokenCount)) error {
-
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -995,7 +993,7 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 
 // stopActivityLog removes the ActivityLog from Core
 // and frees any resources.
-func (c *Core) stopActivityLog() error {
+func (c *Core) stopActivityLog() {
 	if c.tokenStore != nil {
 		c.tokenStore.SetActivityLog(nil)
 	}
@@ -1007,7 +1005,6 @@ func (c *Core) stopActivityLog() error {
 	}
 
 	c.activityLog = nil
-	return nil
 }
 
 func (a *ActivityLog) StartOfNextMonth() time.Time {

@@ -431,6 +431,9 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 
 	// Stop timers for test purposes
 	close(a.doneCh)
+	defer func() {
+		a.doneCh = make(chan struct{}, 1)
+	}()
 
 	startTimestamp := a.GetStartTimestamp()
 	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", startTimestamp)
@@ -516,7 +519,11 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	a.receivedFragment(fragment1)
 	a.receivedFragment(fragment2)
 
-	<-a.newFragmentCh
+	select {
+	case <-a.newFragmentCh:
+	case <-time.After(time.Minute):
+		t.Fatal("timed out waiting for new fragment")
+	}
 
 	err = a.saveCurrentSegmentToStorage(context.Background(), false)
 	if err != nil {
@@ -1376,6 +1383,9 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 
 	var wg sync.WaitGroup
 	close(a.doneCh)
+	defer func() {
+		a.doneCh = make(chan struct{}, 1)
+	}()
 
 	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
@@ -2249,7 +2259,8 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 
 	// This will block if the shutdown didn't work.
 	go func() {
-		a.precomputedQueryWorker()
+		// We expect this to error because of BlockingInmemStorage
+		_ = a.precomputedQueryWorker()
 		close(done)
 	}()
 
