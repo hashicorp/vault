@@ -472,16 +472,6 @@ func TestCore_RemountConcurrent(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	mount3 := &MountEntry{
-		Table: mountTableType,
-		Path:  "test3/",
-		Type:  "noop",
-	}
-
-	if err := c2.mount(namespace.RootContext(nil), mount3); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -492,14 +482,6 @@ func TestCore_RemountConcurrent(t *testing.T) {
 		}
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
-		if err != nil {
-			t.Logf("err: %v", err)
-		}
-	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

@@ -238,7 +238,7 @@ layers:
   - name: build-ui
     source-include: ui/
     dockerfile: |-
-      RUN cd ui && yarn run build
+      RUN cd ui && yarn --verbose run build
   - name: build-static-assets
     source-include: Makefile
     dockerfile: |-
