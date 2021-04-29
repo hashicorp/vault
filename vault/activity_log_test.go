@@ -432,7 +432,9 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	// Stop timers for test purposes
 	close(a.doneCh)
 	defer func() {
+		a.l.Lock()
 		a.doneCh = make(chan struct{}, 1)
+		a.l.Unlock()
 	}()
 
 	startTimestamp := a.GetStartTimestamp()
