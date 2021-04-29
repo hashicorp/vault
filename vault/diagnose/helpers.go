@@ -2,11 +2,12 @@ package diagnose
 
 import (
 	"context"
+	"io"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"io"
 )
 
 const (
@@ -36,8 +37,8 @@ type Session struct {
 // New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
 // synchronously receives and tracks OpenTelemetry spans in order to provide a tree structure of results
 // when the outermost span ends.
-func New() *Session {
-	tc := NewTelemetryCollector()
+func New(w io.Writer) *Session {
+	tc := NewTelemetryCollector(w)
 	//so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -69,7 +70,6 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {
-
 		session := sessionCtxVal.(*Session)
 		return session.tracer.Start(ctx, spanName, options...)
 	} else {
