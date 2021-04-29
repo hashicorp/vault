@@ -595,6 +595,8 @@ github.com/hashicorp/go-gatedio v0.5.0/go.mod h1:Lr3t8L6IyxD3DAeaUxGcgl2JnRUpWMC
 github.com/hashicorp/go-gcp-common v0.5.0/go.mod h1:IDGUI2N/OS3PiU4qZcXJeWKPI6O/9Y8hOrbSiMcqyYw=
 github.com/hashicorp/go-gcp-common v0.6.0 h1:m1X+DK003bj4WEjqOnv+Csepb3zpfN/bidboUeUSj68=
 github.com/hashicorp/go-gcp-common v0.6.0/go.mod h1:RuZi18562/z30wxOzpjeRrGcmk9Ro/rBzixaSZDhIhY=
+github.com/hashicorp/go-gcp-common v0.7.0 h1:DF2liDG2N71MYt5SN0FJRPdBjxeqx9wfM/PnF7a8Fqk=
+github.com/hashicorp/go-gcp-common v0.7.0/go.mod h1:RuZi18562/z30wxOzpjeRrGcmk9Ro/rBzixaSZDhIhY=
 github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd/go.mod h1:9bjs9uLqI8l75knNv3lV1kA55veR+WUPSiKIWcQHudI=
 github.com/hashicorp/go-hclog v0.8.0/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
 github.com/hashicorp/go-hclog v0.9.1/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
@@ -694,6 +696,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.8.0/go.mod h1:exPUMj8yNohKM7yRiHa7O
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-gcp v0.9.0 h1:57uJ2Vqo+M+W7pD8xEONKJ1BBGS8V4xpm7VU56A9RWA=
 github.com/hashicorp/vault-plugin-auth-gcp v0.9.0/go.mod h1:sHDguHmyGScoalGLEjuxvDCrMPVlw2c3f+ieeiHcv6w=
+github.com/hashicorp/vault-plugin-auth-gcp v0.9.1 h1:DNwSe1Sk53olEaB7vSipyBNRB5iQuy9cib/rWKogOng=
+github.com/hashicorp/vault-plugin-auth-gcp v0.9.1/go.mod h1:Z+mj9fAqzXfDNxLmMoSS8NheVK7ugLvD8sTHO1GXfCA=
 github.com/hashicorp/vault-plugin-auth-jwt v0.9.2 h1:ghOYlco5t4q+rNecMWC5Cb8jguLiig168jYlBc5QtKk=
 github.com/hashicorp/vault-plugin-auth-jwt v0.9.2/go.mod h1:Gn6ELc1X5nmZ/pxoXf0nA4lG2gwuGnY6SNyW40tR/ws=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0 h1:QxW0gRevydrNfRvo1qI6p0jQkhedLUgiWqpCN36RXoQ=
