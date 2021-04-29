@@ -234,31 +234,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			return err
 		}
 
-		// Attempt to use storage backend
-		c2 := make(chan string, 1)
-		go func() {
-			b.Put(context.Background(), &physical.Entry{Key: "diagnose", Value: []byte("diagnose")})
-			c2 <- "success"
-		}()
-		select {
-		case _ = <-c2:
-			val, err := b.Get(context.Background(), "diagnose")
-			if err != nil {
-				return err
-			} else {
-				if val.Key != "diagnose" && string(val.Value) != "diagnose" {
-					return fmt.Errorf("Storage get and put gave wrong values: expecting diagnose, but got %s, %s", val.Key, val.Value)
-				} else {
-					err = b.Delete(context.Background(), "diagnose")
-					if err != nil {
-						return err
-					}
-				}
-			}
-		case <-time.After(20 * time.Second):
-			return fmt.Errorf("storage get timed out after 20 seconds")
-		}
-
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 			if err != nil {
@@ -272,6 +247,72 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return err
 			}
 		}
+
+		success := "success"
+		secretKey := "diagnose"
+		secretVal := "diagnoseSecret"
+
+		// Attempt to use storage backend
+		// Note: Just checking read, write, and delete for root. It's a very basic check,
+		// but I don't think we can necessarily do any more than that. We could check list,
+		// but I don't think List is ever going to break in isolation.
+		c2 := make(chan string, 1)
+		go func() {
+			err := b.Put(context.Background(), &physical.Entry{Key: secretKey, Value: []byte(secretVal)})
+			if err != nil {
+				c2 <- err.Error()
+			} else {
+				c2 <- success
+			}
+		}()
+		select {
+		case errString := <-c2:
+			if errString != success {
+				return fmt.Errorf(errString)
+			}
+		case <-time.After(20 * time.Second):
+			return fmt.Errorf("storage get timed out after 20 seconds")
+		}
+
+		c3 := make(chan *physical.Entry)
+		c4 := make(chan error)
+		go func() {
+			val, err := b.Get(context.Background(), "diagnose")
+			if err != nil {
+				c4 <- err
+			} else {
+				c3 <- val
+			}
+		}()
+		select {
+		case err := <-c4:
+			return err
+		case val := <-c3:
+			if val.Key != "diagnose" && string(val.Value) != "diagnose" {
+				return fmt.Errorf("Storage get and put gave wrong values: expecting diagnose, but got %s, %s", val.Key, val.Value)
+			}
+		case <-time.After(20 * time.Second):
+			return fmt.Errorf("storage get timed out after 20 seconds")
+		}
+
+		c5 := make(chan string, 1)
+		go func() {
+			err := b.Delete(context.Background(), "diagnose")
+			if err != nil {
+				c5 <- err.Error()
+			} else {
+				c5 <- success
+			}
+		}()
+		select {
+		case errString := <-c5:
+			if errString != success {
+				return fmt.Errorf(errString)
+			}
+		case <-time.After(20 * time.Second):
+			return fmt.Errorf("storage get timed out after 20 seconds")
+		}
+
 		return nil
 	}); err != nil {
 		return err
