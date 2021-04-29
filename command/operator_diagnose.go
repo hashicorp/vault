@@ -2,7 +2,11 @@ package command
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/vault/sdk/version"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -95,6 +99,12 @@ func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
 		Default: false,
 		Usage:   "Dump all information collected by Diagnose.",
 	})
+
+	f.StringVar(&StringVar{
+		Name:   "format",
+		Target: &c.flagFormat,
+		Usage:  "The output format",
+	})
 	return set
 }
 
@@ -130,10 +140,29 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		return 1
 	}
 
-	c.UI.Output(version.GetVersion().FullVersionNumber(true))
+	if c.diagnose == nil {
+		if c.flagFormat == "json" {
+			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+		} else {
+			c.UI.Output(version.GetVersion().FullVersionNumber(true))
+			c.diagnose = diagnose.New(os.Stdout)
+		}
+	}
 	ctx := diagnose.Context(context.Background(), c.diagnose)
 	err := c.offlineDiagnostics(ctx)
 
+	results := c.diagnose.Finalize(ctx)
+	if c.flagFormat == "json" {
+		resultsJS, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			return 2
+		}
+		c.UI.Output(string(resultsJS))
+	} else {
+		c.UI.Output("\nResults:")
+		results.Write(os.Stdout)
+	}
 	if err != nil {
 		return 1
 	}
@@ -176,7 +205,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
 	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		disableClustering := config.HAStorage.DisableClustering
+		disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
 		status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
@@ -218,7 +247,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				Config: ln.Config,
 			})
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 		return diagnose.ListenerChecks(sanitizedListeners)
 	}, diagnose.MainSection); err != nil {
 		return err
@@ -230,6 +259,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// TODO: check for storage backend
 
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+		time.Sleep(1 * time.Second)
 		_, err = server.setupStorage(config)
 		if err != nil {
 			return err
@@ -254,6 +284,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		time.Sleep(1 * time.Second)
 		// Initialize the Service Discovery, if there is one
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
@@ -264,5 +295,5 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 		}
 		return nil
-	})
+	}, diagnose.MainSection)
 }

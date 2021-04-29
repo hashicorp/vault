@@ -20,32 +20,58 @@ const (
 	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
 	status_failed  = "\u001b[31m[failed]\u001b[0m "
 	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
-	same_line      = "\u001b[F"
-	ErrorStatus    = "error"
-	WarningStatus  = "warn"
-	OkStatus       = "ok"
+	same_line      = "\x0d"
+	ErrorStatus    = 2
+	WarningStatus  = 1
+	OkStatus       = 0
 )
 
 var errUnimplemented = errors.New("unimplemented")
 
-type Result struct {
-	Time     time.Time
-	Name     string
-	Warnings []string
-	Status   string
-	Message  string
-	Children []*Result
+type status int
+
+func (s status) String() string {
+	switch s {
+	case OkStatus:
+		return "ok"
+	case WarningStatus:
+		return "warn"
+	case ErrorStatus:
+		return "fail"
+	}
+	return "invalid"
 }
 
-func (r *Result) sortChildren() {
+func (s status) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprint("\"", s.String(), "\"")), nil
+}
+
+type Result struct {
+	Time     time.Time `json:"time"`
+	Name     string    `json:"name"`
+	Status   status    `json:"status"`
+	Warnings []string  `json:"warnings,omitempty"`
+	Message  string    `json:"message,omitempty"`
+	Children []*Result `json:"children,omitempty"`
+}
+
+func (r *Result) finalize() status {
+	maxStatus := r.Status
 	if len(r.Children) > 0 {
 		sort.SliceStable(r.Children, func(i, j int) bool {
 			return r.Children[i].Time.Before(r.Children[j].Time)
 		})
 		for _, c := range r.Children {
-			c.sortChildren()
+			cms := c.finalize()
+			if cms > maxStatus {
+				maxStatus = cms
+			}
+		}
+		if maxStatus > r.Status {
+			r.Status = maxStatus
 		}
 	}
+	return maxStatus
 }
 
 func (r *Result) ZeroTimes() {
@@ -106,6 +132,7 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 					p := t.getOrBuildResult(s.Parent().SpanID())
 					if p != nil {
 						p.Children = append(p.Children, r)
+
 					}
 				} else {
 					t.RootResult = r
@@ -114,11 +141,12 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 		}
 
 		// Then walk the results sorting children by time
-		t.RootResult.sortChildren()
+		t.RootResult.finalize()
 	} else if isMainSection(e) {
 		r := t.getOrBuildResult(e.SpanContext().SpanID())
 		if r != nil {
-			fmt.Fprintf(t.ui, same_line+r.String()+"\n\n")
+			fmt.Print(same_line)
+			fmt.Fprintln(t.ui, r.String())
 		}
 	}
 }
@@ -153,7 +181,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						r.Warnings = append(r.Warnings, a.Value.AsString())
 					}
 				}
-			case ErrorStatus:
+			case "fail":
 				var message string
 				var action string
 				for _, a := range e.Attributes {
@@ -261,7 +289,7 @@ func (r *Result) Write(writer io.Writer) error {
 
 func (r *Result) write(sb *strings.Builder, depth int) {
 	for i := 0; i < depth; i++ {
-		sb.WriteRune('\t')
+		sb.WriteString("  ")
 	}
 	sb.WriteString(r.String())
 	sb.WriteRune('\n')
@@ -272,7 +300,7 @@ func (r *Result) write(sb *strings.Builder, depth int) {
 
 func (r *Result) String() string {
 	var sb strings.Builder
-	if r.Status != WarningStatus || (len(r.Warnings) == 0 && r.Message != "") {
+	if len(r.Warnings) == 0 {
 		switch r.Status {
 		case OkStatus:
 			sb.WriteString(status_ok)
@@ -288,9 +316,18 @@ func (r *Result) String() string {
 		}
 		sb.WriteString(r.Message)
 	}
-	for _, w := range r.Warnings {
-		//TODO: Indentation
+	warnings := r.Warnings
+	if r.Message == "" && len(warnings) > 0 {
+		sb.WriteString(status_warn)
+		sb.WriteString(r.Name)
+		sb.WriteString(": ")
+		sb.WriteString(warnings[0])
+
+		warnings = warnings[1:]
+	}
+	for _, w := range warnings {
 		sb.WriteRune('\n')
+		//TODO: Indentation
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
