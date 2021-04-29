@@ -69,8 +69,36 @@ similar, so this may help to avoid duplicating efforts.
 
 Your pull request should have a description of what it accomplishes, how it does so,
 and why you chose the approach you did.  PRs should include unit tests that validate
-correctness and the existing tests must pass.
+correctness and the existing tests must pass.  Follow-up work to fix tests
+does not need a fresh issue filed.
 
+Someone will do a first pass review on your PR making sure it follows the guidelines 
+in this document.  If it doesn't we'll mark the PR incomplete and ask you to follow
+up on the missing requirements.
+
+### Vault UI
+
+Thanks for contributing to the Vault UI!  If you are contributing something new,
+please submit an informational issue first.  As with other work, that issue
+should include a short description of the proposed feature, the use case,
+the approach you're taking, and the tests that would be written.  A mockup
+is optional but encouraged.  
+
+Bug fixes are welcome in PRs but existing tests must pass and updated logic 
+should be handled in new tests.  You needn't submit an issue first to fix bugs.
+
+Keep in mind that the UI should be consistent with other areas of Vault. Our 
+[README](ui/README.md) [has instructions for launching Storybook](ui/README.md#vault-storybook),
+which showcases how we use components. Beyond that, the UI should be user-centered, 
+informative, and include edge cases and errors— including accommodations for 
+users who may not have permissions to view or interact with your feature. 
+If you are not comfortable with UI design, a Vault designer can take a look at 
+your work— just be aware that this might mean it will add some time to the 
+PR process. 
+
+Finally, in your code, try to avoid logic-heavy templates (when possible, 
+calculate values in the .js file instead of .hbs) and Ember anti-patterns. 
+And most of all, if you have any questions, please ask!
 
 ### Changelog Entries
 Please include a file within your PR named `changelog/#.txt`, where `#` is your
