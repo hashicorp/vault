@@ -32,23 +32,29 @@
       </div>
     </div>
     <div class="field">
-      <div class="level is-mobile">
-        <div class="level-left">
-          <label for="policy" class="is-label">Policy</label>
-        </div>
-        <div class="level-right">
-          <div class="field is-horizontal is-flex-end is-single-line">
-            <div class="control is-flex">
-              <Input @id="fileUploadToggle" @type="checkbox" @name="fileUploadToggle" class="switch is-rounded is-success is-small" @checked={{showFileUpload}} @change={{toggle-action "showFileUpload" this}} data-test-policy-edit-toggle={{true}} />
-              <label for="fileUploadToggle">Upload file</label>
-            </div>
+      <Toolbar>
+        <label class="is-label">Policy</label>
+        <ToolbarActions>
+          {{#unless showFileUpload}}
+            <CopyButton class="button is-transparent" @clipboardText={{model.policy}}
+              @buttonType="button" @success={{action (set-flash-message 'Policy copied!')}}>
+              <Icon @glyph="copy-action" aria-label="Copy" />
+            </CopyButton>
+          {{/unless}}
+        <div class="toolbar-separator"></div>
+          <div class="control is-flex">
+                <Input @id="fileUploadToggle" @type="checkbox" @name="fileUploadToggle" class="switch is-rounded is-success is-small" @checked={{showFileUpload}} @change={{toggle-action "showFileUpload" this}} data-test-policy-edit-toggle={{true}} />
+                <label for="fileUploadToggle">Upload file</label>
           </div>
-        </div>
-      </div>
+        </ToolbarActions>
+      </Toolbar>
       {{#if showFileUpload}}
         <TextFile @inputOnly={{true}} @file={{file}} @onChange={{action "setPolicyFromFile"}} />
       {{else}}
-        <IvyCodemirror @value={{model.policy}} @id="policy" @valueUpdated={{action (mut model.policy)}} @options={{hash
+        <JsonEditor 
+          @value={{model.policy}}
+          @valueUpdated={{action (mut model.policy)}} 
+          @options={{hash
             lineNumbers=true
             tabSize=2
             mode='ruby'

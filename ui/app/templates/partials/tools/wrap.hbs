@@ -32,7 +32,16 @@
     <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
     <MessageError @errors={{errors}} />
     <div class="field">
-      <label for="data" class="is-label">Data to wrap <span class="is-size-9 is-lowercase has-text-grey">(json-formatted)</span></label>
+      <Toolbar>
+          <label for="data" class="is-label">Data to wrap <span class="is-size-9 is-lowercase has-text-grey">(json-formatted)</span></label>
+          <ToolbarActions>
+            <div class="toolbar-separator"></div>
+            <CopyButton class="button is-transparent" @clipboardText={{data}}
+              @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
+                <Icon @glyph="copy-action" aria-label="Copy" />
+            </CopyButton>
+          </ToolbarActions>
+      </Toolbar>
       <div class="control">
         <JsonEditor @value={{data}} @valueUpdated={{action "codemirrorUpdated"}} />
       </div>

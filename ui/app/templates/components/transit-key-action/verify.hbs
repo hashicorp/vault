@@ -4,16 +4,28 @@
         <p>Check whether the provided signature is valid for the given data.</p>
       </div>
       <div class="field">
-        <label for="input" class="is-label">
-          Input
-        </label>
+        <Toolbar>
+          <label class="is-label">
+            Input
+          </label>
+          <ToolbarActions>
+            <div class="toolbar-separator"></div>
+            <CopyButton class="button is-transparent" @clipboardText={{input}}
+              @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
+                <Icon @glyph="copy-action" aria-label="Copy" />
+            </CopyButton>
+          </ToolbarActions>
+        </Toolbar>
         <div class="control is-relative">
-          <IvyCodemirror @id="input" @value={{input}} @valueUpdated={{action (mut input)}} @options={{hash
-              lineNumbers=true
-              tabSize=2
-              mode='ruby'
-              theme='hashi'
-            }} @data-test-transit-input="input" />
+          <JsonEditor
+              @value={{input}} @valueUpdated={{action (mut input)}} 
+              @options={{hash
+                lineNumbers=true
+                tabSize=2
+                mode='ruby'
+                theme='hashi'
+              }} 
+              @data-test-transit-input="input" />
         </div>
       </div>
       <div class="field">
@@ -115,21 +127,46 @@
           <div class="column is-two-thirds is-flex-column">
             {{#if (or (and verification (eq verification 'HMAC')) hmac)}}
               <div class="field is-flex-column is-flex-1">
-                <label for="hmac" class="is-label">HMAC</label>
+                <Toolbar>
+                  <label class="is-label">HMAC</label>
+                  <ToolbarActions>
+                    <div class="toolbar-separator"></div>
+                    <CopyButton class="button is-transparent" @clipboardText={{hmac}}
+                      @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
+                        <Icon @glyph="copy-action" aria-label="Copy" />
+                    </CopyButton>
+                  </ToolbarActions>
+                </Toolbar>
                 <div class="control is-flex-column is-flex-1">
-                  <IvyCodemirror @id="hmac" @value={{hmac}} @valueUpdated={{action (mut hmac)}} @options={{hash
-                      lineNumbers=true
-                      tabSize=2
-                      mode='ruby'
-                      theme='hashi'
-                    }} />
+                  <JsonEditor
+                      @value={{hmac}} 
+                      @valueUpdated={{action (mut hmac)}} 
+                      @options={{hash
+                        lineNumbers=true
+                        tabSize=2
+                        mode='ruby'
+                        theme='hashi'
+                      }} 
+                  />
                 </div>
               </div>
             {{else}}
               <div class="field is-flex-column is-flex-1">
-                <label for="signature" class="is-label">Signature</label>
+                <Toolbar>
+                  <label class="is-label">Signature</label>
+                  <ToolbarActions>
+                    <div class="toolbar-separator"></div>
+                    <CopyButton class="button is-transparent" @clipboardText={{signature}}
+                      @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
+                        <Icon @glyph="copy-action" aria-label="Copy" />
+                    </CopyButton>
+                  </ToolbarActions>
+                </Toolbar>
                 <div class="control is-flex-column is-flex-1">
-                  <IvyCodemirror @id="signature" @value={{signature}} @valueUpdated={{action (mut signature)}} @options={{hash
+                  <JsonEditor
+                  @value={{signature}} 
+                  @valueUpdated={{action (mut signature)}} 
+                  @options={{hash
                       lineNumbers=true
                       tabSize=2
                       mode='ruby'
@@ -142,14 +179,27 @@
         </div>
       {{else}}
         <div class="field">
-          <label for="hmac" class="is-label">HMAC</label>
+          <Toolbar>
+            <label class="is-label">HMAC</label>
+            <ToolbarActions>
+              <div class="toolbar-separator"></div>
+              <CopyButton class="button is-transparent" @clipboardText={{hmac}}
+                @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
+                  <Icon @glyph="copy-action" aria-label="Copy" />
+              </CopyButton>
+            </ToolbarActions>
+          </Toolbar>
           <div class="control">
-            <IvyCodemirror @id="hmac" @value={{hmac}} @valueUpdated={{action (mut hmac)}} @options={{hash
-                lineNumbers=true
-                tabSize=2
-                mode='ruby'
-                theme='hashi'
-              }} />
+            <JsonEditor
+                @value={{hmac}} 
+                @valueUpdated={{action (mut hmac)}} 
+                @options={{hash
+                  lineNumbers=true
+                  tabSize=2
+                  mode='ruby'
+                  theme='hashi'
+                }} 
+            />
           </div>
         </div>
         <div class="field">

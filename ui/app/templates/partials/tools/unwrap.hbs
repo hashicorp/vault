@@ -20,6 +20,16 @@
     </nav>
     {{#if (eq unwrapActiveTab "data")}}
       <div class="field">
+        <Toolbar>
+          <label class="is-label">Unwrapped Data</label>
+          <ToolbarActions>
+            <div class="toolbar-separator"></div>
+            <CopyButton class="button is-transparent" @clipboardText={{stringify unwrap_data}}
+              @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
+                <Icon @glyph="copy-action" aria-label="Copy" />
+            </CopyButton>
+          </ToolbarActions>
+        </Toolbar>
         <div class="control">
           <JsonEditor @value={{stringify unwrap_data}} @options={{hash
               readOnly=true

@@ -47,9 +47,21 @@
   <div class="box is-bottomless is-fullwidth is-marginless">
     <MessageError @model={{model}} />
     <NamespaceReminder @mode="edit" @noun="policy" />
-    <label for="policy" class="is-label">Policy</label>
     <div class="field">
-      <IvyCodemirror @value={{model.policy}} @valueUpdated={{action (mut model.policy)}} @options={{hash
+      <Toolbar>
+        <label class="is-label">Policy</label>
+        <ToolbarActions>
+          <div class="toolbar-separator"></div>
+          <CopyButton class="button is-transparent" @clipboardText={{model.policy}}
+            @buttonType="button" @success={{action (set-flash-message 'Policy copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </ToolbarActions>
+      </Toolbar>
+      <JsonEditor
+        @value={{model.policy}} 
+        @valueUpdated={{action (mut model.policy)}} 
+        @options={{hash
           lineNumbers=true
           tabSize=2
           mode='ruby'
