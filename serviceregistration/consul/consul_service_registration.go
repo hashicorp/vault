@@ -213,7 +213,6 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 	}
 
 	if consulConf.Scheme == "https" {
-
 		if isDiagnose {
 			certPath, okCert := conf["tls_cert_file"]
 			keyPath, okKey := conf["tls_key_file"]

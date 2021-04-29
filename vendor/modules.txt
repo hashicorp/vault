@@ -434,7 +434,7 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
-# github.com/google/go-cmp v0.5.4
+# github.com/google/go-cmp v0.5.5
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -1130,7 +1130,7 @@ github.com/softlayer/softlayer-go/sl
 github.com/spf13/pflag
 # github.com/stretchr/objx v0.2.0
 github.com/stretchr/objx
-# github.com/stretchr/testify v1.6.1
+# github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
@@ -1270,6 +1270,31 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
+# go.opentelemetry.io/otel v0.20.0
+## explicit
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/attribute
+go.opentelemetry.io/otel/codes
+go.opentelemetry.io/otel/internal
+go.opentelemetry.io/otel/internal/baggage
+go.opentelemetry.io/otel/internal/global
+go.opentelemetry.io/otel/internal/trace/noop
+go.opentelemetry.io/otel/propagation
+go.opentelemetry.io/otel/semconv
+go.opentelemetry.io/otel/unit
+# go.opentelemetry.io/otel/metric v0.20.0
+go.opentelemetry.io/otel/metric
+go.opentelemetry.io/otel/metric/number
+go.opentelemetry.io/otel/metric/registry
+# go.opentelemetry.io/otel/sdk v0.20.0
+## explicit
+go.opentelemetry.io/otel/sdk/instrumentation
+go.opentelemetry.io/otel/sdk/internal
+go.opentelemetry.io/otel/sdk/resource
+go.opentelemetry.io/otel/sdk/trace
+# go.opentelemetry.io/otel/trace v0.20.0
+## explicit
+go.opentelemetry.io/otel/trace
 # go.uber.org/atomic v1.6.0
 ## explicit
 go.uber.org/atomic
