@@ -190,6 +190,7 @@ export default Route.extend({
       let secret = this.secretParam();
       let backend = this.enginePathParam();
       let is404 = error.httpStatus === 404;
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let hasModel = this.controllerFor(this.routeName).get('hasModel');
 
       // this will occur if we've deleted something,

@@ -153,7 +153,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
 	req := &logical.Request{
@@ -230,22 +230,22 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 			return nil, nil, http.StatusForbidden, nil
 		}
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("error performing token check: %w", err)
 	}
 
 	req, err = requestWrapInfo(r, req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing X-Vault-Wrap-TTL header: %w", err)
 	}
 
 	err = parseMFAHeader(req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse X-Vault-MFA header: %w", err)
 	}
 
 	err = requestPolicyOverride(r, req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse %s header: %w", PolicyOverrideHeaderName, err)
 	}
 
 	return req, origBody, 0, nil
