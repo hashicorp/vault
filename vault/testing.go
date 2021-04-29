@@ -1688,7 +1688,7 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("stopping core", "core", idx)
 
-	// Stop listeners and call Shutdown()
+	// Stop listeners and call Finalize()
 	if err := tcc.stop(); err != nil {
 		t.Fatal(err)
 	}

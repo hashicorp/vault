@@ -29,6 +29,7 @@ var (
 
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
+	diagnose *diagnose.Session
 
 	flagDebug    bool
 	flagSkips    []string
@@ -132,6 +133,16 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
+	ctx := diagnose.Context(context.Background(), c.diagnose)
+	err := c.offlineDiagnostics(ctx)
+
+	if err != nil {
+		return 1
+	}
+	return 0
+}
+
+func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error {
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
 	server := &ServerCommand{
 		// TODO: set up a different one?
@@ -153,166 +164,129 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		reloadFuncsLock: new(sync.RWMutex),
 	}
 
-	phase := "Parse configuration"
+	ctx, span := diagnose.StartSpan(ctx, "initialization")
+	defer span.End()
+
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		c.outputErrorsAndWarnings(fmt.Sprintf("Error while reading configuration files: %s", err.Error()), phase, nil)
-		return 1
+		return diagnose.SpotError(ctx, "parse-config", err)
+	} else {
+		diagnose.SpotOk(ctx, "parse-config", "")
 	}
-	c.UI.Output(same_line + status_ok + phase)
-
 	// Check Listener Information
-	phase = "Check Listeners"
 	// TODO: Run Diagnose checks on the actual net.Listeners
-	var warnings []string
-	disableClustering := config.HAStorage.DisableClustering
-	infoKeys := make([]string, 0, 10)
-	info := make(map[string]string)
-	status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 
-	if status != 0 {
-		c.outputErrorsAndWarnings(fmt.Sprintf("Error parsing listener configuration. %s", errMsg.Error()), phase, nil)
-		return 1
-	}
+	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+		disableClustering := config.HAStorage.DisableClustering
+		infoKeys := make([]string, 0, 10)
+		info := make(map[string]string)
+		status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 
-	// Make sure we close all listeners from this point on
-	listenerCloseFunc := func() {
+		if status != 0 {
+			return errMsg
+		}
+
+		// Make sure we close all listeners from this point on
+		listenerCloseFunc := func() {
+			for _, ln := range lns {
+				ln.Listener.Close()
+			}
+		}
+
+		defer c.cleanupGuard.Do(listenerCloseFunc)
+
+		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
 		for _, ln := range lns {
-			ln.Listener.Close()
+			if ln.Config.TLSDisable {
+				diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
+				continue
+			}
+			if ln.Config.TLSDisableClientCerts {
+				diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
+			}
+
+			// Check ciphersuite and load ca/cert/key files
+			// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
+			// perform an active probe.
+			_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+			if err != nil {
+				return err
+			}
+
+			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+				Listener: ln.Listener,
+				Config:   ln.Config,
+			})
 		}
+		return diagnose.ListenerChecks(sanitizedListeners)
+	}); err != nil {
+		return err
 	}
-
-	defer c.cleanupGuard.Do(listenerCloseFunc)
-
-	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-	for _, ln := range lns {
-		if ln.Config.TLSDisable {
-			warnings = append(warnings, "WARNING! TLS is disabled in a Listener config stanza.")
-			continue
-		}
-		if ln.Config.TLSDisableClientCerts {
-			warnings = append(warnings, "WARNING! TLS for a listener is turned on without requiring client certs.")
-		}
-
-		// Check ciphersuite and load ca/cert/key files
-		// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
-		// perform an active probe.
-		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
-		if err != nil {
-			c.outputErrorsAndWarnings(fmt.Sprintf("Error creating TLS Configuration out of config file:  %s", err.Error()), phase, warnings)
-			return 1
-		}
-
-		sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-			Listener: ln.Listener,
-			Config:   ln.Config,
-		})
-	}
-	err = diagnose.ListenerChecks(sanitizedListeners)
-	if err != nil {
-		c.outputErrorsAndWarnings(fmt.Sprintf("Diagnose caught configuration errors:  %s", err.Error()), phase, warnings)
-		return 1
-	}
-
-	c.UI.Output(same_line + status_ok + phase)
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
 	// TODO: check for storage backend
-
-	var storageErrors []string
-
-	phase = "Access storage"
-	c.UI.Output(status_unknown + phase)
-	b, err := server.setupStorage(config)
-	if err != nil {
-		storageErrors = append(storageErrors, err.Error())
-	}
-
-	// Attempt to use storage backend
-	c2 := make(chan string, 1)
-	go func() {
-		b.Put(context.Background(), &physical.Entry{Key: "diagnose", Value: []byte("diagnose")})
-		c2 <- "success"
-	}()
-	select {
-	case _ = <-c2:
-		val, err := b.Get(context.Background(), "diagnose")
+	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+		b, err := server.setupStorage(config)
 		if err != nil {
-			storageErrors = append(storageErrors, err.Error())
-		} else {
-			if val.Key != "diagnose" && string(val.Value) != "diagnose" {
-				storageErrors = append(storageErrors, fmt.Sprintf("Storage get and put gave wrong values: expecting diagnose, but got %s, %s", val.Key, val.Value))
+			return err
+		}
+
+		// Attempt to use storage backend
+		c2 := make(chan string, 1)
+		go func() {
+			b.Put(context.Background(), &physical.Entry{Key: "diagnose", Value: []byte("diagnose")})
+			c2 <- "success"
+		}()
+		select {
+		case _ = <-c2:
+			val, err := b.Get(context.Background(), "diagnose")
+			if err != nil {
+				return err
 			} else {
-				err = b.Delete(context.Background(), "diagnose")
-				if err != nil {
-					storageErrors = append(storageErrors, err.Error())
+				if val.Key != "diagnose" && string(val.Value) != "diagnose" {
+					return fmt.Errorf("Storage get and put gave wrong values: expecting diagnose, but got %s, %s", val.Key, val.Value)
+				} else {
+					err = b.Delete(context.Background(), "diagnose")
+					if err != nil {
+						return err
+					}
 				}
 			}
+		case <-time.After(20 * time.Second):
+			return fmt.Errorf("storage get timed out after 20 seconds")
 		}
-	case <-time.After(20 * time.Second):
-		storageErrors = append(storageErrors, fmt.Sprint("Storage get timed out after 20 seconds."))
+
+		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
-	// Initialize the Service Discovery, if there is one
-	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, nil, true)
-		if err != nil {
-			storageErrors = append(storageErrors, err.Error())
+	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		// Initialize the Service Discovery, if there is one
+		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
+			// storage. See the consul package in physical for details.
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
 		}
-	}
-	if storageErrors != nil && len(storageErrors) > 0 {
-		for _, err := range storageErrors {
-			c.UI.Output(same_line + status_failed + phase)
-			c.UI.Output(err)
-		}
-		return 1
-	}
-
-	if config.Storage != nil && config.Storage.Type == storageTypeConsul {
-		err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
-		if err != nil {
-			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
-			return 1
-		}
-	}
-
-	if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-		err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
-		if err != nil {
-			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
-			return 1
-		}
-	}
-
-	c.UI.Output(same_line + status_ok + phase)
-
-	// Initialize the Service Discovery, if there is one
-	phase = "Service discovery"
-	if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-		// SetupSecureTLS for service discovery uses the same cert and key to set up physical
-		// storage. See the consul package in physical for details.
-		err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
-		if err != nil {
-			c.outputErrorsAndWarnings(fmt.Sprintf(err.Error()), phase, warnings)
-			return 1
-		}
-	}
-	c.UI.Output(same_line + status_ok + phase)
-
-	return 0
-}
-
-func (c *OperatorDiagnoseCommand) outputErrorsAndWarnings(err, phase string, warnings []string) {
-
-	c.UI.Output(same_line + status_failed + phase)
-
-	if warnings != nil && len(warnings) > 0 {
-		for _, warning := range warnings {
-			c.UI.Warn(warning)
-		}
-	}
-	c.UI.Error(err)
+		return nil
+	})
 }
