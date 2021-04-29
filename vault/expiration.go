@@ -69,6 +69,12 @@ const (
 	// limit zombie error messages to 240 characters to be respectful of storage
 	// requirements
 	maxZombieErrorLength = 240
+
+	genericZombieErrorMessage = "no error message given"
+)
+
+var (
+	errOutOfRetries = errors.New("lease has consumed all retry attempts")
 )
 
 type pendingInfo struct {
@@ -239,6 +245,10 @@ func (r *revocationJob) OnFailure(err error) {
 			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
 			return
 		}
+		if le == nil {
+			r.m.logger.Warn("failed to mark lease as zombie - nil lease", "lease_id", r.leaseID)
+			return
+		}
 
 		r.m.markLeaseAsZombie(r.nsCtx, le, err)
 		return
@@ -254,7 +264,7 @@ func (r *revocationJob) OnFailure(err error) {
 			return
 		}
 
-		r.m.markLeaseAsZombie(r.nsCtx, le, errors.New("lease has consumed all retry attempts"))
+		r.m.markLeaseAsZombie(r.nsCtx, le, errOutOfRetries)
 		return
 	}
 
@@ -2370,9 +2380,12 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 		return
 	}
 
-	errStr := err.Error()
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
 	if len(errStr) == 0 {
-		errStr = "no error message given"
+		errStr = genericZombieErrorMessage
 	}
 	if len(errStr) > maxZombieErrorLength {
 		errStr = errStr[:maxZombieErrorLength]
