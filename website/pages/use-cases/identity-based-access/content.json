@@ -1,12 +1,12 @@
 {
   "beforeAfterDiagram": {
     "beforeImage": {
-      "url": "/img/use-cases/identity-based-access/identity-based-access-challenge.svg"
+      "url": "/img/use-cases/identity-based-access/identity-based-access-challenge.png"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl",
     "afterImage": {
-      "url": "/img/use-cases/identity-based-access/identity-based-access-solution.svg"
+      "url": "/img/use-cases/identity-based-access/identity-based-access-solution.png"
     },
     "afterHeadline": "The Solution",
     "afterContent": "Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"

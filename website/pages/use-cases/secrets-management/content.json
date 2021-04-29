@@ -1,13 +1,13 @@
 {
   "beforeAfterDiagram": {
     "beforeImage": {
-      "url": "/img/use-cases/secrets-management/secrets_mgmt_challenge.svg",
+      "url": "/img/use-cases/secrets-management/secrets-mgmt-challenge.png",
       "format": "svg"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "Secrets for applications and systems need to be centralized and static IP-based solutions don't scale in dynamic environments with frequently changing applications and machines",
     "afterImage": {
-      "url": "/img/use-cases/secrets-management/secrets_mgmt_solution.svg",
+      "url": "/img/use-cases/secrets-management/secrets-mgmt-solution.png",
       "format": "png"
     },
     "afterHeadline": "The Solution",

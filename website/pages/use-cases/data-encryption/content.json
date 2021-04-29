@@ -1,13 +1,13 @@
 {
   "beforeAfterDiagram": {
     "beforeImage": {
-      "url": "/img/use-cases/data-encryption/data-encryption-challenge.svg",
+      "url": "/img/use-cases/data-encryption/data-encryption-challenge.png",
       "format": "svg"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly",
     "afterImage": {
-      "url": "/img/use-cases/data-encryption/data-encryption-solution.svg",
+      "url": "/img/use-cases/data-encryption/data-encryption-solution.png",
       "format": "svg"
     },
     "afterHeadline": "The Solution",
@@ -20,7 +20,7 @@
         "content": "Encrypt application data during transit and rest with AES 256-bit CBC data encryption and TLS in transit."
       },
       "image": {
-        "url": "/img/use-cases/data-encryption/encryption-features.svg"
+        "url": "/img/use-cases/data-encryption/encryption-features.png"
       }
     },
     {
