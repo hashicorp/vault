@@ -216,7 +216,7 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 		return fmt.Errorf("names mismatch: %s vs %s", exp.Name, act.Name)
 	}
 	if exp.Status != act.Status {
-		if act.Status != status_ok {
+		if act.Status != diagnose.OkStatus {
 			return fmt.Errorf("section %s, status mismatch: %s vs %s, got error %s", exp.Name, exp.Status, act.Status, act.Message)
 
 		}
