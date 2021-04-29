@@ -1412,7 +1412,7 @@ func (c *ServerCommand) Run(args []string) int {
 				coreConfig.ClusterAddr = config.Storage.ClusterAddr
 			}
 		}
-	} // ROY
+	}
 
 	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
 		coreConfig.RedirectAddr = envRA
