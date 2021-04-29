@@ -428,7 +428,7 @@ github.com/hashicorp/go-discover/provider/softlayer
 github.com/hashicorp/go-discover/provider/tencentcloud
 github.com/hashicorp/go-discover/provider/triton
 github.com/hashicorp/go-discover/provider/vsphere
-# github.com/hashicorp/go-gcp-common v0.6.0
+# github.com/hashicorp/go-gcp-common v0.7.0
 github.com/hashicorp/go-gcp-common/gcputil
 # github.com/hashicorp/go-hclog v0.14.1
 github.com/hashicorp/go-hclog
@@ -512,7 +512,7 @@ github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
+# github.com/hashicorp/vault-plugin-auth-gcp v0.8.1
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.8.1
@@ -1175,6 +1175,7 @@ google.golang.org/api/compute/v1
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/iam/v1
+google.golang.org/api/iamcredentials/v1
 google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/third_party/uritemplates
