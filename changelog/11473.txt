@@ -1,0 +1,4 @@
+```release-note:changes
+agent: Update to use IAM Service Account Credentials endpoint for signing JWTs
+when using GCP Auto-Auth method
+```
