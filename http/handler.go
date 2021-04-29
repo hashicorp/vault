@@ -382,7 +382,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing client hostport: {{err}}", err))
+			respondError(w, http.StatusBadRequest, fmt.Errorf("error parsing client hostport: %w", err))
 			return
 		}
 
@@ -393,7 +393,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing client address: {{err}}", err))
+			respondError(w, http.StatusBadRequest, fmt.Errorf("error parsing client address: %w", err))
 			return
 		}
 
@@ -459,7 +459,7 @@ func wrappingVerificationFunc(ctx context.Context, core *vault.Core, req *logica
 
 	valid, err := core.ValidateWrappingToken(ctx, req)
 	if err != nil {
-		return errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+		return fmt.Errorf("error validating wrapping token: %w", err)
 	}
 	if !valid {
 		return consts.ErrInvalidWrappingToken
@@ -655,7 +655,7 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
-		return nil, errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse JSON input: %w", err)
 	}
 	if origBody != nil {
 		return ioutil.NopCloser(origBody), err

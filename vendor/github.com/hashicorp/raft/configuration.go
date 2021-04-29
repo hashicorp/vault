@@ -181,17 +181,17 @@ func checkConfiguration(configuration Configuration) error {
 	var voters int
 	for _, server := range configuration.Servers {
 		if server.ID == "" {
-			return fmt.Errorf("Empty ID in configuration: %v", configuration)
+			return fmt.Errorf("empty ID in configuration: %v", configuration)
 		}
 		if server.Address == "" {
-			return fmt.Errorf("Empty address in configuration: %v", server)
+			return fmt.Errorf("empty address in configuration: %v", server)
 		}
 		if idSet[server.ID] {
-			return fmt.Errorf("Found duplicate ID in configuration: %v", server.ID)
+			return fmt.Errorf("found duplicate ID in configuration: %v", server.ID)
 		}
 		idSet[server.ID] = true
 		if addressSet[server.Address] {
-			return fmt.Errorf("Found duplicate address in configuration: %v", server.Address)
+			return fmt.Errorf("found duplicate address in configuration: %v", server.Address)
 		}
 		addressSet[server.Address] = true
 		if server.Suffrage == Voter {
@@ -199,7 +199,7 @@ func checkConfiguration(configuration Configuration) error {
 		}
 	}
 	if voters == 0 {
-		return fmt.Errorf("Need at least one voter in configuration: %v", configuration)
+		return fmt.Errorf("need at least one voter in configuration: %v", configuration)
 	}
 	return nil
 }
@@ -209,7 +209,7 @@ func checkConfiguration(configuration Configuration) error {
 // that it can be unit tested easily.
 func nextConfiguration(current Configuration, currentIndex uint64, change configurationChangeRequest) (Configuration, error) {
 	if change.prevIndex > 0 && change.prevIndex != currentIndex {
-		return Configuration{}, fmt.Errorf("Configuration changed since %v (latest is %v)", change.prevIndex, currentIndex)
+		return Configuration{}, fmt.Errorf("configuration changed since %v (latest is %v)", change.prevIndex, currentIndex)
 	}
 
 	configuration := current.Clone()

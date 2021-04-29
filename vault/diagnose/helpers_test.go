@@ -3,8 +3,10 @@ package diagnose
 import (
 	"context"
 	"errors"
+	"github.com/go-test/deep"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -14,7 +16,6 @@ func TestDiagnoseOtelResults(t *testing.T) {
 		Status: WarningStatus,
 		Warnings: []string{
 			"coffee getting low",
-			"no scones",
 		},
 		Children: []*Result{
 			{
@@ -25,20 +26,27 @@ func TestDiagnoseOtelResults(t *testing.T) {
 				Name:   "brew-coffee",
 				Status: OkStatus,
 			},
+			{
+				Name:    "pick-scone",
+				Status:  ErrorStatus,
+				Message: "no scones",
+			},
 		},
 	}
-	Init()
+	sess := New()
+	ctx := Context(context.Background(), sess)
 
 	func() {
-		ctx, span := StartSpan(context.Background(), "make-coffee")
+		ctx, span := StartSpan(ctx, "make-coffee")
 		defer span.End()
 
 		makeCoffee(ctx)
 	}()
 
-	results := Shutdown()
+	results := sess.Finalize(ctx)
+	results.ZeroTimes()
 	if !reflect.DeepEqual(results, expected) {
-		t.Fail()
+		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
 	}
 	results.Write(os.Stdout)
 }

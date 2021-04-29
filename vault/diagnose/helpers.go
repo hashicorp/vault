@@ -2,7 +2,6 @@ package diagnose
 
 import (
 	"context"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -25,34 +24,57 @@ var (
 	MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
 )
 
-var tp *sdktrace.TracerProvider
-var tracer trace.Tracer
-var tc *TelemetryCollector
+var diagnoseSession = struct{}{}
+var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
 
-// Init initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
+type Session struct {
+	tc     *TelemetryCollector
+	tracer trace.Tracer
+	tp     *sdktrace.TracerProvider
+}
+
+// New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
 // synchronously receives and tracks OpenTelemetry spans in order to provide a tree structure of results
 // when the outermost span ends.
-func Init(w io.Writer) {
-	tc = NewTelemetryCollector(w)
+func New() *Session {
+	tc := NewTelemetryCollector()
 	//so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
-	tp = sdktrace.NewTracerProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		//sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
 		sdktrace.WithSpanProcessor(tc),
 	)
-	otel.SetTracerProvider(tp)
-	tracer = tp.Tracer("vault-diagnose")
+	tracer := tp.Tracer("vault-diagnose")
+	sess := &Session{
+		tp:     tp,
+		tc:     tc,
+		tracer: tracer,
+	}
+	return sess
 }
 
-// Ends the Diagnose session, returning the root of the result tree.  This will be empty until
+// Context returns a new context with a defined diagnose session
+func Context(ctx context.Context, sess *Session) context.Context {
+	return context.WithValue(ctx, diagnoseSession, sess)
+}
+
+// Finalize ends the Diagnose session, returning the root of the result tree.  This will be empty until
 // the outermost span ends.
-func Shutdown() *Result {
-	return tc.RootResult
+func (s *Session) Finalize(ctx context.Context) *Result {
+	s.tp.ForceFlush(ctx)
+	return s.tc.RootResult
 }
 
-// Start a "diagnose" span, which is really just an Otel Tracing span.
+// StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
-	return tracer.Start(ctx, spanName, options...)
+	sessionCtxVal := ctx.Value(diagnoseSession)
+	if sessionCtxVal != nil {
+
+		session := sessionCtxVal.(*Session)
+		return session.tracer.Start(ctx, spanName, options...)
+	} else {
+		return noopTracer.Start(ctx, spanName, options...)
+	}
 }
 
 // Fail records a failure in the current span
@@ -74,14 +96,20 @@ func Warn(ctx context.Context, msg string) {
 	span.AddEvent(warningEventName, trace.WithAttributes(messageKey.String(msg)))
 }
 
+// SpotOk adds an Ok result without adding a new Span.  This should be used for instantaneous checks with no
+// possible sub-spans
 func SpotOk(ctx context.Context, checkName, message string, options ...trace.EventOption) {
 	addSpotCheckResult(ctx, spotCheckOkEventName, checkName, message, options...)
 }
 
+// SpotWarn adds a Warning result without adding a new Span.  This should be used for instantaneous checks with no
+// possible sub-spans
 func SpotWarn(ctx context.Context, checkName, message string, options ...trace.EventOption) {
 	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message, options...)
 }
 
+// SpotError adds an Error result without adding a new Span.  This should be used for instantaneous checks with no
+// possible sub-spans
 func SpotError(ctx context.Context, checkName string, err error, options ...trace.EventOption) error {
 	var message string
 	if err != nil {
@@ -114,7 +142,7 @@ func SpotCheck(ctx context.Context, checkName string, f func() error) error {
 // Test creates a new named span, and executes the provided function within it.  If the function returns an error,
 // the span is considered to have failed.
 func Test(ctx context.Context, spanName string, function func(context.Context) error, options ...trace.SpanOption) error {
-	ctx, span := tracer.Start(ctx, spanName, options...)
+	ctx, span := StartSpan(ctx, spanName, options...)
 	defer span.End()
 
 	err := function(ctx)

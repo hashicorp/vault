@@ -7,6 +7,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
@@ -63,6 +64,7 @@ type TelemetryCollector struct {
 	rootSpan   sdktrace.ReadOnlySpan
 	results    map[trace.SpanID]*Result
 	RootResult *Result
+	mu         sync.Mutex
 }
 
 func NewTelemetryCollector(w io.Writer) *TelemetryCollector {
@@ -75,6 +77,8 @@ func NewTelemetryCollector(w io.Writer) *TelemetryCollector {
 
 // OnStart tracks spans by id for later retrieval
 func (t *TelemetryCollector) OnStart(_ context.Context, s sdktrace.ReadWriteSpan) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.spans[s.SpanContext().SpanID()] = s
 	if isMainSection(s) {
 		fmt.Fprintf(t.ui, status_unknown+s.Name())
@@ -91,6 +95,8 @@ func isMainSection(s sdktrace.ReadOnlySpan) bool {
 }
 
 func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if !e.Parent().HasSpanID() {
 		// First walk the span structs to construct the top down tree results we want
 		for _, s := range t.spans {
@@ -118,12 +124,12 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 }
 
 // required to implement SpanProcessor, but noops for our purposes
-func (t *TelemetryCollector) Shutdown(ctx context.Context) error {
+func (t *TelemetryCollector) Shutdown(_ context.Context) error {
 	return nil
 }
 
 // required to implement SpanProcessor, but noops for our purposes
-func (t *TelemetryCollector) ForceFlush(ctx context.Context) error {
+func (t *TelemetryCollector) ForceFlush(_ context.Context) error {
 	return nil
 }
 
@@ -171,9 +177,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				var message string
 				for _, a := range e.Attributes {
 					switch a.Key {
-					case "name":
+					case nameKey:
 						checkName = a.Value.AsString()
-					case "message":
+					case messageKey:
 						message = a.Value.AsString()
 					}
 				}
@@ -191,9 +197,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				var message string
 				for _, a := range e.Attributes {
 					switch a.Key {
-					case "name":
+					case nameKey:
 						checkName = a.Value.AsString()
-					case "message":
+					case messageKey:
 						message = a.Value.AsString()
 					}
 				}
@@ -211,9 +217,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				var message string
 				for _, a := range e.Attributes {
 					switch a.Key {
-					case "name":
+					case nameKey:
 						checkName = a.Value.AsString()
-					case "error":
+					case messageKey:
 						message = a.Value.AsString()
 					}
 				}

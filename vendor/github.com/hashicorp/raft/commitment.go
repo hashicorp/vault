@@ -23,7 +23,7 @@ type commitment struct {
 	startIndex uint64
 }
 
-// newCommitment returns an commitment struct that notifies the provided
+// newCommitment returns a commitment struct that notifies the provided
 // channel when log entries have been committed. A new commitment struct is
 // created each time this server becomes leader for a particular term.
 // 'configuration' is the servers in the cluster.

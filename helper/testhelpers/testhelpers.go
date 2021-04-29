@@ -3,15 +3,19 @@ package testhelpers
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/url"
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
@@ -653,4 +657,44 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	if len(expected) != 0 {
 		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
 	}
+}
+
+func TestMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
+		clusterSink.GaugeInterval = gaugeInterval
+		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
+	}
+}
+
+func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) (*SysMetricsJSON, error) {
+	r := client.NewRequest("GET", "/v1/sys/metrics")
+	if !unauth {
+		r.Headers.Set("X-Vault-Token", cluster.RootToken)
+	}
+	var data SysMetricsJSON
+	resp, err := client.RawRequestWithContext(context.Background(), r)
+	if err != nil {
+		return nil, err
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Response.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := json.Unmarshal(bodyBytes, &data); err != nil {
+		return nil, errors.New("failed to unmarshal:" + err.Error())
+	}
+	return &data, nil
+}
+
+type SysMetricsJSON struct {
+	Gauges []GaugeJSON `json:"Gauges"`
+}
+
+type GaugeJSON struct {
+	Name   string                 `json:"Name"`
+	Value  int                    `json:"Value"`
+	Labels map[string]interface{} `json:"Labels"`
 }

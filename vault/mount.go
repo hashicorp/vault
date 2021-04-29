@@ -938,12 +938,13 @@ func (c *Core) remount(ctx context.Context, src, dst string, updateStorage bool)
 		c.logger.Error("failed to update mounts table", "error", err)
 		return logical.CodedError(500, "failed to update mounts table")
 	}
-	c.mountsLock.Unlock()
 
 	// Remount the backend
 	if err := c.router.Remount(ctx, src, dst); err != nil {
+		c.mountsLock.Unlock()
 		return err
 	}
+	c.mountsLock.Unlock()
 
 	// Un-taint the path
 	if err := c.router.Untaint(ctx, dst); err != nil {
