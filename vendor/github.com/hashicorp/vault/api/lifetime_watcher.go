@@ -268,7 +268,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		default:
 		}
 
-		var leaseDuration time.Duration
+		var remainingLeaseDuration time.Duration
 		fallbackLeaseDuration := initialTime.Add(priorDuration).Sub(time.Now())
 		var renewal *Secret
 		var err error
@@ -277,7 +277,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		case nonRenewable || r.renewBehavior == RenewBehaviorRenewDisabled:
 			// Can't or won't renew, just keep the same expiration so we exit
 			// when it's reauthentication time
-			leaseDuration = fallbackLeaseDuration
+			remainingLeaseDuration = fallbackLeaseDuration
 
 		default:
 			// Renew the token
@@ -293,10 +293,10 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				}
 
 				// Calculate remaining duration until initial token lease expires
-				leaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
+				remainingLeaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
 				if errorBackoff == nil {
 					errorBackoff = &backoff.ExponentialBackOff{
-						MaxElapsedTime:      leaseDuration,
+						MaxElapsedTime:      remainingLeaseDuration,
 						RandomizationFactor: backoff.DefaultRandomizationFactor,
 						InitialInterval:     initialRetryInterval,
 						MaxInterval:         5 * time.Minute,
@@ -315,14 +315,14 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			default:
 			}
 
-			// Reset initial time
-			initialTime = time.Now()
-
 			// Possibly error if we are not renewable
 			if ((tokenMode && !renewal.Auth.Renewable) || (!tokenMode && !renewal.Renewable)) &&
 				r.renewBehavior == RenewBehaviorErrorOnErrors {
 				return r.errLifetimeWatcherNotRenewable
 			}
+
+			// Reset initial time
+			initialTime = time.Now()
 
 			// Grab the lease duration
 			initLeaseDuration = renewal.LeaseDuration
@@ -330,7 +330,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				initLeaseDuration = renewal.Auth.LeaseDuration
 			}
 
-			leaseDuration = time.Duration(initLeaseDuration) * time.Second
+			remainingLeaseDuration = time.Duration(initLeaseDuration) * time.Second
 		}
 
 		var sleepDuration time.Duration
@@ -344,14 +344,14 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			// We keep evaluating a new grace period so long as the lease is
 			// extending. Once it stops extending, we've hit the max and need to
 			// rely on the grace duration.
-			if leaseDuration > priorDuration {
-				r.calculateGrace(leaseDuration)
+			if remainingLeaseDuration > priorDuration {
+				r.calculateGrace(remainingLeaseDuration)
 			}
-			priorDuration = leaseDuration
+			priorDuration = remainingLeaseDuration
 
 			// The sleep duration is set to 2/3 of the current lease duration plus
 			// 1/3 of the current grace period, which adds jitter.
-			sleepDuration = time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
+			sleepDuration = time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
 		}
 
 		// If we are within grace, return now; or, if the amount of time we
@@ -360,7 +360,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		// seconds, a grace period of 3 seconds, and end up sleeping for more
 		// than three of those seconds and having a very small budget of time
 		// to renew.
-		if leaseDuration <= r.grace || leaseDuration-sleepDuration <= r.grace {
+		if remainingLeaseDuration <= r.grace || remainingLeaseDuration-sleepDuration <= r.grace {
 			return nil
 		}
 
@@ -371,23 +371,6 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			continue
 		}
 	}
-}
-
-// sleepDuration calculates the time to sleep given the base lease duration. The
-// base is the resulting lease duration. It will be reduced to 1/3 and
-// multiplied by a random float between 0.0 and 1.0. This extra randomness
-// prevents multiple clients from all trying to renew simultaneously.
-func (r *LifetimeWatcher) sleepDuration(base time.Duration) time.Duration {
-	sleep := float64(base)
-
-	// Renew at 1/3 the remaining lease. This will give us an opportunity to retry
-	// at least one more time should the first renewal fail.
-	sleep = sleep / 3.0
-
-	// Use a randomness so many clients do not hit Vault simultaneously.
-	sleep = sleep * (r.random.Float64() + 1) / 2.0
-
-	return time.Duration(sleep)
 }
 
 // calculateGrace calculates the grace period based on a reasonable set of
