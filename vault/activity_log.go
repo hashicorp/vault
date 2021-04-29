@@ -1523,14 +1523,20 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 
 	// Cancel the context if activity log is shut down.
 	// This will cause the next storage operation to fail.
-	go func() {
+	a.l.RLock()
+	// doneCh is modified in some tests, so we don't want to access that member
+	// without a lock, but we don't want to hold the lock for the entire lifetime
+	// of this goroutine.  Passing the channel to the goroutine works here because
+	// no tests depend on us accessing the new doneCh after modifying the field.
+	go func(done chan struct{}) {
 		select {
-		case <-a.doneCh:
+		case <-done:
 			cancel()
 		case <-ctx.Done():
 			break
 		}
-	}()
+	}(a.doneCh)
+	a.l.RUnlock()
 
 	// Load the intent log
 	rawIntentLog, err := a.view.Get(ctx, activityIntentLogKey)
