@@ -164,7 +164,7 @@ func (j *jwtMethod) ingressToken() {
 	j.logger.Debug("new jwt file found")
 
 	// Check that the path refers to a file.
-	// If it's a sym link, it could still be a sym link to a directory,
+	// If it's a sym link, it could still be a symlink to a directory,
 	// but ioutil.ReadFile below will return a descriptive error.
 	if !fi.Mode().IsRegular() && (fi.Mode()&fs.ModeSymlink) == 0 {
 		j.logger.Error("jwt file is not a regular file or symlink")
