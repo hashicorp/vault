@@ -20,7 +20,7 @@
     "@hashicorp/react-inline-svg": "6.0.1",
     "@hashicorp/react-logo-grid": "4.0.1",
     "@hashicorp/react-markdown-page": "1.1.2",
-    "@hashicorp/react-product-downloads-page": "2.0.1",
+    "@hashicorp/react-product-downloads-page": "^2.0.2-alpha.10",
     "@hashicorp/react-section-header": "5.0.2",
     "@hashicorp/react-subnav": "8.1.0",
     "@hashicorp/react-tabs": "6.0.1",
