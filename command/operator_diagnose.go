@@ -2,17 +2,14 @@ package command
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
@@ -228,7 +225,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
-	// TODO: check for storage backend
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
 		b, err := server.setupStorage(config)
 		if err != nil {
@@ -251,7 +247,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Attempt to use storage backend
 		if !c.skipEndEnd {
-			err = storageEndToEndLatencyCheck(ctx, b)
+			err = diagnose.StorageEndToEndLatencyCheck(ctx, b)
 			if err != nil {
 				return err
 			}
@@ -274,72 +270,4 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 		return nil
 	})
-}
-
-func storageEndToEndLatencyCheck(ctx context.Context, b physical.Backend) error {
-	// Note: Just checking read, write, and delete for root. It's a very basic check,
-	// but I don't think we can necessarily do any more than that. We could check list,
-	// but I don't think List is ever going to break in isolation.
-
-	success := "success"
-	secretKey := "diagnose"
-	secretVal := "diagnoseSecret"
-
-	c2 := make(chan string, 1)
-	go func() {
-		err := b.Put(context.Background(), &physical.Entry{Key: secretKey, Value: []byte(secretVal)})
-		if err != nil {
-			c2 <- err.Error()
-		} else {
-			c2 <- success
-		}
-	}()
-	select {
-	case errString := <-c2:
-		if errString != success {
-			return fmt.Errorf(errString)
-		}
-	case <-time.After(20 * time.Second):
-		return fmt.Errorf("storage get timed out after 20 seconds")
-	}
-
-	c3 := make(chan *physical.Entry)
-	c4 := make(chan error)
-	go func() {
-		val, err := b.Get(context.Background(), "diagnose")
-		if err != nil {
-			c4 <- err
-		} else {
-			c3 <- val
-		}
-	}()
-	select {
-	case err := <-c4:
-		return err
-	case val := <-c3:
-		if val.Key != "diagnose" && string(val.Value) != "diagnose" {
-			return fmt.Errorf("Storage get and put gave wrong values: expecting diagnose, but got %s, %s", val.Key, val.Value)
-		}
-	case <-time.After(20 * time.Second):
-		return fmt.Errorf("storage get timed out after 20 seconds")
-	}
-
-	c5 := make(chan string, 1)
-	go func() {
-		err := b.Delete(context.Background(), "diagnose")
-		if err != nil {
-			c5 <- err.Error()
-		} else {
-			c5 <- success
-		}
-	}()
-	select {
-	case errString := <-c5:
-		if errString != success {
-			return fmt.Errorf(errString)
-		}
-	case <-time.After(20 * time.Second):
-		return fmt.Errorf("storage get timed out after 20 seconds")
-	}
-	return nil
 }
