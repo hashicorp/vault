@@ -103,8 +103,8 @@ process.
 
 ### Vault UI
 
-Thanks for contributing to the Vault UI!  If you are contributing something new,
-please submit an informational issue first.  As with other work, that issue
+How you contribute to the UI depends on what you want to contribute. If that is 
+a new feature, please submit an informational issue first.  That issue 
 should include a short description of the proposed feature, the use case,
 the approach you're taking, and the tests that would be written.  A mockup
 is optional but encouraged.  
