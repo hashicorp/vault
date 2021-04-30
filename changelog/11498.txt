@@ -1,4 +1,4 @@
-```release-note:changes
+```release-note:change
 auth/gcp: Update to v0.8.1 to use IAM Service Account Credentials API for
 signing JWTs
 ```
