@@ -18,6 +18,7 @@ is via the [Vault Discussion Forum][2].
 ## Issues
 
 This section will cover what we're looking for in terms of reporting issues.
+
 By addressing all the points we're looking for, it raises the chances we can
 quickly merge or address your contributions.
 
@@ -63,9 +64,10 @@ quickly merge or address your contributions.
 
 ## Pull requests
 
-First, consider opening an issue (see above) to discuss the approach you'd like 
-to take to address your feature or fix.  It may be that we're working on something 
-similar, so this may help to avoid duplicating efforts. 
+Before working on a pull request, open an issue for your intended work to discuss 
+the approach you'd like to take to address your feature or fix.  It may be that we're 
+working on something similar, so this may help to avoid duplicating efforts. 
+Or it may be that we can provide guidance that will help with your approach.
 
 Your pull request should have a description of what it accomplishes, how it does so,
 and why you chose the approach you did.  PRs should include unit tests that validate
