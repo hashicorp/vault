@@ -3,6 +3,7 @@ package diagnose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/physical"
@@ -79,4 +80,15 @@ func StorageEndToEndLatencyCheck(ctx context.Context, b physical.Backend) error 
 		return fmt.Errorf(timeOutErr + "operation: Delete")
 	}
 	return nil
+}
+
+// ConsulDirectAccess verifies that consul is connecting to local agent,
+// versus directly to a remote server. We can only assume that the local address
+// is a server, not a client.
+func ConsulDirectAccess(config map[string]string) string {
+	serviceRegistrationAddr := config["address"]
+	if !strings.Contains(serviceRegistrationAddr, "localhost") && !strings.Contains(serviceRegistrationAddr, "127.0.0.1") {
+		return "consul storage does not connect to local agent, but directly to server"
+	}
+	return ""
 }

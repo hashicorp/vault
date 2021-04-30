@@ -9,6 +9,7 @@ listener "tcp" {
 }
 
 backend "consul" {
+    address = "127.0.0.1:8500"
     foo = "bar"
     advertise_addr = "foo"
     scheme = "https"
@@ -17,6 +18,7 @@ backend "consul" {
 }
 
 ha_backend "consul" {
+    address = "127.0.0.1:8500"
     bar = "baz"
     advertise_addr = "snafu"
     disable_clustering = "true"

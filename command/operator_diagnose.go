@@ -231,10 +231,20 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			return err
 		}
 
+		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+		if dirAccess != "" {
+			diagnose.Warn(ctx, dirAccess)
+		}
+
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 			if err != nil {
 				return err
+			}
+
+			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
 			}
 		}
 
@@ -259,11 +269,18 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		srConfig := config.ServiceRegistration.Config
 		// Initialize the Service Discovery, if there is one
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			// setupStorage populates the srConfig, so no nil checks are necessary.
+			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
 				return err
 			}

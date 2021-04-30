@@ -11,6 +11,8 @@ listener "tcp" {
 backend "consul" {
     foo = "bar"
     advertise_addr = "foo"
+    address = "127.0.0.1:1028"
+
 }
 
 ha_backend "consul" {
@@ -24,6 +26,8 @@ ha_backend "consul" {
 
 service_registration "consul" {
     foo = "bar"
+    address = "127.0.0.1:1028"
+
 }
 
 telemetry {

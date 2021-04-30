@@ -11,17 +11,19 @@ listener "tcp" {
 backend "consul" {
     foo = "bar"
     advertise_addr = "foo"
+    address = "127.0.0.1:8500"
 }
 
 ha_backend "consul" {
     bar = "baz"
     advertise_addr = "snafu"
     disable_clustering = "true"
+    address = "127.0.0.1:8500"
 }
 
 service_registration "consul" {
+    address = "https://consulserverIP:8500"
     foo = "bar"
-    address = "https://127.0.0.1:8200"
     tls_cert_file = "./../vault/diagnose/test-fixtures/expiredcert.pem"
     tls_key_file = "./../vault/diagnose/test-fixtures/expiredprivatekey.pem"
 }
