@@ -93,6 +93,9 @@ type TelemetryCollector struct {
 	mu         sync.Mutex
 }
 
+// NewTelemetryCollector creates a SpanProcessor that collects OpenTelemetry spans
+// and aggregates them into a tree structure for use by Diagnose.
+// It also outputs the status of main sections to that writer.
 func NewTelemetryCollector(w io.Writer) *TelemetryCollector {
 	return &TelemetryCollector{
 		ui:      w,
