@@ -74,7 +74,7 @@ const (
 )
 
 var (
-	errOutOfRetries = errors.New("lease has consumed all retry attempts")
+	errOutOfRetries = errors.New("out of retries")
 )
 
 type pendingInfo struct {
@@ -2439,7 +2439,7 @@ func (le *leaseEntry) renewable() (bool, error) {
 		return false, fmt.Errorf("lease not found")
 
 	case le.isZombie():
-		return false, fmt.Errorf("lease is not renewable and has failed previous revocation attempts")
+		return false, fmt.Errorf("lease is expired and has failed previous revocation attempts")
 
 	case le.ExpireTime.IsZero():
 		return false, fmt.Errorf("lease is not renewable")
