@@ -14,8 +14,8 @@ import (
 
 // SharedConfig contains some shared values
 type SharedConfig struct {
-	FoundKeys  []string               `hcl:",decodedFields"`
-	UnusedKeys map[string][]token.Pos `hcl:",unusedKeyPositions"`
+	FoundKeys  []string     `hcl:",decodedFields"`
+	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
 	Sections   map[string][]token.Pos
 
 	EntSharedConfig

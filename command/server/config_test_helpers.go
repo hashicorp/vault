@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			},
 		},
 	}
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -151,7 +152,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -240,8 +241,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	config.Listeners[0].RawConfig = nil
-	config.Listeners[1].RawConfig = nil
+
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -356,7 +357,7 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 		EnableUIRaw:     true,
 	}
 
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -451,9 +452,23 @@ func testLoadConfigFile(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{})
 
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func cleanup(config *Config) {
+	for _, l := range config.Listeners {
+		l.RawConfig = nil
+	}
+	config.FoundKeys = nil
+	config.UnusedKeys = nil
+	config.SharedConfig.FoundKeys = nil
+	config.SharedConfig.UnusedKeys = nil
+	if config.Telemetry != nil {
+		config.Telemetry.FoundKeys = nil
+		config.Telemetry.UnusedKeys = nil
 	}
 }
 
@@ -465,30 +480,40 @@ func testUnknownFieldValidation(t *testing.T) {
 
 	expected := []configutil.ConfigError{
 		{
-			Problem:  "unknown field bad_value found in configuration",
-			Position: token.Pos{},
+			Problem: "unknown field bad_value found in configuration",
+			Position: token.Pos{
+				Filename: "./test-fixtures/config.hcl",
+				Offset:   603,
+				Line:     35,
+				Column:   5,
+			},
 		},
 	}
 	errors := config.Validate("./test-fixtures/config.hcl")
 
-outer:
 	for _, er1 := range errors {
+		found := false
 		for _, ex := range expected {
 			// Only test the string, pos may change
-			if ex.Problem == er1.Problem {
-				continue outer
+			if ex.Problem == er1.Problem && reflect.DeepEqual(ex.Position, er1.Position) {
+				found = true
+				break
 			}
 		}
-		t.Fatalf("found unexpected error: %v", er1.String())
+		if !found {
+			t.Fatalf("found unexpected error: %v", er1.String())
+		}
 	}
-outer2:
 	for _, ex := range expected {
+		found := false
 		for _, er1 := range errors {
-			if ex.Problem == er1.Problem {
-				continue outer2
+			if ex.Problem == er1.Problem && reflect.DeepEqual(ex.Position, er1.Position) {
+				found = true
 			}
 		}
-		t.Fatalf("could not find expected error: %v", ex.String())
+		if !found {
+			t.Fatalf("could not find expected error: %v", ex.String())
+		}
 	}
 }
 
@@ -569,7 +594,7 @@ func testLoadConfigFile_json(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{})
 
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -633,7 +658,7 @@ func testLoadConfigDir(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{"http"})
 
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -735,7 +760,7 @@ func testConfig_Sanitized(t *testing.T) {
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
 
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
@@ -801,7 +826,7 @@ listener "tcp" {
 			},
 		},
 	}
-	config.Listeners[0].RawConfig = nil
+	cleanup(&config)
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -861,6 +886,7 @@ func testParseSeals(t *testing.T) {
 			},
 		},
 	}
+	cleanup(config)
 	require.Equal(t, config, expected)
 }
 
@@ -948,7 +974,7 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{})
 
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -981,7 +1007,7 @@ func testConfigRaftAutopilot(t *testing.T) {
 			},
 		},
 	}
-	config.Listeners[0].RawConfig = nil
+	cleanup(config)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}

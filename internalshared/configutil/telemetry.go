@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/hcl/hcl/token"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
@@ -34,10 +33,10 @@ const (
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	FoundKeys    []string               `hcl:",decodedFields"`
-	UnusedKeys   map[string][]token.Pos `hcl:",unusedKeyPositions"`
-	StatsiteAddr string                 `hcl:"statsite_address"`
-	StatsdAddr   string                 `hcl:"statsd_address"`
+	FoundKeys    []string     `hcl:",decodedFields"`
+	UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
+	StatsiteAddr string       `hcl:"statsite_address"`
+	StatsdAddr   string       `hcl:"statsd_address"`
 
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`

@@ -36,7 +36,7 @@ func ParseEntropy(result *SharedConfig, list *ast.ObjectList, blockName string) 
 }
 
 // Creates the ConfigErrors for unused fields, which occur in various structs
-func ValidateUnusedFields(unusedKeyPositions map[string][]token.Pos, source string) []ConfigError {
+func ValidateUnusedFields(unusedKeyPositions UnusedKeyMap, sourceFilePath string) []ConfigError {
 	if unusedKeyPositions == nil {
 		return nil
 	}
@@ -44,8 +44,8 @@ func ValidateUnusedFields(unusedKeyPositions map[string][]token.Pos, source stri
 	for field, positions := range unusedKeyPositions {
 		problem := fmt.Sprintf("unknown field %s found in configuration", field)
 		for _, pos := range positions {
-			if pos.Filename == "" && source != "" {
-				pos.Filename = source
+			if pos.Filename == "" && sourceFilePath != "" {
+				pos.Filename = sourceFilePath
 			}
 			errors = append(errors, ConfigError{
 				Problem:  problem,
@@ -56,14 +56,15 @@ func ValidateUnusedFields(unusedKeyPositions map[string][]token.Pos, source stri
 	return errors
 }
 
-func UnusedFieldDifference(a, b map[string][]token.Pos, foundKeys []string) map[string][]token.Pos {
+// UnusedFieldDifference returns all the keys in map a that are not present in map b, and also not present in foundKeys.
+func UnusedFieldDifference(a, b UnusedKeyMap, foundKeys []string) UnusedKeyMap {
 	if a == nil {
 		return nil
 	}
 	if b == nil {
 		return a
 	}
-	res := make(map[string][]token.Pos)
+	res := make(UnusedKeyMap)
 	for k, v := range a {
 		if _, ok := b[k]; !ok && !strutil.StrListContainsCaseInsensitive(foundKeys, govalidator.UnderscoreToCamelCase(k)) {
 			res[k] = v

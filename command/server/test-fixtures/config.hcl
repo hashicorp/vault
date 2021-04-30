@@ -32,6 +32,7 @@ telemetry {
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
     metrics_prefix = "myprefix"
+    bad_value = "shouldn't be here"
 }
 
 sentinel {

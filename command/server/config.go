@@ -82,10 +82,10 @@ const (
 	sectionSeal = "Seal"
 )
 
-func (c *Config) Validate(source string) []configutil.ConfigError {
-	results := configutil.ValidateUnusedFields(c.UnusedKeys, source)
+func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
+	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
 	if c.Telemetry != nil {
-		results = append(results, c.Telemetry.Validate(source)...)
+		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
 	}
 	return results
 }
