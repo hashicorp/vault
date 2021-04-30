@@ -78,6 +78,29 @@ Someone will do a first pass review on your PR making sure it follows the guidel
 in this document.  If it doesn't we'll mark the PR incomplete and ask you to follow
 up on the missing requirements.
 
+### Changelog Entries
+Please include a file within your PR named `changelog/#.txt`, where `#` is your
+pull request ID.  There are many examples under [changelog](changelog/), but
+the general format is
+
+````
+```release-note:CATEGORY
+COMPONENT: summary of change
+```
+````
+
+CATEGORY is one of `security`, `change`, `feature`, `improvement`, or `bug`.
+Your PR is almost certain to be one of `bug` or `improvement`, but don't
+worry too much about getting it exactly right, we'll tell you if a change is 
+needed.
+
+To determine the relevant component, consult [CHANGELOG](CHANGELOG.md) and pick
+whichever one you see that seems the closest match.
+
+You do not need to include the link at the end of the summary that appears in
+CHANGELOG.md, those are generated automatically by the changelog-building 
+process.
+
 ### Vault UI
 
 Thanks for contributing to the Vault UI!  If you are contributing something new,
@@ -101,29 +124,6 @@ PR process.
 Finally, in your code, try to avoid logic-heavy templates (when possible, 
 calculate values in the .js file instead of .hbs) and Ember anti-patterns. 
 And most of all, if you have any questions, please ask!
-
-### Changelog Entries
-Please include a file within your PR named `changelog/#.txt`, where `#` is your
-pull request ID.  There are many examples under [changelog](changelog/), but
-the general format is
-
-````
-```release-note:CATEGORY
-COMPONENT: summary of change
-```
-````
-
-CATEGORY is one of `security`, `change`, `feature`, `improvement`, or `bug`.
-Your PR is almost certain to be one of `bug` or `improvement`, but don't
-worry too much about getting it exactly right, we'll tell you if a change is 
-needed.
-
-To determine the relevant component, consult [CHANGELOG](CHANGELOG.md) and pick
-whichever one you see that seems the closest match.
-
-You do not need to include the link at the end of the summary that appears in
-CHANGELOG.md, those are generated automatically by the changelog-building 
-process.
 
 ## Setting up Go to work on Vault
 
