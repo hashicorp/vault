@@ -59,6 +59,3 @@ func TestStorageTimeout(t *testing.T) {
 		}
 	}
 }
-
-// mb := mockStorageBackend{callType: timeoutCallRead}
-// err := StorageEndToEndLatencyCheck(context.Background(), mb)
