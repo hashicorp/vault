@@ -150,6 +150,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
+					Warnings: []string{
+						diagnose.AddrDNExistErr,
+					},
 				},
 			},
 		},
@@ -178,6 +181,39 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Name:    "service-discovery",
 					Status:  diagnose.ErrorStatus,
 					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid:",
+					Warnings: []string{
+						diagnose.DirAccessErr,
+					},
+				},
+			},
+		},
+		{
+			"diagnose_direct_storage_access",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_ok_storage_direct_access.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						"TLS is disabled in a Listener config stanza.",
+					},
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						diagnose.DirAccessErr,
+					},
+				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.OkStatus,
 				},
 			},
 		},

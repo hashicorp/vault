@@ -3,6 +3,7 @@ package diagnose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/physical"
@@ -14,6 +15,8 @@ const (
 	secretVal string = "diagnoseSecret"
 
 	timeOutErr        string = "storage call timed out after 20 seconds: "
+	DirAccessErr      string = "consul storage does not connect to local agent, but directly to server"
+	AddrDNExistErr    string = "config address does not exist: 127.0.0.1:8500 will be used"
 	wrongRWValsPrefix string = "Storage get and put gave wrong values: "
 )
 
@@ -73,4 +76,18 @@ func StorageEndToEndLatencyCheck(ctx context.Context, b physical.Backend) error 
 		return fmt.Errorf(timeOutErr + "operation: Delete")
 	}
 	return nil
+}
+
+// ConsulDirectAccess verifies that consul is connecting to local agent,
+// versus directly to a remote server. We can only assume that the local address
+// is a server, not a client.
+func ConsulDirectAccess(config map[string]string) string {
+	configAddr, ok := config["address"]
+	if !ok {
+		return AddrDNExistErr
+	}
+	if !strings.Contains(configAddr, "localhost") && !strings.Contains(configAddr, "127.0.0.1") {
+		return DirAccessErr
+	}
+	return ""
 }
