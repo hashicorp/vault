@@ -21,6 +21,7 @@ func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
+		skipEndEnd: true,
 	}
 }
 
@@ -215,6 +216,10 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 		return fmt.Errorf("names mismatch: %s vs %s", exp.Name, act.Name)
 	}
 	if exp.Status != act.Status {
+		if act.Status != diagnose.OkStatus {
+			return fmt.Errorf("section %s, status mismatch: %s vs %s, got error %s", exp.Name, exp.Status, act.Status, act.Message)
+
+		}
 		return fmt.Errorf("section %s, status mismatch: %s vs %s", exp.Name, exp.Status, act.Status)
 	}
 	if exp.Message != "" && exp.Message != act.Message && !strings.Contains(act.Message, exp.Message) {

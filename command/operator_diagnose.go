@@ -37,6 +37,7 @@ type OperatorDiagnoseCommand struct {
 	reloadFuncs     *map[string][]reloadutil.ReloadFunc
 	startedCh       chan struct{} // for tests
 	reloadedCh      chan struct{} // for tests
+	skipEndEnd      bool          // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -224,11 +225,8 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
-	// TODO: check for storage backend
-
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-
-		_, err = server.setupStorage(config)
+		b, err := server.setupStorage(config)
 		if err != nil {
 			return err
 		}
@@ -246,6 +244,15 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return err
 			}
 		}
+
+		// Attempt to use storage backend
+		if !c.skipEndEnd {
+			err = diagnose.StorageEndToEndLatencyCheck(ctx, b)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	}); err != nil {
 		return err
