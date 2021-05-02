@@ -8,19 +8,21 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
-const timeoutCallRead string = "lag Read"
-const timeoutCallWrite string = "lag Write"
-const timeoutCallDelete string = "lag Delete"
-const errCallWrite string = "err Write"
-const errCallDelete string = "err Delete"
-const errCallRead string = "err Read"
-const badReadCall string = "bad Read"
-const storageErrStringWrite string = "storage error on write"
-const storageErrStringRead string = "storage error on read"
-const storageErrStringDelete string = "storage error on delete"
-const readOp string = "read"
-const writeOp string = "write"
-const deleteOp string = "delete"
+const (
+	timeoutCallRead        string = "lag Read"
+	timeoutCallWrite       string = "lag Write"
+	timeoutCallDelete      string = "lag Delete"
+	errCallWrite           string = "err Write"
+	errCallDelete          string = "err Delete"
+	errCallRead            string = "err Read"
+	badReadCall            string = "bad Read"
+	storageErrStringWrite  string = "storage error on write"
+	storageErrStringRead   string = "storage error on read"
+	storageErrStringDelete string = "storage error on delete"
+	readOp                 string = "read"
+	writeOp                string = "write"
+	deleteOp               string = "delete"
+)
 
 var goodEntry physical.Entry = physical.Entry{Key: secretKey, Value: []byte(secretVal)}
 var badEntry physical.Entry = physical.Entry{}

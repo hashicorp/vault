@@ -8,12 +8,14 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
-var success string = "success"
-var secretKey string = "diagnose"
-var secretVal string = "diagnoseSecret"
+const (
+	success   string = "success"
+	secretKey string = "diagnose"
+	secretVal string = "diagnoseSecret"
 
-const timeOutErr string = "storage call timed out after 20 seconds: "
-const wrongRWValsPrefix string = "Storage get and put gave wrong values: "
+	timeOutErr        string = "storage call timed out after 20 seconds: "
+	wrongRWValsPrefix string = "Storage get and put gave wrong values: "
+)
 
 // StorageEndToEndLatencyCheck calls Write, Read, and Delete on a secret in the root
 // directory of the backend.
@@ -22,19 +24,15 @@ const wrongRWValsPrefix string = "Storage get and put gave wrong values: "
 // but I don't think List is ever going to break in isolation.
 func StorageEndToEndLatencyCheck(ctx context.Context, b physical.Backend) error {
 
-	c2 := make(chan string, 1)
+	c2 := make(chan error)
 	go func() {
 		err := b.Put(context.Background(), &physical.Entry{Key: secretKey, Value: []byte(secretVal)})
-		if err != nil {
-			c2 <- err.Error()
-		} else {
-			c2 <- success
-		}
+		c2 <- err
 	}()
 	select {
-	case errString := <-c2:
-		if errString != success {
-			return fmt.Errorf(errString)
+	case errOut := <-c2:
+		if errOut != nil {
+			return errOut
 		}
 	case <-time.After(20 * time.Second):
 		return fmt.Errorf(timeOutErr + "operation: Put")
@@ -61,19 +59,15 @@ func StorageEndToEndLatencyCheck(ctx context.Context, b physical.Backend) error 
 		return fmt.Errorf(timeOutErr + "operation: Get")
 	}
 
-	c5 := make(chan string, 1)
+	c5 := make(chan error)
 	go func() {
 		err := b.Delete(context.Background(), "diagnose")
-		if err != nil {
-			c5 <- err.Error()
-		} else {
-			c5 <- success
-		}
+		c5 <- err
 	}()
 	select {
-	case errString := <-c5:
-		if errString != success {
-			return fmt.Errorf(errString)
+	case errOut := <-c5:
+		if errOut != nil {
+			return errOut
 		}
 	case <-time.After(20 * time.Second):
 		return fmt.Errorf(timeOutErr + "operation: Delete")
