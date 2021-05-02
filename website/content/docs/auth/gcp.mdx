@@ -294,7 +294,7 @@ If specified, expiration must be a
 Epoch). This value must be before the max JWT expiration allowed for a role.
 This defaults to 15 minutes and cannot be more than 1 hour. 
 
-If user generates a token that expires after 15 minutes and gcp role has `max_jwt_exp` set to default 15 minutes, Vault will return an error like `Expiration date must be set to no more that 15 mins in JWT_CLAIM, otherwise the login request returns error "role requires that service account JWTs expire within 900 seconds"`. In this case user must create a new signed JWT with a shorter expiration or set `max_jwt_exp` to higher value in gcp role.
+If a user generates a token that expires after 15 minutes and gcp role has `max_jwt_exp` set to default 15 minutes, Vault will return an error like `Expiration date must be set to no more that 15 mins in JWT_CLAIM, otherwise the login request returns error "role requires that service account JWTs expire within 900 seconds"`. In this case user must create a new signed JWT with a shorter expiration or set `max_jwt_exp` to higher value in gcp role.
 
 One you have all this information, the JWT token can be signed using curl and
 [oauth2l](https://github.com/google/oauth2l):
