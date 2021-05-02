@@ -151,7 +151,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
 					Warnings: []string{
-						"consul storage does not connect to local agent, but directly to server",
+						diagnose.AddrDNExistErr,
 					},
 				},
 			},
@@ -182,7 +182,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status:  diagnose.ErrorStatus,
 					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid:",
 					Warnings: []string{
-						"consul storage does not connect to local agent, but directly to server",
+						diagnose.DirAccessErr,
 					},
 				},
 			},
@@ -208,7 +208,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Name:   "storage",
 					Status: diagnose.WarningStatus,
 					Warnings: []string{
-						"consul storage does not connect to local agent, but directly to server",
+						diagnose.DirAccessErr,
 					},
 				},
 				{
