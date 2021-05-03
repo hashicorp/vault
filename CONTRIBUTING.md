@@ -64,10 +64,12 @@ quickly merge or address your contributions.
 
 ## Pull requests
 
-Before working on a pull request, open an issue for your intended work to discuss 
-the approach you'd like to take to address your feature or fix.  It may be that we're 
-working on something similar, so this may help to avoid duplicating efforts. 
-Or it may be that we can provide guidance that will help with your approach.
+When submitting a PR you should reference an existing issue. If no issue already exists, 
+please create one. This can be skipped for trivial PRs like fixing typos.
+
+Creating an issue in advance of working on the PR can help to avoid duplication of effort, 
+e.g. maybe we know of existing related work. Or it may be that we can provide guidance 
+that will help with your approach.
 
 Your pull request should have a description of what it accomplishes, how it does so,
 and why you chose the approach you did.  PRs should include unit tests that validate
