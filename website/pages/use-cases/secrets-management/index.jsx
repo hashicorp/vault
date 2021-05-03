@@ -7,6 +7,7 @@ import UseCaseCtaSection from 'components/use-case-cta-section'
 import RAW_CONTENT from './content.json'
 import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
 import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
+import FeaturedSlider from '@hashicorp/react-featured-slider'
 
 export async function getStaticProps() {
   const content = await highlightData(RAW_CONTENT)
@@ -29,7 +30,11 @@ export default function SecretsManagmentUseCase({ content }) {
         />
 
         <div className="button-container">
-          <Button title="Download" url="/downloads" />
+          <Button
+            title="Download"
+            url="/downloads"
+            theme={{ brand: 'vault' }}
+          />
           <Button title="Get Started" url="/intro" theme="dark-outline" />
         </div>
       </section>
@@ -44,62 +49,33 @@ export default function SecretsManagmentUseCase({ content }) {
 
       {/* Case study slider */}
 
-      <section className="g-section-block theme-black-background-white-text">
-        <div className="g-container">
-          <div className="g-case-study-slider">
-            <div className="case-study-container">
-              <div className="slider-container">
-                <div className="slider-frame single">
-                  <div className="case-study">
-                    <div className="feature-image">
-                      <a href="https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault">
-                        <picture>
-                          <source
-                            type="image/webp"
-                            srcSet="https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=156.25&amp;q=80&amp;w=250 250w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=312.5&amp;q=80&amp;w=500 500w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=468.75&amp;q=80&amp;w=750 750w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=625&amp;q=80&amp;w=1000 1000w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=937.5&amp;q=80&amp;w=1500 1500w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=1250&amp;q=80&amp;w=2000 2000w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=webp&amp;h=1562.5&amp;q=80&amp;w=2500 2500w"
-                            sizes="100vw"
-                          />
-                          <img
-                            src="https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=312.5&amp;q=80&amp;w=500"
-                            srcSet="https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=156.25&amp;q=80&amp;w=250 250w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=312.5&amp;q=80&amp;w=500 500w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=468.75&amp;q=80&amp;w=750 750w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=625&amp;q=80&amp;w=1000 1000w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=937.5&amp;q=80&amp;w=1500 1500w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=1250&amp;q=80&amp;w=2000 2000w,https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=1562.5&amp;q=80&amp;w=2500 2500w"
-                            sizes="100vw"
-                            alt="Dan McTeer at HashiConf 2017"
-                          />
-                        </picture>
-                      </a>
-                    </div>
-                    <div className="feature-content">
-                      <div className="single-logo">
-                        <img
-                          src="https://www.datocms-assets.com/2885/1539889072-1524097013-adobe-white-1.svg"
-                          alt="Adobe logo"
-                        />
-                      </div>
-                      <h3>
-                        Using Vault to Protect Adobe&apos;s Secrets and User
-                        Data Across Clouds and Datacenters
-                      </h3>
-                      <p>
-                        Securing secrets and application data is a complex task
-                        for globally distributed organizations. For Adobe,
-                        managing secrets for over 20 products across 100,000
-                        hosts, four regions, and trillions of transactions
-                        annually requires a different approach altogether.
-                      </p>
-                      <a
-                        className="g-btn primary-hashicorp-light"
-                        href="https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault"
-                      >
-                        Read Case Study
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <FeaturedSlider
+        theme="dark"
+        features={[
+          {
+            logo: {
+              url:
+                'https://www.datocms-assets.com/2885/1539889072-1524097013-adobe-white-1.svg',
+              alt: 'Adobe Logo',
+            },
+            image: {
+              url:
+                'https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=312.5&amp;q=80&amp;w=500',
+              alt: 'Dan McTeer at HashiConf 2017',
+            },
+            heading:
+              "Using Vault to Protect Adobe's Secrets and User Data Across Clouds and Datacenters",
+            content:
+              'Securing secrets and application data is a complex task for globally distributed organizations. For Adobe, managing secrets for over 20 products across 100,000 hosts, four regions, and trillions of transactions annually requires a different approach altogether.',
+            link: {
+              text: 'Read Case Study',
+              url:
+                'https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault',
+              type: 'outbound',
+            },
+          },
+        ]}
+      />
 
       {/* Features */}
       <section className="no-section-spacing">
