@@ -1,5 +1,21 @@
 # UNRELEASED
 
+# 1.3.0 (April 22nd, 2021)
+
+IMPROVEMENTS
+
+* Added metrics for `oldestLogAge` and `lastRestoreDuration` to monitor capacity issues that can cause unrecoverable cluster failure  [[GH-452](https://github.com/hashicorp/raft/pull/452)][[GH-454](https://github.com/hashicorp/raft/pull/454/files)]
+* Made `TrailingLogs`, `SnapshotInterval` and `SnapshotThreshold` reloadable at runtime using a new `ReloadConfig` method. This allows recovery from cases where there are not enough logs retained for followers to catchup after a restart. [[GH-444](https://github.com/hashicorp/raft/pull/444)]
+* Inclusify the repository by switching to main [[GH-446](https://github.com/hashicorp/raft/pull/446)]
+* Add option for a buffered `ApplyCh` if `MaxAppendEntries` is enabled [[GH-445](https://github.com/hashicorp/raft/pull/445)]
+* Add string to `LogType` for more human readable debugging [[GH-442](https://github.com/hashicorp/raft/pull/442)]
+* Extract fuzzy testing into its own module [[GH-459](https://github.com/hashicorp/raft/pull/459)]
+
+BUG FIXES
+* Update LogCache `StoreLogs()` to capture an error that would previously cause a panic [[GH-460](https://github.com/hashicorp/raft/pull/460)]
+
+# 1.2.0 (October 5th, 2020)
+
 IMPROVEMENTS
 
 * Remove `StartAsLeader` configuration option [[GH-364](https://github.com/hashicorp/raft/pull/386)]
@@ -85,4 +101,4 @@ v1.0.0 takes the changes that were staged in the library-v2-stage-one branch. Th
 
 # 0.1.0 (September 29th, 2017)
 
-v0.1.0 is the original stable version of the library that was in master and has been maintained with no breaking API changes. This was in use by Consul prior to version 0.7.0.
+v0.1.0 is the original stable version of the library that was in main and has been maintained with no breaking API changes. This was in use by Consul prior to version 0.7.0.
