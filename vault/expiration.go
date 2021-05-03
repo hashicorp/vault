@@ -234,10 +234,15 @@ func (r *revocationJob) OnFailure(err error) {
 		return
 	}
 
-	if errIsUnrecoverable(err) {
-		r.m.logger.Trace("lease revocation returned unrecoverable error", "lease_id", r.leaseID, "err", err)
+	pending := pendingRaw.(pendingInfo)
+	pending.revokesAttempted++
+	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
+		r.m.logger.Trace("marking lease as zombie", "lease_id", r.leaseID, "error", err)
+		if pending.revokesAttempted >= maxRevokeAttempts {
+			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+			err = fmt.Errorf("%v: %w", errOutOfRetries.Error(), err)
+		}
 
-		// TODO 1978 below here should be incorporated into markLeaseAsZombie
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
 		if loadErr != nil {
 			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
@@ -249,20 +254,6 @@ func (r *revocationJob) OnFailure(err error) {
 		}
 
 		r.m.markLeaseAsZombie(r.nsCtx, le, err)
-		return
-	}
-
-	pending := pendingRaw.(pendingInfo)
-	pending.revokesAttempted++
-	if pending.revokesAttempted >= maxRevokeAttempts {
-		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
-		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
-		if loadErr != nil {
-			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
-			return
-		}
-
-		r.m.markLeaseAsZombie(r.nsCtx, le, errOutOfRetries)
 		return
 	}
 
