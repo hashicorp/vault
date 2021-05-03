@@ -69,6 +69,12 @@ const (
 	// limit zombie error messages to 240 characters to be respectful of storage
 	// requirements
 	maxZombieErrorLength = 240
+
+	genericZombieErrorMessage = "no error message given"
+)
+
+var (
+	errOutOfRetries = errors.New("out of retries")
 )
 
 type pendingInfo struct {
@@ -103,7 +109,8 @@ type ExpirationManager struct {
 
 	// Track expired leases that have been determined to be irrevocable (without
 	// manual intervention). These irrevocable leases are referred to as
-	// "zombies" or "zombie leases"
+	// "zombies" or "zombie leases", and we retain a subset of the lease info
+	// in memory
 	zombies sync.Map
 
 	// The uniquePolicies map holds policy sets, so they can
@@ -169,6 +176,20 @@ func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Names
 	}, nil
 }
 
+// errIsUnrecoverable returns true if the logical error is unlikely to resolve
+// automatically or with additional retries
+func errIsUnrecoverable(err error) bool {
+	switch {
+	case errors.Is(err, logical.ErrUnrecoverable),
+		errors.Is(err, logical.ErrUnsupportedOperation),
+		errors.Is(err, logical.ErrUnsupportedPath),
+		errors.Is(err, logical.ErrInvalidRequest):
+		return true
+	}
+
+	return false
+}
+
 func (r *revocationJob) Execute() error {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 	r.m.core.metricSink.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
@@ -216,16 +237,24 @@ func (r *revocationJob) OnFailure(err error) {
 
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
+	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
+		r.m.logger.Trace("marking lease as zombie", "lease_id", r.leaseID, "error", err)
+		if pending.revokesAttempted >= maxRevokeAttempts {
+			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+			err = fmt.Errorf("%v: %w", errOutOfRetries.Error(), err)
+		}
 
-	if pending.revokesAttempted >= maxRevokeAttempts {
-		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
 		if loadErr != nil {
 			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
 			return
 		}
+		if le == nil {
+			r.m.logger.Warn("failed to mark lease as zombie - nil lease", "lease_id", r.leaseID)
+			return
+		}
 
-		r.m.markLeaseAsZombie(r.nsCtx, le, errors.New("lease has consumed all retry attempts"))
+		r.m.markLeaseAsZombie(r.nsCtx, le, err)
 		return
 	}
 
@@ -1658,6 +1687,9 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 		}
 		ret.Path = le.Path
 	}
+	if le.isZombie() {
+		ret.RevokeErr = le.RevokeErr
+	}
 	return ret
 }
 
@@ -1780,7 +1812,7 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 	// Handle standard revocation via backends
 	resp, err := m.router.Route(nsCtx, logical.RevokeRequest(le.Path, le.Secret, le.Data))
 	if err != nil || (resp != nil && resp.IsError()) {
-		return errwrap.Wrapf(fmt.Sprintf("failed to revoke entry: resp: %#v err: {{err}}", resp), err)
+		return fmt.Errorf("failed to revoke entry: resp: %#v err: %w", resp, err)
 	}
 	return nil
 }
@@ -1884,7 +1916,7 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	le.namespace = ns
 
 	if le.isZombie() {
-		m.zombies.Store(le.LeaseID, le)
+		m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 		return le, nil
 	}
 
@@ -2345,9 +2377,12 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 		return
 	}
 
-	errStr := err.Error()
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
 	if len(errStr) == 0 {
-		errStr = "no error message given"
+		errStr = genericZombieErrorMessage
 	}
 	if len(errStr) > maxZombieErrorLength {
 		errStr = errStr[:maxZombieErrorLength]
@@ -2356,7 +2391,7 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 	le.RevokeErr = errStr
 	m.persistEntry(ctx, le)
 
-	m.zombies.Store(le.LeaseID, le)
+	m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 	m.removeFromPending(ctx, le.LeaseID)
 	m.nonexpiring.Delete(le.LeaseID)
 }
@@ -2401,7 +2436,7 @@ func (le *leaseEntry) renewable() (bool, error) {
 		return false, fmt.Errorf("lease not found")
 
 	case le.isZombie():
-		return false, fmt.Errorf("lease is not renewable and has failed previous revocation attempts")
+		return false, fmt.Errorf("lease is expired and has failed previous revocation attempts")
 
 	case le.ExpireTime.IsZero():
 		return false, fmt.Errorf("lease is not renewable")

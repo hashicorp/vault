@@ -2664,3 +2664,111 @@ func TestExpiration_StopClearsZombieCache(t *testing.T) {
 		t.Error("expiration manager zombies cache should be cleared on stop")
 	}
 }
+
+func TestExpiration_errorIsUnrecoverable(t *testing.T) {
+	testCases := []struct {
+		err             error
+		isUnrecoverable bool
+	}{
+		{
+			err:             logical.ErrUnrecoverable,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrUnsupportedOperation,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrUnsupportedPath,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrInvalidRequest,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrPermissionDenied,
+			isUnrecoverable: false,
+		},
+		{
+			err:             logical.ErrMultiAuthzPending,
+			isUnrecoverable: false,
+		},
+		{
+			err:             fmt.Errorf("some other error"),
+			isUnrecoverable: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		out := errIsUnrecoverable(tc.err)
+		if out != tc.isUnrecoverable {
+			t.Errorf("wrong answer: expected %t, got %t", tc.isUnrecoverable, out)
+		}
+	}
+}
+
+func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	makeJob := func() *revocationJob {
+		leaseID := registerOneLease(t, ctx, exp)
+
+		job, err := newRevocationJob(ctx, leaseID, namespace.RootNamespace, exp)
+		if err != nil {
+			t.Fatalf("err making revocation job: %v", err)
+		}
+
+		return job
+	}
+
+	testCases := []struct {
+		err            error
+		job            *revocationJob
+		shouldBeZombie bool
+	}{
+		{
+			err:            logical.ErrUnrecoverable,
+			job:            makeJob(),
+			shouldBeZombie: true,
+		},
+		{
+			err:            logical.ErrInvalidRequest,
+			job:            makeJob(),
+			shouldBeZombie: true,
+		},
+		{
+			err:            logical.ErrPermissionDenied,
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+		{
+			err:            logical.ErrRateLimitQuotaExceeded,
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+		{
+			err:            fmt.Errorf("some random recoverable error"),
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc.job.OnFailure(tc.err)
+
+		le, err := exp.loadEntry(ctx, tc.job.leaseID)
+		if err != nil {
+			t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
+		}
+		if le == nil {
+			t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
+		}
+
+		isZombie := le.isZombie()
+		if isZombie != tc.shouldBeZombie {
+			t.Errorf("expected zombie: %t, got zombie: %t", tc.shouldBeZombie, isZombie)
+		}
+	}
+}
