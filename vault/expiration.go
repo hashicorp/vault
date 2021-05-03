@@ -182,9 +182,7 @@ func errIsUnrecoverable(err error) bool {
 	case errors.Is(err, logical.ErrUnrecoverable),
 		errors.Is(err, logical.ErrUnsupportedOperation),
 		errors.Is(err, logical.ErrUnsupportedPath),
-		errors.Is(err, logical.ErrInvalidRequest),
-		errors.Is(err, logical.ErrPermissionDenied),
-		errors.Is(err, logical.ErrMultiAuthzPending):
+		errors.Is(err, logical.ErrInvalidRequest):
 		return true
 	}
 

@@ -2688,11 +2688,11 @@ func TestExpiration_errorIsUnrecoverable(t *testing.T) {
 		},
 		{
 			err:             logical.ErrPermissionDenied,
-			isUnrecoverable: true,
+			isUnrecoverable: false,
 		},
 		{
 			err:             logical.ErrMultiAuthzPending,
-			isUnrecoverable: true,
+			isUnrecoverable: false,
 		},
 		{
 			err:             fmt.Errorf("some other error"),
@@ -2741,7 +2741,7 @@ func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
 		{
 			err:            logical.ErrPermissionDenied,
 			job:            makeJob(),
-			shouldBeZombie: true,
+			shouldBeZombie: false,
 		},
 		{
 			err:            logical.ErrRateLimitQuotaExceeded,
