@@ -40,7 +40,7 @@ func (d *FieldData) Validate() error {
 		switch schema.Type {
 		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 			TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
+			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime, TypeAny:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("error converting input %v for field %q: {{err}}", value, field), err)
@@ -148,6 +148,9 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 	}
 
 	switch t := schema.Type; t {
+	case TypeAny:
+		return raw, true, nil
+
 	case TypeBool:
 		var result bool
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {

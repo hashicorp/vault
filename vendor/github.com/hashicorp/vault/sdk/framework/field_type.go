@@ -62,6 +62,8 @@ const (
 	// formatted as a string or a number. The resulting time.Time
 	// is converted to UTC.
 	TypeTime
+
+	TypeAny
 )
 
 func (t FieldType) String() string {
@@ -90,6 +92,8 @@ func (t FieldType) String() string {
 		return "float"
 	case TypeTime:
 		return "time"
+	case TypeAny:
+		return "any"
 	default:
 		return "unknown type"
 	}
