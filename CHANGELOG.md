@@ -210,6 +210,7 @@ BUG FIXES:
 * core: Fix goroutine leak when updating rate limit quota [[GH-11371](https://github.com/hashicorp/vault/pull/11371)]
 * core: Fix storage entry leak when revoking leases created with non-orphan batch tokens. [[GH-11377](https://github.com/hashicorp/vault/pull/11377)]
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
+* pki: Preserve ordering of all DN attribute values when issuing certificates [[GH-11259](https://github.com/hashicorp/vault/pull/11259)]
 * replication: Fix: mounts created within a namespace that was part of an Allow
   filtering rule would not appear on performance secondary if created after rule
   was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
