@@ -6,6 +6,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"io"
 	"io/ioutil"
 	"net"
@@ -37,13 +45,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -1894,6 +1895,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -1920,6 +1924,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			shutdownTriggered = true
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
+
+			// Notify systemd that the server is reloading config
+			c.notifySystemd(systemd.SdNotifyReloading)
 
 			// Check for new log level
 			var config *server.Config
@@ -1976,6 +1983,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
+	// Notify systemd that the server is shutting down
+	c.notifySystemd(systemd.SdNotifyStopping)
 
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
@@ -1990,6 +1999,18 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	}
+	if sent {
+		c.logger.Debug("sent systemd notification", "notification", status)
+	} else {
+		c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+	}
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
