@@ -1,3 +1,3 @@
-```changelog:enhancement
+```release-note:enhancement
 secret/pki: Preserve ordering of all DN attribute values when issuing certificates
 ```
