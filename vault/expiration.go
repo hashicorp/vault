@@ -109,7 +109,8 @@ type ExpirationManager struct {
 
 	// Track expired leases that have been determined to be irrevocable (without
 	// manual intervention). These irrevocable leases are referred to as
-	// "zombies" or "zombie leases"
+	// "zombies" or "zombie leases", and we retain a subset of the lease info
+	// in memory
 	zombies sync.Map
 
 	// The uniquePolicies map holds policy sets, so they can
@@ -1682,6 +1683,9 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 		}
 		ret.Path = le.Path
 	}
+	if le.isZombie() {
+		ret.RevokeErr = le.RevokeErr
+	}
 	return ret
 }
 
@@ -1908,7 +1912,7 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	le.namespace = ns
 
 	if le.isZombie() {
-		m.zombies.Store(le.LeaseID, le)
+		m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 		return le, nil
 	}
 
@@ -2383,7 +2387,7 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 	le.RevokeErr = errStr
 	m.persistEntry(ctx, le)
 
-	m.zombies.Store(le.LeaseID, le)
+	m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 	m.removeFromPending(ctx, le.LeaseID)
 	m.nonexpiring.Delete(le.LeaseID)
 }
