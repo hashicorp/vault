@@ -6,7 +6,7 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
 /**
@@ -210,6 +210,9 @@ export default Component.extend(DEFAULTS, {
   authenticate: task(function*(backendType, data) {
     let clusterId = this.cluster.id;
     try {
+      if (backendType === 'okta') {
+        this.delayAuthMessageReminder.perform();
+      }
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
 
       let { isRoot, namespace } = authResponse;
@@ -236,6 +239,10 @@ export default Component.extend(DEFAULTS, {
       this.handleError(e);
     }
   }).withTestWaiter(),
+
+  delayAuthMessageReminder: task(function*() {
+    yield timeout(5000);
+  }),
 
   actions: {
     doSubmit() {
