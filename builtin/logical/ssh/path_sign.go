@@ -359,15 +359,18 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, error) {
 	unparsedExtensions := data.Get("extensions").(map[string]interface{})
 	extensions := make(map[string]string)
+
 	if len(unparsedExtensions) > 0 {
-		extensions = convertMapToStringValue(unparsedExtensions)
+		parsedExtensions := convertMapToStringValue(unparsedExtensions)
 		if role.AllowedExtensions != "" {
 			notAllowed := []string{}
 			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
 
-			for extension := range extensions {
-				if !strutil.StrListContains(allowedExtensions, extension) {
-					notAllowed = append(notAllowed, extension)
+			for extensionKey, extensionValue := range parsedExtensions {
+				if !strutil.StrListContains(allowedExtensions, extensionKey) {
+					notAllowed = append(notAllowed, extensionKey)
+				} else {
+					extensions[extensionKey] = extensionValue
 				}
 			}
 
@@ -375,13 +378,8 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 			}
 		}
-	} else {
-		extensions = role.DefaultExtensions
-	}
-
-	if role.DefaultExtensionsTemplate {
-		templatedExtensions := make(map[string]string)
-		for extensionKey, extensionValue := range extensions {
+	} else if role.DefaultExtensionsTemplate {
+		for extensionKey, extensionValue := range role.DefaultExtensions {
 			// Look for templating markers {{ .* }}
 			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)
 			if matched {
@@ -390,17 +388,18 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 					templateExtensionValue, err := framework.PopulateIdentityTemplate(extensionValue, req.EntityID, b.System())
 					if err == nil {
 						// Template returned an extension value that we can use
-						templatedExtensions[extensionKey] = templateExtensionValue
+						extensions[extensionKey] = templateExtensionValue
 					} else {
 						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
 					}
 				}
 			} else {
 				// Static extension value or err template
-				templatedExtensions[extensionKey] = extensionValue
+				extensions[extensionKey] = extensionValue
 			}
 		}
-		return templatedExtensions, nil
+	} else {
+		extensions = role.DefaultExtensions
 	}
 
 	return extensions, nil

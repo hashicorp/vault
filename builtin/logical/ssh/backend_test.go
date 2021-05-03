@@ -19,8 +19,10 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
@@ -158,7 +160,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 
 		// Install util-linux for non-busybox flock that supports timeout option
 		err = testSSH("vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
-			set -e; 
+			set -e;
 			sudo ln -s /config /home/vaultssh
 			sudo apk add util-linux;
 			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
@@ -1316,6 +1318,127 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	}
 
 	logicaltest.Test(t, testCase)
+}
+
+func TestBackend_DefaultExtensionsTemplating(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Write test policy for userpass auth method.
+	err := client.Sys().PutPolicy("test", `
+   path "ssh/*" {
+     capabilities = ["update"]
+   }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable userpass auth method.
+	if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	userIdentity := "userpassname"
+	// Configure test role for userpass.
+	if _, err := client.Logical().Write("auth/userpass/users/" + userIdentity, map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Login userpass for test role and keep client token.
+	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Mount SSH.
+	err = client.Sys().Mount("ssh", &api.MountInput{
+		Type: "ssh",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate internal SSH CA.
+	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
+		"generate_signing_key": true,
+		"key_bits":             2048,
+		"key_type":             "ca",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write SSH role.
+	_, err = client.Logical().Write("ssh/roles/test", map[string]interface{}{
+		"key_type":                    "ca",
+		"allowed_extensions":          "login@zipzap.com",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"default_extensions_template": true,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with userpassToken.
+	client.SetToken(userpassToken)
+	resp, err := client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey := resp.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cert := parsedKey.(*ssh.Certificate)
+
+	expectedExtensionPermissions := map[string]string{
+		"login@foobar.com": userIdentity,
+	}
+
+	if !reflect.DeepEqual(cert.Permissions.Extensions, expectedExtensionPermissions) {
+		t.Fatalf("incorrect Permissions.Extensions: Expected: %v, Actual: %v", expectedExtensionPermissions, cert.Permissions.Extensions)
+	}
+
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
