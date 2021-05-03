@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
-import { currentURL, visit, settled } from '@ember/test-helpers';
+import { click, currentURL, visit, settled } from '@ember/test-helpers';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
@@ -106,17 +106,16 @@ module('Acceptance | auth', function(hooks) {
     assert.dom('[data-test-allow-expiration="true"]').doesNotExist('hides beacon when the api is used again');
   });
 
-  test('it shows the push notification warning only for okta auth method when it is selected', async function(assert) {
+  test('it shows the push notification warning only for okta auth method after submit', async function(assert) {
     await visit('/vault/auth');
     await component.selectMethod('token');
+    await click('[data-test-auth-submit="true"]');
     assert
       .dom('[data-test-auth-message="push"]')
       .doesNotExist('message is not shown for other authentication methods');
 
     await component.selectMethod('okta');
+    await click('[data-test-auth-submit="true"]');
     assert.dom('[data-test-auth-message="push"]').exists('shows push notification message');
-
-    await component.selectMethod('token');
-    assert.dom('[data-test-auth-message="push"]').doesNotExist('message has been cleared');
   });
 });

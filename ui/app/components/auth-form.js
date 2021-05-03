@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
@@ -241,6 +242,11 @@ export default Component.extend(DEFAULTS, {
   }).withTestWaiter(),
 
   delayAuthMessageReminder: task(function*() {
+    if (Ember.testing) {
+      this.showLoading = true;
+      yield timeout(0);
+      return;
+    }
     yield timeout(5000);
   }),
 
