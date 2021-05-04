@@ -42,7 +42,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			},
 		},
 	}
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -152,7 +152,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -242,7 +242,7 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 		expected.Entropy = entropy
 	}
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -357,7 +357,7 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 		EnableUIRaw:     true,
 	}
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -452,23 +452,9 @@ func testLoadConfigFile(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{})
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
-	}
-}
-
-func cleanup(config *Config) {
-	for _, l := range config.Listeners {
-		l.RawConfig = nil
-	}
-	config.FoundKeys = nil
-	config.UnusedKeys = nil
-	config.SharedConfig.FoundKeys = nil
-	config.SharedConfig.UnusedKeys = nil
-	if config.Telemetry != nil {
-		config.Telemetry.FoundKeys = nil
-		config.Telemetry.UnusedKeys = nil
 	}
 }
 
@@ -594,7 +580,7 @@ func testLoadConfigFile_json(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{})
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -658,7 +644,7 @@ func testLoadConfigDir(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{"http"})
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -760,7 +746,7 @@ func testConfig_Sanitized(t *testing.T) {
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
@@ -826,7 +812,7 @@ listener "tcp" {
 			},
 		},
 	}
-	cleanup(&config)
+	config.Prune()
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -886,7 +872,7 @@ func testParseSeals(t *testing.T) {
 			},
 		},
 	}
-	cleanup(config)
+	config.Prune()
 	require.Equal(t, config, expected)
 }
 
@@ -974,7 +960,7 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 
 	addExpectedEntConfig(expected, []string{})
 
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -1007,7 +993,7 @@ func testConfigRaftAutopilot(t *testing.T) {
 			},
 		},
 	}
-	cleanup(config)
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}

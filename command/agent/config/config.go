@@ -30,6 +30,20 @@ type Config struct {
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
+}
+
 type Retry struct {
 	NumRetries int `hcl:"num_retries"`
 }
