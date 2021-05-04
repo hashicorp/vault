@@ -32,7 +32,7 @@ export default function Homepage({ content }) {
               external: false,
               title: 'Try Cloud',
               url:
-                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
+                'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
             },
             {
               external: false,
