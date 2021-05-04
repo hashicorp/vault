@@ -2005,11 +2005,12 @@ func (c *ServerCommand) notifySystemd(status string) {
 	sent, err := systemd.SdNotify(false, status)
 	if err != nil {
 		c.logger.Error("error notifying systemd", "error", err)
-	}
-	if sent {
-		c.logger.Debug("sent systemd notification", "notification", status)
 	} else {
-		c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
 	}
 }
 
