@@ -6,7 +6,7 @@
   "dependencies": {
     "autosize": "*",
     "date-fns": "*",
-    "Duration.js": "*",
+    "@icholy/duration": "*",
     "base64-js": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
