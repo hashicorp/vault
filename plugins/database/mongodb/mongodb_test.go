@@ -350,7 +350,7 @@ func TestGetTLSAuth(t *testing.T) {
 			if !test.expectErr && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
 			}
-			assertDeepEqual(t, actual, test.expectOpts)
+			assertDeepEqual(t, test.expectOpts, actual)
 		})
 	}
 }
