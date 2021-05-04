@@ -101,7 +101,7 @@ func TestIngressToken(t *testing.T) {
 			}
 		} else {
 			if strings.Contains(logBuffer.String(), "[ERROR]") || strings.Contains(logBuffer.String(), "[WARN]") {
-				t.Fatal("logs contained unexepected error", logBuffer.String())
+				t.Fatal("logs contained unexpected error", logBuffer.String())
 			}
 		}
 	}
