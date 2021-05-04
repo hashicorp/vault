@@ -66,11 +66,11 @@ const (
 
 	fairshareWorkersOverrideVar = "VAULT_LEASE_REVOCATION_WORKERS"
 
-	// limit zombie error messages to 240 characters to be respectful of storage
-	// requirements
-	maxZombieErrorLength = 240
+	// limit irrevocable error messages to 240 characters to be respectful of
+	// storage/memory
+	maxIrrevocableErrorLength = 240
 
-	genericZombieErrorMessage = "no error message given"
+	genericIrrevocableErrorMessage = "no error message given"
 )
 
 var (
@@ -108,10 +108,8 @@ type ExpirationManager struct {
 	pendingLock sync.RWMutex
 
 	// Track expired leases that have been determined to be irrevocable (without
-	// manual intervention). These irrevocable leases are referred to as
-	// "zombies" or "zombie leases", and we retain a subset of the lease info
-	// in memory
-	zombies sync.Map
+	// manual intervention). We retain a subset of the lease info in memory
+	irrevocable sync.Map
 
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
@@ -238,7 +236,7 @@ func (r *revocationJob) OnFailure(err error) {
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
 	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
-		r.m.logger.Trace("marking lease as zombie", "lease_id", r.leaseID, "error", err)
+		r.m.logger.Trace("marking lease as irrevocable", "lease_id", r.leaseID, "error", err)
 		if pending.revokesAttempted >= maxRevokeAttempts {
 			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
 			err = fmt.Errorf("%v: %w", errOutOfRetries.Error(), err)
@@ -246,15 +244,15 @@ func (r *revocationJob) OnFailure(err error) {
 
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
 		if loadErr != nil {
-			r.m.logger.Warn("failed to mark lease as zombie - failed to load", "lease_id", r.leaseID, "err", loadErr)
+			r.m.logger.Warn("failed to mark lease as irrevocable - failed to load", "lease_id", r.leaseID, "err", loadErr)
 			return
 		}
 		if le == nil {
-			r.m.logger.Warn("failed to mark lease as zombie - nil lease", "lease_id", r.leaseID)
+			r.m.logger.Warn("failed to mark lease as irrevocable - nil lease", "lease_id", r.leaseID)
 			return
 		}
 
-		r.m.markLeaseAsZombie(r.nsCtx, le, err)
+		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
 		return
 	}
 
@@ -869,8 +867,8 @@ func (m *ExpirationManager) Stop() error {
 		return true
 	})
 	m.uniquePolicies = make(map[string][]string)
-	m.zombies.Range(func(key, _ interface{}) bool {
-		m.zombies.Delete(key)
+	m.irrevocable.Range(func(key, _ interface{}) bool {
+		m.irrevocable.Delete(key)
 		return true
 	})
 	m.pendingLock.Unlock()
@@ -989,7 +987,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	m.pendingLock.Lock()
 	m.removeFromPending(ctx, leaseID)
 	m.nonexpiring.Delete(leaseID)
-	m.zombies.Delete(leaseID)
+	m.irrevocable.Delete(leaseID)
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1625,7 +1623,7 @@ func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string)
 		return m.leaseTimesForExport(info.(pendingInfo).cachedLeaseInfo), nil
 	}
 
-	info, ok = m.zombies.Load(leaseID)
+	info, ok = m.irrevocable.Load(leaseID)
 	if ok && info.(*leaseEntry) != nil {
 		return m.leaseTimesForExport(info.(*leaseEntry)), nil
 	}
@@ -1687,7 +1685,7 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 		}
 		ret.Path = le.Path
 	}
-	if le.isZombie() {
+	if le.isIrrevocable() {
 		ret.RevokeErr = le.RevokeErr
 	}
 	return ret
@@ -1717,7 +1715,7 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
-	if le.isZombie() {
+	if le.isIrrevocable() {
 		return
 	}
 
@@ -1915,8 +1913,8 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	}
 	le.namespace = ns
 
-	if le.isZombie() {
-		m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	if le.isIrrevocable() {
+		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 		return le, nil
 	}
 
@@ -2367,13 +2365,13 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 }
 
 // note: must be called with pending lock held
-func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntry, err error) {
+func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseEntry, err error) {
 	if le == nil {
-		m.logger.Warn("attempted to mark nil lease as zombie")
+		m.logger.Warn("attempted to mark nil lease as irrevocable")
 		return
 	}
-	if le.isZombie() {
-		m.logger.Info("attempted to re-mark lease as zombie", "original_error", le.RevokeErr, "new_error", err.Error())
+	if le.isIrrevocable() {
+		m.logger.Info("attempted to re-mark lease as irrevocable", "original_error", le.RevokeErr, "new_error", err.Error())
 		return
 	}
 
@@ -2382,16 +2380,16 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 		errStr = err.Error()
 	}
 	if len(errStr) == 0 {
-		errStr = genericZombieErrorMessage
+		errStr = genericIrrevocableErrorMessage
 	}
-	if len(errStr) > maxZombieErrorLength {
-		errStr = errStr[:maxZombieErrorLength]
+	if len(errStr) > maxIrrevocableErrorLength {
+		errStr = errStr[:maxIrrevocableErrorLength]
 	}
 
 	le.RevokeErr = errStr
 	m.persistEntry(ctx, le)
 
-	m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 	m.removeFromPending(ctx, le.LeaseID)
 	m.nonexpiring.Delete(le.LeaseID)
 }
@@ -2419,8 +2417,8 @@ type leaseEntry struct {
 
 	// RevokeErr tracks if a lease has failed revocation in a way that is
 	// unlikely to be automatically resolved. The first time this happens,
-	// RevokeErr will be set, thus marking this leaseEntry as a zombie that will
-	// have to be manually removed.
+	// RevokeErr will be set, thus marking this leaseEntry as irrevocable. From
+	// there, it must be manually removed (force revoked).
 	RevokeErr string `json:"revokeErr"`
 }
 
@@ -2435,7 +2433,7 @@ func (le *leaseEntry) renewable() (bool, error) {
 	case le == nil:
 		return false, fmt.Errorf("lease not found")
 
-	case le.isZombie():
+	case le.isIrrevocable():
 		return false, fmt.Errorf("lease is expired and has failed previous revocation attempts")
 
 	case le.ExpireTime.IsZero():
@@ -2471,7 +2469,7 @@ func (le *leaseEntry) nonexpiringToken() bool {
 }
 
 // TODO maybe lock RevokeErr once this goes in: https://github.com/hashicorp/vault/pull/11122
-func (le *leaseEntry) isZombie() bool {
+func (le *leaseEntry) isIrrevocable() bool {
 	return le.RevokeErr != ""
 }
 
