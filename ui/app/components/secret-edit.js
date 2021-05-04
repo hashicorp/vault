@@ -39,6 +39,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   isWrapping: false,
   showWrapButton: not('wrappedData'),
 
+  showDeleteModal: false,
+
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
   onRefresh() {},
