@@ -12,10 +12,15 @@ The following parameters are supported by the Vault provider:
 
 - `vaultAddress` `(string: "")` - The address of the Vault server.
 
-- `vaultSkipTLSVerify` `(string: "false")` - When set to true, skips verification of the Vault server 
+- `vaultNamespace` `(string: "")` - The Vault [namespace](/docs/enterprise/namespaces) to use.
+
+- `vaultSkipTLSVerify` `(string: "false")` - When set to true, skips verification of the Vault server
   certificiate. Setting this to true is not recommended for production.
 
 - `vaultCACertPath` `(string: "")` - The path on disk where the Vault CA certificate can be found
+  when verifying the Vault server certificate.
+
+- `vaultCADirectory` `(string: "")` - The directory on disk where the Vault CA certificate can be found
   when verifying the Vault server certificate.
 
 - `vaultTLSClientCertPath` `(string: "")` - The path on disk where the client certificate can be found
@@ -26,17 +31,22 @@ The following parameters are supported by the Vault provider:
 
 - `vaultTLSServerName` `(string: "")` - The name to use as the SNI host when connecting via TLS.
 
+- `vaultKubernetesMountPath` `(string: "kubernetes")` - The name of the auth mount used for login.
+  At this time only the Kubernetes auth method is supported.
+
 - `objects` `(array)` - An array of secrets to retrieve from Vault.
 
-  - `objectName` `(string: "")` - The alias of the object which can be referenced within the secret provider class and 
+  - `objectName` `(string: "")` - The alias of the object which can be referenced within the secret provider class and
   the name of the secret file.
 
   - `method` `(string: "GET")` - The type of HTTP request. Supported values include "GET" and "PUT".
 
   - `secretPath` `(string: "")` - The path in Vault where the secret is located.
 
-  - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary 
-    for different secret engines. For example: 
+  - `secretKey` `(string: "")` - The key in the Vault secret to extract. If omitted, the whole response from Vault will be written as JSON.
+
+  - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary
+    for different secret engines. For example:
 
     ```yaml
     secretArgs:
