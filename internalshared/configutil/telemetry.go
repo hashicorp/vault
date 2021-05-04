@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
@@ -33,8 +33,10 @@ const (
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
+	FoundKeys    []string     `hcl:",decodedFields"`
+	UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
+	StatsiteAddr string       `hcl:"statsite_address"`
+	StatsdAddr   string       `hcl:"statsd_address"`
 
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
@@ -149,6 +151,10 @@ type Telemetry struct {
 
 	// Whether or not telemetry should add labels for namespaces
 	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
+}
+
+func (t *Telemetry) Validate(source string) []ConfigError {
+	return ValidateUnusedFields(t.UnusedKeys, source)
 }
 
 func (t *Telemetry) GoString() string {
