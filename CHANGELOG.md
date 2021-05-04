@@ -97,6 +97,7 @@ IMPROVEMENTS:
 * agent: Better concurrent request handling on identical requests proxied through Agent. [[GH-10705](https://github.com/hashicorp/vault/pull/10705)]
 * agent: Route templating server through cache when persistent cache is enabled. [[GH-10927](https://github.com/hashicorp/vault/pull/10927)]
 * agent: change auto-auth to preload an existing token on start [[GH-10850](https://github.com/hashicorp/vault/pull/10850)]
+* auth/approle: Secrets ID generation endpoint now returns `secret_id_ttl` as part of its response. [[GH-10826](https://github.com/hashicorp/vault/pull/10826)]
 * auth/ldap: Improve consistency in error messages [[GH-10537](https://github.com/hashicorp/vault/pull/10537)]
 * auth/okta: Adds support for Okta Verify TOTP MFA. [[GH-10942](https://github.com/hashicorp/vault/pull/10942)]
 * changelog: Add dependencies listed in dependencies/2-25-21 [[GH-11015](https://github.com/hashicorp/vault/pull/11015)]
