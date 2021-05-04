@@ -102,9 +102,15 @@ export default class DatabaseConnectionEdit extends Component {
     evt.preventDefault();
     let secret = this.args.model;
     let secretId = secret.name;
-    secret.save().then(() => {
-      this.transitionToRoute(SHOW_ROUTE, secretId);
-    });
+    secret
+      .save()
+      .then(() => {
+        this.transitionToRoute(SHOW_ROUTE, secretId);
+      })
+      .catch(e => {
+        const errorMessage = getErrorMessage(e.errors);
+        this.flashMessages.danger(errorMessage);
+      });
   }
 
   @action
