@@ -1089,7 +1089,7 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt_oidc_providers"
+            "path": "auth/jwt/oidc_providers"
           }
         ]
       },
