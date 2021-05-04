@@ -11,7 +11,7 @@
     "@hashicorp/react-case-study-slider": "6.0.0",
     "@hashicorp/react-code-block": "4.0.1",
     "@hashicorp/react-content": "7.0.1",
-    "@hashicorp/react-docs-page": "13.1.4",
+    "@hashicorp/react-docs-page": "13.1.7-alpha.8",
     "@hashicorp/react-featured-slider": "4.0.0",
     "@hashicorp/react-hashi-stack-menu": "2.0.3",
     "@hashicorp/react-head": "3.0.2",
