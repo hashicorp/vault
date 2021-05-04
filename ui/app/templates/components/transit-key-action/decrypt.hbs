@@ -4,24 +4,12 @@
       <p>You can decrypt ciphertext using <code>{{key.name}}</code> as the encryption key.</p>
     </div>
     <div class="field">
-      <Toolbar>
-        <label for="ciphertext" class="is-label">Ciphertext</label>
-        <ToolbarActions>
-          <div class="toolbar-separator"></div>
-          <CopyButton class="button is-transparent" @clipboardText={{ciphertext}}
-              @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-              <Icon @glyph="copy-action" aria-label="Copy" />
-            </CopyButton>
-        </ToolbarActions>
-      </Toolbar>
       <div id="ciphertext-control" class="control">
         <JsonEditor
+            @title="Ciphertext"
             @valueUpdated={{action (mut ciphertext)}} 
             @options={{hash
-              lineNumbers=true
-              tabSize=2
               mode='ruby'
-              theme='hashi'
             }}  
             @data-test-transit-input="ciphertext" />
       </div>

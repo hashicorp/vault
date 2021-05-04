@@ -6,26 +6,12 @@
       </div>
       <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
       <div class="field">
-        <Toolbar>
-          <label for="plaintext" class="is-label">
-            Plaintext
-          </label>
-          <ToolbarActions>
-            <div class="toolbar-separator"></div>
-            <CopyButton class="button is-transparent" @clipboardText={{plaintext}}
-              @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-              <Icon @glyph="copy-action" aria-label="Copy" />
-            </CopyButton>
-        </ToolbarActions>
-        </Toolbar>
         <div id="plaintext-control" class="control is-relative">
           <JsonEditor
+              @title="Plaintext"
               @value={{plaintext}} @valueUpdated={{action (mut plaintext)}} 
               @options={{hash
-                lineNumbers=true
-                tabSize=2
                 mode='ruby'
-                theme='hashi'
               }} 
               @data-test-transit-input="plaintext" />
         </div>

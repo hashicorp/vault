@@ -4,26 +4,12 @@
         <p>Check whether the provided signature is valid for the given data.</p>
       </div>
       <div class="field">
-        <Toolbar>
-          <label class="is-label">
-            Input
-          </label>
-          <ToolbarActions>
-            <div class="toolbar-separator"></div>
-            <CopyButton class="button is-transparent" @clipboardText={{input}}
-              @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-                <Icon @glyph="copy-action" aria-label="Copy" />
-            </CopyButton>
-          </ToolbarActions>
-        </Toolbar>
         <div class="control is-relative">
           <JsonEditor
+              @title="Input"
               @value={{input}} @valueUpdated={{action (mut input)}} 
               @options={{hash
-                lineNumbers=true
-                tabSize=2
                 mode='ruby'
-                theme='hashi'
               }} 
               @data-test-transit-input="input" />
         </div>
@@ -127,50 +113,26 @@
           <div class="column is-two-thirds is-flex-column">
             {{#if (or (and verification (eq verification 'HMAC')) hmac)}}
               <div class="field is-flex-column is-flex-1">
-                <Toolbar>
-                  <label class="is-label">HMAC</label>
-                  <ToolbarActions>
-                    <div class="toolbar-separator"></div>
-                    <CopyButton class="button is-transparent" @clipboardText={{hmac}}
-                      @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-                        <Icon @glyph="copy-action" aria-label="Copy" />
-                    </CopyButton>
-                  </ToolbarActions>
-                </Toolbar>
                 <div class="control is-flex-column is-flex-1">
                   <JsonEditor
+                      @title="HMAC"
                       @value={{hmac}} 
                       @valueUpdated={{action (mut hmac)}} 
                       @options={{hash
-                        lineNumbers=true
-                        tabSize=2
                         mode='ruby'
-                        theme='hashi'
                       }} 
                   />
                 </div>
               </div>
             {{else}}
               <div class="field is-flex-column is-flex-1">
-                <Toolbar>
-                  <label class="is-label">Signature</label>
-                  <ToolbarActions>
-                    <div class="toolbar-separator"></div>
-                    <CopyButton class="button is-transparent" @clipboardText={{signature}}
-                      @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-                        <Icon @glyph="copy-action" aria-label="Copy" />
-                    </CopyButton>
-                  </ToolbarActions>
-                </Toolbar>
                 <div class="control is-flex-column is-flex-1">
                   <JsonEditor
+                  @title="Signature"
                   @value={{signature}} 
                   @valueUpdated={{action (mut signature)}} 
                   @options={{hash
-                      lineNumbers=true
-                      tabSize=2
                       mode='ruby'
-                      theme='hashi'
                     }} />
                 </div>
               </div>
@@ -179,25 +141,13 @@
         </div>
       {{else}}
         <div class="field">
-          <Toolbar>
-            <label class="is-label">HMAC</label>
-            <ToolbarActions>
-              <div class="toolbar-separator"></div>
-              <CopyButton class="button is-transparent" @clipboardText={{hmac}}
-                @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-                  <Icon @glyph="copy-action" aria-label="Copy" />
-              </CopyButton>
-            </ToolbarActions>
-          </Toolbar>
           <div class="control">
             <JsonEditor
+                @title="HMAC"
                 @value={{hmac}} 
                 @valueUpdated={{action (mut hmac)}} 
                 @options={{hash
-                  lineNumbers=true
-                  tabSize=2
                   mode='ruby'
-                  theme='hashi'
                 }} 
             />
           </div>

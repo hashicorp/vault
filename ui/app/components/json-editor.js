@@ -14,6 +14,10 @@ const JSON_EDITOR_DEFAULTS = {
 };
 
 export default Component.extend({
+  showToolbar: true,
+  title: null,
+  subTitle: null,
+  helpText: null,
   value: null,
   options: null,
   valueUpdated: null,

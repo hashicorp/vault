@@ -6,20 +6,13 @@
     </div>
     <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
-      <Toolbar>
-        <label for="input" class="is-label">
-          Input
-        </label>
-      </Toolbar>
       <div class="control is-relative">
         <JsonEditor
+          @title="Input"
           @value={{input}} 
           @valueUpdated={{action (mut input)}} 
           @options={{hash
-              lineNumbers=true
-              tabSize=2
               mode='ruby'
-              theme='hashi'
             }} 
           @data-test-transit-input="input" />
       </div>

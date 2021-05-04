@@ -48,24 +48,12 @@
     <MessageError @model={{model}} />
     <NamespaceReminder @mode="edit" @noun="policy" />
     <div class="field">
-      <Toolbar>
-        <label class="is-label">Policy</label>
-        <ToolbarActions>
-          <div class="toolbar-separator"></div>
-          <CopyButton class="button is-transparent" @clipboardText={{model.policy}}
-            @buttonType="button" @success={{action (set-flash-message 'Policy copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
-          </CopyButton>
-        </ToolbarActions>
-      </Toolbar>
       <JsonEditor
+        @title="Policy"
         @value={{model.policy}} 
         @valueUpdated={{action (mut model.policy)}} 
         @options={{hash
-          lineNumbers=true
-          tabSize=2
           mode='ruby'
-          theme='hashi'
           extraKeys=(hash
             Shift-Enter=(action "savePolicy" model)
           )

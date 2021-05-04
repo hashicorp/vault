@@ -6,24 +6,12 @@
       </div>
     <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
-      <Toolbar>
-        <label for="ciphertext" class="is-label">Ciphertext</label>
-        <ToolbarActions>
-          <div class="toolbar-separator"></div>
-          <CopyButton class="button is-transparent" @clipboardText={{ciphertext}}
-            @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
-              <Icon @glyph="copy-action" aria-label="Copy" />
-          </CopyButton>
-        </ToolbarActions>
-      </Toolbar>
       <div class="control is-expanded">
         <JsonEditor
+              @title="Ciphertext"
               @valueUpdated={{action (mut ciphertext)}} 
               @options={{hash
-                lineNumbers=true
-                tabSize=2
                 mode='ruby'
-                theme='hashi'
               }} 
             />
       </div>
