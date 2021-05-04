@@ -54,6 +54,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "unseal",
+					Status: diagnose.OkStatus,
+				},
+				{
 					Name:   "service-discovery",
 					Status: diagnose.OkStatus,
 				},
@@ -99,6 +103,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "unseal",
 					Status: diagnose.OkStatus,
 				},
 				{
@@ -178,6 +186,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "unseal",
+					Status: diagnose.OkStatus,
+				},
+				{
 					Name:    "service-discovery",
 					Status:  diagnose.ErrorStatus,
 					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid:",
@@ -210,6 +222,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Warnings: []string{
 						diagnose.DirAccessErr,
 					},
+				},
+				{
+					Name:   "unseal",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "service-discovery",

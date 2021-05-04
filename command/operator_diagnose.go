@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -267,6 +268,20 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}); err != nil {
 		return err
 	}
+
+	err = diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
+		barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+
+		// Check error here
+		if err != nil {
+			return err
+		}
+		if barrierSeal == nil {
+			return fmt.Errorf("could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
+		}
+		fmt.Println(barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError)
+		return nil
+	})
 
 	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
 		srConfig := config.ServiceRegistration.Config
