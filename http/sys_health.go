@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/version"
@@ -79,14 +78,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	if standbyOK {
 		standbyOK, err = parseutil.ParseBool(standbyOKStr[0])
 		if err != nil {
-			return http.StatusBadRequest, nil, errwrap.Wrapf("bad value for standbyok parameter: {{err}}", err)
+			return http.StatusBadRequest, nil, fmt.Errorf("bad value for standbyok parameter: %w", err)
 		}
 	}
 	perfStandbyOKStr, perfStandbyOK := r.URL.Query()["perfstandbyok"]
 	if perfStandbyOK {
 		perfStandbyOK, err = parseutil.ParseBool(perfStandbyOKStr[0])
 		if err != nil {
-			return http.StatusBadRequest, nil, errwrap.Wrapf("bad value for perfstandbyok parameter: {{err}}", err)
+			return http.StatusBadRequest, nil, fmt.Errorf("bad value for perfstandbyok parameter: %w", err)
 		}
 	}
 

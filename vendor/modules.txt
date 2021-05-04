@@ -147,7 +147,7 @@ github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
 github.com/apple/foundationdb/bindings/go/src/fdb/subspace
 github.com/apple/foundationdb/bindings/go/src/fdb/tuple
-# github.com/armon/go-metrics v0.3.4
+# github.com/armon/go-metrics v0.3.7
 ## explicit
 github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
@@ -360,7 +360,7 @@ github.com/duosecurity/duo_api_golang/authapi
 # github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 ## explicit
 github.com/elazarl/go-bindata-assetfs
-# github.com/fatih/color v1.9.0
+# github.com/fatih/color v1.10.0
 ## explicit
 github.com/fatih/color
 # github.com/fatih/structs v1.1.0
@@ -434,7 +434,7 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
-# github.com/google/go-cmp v0.5.4
+# github.com/google/go-cmp v0.5.5
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -526,7 +526,7 @@ github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.6.0
 ## explicit
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.15.0
+# github.com/hashicorp/go-hclog v0.16.0
 ## explicit
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
@@ -547,7 +547,7 @@ github.com/hashicorp/go-kms-wrapping/entropy
 # github.com/hashicorp/go-memdb v1.0.2
 ## explicit
 github.com/hashicorp/go-memdb
-# github.com/hashicorp/go-msgpack v0.5.5
+# github.com/hashicorp/go-msgpack v1.1.5
 ## explicit
 github.com/hashicorp/go-msgpack/codec
 # github.com/hashicorp/go-multierror v1.1.0
@@ -606,12 +606,15 @@ github.com/hashicorp/mdns
 ## explicit
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.2.0
+# github.com/hashicorp/raft v1.3.0
 ## explicit
 github.com/hashicorp/raft
-# github.com/hashicorp/raft-autopilot v0.1.2
+# github.com/hashicorp/raft-autopilot v0.1.3
 ## explicit
 github.com/hashicorp/raft-autopilot
+# github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
+## explicit
+github.com/hashicorp/raft-boltdb/v2
 # github.com/hashicorp/raft-snapshot v1.0.3
 ## explicit
 github.com/hashicorp/raft-snapshot
@@ -883,7 +886,7 @@ github.com/lib/pq/oid
 github.com/lib/pq/scram
 # github.com/linode/linodego v0.7.1
 github.com/linode/linodego
-# github.com/mattn/go-colorable v0.1.7
+# github.com/mattn/go-colorable v0.1.8
 ## explicit
 github.com/mattn/go-colorable
 # github.com/mattn/go-ieproxy v0.0.1
@@ -1127,7 +1130,7 @@ github.com/softlayer/softlayer-go/sl
 github.com/spf13/pflag
 # github.com/stretchr/objx v0.2.0
 github.com/stretchr/objx
-# github.com/stretchr/testify v1.6.1
+# github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
@@ -1267,6 +1270,31 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
+# go.opentelemetry.io/otel v0.20.0
+## explicit
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/attribute
+go.opentelemetry.io/otel/codes
+go.opentelemetry.io/otel/internal
+go.opentelemetry.io/otel/internal/baggage
+go.opentelemetry.io/otel/internal/global
+go.opentelemetry.io/otel/internal/trace/noop
+go.opentelemetry.io/otel/propagation
+go.opentelemetry.io/otel/semconv
+go.opentelemetry.io/otel/unit
+# go.opentelemetry.io/otel/metric v0.20.0
+go.opentelemetry.io/otel/metric
+go.opentelemetry.io/otel/metric/number
+go.opentelemetry.io/otel/metric/registry
+# go.opentelemetry.io/otel/sdk v0.20.0
+## explicit
+go.opentelemetry.io/otel/sdk/instrumentation
+go.opentelemetry.io/otel/sdk/internal
+go.opentelemetry.io/otel/sdk/resource
+go.opentelemetry.io/otel/sdk/trace
+# go.opentelemetry.io/otel/trace v0.20.0
+## explicit
+go.opentelemetry.io/otel/trace
 # go.uber.org/atomic v1.6.0
 ## explicit
 go.uber.org/atomic
@@ -1340,10 +1368,11 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
@@ -1412,6 +1441,7 @@ google.golang.org/api/compute/v1
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/iam/v1
+google.golang.org/api/iamcredentials/v1
 google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/third_party/uritemplates

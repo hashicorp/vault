@@ -3,7 +3,6 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import apiPath from 'vault/utils/api-path';
-import { get } from '@ember/object';
 
 let MODEL_TYPE = 'test-form-model';
 
@@ -20,13 +19,13 @@ module('Unit | lib | attach capabilities', function(hooks) {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
     });
-    let relationship = get(mc, 'relationshipsByName').get('updatePath');
+    let relationship = mc.relationshipsByName.get('updatePath');
 
     assert.equal(relationship.key, 'updatePath', 'has updatePath relationship');
     assert.equal(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
     assert.equal(relationship.type, 'capabilities', 'updatePath is a related capabilities model');
 
-    relationship = get(mc, 'relationshipsByName').get('deletePath');
+    relationship = mc.relationshipsByName.get('deletePath');
     assert.equal(relationship.key, 'deletePath', 'has deletePath relationship');
     assert.equal(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
     assert.equal(relationship.type, 'capabilities', 'deletePath is a related capabilities model');

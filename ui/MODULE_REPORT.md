@@ -1,90 +1,6 @@
 ## Module Report
 ### Unknown Global
 
-**Global**: `Ember.testing`
-
-**Location**: `app/components/auth-jwt.js` at line 9
-
-```js
-
-/* eslint-disable ember/no-ember-testing-in-module-scope */
-const WAIT_TIME = Ember.testing ? 0 : 500;
-const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
-```
-
-### Unknown Global
-
-**Global**: `Ember.testing`
-
-**Location**: `app/components/auth-jwt.js` at line 117
-
-```js
-  exchangeOIDC: task(function*(event, oidcWindow) {
-    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
-    let oidcState = Ember.testing
-      ? event.storageArea.getItem('oidcState')
-      : (yield timeout(1000).then(() => event.storageArea.getItem('oidcState')));
-```
-
-### Unknown Global
-
-**Global**: `Ember.testing`
-
-**Location**: `app/routes/vault.js` at line 7
-
-```js
-import Ember from 'ember';
-/* eslint-disable ember/no-ember-testing-in-module-scope */
-const SPLASH_DELAY = Ember.testing ? 0 : 300;
-
-export default Route.extend({
-```
-
-### Unknown Global
-
-**Global**: `Ember.testing`
-
-**Location**: `app/services/auth.js` at line 267
-
-```js
-  checkShouldRenew: task(function*() {
-    while (true) {
-      if (Ember.testing) {
-        return;
-      }
-```
-
-### Unknown Global
-
-**Global**: `Ember.testing`
-
-**Location**: `lib/core/addon/components/ttl-form.js` at line 82
-
-```js
-    this.set('time', parsedTime);
-    this.handleChange();
-    if (Ember.testing) {
-      return;
-    }
-```
-
-### Unknown Global
-
-**Global**: `Ember.testing`
-
-**Location**: `app/routes/vault/cluster.js` at line 78
-
-```js
-      // when testing, the polling loop causes promises to never settle so acceptance tests hang
-      // to get around that, we just disable the poll in tests
-      if (Ember.testing) {
-        return;
-      }
-```
-
-### Unknown Global
-
 **Global**: `Ember.onerror`
 
 **Location**: `tests/helpers/wait-for-error.js` at line 5
@@ -221,4 +137,74 @@ export default function waitForError(opts) {
     Ember.Logger.error = loggerError;
     return logout.visit();
   });
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/components/auth-jwt.js` at line 9
+
+```js
+
+/* eslint-disable ember/no-ember-testing-in-module-scope */
+const WAIT_TIME = Ember.testing ? 0 : 500;
+const ERROR_WINDOW_CLOSED =
+  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/components/auth-jwt.js` at line 119
+
+```js
+  exchangeOIDC: task(function*(event, oidcWindow) {
+    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
+    let oidcState = Ember.testing
+      ? event.storageArea.getItem('oidcState')
+      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/routes/vault.js` at line 7
+
+```js
+import Ember from 'ember';
+/* eslint-disable ember/no-ember-testing-in-module-scope */
+const SPLASH_DELAY = Ember.testing ? 0 : 300;
+
+export default Route.extend({
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/services/auth.js` at line 267
+
+```js
+  checkShouldRenew: task(function*() {
+    while (true) {
+      if (Ember.testing) {
+        return;
+      }
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `lib/core/addon/components/ttl-form.js` at line 82
+
+```js
+    this.set('time', parsedTime);
+    this.handleChange();
+    if (Ember.testing) {
+      return;
+    }
 ```

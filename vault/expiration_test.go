@@ -2502,3 +2502,273 @@ func TestExpiration_FairsharingEnvVar(t *testing.T) {
 		}
 	}
 }
+
+// register one lease ID and return the leaseID
+func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager) string {
+	t.Helper()
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "zombie/lease",
+		ClientToken: "sometoken",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "sometoken", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: 10 * time.Hour,
+			},
+		},
+	}
+
+	leaseID, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return leaseID
+}
+
+func TestExpiration_MarkZombie(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	leaseID := registerOneLease(t, ctx, exp)
+	loadedLE, err := exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading non zombie lease: %v", err)
+	}
+
+	if loadedLE.isZombie() {
+		t.Fatalf("lease is zombie and shouldn't be")
+	}
+	if _, ok := exp.zombies.Load(leaseID); ok {
+		t.Fatalf("lease included in zombie map")
+	}
+	if _, ok := exp.pending.Load(leaseID); !ok {
+		t.Fatalf("lease not included in pending map")
+	}
+
+	zombieErr := fmt.Errorf("test zombie error")
+	exp.markLeaseAsZombie(ctx, loadedLE, zombieErr)
+
+	if !loadedLE.isZombie() {
+		t.Fatalf("zombie lease is not zombie and should be")
+	}
+	if loadedLE.RevokeErr != zombieErr.Error() {
+		t.Errorf("zombie lease has wrong error message. expected %s, got %s", zombieErr.Error(), loadedLE.RevokeErr)
+	}
+	if _, ok := exp.zombies.Load(leaseID); !ok {
+		t.Fatalf("zombie lease not included in zombie map")
+	}
+	if _, ok := exp.pending.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in pending map")
+	}
+	if _, ok := exp.nonexpiring.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in nonexpiring map")
+	}
+
+	// stop and restore to verify that zombies are properly loaded from storage
+	err = exp.Stop()
+	if err != nil {
+		t.Fatalf("error stopping expiration manager: %v", err)
+	}
+
+	err = exp.Restore(nil)
+	if err != nil {
+		t.Fatalf("error restoring expiration manager: %v", err)
+	}
+
+	loadedLE, err = exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading non zombie lease after restore: %v", err)
+	}
+
+	if !loadedLE.isZombie() {
+		t.Fatalf("zombie lease is not zombie and should be")
+	}
+	if loadedLE.RevokeErr != zombieErr.Error() {
+		t.Errorf("zombie lease has wrong error message. expected %s, got %s", zombieErr.Error(), loadedLE.RevokeErr)
+	}
+	if _, ok := exp.zombies.Load(leaseID); !ok {
+		t.Fatalf("zombie lease not included in zombie map")
+	}
+	if _, ok := exp.pending.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in pending map")
+	}
+	if _, ok := exp.nonexpiring.Load(leaseID); ok {
+		t.Fatalf("zombie lease included in nonexpiring map")
+	}
+}
+
+func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	leaseID := registerOneLease(t, ctx, exp)
+	expectedLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error getting lease times: %v", err)
+	}
+	if expectedLeaseTimes == nil {
+		t.Fatal("got nil lease")
+	}
+
+	le, err := exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading lease: %v", err)
+	}
+	exp.markLeaseAsZombie(ctx, le, fmt.Errorf("test zombie error"))
+
+	zombieLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error getting zombie lease times: %v", err)
+	}
+	if zombieLeaseTimes == nil {
+		t.Fatal("got nil zombie lease")
+	}
+
+	// strip monotonic clock reading
+	expectedLeaseTimes.IssueTime = expectedLeaseTimes.IssueTime.Round(0)
+	expectedLeaseTimes.ExpireTime = expectedLeaseTimes.ExpireTime.Round(0)
+	expectedLeaseTimes.LastRenewalTime = expectedLeaseTimes.LastRenewalTime.Round(0)
+
+	if !zombieLeaseTimes.IssueTime.Equal(expectedLeaseTimes.IssueTime) {
+		t.Errorf("bad issue time. expected %v, got %v", expectedLeaseTimes.IssueTime, zombieLeaseTimes.IssueTime)
+	}
+	if !zombieLeaseTimes.ExpireTime.Equal(expectedLeaseTimes.ExpireTime) {
+		t.Errorf("bad expire time. expected %v, got %v", expectedLeaseTimes.ExpireTime, zombieLeaseTimes.ExpireTime)
+	}
+	if !zombieLeaseTimes.LastRenewalTime.Equal(expectedLeaseTimes.LastRenewalTime) {
+		t.Errorf("bad last renew time. expected %v, got %v", expectedLeaseTimes.LastRenewalTime, zombieLeaseTimes.LastRenewalTime)
+	}
+}
+
+func TestExpiration_StopClearsZombieCache(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	leaseID := registerOneLease(t, ctx, exp)
+	le, err := exp.loadEntry(ctx, leaseID)
+	if err != nil {
+		t.Fatalf("error loading non zombie lease: %v", err)
+	}
+
+	exp.markLeaseAsZombie(ctx, le, fmt.Errorf("test zombie error"))
+	err = exp.Stop()
+	if err != nil {
+		t.Fatalf("error stopping expiration manager: %v", err)
+	}
+
+	if _, ok := exp.zombies.Load(leaseID); ok {
+		t.Error("expiration manager zombies cache should be cleared on stop")
+	}
+}
+
+func TestExpiration_errorIsUnrecoverable(t *testing.T) {
+	testCases := []struct {
+		err             error
+		isUnrecoverable bool
+	}{
+		{
+			err:             logical.ErrUnrecoverable,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrUnsupportedOperation,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrUnsupportedPath,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrInvalidRequest,
+			isUnrecoverable: true,
+		},
+		{
+			err:             logical.ErrPermissionDenied,
+			isUnrecoverable: false,
+		},
+		{
+			err:             logical.ErrMultiAuthzPending,
+			isUnrecoverable: false,
+		},
+		{
+			err:             fmt.Errorf("some other error"),
+			isUnrecoverable: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		out := errIsUnrecoverable(tc.err)
+		if out != tc.isUnrecoverable {
+			t.Errorf("wrong answer: expected %t, got %t", tc.isUnrecoverable, out)
+		}
+	}
+}
+
+func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
+	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+
+	makeJob := func() *revocationJob {
+		leaseID := registerOneLease(t, ctx, exp)
+
+		job, err := newRevocationJob(ctx, leaseID, namespace.RootNamespace, exp)
+		if err != nil {
+			t.Fatalf("err making revocation job: %v", err)
+		}
+
+		return job
+	}
+
+	testCases := []struct {
+		err            error
+		job            *revocationJob
+		shouldBeZombie bool
+	}{
+		{
+			err:            logical.ErrUnrecoverable,
+			job:            makeJob(),
+			shouldBeZombie: true,
+		},
+		{
+			err:            logical.ErrInvalidRequest,
+			job:            makeJob(),
+			shouldBeZombie: true,
+		},
+		{
+			err:            logical.ErrPermissionDenied,
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+		{
+			err:            logical.ErrRateLimitQuotaExceeded,
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+		{
+			err:            fmt.Errorf("some random recoverable error"),
+			job:            makeJob(),
+			shouldBeZombie: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc.job.OnFailure(tc.err)
+
+		le, err := exp.loadEntry(ctx, tc.job.leaseID)
+		if err != nil {
+			t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
+		}
+		if le == nil {
+			t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
+		}
+
+		isZombie := le.isZombie()
+		if isZombie != tc.shouldBeZombie {
+			t.Errorf("expected zombie: %t, got zombie: %t", tc.shouldBeZombie, isZombie)
+		}
+	}
+}

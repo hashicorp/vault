@@ -1154,7 +1154,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Prevent server startup if migration is active
-	// TODO: how to incorporate this check into Diagnose?
+	// TODO: Use OpenTelemetry to integrate this into Diagnose
 	if c.storageMigrationActive(backend) {
 		return 1
 	}
@@ -1980,7 +1980,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
 
-	// Shutdown will wait until after Vault is sealed, which means the
+	// Finalize will wait until after Vault is sealed, which means the
 	// request forwarding listeners will also be closed (and also
 	// waited for).
 	if err := core.Shutdown(); err != nil {
@@ -2304,7 +2304,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(testCluster.Cleanup)
 
-			// Shutdown will wait until after Vault is sealed, which means the
+			// Finalize will wait until after Vault is sealed, which means the
 			// request forwarding listeners will also be closed (and also
 			// waited for).
 			for _, core := range testCluster.Cores {

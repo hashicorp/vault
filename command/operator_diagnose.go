@@ -1,13 +1,17 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/sdk/version"
+	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -22,6 +26,7 @@ var (
 
 type OperatorDiagnoseCommand struct {
 	*BaseCommand
+	diagnose *diagnose.Session
 
 	flagDebug    bool
 	flagSkips    []string
@@ -32,6 +37,7 @@ type OperatorDiagnoseCommand struct {
 	reloadFuncs     *map[string][]reloadutil.ReloadFunc
 	startedCh       chan struct{} // for tests
 	reloadedCh      chan struct{} // for tests
+	skipEndEnd      bool          // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -118,12 +124,23 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 }
 
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
+
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
 	}
 
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
+	ctx := diagnose.Context(context.Background(), c.diagnose)
+	err := c.offlineDiagnostics(ctx)
+
+	if err != nil {
+		return 1
+	}
+	return 0
+}
+
+func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error {
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
 	server := &ServerCommand{
 		// TODO: set up a different one?
@@ -145,91 +162,129 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		reloadFuncsLock: new(sync.RWMutex),
 	}
 
-	phase := "Parse configuration"
-	c.UI.Output(status_unknown + phase)
+	ctx, span := diagnose.StartSpan(ctx, "initialization")
+	defer span.End()
+
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output("Error while reading configuration files:")
-		c.UI.Output(err.Error())
-		return 1
-	}
-	errors := config.Validate("test")
-	for _, cerr := range errors {
-		c.UI.Output(same_line + status_warn + phase)
-		c.UI.Output(cerr.String())
+		return diagnose.SpotError(ctx, "parse-config", err)
+	} else {
+		diagnose.SpotOk(ctx, "parse-config", "")
 	}
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
-	disableClustering := config.HAStorage.DisableClustering
-	infoKeys := make([]string, 0, 10)
-	info := make(map[string]string)
-	status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
+	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+		disableClustering := config.HAStorage.DisableClustering
+		infoKeys := make([]string, 0, 10)
+		info := make(map[string]string)
+		status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 
-	if status != 0 {
-		c.UI.Output("Error parsing listener configuration.")
-		c.UI.Error(errMsg.Error())
-		return 1
-	}
+		if status != 0 {
+			return errMsg
+		}
 
-	// Make sure we close all listeners from this point on
-	listenerCloseFunc := func() {
+		// Make sure we close all listeners from this point on
+		listenerCloseFunc := func() {
+			for _, ln := range lns {
+				ln.Listener.Close()
+			}
+		}
+
+		defer c.cleanupGuard.Do(listenerCloseFunc)
+
+		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
 		for _, ln := range lns {
-			ln.Listener.Close()
-		}
-	}
+			if ln.Config.TLSDisable {
+				diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
+				continue
+			}
+			if ln.Config.TLSDisableClientCerts {
+				diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
+			}
 
-	defer c.cleanupGuard.Do(listenerCloseFunc)
+			// Check ciphersuite and load ca/cert/key files
+			// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
+			// perform an active probe.
+			_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+			if err != nil {
+				return err
+			}
 
-	sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-	for _, ln := range lns {
-		if ln.Config.TLSDisable {
-			c.UI.Warn("WARNING! TLS is disabled in a Listener config stanza.")
-			continue
+			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+				Listener: ln.Listener,
+				Config:   ln.Config,
+			})
 		}
-		if ln.Config.TLSDisableClientCerts {
-			c.UI.Warn("WARNING! TLS for a listener is turned on without requiring client certs.")
-		}
-
-		// Check ciphersuite and load ca/cert/key files
-		// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
-		// perform an active probe.
-		_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
-		if err != nil {
-			c.UI.Output("Error creating TLS Configuration out of config file: ")
-			c.UI.Output(err.Error())
-			return 1
-		}
-
-		sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-			Listener: ln.Listener,
-			Config:   ln.Config,
-		})
-	}
-	err = diagnose.ListenerChecks(sanitizedListeners)
-	if err != nil {
-		c.UI.Output("Diagnose caught configuration errors: ")
-		c.UI.Output(err.Error())
-		return 1
+		return diagnose.ListenerChecks(sanitizedListeners)
+	}); err != nil {
+		return err
 	}
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
-	// TODO: check for storage backend
-	c.UI.Output(same_line + status_ok + phase)
+	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+		b, err := server.setupStorage(config)
+		if err != nil {
+			return err
+		}
 
-	phase = "Access storage"
-	c.UI.Output(status_unknown + phase)
-	_, err = server.setupStorage(config)
-	if err != nil {
-		c.UI.Output(same_line + status_failed + phase)
-		c.UI.Output(err.Error())
-		return 1
+		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+		if dirAccess != "" {
+			diagnose.Warn(ctx, dirAccess)
+		}
+
+		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+
+			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+		}
+
+		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Attempt to use storage backend
+		if !c.skipEndEnd {
+			err = diagnose.StorageEndToEndLatencyCheck(ctx, b)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return err
 	}
-	c.UI.Output(same_line + status_ok + phase)
 
-	return 0
+	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		srConfig := config.ServiceRegistration.Config
+		// Initialize the Service Discovery, if there is one
+		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			// setupStorage populates the srConfig, so no nil checks are necessary.
+			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+
+			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
+			// storage. See the consul package in physical for details.
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

@@ -1606,7 +1606,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	// Create TestClusterCores
 	var ret []*TestClusterCore
 	for i := 0; i < numCores; i++ {
-
 		tcc := &TestClusterCore{
 			Core:                 cores[i],
 			CoreConfig:           coreConfigs[i],
@@ -1689,7 +1688,7 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("stopping core", "core", idx)
 
-	// Stop listeners and call Shutdown()
+	// Stop listeners and call Finalize()
 	if err := tcc.stop(); err != nil {
 		t.Fatal(err)
 	}

@@ -9,17 +9,20 @@ listener "tcp" {
 }
 
 backend "consul" {
+    address = "127.0.0.1:8500"
     foo = "bar"
     advertise_addr = "foo"
 }
 
 ha_backend "consul" {
+    address = "127.0.0.1:8500"
     bar = "baz"
     advertise_addr = "snafu"
     disable_clustering = "true"
 }
 
 service_registration "consul" {
+    address = "127.0.0.1:8500"
     foo = "bar"
 }
 

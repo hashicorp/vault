@@ -12,7 +12,7 @@ import (
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
+	"github.com/hashicorp/raft-boltdb/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -21,6 +21,7 @@ IMPROVEMENTS:
 * core: Add tls_max_version listener config option. [[GH-11226](https://github.com/hashicorp/vault/pull/11226)]
 * core: Add metrics for standby node forwarding. [[GH-11366](https://github.com/hashicorp/vault/pull/11366)]
 * core: allow arbitrary length stack traces upon receiving SIGUSR2 (was 32MB) [[GH-11364](https://github.com/hashicorp/vault/pull/11364)]
+* storage/raft: Support autopilot for HA only raft storage. [[GH-11260](https://github.com/hashicorp/vault/pull/11260)]
 
 BUG FIXES:
 
@@ -142,7 +143,6 @@ pulling in https://github.com/hashicorp/consul-template/pull/1447 [[GH-10756](ht
 * core (enterprise): Limit entropy augmentation during token generation to root tokens. [[GH-10487](https://github.com/hashicorp/vault/pull/10487)]
 * core (enterprise): Vault EGP policies attached to path * were not correctly scoped to the namespace.
 * core/identity: Fix deadlock in entity merge endpoint. [[GH-10877](https://github.com/hashicorp/vault/pull/10877)]
-* core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
 * core: Avoid disclosing IP addresses in the errors of unauthenticated requests [[GH-10579](https://github.com/hashicorp/vault/pull/10579)]
 * core: Fix client.Clone() to include the address [[GH-10077](https://github.com/hashicorp/vault/pull/10077)]
 * core: Fix duplicate quotas on performance standby nodes. [[GH-10855](https://github.com/hashicorp/vault/pull/10855)]
@@ -211,6 +211,7 @@ BUG FIXES:
 * core: Fix goroutine leak when updating rate limit quota [[GH-11371](https://github.com/hashicorp/vault/pull/11371)]
 * core: Fix storage entry leak when revoking leases created with non-orphan batch tokens. [[GH-11377](https://github.com/hashicorp/vault/pull/11377)]
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
+* pki: Preserve ordering of all DN attribute values when issuing certificates [[GH-11259](https://github.com/hashicorp/vault/pull/11259)]
 * replication: Fix: mounts created within a namespace that was part of an Allow
   filtering rule would not appear on performance secondary if created after rule
   was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
@@ -435,6 +436,7 @@ BUG FIXES:
 * core/identity: Fix deadlock in entity merge endpoint. [[GH-10877](https://github.com/hashicorp/vault/pull/10877)]
 * core: Fix cleanup of storage entries from cubbyholes within namespaces. [[GH-11408](https://github.com/hashicorp/vault/pull/11408)]
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
+* core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
 
 ## 1.5.7
 ### January 29, 2021
