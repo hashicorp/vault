@@ -13,6 +13,7 @@ import (
 	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/sdk/version"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
+	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -270,16 +271,28 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	err = diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
-		barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+		barrierSeal, _, _, seals, _, err := setSeal(server, config, make([]string, 0), make(map[string]string))
 
 		// Check error here
 		if err != nil {
 			return err
 		}
+
+		if seals != nil {
+			for _, seal := range seals {
+				// Ensure that the seal finalizer is called, even if using verify-only
+				defer func(seal *vault.Seal) {
+					err = (*seal).Finalize(context.Background())
+					if err != nil {
+						c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+					}
+				}(&seal)
+			}
+		}
+
 		if barrierSeal == nil {
 			return fmt.Errorf("could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
 		}
-		fmt.Println(barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError)
 		return nil
 	})
 
