@@ -610,7 +610,7 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 					Description: strings.TrimSpace(sysHelp["rotation-enabled"][0]),
 				},
 				"max_operations": {
-					Type:        framework.TypeInt, // 64?
+					Type:        framework.TypeInt64,
 					Description: strings.TrimSpace(sysHelp["rotation-max-operations"][0]),
 				},
 				"interval": {
