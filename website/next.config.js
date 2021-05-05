@@ -1,7 +1,9 @@
 const withHashicorp = require('@hashicorp/nextjs-scripts')
 const redirects = require('./redirects.next')
 
-module.exports = withHashicorp()({
+module.exports = withHashicorp({
+  transpileModules: ['@hashicorp/versioned-docs'],
+})({
   svgo: { plugins: [{ removeViewBox: false }] },
   rewrites: () => [
     {
