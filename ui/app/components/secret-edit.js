@@ -432,8 +432,14 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
           .adapterFor('secret-v2-version')
           .v2DeleteOperation(this.store, this.modelForData.id, this.deleteType)
           .then(() => {
-            location.reload(); // not the best but unsure how refresh such that the modal no longer shows?
+            location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
           });
+      }
+      if (this.deleteType === 'destroy-all-versions') {
+        let { id } = this.model;
+        this.model.destroyRecord().then(() => {
+          this.navToNearestAncestor.perform(id);
+        });
       }
     },
   },
