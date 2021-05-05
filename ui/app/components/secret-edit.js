@@ -397,5 +397,22 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     formatJSON() {
       this.set('codemirrorString', this.secretData.toJSONString(true));
     },
+
+    handleDelete() {
+      if (!this.deleteType) {
+        return;
+      }
+      console.log(this.deleteType, 'do something with the deleteType');
+      this.router.transitionTo('vault.cluster.metrics.config');
+      // this.rotateCredentials(backend, name)
+      // .then(() => {
+      //   this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
+      //   this.transitionToRoute(SHOW_ROUTE, name);
+      // })
+      // .catch(e => {
+      //   this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
+      //   this.transitionToRoute(SHOW_ROUTE, name);
+      // });
+    },
   },
 });
