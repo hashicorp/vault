@@ -1144,7 +1144,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	defer noop.Unlock()
 
 	if len(noop.Requests) != 3 {
-		t.Fatalf("Bad: %v", noop.Requests)
+		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 	for _, req := range noop.Requests {
 		if req.Operation != logical.RevokeOperation {
@@ -2583,6 +2583,7 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading non irrevocable lease after restore: %v", err)
 	}
+	exp.updatePending(loadedLE)
 
 	if !loadedLE.isIrrevocable() {
 		t.Fatalf("irrevocable lease is not irrevocable and should be")

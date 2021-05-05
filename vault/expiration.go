@@ -1714,6 +1714,7 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 	if le.isIrrevocable() {
+		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 		return
 	}
 
@@ -1910,11 +1911,6 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
 	}
 	le.namespace = ns
-
-	if le.isIrrevocable() {
-		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
-		return le, nil
-	}
 
 	if restoreMode {
 		if checkRestored {
