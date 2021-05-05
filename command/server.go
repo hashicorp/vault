@@ -1200,20 +1200,14 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if seals != nil {
-		// NOTE: Not sure if there's a cleaner way to do this besides the use of
-		// a waitgroup, but without it we run into a race condition on seals.
-		var wg sync.WaitGroup
 		for _, seal := range seals {
-			wg.Add(1)
 			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func() {
-				defer wg.Done()
-				err = seal.Finalize(context.Background())
+			defer func(seal *vault.Seal) {
+				err = (*seal).Finalize(context.Background())
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 				}
-			}()
-			wg.Wait()
+			}(&seal)
 		}
 	}
 
