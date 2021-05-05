@@ -120,7 +120,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   deleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
-      let [backend, id] = JSON.parse(context.version.id);
+      let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/delete/${id}`,
       };
@@ -131,7 +131,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   destroyVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
-      let [backend, id] = JSON.parse(context.version.id);
+      let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/destroy/${id}`,
       };
