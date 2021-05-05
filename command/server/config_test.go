@@ -57,3 +57,7 @@ func TestConfigRaftRetryJoin(t *testing.T) {
 func TestParseSeals(t *testing.T) {
 	testParseSeals(t)
 }
+
+func TestUnknownFieldValidation(t *testing.T) {
+	testUnknownFieldValidation(t)
+}

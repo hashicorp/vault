@@ -30,6 +30,20 @@ type Config struct {
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
+}
+
 type Retry struct {
 	NumRetries int `hcl:"num_retries"`
 }
@@ -130,6 +144,14 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Attribute
+	ast.Walk(obj, func(n ast.Node) (ast.Node, bool) {
+		if k, ok := n.(*ast.ObjectKey); ok {
+			k.Token.Pos.Filename = path
+		}
+		return n, true
+	})
 
 	// Start building the result
 	result := NewConfig()
