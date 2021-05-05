@@ -2566,7 +2566,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 		return nil, err
 	}
 	if ok {
-		rotConfig.MaxOperations = int64(maxOps.(int))
+		rotConfig.MaxOperations = maxOps.(int64)
 	}
 	interval, ok, err := data.GetOkErr("interval")
 	if err != nil {
