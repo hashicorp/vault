@@ -9,7 +9,7 @@ export default Component.extend({
   version: null,
   useDefaultTrigger: false,
   onRefresh() {},
-
+  // ARG TODO this functionality is being moved to secret-edit
   deleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {

@@ -10,7 +10,6 @@ import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import ControlGroupError from 'vault/lib/control-group-error';
-import { getOwner } from '@ember/application';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -117,6 +116,30 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   ),
   canDelete: alias('model.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
+
+  deleteVersionPath: maybeQueryRecord(
+    'capabilities',
+    context => {
+      let [backend, id] = JSON.parse(context.version.id);
+      return {
+        id: `${backend}/delete/${id}`,
+      };
+    },
+    'version.id'
+  ),
+  canDeleteVersion: alias('deleteVersionPath.canUpdate'),
+  destroyVersionPath: maybeQueryRecord(
+    'capabilities',
+    context => {
+      let [backend, id] = JSON.parse(context.version.id);
+      return {
+        id: `${backend}/destroy/${id}`,
+      };
+    },
+    'version.id'
+  ),
+  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
+  // ARG TODO missing canUndelete Version? see secret version menu
 
   v2UpdatePath: maybeQueryRecord(
     'capabilities',
@@ -403,18 +426,14 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       if (!this.deleteType) {
         return;
       }
-      // Option 1: Delete Current Version
-      if (this.deleteType === 'delete-version') {
+      // Option 1 & 2: Delete or Destroy Current Version
+      if (this.deleteType === 'delete' || this.deleteType === 'destroy') {
         return this.store
           .adapterFor('secret-v2-version')
-          .v2DeleteOperation(this.store, this.modelForData.id, 'delete')
+          .v2DeleteOperation(this.store, this.modelForData.id, this.deleteType)
           .then(() => {
             location.reload(); // not the best but unsure how refresh such that the modal no longer shows?
           });
-      }
-      // Option 2: Destroy Current Version
-      if (this.deleteType === 'destroy-version') {
-        // here
       }
     },
   },
