@@ -197,6 +197,14 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return false;
   }),
 
+  canUndelete: computed('modelForData.{deleted,destroyed}', function() {
+    if (this.modelForData.deleted && !this.modelForData.destroyed) {
+      return true;
+    } else {
+      return false;
+    }
+  }),
+
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
   },
@@ -422,24 +430,23 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.set('codemirrorString', this.secretData.toJSONString(true));
     },
 
-    handleDelete() {
-      if (!this.deleteType) {
+    handleDelete(deleteType) {
+      if (!deleteType) {
         return;
       }
-      // Option 1 & 2: Delete or Destroy Current Version
-      if (this.deleteType === 'delete' || this.deleteType === 'destroy') {
-        return this.store
-          .adapterFor('secret-v2-version')
-          .v2DeleteOperation(this.store, this.modelForData.id, this.deleteType)
-          .then(() => {
-            location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
-          });
-      }
-      if (this.deleteType === 'destroy-all-versions') {
+
+      if (deleteType === 'destroy-all-versions') {
         let { id } = this.model;
         this.model.destroyRecord().then(() => {
           this.navToNearestAncestor.perform(id);
         });
+      } else {
+        return this.store
+          .adapterFor('secret-v2-version')
+          .v2DeleteOperation(this.store, this.modelForData.id, deleteType)
+          .then(() => {
+            location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
+          });
       }
     },
   },
