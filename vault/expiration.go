@@ -70,11 +70,9 @@ const (
 	// storage/memory
 	maxIrrevocableErrorLength = 240
 
-	genericIrrevocableErrorMessage = "no error message given"
-)
+	genericIrrevocableErrorMessage = "unknown"
 
-var (
-	errOutOfRetries = errors.New("out of retries")
+	outOfRetriesMessage = "out of retries"
 )
 
 type pendingInfo struct {
@@ -239,7 +237,7 @@ func (r *revocationJob) OnFailure(err error) {
 		r.m.logger.Trace("marking lease as irrevocable", "lease_id", r.leaseID, "error", err)
 		if pending.revokesAttempted >= maxRevokeAttempts {
 			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
-			err = fmt.Errorf("%v: %w", errOutOfRetries.Error(), err)
+			err = fmt.Errorf("%v: %w", outOfRetriesMessage, err)
 		}
 
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
