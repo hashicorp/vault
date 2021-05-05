@@ -10,6 +10,7 @@ import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import ControlGroupError from 'vault/lib/control-group-error';
+import { getOwner } from '@ember/application';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -402,17 +403,19 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       if (!this.deleteType) {
         return;
       }
-      console.log(this.deleteType, 'do something with the deleteType');
-      this.router.transitionTo('vault.cluster.metrics.config');
-      // this.rotateCredentials(backend, name)
-      // .then(() => {
-      //   this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
-      //   this.transitionToRoute(SHOW_ROUTE, name);
-      // })
-      // .catch(e => {
-      //   this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
-      //   this.transitionToRoute(SHOW_ROUTE, name);
-      // });
+      // Option 1: Delete Current Version
+      if (this.deleteType === 'delete-version') {
+        return this.store
+          .adapterFor('secret-v2-version')
+          .v2DeleteOperation(this.store, this.modelForData.id, 'delete')
+          .then(() => {
+            location.reload(); // not the best but unsure how refresh such that the modal no longer shows?
+          });
+      }
+      // Option 2: Destroy Current Version
+      if (this.deleteType === 'destroy-version') {
+        // here
+      }
     },
   },
 });
