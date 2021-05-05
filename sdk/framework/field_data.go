@@ -131,7 +131,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+	case TypeBool, TypeInt, TypeInt64, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 		TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 		TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
 		return d.getPrimitive(k, schema)
