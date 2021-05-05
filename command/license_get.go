@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -82,7 +81,14 @@ func (c *LicenseGetCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().ReadWithData("sys/license", map[string][]string{"signed": {strconv.FormatBool(c.signed)}})
+	var path string
+	if c.signed {
+		path = "sys/license/signed"
+	} else {
+		path = "sys/license"
+	}
+
+	secret, err := client.Logical().Read(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error retrieving license: %s", err))
 		return 2
