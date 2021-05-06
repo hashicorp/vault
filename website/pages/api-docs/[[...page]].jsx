@@ -1,5 +1,6 @@
 import { productName, productSlug } from 'data/metadata'
 import DocsPage from '@hashicorp/react-docs-page'
+// Imports below are used in server-side only
 import {
   generateStaticPaths,
   generateStaticProps,
