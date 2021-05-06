@@ -357,7 +357,7 @@ func TestServerRun(t *testing.T) {
 	}{
 		"simple": {
 			templateMap: map[string]*templateTest{
-				"render_01": &templateTest{
+				"render_01": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
@@ -367,37 +367,37 @@ func TestServerRun(t *testing.T) {
 		},
 		"multiple": {
 			templateMap: map[string]*templateTest{
-				"render_01": &templateTest{
+				"render_01": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
-				"render_02": &templateTest{
+				"render_02": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
-				"render_03": &templateTest{
+				"render_03": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
-				"render_04": &templateTest{
+				"render_04": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
-				"render_05": &templateTest{
+				"render_05": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
-				"render_06": &templateTest{
+				"render_06": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
-				"render_07": &templateTest{
+				"render_07": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
@@ -407,7 +407,7 @@ func TestServerRun(t *testing.T) {
 		},
 		"bad secret": {
 			templateMap: map[string]*templateTest{
-				"render_01": &templateTest{
+				"render_01": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContentsBad),
 					},
@@ -417,7 +417,7 @@ func TestServerRun(t *testing.T) {
 		},
 		"missing key": {
 			templateMap: map[string]*templateTest{
-				"render_01": &templateTest{
+				"render_01": {
 					template: &ctconfig.TemplateConfig{
 						Contents:      pointerutil.StringPtr(templateContentsMissingKey),
 						ErrMissingKey: pointerutil.BoolPtr(true),
@@ -428,7 +428,7 @@ func TestServerRun(t *testing.T) {
 		},
 		"permission denied": {
 			templateMap: map[string]*templateTest{
-				"render_01": &templateTest{
+				"render_01": {
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContentsPermDenied),
 					},
@@ -454,6 +454,9 @@ func TestServerRun(t *testing.T) {
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
 						Address: ts.URL,
+						Retry: &config.Retry{
+							NumRetries: 3,
+						},
 					},
 				},
 				LogLevel:      hclog.Trace,
@@ -466,7 +469,6 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
-			server.testingLimitRetry = 3
 
 			errCh := make(chan error)
 			go func() {

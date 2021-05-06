@@ -143,6 +143,7 @@ export default Certificate.extend({
   csr: attr('string', {
     editType: 'textarea',
     label: 'CSR',
+    masked: true,
   }),
   expiration: attr(),
 

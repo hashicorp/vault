@@ -22,9 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	errDuplicateIdentityName = errors.New("duplicate identity name")
-)
+var errDuplicateIdentityName = errors.New("duplicate identity name")
 
 func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
 	c.loadCaseSensitiveIdentityStore = caseSensitive
@@ -1886,7 +1884,7 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 	return i.MemDBGroupByAliasIDInTxn(txn, aliasID, clone)
 }
 
-func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Context, entityID string, groupAliases []*logical.Alias) ([]*logical.Alias, error) {
+func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Context, entityID string, groupAliases []*logical.Alias, mountAccessor string) ([]*logical.Alias, error) {
 	defer metrics.MeasureSince([]string{"identity", "refresh_external_groups"}, time.Now())
 
 	if entityID == "" {
@@ -1894,7 +1892,6 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 	}
 
 	refreshFunc := func(dryRun bool) (bool, []*logical.Alias, error) {
-
 		if !dryRun {
 			i.groupLock.Lock()
 			defer i.groupLock.Unlock()
@@ -1906,11 +1903,6 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 		oldGroups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entityID, true, true)
 		if err != nil {
 			return false, nil, err
-		}
-
-		mountAccessor := ""
-		if len(groupAliases) != 0 {
-			mountAccessor = groupAliases[0].MountAccessor
 		}
 
 		var newGroups []*identity.Group

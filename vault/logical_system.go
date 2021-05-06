@@ -42,8 +42,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const maxBytes = 128 * 1024
-const globalScope = "global"
+const (
+	maxBytes    = 128 * 1024
+	globalScope = "global"
+)
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -2564,7 +2566,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 		return nil, err
 	}
 	if ok {
-		rotConfig.MaxOperations = int64(maxOps.(int))
+		rotConfig.MaxOperations = maxOps.(int64)
 	}
 	interval, ok, err := data.GetOkErr("interval")
 	if err != nil {
@@ -2581,6 +2583,16 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	if ok {
 		rotConfig.Disabled = !enabled.(bool)
 	}
+
+	// Reject out of range settings
+	if rotConfig.Interval < minimumRotationInterval && rotConfig.Interval != 0 {
+		return logical.ErrorResponse("interval must be greater or equal to %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
+	}
+
+	if rotConfig.MaxOperations < absoluteOperationMinimum || rotConfig.MaxOperations > absoluteOperationMaximum {
+		return logical.ErrorResponse("max_operations must be in the range [%d,%d]", absoluteOperationMinimum, absoluteOperationMaximum), logical.ErrInvalidRequest
+	}
+
 	// Store the rotation config
 	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
@@ -3595,7 +3607,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
 	if err != nil {
@@ -3907,7 +3918,6 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 	}
 
 	return nil
-
 }
 
 func sanitizePath(path string) string {

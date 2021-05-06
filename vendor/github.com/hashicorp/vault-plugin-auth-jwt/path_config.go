@@ -160,6 +160,23 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 		return nil, nil
 	}
 
+	provider, err := NewProviderConfig(ctx, config, ProviderMap())
+	if err != nil {
+		return nil, err
+	}
+
+	// Omit sensitive keys from provider-specific config
+	providerConfig := make(map[string]interface{})
+	if provider != nil {
+		for k, v := range config.ProviderConfig {
+			providerConfig[k] = v
+		}
+
+		for _, k := range provider.SensitiveKeys() {
+			delete(providerConfig, k)
+		}
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"oidc_discovery_url":     config.OIDCDiscoveryURL,
@@ -173,7 +190,7 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"jwks_url":               config.JWKSURL,
 			"jwks_ca_pem":            config.JWKSCAPEM,
 			"bound_issuer":           config.BoundIssuer,
-			"provider_config":        config.ProviderConfig,
+			"provider_config":        providerConfig,
 			"namespace_in_state":     config.NamespaceInState,
 		},
 	}

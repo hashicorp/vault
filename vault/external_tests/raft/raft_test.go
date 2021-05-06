@@ -8,36 +8,33 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	vaultcluster "github.com/hashicorp/vault/vault/cluster"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
 type RaftClusterOpts struct {
-	DisableFollowerJoins  bool
-	InmemCluster          bool
-	EnableAutopilot       bool
-	PhysicalFactoryConfig map[string]interface{}
-	DisablePerfStandby    bool
+	DisableFollowerJoins           bool
+	InmemCluster                   bool
+	EnableAutopilot                bool
+	PhysicalFactoryConfig          map[string]interface{}
+	DisablePerfStandby             bool
+	EnableResponseHeaderRaftNodeID bool
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -49,26 +46,14 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
-		DisableAutopilot: !ropts.EnableAutopilot,
+		DisableAutopilot:               !ropts.EnableAutopilot,
+		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 	}
 
-	var opts = vault.TestClusterOptions{
+	opts := vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	}
-	opts.Logger = logging.NewVaultLogger(hclog.Trace).Named(t.Name())
-
-	if ropts.InmemCluster {
-		inmemCluster, err := vaultcluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
-			Mutex: &sync.Mutex{},
-			Level: hclog.Trace,
-			Name:  "inmem-cluster",
-		}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		opts.ClusterLayers = inmemCluster
-	}
-
+	opts.InmemClusterLayers = ropts.InmemCluster
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 
@@ -82,6 +67,62 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_BoltDBMetrics(t *testing.T) {
+	t.Parallel()
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
+		HandlerFunc:            vaulthttp.Handler,
+		NumCores:               1,
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Telemetry: configutil.ListenerTelemetry{
+					UnauthenticatedMetricsAccess: true,
+				},
+			},
+		},
+	}
+
+	teststorage.RaftBackendSetup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	leaderClient := cluster.Cores[0].Client
+
+	// Write a few keys
+	for i := 0; i < 50; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			fmt.Sprintf("foo%d", i): fmt.Sprintf("bar%d", i),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Even though there is a long delay between when we start the node and when we check for these metrics,
+	// the core metrics loop isn't started until postUnseal, which happens after said delay. This means we
+	// need a small artificial delay here as well, otherwise we won't see any metrics emitted.
+	time.Sleep(5 * time.Second)
+	data, err := testhelpers.SysMetricsReq(leaderClient, cluster, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noBoltDBMetrics := true
+	for _, g := range data.Gauges {
+		if strings.HasPrefix(g.Name, "raft_storage.bolt.") {
+			noBoltDBMetrics = false
+			break
+		}
+	}
+
+	if noBoltDBMetrics {
+		t.Fatal("expected to find boltdb metrics being emitted from the raft backend, but there were none")
+	}
 }
 
 func TestRaft_RetryAutoJoin(t *testing.T) {
@@ -137,7 +178,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 func TestRaft_Retry_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -158,7 +199,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leaderAPI,
 			TLSConfig:     leaderCore.TLSConfig,
 			Retry:         true,
@@ -201,7 +242,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 func TestRaft_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -302,6 +343,64 @@ func TestRaft_RemovePeer(t *testing.T) {
 	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
+}
+
+func TestRaft_NodeIDHeader(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		ropts         *RaftClusterOpts
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			ropts:         nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			ropts: &RaftClusterOpts{
+				EnableResponseHeaderRaftNodeID: true,
+			},
+			headerPresent: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cluster := raftCluster(t, tc.ropts)
+			defer cluster.Cleanup()
+
+			for i, c := range cluster.Cores {
+				if c.Core.Sealed() {
+					t.Fatalf("failed to unseal core %d", i)
+				}
+
+				client := c.Client
+				req := client.NewRequest("GET", "/v1/sys/seal-status")
+				resp, err := client.RawRequest(req)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				if resp == nil {
+					t.Fatalf("nil response")
+				}
+
+				rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+				nodeID := c.Core.GetRaftNodeID()
+
+				if tc.headerPresent && rniHeader == "" {
+					t.Fatal("missing 'X-Vault-Raft-Node-ID' header entry in response")
+				}
+				if tc.headerPresent && rniHeader != nodeID {
+					t.Fatalf("got the wrong raft node id. expected %s to equal %s", rniHeader, nodeID)
+				}
+				if !tc.headerPresent && rniHeader != "" {
+					t.Fatal("didn't expect 'X-Vault-Raft-Node-ID' header but it was present anyway")
+				}
+			}
+		})
+	}
 }
 
 func TestRaft_Configuration(t *testing.T) {
@@ -1012,7 +1111,7 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 func TestRaft_Join_InitStatus(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)

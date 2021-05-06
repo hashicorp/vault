@@ -22,8 +22,9 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
+	"github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
-	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
@@ -31,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	bolt "go.etcd.io/bbolt"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -40,10 +42,12 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
 // Verify RaftBackend satisfies the correct interfaces
-var _ physical.Backend = (*RaftBackend)(nil)
-var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physical.HABackend = (*RaftBackend)(nil)
-var _ physical.Lock = (*RaftLock)(nil)
+var (
+	_ physical.Backend       = (*RaftBackend)(nil)
+	_ physical.Transactional = (*RaftBackend)(nil)
+	_ physical.HABackend     = (*RaftBackend)(nil)
+	_ physical.Lock          = (*RaftLock)(nil)
+)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -145,6 +149,8 @@ type RaftBackend struct {
 	// VAULT_RAFT_AUTOPILOT_DISABLE during startup and can't be updated once the
 	// node is up and running.
 	disableAutopilot bool
+
+	autopilotReconcileInterval time.Duration
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -267,7 +273,7 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o755)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -315,7 +321,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
 				return nil, err
 			}
 
@@ -385,7 +391,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
 		}
-		snap = newSnapshotStoreDelay(snap, delay)
+		snap = newSnapshotStoreDelay(snap, delay, logger)
 	}
 
 	maxEntrySize := defaultMaxEntrySize
@@ -398,28 +404,40 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize = uint64(i)
 	}
 
+	var reconcileInterval time.Duration
+	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
+		}
+		reconcileInterval = interval
+	}
+
 	return &RaftBackend{
-		logger:                  logger,
-		fsm:                     fsm,
-		raftInitCh:              make(chan struct{}),
-		conf:                    conf,
-		logStore:                log,
-		stableStore:             stable,
-		snapStore:               snap,
-		dataDir:                 path,
-		localID:                 localID,
-		permitPool:              physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize:            maxEntrySize,
-		followerHeartbeatTicker: time.NewTicker(time.Second),
+		logger:                     logger,
+		fsm:                        fsm,
+		raftInitCh:                 make(chan struct{}),
+		conf:                       conf,
+		logStore:                   log,
+		stableStore:                stable,
+		snapStore:                  snap,
+		dataDir:                    path,
+		localID:                    localID,
+		permitPool:                 physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:               maxEntrySize,
+		followerHeartbeatTicker:    time.NewTicker(time.Second),
+		autopilotReconcileInterval: reconcileInterval,
 	}, nil
 }
 
 type snapshotStoreDelay struct {
+	logger  log.Logger
 	wrapped raft.SnapshotStore
 	delay   time.Duration
 }
 
 func (s snapshotStoreDelay) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+	s.logger.Trace("delaying before creating snapshot", "delay", s.delay)
 	time.Sleep(s.delay)
 	return s.wrapped.Create(version, index, term, configuration, configurationIndex, trans)
 }
@@ -434,8 +452,9 @@ func (s snapshotStoreDelay) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 
 var _ raft.SnapshotStore = &snapshotStoreDelay{}
 
-func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration) *snapshotStoreDelay {
+func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration, logger log.Logger) *snapshotStoreDelay {
 	return &snapshotStoreDelay{
+		logger:  logger,
 		wrapped: snap,
 		delay:   delay,
 	}
@@ -457,6 +476,38 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
+	b.l.RLock()
+	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
+	fsmStats := b.fsm.db.Stats()
+	b.l.RUnlock()
+	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
+	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+}
+
+func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
+	txstats := stats.TxStats
+	labels := []metricsutil.Label{{"database", database}}
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.PageCount), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.PageAlloc), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.CursorCount), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -490,8 +541,9 @@ type RaftConfigurationResponse struct {
 
 // Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
-	ID      string `json:"id"`
-	Address string `json:"address"`
+	ID       string `json:"id"`
+	Address  string `json:"address"`
+	Suffrage int    `json:"suffrage"`
 }
 
 // NodeID returns the identifier of the node
@@ -546,8 +598,9 @@ func (b *RaftBackend) Bootstrap(peers []Peer) error {
 
 	for i, p := range peers {
 		raftConfig.Servers[i] = raft.Server{
-			ID:      raft.ServerID(p.ID),
-			Address: raft.ServerAddress(p.Address),
+			ID:       raft.ServerID(p.ID),
+			Address:  raft.ServerAddress(p.Address),
+			Suffrage: raft.ServerSuffrage(p.Suffrage),
 		}
 	}
 
@@ -597,6 +650,15 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 			return err
 		}
 		config.TrailingLogs = uint64(trailingLogs)
+	}
+	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	if ok {
+		var err error
+		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		if err != nil {
+			return err
+		}
+		config.SnapshotInterval = snapshotInterval
 	}
 
 	config.NoSnapshotRestoreOnStart = true
@@ -774,6 +836,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	b.logger.Info("creating Raft", "config", fmt.Sprintf("%#v", raftConfig))
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
@@ -998,8 +1061,9 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	ret := make([]Peer, len(future.Configuration().Servers))
 	for i, s := range future.Configuration().Servers {
 		ret[i] = Peer{
-			ID:      string(s.ID),
-			Address: string(s.Address),
+			ID:       string(s.ID),
+			Address:  string(s.Address),
+			Suffrage: int(s.Suffrage),
 		}
 	}
 
@@ -1083,7 +1147,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	// snapshot applied to a quorum of nodes.
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: restoreCallbackOp,
 			},
 		},
@@ -1102,7 +1166,7 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: deleteOp,
 				Key:    path,
 			},
@@ -1148,7 +1212,7 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: putOp,
 				Key:    entry.Key,
 				Value:  entry.Value,
@@ -1359,7 +1423,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		case <-stopCh:
 			return nil, nil
 		}
-
 	}
 
 	l.b.l.RLock()
@@ -1377,7 +1440,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	if l.b.raft.State() == raft.Leader {
 		err := l.b.applyLog(context.Background(), &LogData{
 			Operations: []*LogOperation{
-				&LogOperation{
+				{
 					OpType: putOp,
 					Key:    l.key,
 					Value:  l.value,
@@ -1401,7 +1464,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				l.b.l.RLock()
 				err := l.b.applyLog(context.Background(), &LogData{
 					Operations: []*LogOperation{
-						&LogOperation{
+						{
 							OpType: putOp,
 							Key:    l.key,
 							Value:  l.value,

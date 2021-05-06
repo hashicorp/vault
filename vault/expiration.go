@@ -65,6 +65,16 @@ const (
 	numExpirationWorkersTest = 10
 
 	fairshareWorkersOverrideVar = "VAULT_LEASE_REVOCATION_WORKERS"
+
+	// limit irrevocable error messages to 240 characters to be respectful of
+	// storage/memory
+	maxIrrevocableErrorLength = 240
+
+	genericIrrevocableErrorMessage = "no error message given"
+)
+
+var (
+	errOutOfRetries = errors.New("out of retries")
 )
 
 type pendingInfo struct {
@@ -99,6 +109,9 @@ type ExpirationManager struct {
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
+	// Track expired leases that have been determined to be irrevocable (without
+	// manual intervention). We retain a subset of the lease info in memory
+	irrevocable sync.Map
 
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
@@ -163,6 +176,20 @@ func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Names
 	}, nil
 }
 
+// errIsUnrecoverable returns true if the logical error is unlikely to resolve
+// automatically or with additional retries
+func errIsUnrecoverable(err error) bool {
+	switch {
+	case errors.Is(err, logical.ErrUnrecoverable),
+		errors.Is(err, logical.ErrUnsupportedOperation),
+		errors.Is(err, logical.ErrUnsupportedPath),
+		errors.Is(err, logical.ErrInvalidRequest):
+		return true
+	}
+
+	return false
+}
+
 func (r *revocationJob) Execute() error {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 	r.m.core.metricSink.MeasureSinceWithLabels([]string{"expire", "lease_expiration", "time_in_queue"}, r.startTime, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
@@ -210,9 +237,24 @@ func (r *revocationJob) OnFailure(err error) {
 
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
+	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
+		r.m.logger.Trace("marking lease as irrevocable", "lease_id", r.leaseID, "error", err)
+		if pending.revokesAttempted >= maxRevokeAttempts {
+			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+			err = fmt.Errorf("%v: %w", errOutOfRetries.Error(), err)
+		}
 
-	if pending.revokesAttempted >= maxRevokeAttempts {
-		r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
+		if loadErr != nil {
+			r.m.logger.Warn("failed to mark lease as irrevocable - failed to load", "lease_id", r.leaseID, "err", loadErr)
+			return
+		}
+		if le == nil {
+			r.m.logger.Warn("failed to mark lease as irrevocable - nil lease", "lease_id", r.leaseID)
+			return
+		}
+
+		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
 		return
 	}
 
@@ -829,6 +871,10 @@ func (m *ExpirationManager) Stop() error {
 		return true
 	})
 	m.uniquePolicies = make(map[string][]string)
+	m.irrevocable.Range(func(key, _ interface{}) bool {
+		m.irrevocable.Delete(key)
+		return true
+	})
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -935,24 +981,32 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
-		if err := m.removeIndexByToken(ctx, le); err != nil {
-			return err
+		var indexToken string
+		// Maintain secondary index by token, except for orphan batch tokens
+		switch le.ClientTokenType {
+		case logical.TokenTypeBatch:
+			te, err := m.tokenStore.lookupBatchTokenInternal(ctx, le.ClientToken)
+			if err != nil {
+				return err
+			}
+			// If it's a non-orphan batch token, assign the secondary index to its
+			// parent
+			indexToken = te.Parent
+		default:
+			indexToken = le.ClientToken
+		}
+		if indexToken != "" {
+			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
+				return err
+			}
 		}
 	}
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	if info, ok := m.pending.Load(leaseID); ok {
-		pending := info.(pendingInfo)
-		pending.timer.Stop()
-		m.pending.Delete(leaseID)
-		m.leaseCount--
-		// Log but do not fail; unit tests (and maybe Tidy on production systems)
-		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-			m.logger.Error("failed to update quota on revocation", "error", err)
-		}
-	}
+	m.removeFromPending(ctx, leaseID)
 	m.nonexpiring.Delete(leaseID)
+	m.irrevocable.Delete(leaseID)
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1293,7 +1347,11 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 
 	// Refresh groups
 	if resp.Auth.EntityID != "" && m.core.identityStore != nil {
-		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases)
+		mountAccessor := ""
+		if resp.Auth.Alias != nil {
+			mountAccessor = resp.Auth.Alias.MountAccessor
+		}
+		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases, mountAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -1365,6 +1423,17 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		Version:         1,
 	}
 
+	var indexToken string
+	// Maintain secondary index by token, except for orphan batch tokens
+	switch {
+	case te.Type != logical.TokenTypeBatch:
+		indexToken = le.ClientToken
+	case te.Parent != "":
+		// If it's a non-orphan batch token, assign the secondary index to its
+		// parent
+		indexToken = te.Parent
+	}
+
 	defer func() {
 		// If there is an error we want to rollback as much as possible (note
 		// that errors here are ignored to do as much cleanup as we can). We
@@ -1383,7 +1452,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
 			}
 
-			if err := m.removeIndexByToken(ctx, le); err != nil {
+			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
 			}
 
@@ -1419,16 +1488,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		return "", err
 	}
 
-	// Maintain secondary index by token, except for orphan batch tokens
-	switch {
-	case te.Type != logical.TokenTypeBatch:
-		if err := m.createIndexByToken(ctx, le, le.ClientToken); err != nil {
-			return "", err
-		}
-	case te.Parent != "":
-		// If it's a non-orphan batch token, assign the secondary index to its
-		// parent
-		if err := m.createIndexByToken(ctx, le, te.Parent); err != nil {
+	if indexToken != "" {
+		if err := m.createIndexByToken(ctx, le, indexToken); err != nil {
 			return "", err
 		}
 	}
@@ -1576,6 +1637,11 @@ func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string)
 		return m.leaseTimesForExport(info.(pendingInfo).cachedLeaseInfo), nil
 	}
 
+	info, ok = m.irrevocable.Load(leaseID)
+	if ok && info.(*leaseEntry) != nil {
+		return m.leaseTimesForExport(info.(*leaseEntry)), nil
+	}
+
 	// Load the entry
 	le, err := m.loadEntryInternal(ctx, leaseID, true, false)
 	if err != nil {
@@ -1633,6 +1699,9 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 		}
 		ret.Path = le.Path
 	}
+	if le.isIrrevocable() {
+		ret.RevokeErr = le.RevokeErr
+	}
 	return ret
 }
 
@@ -1684,11 +1753,14 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
-	var pending pendingInfo
+	if le.isIrrevocable() {
+		return
+	}
 
 	// Check for an existing timer
 	info, ok := m.pending.Load(le.LeaseID)
 
+	var pending pendingInfo
 	if le.ExpireTime.IsZero() {
 		if le.nonexpiringToken() {
 			// Store this in the nonexpiring map instead of pending.
@@ -1776,7 +1848,7 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 	// Handle standard revocation via backends
 	resp, err := m.router.Route(nsCtx, logical.RevokeRequest(le.Path, le.Secret, le.Data))
 	if err != nil || (resp != nil && resp.IsError()) {
-		return errwrap.Wrapf(fmt.Sprintf("failed to revoke entry: resp: %#v err: {{err}}", resp), err)
+		return fmt.Errorf("failed to revoke entry: resp: %#v err: %w", resp, err)
 	}
 	return nil
 }
@@ -1887,6 +1959,11 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
 	}
 	le.namespace = ns
+
+	if le.isIrrevocable() {
+		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+		return le, nil
+	}
 
 	if restoreMode {
 		if checkRestored {
@@ -2014,10 +2091,10 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 }
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
-func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry) error {
+func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	_, nsID := namespace.SplitIDFromString(le.ClientToken)
+	_, nsID := namespace.SplitIDFromString(token)
 	if nsID != "" {
 		var err error
 		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
@@ -2038,7 +2115,7 @@ func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEnt
 		}
 	}
 
-	saltedID, err := m.tokenStore.SaltID(saltCtx, le.ClientToken)
+	saltedID, err := m.tokenStore.SaltID(saltCtx, token)
 	if err != nil {
 		return err
 	}
@@ -2232,7 +2309,6 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 			return true
 		}
 	})
-
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
 	}
@@ -2270,9 +2346,7 @@ func (m *ExpirationManager) leaseAggregationMetrics(ctx context.Context, consts 
 // type (though most likely we would only call this from within the "vault" core package.)
 type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path string) bool
 
-var (
-	ErrInRestoreMode = errors.New("expiration manager in restore mode")
-)
+var ErrInRestoreMode = errors.New("expiration manager in restore mode")
 
 // WalkTokens extracts the Auth structure from leases corresponding to tokens.
 // Returning false from the walk function terminates the iteration.
@@ -2323,6 +2397,50 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	return nil
 }
 
+// must be called with m.pendingLock held
+func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
+	if info, ok := m.pending.Load(leaseID); ok {
+		pending := info.(pendingInfo)
+		pending.timer.Stop()
+		m.pending.Delete(leaseID)
+		m.leaseCount--
+		// Log but do not fail; unit tests (and maybe Tidy on production systems)
+		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+			m.logger.Error("failed to update quota on revocation", "error", err)
+		}
+	}
+}
+
+// note: must be called with pending lock held
+func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseEntry, err error) {
+	if le == nil {
+		m.logger.Warn("attempted to mark nil lease as irrevocable")
+		return
+	}
+	if le.isIrrevocable() {
+		m.logger.Info("attempted to re-mark lease as irrevocable", "original_error", le.RevokeErr, "new_error", err.Error())
+		return
+	}
+
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
+	if len(errStr) == 0 {
+		errStr = genericIrrevocableErrorMessage
+	}
+	if len(errStr) > maxIrrevocableErrorLength {
+		errStr = errStr[:maxIrrevocableErrorLength]
+	}
+
+	le.RevokeErr = errStr
+	m.persistEntry(ctx, le)
+
+	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	m.removeFromPending(ctx, le.LeaseID)
+	m.nonexpiring.Delete(le.LeaseID)
+}
+
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
@@ -2343,6 +2461,12 @@ type leaseEntry struct {
 	Version int `json:"version"`
 
 	namespace *namespace.Namespace
+
+	// RevokeErr tracks if a lease has failed revocation in a way that is
+	// unlikely to be automatically resolved. The first time this happens,
+	// RevokeErr will be set, thus marking this leaseEntry as irrevocable. From
+	// there, it must be manually removed (force revoked).
+	RevokeErr string `json:"revokeErr"`
 }
 
 // encode is used to JSON encode the lease entry
@@ -2355,6 +2479,9 @@ func (le *leaseEntry) renewable() (bool, error) {
 	// If there is no entry, cannot review to renew
 	case le == nil:
 		return false, fmt.Errorf("lease not found")
+
+	case le.isIrrevocable():
+		return false, fmt.Errorf("lease is expired and has failed previous revocation attempts")
 
 	case le.ExpireTime.IsZero():
 		return false, fmt.Errorf("lease is not renewable")
@@ -2386,6 +2513,11 @@ func (le *leaseEntry) nonexpiringToken() bool {
 		return false
 	}
 	return !le.Auth.LeaseEnabled()
+}
+
+// TODO maybe lock RevokeErr once this goes in: https://github.com/hashicorp/vault/pull/11122
+func (le *leaseEntry) isIrrevocable() bool {
+	return le.RevokeErr != ""
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry

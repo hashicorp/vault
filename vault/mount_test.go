@@ -197,7 +197,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	c.mounts = &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:            mountTableType,
 				Path:             "noop/",
 				Type:             "kv",
@@ -207,7 +207,7 @@ func TestCore_Mount_Local(t *testing.T) {
 				NamespaceID:      namespace.RootNamespaceID,
 				namespace:        namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:            mountTableType,
 				Path:             "noop2/",
 				Type:             "kv",
@@ -444,6 +444,7 @@ func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 		}
 	}
 }
+
 func TestCore_RemountConcurrent(t *testing.T) {
 	c2, _, _ := TestCoreUnsealed(t)
 	noop := &NoopBackend{}
@@ -471,16 +472,6 @@ func TestCore_RemountConcurrent(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	mount3 := &MountEntry{
-		Table: mountTableType,
-		Path:  "test3/",
-		Type:  "noop",
-	}
-
-	if err := c2.mount(namespace.RootContext(nil), mount3); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -491,14 +482,6 @@ func TestCore_RemountConcurrent(t *testing.T) {
 		}
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
-		if err != nil {
-			t.Logf("err: %v", err)
-		}
-	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -518,6 +501,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 		c2MountMap[v.Path] = v
 	}
 }
+
 func TestCore_Remount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
@@ -903,7 +887,8 @@ func TestCore_MountInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeLogical,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -928,7 +913,8 @@ func TestCore_MountInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeLogical,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -938,7 +924,7 @@ func TestCore_MountInitialize(t *testing.T) {
 		c.mounts = &MountTable{
 			Type: mountTableType,
 			Entries: []*MountEntry{
-				&MountEntry{
+				{
 					Table:            mountTableType,
 					Path:             "foo/",
 					Type:             "initable",

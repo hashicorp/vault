@@ -2,8 +2,8 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
@@ -17,24 +17,24 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"connection_uri": &framework.FieldSchema{
+			"connection_uri": {
 				Type:        framework.TypeString,
 				Description: "RabbitMQ Management URI",
 			},
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username of a RabbitMQ management administrator",
 			},
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password of the provided RabbitMQ management user",
 			},
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set, connection_uri is verified by actually connecting to the RabbitMQ management API`,
 			},
-			"password_policy": &framework.FieldSchema{
+			"password_policy": {
 				Type:        framework.TypeString,
 				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
 			},
@@ -73,12 +73,12 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 		// Create RabbitMQ management client
 		client, err := rabbithole.NewClient(uri, username, password)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create client: {{err}}", err)
+			return nil, fmt.Errorf("failed to create client: %w", err)
 		}
 
 		// Verify that configured credentials is capable of listing
 		if _, err = client.ListUsers(); err != nil {
-			return nil, errwrap.Wrapf("failed to validate the connection: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate the connection: %w", err)
 		}
 	}
 

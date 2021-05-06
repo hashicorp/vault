@@ -20,14 +20,14 @@ export default function ProductSubnav() {
         {
           text: 'Try Cloud',
           url:
-            'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=top_nav',
+            'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=top_nav',
         },
         {
           text: 'Download',
           url: '/downloads',
         },
       ]}
-      currentPath={router.pathname}
+      currentPath={router.asPath}
       menuItems={menuItems}
       menuItemsAlign="right"
       constrainWidth

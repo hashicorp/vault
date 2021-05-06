@@ -313,7 +313,7 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 		// Rotate to next segment
 		a.currentSegment.entitySequenceNumber += 1
 		if len(excessEntities) > activitySegmentEntityCapacity {
-			a.logger.Warn("too many new active entities %v, dropping tail", len(excessEntities))
+			a.logger.Warn("too many new active entities, dropping tail", "entities", len(excessEntities))
 			excessEntities = excessEntities[:activitySegmentEntityCapacity]
 		}
 		a.currentSegment.currentEntities.Entities = excessEntities
@@ -456,7 +456,6 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.EntityActivityLog)) error {
-
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -486,7 +485,6 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.TokenCount)) error {
-
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -995,7 +993,7 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 
 // stopActivityLog removes the ActivityLog from Core
 // and frees any resources.
-func (c *Core) stopActivityLog() error {
+func (c *Core) stopActivityLog() {
 	if c.tokenStore != nil {
 		c.tokenStore.SetActivityLog(nil)
 	}
@@ -1007,7 +1005,6 @@ func (c *Core) stopActivityLog() error {
 	}
 
 	c.activityLog = nil
-	return nil
 }
 
 func (a *ActivityLog) StartOfNextMonth() time.Time {
@@ -1177,7 +1174,6 @@ func (a *ActivityLog) activeFragmentWorker() {
 			endOfMonth.Reset(delta)
 		}
 	}
-
 }
 
 type ActivityIntentLog struct {
@@ -1358,7 +1354,6 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
 
 	// TODO: check if current segment is full and should be written
-
 }
 
 type ClientCountResponse struct {
@@ -1528,14 +1523,20 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 
 	// Cancel the context if activity log is shut down.
 	// This will cause the next storage operation to fail.
-	go func() {
+	a.l.RLock()
+	// doneCh is modified in some tests, so we don't want to access that member
+	// without a lock, but we don't want to hold the lock for the entire lifetime
+	// of this goroutine.  Passing the channel to the goroutine works here because
+	// no tests depend on us accessing the new doneCh after modifying the field.
+	go func(done chan struct{}) {
 		select {
-		case <-a.doneCh:
+		case <-done:
 			cancel()
 		case <-ctx.Done():
 			break
 		}
-	}()
+	}(a.doneCh)
+	a.l.RUnlock()
 
 	// Load the intent log
 	rawIntentLog, err := a.view.Get(ctx, activityIntentLogKey)

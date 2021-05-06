@@ -15,19 +15,19 @@ func pathConfigURLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/urls",
 		Fields: map[string]*framework.FieldSchema{
-			"issuing_certificates": &framework.FieldSchema{
+			"issuing_certificates": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the issuing certificate attribute`,
 			},
 
-			"crl_distribution_points": &framework.FieldSchema{
+			"crl_distribution_points": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute`,
 			},
 
-			"ocsp_servers": &framework.FieldSchema{
+			"ocsp_servers": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute`,

@@ -24,16 +24,14 @@ path "/auth/token/lookup" {
 `
 )
 
-var (
-	coreConfig = &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": pki.Factory,
-		},
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-)
+var coreConfig = &vault.CoreConfig{
+	LogicalBackends: map[string]logical.Factory{
+		"pki": pki.Factory,
+	},
+	CredentialBackends: map[string]logical.Factory{
+		"userpass": userpass.Factory,
+	},
+}
 
 func setupMounts(t *testing.T, client *api.Client) {
 	t.Helper()
@@ -78,7 +76,6 @@ func setupMounts(t *testing.T, client *api.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func teardownMounts(t *testing.T, client *api.Client) {
@@ -197,7 +194,6 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("Duplicated paths were accepted")
 	}
-
 }
 
 func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {

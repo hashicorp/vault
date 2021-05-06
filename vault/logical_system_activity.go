@@ -17,11 +17,11 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "internal/counters/activity$",
 		Fields: map[string]*framework.FieldSchema{
-			"start_time": &framework.FieldSchema{
+			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
 			},
-			"end_time": &framework.FieldSchema{
+			"end_time": {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
 			},
@@ -109,7 +109,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	// Also convert any user inputs to UTC to avoid
 	// problems later.
 	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(time.Now().UTC().AddDate(0, -1, 0))
+		endTime = timeutil.EndOfMonth(timeutil.StartOfPreviousMonth(time.Now().UTC()))
 	} else {
 		endTime = endTime.UTC()
 	}

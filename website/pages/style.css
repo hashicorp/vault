@@ -5,27 +5,23 @@
 @import '~@hashicorp/nextjs-scripts/prism/style.css';
 
 :root {
-  --highlight-color: var(--brand);
+  --highlight-color: var(--brand-link);
 }
 
+@import '~@hashicorp/react-consent-manager/style.css';
+@import '~@hashicorp/react-toggle/style.css';
 @import '~@hashicorp/react-alert-banner/style.css';
 @import '~@hashicorp/react-button/styles/index.css';
-@import '~@hashicorp/react-case-study-slider/style.css';
 @import '~@hashicorp/react-code-block/style.css';
-@import '~@hashicorp/react-consent-manager/style.css';
 @import '~@hashicorp/react-content/style.css';
 @import '~@hashicorp/react-docs-page/style.css';
-@import '~@hashicorp/react-docs-sidenav/style.css';
 @import '~@hashicorp/react-enterprise-alert/style.css';
+@import '~@hashicorp/react-featured-slider/style.css';
 @import '~@hashicorp/react-hero/style.css';
 @import '~@hashicorp/react-logo-grid/style.css';
-@import '~@hashicorp/react-product-downloader/dist/style.css';
-@import '~@hashicorp/react-search/style.css';
-@import '~@hashicorp/react-section-header/style.css';
 @import '~@hashicorp/react-tabs/style.css';
 @import '~@hashicorp/react-text-split/style.css';
-@import '~@hashicorp/react-toggle/style.css';
-@import '~@hashicorp/react-use-cases/dist/style.css';
+@import '~@hashicorp/react-use-cases/style.css';
 @import '~@hashicorp/react-vertical-text-block-list/style.css';
 
 /* Global Components - Transpiled */
@@ -37,7 +33,6 @@
 
 /* Pages */
 @import './not-found/style.css';
-@import './downloads/style.css';
 @import './community/style.css';
 @import './use-cases/style.css';
 
@@ -98,4 +93,13 @@
 .g-section-block.theme-black-background-white-text {
   background: var(--gray-1);
   color: white;
+}
+
+/** DEBT: short term patch until the branding changes roll out. Remove this with this PR — https://github.com/hashicorp/vault/pull/11118 **/
+.g-content {
+  --brand-text: var(--vagrant) !important;
+}
+.g-docs-sidenav {
+  --brand: var(--vagrant) !important;
+  --brand-text: var(--vagrant) !important;
 }
