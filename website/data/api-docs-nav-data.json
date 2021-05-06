@@ -38,6 +38,11 @@
         "path": "secret/azure"
       },
       {
+        "title": "Cassandra",
+        "path": "secret/cassandra",
+        "hidden": true
+      },
+      {
         "title": "Consul",
         "path": "secret/consul"
       },
@@ -362,6 +367,11 @@
       {
         "title": "<code>/sys/control-group</code>",
         "path": "system/control-group"
+      },
+      {
+        "title": "<code>/sys/generate-recovery-token</code>",
+        "path": "system/generate-recovery-token",
+        "hidden": true
       },
       {
         "title": "<code>/sys/generate-root</code>",

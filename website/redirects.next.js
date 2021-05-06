@@ -35,6 +35,11 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/auth/jwt_oidc_providers',
+    destination: '/docs/auth/jwt/oidc_providers',
+    permanent: true,
+  },
+  {
     source: '/docs/commands/environment',
     destination: '/docs/commands/#environment-variables',
     permanent: true,
