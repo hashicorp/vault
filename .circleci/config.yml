@@ -818,7 +818,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.16.2
-    - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -1013,7 +1012,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -1053,7 +1052,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
   freebsd_386_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -1228,7 +1226,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -1262,7 +1260,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
   freebsd_amd64_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -1694,7 +1691,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -1728,7 +1725,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
   test-go-nightly:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -1840,7 +1836,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -1880,7 +1876,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.16.2
-    - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   netbsd_amd64_package:
     docker:
@@ -2301,42 +2296,6 @@ jobs:
         name: Install CircleCI CLI
     - run:
         command: make ci-verify
-  go-mod-vendor:
-    machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    steps:
-    - run:
-        command: |
-          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
-          # Install Go
-          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-          sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
-          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
-          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
-          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
-
-          echo "$ go version"
-          go version
-        name: Setup Go
-        working_directory: ~/
-    - checkout
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          GO111MODULE=on go mod vendor
-          git diff --exit-code
-        name: Run go mod vendor
-    environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: ''
-    - GO_VERSION: 1.16.2
-    - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster
@@ -2437,7 +2396,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -2477,7 +2436,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
 workflows:
   build-17ae90554a536793:
     jobs:
@@ -2555,9 +2513,6 @@ workflows:
         requires:
         - pre-flight-checks
     - build-go-dev:
-        requires:
-        - pre-flight-checks
-    - go-mod-vendor:
         requires:
         - pre-flight-checks
     - test-ui:
