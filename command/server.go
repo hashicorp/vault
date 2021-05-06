@@ -1224,59 +1224,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	coreConfig := &vault.CoreConfig{
-		RawConfig:                      config,
-		Physical:                       backend,
-		RedirectAddr:                   config.Storage.RedirectAddr,
-		StorageType:                    config.Storage.Type,
-		HAPhysical:                     nil,
-		ServiceRegistration:            configSR,
-		Seal:                           barrierSeal,
-		UnwrapSeal:                     unwrapSeal,
-		AuditBackends:                  c.AuditBackends,
-		CredentialBackends:             c.CredentialBackends,
-		LogicalBackends:                c.LogicalBackends,
-		Logger:                         c.logger,
-		DisableSentinelTrace:           config.DisableSentinelTrace,
-		DisableCache:                   config.DisableCache,
-		DisableMlock:                   config.DisableMlock,
-		MaxLeaseTTL:                    config.MaxLeaseTTL,
-		DefaultLeaseTTL:                config.DefaultLeaseTTL,
-		ClusterName:                    config.ClusterName,
-		CacheSize:                      config.CacheSize,
-		PluginDirectory:                config.PluginDirectory,
-		EnableUI:                       config.EnableUI,
-		EnableRaw:                      config.EnableRawEndpoint,
-		DisableSealWrap:                config.DisableSealWrap,
-		DisablePerformanceStandby:      config.DisablePerformanceStandby,
-		DisableIndexing:                config.DisableIndexing,
-		AllLoggers:                     c.allLoggers,
-		BuiltinRegistry:                builtinplugins.Registry,
-		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
-		MetricsHelper:                  metricsHelper,
-		MetricSink:                     metricSink,
-		SecureRandomReader:             secureRandomReader,
-		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
-		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
-	}
-	if c.flagDev {
-		coreConfig.EnableRaw = true
-		coreConfig.DevToken = c.flagDevRootTokenID
-		if c.flagDevLeasedKV {
-			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
-		}
-		if c.flagDevPluginDir != "" {
-			coreConfig.PluginDirectory = c.flagDevPluginDir
-		}
-		if c.flagDevLatency > 0 {
-			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
-			if _, txnOK := backend.(physical.Transactional); txnOK {
-				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
-			} else {
-				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
-			}
-		}
-	}
+	coreConfig := createCoreConfig(c, config, backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 
 	if c.flagDevThreeNode {
 		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
@@ -1286,169 +1234,22 @@ func (c *ServerCommand) Run(args []string) int {
 		return enableFourClusterDev(c, coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
-	var disableClustering bool
-
 	// Initialize the separate HA storage backend, if it exists
-	var ok bool
-	if config.HAStorage != nil {
-		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
-			c.UI.Error("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
-			return 1
-		}
-
-		if config.Storage.Type == storageTypeRaft {
-			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
-			return 1
-		}
-
-		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
-		if !exists {
-			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
-			return 1
-
-		}
-
-		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
-		c.allLoggers = append(c.allLoggers, namedHALogger)
-		habackend, err := factory(config.HAStorage.Config, namedHALogger)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf(
-				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
-			return 1
-
-		}
-
-		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
-			c.UI.Error("Specified HA storage does not support HA")
-			return 1
-		}
-
-		if !coreConfig.HAPhysical.HAEnabled() {
-			c.UI.Error("Specified HA storage has HA support disabled; please consult documentation")
-			return 1
-		}
-
-		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
-		disableClustering = config.HAStorage.DisableClustering
-
-		if config.HAStorage.Type == storageTypeRaft && disableClustering {
-			c.UI.Error("Disable clustering cannot be set to true when Raft is the HA storage type")
-			return 1
-		}
-
-		if !disableClustering {
-			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
-		}
-	} else {
-		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
-			coreConfig.RedirectAddr = config.Storage.RedirectAddr
-			disableClustering = config.Storage.DisableClustering
-
-			if (config.Storage.Type == storageTypeRaft) && disableClustering {
-				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
-				return 1
-			}
-
-			if !disableClustering {
-				coreConfig.ClusterAddr = config.Storage.ClusterAddr
-			}
-		}
-	}
-
-	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
-		coreConfig.RedirectAddr = envRA
-	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
-		coreConfig.RedirectAddr = envRA
-	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
-		coreConfig.RedirectAddr = envAA
-	}
-
-	// Attempt to detect the redirect address, if possible
-	if coreConfig.RedirectAddr == "" {
-		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
-	}
-	var detect physical.RedirectDetect
-	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
-		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
-	} else {
-		detect, ok = coreConfig.Physical.(physical.RedirectDetect)
-	}
-	if ok && coreConfig.RedirectAddr == "" {
-		redirect, err := c.detectRedirect(detect, config)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
-		} else if redirect == "" {
-			c.UI.Error("Failed to detect api address")
-		} else {
-			coreConfig.RedirectAddr = redirect
-		}
-	}
-	if coreConfig.RedirectAddr == "" && c.flagDev {
-		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
-	}
-
-	// After the redirect bits are sorted out, if no cluster address was
-	// explicitly given, derive one from the redirect addr
-	if disableClustering {
-		coreConfig.ClusterAddr = ""
-	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-		coreConfig.ClusterAddr = envCA
-	} else {
-		var addrToUse string
-		switch {
-		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
-			addrToUse = coreConfig.RedirectAddr
-		case c.flagDev:
-			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Address)
-		default:
-			goto CLUSTER_SYNTHESIS_COMPLETE
-		}
-		u, err := url.ParseRequestURI(addrToUse)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing synthesized cluster address %s: %v", addrToUse, err))
-			return 1
-		}
-		host, port, err := net.SplitHostPort(u.Host)
-		if err != nil {
-			// This sucks, as it's a const in the function but not exported in the package
-			if strings.Contains(err.Error(), "missing port in address") {
-				host = u.Host
-				port = "443"
-			} else {
-				c.UI.Error(fmt.Sprintf("Error parsing api address: %v", err))
-				return 1
-			}
-		}
-		nPort, err := strconv.Atoi(port)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err))
-			return 1
-		}
-		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
-		// Will always be TLS-secured
-		u.Scheme = "https"
-		coreConfig.ClusterAddr = u.String()
-	}
-
-CLUSTER_SYNTHESIS_COMPLETE:
-
-	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
-		c.UI.Error(fmt.Sprintf(
-			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
+	disableClustering, err := initHaBackend(c, config, coreConfig, backend)
+	if err != nil {
+		c.UI.Output(err.Error())
 		return 1
 	}
 
-	if coreConfig.ClusterAddr != "" {
-		// Force https as we'll always be TLS-secured
-		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err))
-			return 11
-		}
-		u.Scheme = "https"
-		coreConfig.ClusterAddr = u.String()
+	// Determine the redirect address from environment variables
+	determineRedirectAddr(c, coreConfig, config)
+
+	// After the redirect bits are sorted out, if no cluster address was
+	// explicitly given, derive one from the redirect addr
+	err = findClusterAddress(c, coreConfig, config, disableClustering)
+	if err != nil {
+		c.UI.Output(err.Error())
+		return 1
 	}
 
 	// Override the UI enabling config by the environment variable
@@ -2578,6 +2379,162 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
 }
 
+func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {
+	// Initialize the separate HA storage backend, if it exists
+	var ok bool
+	if config.HAStorage != nil {
+		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
+			return false, fmt.Errorf("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
+		}
+
+		if config.Storage.Type == storageTypeRaft {
+			return false, fmt.Errorf("HA storage cannot be declared when Raft is the storage type")
+		}
+
+		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
+		if !exists {
+			return false, fmt.Errorf("Unknown HA storage type %s", config.HAStorage.Type)
+
+		}
+
+		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
+		c.allLoggers = append(c.allLoggers, namedHALogger)
+		habackend, err := factory(config.HAStorage.Config, namedHALogger)
+		if err != nil {
+			return false, fmt.Errorf("Error initializing HA storage of type %s: %s", config.HAStorage.Type, err)
+
+		}
+
+		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
+			return false, fmt.Errorf("Specified HA storage does not support HA")
+		}
+
+		if !coreConfig.HAPhysical.HAEnabled() {
+			return false, fmt.Errorf("Specified HA storage has HA support disabled; please consult documentation")
+		}
+
+		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
+		disableClustering := config.HAStorage.DisableClustering
+
+		if config.HAStorage.Type == storageTypeRaft && disableClustering {
+			return disableClustering, fmt.Errorf("Disable clustering cannot be set to true when Raft is the HA storage type")
+		}
+
+		if !disableClustering {
+			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
+		}
+	} else {
+		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
+			coreConfig.RedirectAddr = config.Storage.RedirectAddr
+			disableClustering := config.Storage.DisableClustering
+
+			if (config.Storage.Type == storageTypeRaft) && disableClustering {
+				return disableClustering, fmt.Errorf("Disable clustering cannot be set to true when Raft is the storage type")
+			}
+
+			if !disableClustering {
+				coreConfig.ClusterAddr = config.Storage.ClusterAddr
+			}
+		}
+	}
+	return config.DisableClustering, nil
+}
+
+func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config) {
+	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
+		coreConfig.RedirectAddr = envAA
+	}
+
+	// Attempt to detect the redirect address, if possible
+	if coreConfig.RedirectAddr == "" {
+		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
+	}
+
+	var ok bool
+	var detect physical.RedirectDetect
+	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
+		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
+	} else {
+		detect, ok = coreConfig.Physical.(physical.RedirectDetect)
+	}
+	if ok && coreConfig.RedirectAddr == "" {
+		redirect, err := c.detectRedirect(detect, config)
+		// the following errors did not cause Run to return, so I'm not returning these
+		// as errors.
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
+		} else if redirect == "" {
+			c.UI.Error("Failed to detect api address")
+		} else {
+			coreConfig.RedirectAddr = redirect
+		}
+	}
+	if coreConfig.RedirectAddr == "" && c.flagDev {
+		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+	}
+}
+
+func findClusterAddress(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, disableClustering bool) error {
+	if disableClustering {
+		coreConfig.ClusterAddr = ""
+	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+		coreConfig.ClusterAddr = envCA
+	} else {
+		var addrToUse string
+		switch {
+		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
+			addrToUse = coreConfig.RedirectAddr
+		case c.flagDev:
+			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+		default:
+			goto CLUSTER_SYNTHESIS_COMPLETE
+		}
+		u, err := url.ParseRequestURI(addrToUse)
+		if err != nil {
+			return fmt.Errorf("Error parsing synthesized cluster address %s: %v", addrToUse, err)
+		}
+		host, port, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			// This sucks, as it's a const in the function but not exported in the package
+			if strings.Contains(err.Error(), "missing port in address") {
+				host = u.Host
+				port = "443"
+			} else {
+				return fmt.Errorf("Error parsing api address: %v", err)
+			}
+		}
+		nPort, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err)
+		}
+		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
+		// Will always be TLS-secured
+		u.Scheme = "https"
+		coreConfig.ClusterAddr = u.String()
+	}
+
+CLUSTER_SYNTHESIS_COMPLETE:
+
+	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
+		return fmt.Errorf("Address %q used for both API and cluster addresses", coreConfig.RedirectAddr)
+	}
+
+	if coreConfig.ClusterAddr != "" {
+		// Force https as we'll always be TLS-secured
+		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
+		if err != nil {
+			return fmt.Errorf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err)
+		}
+		u.Scheme = "https"
+		coreConfig.ClusterAddr = u.String()
+	}
+	return nil
+}
+
 func runUnseal(c *ServerCommand, core *vault.Core) {
 	for {
 		err := core.UnsealWithStoredKeys(context.Background())
@@ -2597,6 +2554,64 @@ func runUnseal(c *ServerCommand, core *vault.Core) {
 		case <-time.After(5 * time.Second):
 		}
 	}
+}
+
+func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) *vault.CoreConfig {
+	coreConfig := &vault.CoreConfig{
+		RawConfig:                      config,
+		Physical:                       backend,
+		RedirectAddr:                   config.Storage.RedirectAddr,
+		StorageType:                    config.Storage.Type,
+		HAPhysical:                     nil,
+		ServiceRegistration:            configSR,
+		Seal:                           barrierSeal,
+		UnwrapSeal:                     unwrapSeal,
+		AuditBackends:                  c.AuditBackends,
+		CredentialBackends:             c.CredentialBackends,
+		LogicalBackends:                c.LogicalBackends,
+		Logger:                         c.logger,
+		DisableSentinelTrace:           config.DisableSentinelTrace,
+		DisableCache:                   config.DisableCache,
+		DisableMlock:                   config.DisableMlock,
+		MaxLeaseTTL:                    config.MaxLeaseTTL,
+		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		ClusterName:                    config.ClusterName,
+		CacheSize:                      config.CacheSize,
+		PluginDirectory:                config.PluginDirectory,
+		EnableUI:                       config.EnableUI,
+		EnableRaw:                      config.EnableRawEndpoint,
+		DisableSealWrap:                config.DisableSealWrap,
+		DisablePerformanceStandby:      config.DisablePerformanceStandby,
+		DisableIndexing:                config.DisableIndexing,
+		AllLoggers:                     c.allLoggers,
+		BuiltinRegistry:                builtinplugins.Registry,
+		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
+		MetricsHelper:                  metricsHelper,
+		MetricSink:                     metricSink,
+		SecureRandomReader:             secureRandomReader,
+		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
+		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+	}
+	if c.flagDev {
+		coreConfig.EnableRaw = true
+		coreConfig.DevToken = c.flagDevRootTokenID
+		if c.flagDevLeasedKV {
+			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
+		}
+		if c.flagDevPluginDir != "" {
+			coreConfig.PluginDirectory = c.flagDevPluginDir
+		}
+		if c.flagDevLatency > 0 {
+			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
+			if _, txnOK := backend.(physical.Transactional); txnOK {
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
+			} else {
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
+			}
+		}
+	}
+	return coreConfig
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {

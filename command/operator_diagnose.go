@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
@@ -293,23 +294,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return err
 	}
 
-	// ROY NOTES: init serverCore, save the core from setup-core step in this variable, 
-	// and then use that in the actual unseal step.
-	var serverCore 
-	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
-	// prepare a secure random reader for core
-		secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 1
-		}
-	}); err != nil {
-		return err
-	}
-
-	return diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
-		barrierSeal, _, _, seals, _, err := setSeal(server, config, make([]string, 0), make(map[string]string))
-
+	var barrierWrapper wrapping.Wrapper
+	if err := diagnose.Test(ctx, "create-seal", func(context.Context) error {
+		barrierSeal, bw, _, seals, _, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+		barrierWrapper = bw
 		// Check error here
 		if err != nil {
 			return err
@@ -330,7 +318,26 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		if barrierSeal == nil {
 			return fmt.Errorf("could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
 		}
+		return nil
+	}); err != nil {
+		return err
+	}
 
+	// ROY NOTES: init serverCore, save the core from setup-core step in this variable,
+	// and then use that in the actual unseal step.
+	// var serverCore *vault.Core
+	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
+		// prepare a secure random reader for core
+		_, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
 		return nil
 	})
 }
