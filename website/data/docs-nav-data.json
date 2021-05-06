@@ -467,11 +467,6 @@
             "path": "commands/lease"
           },
           {
-            "title": "<code>lookup</code>",
-            "path": "commands/lease/lookup",
-            "hidden": true
-          },
-          {
             "title": "<code>renew</code>",
             "path": "commands/lease/renew"
           },
