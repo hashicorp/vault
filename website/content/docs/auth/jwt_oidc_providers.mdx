@@ -19,87 +19,120 @@ and additions may be submitted via the [Vault Github repository](https://github.
 
 Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc)
 
-1. Register or select an AAD application. Visit Overview page.
-1. Configure Redirect URIs ("Web" type).
-   - You may include two redirect URIs, one for CLI access another one for Vault UI access.
-     - http://localhost:8250/oidc/callback
-     - https://hostname:port_number/ui/vault/auth/oidc/oidc/callback
-1. Record "Application (client) ID" as you will need it as the oidc_client_id
-1. Under API Permissions grant the following permission:
+1. Choose your Azure tenant.
+
+1. Go to **Azure Active Directory** and
+   [register an application](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app)
+   for Vault.
+
+1. Add Redirect URIs with the "Web" type. You may include two redirect URIs,
+   one for CLI access another one for Vault UI access.
+   - `http://localhost:8250/oidc/callback`
+   - `https://hostname:port_number/ui/vault/auth/oidc/oidc/callback`
+
+1. Record the "Application (client) ID" as you will need it as the `oidc_client_id`.
+
+1. Under **API Permissions** grant the following permission:
    - Microsoft Graph API permission [GroupMember.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-23)
-1. Under "Endpoints", copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
-   - The endpoint url (oidc_discovery_url) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
-1. Switch to Certificates & Secrets. Create a new client secret and record the generated value as
-   it will not be accessible after you leave the page.
 
-Please note [Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison)
-are required for [external groups](/docs/secrets/identity#external-vs-internal-groups) to work.
+1. Under **Endpoints**, copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
+   - The endpoint URL (`oidc_discovery_url`) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
 
-- `groupMembershipClaims` should be changed from `none` in the
-  [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest).
-  Options are "All" or "SecurityGroup"
+1. Under **Certificates & secrets**,
+   [add a client secret](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#add-a-client-secret)
+   Record the secret's value as you will need it as the `oidc_client_secret` for Vault.
 
-- In the [OIDC Role config](/api/auth/jwt#create-role)
-  the scope `"https://graph.microsoft.com/.default"` should be added to add groups
-  to the jwt token and `groups_claim` should be set to `groups`.
+### Connect AD group with Vault external group
 
-- Finally Azure AD group can be referenced by using the groups `objectId` as the [group alias name](/api/secret/identity/group-alias) for the external group.
+Reference: [Azure Active Directory with OIDC Auth Method and External Groups](https://learn.hashicorp.com/tutorials/vault/oidc-auth-azure)
 
-### CLI setup instructions:
+To connect the AD group with a [Vault external groups](/docs/secrets/identity#external-vs-internal-groups),
+you will need
+[Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison).
+You should set up a [Vault policy](https://learn.hashicorp.com/tutorials/vault/policies) for the Azure AD group to use.
 
-You have to fill in the following values make sure to use the correct vault secret
-path that matches the name of the authentication method such as /oidc/
+1. Go to **Azure Active Directory** and choose your Vault application.
 
-- oidc_client_id = Application Client ID
-- oidc_client_secret = Secret obtained from the Certificates & Secrets Section
-- default_role = default role the user will be using when connecting. (see the second command)
-- oidc_discovery_url = Open ID endpoint retrieved from the App Registration sections.
+1. Go to **Token configuration** and **Add groups claim**. Select "All" or "SecurityGroup" based on
+   [which groups for a user](https://docs.microsoft.com/en-us/azure/active-directory/hybrid/how-to-connect-fed-group-claims)
+   you want returned in the claim.
 
-```
-vault write auth/oidc/config \
-    oidc_client_id="your_client_id" \
-    oidc_client_secret="your_client_secret" \
-    default_role="your_default_role" \
-    oidc_discovery_url="https://login.microsoftonline.com/tenant_id/v2.0"
-```
+1. In Vault, enable the OIDC auth method.
 
-```
-vault write auth/oidc/role/demo user_claim="email" \
-    allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
-    groups_claim="groups" \
-    policies=default
-```
+1. Configure the OIDC auth method with the `oidc_client_id` (application ID), `oidc_client_secret`
+   (client secret), and `oidc_discovery_url` (endpoint URL) you recorded from Azure.
+   ```shell
+   vault write auth/oidc/config \
+      oidc_client_id="your_client_id" \
+      oidc_client_secret="your_client_secret" \
+      default_role="your_default_role" \
+      oidc_discovery_url="https://login.microsoftonline.com/tenant_id/v2.0"
+   ```
 
-### Azure-specific handling configuration
+1. Configure the [OIDC Role](/api/auth/jwt#create-role) with the following:
+   - `user_claim` should be `"email"`.
+   - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
+   - `groups_claim` should be set to `"groups"`.
+   - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+   ```shell
+   vault write auth/oidc/role/your_default_role \
+      user_claim="email" \
+      allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+      groups_claim="groups" \
+      oidc_scopes="https://graph.microsoft.com/.default" \
+      policies=default
+   ```
 
-If a user is a member of more than 200 groups (directly or indirectly), extra configuration is required so that vault can fetch the groups properly.
+1. In Vault, create the [external group](/api/secret/identity/group).
+   Record the group ID as you will need it for the group alias.
 
-- Set `"provider_config"` to azure (see below)
-- Grant the AAD application `Directory.Read.All` permission under "Azure Active Directory Graph" API Permissions (legacy API).
-- Add `"profile"` to `oidc_scopes` so the user's id comes back on the jwt token.
+1. From Vault, retrieve the [OIDC accessor ID](/api/system/auth#list-auth-methods)
+   from the OIDC auth method as you will need it for the group alias's `mount_accessor`.
 
-```
-vault write auth/oidc/config -<<"EOH"
-{
-   "oidc_client_id": "your_client_id",
-   "oidc_client_secret": "your_client_secret",
-   "default_role": "your_default_role",
-   "oidc_discovery_url": "https://login.microsoftonline.com/tenant_id/v2.0",
-   "provider_config": {
-      "provider": "azure"
-   }
-}
-EOH
-```
+1. Go to the Azure AD Group you want to attach to Vault's external group. Record the `objectId`
+   as you will need it as the group alias name in Vault.
 
-```
-vault write auth/oidc/role/demo \
+1. In Vault, create a [group alias](/api/secret/identity/group-alias)
+   for the external group and set the `objectId` as the group alias name.
+   ```shell
+   vault write identity/group-alias \
+      name="your_ad_group_object_id" \
+      mount_accessor="vault_oidc_accessor_id" \
+      canonical_id="vault_external_group_id"
+   ```
+
+### Optional Azure-specific Configuration
+
+If a user is a member of more than 200 groups (directly or indirectly), extra configuration
+is required so that Vault can fetch the groups properly.
+
+- In Azure, under the applications **API Permissions**, grant the following permissions:
+   - Microsoft Graph API permission [Directory.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-19)
+
+- In Vault, set `"provider_config"` to Azure.
+  ```shell
+  vault write auth/oidc/config -<<"EOH"
+  {
+     "oidc_client_id": "your_client_id",
+     "oidc_client_secret": "your_client_secret",
+     "default_role": "your_default_role",
+     "oidc_discovery_url": "https://login.microsoftonline.com/tenant_id/v2.0",
+     "provider_config": {
+        "provider": "azure"
+     }
+  }
+  EOH
+  ```
+
+- In Vault, add `"profile"` to `oidc_scopes` so the user's id comes back on the JWT.
+  ```shell
+  vault write auth/oidc/role/your_default_role \
    user_claim="email" \
    allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
    groups_claim="groups" \
    oidc_scopes="profile" \
    policies="default"
-```
+  ```
 
 ## Auth0
 
@@ -128,9 +161,9 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 1. Configure Authorized Redirect URIs.
 1. Save client ID and secret.
 
-### Google-specific handling configuration
+### Optional Google-specific Configuration
 
-Provider specific configuration is available when using Google as an identity provider from the
+Google-specific configuration is available when using Google as an identity provider from the
 Vault JWT/OIDC auth method. The configuration allows Vault to obtain G Suite group membership and
 user information during the JWT/OIDC authentication flow. The group membership obtained from G Suite
 may be used for Identity group alias association. The user information obtained from G Suite can be
@@ -167,8 +200,9 @@ host that Vault is running on.
 #### Configuration
 
 - `provider` `(string: <required>)` - Name of the provider. Must be set to "gsuite".
-- `gsuite_service_account` `(string: <required>)` - Path to the Google service account key file obtained
-  from setup. The path must refer to a file that's readable on the host that Vault is running on.
+- `gsuite_service_account` `(string: <required>)` - Either the path to or the contents of a Google service
+  account key file in JSON format. If given as a file path, it must refer to a file that's readable on
+  the host that Vault is running on. If given directly as JSON contents, the JSON must be properly escaped.
 - `gsuite_admin_impersonate` `(string: <required>)` - Email address of a G Suite admin to impersonate.
 - `fetch_groups` `(bool: false)` - If set to true, groups will be fetched from G Suite.
 - `fetch_user_info` `(bool: false)` - If set to true, user info will be fetched from G Suite using the configured [user_custom_schemas](#user_custom_schemas).

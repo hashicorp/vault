@@ -18,35 +18,39 @@ func pathLogin(b *azureAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: `The token role.`,
 			},
-			"jwt": &framework.FieldSchema{
+			"jwt": {
 				Type:        framework.TypeString,
 				Description: `A signed JWT`,
 			},
-			"subscription_id": &framework.FieldSchema{
+			"subscription_id": {
 				Type:        framework.TypeString,
 				Description: `The subscription id for the instance.`,
 			},
-			"resource_group_name": &framework.FieldSchema{
+			"resource_group_name": {
 				Type:        framework.TypeString,
 				Description: `The resource group from the instance.`,
 			},
-			"vm_name": &framework.FieldSchema{
+			"vm_name": {
 				Type:        framework.TypeString,
 				Description: `The name of the virtual machine. This value is ignored if vmss_name is specified.`,
 			},
-			"vmss_name": &framework.FieldSchema{
+			"vmss_name": {
 				Type:        framework.TypeString,
 				Description: `The name of the virtual machine scale set the instance is in.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLogin,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,

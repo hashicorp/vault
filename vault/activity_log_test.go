@@ -341,12 +341,12 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 	}
 
 	entityRecords := []*activity.EntityRecord{
-		&activity.EntityRecord{
+		{
 			EntityID:    ids[0],
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
 		},
-		&activity.EntityRecord{
+		{
 			EntityID:    ids[1],
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
@@ -386,7 +386,6 @@ func TestActivityLog_availableLogsEmptyDirectory(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	times, err := a.availableLogs(context.Background())
-
 	if err != nil {
 		t.Fatalf("error getting start_time(s) for empty activity log")
 	}
@@ -966,12 +965,12 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 
 	// setup in-storage data to load for testing
 	entityRecords := []*activity.EntityRecord{
-		&activity.EntityRecord{
+		{
 			EntityID:    "11111111-1111-1111-1111-111111111111",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
 		},
-		&activity.EntityRecord{
+		{
 			EntityID:    "22222222-2222-2222-2222-222222222222",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
@@ -1066,12 +1065,12 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 
 	// setup in-storage data to load for testing
 	entityRecords := []*activity.EntityRecord{
-		&activity.EntityRecord{
+		{
 			EntityID:    "11111111-1111-1111-1111-111111111111",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
 		},
-		&activity.EntityRecord{
+		{
 			EntityID:    "22222222-2222-2222-2222-222222222222",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
@@ -1253,7 +1252,6 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 // :base: is the timestamp to start from for the setup logic (use to simulate newest log from past or future)
@@ -1269,17 +1267,17 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 	var entityRecords []*activity.EntityRecord
 	if includeEntities {
 		entityRecords = []*activity.EntityRecord{
-			&activity.EntityRecord{
+			{
 				EntityID:    "11111111-1111-1111-1111-111111111111",
 				NamespaceID: "root",
 				Timestamp:   time.Now().Unix(),
 			},
-			&activity.EntityRecord{
+			{
 				EntityID:    "22222222-2222-2222-2222-222222222222",
 				NamespaceID: "root",
 				Timestamp:   time.Now().Unix(),
 			},
-			&activity.EntityRecord{
+			{
 				EntityID:    "33333333-2222-2222-2222-222222222222",
 				NamespaceID: "root",
 				Timestamp:   time.Now().Unix(),
@@ -2214,11 +2212,9 @@ func TestActivityLog_Precompute(t *testing.T) {
 				g.Name, g.NamespaceLabel)
 		}
 	}
-
 }
 
-type BlockingInmemStorage struct {
-}
+type BlockingInmemStorage struct{}
 
 func (b *BlockingInmemStorage) List(ctx context.Context, prefix string) ([]string, error) {
 	<-ctx.Done()
@@ -2265,7 +2261,6 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 	case <-timeout:
 		t.Fatalf("timeout waiting for worker to finish")
 	}
-
 }
 
 func TestActivityLog_NextMonthStart(t *testing.T) {
@@ -2307,11 +2302,25 @@ func TestActivityLog_NextMonthStart(t *testing.T) {
 	}
 }
 
+// The retention worker is called on unseal; wait for it to finish before
+// proceeding with the test.
+func waitForRetentionWorkerToFinish(t *testing.T, a *ActivityLog) {
+	t.Helper()
+	timeout := time.After(30 * time.Second)
+	select {
+	case <-a.retentionDone:
+		return
+	case <-timeout:
+		t.Fatal("timeout waiting for retention worker to finish")
+	}
+}
+
 func TestActivityLog_Deletion(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
+	waitForRetentionWorkerToFinish(t, a)
 
 	times := []time.Time{
 		time.Date(2019, 1, 15, 1, 2, 3, 0, time.UTC), // 0
@@ -2418,5 +2427,57 @@ func TestActivityLog_Deletion(t *testing.T) {
 		checkAbsent(i)
 	}
 	checkPresent(21)
+}
 
+func TestActivityLog_partialMonthClientCount(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	// entities[0] is from a previous month
+	partialMonthEntityCount := len(entities[1:])
+	var partialMonthTokenCount int
+	for _, countByNS := range tokenCounts {
+		partialMonthTokenCount += int(countByNS)
+	}
+
+	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
+
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	entityCount, ok := results["distinct_entities"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if entityCount != partialMonthEntityCount {
+		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	}
+
+	tokenCount, ok := results["non_entity_tokens"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if tokenCount != partialMonthTokenCount {
+		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
+	}
+	clientCount, ok := results["clients"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if clientCount != expectedClientCount {
+		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	}
 }

@@ -213,7 +213,7 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 	netConfig := &network.NetworkingConfig{}
 	if d.RunOptions.NetworkID != "" {
 		netConfig.EndpointsConfig = map[string]*network.EndpointSettings{
-			d.RunOptions.NetworkID: &network.EndpointSettings{},
+			d.RunOptions.NetworkID: {},
 		}
 	}
 

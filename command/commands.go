@@ -85,11 +85,11 @@ const (
 	// flagnameCAPath is the flag used in the base command to read in the CA
 	// cert path.
 	flagNameCAPath = "ca-path"
-	//flagNameClientCert is the flag used in the base command to read in the
-	//client key
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client key
 	flagNameClientKey = "client-key"
-	//flagNameClientCert is the flag used in the base command to read in the
-	//client cert
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client cert
 	flagNameClientCert = "client-cert"
 	// flagNameTLSSkipVerify is the flag used in the base command to read in
 	// the option to ignore TLS certificate verification.
@@ -286,8 +286,23 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"license": func() (cli.Command, error) {
+			return &LicenseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"license get": func() (cli.Command, error) {
+			return &LicenseGetCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -332,6 +347,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator generate-root": func() (cli.Command, error) {
 			return &OperatorGenerateRootCommand{
 				BaseCommand: getBaseCommand(),
@@ -356,6 +376,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator raft": func() (cli.Command, error) {
 			return &OperatorRaftCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot state": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotStateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

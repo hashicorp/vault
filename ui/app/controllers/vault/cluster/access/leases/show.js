@@ -24,11 +24,11 @@ export default Controller.extend({
       });
     },
 
-    renewLease(model, interval) {
+    renewLease(model, increment) {
       const adapter = model.store.adapterFor('lease');
       const flash = this.flashMessages;
       adapter
-        .renew(model.id, interval)
+        .renew(model.id, increment?.seconds)
         .then(() => {
           this.send('refreshModel');
           // lol this is terrible, but there's no way to get the promise from the route refresh

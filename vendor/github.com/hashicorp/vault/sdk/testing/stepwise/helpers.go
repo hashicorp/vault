@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/errwrap"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"path"
 	"strings"
 	"sync"
+
+	"github.com/hashicorp/errwrap"
 )
 
 const pluginPrefix = "vault-plugin-"

@@ -20,6 +20,7 @@ export default Component.extend({
   nextStep: computed('fullNextStep', function() {
     return this.fullNextStep.split('.').lastObject;
   }),
+  needsConnection: equal('mountSubtype', 'database'),
   needsEncryption: equal('mountSubtype', 'transit'),
   stepComponent: alias('wizard.stepComponent'),
   detailsComponent: computed('currentMachine', 'mountSubtype', function() {

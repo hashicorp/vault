@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/hcl/hcl/token"
 	"io"
 	"io/ioutil"
 	"os"
@@ -22,6 +23,7 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
+	UnusedKeys map[string][]token.Pos `hcl:",unusedKeyPositions"`
 	entConfig
 
 	*configutil.SharedConfig `hcl:"-"`
@@ -41,33 +43,51 @@ type Config struct {
 	EnableUIRaw interface{} `hcl:"ui"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
-	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
+	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl,alias:MaxLeaseTTL"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
-	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
+	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
 	EnableRawEndpoint    bool        `hcl:"-"`
-	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
 
 	APIAddr              string      `hcl:"api_addr"`
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
-	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+	DisableClusteringRaw interface{} `hcl:"disable_clustering,alias:DisableClustering"`
 
 	DisablePerformanceStandby    bool        `hcl:"-"`
-	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby,alias:DisablePerformanceStandby"`
 
 	DisableSealWrap    bool        `hcl:"-"`
-	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap,alias:DisableSealWrap"`
 
 	DisableIndexing    bool        `hcl:"-"`
-	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing,alias:DisableIndexing"`
 
 	DisableSentinelTrace    bool        `hcl:"-"`
-	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace"`
+	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace,alias:DisableSentinelTrace"`
+
+	EnableResponseHeaderHostname    bool        `hcl:"-"`
+	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
+
+	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
+	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
+}
+
+const (
+	sectionSeal = "Seal"
+)
+
+func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
+	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
+	if c.Telemetry != nil {
+		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
+	}
+	return results
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -96,7 +116,7 @@ ui = true
 `
 
 	hclStr = fmt.Sprintf(hclStr, storageType)
-	parsed, err := ParseConfig(hclStr)
+	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing dev config: %w", err)
 	}
@@ -105,6 +125,7 @@ ui = true
 
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
+	UnusedKeys        []string `hcl:",unusedKeys"`
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -245,6 +266,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableIndexing = c2.DisableIndexing
 	}
 
+	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
+	if c2.EnableResponseHeaderHostname {
+		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
+	}
+
+	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
+	if c2.EnableResponseHeaderRaftNodeID {
+		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
 	// Use values from top-level configuration for storage if set
 	if storage := result.Storage; storage != nil {
 		if result.APIAddr != "" {
@@ -314,7 +345,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	conf, err := ParseConfig(string(d))
+	conf, err := ParseConfig(string(d), path)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +353,7 @@ func LoadConfigFile(path string) (*Config, error) {
 	return conf, nil
 }
 
-func ParseConfig(d string) (*Config, error) {
+func ParseConfig(d, source string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -406,6 +437,18 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.EnableResponseHeaderHostnameRaw != nil {
+		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
+		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -446,6 +489,15 @@ func ParseConfig(d string) (*Config, error) {
 	entConfig := &(result.entConfig)
 	if err := entConfig.parseConfig(list); err != nil {
 		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
+	}
+
+	// Remove all unused keys from Config that were satisfied by SharedConfig.
+	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, sharedConfig.UnusedKeys, append(result.FoundKeys, sharedConfig.FoundKeys...))
+	// Assign file info
+	for _, v := range result.UnusedKeys {
+		for _, p := range v {
+			p.Filename = source
+		}
 	}
 
 	return result, nil
@@ -742,6 +794,10 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sealwrap": c.DisableSealWrap,
 
 		"disable_indexing": c.DisableIndexing,
+
+		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
+
+		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -783,4 +839,18 @@ func (c *Config) Sanitized() map[string]interface{} {
 	}
 
 	return result
+}
+
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
 }

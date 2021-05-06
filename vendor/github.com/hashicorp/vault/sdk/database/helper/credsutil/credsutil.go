@@ -2,9 +2,8 @@ package credsutil
 
 import (
 	"context"
-	"time"
-
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/base62"

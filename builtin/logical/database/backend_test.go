@@ -93,7 +93,6 @@ func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
-
 	storage := &logical.InmemStorage{}
 	backend := &databaseBackend{}
 
@@ -143,7 +142,6 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	if !reflect.DeepEqual(role, roleExpected) {
 		t.Fatalf("bad role %#v, %#v", role, roleExpected)
 	}
-
 }
 
 func TestBackend_config_connection(t *testing.T) {
@@ -1025,6 +1023,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal("Expected response to be nil")
 	}
 }
+
 func TestBackend_allowedRoles(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -1334,7 +1333,6 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
 	conn, err := pq.ParseURL(connURL)
-
 	if err != nil {
 		t.Fatal(err)
 	}

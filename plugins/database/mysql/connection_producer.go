@@ -37,7 +37,6 @@ type mySQLConnectionProducer struct {
 
 	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
-	Legacy                bool
 	Initialized           bool
 	db                    *sql.DB
 	sync.Mutex

@@ -17,10 +17,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var (
-	// Before minValidSeconds in ptypes package
-	invalidExpiration = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
-)
+// Before minValidSeconds in ptypes package
+var invalidExpiration = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
 
 func TestGRPCServer_Initialize(t *testing.T) {
 	type testCase struct {

@@ -76,6 +76,9 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 	return nil
 }
 
+// wrapInCubbyhole is invoked when a caller asks for response wrapping.
+// On success, return (nil, nil) and mutates resp.  On failure, returns
+// either a response describing the failure or an error.
 func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *logical.Response, auth *logical.Auth) (*logical.Response, error) {
 	if c.perfStandby {
 		return forwardWrapRequest(ctx, c, req, resp, auth)
@@ -406,7 +409,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
 		}
 		var claims squarejwt.Claims
-		var allClaims = make(map[string]interface{})
+		allClaims := make(map[string]interface{})
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
 			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
 		}

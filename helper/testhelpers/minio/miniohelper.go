@@ -21,8 +21,10 @@ type Config struct {
 	Region          string
 }
 
-const accessKeyID = "min-access-key"
-const secretKey = "min-secret-key"
+const (
+	accessKeyID = "min-access-key"
+	secretKey   = "min-secret-key"
+)
 
 func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 	if version == "" {

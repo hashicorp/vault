@@ -137,6 +137,10 @@ type ActivityLog struct {
 	// channel closed by delete worker when done
 	deleteDone chan struct{}
 
+	// channel closed when deletion at startup is done
+	// (for unit test robustness)
+	retentionDone chan struct{}
+
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
 }
@@ -309,7 +313,7 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 		// Rotate to next segment
 		a.currentSegment.entitySequenceNumber += 1
 		if len(excessEntities) > activitySegmentEntityCapacity {
-			a.logger.Warn("too many new active entities %v, dropping tail", len(excessEntities))
+			a.logger.Warn("too many new active entities, dropping tail", "entities", len(excessEntities))
 			excessEntities = excessEntities[:activitySegmentEntityCapacity]
 		}
 		a.currentSegment.currentEntities.Entities = excessEntities
@@ -975,7 +979,12 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 		go manager.precomputedQueryWorker()
 
 		// Catch up on garbage collection
-		go manager.retentionWorker(time.Now(), manager.retentionMonths)
+		// Signal when this is done so that unit tests can proceed.
+		manager.retentionDone = make(chan struct{})
+		go func() {
+			manager.retentionWorker(time.Now(), manager.retentionMonths)
+			close(manager.retentionDone)
+		}()
 	}
 
 	// Link the token store to this core
@@ -1168,7 +1177,6 @@ func (a *ActivityLog) activeFragmentWorker() {
 			endOfMonth.Reset(delta)
 		}
 	}
-
 }
 
 type ActivityIntentLog struct {
@@ -1349,7 +1357,6 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
 
 	// TODO: check if current segment is full and should be written
-
 }
 
 type ClientCountResponse struct {
@@ -1761,4 +1768,30 @@ func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.Ga
 		return []metricsutil.GaugeLabelValues{}, nil
 	}
 	return a.PartialMonthMetrics(ctx)
+}
+
+// partialMonthClientCount returns the number of clients used so far this month.
+// If activity log is not enabled, the response will be nil
+func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]interface{} {
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+
+	if !a.enabled {
+		// nothing to count
+		return nil
+	}
+
+	entityCount := len(a.activeEntities)
+	var tokenCount int
+	for _, countByNS := range a.currentSegment.tokenCount.CountByNamespaceID {
+		tokenCount += int(countByNS)
+	}
+	clientCount := entityCount + tokenCount
+
+	responseData := make(map[string]interface{})
+	responseData["distinct_entities"] = entityCount
+	responseData["non_entity_tokens"] = tokenCount
+	responseData["clients"] = clientCount
+
+	return responseData
 }

@@ -9,7 +9,27 @@
   </h2>
   {{#if (or model.certificate model.csr)}}
     {{#each model.attrs as |attr|}}
-      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{#if attr.options.masked}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+          />
+        </InfoTableRow>
+      {{else if (eq attr.name "expiration")}}
+        {{info-table-row 
+          data-test-table-row
+          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
+          value=(date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a')
+        }}
+      {{else}}
+        {{info-table-row 
+          data-test-table-row
+          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
+          value=(get model attr.name)
+        }}
+      {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
@@ -52,7 +72,7 @@
             <ConfirmAction
               @buttonClasses="button"
               @confirmTitle="Delete this CA key?"
-              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key are generated or uploaded."
+              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key is generated or uploaded."
               @onConfirmAction={{action "deleteCA"}}
             >
               Delete
@@ -70,7 +90,17 @@
       data-test-warning
     />
     {{#each model.attrs as |attr|}}
-      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{#if attr.options.masked}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+          />
+        </InfoTableRow>
+      {{else}}
+        {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">

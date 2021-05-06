@@ -52,6 +52,7 @@ func (e extendedSystemViewImpl) ForwardGenericRequest(ctx context.Context, req *
 	// Forward the request if allowed
 	if couldForward(e.core) {
 		ctx = namespace.ContextWithNamespace(ctx, e.mountEntry.Namespace())
+		ctx = logical.IndexStateContext(ctx, &logical.WALState{})
 		ctx = context.WithValue(ctx, ctxKeyForwardedRequestMountAccessor{}, e.mountEntry.Accessor)
 		return forward(ctx, e.core, req)
 	}

@@ -2,7 +2,7 @@ import { typeOf } from '@ember/utils';
 import EmberError from '@ember/error';
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
-import Duration from 'Duration.js';
+import Duration from '@icholy/duration';
 import layout from '../templates/components/ttl-picker';
 
 const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';

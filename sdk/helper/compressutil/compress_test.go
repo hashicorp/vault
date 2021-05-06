@@ -14,31 +14,38 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		compressionConfig CompressionConfig
 		canary            byte
 	}{
-		{"GZIP default implicit",
+		{
+			"GZIP default implicit",
 			CompressionConfig{Type: CompressionTypeGzip},
 			CompressionCanaryGzip,
 		},
-		{"GZIP default explicit",
+		{
+			"GZIP default explicit",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.DefaultCompression},
 			CompressionCanaryGzip,
 		},
-		{"GZIP best speed",
+		{
+			"GZIP best speed",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestSpeed},
 			CompressionCanaryGzip,
 		},
-		{"GZIP best compression",
+		{
+			"GZIP best compression",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestCompression},
 			CompressionCanaryGzip,
 		},
-		{"Snappy",
+		{
+			"Snappy",
 			CompressionConfig{Type: CompressionTypeSnappy},
 			CompressionCanarySnappy,
 		},
-		{"LZ4",
+		{
+			"LZ4",
 			CompressionConfig{Type: CompressionTypeLZ4},
 			CompressionCanaryLZ4,
 		},
-		{"LZW",
+		{
+			"LZW",
 			CompressionConfig{Type: CompressionTypeLZW},
 			CompressionCanaryLZW,
 		},

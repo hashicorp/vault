@@ -1,4 +1,18 @@
 {
+  "beforeAfterDiagram": {
+    "beforeImage": {
+      "url": "https://www.datocms-assets.com/2885/1579635889-static-infrastructure.svg",
+      "format": "svg"
+    },
+    "beforeHeadline": "Static Infrastructure",
+    "beforeContent": "Datacenters with inherently high-trust networks with clear network perimeters.\n\n#### Traditional Approach\n\n- High trust networks\n- A clear network perimeter\n- Security enforced by IP Address",
+    "afterImage": {
+      "url": "https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg",
+      "format": "svg"
+    },
+    "afterHeadline": "Dynamic Infrastructure",
+    "afterContent": "Multiple clouds and private datacenters without a clear network perimeter.\n\n#### Vault Approach\n\n\n- Low-trust networks in public clouds\n- Unknown network perimeter across clouds\n- Security enforced by Identity"
+  },
   "principles": [
     {
       "textSplit": {
@@ -43,7 +57,7 @@
         "aws",
         "mongodb",
         {
-          "url": "https://www.datocms-assets.com/2885/1508434209-consul_primarylogo_fullcolor.svg"
+          "url": "https://www.datocms-assets.com/2885/1619808181-conusul-attributedcolor.svg"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg"

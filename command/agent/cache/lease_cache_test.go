@@ -3,9 +3,11 @@ package cache
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -15,9 +17,14 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agent/cache/keymanager"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 )
 
@@ -63,6 +70,24 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	return lc
 }
 
+func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, storage *cacheboltdb.BoltStorage) *LeaseCache {
+	t.Helper()
+
+	client, err := api.NewClient(api.DefaultConfig())
+	require.NoError(t, err)
+
+	lc, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:      client,
+		BaseContext: context.Background(),
+		Proxier:     newMockProxier(responses),
+		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Storage:     storage,
+	})
+	require.NoError(t, err)
+
+	return lc
+}
+
 func TestCache_ComputeIndexID(t *testing.T) {
 	type args struct {
 		req *http.Request
@@ -79,6 +104,23 @@ func TestCache_ComputeIndexID(t *testing.T) {
 				Request: &http.Request{
 					URL: &url.URL{
 						Path: "test",
+					},
+				},
+			},
+			"7b5db388f211fd9edca8c6c254831fb01ad4e6fe624dbb62711f256b5e803717",
+			false,
+		},
+		{
+			"ignore consistency headers",
+			&SendRequest{
+				Request: &http.Request{
+					URL: &url.URL{
+						Path: "test",
+					},
+					Header: http.Header{
+						vaulthttp.VaultIndexHeaderName:        []string{"foo"},
+						vaulthttp.VaultInconsistentHeaderName: []string{"foo"},
+						vaulthttp.VaultForwardHeaderName:      []string{"foo"},
 					},
 				},
 			},
@@ -589,7 +631,6 @@ func TestLeaseCache_Concurrent_NonCacheable(t *testing.T) {
 		t.Fatalf("request timed out: %s", ctx.Err())
 	case <-wgDoneCh:
 	}
-
 }
 
 func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
@@ -648,4 +689,393 @@ func TestLeaseCache_Concurrent_Cacheable(t *testing.T) {
 	if cacheCount.Load() != 99 {
 		t.Fatalf("Should have returned a cached response 99 times, got %d", cacheCount.Load())
 	}
+}
+
+func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cacheboltdb.BoltStorage) {
+	t.Helper()
+
+	km, err := keymanager.NewPassthroughKeyManager(nil)
+	require.NoError(t, err)
+
+	tempCacheDir, err = ioutil.TempDir("", "agent-cache-test")
+	require.NoError(t, err)
+	boltStorage, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
+		Path:    tempCacheDir,
+		Logger:  hclog.Default(),
+		Wrapper: km.Wrapper(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, boltStorage)
+	// The calling function should `defer boltStorage.Close()` and `defer os.RemoveAll(tempCacheDir)`
+	return tempCacheDir, boltStorage
+}
+
+func TestLeaseCache_PersistAndRestore(t *testing.T) {
+	// Emulate 4 responses from the api proxy. The first two use the auto-auth
+	// token, and the last two use another token.
+	responses := []*SendResponse{
+		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
+		newTestSendResponse(202, `{"auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
+		newTestSendResponse(203, `{"lease_id": "secret2-lease", "renewable": true, "data": {"number": "two"}, "lease_duration": 600}`),
+	}
+
+	tempDir, boltStorage := setupBoltStorage(t)
+	defer os.RemoveAll(tempDir)
+	defer boltStorage.Close()
+	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
+
+	// Register an auto-auth token so that the token and lease requests are cached
+	lc.RegisterAutoAuthToken("autoauthtoken")
+
+	cacheTests := []struct {
+		token          string
+		method         string
+		urlPath        string
+		body           string
+		wantStatusCode int
+	}{
+		{
+			// Make a request. A response with a new token is returned to the
+			// lease cache and that will be cached.
+			token:          "autoauthtoken",
+			method:         "GET",
+			urlPath:        "http://example.com/v1/sample/api",
+			body:           `{"value": "input"}`,
+			wantStatusCode: responses[0].Response.StatusCode,
+		},
+		{
+			// Modify the request a little bit to ensure the second response is
+			// returned to the lease cache.
+			token:          "autoauthtoken",
+			method:         "GET",
+			urlPath:        "http://example.com/v1/sample/api",
+			body:           `{"value": "input_changed"}`,
+			wantStatusCode: responses[1].Response.StatusCode,
+		},
+		{
+			// Simulate an approle login to get another token
+			method:         "PUT",
+			urlPath:        "http://example.com/v1/auth/approle/login",
+			body:           `{"role_id": "my role", "secret_id": "my secret"}`,
+			wantStatusCode: responses[2].Response.StatusCode,
+		},
+		{
+			// Test caching with the token acquired from the approle login
+			token:          "testtoken2",
+			method:         "GET",
+			urlPath:        "http://example.com/v1/sample2/api",
+			body:           `{"second": "input"}`,
+			wantStatusCode: responses[3].Response.StatusCode,
+		},
+	}
+
+	for _, ct := range cacheTests {
+		// Send once to cache
+		sendReq := &SendRequest{
+			Token:   ct.token,
+			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+		}
+		resp, err := lc.Send(context.Background(), sendReq)
+		require.NoError(t, err)
+		assert.Equal(t, resp.Response.StatusCode, ct.wantStatusCode, "expected proxied response")
+		assert.Nil(t, resp.CacheMeta)
+
+		// Send again to test cache. If this isn't cached, the response returned
+		// will be the next in the list and the status code will not match.
+		sendCacheReq := &SendRequest{
+			Token:   ct.token,
+			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+		}
+		respCached, err := lc.Send(context.Background(), sendCacheReq)
+		require.NoError(t, err, "failed to send request %+v", ct)
+		assert.Equal(t, respCached.Response.StatusCode, ct.wantStatusCode, "expected proxied response")
+		require.NotNil(t, respCached.CacheMeta)
+		assert.True(t, respCached.CacheMeta.Hit)
+	}
+
+	// Now we know the cache is working, so try restoring from the persisted
+	// cache's storage
+	restoredCache := testNewLeaseCache(t, nil)
+
+	err := restoredCache.Restore(context.Background(), boltStorage)
+	assert.NoError(t, err)
+
+	// Now compare before and after
+	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, beforeDB, 5)
+
+	for _, cachedItem := range beforeDB {
+		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
+		require.NoError(t, err)
+
+		assert.NoError(t, err)
+		assert.Equal(t, cachedItem.ID, restoredItem.ID)
+		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
+		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
+		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
+		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
+		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
+		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
+		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
+		assert.Equal(t, cachedItem.Response, restoredItem.Response)
+		assert.Equal(t, cachedItem.Token, restoredItem.Token)
+		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
+		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
+
+		// check what we can in the renewal context
+		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
+		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
+		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
+		assert.Equal(t,
+			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+		)
+	}
+	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, afterDB, 5)
+
+	// And finally send the cache requests once to make sure they're all being
+	// served from the restoredCache
+	for _, ct := range cacheTests {
+		sendCacheReq := &SendRequest{
+			Token:   ct.token,
+			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+		}
+		respCached, err := restoredCache.Send(context.Background(), sendCacheReq)
+		require.NoError(t, err, "failed to send request %+v", ct)
+		assert.Equal(t, respCached.Response.StatusCode, ct.wantStatusCode, "expected proxied response")
+		require.NotNil(t, respCached.CacheMeta)
+		assert.True(t, respCached.CacheMeta.Hit)
+	}
+}
+
+func TestEvictPersistent(t *testing.T) {
+	ctx := context.Background()
+
+	responses := []*SendResponse{
+		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+	}
+
+	tempDir, boltStorage := setupBoltStorage(t)
+	defer os.RemoveAll(tempDir)
+	defer boltStorage.Close()
+	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
+
+	lc.RegisterAutoAuthToken("autoauthtoken")
+
+	// populate cache by sending request through
+	sendReq := &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", strings.NewReader(`{"value": "some_input"}`)),
+	}
+	resp, err := lc.Send(context.Background(), sendReq)
+	require.NoError(t, err)
+	assert.Equal(t, resp.Response.StatusCode, 201, "expected proxied response")
+	assert.Nil(t, resp.CacheMeta)
+
+	// Check bolt for the cached lease
+	secrets, err := lc.ps.GetByType(ctx, cacheboltdb.SecretLeaseType)
+	require.NoError(t, err)
+	assert.Len(t, secrets, 1)
+
+	// Call clear for the request path
+	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
+		Type:        "request_path",
+		RequestPath: "/v1/sample/api",
+	})
+	require.NoError(t, err)
+
+	time.Sleep(2 * time.Second)
+
+	// Check that cached item is gone
+	secrets, err = lc.ps.GetByType(ctx, cacheboltdb.SecretLeaseType)
+	require.NoError(t, err)
+	assert.Len(t, secrets, 0)
+}
+
+func TestRegisterAutoAuth_sameToken(t *testing.T) {
+	// If the auto-auth token already exists in the cache, it should not be
+	// stored again in a new index.
+	lc := testNewLeaseCache(t, nil)
+	err := lc.RegisterAutoAuthToken("autoauthtoken")
+	assert.NoError(t, err)
+
+	oldTokenIndex, err := lc.db.Get(cachememdb.IndexNameToken, "autoauthtoken")
+	assert.NoError(t, err)
+	oldTokenID := oldTokenIndex.ID
+
+	// register the same token again
+	err = lc.RegisterAutoAuthToken("autoauthtoken")
+	assert.NoError(t, err)
+
+	// check that there's only one index for autoauthtoken
+	entries, err := lc.db.GetByPrefix(cachememdb.IndexNameToken, "autoauthtoken")
+	assert.NoError(t, err)
+	assert.Len(t, entries, 1)
+
+	newTokenIndex, err := lc.db.Get(cachememdb.IndexNameToken, "autoauthtoken")
+	assert.NoError(t, err)
+
+	// compare the ID's since those are randomly generated when an index for a
+	// token is added to the cache, so if a new token was added, the id's will
+	// not match.
+	assert.Equal(t, oldTokenID, newTokenIndex.ID)
+}
+
+func Test_hasExpired(t *testing.T) {
+	responses := []*SendResponse{
+		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 60}`),
+	}
+	lc := testNewLeaseCache(t, responses)
+	lc.RegisterAutoAuthToken("autoauthtoken")
+
+	cacheTests := []struct {
+		token          string
+		urlPath        string
+		leaseType      string
+		wantStatusCode int
+	}{
+		{
+			// auth lease
+			token:          "autoauthtoken",
+			urlPath:        "/v1/sample/auth",
+			leaseType:      cacheboltdb.AuthLeaseType,
+			wantStatusCode: responses[0].Response.StatusCode,
+		},
+		{
+			// secret lease
+			token:          "autoauthtoken",
+			urlPath:        "/v1/sample/secret",
+			leaseType:      cacheboltdb.SecretLeaseType,
+			wantStatusCode: responses[1].Response.StatusCode,
+		},
+	}
+
+	for _, ct := range cacheTests {
+		// Send once to cache
+		urlPath := "http://example.com" + ct.urlPath
+		sendReq := &SendRequest{
+			Token:   ct.token,
+			Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
+		}
+		resp, err := lc.Send(context.Background(), sendReq)
+		require.NoError(t, err)
+		assert.Equal(t, resp.Response.StatusCode, ct.wantStatusCode, "expected proxied response")
+		assert.Nil(t, resp.CacheMeta)
+
+		// get the Index out of the mem cache
+		index, err := lc.db.Get(cachememdb.IndexNameRequestPath, "root/", ct.urlPath)
+		require.NoError(t, err)
+		assert.Equal(t, ct.leaseType, index.Type)
+
+		// The lease duration is 60 seconds, so time.Now() should be within that
+		notExpired, err := lc.hasExpired(time.Now().UTC(), index)
+		require.NoError(t, err)
+		assert.False(t, notExpired)
+
+		// In 90 seconds the index should be "expired"
+		futureTime := time.Now().UTC().Add(time.Second * 90)
+		expired, err := lc.hasExpired(futureTime, index)
+		require.NoError(t, err)
+		assert.True(t, expired)
+	}
+}
+
+func TestLeaseCache_hasExpired_wrong_type(t *testing.T) {
+	index := &cachememdb.Index{
+		Type: cacheboltdb.TokenType,
+		Response: []byte(`HTTP/0.0 200 OK
+Content-Type: application/json
+Date: Tue, 02 Mar 2021 17:54:16 GMT
+
+{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+	}
+
+	lc := testNewLeaseCache(t, nil)
+	expired, err := lc.hasExpired(time.Now().UTC(), index)
+	assert.False(t, expired)
+	assert.EqualError(t, err, `index type "token" unexpected in expiration check`)
+}
+
+func TestLeaseCacheRestore_expired(t *testing.T) {
+	// Emulate 2 responses from the api proxy, both expired
+	responses := []*SendResponse{
+		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": -600}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": -600}`),
+	}
+
+	tempDir, boltStorage := setupBoltStorage(t)
+	defer os.RemoveAll(tempDir)
+	defer boltStorage.Close()
+	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
+
+	// Register an auto-auth token so that the token and lease requests are cached in mem
+	lc.RegisterAutoAuthToken("autoauthtoken")
+
+	cacheTests := []struct {
+		token          string
+		method         string
+		urlPath        string
+		body           string
+		wantStatusCode int
+	}{
+		{
+			// Make a request. A response with a new token is returned to the
+			// lease cache and that will be cached.
+			token:          "autoauthtoken",
+			method:         "GET",
+			urlPath:        "http://example.com/v1/sample/api",
+			body:           `{"value": "input"}`,
+			wantStatusCode: responses[0].Response.StatusCode,
+		},
+		{
+			// Modify the request a little bit to ensure the second response is
+			// returned to the lease cache.
+			token:          "autoauthtoken",
+			method:         "GET",
+			urlPath:        "http://example.com/v1/sample/api",
+			body:           `{"value": "input_changed"}`,
+			wantStatusCode: responses[1].Response.StatusCode,
+		},
+	}
+
+	for _, ct := range cacheTests {
+		// Send once to cache
+		sendReq := &SendRequest{
+			Token:   ct.token,
+			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+		}
+		resp, err := lc.Send(context.Background(), sendReq)
+		require.NoError(t, err)
+		assert.Equal(t, resp.Response.StatusCode, ct.wantStatusCode, "expected proxied response")
+		assert.Nil(t, resp.CacheMeta)
+	}
+
+	// Restore from the persisted cache's storage
+	restoredCache := testNewLeaseCache(t, nil)
+
+	err := restoredCache.Restore(context.Background(), boltStorage)
+	assert.NoError(t, err)
+
+	// The original mem cache should have all three items
+	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, beforeDB, 3)
+
+	// There should only be one item in the restored cache: the autoauth token
+	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, afterDB, 1)
+
+	// Just verify that the one item in the restored mem cache matches one in the original mem cache, and that it's the auto-auth token
+	beforeItem, err := lc.db.Get(cachememdb.IndexNameID, afterDB[0].ID)
+	require.NoError(t, err)
+	assert.NotNil(t, beforeItem)
+
+	assert.Equal(t, "autoauthtoken", afterDB[0].Token)
+	assert.Equal(t, cacheboltdb.TokenType, afterDB[0].Type)
 }

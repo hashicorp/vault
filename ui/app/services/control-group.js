@@ -1,4 +1,3 @@
-import { get } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import RSVP from 'rsvp';
 import ControlGroupError from 'vault/lib/control-group-error';
@@ -83,7 +82,7 @@ export default Service.extend({
   },
 
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
-    let creationPath = response && get(response, 'wrap_info.creation_path');
+    let creationPath = response && response?.wrap_info?.creation_path;
     if (
       this.version.isOSS ||
       wasWrapTTLRequested ||

@@ -1,4 +1,18 @@
 {
+  "beforeAfterDiagram": {
+    "beforeImage": {
+      "url": "/img/use-cases/secrets-management/secrets-mgmt-challenge.png",
+      "format": "svg"
+    },
+    "beforeHeadline": "The Challenge",
+    "beforeContent": "Secrets for applications and systems need to be centralized and static IP-based solutions don't scale in dynamic environments with frequently changing applications and machines",
+    "afterImage": {
+      "url": "/img/use-cases/secrets-management/secrets-mgmt-solution.png",
+      "format": "png"
+    },
+    "afterHeadline": "The Solution",
+    "afterContent": "Vault centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity"
+  },
   "features": [
     {
       "textSplit": {
@@ -6,7 +20,7 @@
         "content": "Dynamically create, revoke, and rotate secrets programmatically."
       },
       "image": {
-        "url": "https://www.datocms-assets.com/2885/1538684923-dynamic-secrets-screenshot.jpg"
+        "url": "/img/use-cases/secrets-management/dynamic_secrets@3x.png"
       }
     },
     {

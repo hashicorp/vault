@@ -20,6 +20,16 @@
   margin-bottom: $spacing-xs;
 }
 
+.empty-state-subTitle {
+  font-size: $size-7;
+  margin-top: -10px;
+  padding-bottom: $spacing-s;
+}
+
+.empty-state-message.has-border-bottom-light {
+  padding-bottom: $spacing-s;
+}
+
 .empty-state-actions {
   margin-top: $spacing-xs;
 
