@@ -88,9 +88,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
-	config.Listeners[1].RawConfig = nil
-	config.Listeners[2].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -101,9 +99,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 	expected.Vault.TLSSkipVerifyRaw = interface{}(true)
 
-	config.Listeners[0].RawConfig = nil
-	config.Listeners[1].RawConfig = nil
-	config.Listeners[2].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -168,6 +164,7 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -177,6 +174,7 @@ func TestLoadConfigFile(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -218,6 +216,7 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -248,7 +247,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -341,7 +340,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -385,7 +384,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -429,7 +428,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -484,7 +483,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -523,12 +522,7 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
-	}
-
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -644,6 +638,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 				Templates: tc.expectedTemplates,
 			}
 
+			config.Prune()
 			if diff := deep.Equal(config, expected); diff != nil {
 				t.Fatal(diff)
 			}
@@ -744,6 +739,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 				},
 			}
 
+			config.Prune()
 			if diff := deep.Equal(config, expected); diff != nil {
 				t.Fatal(diff)
 			}
@@ -790,6 +786,7 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -834,6 +831,7 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -867,7 +865,7 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}

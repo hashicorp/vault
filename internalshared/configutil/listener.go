@@ -28,7 +28,8 @@ type ListenerProfiling struct {
 
 // Listener is the listener configuration for the server.
 type Listener struct {
-	RawConfig map[string]interface{}
+	UnusedKeys []string `hcl:",unusedKeys"`
+	RawConfig  map[string]interface{}
 
 	Type       string
 	Purpose    []string    `hcl:"-"`

@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -1154,7 +1155,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Prevent server startup if migration is active
-	// TODO: how to incorporate this check into Diagnose?
+	// TODO: Use OpenTelemetry to integrate this into Diagnose
 	if c.storageMigrationActive(backend) {
 		return 1
 	}
@@ -1894,6 +1895,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -1920,6 +1924,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			shutdownTriggered = true
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
+
+			// Notify systemd that the server is reloading config
+			c.notifySystemd(systemd.SdNotifyReloading)
 
 			// Check for new log level
 			var config *server.Config
@@ -1976,11 +1983,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
+	// Notify systemd that the server is shutting down
+	c.notifySystemd(systemd.SdNotifyStopping)
 
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
 
-	// Shutdown will wait until after Vault is sealed, which means the
+	// Finalize will wait until after Vault is sealed, which means the
 	// request forwarding listeners will also be closed (and also
 	// waited for).
 	if err := core.Shutdown(); err != nil {
@@ -1990,6 +1999,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	} else {
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
+	}
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
@@ -2304,7 +2326,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(testCluster.Cleanup)
 
-			// Shutdown will wait until after Vault is sealed, which means the
+			// Finalize will wait until after Vault is sealed, which means the
 			// request forwarding listeners will also be closed (and also
 			// waited for).
 			for _, core := range testCluster.Cores {

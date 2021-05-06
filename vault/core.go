@@ -2154,9 +2154,7 @@ func (c *Core) preSeal() error {
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping expiration: {{err}}", err))
 	}
-	if err := c.stopActivityLog(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error stopping activity log: {{err}}", err))
-	}
+	c.stopActivityLog()
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down credentials: {{err}}", err))
 	}

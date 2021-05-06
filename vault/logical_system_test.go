@@ -2066,7 +2066,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 
 	req2 := logical.TestRequest(t, logical.UpdateOperation, "rotate/config")
-	req2.Data["max_operations"] = 2345678910
+	req2.Data["max_operations"] = int64(3221225472)
 	req2.Data["interval"] = "5432h0m0s"
 	req2.Data["enabled"] = false
 
@@ -2081,7 +2081,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"max_operations": int64(2345678910),
+		"max_operations": int64(3221225472),
 		"interval":       "5432h0m0s",
 		"enabled":        false,
 	}

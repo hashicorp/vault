@@ -3,7 +3,7 @@ import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
 import Component from '@ember/component';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
@@ -68,7 +68,7 @@ export default Component.extend(FocusOnInsertMixin, {
   persist(method, successCallback) {
     const model = this.model;
     return model[method]().then(() => {
-      if (!get(model, 'isError')) {
+      if (!model.isError) {
         if (this.wizard.featureState === 'role') {
           this.wizard.transitionFeatureMachine('role', 'CONTINUE', this.backendType);
         }

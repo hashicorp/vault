@@ -359,11 +359,6 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	testCoreAddSecretMount(t, core, token)
 
 	t.Cleanup(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("panic closing core during cleanup", "panic", r)
-			}
-		}()
 		core.Shutdown()
 	})
 	return core, keys, token
@@ -1606,7 +1601,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	// Create TestClusterCores
 	var ret []*TestClusterCore
 	for i := 0; i < numCores; i++ {
-
 		tcc := &TestClusterCore{
 			Core:                 cores[i],
 			CoreConfig:           coreConfigs[i],
@@ -1689,7 +1683,7 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("stopping core", "core", idx)
 
-	// Stop listeners and call Shutdown()
+	// Stop listeners and call Finalize()
 	if err := tcc.stop(); err != nil {
 		t.Fatal(err)
 	}
@@ -1872,7 +1866,6 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 func (testCluster *TestCluster) setupClusterListener(
 	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
 	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
-
 	if coreConfig.ClusterAddr == "" {
 		return
 	}
@@ -2059,7 +2052,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 func (testCluster *TestCluster) getAPIClient(
 	t testing.T, opts *TestClusterOptions,
 	port int, tlsConfig *tls.Config) *api.Client {
-
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {
