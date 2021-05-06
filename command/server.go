@@ -1581,27 +1581,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
 	if !core.IsInSealMigrationMode() {
-		go func() {
-			for {
-				err := core.UnsealWithStoredKeys(context.Background())
-				if err == nil {
-					return
-				}
-
-				if vault.IsFatalError(err) {
-					c.logger.Error("error unsealing core", "error", err)
-					return
-				} else {
-					c.logger.Warn("failed to unseal core", "error", err)
-				}
-
-				select {
-				case <-c.ShutdownCh:
-					return
-				case <-time.After(5 * time.Second):
-				}
-			}
-		}()
+		go runUnseal(c, core)
 	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
@@ -2596,6 +2576,27 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		createdSeals = append(createdSeals, seal)
 	}
 	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
+}
+
+func runUnseal(c *ServerCommand, core *vault.Core) {
+	for {
+		err := core.UnsealWithStoredKeys(context.Background())
+		if err == nil {
+			return
+		}
+
+		if vault.IsFatalError(err) {
+			c.logger.Error("error unsealing core", "error", err)
+			return
+		}
+		c.logger.Warn("failed to unseal core", "error", err)
+
+		select {
+		case <-c.ShutdownCh:
+			return
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {
