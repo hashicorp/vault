@@ -46,6 +46,10 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
+func TestParseSockaddrTemplate(t *testing.T) {
+	testParseSockaddrTemplate(t)
+}
+
 func TestParseEntropy(t *testing.T) {
 	testParseEntropy(t, true)
 }
