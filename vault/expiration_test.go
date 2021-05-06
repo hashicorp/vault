@@ -554,7 +554,8 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 }
 
 func TestExpiration_Restore(t *testing.T) {
-	exp := mockExpiration(t)
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -601,7 +602,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Stop everything
-	err = exp.Stop()
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
