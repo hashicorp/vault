@@ -3,11 +3,12 @@ package diagnose
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"time"
 )
 
 const (
