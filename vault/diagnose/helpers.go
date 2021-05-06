@@ -24,9 +24,6 @@ const (
 
 var diagnoseSession = struct{}{}
 var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
-var (
-	MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
-)
 
 type Session struct {
 	tc     *TelemetryCollector
