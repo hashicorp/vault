@@ -113,6 +113,8 @@ type ExpirationManager struct {
 	// in memory
 	zombies sync.Map
 
+	leaseStore *LeaseStore
+
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
 	// unbounded growth.
@@ -229,13 +231,18 @@ func (r *revocationJob) OnFailure(err error) {
 
 	r.m.pendingLock.Lock()
 	defer r.m.pendingLock.Unlock()
-	pendingRaw, ok := r.m.pending.Load(r.leaseID)
-	if !ok {
+
+	pendingRaw, err := r.m.leaseStore.Load(r.leaseID)
+	if err != nil {
+		// TODO log this error?
+		panic(err)
+	}
+	if pendingRaw == nil {
 		r.m.logger.Warn("failed to find lease in pending map for revocation retry", "lease_id", r.leaseID)
 		return
 	}
 
-	pending := pendingRaw.(pendingInfo)
+	pending := pendingRaw.Clone()
 	pending.revokesAttempted++
 	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
 		r.m.logger.Trace("marking lease as zombie", "lease_id", r.leaseID, "error", err)
@@ -258,8 +265,11 @@ func (r *revocationJob) OnFailure(err error) {
 		return
 	}
 
-	pending.timer.Reset(revokeExponentialBackoff(pending.revokesAttempted))
-	r.m.pending.Store(r.leaseID, pending)
+	pending.ExpireTimeUnix = time.Now().Add(revokeExponentialBackoff(pending.revokesAttempted)).Unix()
+	if err := r.m.leaseStore.Update(pending); err != nil {
+		// TODO handle error
+		panic(err)
+	}
 }
 
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
@@ -388,6 +398,12 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
 	jobManager.Start()
 
+	leaseStore, err := newLeaseStore()
+	if err != nil {
+		// TODO handle error
+		panic(err)
+	}
+
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -399,6 +415,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		nonexpiring: sync.Map{},
 		leaseCount:  0,
 		tidyLock:    new(int32),
+		leaseStore:  leaseStore,
 
 		uniquePolicies:      make(map[string][]string),
 		emptyUniquePolicies: time.NewTicker(7 * 24 * time.Hour),
@@ -1648,6 +1665,7 @@ func (m *ExpirationManager) leaseTimesForExport(le *leaseEntry) *leaseEntry {
 		IssueTime:       le.IssueTime,
 		ExpireTime:      le.ExpireTime,
 		LastRenewalTime: le.LastRenewalTime,
+		ExpireTimeUnix:  le.ExpireTime.Unix(),
 	}
 	if le.Secret != nil {
 		ret.Secret = &logical.Secret{}
@@ -1721,65 +1739,29 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		return
 	}
 
-	// Check for an existing timer
-	info, ok := m.pending.Load(le.LeaseID)
-
-	var pending pendingInfo
-	if le.ExpireTime.IsZero() {
-		if le.nonexpiringToken() {
-			// Store this in the nonexpiring map instead of pending.
-			// There does not appear to be any cases where a token that had
-			// a nonzero can be can be assigned a zero TTL, but we can handle that
-			// anyway by falling through to the next check.
-			pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
-			m.nonexpiring.Store(le.LeaseID, pending)
-		}
-
-		// if the timer happened to exist, stop the time and delete it from the
-		// pending timers.
-		if ok {
-			info.(pendingInfo).timer.Stop()
-			m.pending.Delete(le.LeaseID)
-			m.leaseCount--
-			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []string{le.LeaseID}); err != nil {
-				m.logger.Error("failed to update quota on lease deletion", "error", err)
-				return
-			}
-		}
-		return
+	leaseCreated, err := m.leaseStore.Insert(le)
+	if err != nil {
+		// TODO handle error
+		panic(err)
 	}
 
-	leaseTotal := le.ExpireTime.Sub(time.Now())
-	leaseCreated := false
-	// Create entry if it does not exist or reset if it does
-	if ok {
-		pending = info.(pendingInfo)
-		pending.timer.Reset(leaseTotal)
-		// No change to lease count in this case
-	} else {
-		leaseID, namespace := le.LeaseID, le.namespace
-		// Extend the timer by the lease total
-		timer := time.AfterFunc(leaseTotal, func() {
-			m.expireFunc(m.quitContext, m, leaseID, namespace)
-		})
-		pending = pendingInfo{
-			timer: timer,
-		}
-		// new lease
-		m.leaseCount++
-		leaseCreated = true
-	}
-
-	// Retain some information in-memory
-	pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
-
-	m.pending.Store(le.LeaseID, pending)
-
+	// TODO: I believe quotas utilize memdb too. If we share a memdb instance
+	// between them and push quota updates into the lease store we can use a
+	// single transaction.
 	if leaseCreated {
 		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
 			m.logger.Error("failed to update quota on lease creation", "error", err)
 			return
 		}
+	}
+}
+
+// must be called with m.pendingLock held
+func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
+
+	// Log but do not fail; unit tests (and maybe Tidy on production systems)
+	if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+		m.logger.Error("failed to update quota on revocation", "error", err)
 	}
 }
 
@@ -2352,20 +2334,6 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	return nil
 }
 
-// must be called with m.pendingLock held
-func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
-	if info, ok := m.pending.Load(leaseID); ok {
-		pending := info.(pendingInfo)
-		pending.timer.Stop()
-		m.pending.Delete(leaseID)
-		m.leaseCount--
-		// Log but do not fail; unit tests (and maybe Tidy on production systems)
-		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-			m.logger.Error("failed to update quota on revocation", "error", err)
-		}
-	}
-}
-
 // note: must be called with pending lock held
 func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntry, err error) {
 	if le == nil {
@@ -2388,7 +2356,7 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 		errStr = errStr[:maxZombieErrorLength]
 	}
 
-	le.RevokeErr = errStr
+	le.RevokeErr = true
 	m.persistEntry(ctx, le)
 
 	m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
@@ -2409,6 +2377,7 @@ type leaseEntry struct {
 	IssueTime       time.Time              `json:"issue_time"`
 	ExpireTime      time.Time              `json:"expire_time"`
 	LastRenewalTime time.Time              `json:"last_renewal_time"`
+	EntityID        string                 `json:"entity_id"`
 
 	// Version is used to track new different versions of leases. V0 (or
 	// zero-value) had non-root namespaced secondary indexes live in the root
@@ -2417,11 +2386,16 @@ type leaseEntry struct {
 
 	namespace *namespace.Namespace
 
+	// ExpireTimeUnix is populated by the expiration manager when inserted into
+	// memdb. It's used as the index for looking up the next leases to revoke.
+	// This will not be peristed to storage, that's ExpireTime's role.
+	ExpireTimeUnix int64 `json:"-"`
+
 	// RevokeErr tracks if a lease has failed revocation in a way that is
 	// unlikely to be automatically resolved. The first time this happens,
 	// RevokeErr will be set, thus marking this leaseEntry as a zombie that will
 	// have to be manually removed.
-	RevokeErr string `json:"revokeErr"`
+	RevokeErr bool `json:"revokeErr"`
 }
 
 // encode is used to JSON encode the lease entry
@@ -2472,7 +2446,7 @@ func (le *leaseEntry) nonexpiringToken() bool {
 
 // TODO maybe lock RevokeErr once this goes in: https://github.com/hashicorp/vault/pull/11122
 func (le *leaseEntry) isZombie() bool {
-	return le.RevokeErr != ""
+	return le.RevokeErr
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry

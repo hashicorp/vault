@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/bits"
 	"reflect"
 	"strings"
 )
@@ -73,7 +74,7 @@ func (s *StringFieldIndex) FromObject(obj interface{}) (bool, []byte, error) {
 
 	if isPtr && !fv.IsValid() {
 		val := ""
-		return true, []byte(val), nil
+		return false, []byte(val), nil
 	}
 
 	val := fv.String()
@@ -380,8 +381,7 @@ func (u *UintFieldIndex) FromObject(obj interface{}) (bool, []byte, error) {
 
 	// Get the value and encode it
 	val := fv.Uint()
-	buf := make([]byte, size)
-	binary.PutUvarint(buf, val)
+	buf := encodeUInt(val, size)
 
 	return true, buf, nil
 }
@@ -403,10 +403,26 @@ func (u *UintFieldIndex) FromArgs(args ...interface{}) ([]byte, error) {
 	}
 
 	val := v.Uint()
-	buf := make([]byte, size)
-	binary.PutUvarint(buf, val)
+	buf := encodeUInt(val, size)
 
 	return buf, nil
+}
+
+func encodeUInt(val uint64, size int) []byte {
+	buf := make([]byte, size)
+
+	switch size {
+	case 1:
+		buf[0] = uint8(val)
+	case 2:
+		binary.BigEndian.PutUint16(buf, uint16(val))
+	case 4:
+		binary.BigEndian.PutUint32(buf, uint32(val))
+	case 8:
+		binary.BigEndian.PutUint64(buf, val)
+	}
+
+	return buf
 }
 
 // IsUintType returns whether the passed type is a type of uint and the number
@@ -414,18 +430,53 @@ func (u *UintFieldIndex) FromArgs(args ...interface{}) ([]byte, error) {
 func IsUintType(k reflect.Kind) (size int, okay bool) {
 	switch k {
 	case reflect.Uint:
-		return binary.MaxVarintLen64, true
+		return bits.UintSize / 8, true
 	case reflect.Uint8:
-		return 2, true
+		return 1, true
 	case reflect.Uint16:
-		return binary.MaxVarintLen16, true
+		return 2, true
 	case reflect.Uint32:
-		return binary.MaxVarintLen32, true
+		return 4, true
 	case reflect.Uint64:
-		return binary.MaxVarintLen64, true
+		return 8, true
 	default:
 		return 0, false
 	}
+}
+
+// BoolFieldIndex is used to extract an boolean field from an object using
+// reflection and builds an index on that field.
+type BoolFieldIndex struct {
+	Field string
+}
+
+func (i *BoolFieldIndex) FromObject(obj interface{}) (bool, []byte, error) {
+	v := reflect.ValueOf(obj)
+	v = reflect.Indirect(v) // Dereference the pointer if any
+
+	fv := v.FieldByName(i.Field)
+	if !fv.IsValid() {
+		return false, nil,
+			fmt.Errorf("field '%s' for %#v is invalid", i.Field, obj)
+	}
+
+	// Check the type
+	k := fv.Kind()
+	if k != reflect.Bool {
+		return false, nil, fmt.Errorf("field %q is of type %v; want a bool", i.Field, k)
+	}
+
+	// Get the value and encode it
+	buf := make([]byte, 1)
+	if fv.Bool() {
+		buf[0] = 1
+	}
+
+	return true, buf, nil
+}
+
+func (i *BoolFieldIndex) FromArgs(args ...interface{}) ([]byte, error) {
+	return fromBoolArgs(args)
 }
 
 // UUIDFieldIndex is used to extract a field from an object

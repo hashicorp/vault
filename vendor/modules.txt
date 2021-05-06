@@ -544,7 +544,7 @@ github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
 # github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
 github.com/hashicorp/go-kms-wrapping/entropy
-# github.com/hashicorp/go-memdb v1.0.2
+# github.com/hashicorp/go-memdb v1.3.2
 ## explicit
 github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-msgpack v1.1.5
