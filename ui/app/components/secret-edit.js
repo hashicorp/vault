@@ -114,20 +114,35 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('model.canDelete'),
+  canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
-
+  //  ARG TODO covered by canDelete if they canDelete they can delete the version
+  //  ARG TODO need to confirm still works for version 1.
   deleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
       let [backend, id] = JSON.parse(context.modelForData.id);
+      console.log(backend, 'BACKEND');
       return {
         id: `${backend}/delete/${id}`,
       };
     },
     'version.id'
   ),
-  canDeleteVersion: alias('deleteVersionPath.canUpdate'),
+  canDeleteAnyVersion: alias('deleteVersionPath.canUpdate'),
+
+  undeleteVersionPath: maybeQueryRecord(
+    'capabilities',
+    context => {
+      let [backend, id] = JSON.parse(context.version.id);
+      return {
+        id: `${backend}/undelete/${id}`,
+      };
+    },
+    'version.id'
+  ),
+  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
+
   destroyVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
@@ -197,7 +212,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return false;
   }),
 
-  canUndelete: computed('modelForData.{deleted,destroyed}', function() {
+  showUndeleteOption: computed('modelForData.{deleted,destroyed}', function() {
     if (this.modelForData.deleted && !this.modelForData.destroyed) {
       return true;
     } else {

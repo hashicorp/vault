@@ -70,14 +70,23 @@ export default ApplicationAdapter.extend({
 
   v2DeleteOperation(store, id, deleteType = 'delete') {
     let [backend, path, version] = JSON.parse(id);
-
     // deleteType should be 'delete', 'destroy', 'undelete'
-    return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
-      () => {
+
+    // ARG TODO this previously was not handled with POST and the permissions were denied for soft deletes
+    // Need to make sure this works for different versions at root permissions
+    if (!version && deleteType === 'delete') {
+      return this.ajax(this._url(backend, path, 'data'), 'DELETE').then(() => {
         let model = store.peekRecord('secret-v2-version', id);
         return model && model.rollbackAttributes() && model.reload();
-      }
-    );
+      });
+    } else {
+      return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
+        () => {
+          let model = store.peekRecord('secret-v2-version', id);
+          return model && model.rollbackAttributes() && model.reload();
+        }
+      );
+    }
   },
 
   handleResponse(status, headers, payload, requestData) {
