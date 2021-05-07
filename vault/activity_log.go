@@ -1712,9 +1712,12 @@ func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int
 
 	// Cancel the context if activity log is shut down.
 	// This will cause the next storage operation to fail.
+	a.l.RLock()
+	doneCh := a.doneCh
+	a.l.RUnlock()
 	go func() {
 		select {
-		case <-a.doneCh:
+		case <-doneCh:
 			cancel()
 		case <-ctx.Done():
 			break
