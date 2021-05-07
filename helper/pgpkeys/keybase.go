@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/keybase/go-crypto/openpgp"
@@ -102,7 +101,7 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 		serializedEntity.Reset()
 		err = entityList[0].Serialize(serializedEntity)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error serializing entity for user %q: {{err}}", usernames[i]), err)
+			return nil, fmt.Errorf("error serializing entity for user %q: %w", usernames[i], err)
 		}
 
 		// The API returns values in the same ordering requested, so this should properly match

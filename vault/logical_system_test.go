@@ -2066,7 +2066,7 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 
 	req2 := logical.TestRequest(t, logical.UpdateOperation, "rotate/config")
-	req2.Data["max_operations"] = 123456789
+	req2.Data["max_operations"] = int64(3221225472)
 	req2.Data["interval"] = "5432h0m0s"
 	req2.Data["enabled"] = false
 
@@ -2081,18 +2081,9 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"max_operations": 123456789,
+		"max_operations": int64(3221225472),
 		"interval":       "5432h0m0s",
 		"enabled":        false,
-	}
-
-	// Not pretty, but on a 64-bit machine, the response value is 64-bit, while on a 32 bit machine it'll be an int
-	// DeepEqual rejects it due to the type difference
-	if d, ok := resp.Data["max_operations"]; ok {
-		v, ok := d.(int64)
-		if ok {
-			resp.Data["max_operations"] = int(v)
-		}
 	}
 
 	if !reflect.DeepEqual(resp.Data, exp) {

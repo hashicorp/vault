@@ -554,7 +554,8 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 }
 
 func TestExpiration_Restore(t *testing.T) {
-	exp := mockExpiration(t)
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -601,7 +602,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Stop everything
-	err = exp.Stop()
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2530,7 +2531,8 @@ func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager)
 }
 
 func TestExpiration_MarkIrrevocable(t *testing.T) {
-	exp := mockExpiration(t)
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	ctx := namespace.RootContext(nil)
 
 	leaseID := registerOneLease(t, ctx, exp)
@@ -2569,7 +2571,7 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	}
 
 	// stop and restore to verify that irrevocable leases are properly loaded from storage
-	err = exp.Stop()
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("error stopping expiration manager: %v", err)
 	}
@@ -2646,7 +2648,8 @@ func TestExpiration_FetchLeaseTimesIrrevocable(t *testing.T) {
 }
 
 func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
-	exp := mockExpiration(t)
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	ctx := namespace.RootContext(nil)
 
 	leaseID := registerOneLease(t, ctx, exp)
@@ -2656,7 +2659,7 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 	}
 
 	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
-	err = exp.Stop()
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("error stopping expiration manager: %v", err)
 	}

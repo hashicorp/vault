@@ -6,14 +6,14 @@
       </div>
     <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
-      <label for="ciphertext" class="is-label">Ciphertext</label>
       <div class="control is-expanded">
-        <IvyCodemirror @valueUpdated={{action (mut ciphertext)}} @options={{hash
-              lineNumbers=true
-              tabSize=2
-              mode='ruby'
-              theme='hashi'
-            }} />
+        <JsonEditor
+              @title="Ciphertext"
+              @valueUpdated={{action (mut ciphertext)}} 
+              @options={{hash
+                mode='ruby'
+              }} 
+            />
       </div>
     </div>
     {{#if key.derived}}

@@ -76,6 +76,9 @@ type Config struct {
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
+
+	License     string `hcl:"-"`
+	LicensePath string `hcl:"license_path"`
 }
 
 const (
@@ -274,6 +277,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
+	result.LicensePath = c.LicensePath
+	if c2.LicensePath != "" {
+		result.LicensePath = c2.LicensePath
 	}
 
 	// Use values from top-level configuration for storage if set
