@@ -1125,9 +1125,12 @@ func (a *ActivityLog) activeFragmentWorker() {
 		}
 	}
 
+	a.l.RLock()
+	doneCh := a.doneCh
+	a.l.RUnlock()
 	for {
 		select {
-		case <-a.doneCh:
+		case <-doneCh:
 			// Shutting down activity log.
 			ticker.Stop()
 			return
