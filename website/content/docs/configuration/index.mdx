@@ -121,7 +121,7 @@ to specify where the configuration is.
   reporting system.
 
 - `log_level` `(string: "")` – Specifies the log level to use; overridden by
-  CLI and env var parameters. On SIGHUP, Vault will update the log level to the
+  CLI and env var parameters. On SIGHUP (`sudo kill -s HUP` *pid of vault*), Vault will update the log level to the
   current value specified here (including overriding the CLI/env var
   parameters). Not all parts of Vault's logging can have its level be changed
   dynamically this way; in particular, secrets/auth plugins are currently not
