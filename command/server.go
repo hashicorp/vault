@@ -1121,6 +1121,13 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+		config.LicensePath = envLicensePath
+	}
+	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+		config.License = envLicense
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1318,6 +1325,8 @@ func (c *ServerCommand) Run(args []string) int {
 		SecureRandomReader:             secureRandomReader,
 		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+		License:                        config.License,
+		LicensePath:                    config.LicensePath,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

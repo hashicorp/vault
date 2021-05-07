@@ -648,6 +648,8 @@ type CoreConfig struct {
 	ReloadFuncsLock *sync.RWMutex
 
 	// Licensing
+	License         string
+	LicensePath     string
 	LicensingConfig *LicensingConfig
 	// Don't set this unless in dev mode, ideally only when using inmem
 	DevLicenseDuration time.Duration
