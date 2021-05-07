@@ -122,12 +122,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'capabilities',
     context => {
       let [backend, id] = JSON.parse(context.modelForData.id);
-      console.log(backend, 'BACKEND');
       return {
         id: `${backend}/delete/${id}`,
       };
     },
-    'version.id'
+    'model.id'
   ),
   canDeleteAnyVersion: alias('deleteVersionPath.canUpdate'),
 
@@ -139,7 +138,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         id: `${backend}/undelete/${id}`,
       };
     },
-    'version.id'
+    'model.id'
   ),
   canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
 
@@ -151,7 +150,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         id: `${backend}/destroy/${id}`,
       };
     },
-    'version.id'
+    'model.id'
   ),
   canDestroyVersion: alias('destroyVersionPath.canUpdate'),
   // ARG TODO missing canUndelete Version? see secret version menu
@@ -456,11 +455,17 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
           this.navToNearestAncestor.perform(id);
         });
       } else {
+        //  ARG STUCK on this.modelForData.id does not include version in this iteration
+        let [backend, id, version] = JSON.parse(this.modelForData.id);
+        if (!version) {
+          this.modelForData.id = [backend, id, this.modelForData.version];
+        }
+        console.log(this.modelForData.id, 'here');
         return this.store
           .adapterFor('secret-v2-version')
           .v2DeleteOperation(this.store, this.modelForData.id, deleteType)
           .then(() => {
-            location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
+            // location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
           });
       }
     },
