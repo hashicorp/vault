@@ -1125,6 +1125,8 @@ func (a *ActivityLog) activeFragmentWorker() {
 		}
 	}
 
+	// we modify the doneCh in some tests, so let's make sure we don't trip
+	// the race detector
 	a.l.RLock()
 	doneCh := a.doneCh
 	a.l.RUnlock()
