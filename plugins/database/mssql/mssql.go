@@ -330,14 +330,6 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 		return err
 	}
 
-	var exists bool
-
-	err = db.QueryRowContext(ctx, "SELECT 1 FROM master.sys.server_principals where name = N'$1'", username).Scan(&exists)
-
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
