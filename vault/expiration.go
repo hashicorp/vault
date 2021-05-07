@@ -526,17 +526,16 @@ func (m *ExpirationManager) invalidate(key string) {
 					return
 				}
 			default:
-				// Handle lease update
+				// Update the lease in memory
 				m.updatePendingInternal(le)
 			}
 		default:
-			// There is no entry in the pending map and the invalidation
-			// resulted in a nil entry.
 			if le == nil {
-				// If in the nonexpiring map, remove there.
+				// There is no entry in the pending map and the invalidation
+				// resulted in a nil entry. Therefore we should clean up the
+				// other maps, and update metrics/quotas if appropriate.
 				m.nonexpiring.Delete(leaseID)
 
-				// If in the irrevocable map, remove it there and update the metrics/quotas
 				if _, ok := m.irrevocable.Load(leaseID); ok {
 					m.irrevocable.Delete(leaseID)
 
@@ -548,7 +547,7 @@ func (m *ExpirationManager) invalidate(key string) {
 				}
 				return
 			}
-			// Handle lease creation
+			// Handle lease update (if irrevocable) or creation (if pending)
 			m.updatePendingInternal(le)
 		}
 	}
@@ -1759,7 +1758,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		// It's possible this function is being called to update the in-memory state
 		// for a lease from pending to irrevocable (we don't support the opposite).
 		// If this is the case, we need to know if the lease was previously counted
-		// in pending so that we can maintain correct metric and quota lease counts.
+		// so that we can maintain correct metric and quota lease counts.
 		_, leaseInIrrevocable := m.irrevocable.Load(le.LeaseID)
 		if !(leaseInPending || leaseInIrrevocable) {
 			leaseCreated = true
