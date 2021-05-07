@@ -535,6 +535,17 @@ func (m *ExpirationManager) invalidate(key string) {
 			if le == nil {
 				// If in the nonexpiring map, remove there.
 				m.nonexpiring.Delete(leaseID)
+
+				// If in the irrevocable map, remove it there and update the metrics/quotas
+				if _, ok := m.irrevocable.Load(leaseID); ok {
+					m.irrevocable.Delete(leaseID)
+
+					m.leaseCount--
+					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+						m.logger.Error("failed to update quota on lease invalidation", "error", err)
+						return
+					}
+				}
 				return
 			}
 			// Handle lease creation
@@ -983,7 +994,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	m.removeFromPending(ctx, leaseID)
+	m.removeFromPending(ctx, leaseID, true)
 	m.nonexpiring.Delete(leaseID)
 	m.irrevocable.Delete(leaseID)
 	m.pendingLock.Unlock()
@@ -1713,13 +1724,8 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
-	if le.isIrrevocable() {
-		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
-		return
-	}
-
 	// Check for an existing timer
-	info, ok := m.pending.Load(le.LeaseID)
+	info, leaseInPending := m.pending.Load(le.LeaseID)
 
 	var pending pendingInfo
 	if le.ExpireTime.IsZero() {
@@ -1734,7 +1740,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 		// if the timer happened to exist, stop the time and delete it from the
 		// pending timers.
-		if ok {
+		if leaseInPending {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
@@ -1748,31 +1754,44 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 	leaseTotal := le.ExpireTime.Sub(time.Now())
 	leaseCreated := false
-	// Create entry if it does not exist or reset if it does
-	if ok {
-		pending = info.(pendingInfo)
-		pending.timer.Reset(leaseTotal)
-		// No change to lease count in this case
-	} else {
-		leaseID, namespace := le.LeaseID, le.namespace
-		// Extend the timer by the lease total
-		timer := time.AfterFunc(leaseTotal, func() {
-			m.expireFunc(m.quitContext, m, leaseID, namespace)
-		})
-		pending = pendingInfo{
-			timer: timer,
+
+	if le.isIrrevocable() {
+		// It's possible this function is being called to update the in-memory state
+		// for a lease from pending to irrevocable (we don't support the opposite).
+		// If this is the case, we need to know if the lease was previously counted
+		// in pending so that we can maintain correct metric and quota lease counts.
+		_, leaseInIrrevocable := m.irrevocable.Load(le.LeaseID)
+		if !(leaseInPending || leaseInIrrevocable) {
+			leaseCreated = true
 		}
-		// new lease
-		m.leaseCount++
-		leaseCreated = true
+
+		m.removeFromPending(m.quitContext, le.LeaseID, false)
+		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	} else {
+		// Create entry if it does not exist or reset if it does
+		if leaseInPending {
+			pending = info.(pendingInfo)
+			pending.timer.Reset(leaseTotal)
+			// No change to lease count in this case
+		} else {
+			leaseID, namespace := le.LeaseID, le.namespace
+			// Extend the timer by the lease total
+			timer := time.AfterFunc(leaseTotal, func() {
+				m.expireFunc(m.quitContext, m, leaseID, namespace)
+			})
+			pending = pendingInfo{
+				timer: timer,
+			}
+
+			leaseCreated = true
+		}
+
+		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
+		m.pending.Store(le.LeaseID, pending)
 	}
 
-	// Retain some information in-memory
-	pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
-
-	m.pending.Store(le.LeaseID, pending)
-
 	if leaseCreated {
+		m.leaseCount++
 		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
 			m.logger.Error("failed to update quota on lease creation", "error", err)
 			return
@@ -2345,19 +2364,24 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 }
 
 // must be called with m.pendingLock held
-func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
+// set decrementCounters true to decrement the lease count metric and quota
+func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string, decrementCounters bool) {
 	if info, ok := m.pending.Load(leaseID); ok {
 		pending := info.(pendingInfo)
 		pending.timer.Stop()
 		m.pending.Delete(leaseID)
-		m.leaseCount--
-		// Log but do not fail; unit tests (and maybe Tidy on production systems)
-		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-			m.logger.Error("failed to update quota on revocation", "error", err)
+		if decrementCounters {
+			m.leaseCount--
+			// Log but do not fail; unit tests (and maybe Tidy on production systems)
+			if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+				m.logger.Error("failed to update quota on revocation", "error", err)
+			}
 		}
 	}
 }
 
+// Marks a pending lease as irrevocable. Because the lease is being moved from
+// pending to irrevocable, no total lease count metrics/quotas updates are needed
 // note: must be called with pending lock held
 func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseEntry, err error) {
 	if le == nil {
@@ -2384,7 +2408,7 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.persistEntry(ctx, le)
 
 	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
-	m.removeFromPending(ctx, le.LeaseID)
+	m.removeFromPending(ctx, le.LeaseID, false)
 	m.nonexpiring.Delete(le.LeaseID)
 }
 
