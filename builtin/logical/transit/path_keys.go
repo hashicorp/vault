@@ -7,15 +7,15 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"strconv"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathListKeys() *framework.Path {
@@ -185,6 +185,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 type asymKey struct {
 	Name         string    `json:"name" structs:"name" mapstructure:"name"`
 	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	PublicKeyPem string    `json:"public_key_pem" structs:"public_key_pem" mapstructure:"public_key_pem"`
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
@@ -303,6 +304,19 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 						}
 						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
 						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
+						derBytes, err := x509.MarshalPKIXPublicKey(pubKey)
+						if err != nil {
+							return nil, fmt.Errorf("error marshaling ed25519 public key: %w", err)
+						}
+						pemBlock := &pem.Block{
+							Type:  "PUBLIC KEY",
+							Bytes: derBytes,
+						}
+						pemBytes := pem.EncodeToMemory(pemBlock)
+						if pemBytes == nil || len(pemBytes) == 0 {
+							return nil, fmt.Errorf("failed to PEM-encode ed25519 public key")
+						}
+						key.PublicKeyPem = string(pemBytes)
 					}
 				}
 				key.Name = "ed25519"
@@ -331,6 +345,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
 				}
 				key.PublicKey = string(pemBytes)
+				key.PublicKeyPem = string(pemBytes)
 			}
 
 			retKeys[k] = structs.New(key).Map()
