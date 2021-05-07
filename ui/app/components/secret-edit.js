@@ -134,7 +134,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   undeleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
-      let [backend, id] = JSON.parse(context.version.id);
+      let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/undelete/${id}`,
       };
