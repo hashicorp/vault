@@ -123,11 +123,11 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 		return nil, err
 	}
 
-	raClient := authorization.NewRoleAssignmentsClient(settings.SubscriptionID)
+	raClient := authorization.NewRoleAssignmentsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, settings.SubscriptionID)
 	raClient.Authorizer = authorizer
 	raClient.AddToUserAgent(userAgent)
 
-	rdClient := authorization.NewRoleDefinitionsClient(settings.SubscriptionID)
+	rdClient := authorization.NewRoleDefinitionsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, settings.SubscriptionID)
 	rdClient.Authorizer = authorizer
 	rdClient.AddToUserAgent(userAgent)
 
