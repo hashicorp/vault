@@ -3,17 +3,23 @@ package command
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
@@ -37,11 +43,12 @@ type OperatorDiagnoseCommand struct {
 	flagConfigs  []string
 	cleanupGuard sync.Once
 
-	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reloadutil.ReloadFunc
-	startedCh       chan struct{} // for tests
-	reloadedCh      chan struct{} // for tests
-	skipEndEnd      bool          // for tests
+	reloadFuncsLock      *sync.RWMutex
+	reloadFuncs          *map[string][]reloadutil.ReloadFunc
+	ServiceRegistrations map[string]sr.Factory
+	startedCh            chan struct{} // for tests
+	reloadedCh           chan struct{} // for tests
+	skipEndEnd           bool          // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -176,15 +183,207 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	} else {
 		diagnose.SpotOk(ctx, "parse-config", "")
 	}
-	// Check Listener Information
-	// TODO: Run Diagnose checks on the actual net.Listeners
 
+	// TODO: Diagnose Telemetry Setup
+	// Telemetry Block (un-diagnosed)
+	inmemMetrics, metricSink, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
+		Config:      config.Telemetry,
+		Ui:          c.UI,
+		ServiceName: "vault",
+		DisplayName: "Vault",
+		UserAgent:   useragent.String(),
+		ClusterName: config.ClusterName,
+	})
+	if err != nil {
+		return fmt.Errorf("Error initializing telemetry: %s", err)
+	}
+	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
+	// End of Telemetry block
+
+	var backend *physical.Backend
+	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+		*backend, err = server.setupStorage(config)
+		if err != nil {
+			return err
+		}
+
+		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+		if dirAccess != "" {
+			diagnose.Warn(ctx, dirAccess)
+		}
+
+		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+
+			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+		}
+
+		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
+			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Attempt to use storage backend
+		if !c.skipEndEnd {
+			err = diagnose.StorageEndToEndLatencyCheck(ctx, *backend)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	var configSR *sr.ServiceRegistration
+	if err := diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		srConfig := config.ServiceRegistration.Config
+		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+
+			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
+			// storage. See the consul package in physical for details.
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
+			if err != nil {
+				return err
+			}
+
+			// Initialize the Service Discovery, if there is one
+			err = beginServiceRegistration(server, configSR, config)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	var barrierWrapper *wrapping.Wrapper
+	var barrierSeal *vault.Seal
+	var unwrapSeal *vault.Seal
+	if err := diagnose.Test(ctx, "create-seal", func(context.Context) error {
+		var seals []vault.Seal
+		var sealConfigError error
+		*barrierSeal, *barrierWrapper, *unwrapSeal, seals, sealConfigError, err = setSeal(server, config, make([]string, 0), make(map[string]string))
+		// Check error here
+		if err != nil {
+			return err
+		}
+		if sealConfigError != nil {
+			return fmt.Errorf("seal could not be configured: seals may already be initialized")
+		}
+
+		if seals != nil {
+			for _, seal := range seals {
+				// Ensure that the seal finalizer is called, even if using verify-only
+				defer func(seal *vault.Seal) {
+					err = (*seal).Finalize(context.Background())
+					if err != nil {
+						c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+					}
+				}(&seal)
+			}
+		}
+
+		if barrierSeal == nil {
+			return fmt.Errorf("could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	var coreConfig *vault.CoreConfig
+	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
+		// prepare a secure random reader for core
+		secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, *barrierWrapper)
+		if err != nil {
+			return err
+		}
+		coreConfig = createCoreConfig(server, config, *backend, *configSR, *barrierSeal, *unwrapSeal, metricsHelper, metricSink, secureRandomReader)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	var disableClustering bool
+	if err := diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
+		// Initialize the separate HA storage backend, if it exists
+		disableClustering, err = initHaBackend(server, config, coreConfig, *backend)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Determine the redirect address from environment variables
+	if err := diagnose.Test(ctx, "determine-redirect", func(ctx context.Context) error {
+
+		err = determineRedirectAddr(server, coreConfig, config)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if err := diagnose.Test(ctx, "find-cluster-addr", func(ctx context.Context) error {
+		err = findClusterAddress(server, coreConfig, config, disableClustering)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Initialize the core
+	var core *vault.Core
+	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
+		// Initialize the core
+		var newCoreError error
+		core, newCoreError = vault.NewCore(coreConfig)
+		if newCoreError != nil {
+			if vault.IsFatalError(newCoreError) {
+				return fmt.Errorf("Error initializing core: %s", newCoreError)
+			}
+			diagnose.Warn(ctx, wrapAtLength(
+				"WARNING! A non-fatal error occurred during initialization. Please "+
+					"check the logs for more information."))
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Copy the reload funcs pointers back
+	server.reloadFuncs = coreConfig.ReloadFuncs
+	server.reloadFuncsLock = coreConfig.ReloadFuncsLock
+
+	var clusterAddrs []*net.TCPAddr
+	var lns []listenerutil.Listener
 	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
-		status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
-
+		status, lns, clAddrs, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
+		clusterAddrs = clAddrs
 		if status != 0 {
 			return errMsg
 		}
@@ -226,109 +425,25 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return err
 	}
 
-	// Errors in these items could stop Vault from starting but are not yet covered:
-	// TODO: logging configuration
-	// TODO: SetupTelemetry
-	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		b, err := server.setupStorage(config)
-		if err != nil {
-			return err
-		}
+	// This needs to happen before we first unseal, so before we trigger dev
+	// mode if it's set
+	core.SetClusterListenerAddrs(clusterAddrs)
+	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
+		Core: core,
+	}))
 
-		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
-		if dirAccess != "" {
-			diagnose.Warn(ctx, dirAccess)
-		}
+	// TODO: Diagnose logging configuration
 
-		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
-			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
-			if err != nil {
-				return err
-			}
-
-			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
-			}
-		}
-
-		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
-			if err != nil {
-				return err
-			}
-		}
-
-		// Attempt to use storage backend
-		if !c.skipEndEnd {
-			err = diagnose.StorageEndToEndLatencyCheck(ctx, b)
-			if err != nil {
-				return err
-			}
-		}
-
+	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
+		runUnseal(server, core)
 		return nil
 	}); err != nil {
 		return err
 	}
 
-	if err := diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
-		srConfig := config.ServiceRegistration.Config
-		// Initialize the Service Discovery, if there is one
-		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-			// setupStorage populates the srConfig, so no nil checks are necessary.
-			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
-			}
-
-			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
-			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	var barrierWrapper wrapping.Wrapper
-	if err := diagnose.Test(ctx, "create-seal", func(context.Context) error {
-		barrierSeal, bw, _, seals, _, err := setSeal(server, config, make([]string, 0), make(map[string]string))
-		barrierWrapper = bw
-		// Check error here
-		if err != nil {
-			return err
-		}
-
-		if seals != nil {
-			for _, seal := range seals {
-				// Ensure that the seal finalizer is called, even if using verify-only
-				defer func(seal *vault.Seal) {
-					err = (*seal).Finalize(context.Background())
-					if err != nil {
-						c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-					}
-				}(&seal)
-			}
-		}
-
-		if barrierSeal == nil {
-			return fmt.Errorf("could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	// ROY NOTES: init serverCore, save the core from setup-core step in this variable,
-	// and then use that in the actual unseal step.
-	// var serverCore *vault.Core
-	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
-		// prepare a secure random reader for core
-		_, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+	// If service discovery is available, run service discovery
+	if err := diagnose.Test(ctx, "run-listeners", func(ctx context.Context) error {
+		err = runListeners(server, coreConfig, config, *configSR)
 		if err != nil {
 			return err
 		}
@@ -337,7 +452,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return err
 	}
 
-	return diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
+	return diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+		// Initialize the HTTP servers
+		err = startHttpServers(server, core, config, lns)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 }

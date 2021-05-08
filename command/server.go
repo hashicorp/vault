@@ -875,6 +875,32 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 	return backend, nil
 }
 
+func beginServiceRegistration(c *ServerCommand, configSR *sr.ServiceRegistration, config *server.Config) error {
+	sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
+	if !ok {
+		return fmt.Errorf("Unknown service_registration type %s", config.ServiceRegistration.Type)
+	}
+
+	namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
+	c.allLoggers = append(c.allLoggers, namedSDLogger)
+
+	// Since we haven't even begun starting Vault's core yet,
+	// we know that Vault is in its pre-running state.
+	state := sr.State{
+		VaultVersion:         version.GetVersion().VersionNumber(),
+		IsInitialized:        false,
+		IsSealed:             true,
+		IsActive:             false,
+		IsPerformanceStandby: false,
+	}
+	var err error
+	*configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
+	if err != nil {
+		return fmt.Errorf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err)
+	}
+	return nil
+}
+
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
 func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
 	clusterAddrs := []*net.TCPAddr{}
@@ -1163,27 +1189,9 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
-		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
-		if !ok {
-			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
-			return 1
-		}
-
-		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
-		c.allLoggers = append(c.allLoggers, namedSDLogger)
-
-		// Since we haven't even begun starting Vault's core yet,
-		// we know that Vault is in its pre-running state.
-		state := sr.State{
-			VaultVersion:         version.GetVersion().VersionNumber(),
-			IsInitialized:        false,
-			IsSealed:             true,
-			IsActive:             false,
-			IsPerformanceStandby: false,
-		}
-		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
+		err = beginServiceRegistration(c, &configSR, config)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
+			c.UI.Output(err.Error())
 			return 1
 		}
 	}
@@ -1242,7 +1250,10 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Determine the redirect address from environment variables
-	determineRedirectAddr(c, coreConfig, config)
+	err = determineRedirectAddr(c, coreConfig, config)
+	if err != nil {
+		c.UI.Output(err.Error())
+	}
 
 	// After the redirect bits are sorted out, if no cluster address was
 	// explicitly given, derive one from the redirect addr
@@ -1279,6 +1290,11 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
+		c.UI.Warn(wrapAtLength(
+			"WARNING! A non-fatal error occurred during initialization. Please " +
+				"check the logs for more information."))
+		c.UI.Warn("")
+
 	}
 
 	// Copy the reload funcs pointers back
@@ -1401,176 +1417,24 @@ func (c *ServerCommand) Run(args []string) int {
 	c.WaitGroup = &sync.WaitGroup{}
 
 	// If service discovery is available, run service discovery
-	if sd := coreConfig.GetServiceRegistration(); sd != nil {
-		if err := configSR.Run(c.ShutdownCh, c.WaitGroup, coreConfig.RedirectAddr); err != nil {
-			c.UI.Error(fmt.Sprintf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err))
-			return 1
-		}
+	err = runListeners(c, coreConfig, config, configSR)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	// If we're in Dev mode, then initialize the core
-	if c.flagDev && !c.flagDevSkipInit {
-
-		init, err := c.enableDev(core, coreConfig)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing Dev mode: %s", err))
-			return 1
-		}
-
-		var plugins, pluginsNotLoaded []string
-		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
-
-			f, err := os.Open(c.flagDevPluginDir)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error reading plugin dir: %s", err))
-				return 1
-			}
-
-			list, err := f.Readdirnames(0)
-			f.Close()
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error listing plugins: %s", err))
-				return 1
-			}
-
-			for _, name := range list {
-				path := filepath.Join(f.Name(), name)
-				if err := c.addPlugin(path, init.RootToken, core); err != nil {
-					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
-						c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
-						return 1
-					}
-					pluginsNotLoaded = append(pluginsNotLoaded, name)
-					continue
-				}
-				plugins = append(plugins, name)
-			}
-
-			sort.Strings(plugins)
-		}
-
-		var qw *quiescenceSink
-		var qwo sync.Once
-		qw = &quiescenceSink{
-			t: time.AfterFunc(100*time.Millisecond, func() {
-				qwo.Do(func() {
-					c.logger.DeregisterSink(qw)
-
-					// Print the big dev mode warning!
-					c.UI.Warn(wrapAtLength(
-						"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
-							"in-memory and starts unsealed with a single unseal key. The root " +
-							"token is already authenticated to the CLI, so you can immediately " +
-							"begin using Vault."))
-					c.UI.Warn("")
-					c.UI.Warn("You may need to set the following environment variable:")
-					c.UI.Warn("")
-
-					endpointURL := "http://" + config.Listeners[0].Address
-					if runtime.GOOS == "windows" {
-						c.UI.Warn("PowerShell:")
-						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
-						c.UI.Warn("cmd.exe:")
-						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
-					} else {
-						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
-					}
-
-					// Unseal key is not returned if stored shares is supported
-					if len(init.SecretShares) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The unseal key and root token are displayed below in case you want " +
-								"to seal/unseal the Vault or re-authenticate."))
-						c.UI.Warn("")
-						c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
-					}
-
-					if len(init.RecoveryShares) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The recovery key and root token are displayed below in case you want " +
-								"to seal/unseal the Vault or re-authenticate."))
-						c.UI.Warn("")
-						c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
-					}
-
-					c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
-
-					if len(plugins) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The following dev plugins are registered in the catalog:"))
-						for _, p := range plugins {
-							c.UI.Warn(fmt.Sprintf("    - %s", p))
-						}
-					}
-
-					if len(pluginsNotLoaded) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
-						for _, p := range pluginsNotLoaded {
-							c.UI.Warn(fmt.Sprintf("    - %s", p))
-						}
-					}
-
-					c.UI.Warn("")
-					c.UI.Warn(wrapAtLength(
-						"Development mode should NOT be used in production installations!"))
-					c.UI.Warn("")
-				})
-			}),
-		}
-		c.logger.RegisterSink(qw)
+	err = initDevCore(c, coreConfig, config, core)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	// Initialize the HTTP servers
-	for _, ln := range lns {
-		if ln.Config == nil {
-			c.UI.Error("Found nil listener config after parsing")
-			return 1
-		}
-		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:                  core,
-			ListenerConfig:        ln.Config,
-			DisablePrintableCheck: config.DisablePrintableCheck,
-			RecoveryMode:          c.flagRecovery,
-		})
-
-		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
-			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
-		}
-
-		// server defaults
-		server := &http.Server{
-			Handler:           handler,
-			ReadHeaderTimeout: 10 * time.Second,
-			ReadTimeout:       30 * time.Second,
-			IdleTimeout:       5 * time.Minute,
-			ErrorLog:          c.logger.StandardLogger(nil),
-		}
-
-		// override server defaults with config values for read/write/idle timeouts if configured
-		if ln.Config.HTTPReadHeaderTimeout > 0 {
-			server.ReadHeaderTimeout = ln.Config.HTTPReadHeaderTimeout
-		}
-		if ln.Config.HTTPReadTimeout > 0 {
-			server.ReadTimeout = ln.Config.HTTPReadTimeout
-		}
-		if ln.Config.HTTPWriteTimeout > 0 {
-			server.WriteTimeout = ln.Config.HTTPWriteTimeout
-		}
-		if ln.Config.HTTPIdleTimeout > 0 {
-			server.IdleTimeout = ln.Config.HTTPIdleTimeout
-		}
-
-		// server config tests can exit now
-		if c.flagTestServerConfig {
-			continue
-		}
-
-		go server.Serve(ln.Listener)
+	err = startHttpServers(c, core, config, lns)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	if c.flagTestServerConfig {
@@ -1587,13 +1451,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Error("Vault is initialized but no Seal key could be loaded")
 			return 1
 		}
-	}
-
-	if newCoreError != nil {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! A non-fatal error occurred during initialization. Please " +
-				"check the logs for more information."))
-		c.UI.Warn("")
 	}
 
 	// Output the header that the server has started
@@ -2440,7 +2297,8 @@ func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.Co
 	return config.DisableClustering, nil
 }
 
-func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config) {
+func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config) error {
+	var retErr error
 	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
 		coreConfig.RedirectAddr = envRA
 	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
@@ -2466,9 +2324,9 @@ func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, confi
 		// the following errors did not cause Run to return, so I'm not returning these
 		// as errors.
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
+			retErr = fmt.Errorf("Error detecting api address: %s", err)
 		} else if redirect == "" {
-			c.UI.Error("Failed to detect api address")
+			retErr = fmt.Errorf("Failed to detect api address")
 		} else {
 			coreConfig.RedirectAddr = redirect
 		}
@@ -2476,6 +2334,7 @@ func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, confi
 	if coreConfig.RedirectAddr == "" && c.flagDev {
 		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
 	}
+	return retErr
 }
 
 func findClusterAddress(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, disableClustering bool) error {
@@ -2612,6 +2471,180 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		}
 	}
 	return coreConfig
+}
+
+func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, configSR sr.ServiceRegistration) error {
+	if sd := coreConfig.GetServiceRegistration(); sd != nil {
+		if err := configSR.Run(c.ShutdownCh, c.WaitGroup, coreConfig.RedirectAddr); err != nil {
+			return fmt.Errorf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err)
+		}
+	}
+	return nil
+}
+
+func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core) error {
+	if c.flagDev && !c.flagDevSkipInit {
+
+		init, err := c.enableDev(core, coreConfig)
+		if err != nil {
+			return fmt.Errorf("Error initializing Dev mode: %s", err)
+		}
+
+		var plugins, pluginsNotLoaded []string
+		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
+
+			f, err := os.Open(c.flagDevPluginDir)
+			if err != nil {
+				return fmt.Errorf("Error reading plugin dir: %s", err)
+			}
+
+			list, err := f.Readdirnames(0)
+			f.Close()
+			if err != nil {
+				return fmt.Errorf("Error listing plugins: %s", err)
+			}
+
+			for _, name := range list {
+				path := filepath.Join(f.Name(), name)
+				if err := c.addPlugin(path, init.RootToken, core); err != nil {
+					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
+					}
+					pluginsNotLoaded = append(pluginsNotLoaded, name)
+					continue
+				}
+				plugins = append(plugins, name)
+			}
+
+			sort.Strings(plugins)
+		}
+
+		var qw *quiescenceSink
+		var qwo sync.Once
+		qw = &quiescenceSink{
+			t: time.AfterFunc(100*time.Millisecond, func() {
+				qwo.Do(func() {
+					c.logger.DeregisterSink(qw)
+
+					// Print the big dev mode warning!
+					c.UI.Warn(wrapAtLength(
+						"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
+							"in-memory and starts unsealed with a single unseal key. The root " +
+							"token is already authenticated to the CLI, so you can immediately " +
+							"begin using Vault."))
+					c.UI.Warn("")
+					c.UI.Warn("You may need to set the following environment variable:")
+					c.UI.Warn("")
+
+					endpointURL := "http://" + config.Listeners[0].Address
+					if runtime.GOOS == "windows" {
+						c.UI.Warn("PowerShell:")
+						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+						c.UI.Warn("cmd.exe:")
+						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
+					} else {
+						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+					}
+
+					// Unseal key is not returned if stored shares is supported
+					if len(init.SecretShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The unseal key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
+					}
+
+					if len(init.RecoveryShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The recovery key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+					}
+
+					c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+					if len(plugins) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins are registered in the catalog:"))
+						for _, p := range plugins {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
+					if len(pluginsNotLoaded) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
+						for _, p := range pluginsNotLoaded {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
+					c.UI.Warn("")
+					c.UI.Warn(wrapAtLength(
+						"Development mode should NOT be used in production installations!"))
+					c.UI.Warn("")
+				})
+			}),
+		}
+		c.logger.RegisterSink(qw)
+	}
+	return nil
+}
+
+// Initialize the HTTP servers
+func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config, lns []listenerutil.Listener) error {
+	for _, ln := range lns {
+		if ln.Config == nil {
+			return fmt.Errorf("Found nil listener config after parsing")
+		}
+		handler := vaulthttp.Handler(&vault.HandlerProperties{
+			Core:                  core,
+			ListenerConfig:        ln.Config,
+			DisablePrintableCheck: config.DisablePrintableCheck,
+			RecoveryMode:          c.flagRecovery,
+		})
+
+		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
+			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
+		}
+
+		// server defaults
+		server := &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
+			ErrorLog:          c.logger.StandardLogger(nil),
+		}
+
+		// override server defaults with config values for read/write/idle timeouts if configured
+		if ln.Config.HTTPReadHeaderTimeout > 0 {
+			server.ReadHeaderTimeout = ln.Config.HTTPReadHeaderTimeout
+		}
+		if ln.Config.HTTPReadTimeout > 0 {
+			server.ReadTimeout = ln.Config.HTTPReadTimeout
+		}
+		if ln.Config.HTTPWriteTimeout > 0 {
+			server.WriteTimeout = ln.Config.HTTPWriteTimeout
+		}
+		if ln.Config.HTTPIdleTimeout > 0 {
+			server.IdleTimeout = ln.Config.HTTPIdleTimeout
+		}
+
+		// server config tests can exit now
+		if c.flagTestServerConfig {
+			continue
+		}
+
+		go server.Serve(ln.Listener)
+	}
+	return nil
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {
