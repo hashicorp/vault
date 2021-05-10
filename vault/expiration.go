@@ -1665,7 +1665,6 @@ func (m *ExpirationManager) leaseTimesForExport(le *leaseEntry) *leaseEntry {
 		IssueTime:       le.IssueTime,
 		ExpireTime:      le.ExpireTime,
 		LastRenewalTime: le.LastRenewalTime,
-		ExpireTimeUnix:  le.ExpireTime.Unix(),
 	}
 	if le.Secret != nil {
 		ret.Secret = &logical.Secret{}
@@ -2385,11 +2384,6 @@ type leaseEntry struct {
 	Version int `json:"version"`
 
 	namespace *namespace.Namespace
-
-	// ExpireTimeUnix is populated by the expiration manager when inserted into
-	// memdb. It's used as the index for looking up the next leases to revoke.
-	// This will not be peristed to storage, that's ExpireTime's role.
-	ExpireTimeUnix int64 `json:"-"`
 
 	// RevokeErr tracks if a lease has failed revocation in a way that is
 	// unlikely to be automatically resolved. The first time this happens,
