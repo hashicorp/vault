@@ -875,10 +875,10 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 	return backend, nil
 }
 
-func beginServiceRegistration(c *ServerCommand, configSR *sr.ServiceRegistration, config *server.Config) error {
+func beginServiceRegistration(c *ServerCommand, config *server.Config) (sr.ServiceRegistration, error) {
 	sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
 	if !ok {
-		return fmt.Errorf("Unknown service_registration type %s", config.ServiceRegistration.Type)
+		return nil, fmt.Errorf("Unknown service_registration type %s", config.ServiceRegistration.Type)
 	}
 
 	namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
@@ -894,11 +894,12 @@ func beginServiceRegistration(c *ServerCommand, configSR *sr.ServiceRegistration
 		IsPerformanceStandby: false,
 	}
 	var err error
-	*configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
+	configSR, err := sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
 	if err != nil {
-		return fmt.Errorf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err)
+		return nil, fmt.Errorf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err)
 	}
-	return nil
+
+	return configSR, nil
 }
 
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
@@ -1189,7 +1190,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
-		err = beginServiceRegistration(c, &configSR, config)
+		configSR, err = beginServiceRegistration(c, config)
 		if err != nil {
 			c.UI.Output(err.Error())
 			return 1
@@ -1235,29 +1236,29 @@ func (c *ServerCommand) Run(args []string) int {
 	coreConfig := createCoreConfig(c, config, backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 
 	if c.flagDevThreeNode {
-		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return c.enableThreeNodeDevCluster(&coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	if c.flagDevFourCluster {
-		return enableFourClusterDev(c, coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	// Initialize the separate HA storage backend, if it exists
-	disableClustering, err := initHaBackend(c, config, coreConfig, backend)
+	disableClustering, err := initHaBackend(c, config, &coreConfig, backend)
 	if err != nil {
 		c.UI.Output(err.Error())
 		return 1
 	}
 
 	// Determine the redirect address from environment variables
-	err = determineRedirectAddr(c, coreConfig, config)
+	err = determineRedirectAddr(c, &coreConfig, config)
 	if err != nil {
 		c.UI.Output(err.Error())
 	}
 
 	// After the redirect bits are sorted out, if no cluster address was
 	// explicitly given, derive one from the redirect addr
-	err = findClusterAddress(c, coreConfig, config, disableClustering)
+	err = findClusterAddress(c, &coreConfig, config, disableClustering)
 	if err != nil {
 		c.UI.Output(err.Error())
 		return 1
@@ -1281,10 +1282,10 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	adjustCoreConfigForEnt(config, coreConfig)
+	adjustCoreConfigForEnt(config, &coreConfig)
 
 	// Initialize the core
-	core, newCoreError := vault.NewCore(coreConfig)
+	core, newCoreError := vault.NewCore(&coreConfig)
 	if newCoreError != nil {
 		if vault.IsFatalError(newCoreError) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
@@ -1417,14 +1418,14 @@ func (c *ServerCommand) Run(args []string) int {
 	c.WaitGroup = &sync.WaitGroup{}
 
 	// If service discovery is available, run service discovery
-	err = runListeners(c, coreConfig, config, configSR)
+	err = runListeners(c, &coreConfig, config, configSR)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
 
 	// If we're in Dev mode, then initialize the core
-	err = initDevCore(c, coreConfig, config, core)
+	err = initDevCore(c, &coreConfig, config, core)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -2416,7 +2417,7 @@ func runUnseal(c *ServerCommand, core *vault.Core) {
 }
 
 func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) *vault.CoreConfig {
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,
@@ -2470,7 +2471,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 			}
 		}
 	}
-	return coreConfig
+	return *coreConfig
 }
 
 func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, configSR sr.ServiceRegistration) error {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -28,6 +29,10 @@ import (
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
+
+const CoreUninitializedErr = "diagnose cannot attempt this step because core could not be initialized"
+const BackendUninitializedErr = "diagnose cannot attempt this step because backend could not be initialized"
+const CoreConfigUninitializedErr = "diagnose cannot attempt this step because core config could not be set"
 
 var (
 	_ cli.Command             = (*OperatorDiagnoseCommand)(nil)
@@ -184,28 +189,43 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.SpotOk(ctx, "parse-config", "")
 	}
 
-	// TODO: Diagnose Telemetry Setup
-	// Telemetry Block (un-diagnosed)
-	inmemMetrics, metricSink, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
-		Config:      config.Telemetry,
-		Ui:          c.UI,
-		ServiceName: "vault",
-		DisplayName: "Vault",
-		UserAgent:   useragent.String(),
-		ClusterName: config.ClusterName,
-	})
-	if err != nil {
-		return fmt.Errorf("Error initializing telemetry: %s", err)
+	var metricSink *metricsutil.ClusterMetricSink
+	var metricsHelper *metricsutil.MetricsHelper
+	if err := diagnose.Test(ctx, "setup-telemetry", func(ctx context.Context) error {
+		var prometheusEnabled bool
+		var inmemMetrics *metrics.InmemSink
+		inmemMetrics, metricSink, prometheusEnabled, err = configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
+			Config:      config.Telemetry,
+			Ui:          c.UI,
+			ServiceName: "vault",
+			DisplayName: "Vault",
+			UserAgent:   useragent.String(),
+			ClusterName: config.ClusterName,
+		})
+		metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
+
+		// TODO: Comment this error back in. Currently commenting this error in yields
+		// indeterministic test behavior, where some subset of operator_diagnose tests have
+		// AlreadyRegisteredError errors. We need these metrics values to be initialized for
+		// to add them to the coreConfig in later steps, so we have to keep this step in as a
+		// no-op for now.
+
+		// if err != nil {
+		// 	return fmt.Errorf("Error initializing telemetry: %s", err)
+		// }
+
+		return nil
+	}); err != nil {
+		diagnose.Error(ctx, err)
 	}
-	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
-	// End of Telemetry block
 
 	var backend *physical.Backend
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		*backend, err = server.setupStorage(config)
+		b, err := server.setupStorage(config)
 		if err != nil {
 			return err
 		}
+		backend = &b
 
 		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
 		if dirAccess != "" {
@@ -241,11 +261,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
-	var configSR *sr.ServiceRegistration
+	var configSR sr.ServiceRegistration
 	if err := diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+		if config.ServiceRegistration == nil {
+			return fmt.Errorf("No service registration config")
+		}
 		srConfig := config.ServiceRegistration.Config
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
 			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
@@ -261,14 +284,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 
 			// Initialize the Service Discovery, if there is one
-			err = beginServiceRegistration(server, configSR, config)
+			configSR, err = beginServiceRegistration(server, config)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
 	var barrierWrapper *wrapping.Wrapper
@@ -277,7 +300,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	if err := diagnose.Test(ctx, "create-seal", func(context.Context) error {
 		var seals []vault.Seal
 		var sealConfigError error
-		*barrierSeal, *barrierWrapper, *unwrapSeal, seals, sealConfigError, err = setSeal(server, config, make([]string, 0), make(map[string]string))
+		bS, bW, uS, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
 		// Check error here
 		if err != nil {
 			return err
@@ -286,6 +309,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			return fmt.Errorf("seal could not be configured: seals may already be initialized")
 		}
 
+		barrierSeal = &bS
+		barrierWrapper = &bW
+		unwrapSeal = &uS
 		if seals != nil {
 			for _, seal := range seals {
 				// Ensure that the seal finalizer is called, even if using verify-only
@@ -306,51 +332,57 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return err
 	}
 
-	var coreConfig *vault.CoreConfig
+	var coreConfig vault.CoreConfig
 	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		// prepare a secure random reader for core
 		secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, *barrierWrapper)
 		if err != nil {
 			return err
 		}
-		coreConfig = createCoreConfig(server, config, *backend, *configSR, *barrierSeal, *unwrapSeal, metricsHelper, metricSink, secureRandomReader)
+		if backend == nil {
+			return fmt.Errorf(BackendUninitializedErr)
+		}
+		coreConfig = createCoreConfig(server, config, *backend, configSR, *barrierSeal, *unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
 	var disableClustering bool
 	if err := diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
+		if backend == nil {
+			return fmt.Errorf(BackendUninitializedErr)
+		}
 		// Initialize the separate HA storage backend, if it exists
-		disableClustering, err = initHaBackend(server, config, coreConfig, *backend)
+		disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
 		if err != nil {
 			return err
 		}
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
-	// Determine the redirect address from environment variables
+	// // Determine the redirect address from environment variables
 	if err := diagnose.Test(ctx, "determine-redirect", func(ctx context.Context) error {
 
-		err = determineRedirectAddr(server, coreConfig, config)
+		err = determineRedirectAddr(server, &coreConfig, config)
 		if err != nil {
 			return err
 		}
 		return nil
 	}); err != nil {
-		return err
+		return diagnose.Error(ctx, err)
 	}
 
 	if err := diagnose.Test(ctx, "find-cluster-addr", func(ctx context.Context) error {
-		err = findClusterAddress(server, coreConfig, config, disableClustering)
+		err = findClusterAddress(server, &coreConfig, config, disableClustering)
 		if err != nil {
 			return err
 		}
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
 	// Initialize the core
@@ -358,7 +390,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
 		// Initialize the core
 		var newCoreError error
-		core, newCoreError = vault.NewCore(coreConfig)
+		if coreConfig.RawConfig == nil {
+			return fmt.Errorf(CoreConfigUninitializedErr)
+		}
+		core, newCoreError = vault.NewCore(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
 				return fmt.Errorf("Error initializing core: %s", newCoreError)
@@ -369,12 +404,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
-	// Copy the reload funcs pointers back
-	server.reloadFuncs = coreConfig.ReloadFuncs
-	server.reloadFuncsLock = coreConfig.ReloadFuncsLock
+	if coreConfig.ReloadFuncs != nil && coreConfig.ReloadFuncsLock != nil {
+		// Copy the reload funcs pointers back
+		server.reloadFuncs = coreConfig.ReloadFuncs
+		server.reloadFuncsLock = coreConfig.ReloadFuncsLock
+	}
 
 	var clusterAddrs []*net.TCPAddr
 	var lns []listenerutil.Listener
@@ -382,11 +419,13 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
-		status, lns, clAddrs, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
-		clusterAddrs = clAddrs
+		status, listeners, clAddrs, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 		if status != 0 {
 			return errMsg
 		}
+
+		lns = listeners
+		clusterAddrs = clAddrs
 
 		// Make sure we close all listeners from this point on
 		listenerCloseFunc := func() {
@@ -422,42 +461,59 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 		return diagnose.ListenerChecks(sanitizedListeners)
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
-	// This needs to happen before we first unseal, so before we trigger dev
-	// mode if it's set
-	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
-		Core: core,
-	}))
+	if core != nil {
+		// This needs to happen before we first unseal, so before we trigger dev
+		// mode if it's set
+		core.SetClusterListenerAddrs(clusterAddrs)
+		core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
+			Core: core,
+		}))
+	}
 
-	// TODO: Diagnose logging configuration
+	// // TODO: Diagnose logging configuration
 
 	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
-		runUnseal(server, core)
+		if core != nil {
+			runUnseal(server, core)
+		} else {
+			return fmt.Errorf(CoreUninitializedErr)
+		}
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
 	// If service discovery is available, run service discovery
 	if err := diagnose.Test(ctx, "run-listeners", func(ctx context.Context) error {
-		err = runListeners(server, coreConfig, config, *configSR)
+
+		// Instantiate the wait group
+		server.WaitGroup = &sync.WaitGroup{}
+
+		err = runListeners(server, &coreConfig, config, configSR)
 		if err != nil {
 			return err
 		}
 		return nil
 	}); err != nil {
-		return err
+		diagnose.Error(ctx, err)
 	}
 
-	return diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+	if err := diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
 		// Initialize the HTTP servers
-		err = startHttpServers(server, core, config, lns)
-		if err != nil {
-			return err
+		if core != nil {
+			err = startHttpServers(server, core, config, lns)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf(CoreUninitializedErr)
 		}
 		return nil
-	})
+	}); err != nil {
+		diagnose.Error(ctx, err)
+	}
+	return nil
 }

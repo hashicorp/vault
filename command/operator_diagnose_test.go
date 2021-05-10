@@ -43,6 +43,42 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "create-seal",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-core",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
 					Name:   "init-listeners",
 					Status: diagnose.WarningStatus,
 					Warnings: []string{
@@ -50,16 +86,18 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					},
 				},
 				{
-					Name:   "storage",
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "unseal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
 				},
 			},
 		},
@@ -74,6 +112,45 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "storage",
+					Status:  diagnose.ErrorStatus,
+					Message: "A storage backend must be specified",
+				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "create-seal",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "setup-core",
+					Status:  diagnose.ErrorStatus,
+					Message: BackendUninitializedErr,
+				},
+				{
+					Name:    "setup-ha-storage",
+					Status:  diagnose.ErrorStatus,
+					Message: BackendUninitializedErr,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
 					Name:   "init-listeners",
 					Status: diagnose.WarningStatus,
 					Warnings: []string{
@@ -81,9 +158,18 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					},
 				},
 				{
-					Name:    "storage",
+					Name:    "unseal",
 					Status:  diagnose.ErrorStatus,
-					Message: "A storage backend must be specified",
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
 				},
 			},
 		},
@@ -98,7 +184,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
+					Name:   "setup-telemetry",
 					Status: diagnose.OkStatus,
 				},
 				{
@@ -106,12 +192,50 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "unseal",
+					Name:   "service-discovery",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "service-discovery",
+					Name:   "create-seal",
 					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-core",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
 				},
 			},
 		},
@@ -126,11 +250,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "storage",
@@ -149,11 +270,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "storage",
@@ -175,24 +293,17 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "unseal",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:    "service-discovery",
 					Status:  diagnose.ErrorStatus,
-					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid:",
+					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid",
 					Warnings: []string{
 						diagnose.DirAccessErr,
 					},
@@ -210,11 +321,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "storage",
@@ -224,12 +332,53 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					},
 				},
 				{
-					Name:   "unseal",
+					Name:   "service-discovery",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "service-discovery",
+					Name:   "create-seal",
 					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-core",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						"TLS is disabled in a Listener config stanza.",
+					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
 				},
 			},
 		},
@@ -240,7 +389,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 		for _, tc := range cases {
 			tc := tc
-
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 				client, closer := testVaultServer(t)
@@ -253,6 +401,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				result := cmd.diagnose.Finalize(context.Background())
 
 				for i, exp := range tc.expected {
+					if i >= len(result.Children) {
+						t.Fatalf("there are at least %d test cases, but fewer actual results", i)
+					}
 					act := result.Children[i]
 					if err := compareResult(t, exp, act); err != nil {
 						t.Fatalf("%v", err)
