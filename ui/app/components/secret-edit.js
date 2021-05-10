@@ -115,12 +115,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canDelete: alias('updatePath.canDelete'),
-  canEdit: alias('updatePath.canUpdate'),
+  canUpdate: alias('updatePath.canUpdate'),
   //  ARG TODO covered by canDelete if they canDelete they can delete the version
   //  ARG TODO need to confirm still works for version 1.
   deleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.modelForData) return;
       let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/delete/${id}`,
@@ -133,6 +134,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   undeleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.modelForData) return;
+      if (!context.modelForData.id) return;
       let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/undelete/${id}`,
@@ -145,6 +148,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   destroyVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.modelForData) return;
+      if (!context.modelForData.id) return;
       let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/destroy/${id}`,
@@ -184,6 +189,17 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }),
 
+  isLatestVersion: computed('model.{currentVersion,selectedVersion}', function() {
+    let { model } = this;
+    if (!model) return;
+    let latestVersion = model.currentVersion;
+    let selectedVersion = model.selectedVersion.version;
+    if (latestVersion !== selectedVersion) {
+      return false;
+    }
+    return true;
+  }),
+
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
     return this.secretDataIsAdvanced || this.showAdvancedMode === false;
   }),
@@ -209,14 +225,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       return true;
     }
     return false;
-  }),
-
-  showUndeleteOption: computed('modelForData.{deleted,destroyed}', function() {
-    if (this.modelForData.deleted && !this.modelForData.destroyed) {
-      return true;
-    } else {
-      return false;
-    }
   }),
 
   transitionToRoute() {
@@ -445,27 +453,21 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     },
 
     handleDelete(deleteType) {
+      // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions'
       if (!deleteType) {
         return;
       }
-
       if (deleteType === 'destroy-all-versions') {
         let { id } = this.model;
         this.model.destroyRecord().then(() => {
           this.navToNearestAncestor.perform(id);
         });
       } else {
-        //  ARG STUCK on this.modelForData.id does not include version in this iteration
-        let [backend, id, version] = JSON.parse(this.modelForData.id);
-        if (!version) {
-          this.modelForData.id = [backend, id, this.modelForData.version];
-        }
-        console.log(this.modelForData.id, 'here');
         return this.store
           .adapterFor('secret-v2-version')
           .v2DeleteOperation(this.store, this.modelForData.id, deleteType)
           .then(() => {
-            // location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
+            location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
           });
       }
     },
