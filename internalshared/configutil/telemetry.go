@@ -14,7 +14,6 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -342,7 +341,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, nil, false, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)

@@ -359,11 +359,6 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	testCoreAddSecretMount(t, core, token)
 
 	t.Cleanup(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("panic closing core during cleanup", "panic", r)
-			}
-		}()
 		core.Shutdown()
 	})
 	return core, keys, token
@@ -1871,7 +1866,6 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 func (testCluster *TestCluster) setupClusterListener(
 	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
 	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
-
 	if coreConfig.ClusterAddr == "" {
 		return
 	}
@@ -2058,7 +2052,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 func (testCluster *TestCluster) getAPIClient(
 	t testing.T, opts *TestClusterOptions,
 	port int, tlsConfig *tls.Config) *api.Client {
-
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {

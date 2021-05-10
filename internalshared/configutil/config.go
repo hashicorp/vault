@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -100,43 +99,43 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "hsm", 2); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'hsm': %w", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'kms': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'kms': %w", err)
 		}
 	}
 
 	if o := list.Filter("entropy"); len(o.Items) > 0 {
 		if err := ParseEntropy(&result, o, "entropy"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'entropy': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'entropy': %w", err)
 		}
 	}
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		if err := ParseListeners(&result, o); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'listener': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'listener': %w", err)
 		}
 	}
 
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
 		if err := parseTelemetry(&result, o); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'telemetry': %w", err)
 		}
 	}
 
 	entConfig := &(result.EntSharedConfig)
 	if err := entConfig.ParseConfig(list); err != nil {
-		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
+		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
 	return &result, nil

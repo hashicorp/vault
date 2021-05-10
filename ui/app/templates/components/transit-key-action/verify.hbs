@@ -4,16 +4,14 @@
         <p>Check whether the provided signature is valid for the given data.</p>
       </div>
       <div class="field">
-        <label for="input" class="is-label">
-          Input
-        </label>
         <div class="control is-relative">
-          <IvyCodemirror @id="input" @value={{input}} @valueUpdated={{action (mut input)}} @options={{hash
-              lineNumbers=true
-              tabSize=2
-              mode='ruby'
-              theme='hashi'
-            }} @data-test-transit-input="input" />
+          <JsonEditor
+              @title="Input"
+              @value={{input}} @valueUpdated={{action (mut input)}} 
+              @options={{hash
+                mode='ruby'
+              }} 
+              @data-test-transit-input="input" />
         </div>
       </div>
       <div class="field">
@@ -115,25 +113,26 @@
           <div class="column is-two-thirds is-flex-column">
             {{#if (or (and verification (eq verification 'HMAC')) hmac)}}
               <div class="field is-flex-column is-flex-1">
-                <label for="hmac" class="is-label">HMAC</label>
                 <div class="control is-flex-column is-flex-1">
-                  <IvyCodemirror @id="hmac" @value={{hmac}} @valueUpdated={{action (mut hmac)}} @options={{hash
-                      lineNumbers=true
-                      tabSize=2
-                      mode='ruby'
-                      theme='hashi'
-                    }} />
+                  <JsonEditor
+                      @title="HMAC"
+                      @value={{hmac}} 
+                      @valueUpdated={{action (mut hmac)}} 
+                      @options={{hash
+                        mode='ruby'
+                      }} 
+                  />
                 </div>
               </div>
             {{else}}
               <div class="field is-flex-column is-flex-1">
-                <label for="signature" class="is-label">Signature</label>
                 <div class="control is-flex-column is-flex-1">
-                  <IvyCodemirror @id="signature" @value={{signature}} @valueUpdated={{action (mut signature)}} @options={{hash
-                      lineNumbers=true
-                      tabSize=2
+                  <JsonEditor
+                  @title="Signature"
+                  @value={{signature}} 
+                  @valueUpdated={{action (mut signature)}} 
+                  @options={{hash
                       mode='ruby'
-                      theme='hashi'
                     }} />
                 </div>
               </div>
@@ -142,14 +141,15 @@
         </div>
       {{else}}
         <div class="field">
-          <label for="hmac" class="is-label">HMAC</label>
           <div class="control">
-            <IvyCodemirror @id="hmac" @value={{hmac}} @valueUpdated={{action (mut hmac)}} @options={{hash
-                lineNumbers=true
-                tabSize=2
-                mode='ruby'
-                theme='hashi'
-              }} />
+            <JsonEditor
+                @title="HMAC"
+                @value={{hmac}} 
+                @valueUpdated={{action (mut hmac)}} 
+                @options={{hash
+                  mode='ruby'
+                }} 
+            />
           </div>
         </div>
         <div class="field">
