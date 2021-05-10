@@ -265,7 +265,7 @@ func (r *revocationJob) OnFailure(err error) {
 		return
 	}
 
-	pending.ExpireTimeUnix = time.Now().Add(revokeExponentialBackoff(pending.revokesAttempted)).Unix()
+	pending.ExpireTimeUnix = uint64(time.Now().Add(revokeExponentialBackoff(pending.revokesAttempted)).Unix())
 	if err := r.m.leaseStore.Update(pending); err != nil {
 		// TODO handle error
 		panic(err)
@@ -2356,7 +2356,7 @@ func (m *ExpirationManager) markLeaseAsZombie(ctx context.Context, le *leaseEntr
 		errStr = errStr[:maxZombieErrorLength]
 	}
 
-	le.RevokeErr = true
+	le.RevokeErr = errStr
 	m.persistEntry(ctx, le)
 
 	m.zombies.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
@@ -2395,7 +2395,7 @@ type leaseEntry struct {
 	// unlikely to be automatically resolved. The first time this happens,
 	// RevokeErr will be set, thus marking this leaseEntry as a zombie that will
 	// have to be manually removed.
-	RevokeErr bool `json:"revokeErr"`
+	RevokeErr string `json:"revokeErr"`
 }
 
 // encode is used to JSON encode the lease entry
@@ -2446,7 +2446,7 @@ func (le *leaseEntry) nonexpiringToken() bool {
 
 // TODO maybe lock RevokeErr once this goes in: https://github.com/hashicorp/vault/pull/11122
 func (le *leaseEntry) isZombie() bool {
-	return le.RevokeErr
+	return le.RevokeErr != ""
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry

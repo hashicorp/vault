@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -31,7 +32,9 @@ func newLeaseStore() (*LeaseStore, error) {
 type memDBLeaseInfo struct {
 	LeaseID string
 
-	ExpireTimeUnix int64
+	// TODO there is a bug in memdb where int64 indexes are not sorted
+	// correctly. We'll use uint64 for now which do sort correctly.
+	ExpireTimeUnix uint64
 	EntityID       string
 	Irrevocable    bool
 
@@ -50,7 +53,7 @@ func newMemDBLeaseInfo(le *leaseEntry) *memDBLeaseInfo {
 	ret := &memDBLeaseInfo{
 		LeaseID:     le.LeaseID,
 		EntityID:    le.EntityID,
-		Irrevocable: le.RevokeErr,
+		Irrevocable: le.RevokeErr != "",
 
 		issueTime:       le.IssueTime,
 		expireTime:      le.ExpireTime,
@@ -59,7 +62,14 @@ func newMemDBLeaseInfo(le *leaseEntry) *memDBLeaseInfo {
 
 	if !le.ExpireTime.IsZero() {
 		// TODO should we use UnixNano?
-		ret.ExpireTimeUnix = le.ExpireTime.Unix()
+		unix := le.ExpireTime.Unix()
+		// If we are negative for whatever reason set to 1 which will
+		// immediately expire
+		if unix < 0 {
+			unix = 1
+		}
+
+		ret.ExpireTimeUnix = uint64(unix)
 	}
 
 	if le.Secret != nil {
@@ -197,8 +207,13 @@ func (ls *LeaseStore) StartExpirations(ctx context.Context, expireFunc ExpireLea
 		txn := ls.db.Txn(true)
 		defer txn.Abort()
 
-		currentTime := time.Now().Unix()
-		it, err := txn.LowerBound("leases", "expiration", currentTime)
+		currentTime := uint64(time.Now().Unix())
+		fmt.Println("======== ", currentTime)
+
+		// We need to itterate from 1 -> currentTime so that items are revoked
+		// in cronological order. The seek to '1' should be relatively fast, but
+		// we should TODO validate that.
+		it, err := txn.LowerBound("leases", "expiration", uint64(1))
 		if err != nil {
 			// TODO
 			panic(err)
@@ -207,18 +222,25 @@ func (ls *LeaseStore) StartExpirations(ctx context.Context, expireFunc ExpireLea
 		leasesToExpire := []*memDBLeaseInfo{}
 		for obj := it.Next(); obj != nil; obj = it.Next() {
 			li := obj.(*memDBLeaseInfo)
-			fmt.Printf("  %s is expired: %d\n", li.LeaseID, li.ExpireTimeUnix)
+
+			if li.ExpireTimeUnix > currentTime {
+				break
+			}
+
+			//	fmt.Printf("  %s is expired: %d\n", li.LeaseID, li.ExpireTimeUnix)
 
 			// Clone and update expire time to 0, this will prevent us from
-			// re-capturing the same leases in the next timeframe.
-			clone := li.Clone()
+			// re-capturing the same leases in the next timeframe
+			leasesToExpire = append(leasesToExpire, li)
+		}
+
+		for _, l := range leasesToExpire {
+			clone := l.Clone()
 			clone.ExpireTimeUnix = 0
 			if err := txn.Insert("leases", clone); err != nil {
 				// TODO
 				panic(err)
 			}
-
-			leasesToExpire = append(leasesToExpire, clone)
 		}
 
 		txn.Commit()
@@ -227,7 +249,7 @@ func (ls *LeaseStore) StartExpirations(ctx context.Context, expireFunc ExpireLea
 			// TODO populate namespace
 			// TODO should we run this in a go routine? the current default strategy
 			// should be non-blocking...
-			go expireFunc(ctx, m, li.LeaseID, nil)
+			expireFunc(ctx, m, li.LeaseID, nil)
 		}
 
 		return len(leasesToExpire)
@@ -241,6 +263,7 @@ func (ls *LeaseStore) StartExpirations(ctx context.Context, expireFunc ExpireLea
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			fmt.Println("=========== Tick")
 			expireLeases()
 		}
 	}
@@ -256,7 +279,7 @@ func schema() *memdb.DBSchema {
 					"id": {
 						Name:    "id",
 						Unique:  true,
-						Indexer: &memdb.StringFieldIndex{Field: "LeaseID"},
+						Indexer: leaseIDIndexer{},
 					},
 					"irrevocable": {
 						Name:    "irrevocable",
@@ -281,16 +304,50 @@ func schema() *memdb.DBSchema {
 	}
 }
 
+const null = "\x00"
+
+type leaseIDIndexer struct{}
+
+func (f leaseIDIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+	strArg, ok := args[0].(string)
+	if !ok {
+		return nil, errors.New("arg is not a string")
+	}
+
+	buf := bytes.Buffer{}
+	buf.WriteString(strArg)
+	buf.WriteString(null)
+
+	return buf.Bytes(), nil
+}
+
+func (f leaseIDIndexer) FromObject(raw interface{}) (bool, []byte, error) {
+	info, ok := raw.(*memDBLeaseInfo)
+	if !ok {
+		return false, nil, errors.New("invalid type for index")
+	}
+
+	if info.LeaseID == "" {
+		return false, nil, errors.New("empty leaseID string")
+	}
+
+	buf := bytes.Buffer{}
+	buf.WriteString(info.LeaseID)
+	buf.WriteString(null)
+
+	return true, buf.Bytes(), nil
+}
+
 type expirationIndexer struct{}
 
 func (f expirationIndexer) FromArgs(args ...interface{}) ([]byte, error) {
-	intArg, ok := args[0].(int64)
+	intArg, ok := args[0].(uint64)
 	if !ok {
-		return nil, errors.New("arg is not int64")
+		return nil, errors.New("arg is not uint64")
 	}
 
-	buf := make([]byte, binary.MaxVarintLen64)
-	binary.PutVarint(buf, intArg)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, intArg)
 
 	return buf, nil
 }
@@ -304,12 +361,14 @@ func (f expirationIndexer) FromObject(raw interface{}) (bool, []byte, error) {
 	// We want to omit non-expiring leases and leases we have already sent to
 	// the expireFunc. The expire time will be reset if there are any errors and
 	// the lease needs to be retried.
-	if info.ExpireTimeUnix <= 0 {
+	// TODO: Let's make this a pointer to a uint64. That way 'nil' can be the
+	// unset case and we can handle actual 0 values.
+	if info.ExpireTimeUnix == 0 {
 		return false, nil, nil
 	}
 
-	buf := make([]byte, binary.MaxVarintLen64)
-	binary.PutVarint(buf, info.ExpireTimeUnix)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, info.ExpireTimeUnix)
 
 	return true, buf, nil
 }
