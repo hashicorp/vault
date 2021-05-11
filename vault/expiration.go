@@ -583,12 +583,12 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 
 		le, err := m.loadEntry(ctx, leaseID)
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to load the lease ID %q: {{err}}", leaseID), err))
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to load the lease ID %q: %w", leaseID, err))
 			return
 		}
 
 		if le == nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("nil entry for lease ID %q: {{err}}", leaseID), err))
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("nil entry for lease ID %q: %w", leaseID, err))
 			return
 		}
 
@@ -609,7 +609,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 			lock.RUnlock()
 
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token: {{err}}", err))
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup token: %w", err))
 				return
 			}
 
@@ -639,7 +639,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 			// again
 			err = m.revokeCommon(ctx, leaseID, true, true)
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke an invalid lease with ID %q: {{err}}", leaseID), err))
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke an invalid lease with ID %q: %w", leaseID, err))
 				return
 			}
 			revokedCount++
@@ -1032,7 +1032,7 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 	// Lookup the leases
 	existing, err := m.lookupLeasesByToken(tokenCtx, te)
 	if err != nil {
-		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
+		return fmt.Errorf("failed to scan for leases: %w", err)
 	}
 
 	// Revoke all the keys
@@ -1101,7 +1101,7 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 		if err == nil && le != nil {
 			if sync {
 				if err := m.revokeCommon(ctx, prefix, force, false); err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
+					return fmt.Errorf("failed to revoke %q: %w", prefix, err)
 				}
 				return nil
 			}
@@ -1119,7 +1119,7 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 	sub := view.SubView(prefix)
 	existing, err := logical.CollectKeys(ctx, sub)
 	if err != nil {
-		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
+		return fmt.Errorf("failed to scan for leases: %w", err)
 	}
 
 	// Revoke all the keys
@@ -1128,11 +1128,11 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 		switch {
 		case sync:
 			if err := m.revokeCommon(ctx, leaseID, force, false); err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+				return fmt.Errorf("failed to revoke %q (%d / %d): %w", leaseID, idx+1, len(existing), err)
 			}
 		default:
 			if err := m.LazyRevoke(ctx, leaseID); err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+				return fmt.Errorf("failed to revoke %q (%d / %d): %w", leaseID, idx+1, len(existing), err)
 			}
 		}
 	}
@@ -1443,17 +1443,17 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 			revokeCtx := namespace.ContextWithNamespace(m.quitContext, ns)
 			revResp, err := m.router.Route(revokeCtx, logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional internal error was encountered revoking the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional internal error was encountered revoking the newly-generated secret: %w", err))
 			} else if revResp != nil && revResp.IsError() {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", revResp.Error()))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional error was encountered revoking the newly-generated secret: %w", revResp.Error()))
 			}
 
 			if err := m.deleteEntry(ctx, le); err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional error was encountered deleting any lease associated with the newly-generated secret: %w", err))
 			}
 
 			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional error was encountered removing lease indexes associated with the newly-generated secret: %w", err))
 			}
 		}
 	}()
@@ -1791,7 +1791,7 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		}
 
 		if err := m.tokenStore.revokeTree(ctx, le); err != nil {
-			return errwrap.Wrapf("failed to revoke token: {{err}}", err)
+			return fmt.Errorf("failed to revoke token: %w", err)
 		}
 
 		return nil
@@ -1828,7 +1828,7 @@ func (m *ExpirationManager) renewEntry(ctx context.Context, le *leaseEntry, incr
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(nsCtx, req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to renew entry: resp: %#v err: {{err}}", resp), err)
+		return nil, fmt.Errorf("failed to renew entry: resp: %#v err: %w", resp, err)
 	}
 	return resp, nil
 }
@@ -1856,7 +1856,7 @@ func (m *ExpirationManager) renewAuthEntry(ctx context.Context, req *logical.Req
 	authReq.Connection = req.Connection
 	resp, err := m.router.Route(nsCtx, authReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to renew entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to renew entry: %w", err)
 	}
 	return resp, nil
 }
@@ -1902,14 +1902,14 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	view := m.leaseView(ns)
 	out, err := view.Get(ctx, leaseID)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read lease entry %s: {{err}}", leaseID), err)
+		return nil, fmt.Errorf("failed to read lease entry %s: %w", leaseID, err)
 	}
 	if out == nil {
 		return nil, nil
 	}
 	le, err := decodeLeaseEntry(out.Value)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
+		return nil, fmt.Errorf("failed to decode lease entry %s: %w", leaseID, err)
 	}
 	le.namespace = ns
 
@@ -1943,7 +1943,7 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 	// Encode the entry
 	buf, err := le.encode()
 	if err != nil {
-		return errwrap.Wrapf("failed to encode lease entry: {{err}}", err)
+		return fmt.Errorf("failed to encode lease entry: %w", err)
 	}
 
 	// Write out to the view
@@ -1957,7 +1957,7 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 
 	view := m.leaseView(le.namespace)
 	if err := view.Put(ctx, &ent); err != nil {
-		return errwrap.Wrapf("failed to persist lease entry: {{err}}", err)
+		return fmt.Errorf("failed to persist lease entry: %w", err)
 	}
 	return nil
 }
@@ -1966,7 +1966,7 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 func (m *ExpirationManager) deleteEntry(ctx context.Context, le *leaseEntry) error {
 	view := m.leaseView(le.namespace)
 	if err := view.Delete(ctx, le.LeaseID); err != nil {
-		return errwrap.Wrapf("failed to delete lease entry: {{err}}", err)
+		return fmt.Errorf("failed to delete lease entry: %w", err)
 	}
 	return nil
 }
@@ -2003,7 +2003,7 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 	}
 	tokenView := m.tokenIndexView(tokenNS)
 	if err := tokenView.Put(ctx, &ent); err != nil {
-		return errwrap.Wrapf("failed to persist lease index entry: {{err}}", err)
+		return fmt.Errorf("failed to persist lease index entry: %w", err)
 	}
 	return nil
 }
@@ -2081,7 +2081,7 @@ func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEnt
 	key := saltedID + "/" + leaseSaltedID
 	tokenView := m.tokenIndexView(tokenNS)
 	if err := tokenView.Delete(ctx, key); err != nil {
-		return errwrap.Wrapf("failed to delete lease index entry: {{err}}", err)
+		return fmt.Errorf("failed to delete lease index entry: %w", err)
 	}
 	return nil
 }
@@ -2173,7 +2173,7 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 	prefix := saltedID + "/"
 	subKeys, err := tokenView.List(ctx, prefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to list leases: {{err}}", err)
+		return nil, fmt.Errorf("failed to list leases: %w", err)
 	}
 
 	// Read each index entry
@@ -2181,7 +2181,7 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 	for _, sub := range subKeys {
 		out, err := tokenView.Get(ctx, prefix+sub)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read lease index: {{err}}", err)
+			return nil, fmt.Errorf("failed to read lease index: %w", err)
 		}
 		if out == nil {
 			continue
@@ -2198,13 +2198,13 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 		prefix := saltedID + "/"
 		subKeys, err := tokenView.List(ctx, prefix)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to list leases on root namespace: {{err}}", err)
+			return nil, fmt.Errorf("failed to list leases on root namespace: %w", err)
 		}
 
 		for _, sub := range subKeys {
 			out, err := tokenView.Get(ctx, prefix+sub)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to read lease index on root namespace: {{err}}", err)
+				return nil, fmt.Errorf("failed to read lease index on root namespace: %w", err)
 			}
 			if out == nil {
 				continue

@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
@@ -95,7 +94,7 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 func (cl *Listener) SetAdvertiseAddr(addr string) error {
 	u, err := url.ParseRequestURI(addr)
 	if err != nil {
-		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
+		return fmt.Errorf("failed to parse advertise address: %w", err)
 	}
 	cl.advertise = &NetAddr{
 		Host: u.Host,

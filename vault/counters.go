@@ -2,11 +2,11 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -58,7 +58,7 @@ func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]Dat
 
 	datepaths, err := view.List(ctx, "")
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
+		return nil, fmt.Errorf("failed to read request counters: %w", err)
 	}
 
 	var all []DatedRequestCounter
@@ -66,7 +66,7 @@ func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]Dat
 	for _, datepath := range datepaths {
 		datesubpaths, err := view.List(ctx, datepath)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
+			return nil, fmt.Errorf("failed to read request counters: %w", err)
 		}
 		sort.Strings(datesubpaths)
 		for _, datesubpath := range datesubpaths {
@@ -123,7 +123,7 @@ func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*Reque
 
 	out, err := view.Get(ctx, datepath)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
+		return nil, fmt.Errorf("failed to read request counters: %w", err)
 	}
 	if out == nil {
 		return nil, nil
@@ -160,11 +160,11 @@ func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) er
 	}
 	entry, err := logical.StorageEntryJSON(writeDatePath, localCounters)
 	if err != nil {
-		return errwrap.Wrapf("failed to create request counters entry: {{err}}", err)
+		return fmt.Errorf("failed to create request counters entry: %w", err)
 	}
 
 	if err := view.Put(ctx, entry); err != nil {
-		return errwrap.Wrapf("failed to save request counters: {{err}}", err)
+		return fmt.Errorf("failed to save request counters: %w", err)
 	}
 
 	if shouldReset {
