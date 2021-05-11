@@ -327,7 +327,7 @@ func (s *fseEncoder) normalizeCount(length int) error {
 		if err != nil {
 			return err
 		}
-		if debug {
+		if debugAsserts {
 			err = s.validateNorm()
 			if err != nil {
 				return err
@@ -336,7 +336,7 @@ func (s *fseEncoder) normalizeCount(length int) error {
 		return s.buildCTable()
 	}
 	s.norm[largest] += stillToDistribute
-	if debug {
+	if debugAsserts {
 		err := s.validateNorm()
 		if err != nil {
 			return err
@@ -619,7 +619,7 @@ func (s *fseEncoder) writeCount(out []byte) ([]byte, error) {
 func (s *fseEncoder) bitCost(symbolValue uint8, accuracyLog uint32) uint32 {
 	minNbBits := s.ct.symbolTT[symbolValue].deltaNbBits >> 16
 	threshold := (minNbBits + 1) << 16
-	if debug {
+	if debugAsserts {
 		if !(s.actualTableLog < 16) {
 			panic("!s.actualTableLog < 16")
 		}
@@ -633,7 +633,7 @@ func (s *fseEncoder) bitCost(symbolValue uint8, accuracyLog uint32) uint32 {
 	// linear interpolation (very approximate)
 	normalizedDeltaFromThreshold := (deltaFromThreshold << accuracyLog) >> s.actualTableLog
 	bitMultiplier := uint32(1) << accuracyLog
-	if debug {
+	if debugAsserts {
 		if s.ct.symbolTT[symbolValue].deltaNbBits+tableSize > threshold {
 			panic("s.ct.symbolTT[symbolValue].deltaNbBits+tableSize > threshold")
 		}

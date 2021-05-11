@@ -179,13 +179,13 @@ TEXT ·writeBlocks(SB), NOSPLIT, $0-40
 	MOVQ ·prime2v(SB), R14
 
 	// Load slice.
-	MOVQ b_base+8(FP), CX
-	MOVQ b_len+16(FP), DX
+	MOVQ arg1_base+8(FP), CX
+	MOVQ arg1_len+16(FP), DX
 	LEAQ (CX)(DX*1), BX
 	SUBQ $32, BX
 
 	// Load vN from d.
-	MOVQ d+0(FP), AX
+	MOVQ arg+0(FP), AX
 	MOVQ 0(AX), R8   // v1
 	MOVQ 8(AX), R9   // v2
 	MOVQ 16(AX), R10 // v3
@@ -209,7 +209,7 @@ blockLoop:
 	MOVQ R11, 24(AX)
 
 	// The number of bytes written is CX minus the old base pointer.
-	SUBQ b_base+8(FP), CX
+	SUBQ arg1_base+8(FP), CX
 	MOVQ CX, ret+32(FP)
 
 	RET

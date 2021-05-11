@@ -129,6 +129,8 @@ github.com/aliyun/alibaba-cloud-sdk-go/services/sts
 # github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 ## explicit
 github.com/aliyun/aliyun-oss-go-sdk/oss
+# github.com/andybalholm/brotli v1.0.0
+github.com/andybalholm/brotli
 # github.com/apache/arrow/go/arrow v0.0.0-20200601151325-b2287a20f230
 github.com/apache/arrow/go/arrow
 github.com/apache/arrow/go/arrow/array
@@ -349,7 +351,6 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
 # github.com/dsnet/compress v0.0.1
-## explicit
 github.com/dsnet/compress
 github.com/dsnet/compress/bzip2
 github.com/dsnet/compress/bzip2/internal/sais
@@ -868,12 +869,16 @@ github.com/keybase/go-crypto/openpgp/errors
 github.com/keybase/go-crypto/openpgp/packet
 github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
-# github.com/klauspost/compress v1.9.5
+# github.com/klauspost/compress v1.10.10
+github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
+github.com/klauspost/compress/gzip
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/snappy
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
+# github.com/klauspost/pgzip v1.2.4
+github.com/klauspost/pgzip
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pretty v0.2.1
@@ -900,9 +905,9 @@ github.com/mattn/go-isatty
 github.com/mattn/go-shellwords
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/mholt/archiver v3.1.1+incompatible
+# github.com/mholt/archiver/v3 v3.5.0
 ## explicit
-github.com/mholt/archiver
+github.com/mholt/archiver/v3
 # github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 ## explicit
 github.com/michaelklishin/rabbit-hole
@@ -957,7 +962,6 @@ github.com/ncw/swift
 # github.com/nicolai86/scaleway-sdk v1.10.2-0.20180628010248-798f60e20bb2
 github.com/nicolai86/scaleway-sdk
 # github.com/nwaples/rardecode v1.1.0
-## explicit
 github.com/nwaples/rardecode
 # github.com/oklog/run v1.0.0
 ## explicit
@@ -1048,6 +1052,12 @@ github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.5.2+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
+# github.com/pierrec/lz4/v4 v4.0.3
+github.com/pierrec/lz4/v4
+github.com/pierrec/lz4/v4/internal/lz4block
+github.com/pierrec/lz4/v4/internal/lz4errors
+github.com/pierrec/lz4/v4/internal/lz4stream
+github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 github.com/pkg/browser
 # github.com/pkg/errors v0.9.1
@@ -1151,7 +1161,6 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ulikunitz/xz v0.5.7
-## explicit
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
@@ -1179,7 +1188,6 @@ github.com/xdg/scram
 ## explicit
 github.com/xdg/stringprep
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
-## explicit
 github.com/xi2/xz
 # github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da
 ## explicit
