@@ -3,7 +3,7 @@ package configutil
 import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
-	"github.com/hashicorp/hcl/json/token"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
