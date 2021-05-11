@@ -39,8 +39,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   isWrapping: false,
   showWrapButton: not('wrappedData'),
 
-  showDeleteModal: false,
-
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
   onRefresh() {},
@@ -117,47 +115,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   canDelete: alias('updatePath.canDelete'),
   canUpdate: alias('updatePath.canUpdate'),
 
-  deleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      if (!context.modelForData) return;
-      let [backend, id] = JSON.parse(context.modelForData.id);
-      return {
-        id: `${backend}/delete/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canDeleteAnyVersion: alias('deleteVersionPath.canUpdate'),
-
-  undeleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      if (!context.modelForData) return;
-      if (!context.modelForData.id) return;
-      let [backend, id] = JSON.parse(context.modelForData.id);
-      return {
-        id: `${backend}/undelete/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
-
-  destroyVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      if (!context.modelForData || !context.modelForData.id) return;
-
-      let [backend, id] = JSON.parse(context.modelForData.id);
-      return {
-        id: `${backend}/destroy/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
-
   v2UpdatePath: maybeQueryRecord(
     'capabilities',
     context => {
@@ -176,19 +133,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canEditV2Secret: alias('v2UpdatePath.canUpdate'),
-
-  canDestroyAllVersions: alias('v2UpdatePath.canDelete'),
-
-  isLatestVersion: computed('model.{currentVersion,selectedVersion}', function() {
-    let { model } = this;
-    if (!model) return;
-    let latestVersion = model.currentVersion;
-    let selectedVersion = model.selectedVersion.version;
-    if (latestVersion !== selectedVersion) {
-      return false;
-    }
-    return true;
-  }),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
@@ -450,26 +394,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     formatJSON() {
       this.set('codemirrorString', this.secretData.toJSONString(true));
-    },
-
-    handleDelete(deleteType) {
-      // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions'
-      if (!deleteType) {
-        return;
-      }
-      if (deleteType === 'destroy-all-versions') {
-        let { id } = this.model;
-        this.model.destroyRecord().then(() => {
-          this.navToNearestAncestor.perform(id);
-        });
-      } else {
-        return this.store
-          .adapterFor('secret-v2-version')
-          .v2DeleteOperation(this.store, this.modelForData.id, deleteType)
-          .then(() => {
-            location.reload();
-          });
-      }
     },
   },
 });
