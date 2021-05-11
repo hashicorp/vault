@@ -14,6 +14,7 @@ export default class SecretDeleteMenu extends Component {
   @maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.args || !context.modelForData || !context.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/delete/${id}`,
@@ -27,6 +28,7 @@ export default class SecretDeleteMenu extends Component {
   @maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/undelete/${id}`,
@@ -40,6 +42,7 @@ export default class SecretDeleteMenu extends Component {
   @maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/destroy/${id}`,
@@ -53,6 +56,7 @@ export default class SecretDeleteMenu extends Component {
   @maybeQueryRecord(
     'capabilities',
     context => {
+      if (!context.args.model || !context.args.model.engine || !context.args.model.id) return;
       let backend = context.args.model.engine.id;
       let id = context.args.model.id;
       return {
