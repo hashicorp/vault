@@ -321,6 +321,9 @@ func (cl *Listener) Run(ctx context.Context) error {
 					time.Sleep(loopDelay)
 					continue
 				}
+				// No error, reset loop delay
+				loopDelay = 0
+
 				if conn == nil {
 					continue
 				}
