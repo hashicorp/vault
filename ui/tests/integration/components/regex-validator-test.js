@@ -36,18 +36,18 @@ module('Integration | Component | regex-validator', function(hooks) {
       .dom('[data-test-regex-validation-message]')
       .doesNotExist('Validation message does not show if test string is empty');
 
-    await fillIn('input#example-testval', '123a');
+    await fillIn('[data-test-input="example-testval"]', '123a');
     assert.dom('[data-test-regex-validation-message]').exists('Validation message shows after input filled');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText("Your regex doesn't match the subject string", 'Shows error when regex does not match string');
 
-    await fillIn('input#example-testval', '1234');
+    await fillIn('[data-test-input="example-testval"]', '1234');
     assert
       .dom('[data-test-inline-success-message]')
       .hasText('Your regex matches the subject string', 'Shows success when regex matches');
 
-    await fillIn('input#example-testval', '12345');
+    await fillIn('[data-test-input="example-testval"]', '12345');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
