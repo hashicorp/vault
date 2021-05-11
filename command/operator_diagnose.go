@@ -2,15 +2,20 @@ package command
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/docker/docker/pkg/ioutils"
+	"github.com/hashicorp/vault/sdk/version"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
-	"github.com/hashicorp/vault/sdk/version"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
@@ -37,7 +42,6 @@ type OperatorDiagnoseCommand struct {
 	reloadFuncs     *map[string][]reloadutil.ReloadFunc
 	startedCh       chan struct{} // for tests
 	reloadedCh      chan struct{} // for tests
-	skipEndEnd      bool          // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -95,6 +99,12 @@ func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
 		Default: false,
 		Usage:   "Dump all information collected by Diagnose.",
 	})
+
+	f.StringVar(&StringVar{
+		Name:   "format",
+		Target: &c.flagFormat,
+		Usage:  "The output format",
+	})
 	return set
 }
 
@@ -120,20 +130,39 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
-	c.diagnose = diagnose.New()
 	return c.RunWithParsedFlags()
 }
 
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
+
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
 	}
 
-	c.UI.Output(version.GetVersion().FullVersionNumber(true))
+	if c.diagnose == nil {
+		if c.flagFormat == "json" {
+			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+		} else {
+			c.UI.Output(version.GetVersion().FullVersionNumber(true))
+			c.diagnose = diagnose.New(os.Stdout)
+		}
+	}
 	ctx := diagnose.Context(context.Background(), c.diagnose)
 	err := c.offlineDiagnostics(ctx)
 
+	results := c.diagnose.Finalize(ctx)
+	if c.flagFormat == "json" {
+		resultsJS, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			return 2
+		}
+		c.UI.Output(string(resultsJS))
+	} else {
+		c.UI.Output("\nResults:")
+		results.Write(os.Stdout)
+	}
 	if err != nil {
 		return 1
 	}
@@ -165,22 +194,18 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
 
-	// OS Specific checks
-	// Check open file count
-	diagnose.OSChecks(ctx)
-
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		return diagnose.SpotError(ctx, "parse-config", err)
+		return diagnose.SpotError(ctx, "parse-config", err, diagnose.MainSection)
 	} else {
-		diagnose.SpotOk(ctx, "parse-config", "")
+		diagnose.SpotOk(ctx, "parse-config", "", diagnose.MainSection)
 	}
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
 	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		disableClustering := config.HAStorage.DisableClustering
+		disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
 		status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
@@ -217,38 +242,33 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 
 			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-				Listener: ln.Listener,
-				Config:   ln.Config,
+				Listener: ln.
+					Listener,
+				Config: ln.Config,
 			})
 		}
+		time.Sleep(1 * time.Second)
 		return diagnose.ListenerChecks(sanitizedListeners)
-	}); err != nil {
+	}, diagnose.MainSection); err != nil {
 		return err
 	}
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
+	// TODO: check for storage backend
+
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		b, err := server.setupStorage(config)
+		time.Sleep(1 * time.Second)
+		_, err = server.setupStorage(config)
 		if err != nil {
 			return err
-		}
-
-		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
-		if dirAccess != "" {
-			diagnose.Warn(ctx, dirAccess)
 		}
 
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 			if err != nil {
 				return err
-			}
-
-			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
 			}
 		}
 
@@ -258,37 +278,22 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return err
 			}
 		}
-
-		// Attempt to use storage backend
-		if !c.skipEndEnd {
-			err = diagnose.StorageEndToEndLatencyCheck(ctx, b)
-			if err != nil {
-				return err
-			}
-		}
-
 		return nil
-	}); err != nil {
+	}, diagnose.MainSection); err != nil {
 		return err
 	}
 
 	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
-		srConfig := config.ServiceRegistration.Config
+		time.Sleep(1 * time.Second)
 		// Initialize the Service Discovery, if there is one
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-			// setupStorage populates the srConfig, so no nil checks are necessary.
-			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
-			}
-
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
-	})
+	}, diagnose.MainSection)
 }

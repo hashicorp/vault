@@ -33,7 +33,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 			},
 		},
 	}
-	sess := New()
+	sess := New(os.Stdout)
 	ctx := Context(context.Background(), sess)
 
 	func() {
@@ -48,7 +48,6 @@ func TestDiagnoseOtelResults(t *testing.T) {
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
 	}
-	results.Write(os.Stdout)
 }
 
 const coffeeLeft = 3

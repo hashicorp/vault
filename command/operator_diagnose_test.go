@@ -5,6 +5,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -17,11 +18,10 @@ func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
 
 	ui := cli.NewMockUi()
 	return &OperatorDiagnoseCommand{
-		diagnose: diagnose.New(),
+		diagnose: diagnose.New(ioutil.Discard),
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
-		skipEndEnd: true,
 	}
 }
 
@@ -150,9 +150,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
-					Warnings: []string{
-						diagnose.AddrDNExistErr,
-					},
 				},
 			},
 		},
@@ -181,39 +178,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Name:    "service-discovery",
 					Status:  diagnose.ErrorStatus,
 					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid:",
-					Warnings: []string{
-						diagnose.DirAccessErr,
-					},
-				},
-			},
-		},
-		{
-			"diagnose_direct_storage_access",
-			[]string{
-				"-config", "./server/test-fixtures/diagnose_ok_storage_direct_access.hcl",
-			},
-			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						diagnose.DirAccessErr,
-					},
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
 				},
 			},
 		},
@@ -252,10 +216,6 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 		return fmt.Errorf("names mismatch: %s vs %s", exp.Name, act.Name)
 	}
 	if exp.Status != act.Status {
-		if act.Status != diagnose.OkStatus {
-			return fmt.Errorf("section %s, status mismatch: %s vs %s, got error %s", exp.Name, exp.Status, act.Status, act.Message)
-
-		}
 		return fmt.Errorf("section %s, status mismatch: %s vs %s", exp.Name, exp.Status, act.Status)
 	}
 	if exp.Message != "" && exp.Message != act.Message && !strings.Contains(act.Message, exp.Message) {

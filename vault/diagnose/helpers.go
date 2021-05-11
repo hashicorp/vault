@@ -2,8 +2,7 @@ package diagnose
 
 import (
 	"context"
-	"fmt"
-	"time"
+	"io"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -22,6 +21,10 @@ const (
 	messageKey              = attribute.Key("message")
 )
 
+var (
+	MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
+)
+
 var diagnoseSession = struct{}{}
 var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
 
@@ -34,8 +37,8 @@ type Session struct {
 // New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
 // synchronously receives and tracks OpenTelemetry spans in order to provide a tree structure of results
 // when the outermost span ends.
-func New() *Session {
-	tc := NewTelemetryCollector()
+func New(w io.Writer) *Session {
+	tc := NewTelemetryCollector(w)
 	//so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -95,30 +98,30 @@ func Warn(ctx context.Context, msg string) {
 
 // SpotOk adds an Ok result without adding a new Span.  This should be used for instantaneous checks with no
 // possible sub-spans
-func SpotOk(ctx context.Context, checkName, message string) {
-	addSpotCheckResult(ctx, spotCheckOkEventName, checkName, message)
+func SpotOk(ctx context.Context, checkName, message string, options ...trace.EventOption) {
+	addSpotCheckResult(ctx, spotCheckOkEventName, checkName, message, options...)
 }
 
 // SpotWarn adds a Warning result without adding a new Span.  This should be used for instantaneous checks with no
 // possible sub-spans
-func SpotWarn(ctx context.Context, checkName, message string) {
-	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message)
+func SpotWarn(ctx context.Context, checkName, message string, options ...trace.EventOption) {
+	addSpotCheckResult(ctx, spotCheckWarnEventName, checkName, message, options...)
 }
 
 // SpotError adds an Error result without adding a new Span.  This should be used for instantaneous checks with no
 // possible sub-spans
-func SpotError(ctx context.Context, checkName string, err error) error {
+func SpotError(ctx context.Context, checkName string, err error, options ...trace.EventOption) error {
 	var message string
 	if err != nil {
 		message = err.Error()
 	}
-	addSpotCheckResult(ctx, spotCheckErrorEventName, checkName, message)
+	addSpotCheckResult(ctx, spotCheckErrorEventName, checkName, message, options...)
 	return err
 }
 
-func addSpotCheckResult(ctx context.Context, eventName, checkName, message string) {
+func addSpotCheckResult(ctx context.Context, eventName, checkName, message string, options ...trace.EventOption) {
 	span := trace.SpanFromContext(ctx)
-	attrs := []trace.EventOption{trace.WithAttributes(nameKey.String(checkName))}
+	attrs := append(options, trace.WithAttributes(nameKey.String(checkName)))
 	if message != "" {
 		attrs = append(attrs, trace.WithAttributes(messageKey.String(message)))
 	}
@@ -147,23 +150,4 @@ func Test(ctx context.Context, spanName string, function func(context.Context) e
 		span.SetStatus(codes.Error, err.Error())
 	}
 	return err
-}
-
-// WithTimeout wraps a context consuming function, and when called, returns an error if the sub-function does not
-// complete within the timeout, e.g.
-//
-// diagnose.Test(ctx, "my-span", diagnose.WithTimeout(5 * time.Second, myTestFunc))
-func WithTimeout(d time.Duration, f func(context.Context) error) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-		rch := make(chan error)
-		t := time.NewTimer(d)
-		defer t.Stop()
-		go f(ctx)
-		select {
-		case <-t.C:
-			return fmt.Errorf("timed out after %s", d.String())
-		case err := <-rch:
-			return err
-		}
-	}
 }
