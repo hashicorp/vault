@@ -120,11 +120,11 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+	c.diagnose = diagnose.New()
 	return c.RunWithParsedFlags()
 }
 
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
-
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 1
@@ -164,6 +164,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
+
+	// OS Specific checks
+	// Check open file count
+	diagnose.OSChecks(ctx)
 
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()

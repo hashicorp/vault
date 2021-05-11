@@ -67,7 +67,6 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {
-
 		session := sessionCtxVal.(*Session)
 		return session.tracer.Start(ctx, spanName, options...)
 	} else {
