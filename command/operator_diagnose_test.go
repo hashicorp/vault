@@ -276,9 +276,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
-					Warnings: []string{
-						diagnose.AddrDNExistErr,
-					},
 				},
 			},
 		},

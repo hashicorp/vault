@@ -227,11 +227,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 		backend = &b
 
-		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
-		if dirAccess != "" {
-			diagnose.Warn(ctx, dirAccess)
-		}
-
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 			if err != nil {
@@ -357,6 +352,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
 		if err != nil {
 			return err
+		}
+		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+		if dirAccess != "" {
+			diagnose.Warn(ctx, dirAccess)
 		}
 		return nil
 	}); err != nil {
