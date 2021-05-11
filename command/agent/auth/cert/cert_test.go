@@ -73,7 +73,7 @@ func TestCertAuthMethod_AuthClient_withoutCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(client, clientToUse) {
+	if client != clientToUse {
 		t.Fatal("error: expected AuthClient to return back original client")
 	}
 }
@@ -107,7 +107,7 @@ func TestCertAuthMethod_AuthClient_withCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err := api.NewClient(api.DefaultConfig())
+	client, err := api.NewClient(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestCertAuthMethod_AuthClient_withCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reflect.DeepEqual(client, clientToUse) {
+	if client == clientToUse {
 		t.Fatal("expected client from AuthClient to be different from original client")
 	}
 
@@ -127,7 +127,7 @@ func TestCertAuthMethod_AuthClient_withCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(cachedClient, clientToUse) {
+	if cachedClient != clientToUse {
 		t.Fatal("expected client from AuthClient to return back a cached client")
 	}
 }
