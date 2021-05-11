@@ -2,6 +2,9 @@ package diagnose
 
 import (
 	"context"
+	"fmt"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -145,4 +148,23 @@ func Test(ctx context.Context, spanName string, function func(context.Context) e
 		span.SetStatus(codes.Error, err.Error())
 	}
 	return err
+}
+
+// WithTimeout wraps a context consuming function, and when called, returns an error if the sub-function does not
+// complete within the timeout, e.g.
+//
+// diagnose.Test(ctx, "my-span", diagnose.WithTimeout(5 * time.Second, myTestFunc))
+func WithTimeout(d time.Duration, f func(context.Context) error) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		rch := make(chan error)
+		t := time.NewTimer(d)
+		defer t.Stop()
+		go f(ctx)
+		select {
+		case <-t.C:
+			return fmt.Errorf("timed out after %s", d.String())
+		case err := <-rch:
+			return err
+		}
+	}
 }
