@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 // Config is the configuration for the vault server.
