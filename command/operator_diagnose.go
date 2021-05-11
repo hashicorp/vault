@@ -477,7 +477,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
 		if core != nil {
-			runUnseal(server, core)
+			runUnseal(server, core, ctx)
 		} else {
 			return fmt.Errorf(CoreUninitializedErr)
 		}
