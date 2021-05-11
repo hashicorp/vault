@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -194,6 +193,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
 
+	// OS Specific checks
+	// Check open file count
+	diagnose.OSChecks(ctx)
+
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
@@ -247,7 +250,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				Config: ln.Config,
 			})
 		}
-		time.Sleep(1 * time.Second)
 		return diagnose.ListenerChecks(sanitizedListeners)
 	}, diagnose.MainSection); err != nil {
 		return err
@@ -259,7 +261,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// TODO: check for storage backend
 
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		time.Sleep(1 * time.Second)
 		_, err = server.setupStorage(config)
 		if err != nil {
 			return err
@@ -284,7 +285,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
-		time.Sleep(1 * time.Second)
 		// Initialize the Service Discovery, if there is one
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical

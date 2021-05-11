@@ -13,10 +13,14 @@ func OSChecks(ctx context.Context) {
 	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &limit); err != nil {
 		SpotError(ctx, "open file limits", fmt.Errorf("could not determine open file limit: %w", err))
 	} else {
-		if limit.Cur <= 1024 || limit.Max <= 1024 {
-			SpotWarn(ctx, "open file limits", fmt.Sprintf("open file limits are set to %d, which may be insufficient.", limit.Max))
+		min := limit.Cur
+		if limit.Max < min {
+			min = limit.Max
+		}
+		if min <= 1024 {
+			SpotWarn(ctx, "open file limits", fmt.Sprintf("set to %d, which may be insufficient.", min))
 		} else {
-			SpotOk(ctx, "open file limits", fmt.Sprintf("open file limits are set to %d", limit.Max))
+			SpotOk(ctx, "open file limits", fmt.Sprintf("set to %d", min))
 		}
 	}
 }
