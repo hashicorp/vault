@@ -70,11 +70,9 @@ const (
 	// storage/memory
 	maxIrrevocableErrorLength = 240
 
-	genericIrrevocableErrorMessage = "no error message given"
-)
+	genericIrrevocableErrorMessage = "unknown"
 
-var (
-	errOutOfRetries = errors.New("out of retries")
+	outOfRetriesMessage = "out of retries"
 )
 
 type pendingInfo struct {
@@ -239,7 +237,7 @@ func (r *revocationJob) OnFailure(err error) {
 		r.m.logger.Trace("marking lease as irrevocable", "lease_id", r.leaseID, "error", err)
 		if pending.revokesAttempted >= maxRevokeAttempts {
 			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
-			err = fmt.Errorf("%v: %w", errOutOfRetries.Error(), err)
+			err = fmt.Errorf("%v: %w", outOfRetriesMessage, err)
 		}
 
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
@@ -528,18 +526,28 @@ func (m *ExpirationManager) invalidate(key string) {
 					return
 				}
 			default:
-				// Handle lease update
+				// Update the lease in memory
 				m.updatePendingInternal(le)
 			}
 		default:
-			// There is no entry in the pending map and the invalidation
-			// resulted in a nil entry.
 			if le == nil {
-				// If in the nonexpiring map, remove there.
+				// There is no entry in the pending map and the invalidation
+				// resulted in a nil entry. Therefore we should clean up the
+				// other maps, and update metrics/quotas if appropriate.
 				m.nonexpiring.Delete(leaseID)
+
+				if _, ok := m.irrevocable.Load(leaseID); ok {
+					m.irrevocable.Delete(leaseID)
+
+					m.leaseCount--
+					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+						m.logger.Error("failed to update quota on lease invalidation", "error", err)
+						return
+					}
+				}
 				return
 			}
-			// Handle lease creation
+			// Handle lease update (if irrevocable) or creation (if pending)
 			m.updatePendingInternal(le)
 		}
 	}
@@ -583,12 +591,12 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 
 		le, err := m.loadEntry(ctx, leaseID)
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to load the lease ID %q: {{err}}", leaseID), err))
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to load the lease ID %q: %w", leaseID, err))
 			return
 		}
 
 		if le == nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("nil entry for lease ID %q: {{err}}", leaseID), err))
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("nil entry for lease ID %q: %w", leaseID, err))
 			return
 		}
 
@@ -609,7 +617,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 			lock.RUnlock()
 
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token: {{err}}", err))
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup token: %w", err))
 				return
 			}
 
@@ -639,7 +647,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 			// again
 			err = m.revokeCommon(ctx, leaseID, true, true)
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke an invalid lease with ID %q: {{err}}", leaseID), err))
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke an invalid lease with ID %q: %w", leaseID, err))
 				return
 			}
 			revokedCount++
@@ -985,7 +993,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	m.removeFromPending(ctx, leaseID)
+	m.removeFromPending(ctx, leaseID, true)
 	m.nonexpiring.Delete(leaseID)
 	m.irrevocable.Delete(leaseID)
 	m.pendingLock.Unlock()
@@ -1032,7 +1040,7 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 	// Lookup the leases
 	existing, err := m.lookupLeasesByToken(tokenCtx, te)
 	if err != nil {
-		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
+		return fmt.Errorf("failed to scan for leases: %w", err)
 	}
 
 	// Revoke all the keys
@@ -1101,7 +1109,7 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 		if err == nil && le != nil {
 			if sync {
 				if err := m.revokeCommon(ctx, prefix, force, false); err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
+					return fmt.Errorf("failed to revoke %q: %w", prefix, err)
 				}
 				return nil
 			}
@@ -1119,7 +1127,7 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 	sub := view.SubView(prefix)
 	existing, err := logical.CollectKeys(ctx, sub)
 	if err != nil {
-		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
+		return fmt.Errorf("failed to scan for leases: %w", err)
 	}
 
 	// Revoke all the keys
@@ -1128,11 +1136,11 @@ func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix strin
 		switch {
 		case sync:
 			if err := m.revokeCommon(ctx, leaseID, force, false); err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+				return fmt.Errorf("failed to revoke %q (%d / %d): %w", leaseID, idx+1, len(existing), err)
 			}
 		default:
 			if err := m.LazyRevoke(ctx, leaseID); err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+				return fmt.Errorf("failed to revoke %q (%d / %d): %w", leaseID, idx+1, len(existing), err)
 			}
 		}
 	}
@@ -1443,17 +1451,17 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 			revokeCtx := namespace.ContextWithNamespace(m.quitContext, ns)
 			revResp, err := m.router.Route(revokeCtx, logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional internal error was encountered revoking the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional internal error was encountered revoking the newly-generated secret: %w", err))
 			} else if revResp != nil && revResp.IsError() {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", revResp.Error()))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional error was encountered revoking the newly-generated secret: %w", revResp.Error()))
 			}
 
 			if err := m.deleteEntry(ctx, le); err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional error was encountered deleting any lease associated with the newly-generated secret: %w", err))
 			}
 
 			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, fmt.Errorf("an additional error was encountered removing lease indexes associated with the newly-generated secret: %w", err))
 			}
 		}
 	}()
@@ -1715,12 +1723,8 @@ func (m *ExpirationManager) updatePending(le *leaseEntry) {
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
-	if le.isIrrevocable() {
-		return
-	}
-
 	// Check for an existing timer
-	info, ok := m.pending.Load(le.LeaseID)
+	info, leaseInPending := m.pending.Load(le.LeaseID)
 
 	var pending pendingInfo
 	if le.ExpireTime.IsZero() {
@@ -1735,7 +1739,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 		// if the timer happened to exist, stop the time and delete it from the
 		// pending timers.
-		if ok {
+		if leaseInPending {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
@@ -1749,31 +1753,44 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 	leaseTotal := le.ExpireTime.Sub(time.Now())
 	leaseCreated := false
-	// Create entry if it does not exist or reset if it does
-	if ok {
-		pending = info.(pendingInfo)
-		pending.timer.Reset(leaseTotal)
-		// No change to lease count in this case
-	} else {
-		leaseID, namespace := le.LeaseID, le.namespace
-		// Extend the timer by the lease total
-		timer := time.AfterFunc(leaseTotal, func() {
-			m.expireFunc(m.quitContext, m, leaseID, namespace)
-		})
-		pending = pendingInfo{
-			timer: timer,
+
+	if le.isIrrevocable() {
+		// It's possible this function is being called to update the in-memory state
+		// for a lease from pending to irrevocable (we don't support the opposite).
+		// If this is the case, we need to know if the lease was previously counted
+		// so that we can maintain correct metric and quota lease counts.
+		_, leaseInIrrevocable := m.irrevocable.Load(le.LeaseID)
+		if !(leaseInPending || leaseInIrrevocable) {
+			leaseCreated = true
 		}
-		// new lease
-		m.leaseCount++
-		leaseCreated = true
+
+		m.removeFromPending(m.quitContext, le.LeaseID, false)
+		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	} else {
+		// Create entry if it does not exist or reset if it does
+		if leaseInPending {
+			pending = info.(pendingInfo)
+			pending.timer.Reset(leaseTotal)
+			// No change to lease count in this case
+		} else {
+			leaseID, namespace := le.LeaseID, le.namespace
+			// Extend the timer by the lease total
+			timer := time.AfterFunc(leaseTotal, func() {
+				m.expireFunc(m.quitContext, m, leaseID, namespace)
+			})
+			pending = pendingInfo{
+				timer: timer,
+			}
+
+			leaseCreated = true
+		}
+
+		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
+		m.pending.Store(le.LeaseID, pending)
 	}
 
-	// Retain some information in-memory
-	pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
-
-	m.pending.Store(le.LeaseID, pending)
-
 	if leaseCreated {
+		m.leaseCount++
 		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
 			m.logger.Error("failed to update quota on lease creation", "error", err)
 			return
@@ -1791,7 +1808,7 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		}
 
 		if err := m.tokenStore.revokeTree(ctx, le); err != nil {
-			return errwrap.Wrapf("failed to revoke token: {{err}}", err)
+			return fmt.Errorf("failed to revoke token: %w", err)
 		}
 
 		return nil
@@ -1828,7 +1845,7 @@ func (m *ExpirationManager) renewEntry(ctx context.Context, le *leaseEntry, incr
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(nsCtx, req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to renew entry: resp: %#v err: {{err}}", resp), err)
+		return nil, fmt.Errorf("failed to renew entry: resp: %#v err: %w", resp, err)
 	}
 	return resp, nil
 }
@@ -1856,7 +1873,7 @@ func (m *ExpirationManager) renewAuthEntry(ctx context.Context, req *logical.Req
 	authReq.Connection = req.Connection
 	resp, err := m.router.Route(nsCtx, authReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to renew entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to renew entry: %w", err)
 	}
 	return resp, nil
 }
@@ -1902,21 +1919,16 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	view := m.leaseView(ns)
 	out, err := view.Get(ctx, leaseID)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read lease entry %s: {{err}}", leaseID), err)
+		return nil, fmt.Errorf("failed to read lease entry %s: %w", leaseID, err)
 	}
 	if out == nil {
 		return nil, nil
 	}
 	le, err := decodeLeaseEntry(out.Value)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
+		return nil, fmt.Errorf("failed to decode lease entry %s: %w", leaseID, err)
 	}
 	le.namespace = ns
-
-	if le.isIrrevocable() {
-		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
-		return le, nil
-	}
 
 	if restoreMode {
 		if checkRestored {
@@ -1943,7 +1955,7 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 	// Encode the entry
 	buf, err := le.encode()
 	if err != nil {
-		return errwrap.Wrapf("failed to encode lease entry: {{err}}", err)
+		return fmt.Errorf("failed to encode lease entry: %w", err)
 	}
 
 	// Write out to the view
@@ -1957,7 +1969,7 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 
 	view := m.leaseView(le.namespace)
 	if err := view.Put(ctx, &ent); err != nil {
-		return errwrap.Wrapf("failed to persist lease entry: {{err}}", err)
+		return fmt.Errorf("failed to persist lease entry: %w", err)
 	}
 	return nil
 }
@@ -1966,7 +1978,7 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 func (m *ExpirationManager) deleteEntry(ctx context.Context, le *leaseEntry) error {
 	view := m.leaseView(le.namespace)
 	if err := view.Delete(ctx, le.LeaseID); err != nil {
-		return errwrap.Wrapf("failed to delete lease entry: {{err}}", err)
+		return fmt.Errorf("failed to delete lease entry: %w", err)
 	}
 	return nil
 }
@@ -2003,7 +2015,7 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 	}
 	tokenView := m.tokenIndexView(tokenNS)
 	if err := tokenView.Put(ctx, &ent); err != nil {
-		return errwrap.Wrapf("failed to persist lease index entry: {{err}}", err)
+		return fmt.Errorf("failed to persist lease index entry: %w", err)
 	}
 	return nil
 }
@@ -2081,7 +2093,7 @@ func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEnt
 	key := saltedID + "/" + leaseSaltedID
 	tokenView := m.tokenIndexView(tokenNS)
 	if err := tokenView.Delete(ctx, key); err != nil {
-		return errwrap.Wrapf("failed to delete lease index entry: {{err}}", err)
+		return fmt.Errorf("failed to delete lease index entry: %w", err)
 	}
 	return nil
 }
@@ -2173,7 +2185,7 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 	prefix := saltedID + "/"
 	subKeys, err := tokenView.List(ctx, prefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to list leases: {{err}}", err)
+		return nil, fmt.Errorf("failed to list leases: %w", err)
 	}
 
 	// Read each index entry
@@ -2181,7 +2193,7 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 	for _, sub := range subKeys {
 		out, err := tokenView.Get(ctx, prefix+sub)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read lease index: {{err}}", err)
+			return nil, fmt.Errorf("failed to read lease index: %w", err)
 		}
 		if out == nil {
 			continue
@@ -2198,13 +2210,13 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 		prefix := saltedID + "/"
 		subKeys, err := tokenView.List(ctx, prefix)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to list leases on root namespace: {{err}}", err)
+			return nil, fmt.Errorf("failed to list leases on root namespace: %w", err)
 		}
 
 		for _, sub := range subKeys {
 			out, err := tokenView.Get(ctx, prefix+sub)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to read lease index on root namespace: {{err}}", err)
+				return nil, fmt.Errorf("failed to read lease index on root namespace: %w", err)
 			}
 			if out == nil {
 				continue
@@ -2351,19 +2363,24 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 }
 
 // must be called with m.pendingLock held
-func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string) {
+// set decrementCounters true to decrement the lease count metric and quota
+func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID string, decrementCounters bool) {
 	if info, ok := m.pending.Load(leaseID); ok {
 		pending := info.(pendingInfo)
 		pending.timer.Stop()
 		m.pending.Delete(leaseID)
-		m.leaseCount--
-		// Log but do not fail; unit tests (and maybe Tidy on production systems)
-		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-			m.logger.Error("failed to update quota on revocation", "error", err)
+		if decrementCounters {
+			m.leaseCount--
+			// Log but do not fail; unit tests (and maybe Tidy on production systems)
+			if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+				m.logger.Error("failed to update quota on revocation", "error", err)
+			}
 		}
 	}
 }
 
+// Marks a pending lease as irrevocable. Because the lease is being moved from
+// pending to irrevocable, no total lease count metrics/quotas updates are needed
 // note: must be called with pending lock held
 func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseEntry, err error) {
 	if le == nil {
@@ -2390,7 +2407,7 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.persistEntry(ctx, le)
 
 	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
-	m.removeFromPending(ctx, le.LeaseID)
+	m.removeFromPending(ctx, le.LeaseID, false)
 	m.nonexpiring.Delete(le.LeaseID)
 }
 

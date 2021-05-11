@@ -1386,7 +1386,9 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 	var wg sync.WaitGroup
 	close(a.doneCh)
 	defer func() {
+		a.l.Lock()
 		a.doneCh = make(chan struct{}, 1)
+		a.l.Unlock()
 	}()
 
 	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
@@ -1806,6 +1808,10 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if intentRaw == nil {
+		t.Fatal("no intent log present")
+	}
+
 	var intent ActivityIntentLog
 	err = intentRaw.DecodeJSON(&intent)
 	if err != nil {

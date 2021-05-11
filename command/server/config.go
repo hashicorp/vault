@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/hcl/hcl/token"
 	"io"
 	"io/ioutil"
 	"os"
@@ -23,7 +22,7 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	UnusedKeys map[string][]token.Pos `hcl:",unusedKeyPositions"`
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
 	entConfig
 
 	*configutil.SharedConfig `hcl:"-"`
@@ -76,6 +75,9 @@ type Config struct {
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
+
+	License     string `hcl:"-"`
+	LicensePath string `hcl:"license_path"`
 }
 
 const (
@@ -274,6 +276,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
+	result.LicensePath = c.LicensePath
+	if c2.LicensePath != "" {
+		result.LicensePath = c2.LicensePath
 	}
 
 	// Use values from top-level configuration for storage if set
