@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -219,7 +218,7 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, plugin
 		return nil, err
 	}
 	if r == nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("{{err}}: %s", name), ErrPluginNotFound)
+		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, name)
 	}
 
 	return r, nil
