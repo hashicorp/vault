@@ -49,6 +49,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 				{
 					Name:   "service-discovery",
@@ -119,6 +125,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Name:    "storage",
 					Status:  diagnose.ErrorStatus,
 					Message: "A storage backend must be specified",
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.ErrorStatus,
+						},
+					},
 				},
 				{
 					Name:   "service-discovery",
@@ -190,6 +202,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 				{
 					Name:   "service-discovery",
@@ -256,6 +274,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 			},
 		},
@@ -276,6 +300,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 			},
 		},
@@ -296,6 +326,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 				{
 					Name:    "service-discovery",
@@ -326,6 +362,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.WarningStatus,
 					Warnings: []string{
 						diagnose.DirAccessErr,
+					},
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
 					},
 				},
 				{

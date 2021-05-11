@@ -221,11 +221,16 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var backend *physical.Backend
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		b, err := server.setupStorage(config)
-		if err != nil {
+		if err := diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
+			b, err := server.setupStorage(config)
+			if err != nil {
+				return err
+			}
+			backend = &b
+			return nil
+		}); err != nil {
 			return err
 		}
-		backend = &b
 
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
