@@ -26,7 +26,7 @@ func TestCertAuthMethod_Authenticate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err := api.NewClient(api.DefaultConfig())
+	client, err := api.NewClient(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
