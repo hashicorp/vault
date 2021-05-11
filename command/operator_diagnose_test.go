@@ -76,7 +76,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "init-core",
-					Status: diagnose.OkStatus,
+					Status: diagnose.ErrorStatus,
 				},
 				{
 					Name:   "init-listeners",
@@ -101,287 +101,287 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 			},
 		},
-		// {
-		// 	"diagnose_invalid_storage",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/nostore_config.hcl",
-		// 	},
-		// 	[]*diagnose.Result{
-		// 		{
-		// 			Name:   "parse-config",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-telemetry",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "storage",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: "A storage backend must be specified",
-		// 		},
-		// 		{
-		// 			Name:   "service-discovery",
-		// 			Status: diagnose.ErrorStatus,
-		// 		},
-		// 		{
-		// 			Name:   "create-seal",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "setup-core",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: BackendUninitializedErr,
-		// 		},
-		// 		{
-		// 			Name:    "setup-ha-storage",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: BackendUninitializedErr,
-		// 		},
-		// 		{
-		// 			Name:   "determine-redirect",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "find-cluster-addr",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "init-core",
-		// 			Status: diagnose.ErrorStatus,
-		// 		},
-		// 		{
-		// 			Name:   "init-listeners",
-		// 			Status: diagnose.WarningStatus,
-		// 			Warnings: []string{
-		// 				"TLS is disabled in a Listener config stanza.",
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:    "unseal",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: "core could not be initialized",
-		// 		},
-		// 		{
-		// 			Name:   "run-listeners",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "start-servers",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: CoreUninitializedErr,
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	"diagnose_listener_config_ok",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/tls_config_ok.hcl",
-		// 	},
-		// 	[]*diagnose.Result{
-		// 		{
-		// 			Name:   "parse-config",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-telemetry",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "storage",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "service-discovery",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "create-seal",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-core",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-ha-storage",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "determine-redirect",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "find-cluster-addr",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "init-core",
-		// 			Status: diagnose.ErrorStatus,
-		// 		},
-		// 		{
-		// 			Name:   "init-listeners",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "unseal",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: "core could not be initialized",
-		// 		},
-		// 		{
-		// 			Name:   "run-listeners",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "start-servers",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: CoreUninitializedErr,
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	"diagnose_invalid_https_storage",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/config_bad_https_storage.hcl",
-		// 	},
-		// 	[]*diagnose.Result{
-		// 		{
-		// 			Name:   "parse-config",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-telemetry",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "storage",
-		// 			Status: diagnose.ErrorStatus,
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	"diagnose_invalid_https_hastorage",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
-		// 	},
-		// 	[]*diagnose.Result{
-		// 		{
-		// 			Name:   "parse-config",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-telemetry",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "storage",
-		// 			Status: diagnose.ErrorStatus,
-		// 			Warnings: []string{
-		// 				diagnose.AddrDNExistErr,
-		// 			},
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	"diagnose_invalid_https_sr",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",
-		// 	},
-		// 	[]*diagnose.Result{
-		// 		{
-		// 			Name:   "parse-config",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-telemetry",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "storage",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "service-discovery",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: "failed to verify certificate: x509: certificate has expired or is not yet valid",
-		// 			Warnings: []string{
-		// 				diagnose.DirAccessErr,
-		// 			},
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	"diagnose_direct_storage_access",
-		// 	[]string{
-		// 		"-config", "./server/test-fixtures/diagnose_ok_storage_direct_access.hcl",
-		// 	},
-		// 	[]*diagnose.Result{
-		// 		{
-		// 			Name:   "parse-config",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-telemetry",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "storage",
-		// 			Status: diagnose.WarningStatus,
-		// 			Warnings: []string{
-		// 				diagnose.DirAccessErr,
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:   "service-discovery",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "create-seal",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-core",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "setup-ha-storage",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "determine-redirect",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "find-cluster-addr",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:   "init-core",
-		// 			Status: diagnose.ErrorStatus,
-		// 		},
-		// 		{
-		// 			Name:   "init-listeners",
-		// 			Status: diagnose.WarningStatus,
-		// 			Warnings: []string{
-		// 				"TLS is disabled in a Listener config stanza.",
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:    "unseal",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: "core could not be initialized",
-		// 		},
-		// 		{
-		// 			Name:   "run-listeners",
-		// 			Status: diagnose.OkStatus,
-		// 		},
-		// 		{
-		// 			Name:    "start-servers",
-		// 			Status:  diagnose.ErrorStatus,
-		// 			Message: CoreUninitializedErr,
-		// 		},
-		// 	},
-		// },
+		{
+			"diagnose_invalid_storage",
+			[]string{
+				"-config", "./server/test-fixtures/nostore_config.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "storage",
+					Status:  diagnose.ErrorStatus,
+					Message: "A storage backend must be specified",
+				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "create-seal",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "setup-core",
+					Status:  diagnose.ErrorStatus,
+					Message: BackendUninitializedErr,
+				},
+				{
+					Name:    "setup-ha-storage",
+					Status:  diagnose.ErrorStatus,
+					Message: BackendUninitializedErr,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						"TLS is disabled in a Listener config stanza.",
+					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
+				},
+			},
+		},
+		{
+			"diagnose_listener_config_ok",
+			[]string{
+				"-config", "./server/test-fixtures/tls_config_ok.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "create-seal",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-core",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
+				},
+			},
+		},
+		{
+			"diagnose_invalid_https_storage",
+			[]string{
+				"-config", "./server/test-fixtures/config_bad_https_storage.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.ErrorStatus,
+				},
+			},
+		},
+		{
+			"diagnose_invalid_https_hastorage",
+			[]string{
+				"-config", "./server/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.ErrorStatus,
+					Warnings: []string{
+						diagnose.AddrDNExistErr,
+					},
+				},
+			},
+		},
+		{
+			"diagnose_invalid_https_sr",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "service-discovery",
+					Status:  diagnose.ErrorStatus,
+					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid",
+					Warnings: []string{
+						diagnose.DirAccessErr,
+					},
+				},
+			},
+		},
+		{
+			"diagnose_direct_storage_access",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_ok_storage_direct_access.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-telemetry",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "storage",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						diagnose.DirAccessErr,
+					},
+				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "create-seal",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-core",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.ErrorStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						"TLS is disabled in a Listener config stanza.",
+					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "core could not be initialized",
+				},
+				{
+					Name:   "run-listeners",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:    "start-servers",
+					Status:  diagnose.ErrorStatus,
+					Message: CoreUninitializedErr,
+				},
+			},
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
