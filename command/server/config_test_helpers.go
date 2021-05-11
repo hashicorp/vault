@@ -448,6 +448,8 @@ func testLoadConfigFile(t *testing.T) {
 		EnableResponseHeaderHostnameRaw:   true,
 		EnableResponseHeaderRaftNodeID:    true,
 		EnableResponseHeaderRaftNodeIDRaw: true,
+
+		LicensePath: "/path/to/license",
 	}
 
 	addExpectedEntConfig(expected, []string{})

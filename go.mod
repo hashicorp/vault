@@ -97,7 +97,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.8.0
@@ -105,7 +105,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
-	github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210505171055-299f311fa707
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

@@ -554,7 +554,8 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 }
 
 func TestExpiration_Restore(t *testing.T) {
-	exp := mockExpiration(t)
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -601,7 +602,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Stop everything
-	err = exp.Stop()
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2509,7 +2510,7 @@ func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager)
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
-		Path:        "zombie/lease",
+		Path:        "irrevocable/lease",
 		ClientToken: "sometoken",
 	}
 	req.SetTokenEntry(&logical.TokenEntry{ID: "sometoken", NamespaceID: "root"})
@@ -2529,47 +2530,48 @@ func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager)
 	return leaseID
 }
 
-func TestExpiration_MarkZombie(t *testing.T) {
-	exp := mockExpiration(t)
+func TestExpiration_MarkIrrevocable(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	ctx := namespace.RootContext(nil)
 
 	leaseID := registerOneLease(t, ctx, exp)
 	loadedLE, err := exp.loadEntry(ctx, leaseID)
 	if err != nil {
-		t.Fatalf("error loading non zombie lease: %v", err)
+		t.Fatalf("error loading non irrevocable lease: %v", err)
 	}
 
-	if loadedLE.isZombie() {
-		t.Fatalf("lease is zombie and shouldn't be")
+	if loadedLE.isIrrevocable() {
+		t.Fatalf("lease is irrevocable and shouldn't be")
 	}
-	if _, ok := exp.zombies.Load(leaseID); ok {
-		t.Fatalf("lease included in zombie map")
+	if _, ok := exp.irrevocable.Load(leaseID); ok {
+		t.Fatalf("lease included in irrevocable map")
 	}
 	if _, ok := exp.pending.Load(leaseID); !ok {
 		t.Fatalf("lease not included in pending map")
 	}
 
-	zombieErr := fmt.Errorf("test zombie error")
-	exp.markLeaseAsZombie(ctx, loadedLE, zombieErr)
+	irrevocableErr := fmt.Errorf("test irrevocable error")
+	exp.markLeaseIrrevocable(ctx, loadedLE, irrevocableErr)
 
-	if !loadedLE.isZombie() {
-		t.Fatalf("zombie lease is not zombie and should be")
+	if !loadedLE.isIrrevocable() {
+		t.Fatalf("irrevocable lease is not irrevocable and should be")
 	}
-	if loadedLE.RevokeErr != zombieErr.Error() {
-		t.Errorf("zombie lease has wrong error message. expected %s, got %s", zombieErr.Error(), loadedLE.RevokeErr)
+	if loadedLE.RevokeErr != irrevocableErr.Error() {
+		t.Errorf("irrevocable lease has wrong error message. expected %s, got %s", irrevocableErr.Error(), loadedLE.RevokeErr)
 	}
-	if _, ok := exp.zombies.Load(leaseID); !ok {
-		t.Fatalf("zombie lease not included in zombie map")
+	if _, ok := exp.irrevocable.Load(leaseID); !ok {
+		t.Fatalf("irrevocable lease not included in irrevocable map")
 	}
 	if _, ok := exp.pending.Load(leaseID); ok {
-		t.Fatalf("zombie lease included in pending map")
+		t.Fatalf("irrevocable lease included in pending map")
 	}
 	if _, ok := exp.nonexpiring.Load(leaseID); ok {
-		t.Fatalf("zombie lease included in nonexpiring map")
+		t.Fatalf("irrevocable lease included in nonexpiring map")
 	}
 
-	// stop and restore to verify that zombies are properly loaded from storage
-	err = exp.Stop()
+	// stop and restore to verify that irrevocable leases are properly loaded from storage
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("error stopping expiration manager: %v", err)
 	}
@@ -2581,27 +2583,27 @@ func TestExpiration_MarkZombie(t *testing.T) {
 
 	loadedLE, err = exp.loadEntry(ctx, leaseID)
 	if err != nil {
-		t.Fatalf("error loading non zombie lease after restore: %v", err)
+		t.Fatalf("error loading non irrevocable lease after restore: %v", err)
 	}
 
-	if !loadedLE.isZombie() {
-		t.Fatalf("zombie lease is not zombie and should be")
+	if !loadedLE.isIrrevocable() {
+		t.Fatalf("irrevocable lease is not irrevocable and should be")
 	}
-	if loadedLE.RevokeErr != zombieErr.Error() {
-		t.Errorf("zombie lease has wrong error message. expected %s, got %s", zombieErr.Error(), loadedLE.RevokeErr)
+	if loadedLE.RevokeErr != irrevocableErr.Error() {
+		t.Errorf("irrevocable lease has wrong error message. expected %s, got %s", irrevocableErr.Error(), loadedLE.RevokeErr)
 	}
-	if _, ok := exp.zombies.Load(leaseID); !ok {
-		t.Fatalf("zombie lease not included in zombie map")
+	if _, ok := exp.irrevocable.Load(leaseID); !ok {
+		t.Fatalf("irrevocable lease not included in irrevocable map")
 	}
 	if _, ok := exp.pending.Load(leaseID); ok {
-		t.Fatalf("zombie lease included in pending map")
+		t.Fatalf("irrevocable lease included in pending map")
 	}
 	if _, ok := exp.nonexpiring.Load(leaseID); ok {
-		t.Fatalf("zombie lease included in nonexpiring map")
+		t.Fatalf("irrevocable lease included in nonexpiring map")
 	}
 }
 
-func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
+func TestExpiration_FetchLeaseTimesIrrevocable(t *testing.T) {
 	exp := mockExpiration(t)
 	ctx := namespace.RootContext(nil)
 
@@ -2618,14 +2620,14 @@ func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading lease: %v", err)
 	}
-	exp.markLeaseAsZombie(ctx, le, fmt.Errorf("test zombie error"))
+	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
 
-	zombieLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
+	irrevocableLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
-		t.Fatalf("error getting zombie lease times: %v", err)
+		t.Fatalf("error getting irrevocable lease times: %v", err)
 	}
-	if zombieLeaseTimes == nil {
-		t.Fatal("got nil zombie lease")
+	if irrevocableLeaseTimes == nil {
+		t.Fatal("got nil irrevocable lease")
 	}
 
 	// strip monotonic clock reading
@@ -2633,35 +2635,36 @@ func TestExpiration_FetchLeaseTimesZombies(t *testing.T) {
 	expectedLeaseTimes.ExpireTime = expectedLeaseTimes.ExpireTime.Round(0)
 	expectedLeaseTimes.LastRenewalTime = expectedLeaseTimes.LastRenewalTime.Round(0)
 
-	if !zombieLeaseTimes.IssueTime.Equal(expectedLeaseTimes.IssueTime) {
-		t.Errorf("bad issue time. expected %v, got %v", expectedLeaseTimes.IssueTime, zombieLeaseTimes.IssueTime)
+	if !irrevocableLeaseTimes.IssueTime.Equal(expectedLeaseTimes.IssueTime) {
+		t.Errorf("bad issue time. expected %v, got %v", expectedLeaseTimes.IssueTime, irrevocableLeaseTimes.IssueTime)
 	}
-	if !zombieLeaseTimes.ExpireTime.Equal(expectedLeaseTimes.ExpireTime) {
-		t.Errorf("bad expire time. expected %v, got %v", expectedLeaseTimes.ExpireTime, zombieLeaseTimes.ExpireTime)
+	if !irrevocableLeaseTimes.ExpireTime.Equal(expectedLeaseTimes.ExpireTime) {
+		t.Errorf("bad expire time. expected %v, got %v", expectedLeaseTimes.ExpireTime, irrevocableLeaseTimes.ExpireTime)
 	}
-	if !zombieLeaseTimes.LastRenewalTime.Equal(expectedLeaseTimes.LastRenewalTime) {
-		t.Errorf("bad last renew time. expected %v, got %v", expectedLeaseTimes.LastRenewalTime, zombieLeaseTimes.LastRenewalTime)
+	if !irrevocableLeaseTimes.LastRenewalTime.Equal(expectedLeaseTimes.LastRenewalTime) {
+		t.Errorf("bad last renew time. expected %v, got %v", expectedLeaseTimes.LastRenewalTime, irrevocableLeaseTimes.LastRenewalTime)
 	}
 }
 
-func TestExpiration_StopClearsZombieCache(t *testing.T) {
-	exp := mockExpiration(t)
+func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
 	ctx := namespace.RootContext(nil)
 
 	leaseID := registerOneLease(t, ctx, exp)
 	le, err := exp.loadEntry(ctx, leaseID)
 	if err != nil {
-		t.Fatalf("error loading non zombie lease: %v", err)
+		t.Fatalf("error loading non irrevocable lease: %v", err)
 	}
 
-	exp.markLeaseAsZombie(ctx, le, fmt.Errorf("test zombie error"))
-	err = exp.Stop()
+	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("error stopping expiration manager: %v", err)
 	}
 
-	if _, ok := exp.zombies.Load(leaseID); ok {
-		t.Error("expiration manager zombies cache should be cleared on stop")
+	if _, ok := exp.irrevocable.Load(leaseID); ok {
+		t.Error("expiration manager irrevocable cache should be cleared on stop")
 	}
 }
 
@@ -2708,7 +2711,7 @@ func TestExpiration_errorIsUnrecoverable(t *testing.T) {
 	}
 }
 
-func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
+func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	exp := mockExpiration(t)
 	ctx := namespace.RootContext(nil)
 
@@ -2724,34 +2727,34 @@ func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
 	}
 
 	testCases := []struct {
-		err            error
-		job            *revocationJob
-		shouldBeZombie bool
+		err                 error
+		job                 *revocationJob
+		shouldBeIrrevocable bool
 	}{
 		{
-			err:            logical.ErrUnrecoverable,
-			job:            makeJob(),
-			shouldBeZombie: true,
+			err:                 logical.ErrUnrecoverable,
+			job:                 makeJob(),
+			shouldBeIrrevocable: true,
 		},
 		{
-			err:            logical.ErrInvalidRequest,
-			job:            makeJob(),
-			shouldBeZombie: true,
+			err:                 logical.ErrInvalidRequest,
+			job:                 makeJob(),
+			shouldBeIrrevocable: true,
 		},
 		{
-			err:            logical.ErrPermissionDenied,
-			job:            makeJob(),
-			shouldBeZombie: false,
+			err:                 logical.ErrPermissionDenied,
+			job:                 makeJob(),
+			shouldBeIrrevocable: false,
 		},
 		{
-			err:            logical.ErrRateLimitQuotaExceeded,
-			job:            makeJob(),
-			shouldBeZombie: false,
+			err:                 logical.ErrRateLimitQuotaExceeded,
+			job:                 makeJob(),
+			shouldBeIrrevocable: false,
 		},
 		{
-			err:            fmt.Errorf("some random recoverable error"),
-			job:            makeJob(),
-			shouldBeZombie: false,
+			err:                 fmt.Errorf("some random recoverable error"),
+			job:                 makeJob(),
+			shouldBeIrrevocable: false,
 		},
 	}
 
@@ -2766,9 +2769,9 @@ func TestExpiration_unrecoverableErrorMakesZombie(t *testing.T) {
 			t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
 		}
 
-		isZombie := le.isZombie()
-		if isZombie != tc.shouldBeZombie {
-			t.Errorf("expected zombie: %t, got zombie: %t", tc.shouldBeZombie, isZombie)
+		isIrrevocable := le.isIrrevocable()
+		if isIrrevocable != tc.shouldBeIrrevocable {
+			t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
 		}
 	}
 }
