@@ -1,8 +1,8 @@
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  tagName: '',
-  version: null,
-  useDefaultTrigger: false,
-  onRefresh() {},
-});
+export default class SecretVersionMenu extends Component {
+  onRefresh() {}
+  get useDefaultTrigger() {
+    return this.args.useDefaultTrigger || false;
+  }
+}
