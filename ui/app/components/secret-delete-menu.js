@@ -1,67 +1,60 @@
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { alias } from '@ember/object/computed';
-import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
-export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
-  tagName: '',
-  router: service(),
-  store: service(),
+export default class SecretDeleteMenu extends Component {
+  @service store;
+  @service router;
 
-  showDeleteModal: false,
+  @tracked showDeleteModal = false;
 
-  deleteVersionPath: maybeQueryRecord(
+  @maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.modelForData) return;
-      let [backend, id] = JSON.parse(context.modelForData.id);
+      let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/delete/${id}`,
       };
     },
     'model.id'
-  ),
-  canDeleteAnyVersion: alias('deleteVersionPath.canUpdate'),
+  )
+  deleteVersionPath;
+  @alias('deleteVersionPath.canUpdate') canDeleteAnyVersion;
 
-  undeleteVersionPath: maybeQueryRecord(
+  @maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.modelForData) return;
-      if (!context.modelForData.id) return;
-      let [backend, id] = JSON.parse(context.modelForData.id);
+      let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/undelete/${id}`,
       };
     },
     'model.id'
-  ),
-  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
+  )
+  undeleteVersionPath;
+  @alias('undeleteVersionPath.canUpdate') canUndeleteVersion;
 
-  destroyVersionPath: maybeQueryRecord(
+  @maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.modelForData || !context.modelForData.id) return;
-
-      let [backend, id] = JSON.parse(context.modelForData.id);
+      let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/destroy/${id}`,
       };
     },
     'model.id'
-  ),
-  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
+  )
+  destroyVersionPath;
+  @alias('destroyVersionPath.canUpdate') canDestroyVersion;
 
-  v2UpdatePath: maybeQueryRecord(
+  @maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.model || context.mode === 'create') {
-        return;
-      }
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
+      let backend = context.args.model.engine.id;
+      let id = context.args.model.id;
       return {
         id: `${backend}/metadata/${id}`,
       };
@@ -69,40 +62,43 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model',
     'model.id',
     'mode'
-  ),
+  )
+  v2UpdatePath;
+  @alias('v2UpdatePath.canDelete') canDestroyAllVersions;
 
-  canDestroyAllVersions: alias('v2UpdatePath.canDelete'),
-
-  isLatestVersion: computed('model.{currentVersion,selectedVersion}', function() {
-    let { model } = this;
-    if (!model) return;
+  get isLatestVersion() {
+    let { model } = this.args;
+    if (!model) return false;
     let latestVersion = model.currentVersion;
     let selectedVersion = model.selectedVersion.version;
     if (latestVersion !== selectedVersion) {
       return false;
     }
     return true;
-  }),
+  }
 
-  actions: {
-    handleDelete(deleteType) {
-      // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions'
-      if (!deleteType) {
-        return;
-      }
-      if (deleteType === 'destroy-all-versions') {
-        let { id } = this.model;
-        this.model.destroyRecord().then(() => {
-          this.navToNearestAncestor.perform(id);
+  @action toggleDeleteModal() {
+    this.showDeleteModal = !this.showDeleteModal;
+  }
+
+  @action
+  handleDelete(deleteType) {
+    // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions'
+    if (!deleteType) {
+      return;
+    }
+    if (deleteType === 'destroy-all-versions') {
+      let { id } = this.args.model;
+      this.args.model.destroyRecord().then(() => {
+        this.args.navToNearestAncestor.perform(id);
+      });
+    } else {
+      return this.store
+        .adapterFor('secret-v2-version')
+        .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType)
+        .then(() => {
+          location.reload();
         });
-      } else {
-        return this.store
-          .adapterFor('secret-v2-version')
-          .v2DeleteOperation(this.store, this.modelForData.id, deleteType)
-          .then(() => {
-            location.reload();
-          });
-      }
-    },
-  },
-});
+    }
+  }
+}
