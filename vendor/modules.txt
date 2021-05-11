@@ -682,7 +682,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+# github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
@@ -709,7 +709,7 @@ github.com/hashicorp/vault-plugin-secrets-terraform
 # github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
 ## explicit
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20210505171055-299f311fa707 => ./sdk
 ## explicit
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5

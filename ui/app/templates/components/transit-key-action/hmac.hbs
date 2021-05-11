@@ -6,16 +6,14 @@
     </div>
     <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
-      <label for="input" class="is-label">
-        Input
-      </label>
       <div id="input-control" class="control is-relative">
-        <IvyCodemirror @valueUpdated={{action (mut input)}} @options={{hash
-            lineNumbers=true
-            tabSize=2
-            mode='ruby'
-            theme='hashi'
-          }} @data-test-transit-input="input" />
+        <JsonEditor
+            @title="Input"
+            @valueUpdated={{action (mut input)}} 
+            @options={{hash
+              mode='ruby'
+            }} 
+            @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">

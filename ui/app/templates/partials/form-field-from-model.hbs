@@ -17,12 +17,14 @@
       (eq attr.type "boolean")
     )
   }}
+  {{#unless (eq attr.type "object")}}
     <label for="{{attr.name}}" class="is-label">
       {{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
       {{#if attr.options.helpText}}
         <InfoTooltip>{{attr.options.helpText}}</InfoTooltip>
       {{/if}}
     </label>
+  {{/unless}}
   {{/unless}}
   {{#if attr.options.possibleValues}}
     <div class="control is-expanded">
@@ -73,6 +75,10 @@
       </label>
     </div>
   {{else if (eq attr.type "object")}}
-    <JsonEditor @value={{if (get model attr.name) (stringify (get model attr.name)) emptyData}} @valueUpdated={{action "codemirrorUpdated" attr.name}} />
+    <JsonEditor 
+      @title={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+      @helpText={{attr.options.helpText}} 
+      @value={{if (get model attr.name) (stringify (get model attr.name)) emptyData}} 
+      @valueUpdated={{action "codemirrorUpdated" attr.name}} />
   {{/if}}
 </div>

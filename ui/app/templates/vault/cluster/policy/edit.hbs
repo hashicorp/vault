@@ -47,13 +47,13 @@
   <div class="box is-bottomless is-fullwidth is-marginless">
     <MessageError @model={{model}} />
     <NamespaceReminder @mode="edit" @noun="policy" />
-    <label for="policy" class="is-label">Policy</label>
     <div class="field">
-      <IvyCodemirror @value={{model.policy}} @valueUpdated={{action (mut model.policy)}} @options={{hash
-          lineNumbers=true
-          tabSize=2
+      <JsonEditor
+        @title="Policy"
+        @value={{model.policy}} 
+        @valueUpdated={{action (mut model.policy)}} 
+        @options={{hash
           mode='ruby'
-          theme='hashi'
           extraKeys=(hash
             Shift-Enter=(action "savePolicy" model)
           )

@@ -21,7 +21,7 @@
     {{#if (eq unwrapActiveTab "data")}}
       <div class="field">
         <div class="control">
-          <JsonEditor @value={{stringify unwrap_data}} @options={{hash
+          <JsonEditor @title="Unwrapped Data" @value={{stringify unwrap_data}} @options={{hash
               readOnly=true
             }} />
         </div>

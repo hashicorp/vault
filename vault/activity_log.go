@@ -456,7 +456,6 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.EntityActivityLog)) error {
-
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -486,7 +485,6 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.TokenCount)) error {
-
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -995,7 +993,7 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 
 // stopActivityLog removes the ActivityLog from Core
 // and frees any resources.
-func (c *Core) stopActivityLog() error {
+func (c *Core) stopActivityLog() {
 	if c.tokenStore != nil {
 		c.tokenStore.SetActivityLog(nil)
 	}
@@ -1007,7 +1005,6 @@ func (c *Core) stopActivityLog() error {
 	}
 
 	c.activityLog = nil
-	return nil
 }
 
 func (a *ActivityLog) StartOfNextMonth() time.Time {
@@ -1128,9 +1125,14 @@ func (a *ActivityLog) activeFragmentWorker() {
 		}
 	}
 
+	// we modify the doneCh in some tests, so let's make sure we don't trip
+	// the race detector
+	a.l.RLock()
+	doneCh := a.doneCh
+	a.l.RUnlock()
 	for {
 		select {
-		case <-a.doneCh:
+		case <-doneCh:
 			// Shutting down activity log.
 			ticker.Stop()
 			return
@@ -1526,14 +1528,20 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 
 	// Cancel the context if activity log is shut down.
 	// This will cause the next storage operation to fail.
-	go func() {
+	a.l.RLock()
+	// doneCh is modified in some tests, so we don't want to access that member
+	// without a lock, but we don't want to hold the lock for the entire lifetime
+	// of this goroutine.  Passing the channel to the goroutine works here because
+	// no tests depend on us accessing the new doneCh after modifying the field.
+	go func(done chan struct{}) {
 		select {
-		case <-a.doneCh:
+		case <-done:
 			cancel()
 		case <-ctx.Done():
 			break
 		}
-	}()
+	}(a.doneCh)
+	a.l.RUnlock()
 
 	// Load the intent log
 	rawIntentLog, err := a.view.Get(ctx, activityIntentLogKey)
@@ -1704,9 +1712,12 @@ func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int
 
 	// Cancel the context if activity log is shut down.
 	// This will cause the next storage operation to fail.
+	a.l.RLock()
+	doneCh := a.doneCh
+	a.l.RUnlock()
 	go func() {
 		select {
-		case <-a.doneCh:
+		case <-doneCh:
 			cancel()
 		case <-ctx.Done():
 			break

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 )
 
 func (c *Config) Clone() (*Config, error) {
@@ -14,13 +13,13 @@ func (c *Config) Clone() (*Config, error) {
 
 	marshaledConfig, err := proto.Marshal(c)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to marshal config: {{err}}", err)
+		return nil, fmt.Errorf("failed to marshal config: %w", err)
 	}
 
 	var clonedConfig Config
 	err = proto.Unmarshal(marshaledConfig, &clonedConfig)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to unmarshal config: {{err}}", err)
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	return &clonedConfig, nil
