@@ -1808,6 +1808,10 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if intentRaw == nil {
+		t.Fatal("no intent log present")
+	}
+
 	var intent ActivityIntentLog
 	err = intentRaw.DecodeJSON(&intent)
 	if err != nil {
