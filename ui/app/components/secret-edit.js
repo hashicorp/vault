@@ -116,8 +116,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   ),
   canDelete: alias('updatePath.canDelete'),
   canUpdate: alias('updatePath.canUpdate'),
-  //  ARG TODO covered by canDelete if they canDelete they can delete the version
-  //  ARG TODO need to confirm still works for version 1.
+
   deleteVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
@@ -148,8 +147,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   destroyVersionPath: maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.modelForData) return;
-      if (!context.modelForData.id) return;
+      if (!context.modelForData || !context.modelForData.id) return;
+
       let [backend, id] = JSON.parse(context.modelForData.id);
       return {
         id: `${backend}/destroy/${id}`,
@@ -158,7 +157,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id'
   ),
   canDestroyVersion: alias('destroyVersionPath.canUpdate'),
-  // ARG TODO missing canUndelete Version? see secret version menu
 
   v2UpdatePath: maybeQueryRecord(
     'capabilities',
@@ -179,15 +177,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   ),
   canEditV2Secret: alias('v2UpdatePath.canUpdate'),
 
-  requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
-
-  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
-
-  modelForData: computed('isV2', 'model', function() {
-    let { model } = this;
-    if (!model) return null;
-    return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
-  }),
+  canDestroyAllVersions: alias('v2UpdatePath.canDelete'),
 
   isLatestVersion: computed('model.{currentVersion,selectedVersion}', function() {
     let { model } = this;
@@ -198,6 +188,16 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       return false;
     }
     return true;
+  }),
+
+  requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
+
+  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
+
+  modelForData: computed('isV2', 'model', function() {
+    let { model } = this;
+    if (!model) return null;
+    return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -467,7 +467,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
           .adapterFor('secret-v2-version')
           .v2DeleteOperation(this.store, this.modelForData.id, deleteType)
           .then(() => {
-            location.reload(); // ARG TODO not the best but unsure how refresh such that the modal no longer shows?
+            location.reload();
           });
       }
     },
