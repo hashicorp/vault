@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -221,75 +222,98 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var backend *physical.Backend
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		if err := diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
+		var subspanErrStrings []string
+		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
+			// diagnose.Test(ctx, "create-storage-backend", diagnose.WithTimeout(20*time.Second, func(ctx context.Context) error {
+
 			b, err := server.setupStorage(config)
 			if err != nil {
+				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			backend = &b
 			return nil
-		}); err != nil {
-			return err
+		})
+		// }))
+
+		if config.Storage == nil {
+			return fmt.Errorf("no storage stanza found in config")
 		}
 
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
-			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
-			if err != nil {
-				return err
-			}
+			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
+				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+				if err != nil {
+					subspanErrStrings = append(subspanErrStrings, err.Error())
+					return err
+				}
+				return nil
+			})
 
-			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
-			}
-		}
-
-		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
-			if err != nil {
-				return err
-			}
+			diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
+				dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
+				if dirAccess != "" {
+					diagnose.Warn(ctx, dirAccess)
+				}
+				return nil
+			})
 		}
 
 		// Attempt to use storage backend
 		if !c.skipEndEnd {
-			err = diagnose.StorageEndToEndLatencyCheck(ctx, *backend)
-			if err != nil {
-				return err
-			}
+			diagnose.Test(ctx, "test-access-storage", func(ctx context.Context) error {
+				err = diagnose.StorageEndToEndLatencyCheck(ctx, *backend)
+				if err != nil {
+					subspanErrStrings = append(subspanErrStrings, err.Error())
+					return err
+				}
+				return nil
+			})
 		}
-
-		return nil
+		return multiErr(subspanErrStrings)
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
 
 	var configSR sr.ServiceRegistration
 	if err := diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
-		if config.ServiceRegistration == nil {
+		var subspanErrStrings []string
+		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
 			return fmt.Errorf("No service registration config")
 		}
 		srConfig := config.ServiceRegistration.Config
-		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
-			}
 
+		diagnose.Test(ctx, "test-serviceregistration-tls-consul", func(ctx context.Context) error {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
 			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
+				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
+			return nil
+		})
+
+		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			diagnose.Test(ctx, "test-consul-direct-access-service-discovery", func(ctx context.Context) error {
+				dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
+				if dirAccess != "" {
+					diagnose.Warn(ctx, dirAccess)
+				}
+				return nil
+			})
 
 			// Initialize the Service Discovery, if there is one
-			configSR, err = beginServiceRegistration(server, config)
-			if err != nil {
-				return err
-			}
+			diagnose.Test(ctx, "init-consul-serviceregistration", func(ctx context.Context) error {
+				configSR, err = beginServiceRegistration(server, config)
+				if err != nil {
+					subspanErrStrings = append(subspanErrStrings, err.Error())
+					return err
+				}
+				return nil
+			})
 		}
-		return nil
+		return multiErr(subspanErrStrings)
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
@@ -297,6 +321,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var barrierWrapper *wrapping.Wrapper
 	var barrierSeal *vault.Seal
 	var unwrapSeal *vault.Seal
+
 	if err := diagnose.Test(ctx, "create-seal", func(context.Context) error {
 		var seals []vault.Seal
 		var sealConfigError error
@@ -334,35 +359,60 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var coreConfig vault.CoreConfig
 	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
-		// prepare a secure random reader for core
-		secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, *barrierWrapper)
-		if err != nil {
-			return err
-		}
+		var secureRandomReader io.Reader
+		var subspanErrStrings []string
+		diagnose.Test(ctx, "init-randreader", func(ctx context.Context) error {
+			// prepare a secure random reader for core
+			secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, *barrierWrapper)
+			if err != nil {
+				subspanErrStrings = append(subspanErrStrings, err.Error())
+				return err
+			}
+			return nil
+		})
+
 		if backend == nil {
 			return fmt.Errorf(BackendUninitializedErr)
 		}
 		coreConfig = createCoreConfig(server, config, *backend, configSR, *barrierSeal, *unwrapSeal, metricsHelper, metricSink, secureRandomReader)
-		return nil
+		return multiErr(subspanErrStrings)
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
 
 	var disableClustering bool
 	if err := diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
+		var subspanErrStrings []string
 		if backend == nil {
 			return fmt.Errorf(BackendUninitializedErr)
 		}
-		// Initialize the separate HA storage backend, if it exists
-		disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
-		if err != nil {
-			return err
+		diagnose.Test(ctx, "create-ha-storage-backend", func(ctx context.Context) error {
+			// Initialize the separate HA storage backend, if it exists
+			disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
+			if err != nil {
+				subspanErrStrings = append(subspanErrStrings, err.Error())
+				return err
+			}
+			return nil
+		})
+		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
+			dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+			return nil
+		})
+		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
+			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
+				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+				if err != nil {
+					subspanErrStrings = append(subspanErrStrings, err.Error())
+					return err
+				}
+				return nil
+			})
 		}
-		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
-		if dirAccess != "" {
-			diagnose.Warn(ctx, dirAccess)
-		}
-		return nil
+		return multiErr(subspanErrStrings)
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
@@ -420,13 +470,21 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var clusterAddrs []*net.TCPAddr
 	var lns []listenerutil.Listener
 	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+		var subspanErrStrings []string
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
-		status, listeners, clAddrs, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
-		if status != 0 {
-			return errMsg
-		}
+		var listeners []listenerutil.Listener
+		var clAddrs []*net.TCPAddr
+		var status int
+		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
+			status, listeners, clAddrs, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
+			if status != 0 {
+				subspanErrStrings = append(subspanErrStrings, err.Error())
+				return err
+			}
+			return nil
+		})
 
 		lns = listeners
 		clusterAddrs = clAddrs
@@ -440,30 +498,39 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 
-		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-		for _, ln := range lns {
-			if ln.Config.TLSDisable {
-				diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
-				continue
-			}
-			if ln.Config.TLSDisableClientCerts {
-				diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
-			}
+		diagnose.Test(ctx, "check-listener-tls", func(ctx context.Context) error {
+			sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
+			for _, ln := range lns {
+				if ln.Config.TLSDisable {
+					diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
+					continue
+				}
+				if ln.Config.TLSDisableClientCerts {
+					diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
+				}
 
-			// Check ciphersuite and load ca/cert/key files
-			// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
-			// perform an active probe.
-			_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+				// Check ciphersuite and load ca/cert/key files
+				// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
+				// perform an active probe.
+				_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
+				if err != nil {
+					subspanErrStrings = append(subspanErrStrings, err.Error())
+					return err
+				}
+
+				sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+					Listener: ln.Listener,
+					Config:   ln.Config,
+				})
+			}
+			err = diagnose.ListenerChecks(sanitizedListeners)
 			if err != nil {
+				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
-
-			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-				Listener: ln.Listener,
-				Config:   ln.Config,
-			})
-		}
-		return diagnose.ListenerChecks(sanitizedListeners)
+			return nil
+		})
+		return multiErr(subspanErrStrings)
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
@@ -518,6 +585,13 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	}); err != nil {
 		diagnose.Error(ctx, err)
+	}
+	return nil
+}
+
+func multiErr(errstrings []string) error {
+	if errstrings != nil {
+		return fmt.Errorf(strings.Join(errstrings, "\n"))
 	}
 	return nil
 }
