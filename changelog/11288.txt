@@ -1,0 +1,4 @@
+```release-note:bug
+agent: Fixed agent templating to use configured tls servername values
+```
+
