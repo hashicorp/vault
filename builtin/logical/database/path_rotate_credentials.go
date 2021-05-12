@@ -82,6 +82,10 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		b.Lock()
 		defer b.Unlock()
 
+		// Take the write lock on the instance
+		dbi.Lock()
+		defer dbi.Unlock()
+
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
@@ -91,10 +95,6 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			// Even on error, still remove the connection
 			delete(b.connections, name)
 		}()
-
-		// Take the write lock on the instance
-		dbi.Lock()
-		defer dbi.Unlock()
 
 		// Generate new credentials
 		oldPassword := config.ConnectionDetails["password"].(string)
