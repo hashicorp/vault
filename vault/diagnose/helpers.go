@@ -26,6 +26,8 @@ const (
 var diagnoseSession = struct{}{}
 var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
 
+type testFunction func(context.Context) error
+
 type Session struct {
 	tc     *TelemetryCollector
 	tracer trace.Tracer
@@ -169,7 +171,7 @@ func SpotCheck(ctx context.Context, checkName string, f func() error) error {
 
 // Test creates a new named span, and executes the provided function within it.  If the function returns an error,
 // the span is considered to have failed.
-func Test(ctx context.Context, spanName string, function func(context.Context) error, options ...trace.SpanOption) error {
+func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanOption) error {
 	ctx, span := StartSpan(ctx, spanName, options...)
 	defer span.End()
 
@@ -184,7 +186,7 @@ func Test(ctx context.Context, spanName string, function func(context.Context) e
 // complete within the timeout, e.g.
 //
 // diagnose.Test(ctx, "my-span", diagnose.WithTimeout(5 * time.Second, myTestFunc))
-func WithTimeout(d time.Duration, f func(context.Context) error) func(context.Context) error {
+func WithTimeout(d time.Duration, f testFunction) testFunction {
 	return func(ctx context.Context) error {
 		rch := make(chan error)
 		t := time.NewTimer(d)
@@ -201,7 +203,7 @@ func WithTimeout(d time.Duration, f func(context.Context) error) func(context.Co
 
 // Skippable wraps a Test function with logic that will not run the test if the skipName
 // was in the session's skip list
-func Skippable(skipName string, f func(context.Context) error) func(context.Context) error {
+func Skippable(skipName string, f testFunction) testFunction {
 	return func(ctx context.Context) error {
 		session := CurrentSession(ctx)
 		if session != nil {
