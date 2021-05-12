@@ -13,6 +13,7 @@
         "ttl"
         "stringArray"
         "json"
+        "regex"
       )
     )
   )
@@ -129,6 +130,18 @@
       @initialValue={{or (get model valuePath) attr.options.setDefault}}
     />
   </div>
+{{else if (eq attr.options.editType "regex")}}
+  {{!-- Regex Validated Input --}}
+  <RegexValidator
+    @attr={{attr}}
+    @labelString={{labelString}}
+    @value={{or (get model valuePath)
+        attr.options.defaultValue}}
+    @onChange={{action
+          (action "setAndBroadcast" valuePath)
+          value="target.value"
+        }}
+  />
 {{else if (eq attr.options.editType "optionalText")}}
   {{!-- Togglable Text Input --}}
   <Toggle
