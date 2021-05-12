@@ -361,16 +361,14 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 	extensions := make(map[string]string)
 
 	if len(unparsedExtensions) > 0 {
-		parsedExtensions := convertMapToStringValue(unparsedExtensions)
+		extensions := convertMapToStringValue(unparsedExtensions)
 		if role.AllowedExtensions != "" {
 			notAllowed := []string{}
 			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
 
-			for extensionKey, extensionValue := range parsedExtensions {
+			for extensionKey, _ := range extensions {
 				if !strutil.StrListContains(allowedExtensions, extensionKey) {
 					notAllowed = append(notAllowed, extensionKey)
-				} else {
-					extensions[extensionKey] = extensionValue
 				}
 			}
 
@@ -378,7 +376,10 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 			}
 		}
-	} else if role.DefaultExtensionsTemplate {
+		return extensions, nil
+	}
+
+	if role.DefaultExtensionsTemplate {
 		for extensionKey, extensionValue := range role.DefaultExtensions {
 			// Look for templating markers {{ .* }}
 			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)

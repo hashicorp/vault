@@ -1475,6 +1475,45 @@ func TestBackend_DefaultExtensionsTemplating(t *testing.T) {
 		t.Fatal("expected an error while attempting to sign a key with invalid permissions")
 	}
 
+	// Write SSH role to test with any extension.
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+		"key_type":                    "ca",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"default_extensions_template": true,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with userpassToken, and user-provided extensions
+	userProvidedAnyExtensionPermissions := map[string]string{
+		"login@foobar.com": "not_userpassname",
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedAnyExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey = resp.Data["signed_key"].(string)
+	key, _ = base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err = ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, userProvidedAnyExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
