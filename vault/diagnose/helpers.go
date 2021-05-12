@@ -60,12 +60,19 @@ func (s *Session) SetSkipList(ls []string) {
 	}
 }
 
+// IsSkipped returns true if skipName is present in the skip list.  Can be used in combination with Skip to mark a
+// span skipped and conditionally skip some logic.
+func (s *Session) IsSkipped(skipName string) bool {
+	return s.skip[skipName]
+}
+
 // Context returns a new context with a defined diagnose session
 func Context(ctx context.Context, sess *Session) context.Context {
 	return context.WithValue(ctx, diagnoseSession, sess)
 }
 
-func getSession(ctx context.Context) *Session {
+// CurrentSession retrieves the active diagnose section from the context, or nil if none.
+func CurrentSession(ctx context.Context) *Session {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {
 
@@ -84,7 +91,7 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 
 // StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
-	session := getSession(ctx)
+	session := CurrentSession(ctx)
 	if session != nil {
 		return session.tracer.Start(ctx, spanName, options...)
 	} else {
@@ -105,6 +112,7 @@ func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 	return err
 }
 
+// Skipped marks the current span skipped
 func Skipped(ctx context.Context) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(skippedEventName)
@@ -195,13 +203,12 @@ func WithTimeout(d time.Duration, f func(context.Context) error) func(context.Co
 // was in the session's skip list
 func Skippable(skipName string, f func(context.Context) error) func(context.Context) error {
 	return func(ctx context.Context) error {
-		session := getSession(ctx)
+		session := CurrentSession(ctx)
 		if session != nil {
-			if !session.skip[skipName] {
+			if !session.IsSkipped(skipName) {
 				return f(ctx)
 			} else {
-				span := trace.SpanFromContext(ctx)
-				span.AddEvent(skippedEventName)
+				Skipped(ctx)
 			}
 		}
 		return nil
