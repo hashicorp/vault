@@ -5,9 +5,14 @@ import { action } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
+const getErrorMessage = errors => {
+  let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
+  return errorMessage;
+};
 export default class SecretDeleteMenu extends Component {
   @service store;
   @service router;
+  @service flashMessages;
 
   @tracked showDeleteModal = false;
 
@@ -122,8 +127,13 @@ export default class SecretDeleteMenu extends Component {
       return this.store
         .adapterFor('secret-v2-version')
         .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType)
-        .then(() => {
-          location.reload();
+        .then(resp => {
+          if (resp.isAdapterError) {
+            const errorMessage = getErrorMessage(resp.errors);
+            this.flashMessages.danger(errorMessage);
+          } else {
+            location.reload();
+          }
         });
     }
   }

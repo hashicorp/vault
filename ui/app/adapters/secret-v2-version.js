@@ -72,17 +72,23 @@ export default ApplicationAdapter.extend({
     let [backend, path, version] = JSON.parse(id);
     // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-version'
     if ((!version && deleteType === 'delete') || deleteType === 'delete-latest-version') {
-      return this.ajax(this._url(backend, path, 'data'), 'DELETE').then(() => {
-        let model = store.peekRecord('secret-v2-version', id);
-        return model && model.rollbackAttributes() && model.reload();
-      });
-    } else {
-      return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
-        () => {
+      return this.ajax(this._url(backend, path, 'data'), 'DELETE')
+        .then(() => {
           let model = store.peekRecord('secret-v2-version', id);
           return model && model.rollbackAttributes() && model.reload();
-        }
-      );
+        })
+        .catch(e => {
+          return e;
+        });
+    } else {
+      return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } })
+        .then(() => {
+          let model = store.peekRecord('secret-v2-version', id);
+          return model && model.rollbackAttributes() && model.reload();
+        })
+        .catch(e => {
+          return e;
+        });
     }
   },
 
