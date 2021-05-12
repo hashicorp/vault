@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -137,7 +136,7 @@ func (c *mongoDBConnectionProducer) getWriteConcern() (opts *options.ClientOptio
 	concern := &writeConcern{}
 	err = json.Unmarshal([]byte(input), concern)
 	if err != nil {
-		return nil, errwrap.Wrapf("error unmarshalling write_concern: {{err}}", err)
+		return nil, fmt.Errorf("error unmarshalling write_concern: %w", err)
 	}
 
 	// Translate write concern to mongo options
