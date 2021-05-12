@@ -1,0 +1,4 @@
+```release-note:bug
+agent/cert: Fix issue where the API client on agent was not honoring certificate
+information from the auto-auth config map on renewals or retries.
+```
