@@ -7,14 +7,12 @@ import (
 	"io"
 	"strings"
 
+	log "github.com/hashicorp/go-hclog"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
-
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
@@ -57,15 +55,6 @@ func (m *MongoDB) Type() (string, error) {
 	return mongoDBTypeName, nil
 }
 
-func (m *MongoDB) getConnection(ctx context.Context) (*mongo.Client, error) {
-	client, err := m.Connection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return client.(*mongo.Client), nil
-}
-
 func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	m.Lock()
 	defer m.Unlock()
@@ -91,41 +80,26 @@ func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
-	err = mapstructure.WeakDecode(req.Config, m.mongoDBConnectionProducer)
+	err = m.mongoDBConnectionProducer.loadConfig(req.Config)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
-
-	if len(m.ConnectionURL) == 0 {
-		return dbplugin.InitializeResponse{}, fmt.Errorf("connection_url cannot be empty-mongo fail")
-	}
-
-	writeOpts, err := m.getWriteConcern()
-	if err != nil {
-		return dbplugin.InitializeResponse{}, err
-	}
-
-	authOpts, err := m.getTLSAuth()
-	if err != nil {
-		return dbplugin.InitializeResponse{}, err
-	}
-
-	m.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
 
 	// Set initialized to true at this point since all fields are set,
 	// and the connection can be established at a later time.
 	m.Initialized = true
 
 	if req.VerifyConnection {
-		_, err := m.Connection(ctx)
+		client, err := m.mongoDBConnectionProducer.createClient(ctx)
 		if err != nil {
 			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
 		}
 
-		err = m.client.Ping(ctx, readpref.Primary())
+		err = client.Ping(ctx, readpref.Primary())
 		if err != nil {
 			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
 		}
+		m.mongoDBConnectionProducer.client = client
 	}
 
 	resp := dbplugin.InitializeResponse{
@@ -135,10 +109,6 @@ func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest
 }
 
 func (m *MongoDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
-	// Grab the lock
-	m.Lock()
-	defer m.Unlock()
-
 	if len(req.Statements.Commands) == 0 {
 		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
@@ -189,9 +159,6 @@ func (m *MongoDB) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest
 }
 
 func (m *MongoDB) changeUserPassword(ctx context.Context, username, password string) error {
-	m.Lock()
-	defer m.Unlock()
-
 	connURL := m.getConnectionURL()
 	cs, err := connstring.Parse(connURL)
 	if err != nil {
@@ -218,9 +185,6 @@ func (m *MongoDB) changeUserPassword(ctx context.Context, username, password str
 }
 
 func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
-	m.Lock()
-	defer m.Unlock()
-
 	// If no revocation statements provided, pass in empty JSON
 	var revocationStatement string
 	switch len(req.Statements.Commands) {
@@ -251,6 +215,12 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest
 	}
 
 	err = m.runCommandWithRetry(ctx, db, dropUserCmd)
+	cErr, ok := err.(mongo.CommandError)
+	if ok && cErr.Name == "UserNotFound" { // User already removed, don't retry needlessly
+		log.Default().Warn("MongoDB user was deleted prior to lease revocation", "user", req.Username)
+		return dbplugin.DeleteUserResponse{}, nil
+	}
+
 	return dbplugin.DeleteUserResponse{}, err
 }
 
@@ -258,7 +228,7 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest
 // on the first attempt. This should be called with the lock held
 func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interface{}) error {
 	// Get the client
-	client, err := m.getConnection(ctx)
+	client, err := m.Connection(ctx)
 	if err != nil {
 		return err
 	}
@@ -273,7 +243,7 @@ func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interf
 		return nil
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		client, err = m.getConnection(ctx)
+		client, err = m.Connection(ctx)
 		if err != nil {
 			return err
 		}

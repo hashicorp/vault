@@ -78,6 +78,10 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		// Take out the backend lock since we are swapping out the connection
+		b.Lock()
+		defer b.Unlock()
+
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
@@ -87,10 +91,6 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			// Even on error, still remove the connection
 			delete(b.connections, name)
 		}()
-
-		// Take out the backend lock since we are swapping out the connection
-		b.Lock()
-		defer b.Unlock()
 
 		// Take the write lock on the instance
 		dbi.Lock()
