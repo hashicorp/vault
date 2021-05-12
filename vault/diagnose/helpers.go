@@ -71,7 +71,7 @@ func Context(ctx context.Context, sess *Session) context.Context {
 	return context.WithValue(ctx, diagnoseSession, sess)
 }
 
-// CurrentSession retrieves the active diagnose section from the context, or nil if none.
+// CurrentSession retrieves the active diagnose session from the context, or nil if none.
 func CurrentSession(ctx context.Context) *Session {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {
