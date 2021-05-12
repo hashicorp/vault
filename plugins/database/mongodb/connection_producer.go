@@ -167,7 +167,7 @@ func (c *mongoDBConnectionProducer) makeClientOpts() (*options.ClientOptions, er
 		return nil, err
 	}
 
-	timeoutOpts, err := c.getTimeoutOpts()
+	timeoutOpts, err := c.timeoutOpts()
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, e
 	return opts, nil
 }
 
-func (c *mongoDBConnectionProducer) getTimeoutOpts() (opts *options.ClientOptions, err error) {
+func (c *mongoDBConnectionProducer) timeoutOpts() (opts *options.ClientOptions, err error) {
 	opts = options.Client()
 
 	if c.SocketTimeout < 0 {

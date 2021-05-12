@@ -97,6 +97,7 @@ func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest
 
 		err = client.Ping(ctx, readpref.Primary())
 		if err != nil {
+			_ = client.Disconnect(ctx) // Try to prevent any sort of resource leak
 			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
 		}
 		m.mongoDBConnectionProducer.client = client
