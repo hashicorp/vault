@@ -633,7 +633,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	recovery bool) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to look up backed-up keys: {{err}}", err)
+		return nil, fmt.Errorf("unable to look up backed-up keys: %w", err)
 	}
 	if backup == nil {
 		return logical.ErrorResponse("no backed-up keys found"), nil
@@ -648,7 +648,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 			}
 			key, err := hex.DecodeString(j)
 			if err != nil {
-				return nil, errwrap.Wrapf("error decoding hex-encoded backup key: {{err}}", err)
+				return nil, fmt.Errorf("error decoding hex-encoded backup key: %w", err)
 			}
 			currB64Keys = append(currB64Keys, base64.StdEncoding.EncodeToString(key))
 			keysB64[k] = currB64Keys
@@ -684,7 +684,7 @@ func (b *SystemBackend) handleRekeyDelete(
 	recovery bool) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
-		return nil, errwrap.Wrapf("error during deletion of backed-up keys: {{err}}", err)
+		return nil, fmt.Errorf("error during deletion of backed-up keys: %w", err)
 	}
 
 	return nil, nil
@@ -1511,11 +1511,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			// enabled. If the vkv backend suports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 			if err != nil {
-				return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
+				return nil, fmt.Errorf("unable to parse mount entry: %w", err)
 			}
 			optVersion, err := parseutil.ParseInt(v)
 			if err != nil {
-				return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
+				return handleError(fmt.Errorf("unable to parse options: %w", err))
 			}
 
 			// Only accept valid versions
@@ -2715,7 +2715,7 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	httpResp := &logical.HTTPResponse{}
 	err = jsonutil.DecodeJSON([]byte(response), httpResp)
 	if err != nil {
-		return nil, errwrap.Wrapf("error decoding wrapped response: {{err}}", err)
+		return nil, fmt.Errorf("error decoding wrapped response: %w", err)
 	}
 	if httpResp.Data != nil &&
 		(httpResp.Data[logical.HTTPStatusCode] != nil ||
@@ -2769,7 +2769,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, tokenID)
 		if err != nil {
-			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
+			return "", fmt.Errorf("error decrementing wrapping token's use-count: %w", err)
 		}
 
 		defer b.Core.tokenStore.revokeOrphan(ctx, tokenID)
@@ -2783,7 +2783,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return "", fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return "no information found; wrapping token may be from a previous Vault version", ErrInternalError
@@ -2979,7 +2979,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3001,7 +3001,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	if creationTTLRaw != nil {
 		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
-			return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
+			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %w", err)
 		}
 		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
@@ -3046,7 +3046,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %w", err)
 		}
 		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
@@ -3060,7 +3060,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3079,7 +3079,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
-		return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %w", err)
 	}
 
 	// Get creation_path to return as the response later
@@ -3098,7 +3098,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)
+		return nil, fmt.Errorf("error looking up response: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil

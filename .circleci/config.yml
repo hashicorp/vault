@@ -952,7 +952,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1167,7 +1167,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1633,7 +1633,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1779,7 +1779,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster \
               tail -f /dev/null
 
             # Run tests
@@ -2376,7 +2376,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster \
               tail -f /dev/null
 
             # Run tests

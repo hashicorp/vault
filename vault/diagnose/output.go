@@ -17,12 +17,14 @@ import (
 const (
 	status_unknown = "[      ] "
 	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
-	status_failed  = "\u001b[31m[failed]\u001b[0m "
+	status_failed  = "\u001b[31m[ fail ]\u001b[0m "
 	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
+	status_skipped = "\u001b[90m[ skip ]\u001b[0m "
 	same_line      = "\u001b[F"
 	ErrorStatus    = "error"
 	WarningStatus  = "warn"
 	OkStatus       = "ok"
+	SkippedStatus  = "skipped"
 )
 
 var errUnimplemented = errors.New("unimplemented")
@@ -133,6 +135,8 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						r.Warnings = append(r.Warnings, a.Value.AsString())
 					}
 				}
+			case skippedEventName:
+				r.Status = SkippedStatus
 			case ErrorStatus:
 				var message string
 				var action string
@@ -218,11 +222,13 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 		case codes.Unset:
 			if len(r.Warnings) > 0 {
 				r.Status = WarningStatus
-			} else {
+			} else if r.Status != SkippedStatus {
 				r.Status = OkStatus
 			}
 		case codes.Ok:
-			r.Status = OkStatus
+			if r.Status != SkippedStatus {
+				r.Status = OkStatus
+			}
 		case codes.Error:
 			r.Status = ErrorStatus
 		}
@@ -251,6 +257,8 @@ func (r *Result) write(sb *strings.Builder, depth int) {
 			sb.WriteString(status_warn)
 		case ErrorStatus:
 			sb.WriteString(status_failed)
+		case SkippedStatus:
+			sb.WriteString(status_skipped)
 		}
 		sb.WriteString(r.Name)
 
