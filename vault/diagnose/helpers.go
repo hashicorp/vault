@@ -13,6 +13,7 @@ import (
 
 const (
 	warningEventName        = "warning"
+	skippedEventName        = "skipped"
 	actionKey               = "actionKey"
 	spotCheckOkEventName    = "spot-check-ok"
 	spotCheckWarnEventName  = "spot-check-warn"
@@ -29,6 +30,7 @@ type Session struct {
 	tc     *TelemetryCollector
 	tracer trace.Tracer
 	tp     *sdktrace.TracerProvider
+	skip   map[string]bool
 }
 
 // New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
@@ -47,13 +49,30 @@ func New() *Session {
 		tp:     tp,
 		tc:     tc,
 		tracer: tracer,
+		skip:   make(map[string]bool),
 	}
 	return sess
+}
+
+func (s *Session) SetSkipList(ls []string) {
+	for _, e := range ls {
+		s.skip[e] = true
+	}
 }
 
 // Context returns a new context with a defined diagnose session
 func Context(ctx context.Context, sess *Session) context.Context {
 	return context.WithValue(ctx, diagnoseSession, sess)
+}
+
+func getSession(ctx context.Context) *Session {
+	sessionCtxVal := ctx.Value(diagnoseSession)
+	if sessionCtxVal != nil {
+
+		return sessionCtxVal.(*Session)
+
+	}
+	return nil
 }
 
 // Finalize ends the Diagnose session, returning the root of the result tree.  This will be empty until
@@ -65,10 +84,8 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 
 // StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
-	sessionCtxVal := ctx.Value(diagnoseSession)
-	if sessionCtxVal != nil {
-
-		session := sessionCtxVal.(*Session)
+	session := getSession(ctx)
+	if session != nil {
 		return session.tracer.Start(ctx, spanName, options...)
 	} else {
 		return noopTracer.Start(ctx, spanName, options...)
@@ -86,6 +103,11 @@ func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err, options...)
 	return err
+}
+
+func Skipped(ctx context.Context) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(skippedEventName)
 }
 
 // Warn records a warning on the current span
@@ -154,7 +176,7 @@ func Test(ctx context.Context, spanName string, function func(context.Context) e
 // complete within the timeout, e.g.
 //
 // diagnose.Test(ctx, "my-span", diagnose.WithTimeout(5 * time.Second, myTestFunc))
-func WithTimeout(d time.Duration, f func(context.Context) error) func(ctx context.Context) error {
+func WithTimeout(d time.Duration, f func(context.Context) error) func(context.Context) error {
 	return func(ctx context.Context) error {
 		rch := make(chan error)
 		t := time.NewTimer(d)
@@ -166,5 +188,22 @@ func WithTimeout(d time.Duration, f func(context.Context) error) func(ctx contex
 		case err := <-rch:
 			return err
 		}
+	}
+}
+
+// Skippable wraps a Test function with logic that will not run the test if the skipName
+// was in the session's skip list
+func Skippable(skipName string, f func(context.Context) error) func(context.Context) error {
+	return func(ctx context.Context) error {
+		session := getSession(ctx)
+		if session != nil {
+			if !session.skip[skipName] {
+				return f(ctx)
+			} else {
+				span := trace.SpanFromContext(ctx)
+				span.AddEvent(skippedEventName)
+			}
+		}
+		return nil
 	}
 }
