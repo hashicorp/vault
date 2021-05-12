@@ -279,6 +279,15 @@ func (cl *Listener) Run(ctx context.Context) error {
 				close(closeCh)
 			}()
 
+			// baseDelay is the initial delay after an Accept() error before attempting again
+			const baseDelay = 5 * time.Millisecond
+
+			// maxDelay is the maximum delay after an Accept() error before attempting again.
+			// In the case that this function is error-looping, it will delay the shutdown check.
+			// Therefore, changes to maxDelay may have an effect on the latency of shutdown.
+			const maxDelay = 1 * time.Second
+
+			var loopDelay time.Duration
 			for {
 				if atomic.LoadUint32(cl.shutdown) > 0 {
 					return
@@ -298,8 +307,23 @@ func (cl *Listener) Run(ctx context.Context) error {
 					if conn != nil {
 						conn.Close()
 					}
+
+					if loopDelay == 0 {
+						loopDelay = baseDelay
+					} else {
+						loopDelay *= 2
+					}
+
+					if loopDelay > maxDelay {
+						loopDelay = maxDelay
+					}
+
+					time.Sleep(loopDelay)
 					continue
 				}
+				// No error, reset loop delay
+				loopDelay = 0
+
 				if conn == nil {
 					continue
 				}
