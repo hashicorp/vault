@@ -301,11 +301,16 @@ func (cl *Listener) Run(ctx context.Context) error {
 				// Accept the connection
 				conn, err := tlsLn.Accept()
 				if err != nil {
-					if err, ok := err.(net.Error); ok && !err.Timeout() {
+					err, ok := err.(net.Error)
+					if ok && !err.Timeout() {
 						cl.logger.Debug("non-timeout error accepting on cluster port", "error", err)
 					}
 					if conn != nil {
 						conn.Close()
+					}
+					if ok && err.Timeout() {
+						loopDelay = 0
+						continue
 					}
 
 					if loopDelay == 0 {
