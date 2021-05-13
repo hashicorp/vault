@@ -144,7 +144,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-    await showPage.deleteSecret();
+    await showPage.deleteSecretV1();
     assert.equal(
       currentRouteName(),
       'vault.cluster.secrets.backend.list-root',
@@ -305,7 +305,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await settled();
-    await click('[data-test-popup-menu-trigger="history"]');
+    await click('[data-test-popup-menu-trigger="version"]');
     await settled();
     await click('[data-test-version-history]');
     await settled();
