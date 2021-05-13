@@ -46,32 +46,35 @@ type placementStrategy interface {
 	replicationFactor(dc string) int
 }
 
-func getReplicationFactorFromOpts(keyspace string, val interface{}) int {
-	// TODO: dont really want to panic here, but is better
-	// than spamming
+func getReplicationFactorFromOpts(val interface{}) (int, error) {
 	switch v := val.(type) {
 	case int:
-		if v <= 0 {
-			panic(fmt.Sprintf("invalid replication_factor %d. Is the %q keyspace configured correctly?", v, keyspace))
+		if v < 0 {
+			return 0, fmt.Errorf("invalid replication_factor %d", v)
 		}
-		return v
+		return v, nil
 	case string:
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			panic(fmt.Sprintf("invalid replication_factor. Is the %q keyspace configured correctly? %v", keyspace, err))
-		} else if n <= 0 {
-			panic(fmt.Sprintf("invalid replication_factor %d. Is the %q keyspace configured correctly?", n, keyspace))
+			return 0, fmt.Errorf("invalid replication_factor %q: %v", v, err)
+		} else if n < 0 {
+			return 0, fmt.Errorf("invalid replication_factor %d", n)
 		}
-		return n
+		return n, nil
 	default:
-		panic(fmt.Sprintf("unkown replication_factor type %T", v))
+		return 0, fmt.Errorf("unknown replication_factor type %T", v)
 	}
 }
 
 func getStrategy(ks *KeyspaceMetadata) placementStrategy {
 	switch {
 	case strings.Contains(ks.StrategyClass, "SimpleStrategy"):
-		return &simpleStrategy{rf: getReplicationFactorFromOpts(ks.Name, ks.StrategyOptions["replication_factor"])}
+		rf, err := getReplicationFactorFromOpts(ks.StrategyOptions["replication_factor"])
+		if err != nil {
+			Logger.Printf("parse rf for keyspace %q: %v", ks.Name, err)
+			return nil
+		}
+		return &simpleStrategy{rf: rf}
 	case strings.Contains(ks.StrategyClass, "NetworkTopologyStrategy"):
 		dcs := make(map[string]int)
 		for dc, rf := range ks.StrategyOptions {
@@ -79,14 +82,21 @@ func getStrategy(ks *KeyspaceMetadata) placementStrategy {
 				continue
 			}
 
-			dcs[dc] = getReplicationFactorFromOpts(ks.Name+":dc="+dc, rf)
+			rf, err := getReplicationFactorFromOpts(rf)
+			if err != nil {
+				Logger.Println("parse rf for keyspace %q, dc %q: %v", err)
+				// skip DC if the rf is invalid/unsupported, so that we can at least work with other working DCs.
+				continue
+			}
+
+			dcs[dc] = rf
 		}
 		return &networkTopology{dcs: dcs}
 	case strings.Contains(ks.StrategyClass, "LocalStrategy"):
 		return nil
 	default:
-		// TODO: handle unknown replicas and just return the primary host for a token
-		panic(fmt.Sprintf("unsupported strategy class: %v", ks.StrategyClass))
+		Logger.Printf("parse rf for keyspace %q: unsupported strategy class: %v", ks.StrategyClass)
+		return nil
 	}
 }
 

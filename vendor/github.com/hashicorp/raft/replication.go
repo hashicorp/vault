@@ -161,7 +161,7 @@ RPC:
 		// raft commits stop flowing naturally. The actual heartbeats
 		// can't do this to keep them unblocked by disk IO on the
 		// follower. See https://github.com/hashicorp/raft/issues/282.
-		case <-randomTimeout(r.conf.CommitTimeout):
+		case <-randomTimeout(r.config().CommitTimeout):
 			lastLogIdx, _ := r.getLastLog()
 			shouldStop = r.replicateTo(s, lastLogIdx)
 		}
@@ -373,7 +373,7 @@ func (r *Raft) heartbeat(s *followerReplication, stopCh chan struct{}) {
 		// Wait for the next heartbeat interval or forced notify
 		select {
 		case <-s.notifyCh:
-		case <-randomTimeout(r.conf.HeartbeatTimeout / 10):
+		case <-randomTimeout(r.config().HeartbeatTimeout / 10):
 		case <-stopCh:
 			return
 		}
@@ -381,6 +381,7 @@ func (r *Raft) heartbeat(s *followerReplication, stopCh chan struct{}) {
 		start := time.Now()
 		if err := r.trans.AppendEntries(s.peer.ID, s.peer.Address, &req, &resp); err != nil {
 			r.logger.Error("failed to heartbeat to", "peer", s.peer.Address, "error", err)
+			r.observe(FailedHeartbeatObservation{PeerID: s.peer.ID, LastContact: s.LastContact()})
 			failures++
 			select {
 			case <-time.After(backoff(failureWait, failures, maxFailureScale)):
@@ -447,7 +448,7 @@ SEND:
 		case <-s.triggerCh:
 			lastLogIdx, _ := r.getLastLog()
 			shouldStop = r.pipelineSend(s, pipeline, &nextIndex, lastLogIdx)
-		case <-randomTimeout(r.conf.CommitTimeout):
+		case <-randomTimeout(r.config().CommitTimeout):
 			lastLogIdx, _ := r.getLastLog()
 			shouldStop = r.pipelineSend(s, pipeline, &nextIndex, lastLogIdx)
 		}
@@ -562,9 +563,12 @@ func (r *Raft) setPreviousLog(req *AppendEntriesRequest, nextIndex uint64) error
 
 // setNewLogs is used to setup the logs which should be appended for a request.
 func (r *Raft) setNewLogs(req *AppendEntriesRequest, nextIndex, lastIndex uint64) error {
-	// Append up to MaxAppendEntries or up to the lastIndex
-	req.Entries = make([]*Log, 0, r.conf.MaxAppendEntries)
-	maxIndex := min(nextIndex+uint64(r.conf.MaxAppendEntries)-1, lastIndex)
+	// Append up to MaxAppendEntries or up to the lastIndex. we need to use a
+	// consistent value for maxAppendEntries in the lines below in case it ever
+	// becomes reloadable.
+	maxAppendEntries := r.config().MaxAppendEntries
+	req.Entries = make([]*Log, 0, maxAppendEntries)
+	maxIndex := min(nextIndex+uint64(maxAppendEntries)-1, lastIndex)
 	for i := nextIndex; i <= maxIndex; i++ {
 		oldLog := new(Log)
 		if err := r.logs.GetLog(i, oldLog); err != nil {

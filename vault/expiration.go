@@ -915,8 +915,24 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
-		if err := m.removeIndexByToken(ctx, le); err != nil {
-			return err
+		var indexToken string
+		// Maintain secondary index by token, except for orphan batch tokens
+		switch le.ClientTokenType {
+		case logical.TokenTypeBatch:
+			te, err := m.tokenStore.lookupBatchTokenInternal(ctx, le.ClientToken)
+			if err != nil {
+				return err
+			}
+			// If it's a non-orphan batch token, assign the secondary index to its
+			// parent
+			indexToken = te.Parent
+		default:
+			indexToken = le.ClientToken
+		}
+		if indexToken != "" {
+			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1285,7 +1301,11 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 
 	// Refresh groups
 	if resp.Auth.EntityID != "" && m.core.identityStore != nil {
-		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases)
+		mountAccessor := ""
+		if resp.Auth.Alias != nil {
+			mountAccessor = resp.Auth.Alias.MountAccessor
+		}
+		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases, mountAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -1364,6 +1384,17 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		Version:         1,
 	}
 
+	var indexToken string
+	// Maintain secondary index by token, except for orphan batch tokens
+	switch {
+	case te.Type != logical.TokenTypeBatch:
+		indexToken = le.ClientToken
+	case te.Parent != "":
+		// If it's a non-orphan batch token, assign the secondary index to its
+		// parent
+		indexToken = te.Parent
+	}
+
 	defer func() {
 		// If there is an error we want to rollback as much as possible (note
 		// that errors here are ignored to do as much cleanup as we can). We
@@ -1382,7 +1413,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
 			}
 
-			if err := m.removeIndexByToken(ctx, le); err != nil {
+			if err := m.removeIndexByToken(ctx, le, indexToken); err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
 			}
 		}
@@ -1408,16 +1439,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		return "", err
 	}
 
-	// Maintain secondary index by token, except for orphan batch tokens
-	switch {
-	case te.Type != logical.TokenTypeBatch:
-		if err := m.createIndexByToken(ctx, le, le.ClientToken); err != nil {
-			return "", err
-		}
-	case te.Parent != "":
-		// If it's a non-orphan batch token, assign the secondary index to its
-		// parent
-		if err := m.createIndexByToken(ctx, le, te.Parent); err != nil {
+	if indexToken != "" {
+		if err := m.createIndexByToken(ctx, le, indexToken); err != nil {
 			return "", err
 		}
 	}
@@ -1966,10 +1989,10 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 }
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
-func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry) error {
+func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	_, nsID := namespace.SplitIDFromString(le.ClientToken)
+	_, nsID := namespace.SplitIDFromString(token)
 	if nsID != "" {
 		var err error
 		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
@@ -1990,7 +2013,7 @@ func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEnt
 		}
 	}
 
-	saltedID, err := m.tokenStore.SaltID(saltCtx, le.ClientToken)
+	saltedID, err := m.tokenStore.SaltID(saltCtx, token)
 	if err != nil {
 		return err
 	}

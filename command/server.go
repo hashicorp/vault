@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
@@ -1195,37 +1196,39 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
-		RawConfig:                 config,
-		Physical:                  backend,
-		RedirectAddr:              config.Storage.RedirectAddr,
-		StorageType:               config.Storage.Type,
-		HAPhysical:                nil,
-		ServiceRegistration:       configSR,
-		Seal:                      barrierSeal,
-		UnwrapSeal:                unwrapSeal,
-		AuditBackends:             c.AuditBackends,
-		CredentialBackends:        c.CredentialBackends,
-		LogicalBackends:           c.LogicalBackends,
-		Logger:                    c.logger,
-		DisableSentinelTrace:      config.DisableSentinelTrace,
-		DisableCache:              config.DisableCache,
-		DisableMlock:              config.DisableMlock,
-		MaxLeaseTTL:               config.MaxLeaseTTL,
-		DefaultLeaseTTL:           config.DefaultLeaseTTL,
-		ClusterName:               config.ClusterName,
-		CacheSize:                 config.CacheSize,
-		PluginDirectory:           config.PluginDirectory,
-		EnableUI:                  config.EnableUI,
-		EnableRaw:                 config.EnableRawEndpoint,
-		DisableSealWrap:           config.DisableSealWrap,
-		DisablePerformanceStandby: config.DisablePerformanceStandby,
-		DisableIndexing:           config.DisableIndexing,
-		AllLoggers:                c.allLoggers,
-		BuiltinRegistry:           builtinplugins.Registry,
-		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
-		MetricsHelper:             metricsHelper,
-		MetricSink:                metricSink,
-		SecureRandomReader:        secureRandomReader,
+		RawConfig:                      config,
+		Physical:                       backend,
+		RedirectAddr:                   config.Storage.RedirectAddr,
+		StorageType:                    config.Storage.Type,
+		HAPhysical:                     nil,
+		ServiceRegistration:            configSR,
+		Seal:                           barrierSeal,
+		UnwrapSeal:                     unwrapSeal,
+		AuditBackends:                  c.AuditBackends,
+		CredentialBackends:             c.CredentialBackends,
+		LogicalBackends:                c.LogicalBackends,
+		Logger:                         c.logger,
+		DisableSentinelTrace:           config.DisableSentinelTrace,
+		DisableCache:                   config.DisableCache,
+		DisableMlock:                   config.DisableMlock,
+		MaxLeaseTTL:                    config.MaxLeaseTTL,
+		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		ClusterName:                    config.ClusterName,
+		CacheSize:                      config.CacheSize,
+		PluginDirectory:                config.PluginDirectory,
+		EnableUI:                       config.EnableUI,
+		EnableRaw:                      config.EnableRawEndpoint,
+		DisableSealWrap:                config.DisableSealWrap,
+		DisablePerformanceStandby:      config.DisablePerformanceStandby,
+		DisableIndexing:                config.DisableIndexing,
+		AllLoggers:                     c.allLoggers,
+		BuiltinRegistry:                builtinplugins.Registry,
+		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
+		MetricsHelper:                  metricsHelper,
+		MetricSink:                     metricSink,
+		SecureRandomReader:             secureRandomReader,
+		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
+		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -1950,9 +1953,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 
 		case <-c.SigUSR2Ch:
-			buf := make([]byte, 32*1024*1024)
-			n := runtime.Stack(buf[:], true)
-			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
+			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
 

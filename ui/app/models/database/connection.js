@@ -17,6 +17,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'write_concern' },
       { attr: 'creation_statements' },
+      { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
 ];
@@ -126,6 +127,7 @@ export default Model.extend({
       'write_concern',
       'verify_connection',
       'allowed_roles',
+      'root_rotation_statements',
     ];
     return expandAttributeMeta(this, f);
   }),
@@ -134,7 +136,7 @@ export default Model.extend({
     if (!this.plugin_name) {
       return null;
     }
-    let groups = [{ default: ['username', 'password', 'write_concern'] }];
+    let groups = [{ default: ['username', 'password', 'write_concern', 'root_rotation_statements'] }];
     // TODO: Get plugin options based on plugin
     groups.push({
       'TLS options': ['tls', 'tls_ca'],

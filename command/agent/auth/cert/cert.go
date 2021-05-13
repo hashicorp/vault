@@ -108,7 +108,7 @@ func (c *certMethod) AuthClient(client *api.Client) (*api.Client, error) {
 	if c.caCert != "" || (c.clientKey != "" && c.clientCert != "") {
 		// Return cached client if present
 		if c.client != nil {
-			return client, nil
+			return c.client, nil
 		}
 
 		config := api.DefaultConfig()
