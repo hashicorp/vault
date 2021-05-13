@@ -286,8 +286,13 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaseCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	paramRaw, ok := d.GetOk("include_child_namespaces")
-	includeChildNamespaces := ok && paramRaw.(bool)
+	typeRaw, ok := d.GetOk("type")
+	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
+		return nil, nil
+	}
+
+	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
+	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
 
 	resp, err := b.Core.expiration.getIrrevocableLeaseCounts(ctx, includeChildNamespaces)
 	if err != nil {
@@ -300,7 +305,25 @@ func (b *SystemBackend) handleLeaseCount(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	typeRaw, ok := d.GetOk("type")
+	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
+		return nil, nil
+	}
 
+	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
+	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
+
+	forceRaw, ok := d.GetOk("force")
+	force := ok && forceRaw.(bool)
+
+	resp, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, force)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: resp,
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

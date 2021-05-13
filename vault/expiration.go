@@ -73,6 +73,14 @@ const (
 	genericIrrevocableErrorMessage = "unknown"
 
 	outOfRetriesMessage = "out of retries"
+
+	// maximum number of irrevocable leases we return to the irrevocable lease
+	// list API **without** the `force` flag set
+	maxIrrevocableLeasesToReturn = 10000
+)
+
+var (
+	hitMaxIrrevocableLeases = errors.New("Command cancelled because many irrevocable leases were found. To emit the entire list, re-run the command with the force flag set true.")
 )
 
 type pendingInfo struct {
@@ -2433,8 +2441,8 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 		return nil, err
 	}
 
-	numMatchingLeases := 0
 	numMatchingLeasesPerMount := make(map[string]int)
+	numMatchingLeases := 0
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
 		leaseInfo := v.(*leaseEntry)
@@ -2466,6 +2474,65 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 	resp := make(map[string]interface{})
 	resp["lease_count"] = numMatchingLeases
 	resp["counts"] = numMatchingLeases
+
+	return resp, nil
+}
+
+type leaseResponse struct {
+	LeaseID string `json:"lease_id"`
+	ErrMsg  string `json:"error"`
+}
+
+func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeChildNamespaces, force bool) (map[string]interface{}, error) {
+	requestNS, err := namespace.FromContext(ctx)
+	if err != nil {
+		m.logger.Error("could not get namespace from context", "error", err)
+		return nil, err
+	}
+
+	// map of mount point : lease info
+	matchingLeasesPerMount := make(map[string][]*leaseResponse)
+	numMatchingLeases := 0
+	var retErr error
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		leaseInfo := v.(*leaseEntry)
+
+		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
+		if err != nil {
+			// We probably want to track that an error occured, but continue counting
+			m.logger.Warn("could not get lease namespace from ID", "error", err)
+			return true
+		}
+
+		leaseMatches := (leaseNS == requestNS) || (includeChildNamespaces && leaseNS.HasParent(requestNS))
+		if !leaseMatches {
+			// the lease doesn't meet our criteria, so keep looking
+			return true
+		}
+
+		if !force && (numMatchingLeases >= maxIrrevocableLeasesToReturn) {
+			m.logger.Warn("hit max irrevocable leases without force flag set")
+			retErr = hitMaxIrrevocableLeases
+			return false
+		}
+
+		numMatchingLeases++
+		matchingLeasesPerMount[leaseInfo.Path] = append(matchingLeasesPerMount[leaseInfo.Path], &leaseResponse{
+			LeaseID: leaseID,
+			ErrMsg:  leaseInfo.RevokeErr,
+		})
+
+		return true
+	})
+
+	if retErr != nil {
+		return nil, retErr
+	}
+
+	resp := make(map[string]interface{})
+	resp["lease_count"] = numMatchingLeases
+	resp["leases"] = matchingLeasesPerMount
 
 	return resp, nil
 }
