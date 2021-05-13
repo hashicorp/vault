@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -221,8 +221,8 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
 		var subspanErrStrings []string
+		// diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
-			// diagnose.Test(ctx, "create-storage-backend", diagnose.WithTimeout(20*time.Second, func(ctx context.Context) error {
 
 			b, err := server.setupStorage(config)
 			if err != nil {
@@ -232,7 +232,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			backend = &b
 			return nil
 		})
-		// }))
 
 		if config.Storage == nil {
 			return fmt.Errorf("no storage stanza found in config")
@@ -259,14 +258,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Attempt to use storage backend
 		if !c.skipEndEnd {
-			diagnose.Test(ctx, "test-access-storage", func(ctx context.Context) error {
+			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(20*time.Second, func(ctx context.Context) error {
 				err = diagnose.StorageEndToEndLatencyCheck(ctx, *backend)
 				if err != nil {
 					subspanErrStrings = append(subspanErrStrings, err.Error())
 					return err
 				}
 				return nil
-			})
+			}))
 		}
 		return multiErr(subspanErrStrings)
 	})
@@ -302,50 +301,46 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return multiErr(subspanErrStrings)
 	})
 
-	var barrierWrapper *wrapping.Wrapper
-	var barrierSeal *vault.Seal
-	var unwrapSeal *vault.Seal
+	ctx, span = diagnose.StartSpan(ctx, "create-seal")
+	var seals []vault.Seal
+	var sealConfigError error
+	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+	// Check error here
+	if err != nil {
+		diagnose.Fail(ctx, err.Error())
+		goto SEALFAIL
+	}
+	if sealConfigError != nil {
+		diagnose.Fail(ctx, "seal could not be configured: seals may already be initialized")
+		goto SEALFAIL
 
-	diagnose.Test(ctx, "create-seal", func(context.Context) error {
-		var seals []vault.Seal
-		var sealConfigError error
-		bS, bW, uS, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
-		// Check error here
-		if err != nil {
-			return err
-		}
-		if sealConfigError != nil {
-			return fmt.Errorf("seal could not be configured: seals may already be initialized")
-		}
+	}
 
-		barrierSeal = &bS
-		barrierWrapper = &bW
-		unwrapSeal = &uS
-		if seals != nil {
-			for _, seal := range seals {
-				// Ensure that the seal finalizer is called, even if using verify-only
-				defer func(seal *vault.Seal) {
-					err = (*seal).Finalize(context.Background())
-					if err != nil {
-						c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-					}
-				}(&seal)
-			}
+	if seals != nil {
+		for _, seal := range seals {
+			// Ensure that the seal finalizer is called, even if using verify-only
+			defer func(seal *vault.Seal) {
+				err = (*seal).Finalize(context.Background())
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+				}
+			}(&seal)
 		}
+	}
 
-		if barrierSeal == nil {
-			return fmt.Errorf("could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
-		}
-		return nil
-	})
+	if barrierSeal == nil {
+		diagnose.Fail(ctx, "could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
+	}
+	span.End()
 
+SEALFAIL:
 	var coreConfig vault.CoreConfig
 	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
 		var subspanErrStrings []string
 		diagnose.Test(ctx, "init-randreader", func(ctx context.Context) error {
 			// prepare a secure random reader for core
-			secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, *barrierWrapper)
+			secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
 			if err != nil {
 				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
@@ -356,7 +351,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		if backend == nil {
 			return fmt.Errorf(BackendUninitializedErr)
 		}
-		coreConfig = createCoreConfig(server, config, *backend, configSR, *barrierSeal, *unwrapSeal, metricsHelper, metricSink, secureRandomReader)
+		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return multiErr(subspanErrStrings)
 	}); err != nil {
 		diagnose.Error(ctx, err)
