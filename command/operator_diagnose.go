@@ -448,6 +448,8 @@ SEALFAIL:
 	return nil
 }
 
+// ROY: remove multierr and just fail the subspan without bothering with the span
+// the span will fail in a separate PR
 func multiErr(errstrings []string) error {
 	if errstrings != nil {
 		return fmt.Errorf(strings.Join(errstrings, "\n"))
