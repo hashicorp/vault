@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
 	"sync"
 
@@ -12,7 +11,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
@@ -282,12 +280,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			if err != nil {
 				return err
 			}
-
-			// Initialize the Service Discovery, if there is one
-			configSR, err = beginServiceRegistration(server, config)
-			if err != nil {
-				return err
-			}
 		}
 		return nil
 	}); err != nil {
@@ -385,47 +377,17 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.Error(ctx, err)
 	}
 
-	// Initialize the core
-	var core *vault.Core
-	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
-		// Initialize the core
-		var newCoreError error
-		if coreConfig.RawConfig == nil {
-			return fmt.Errorf(CoreConfigUninitializedErr)
-		}
-		core, newCoreError = vault.NewCore(&coreConfig)
-		if newCoreError != nil {
-			if vault.IsFatalError(newCoreError) {
-				return fmt.Errorf("Error initializing core: %s", newCoreError)
-			}
-			diagnose.Warn(ctx, wrapAtLength(
-				"WARNING! A non-fatal error occurred during initialization. Please "+
-					"check the logs for more information."))
-		}
-		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
-
-	if coreConfig.ReloadFuncs != nil && coreConfig.ReloadFuncsLock != nil {
-		// Copy the reload funcs pointers back
-		server.reloadFuncs = coreConfig.ReloadFuncs
-		server.reloadFuncsLock = coreConfig.ReloadFuncsLock
-	}
-
-	var clusterAddrs []*net.TCPAddr
 	var lns []listenerutil.Listener
 	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
-		status, listeners, clAddrs, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
+		status, listeners, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
 		if status != 0 {
 			return errMsg
 		}
 
 		lns = listeners
-		clusterAddrs = clAddrs
 
 		// Make sure we close all listeners from this point on
 		listenerCloseFunc := func() {
@@ -464,56 +426,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.Error(ctx, err)
 	}
 
-	if core != nil {
-		// This needs to happen before we first unseal, so before we trigger dev
-		// mode if it's set
-		core.SetClusterListenerAddrs(clusterAddrs)
-		core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
-			Core: core,
-		}))
-	}
-
-	// // TODO: Diagnose logging configuration
-
-	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
-		if core != nil {
-			runUnseal(server, core)
-		} else {
-			return fmt.Errorf(CoreUninitializedErr)
-		}
-		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
-
-	// If service discovery is available, run service discovery
-	if err := diagnose.Test(ctx, "run-listeners", func(ctx context.Context) error {
-
-		// Instantiate the wait group
-		server.WaitGroup = &sync.WaitGroup{}
-
-		err = runListeners(server, &coreConfig, config, configSR)
-		if err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
-
-	if err := diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
-		// Initialize the HTTP servers
-		if core != nil {
-			err = startHttpServers(server, core, config, lns)
-			if err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf(CoreUninitializedErr)
-		}
-		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
+	// TODO: Diagnose logging configuration
 	return nil
 }
