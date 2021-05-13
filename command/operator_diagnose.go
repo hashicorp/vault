@@ -415,6 +415,34 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 
+	// Initialize the core
+	var core *vault.Core
+	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
+		// Initialize the core
+		var newCoreError error
+		if coreConfig.RawConfig == nil {
+			return fmt.Errorf(CoreConfigUninitializedErr)
+		}
+		core, newCoreError = vault.NewCore(&coreConfig)
+		if newCoreError != nil {
+			if vault.IsFatalError(newCoreError) {
+				return fmt.Errorf("Error initializing core: %s", newCoreError)
+			}
+			diagnose.Warn(ctx, wrapAtLength(
+				"WARNING! A non-fatal error occurred during initialization. Please "+
+					"check the logs for more information."))
+		}
+		return nil
+	}); err != nil {
+		diagnose.Error(ctx, err)
+	}
+
+	if coreConfig.ReloadFuncs != nil && coreConfig.ReloadFuncsLock != nil {
+		// Copy the reload funcs pointers back
+		server.reloadFuncs = coreConfig.ReloadFuncs
+		server.reloadFuncsLock = coreConfig.ReloadFuncsLock
+	}
+
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
 		var subspanErrStrings []string
@@ -479,6 +507,47 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	})
 
 	// TODO: Diagnose logging configuration
+
+	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
+		if core != nil {
+			runUnseal(server, core, ctx)
+		} else {
+			return fmt.Errorf(CoreUninitializedErr)
+		}
+		return nil
+	}); err != nil {
+		diagnose.Error(ctx, err)
+	}
+
+	// If service discovery is available, run service discovery
+	if err := diagnose.Test(ctx, "run-listeners", func(ctx context.Context) error {
+
+		// Instantiate the wait group
+		server.WaitGroup = &sync.WaitGroup{}
+
+		err = runListeners(server, &coreConfig, config, configSR)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		diagnose.Error(ctx, err)
+	}
+
+	if err := diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+		// Initialize the HTTP servers
+		if core != nil {
+			err = startHttpServers(server, core, config, lns)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf(CoreUninitializedErr)
+		}
+		return nil
+	}); err != nil {
+		diagnose.Error(ctx, err)
+	}
 	return nil
 }
 
