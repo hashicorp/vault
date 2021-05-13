@@ -2411,6 +2411,65 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.nonexpiring.Delete(le.LeaseID)
 }
 
+func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID string) (*namespace.Namespace, error) {
+	_, nsID := namespace.SplitIDFromString(leaseID)
+	leaseNS := namespace.RootNamespace
+	var err error
+	if nsID != "" {
+		leaseNS, err = NamespaceByID(ctx, nsID, m.core)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return leaseNS, nil
+}
+
+// TODO if keep counts as a map, should update the RFC
+func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
+	requestNS, err := namespace.FromContext(ctx)
+	if err != nil {
+		m.logger.Error("could not get namespace from context", "error", err)
+		return nil, err
+	}
+
+	numMatchingLeases := 0
+	numMatchingLeasesPerMount := make(map[string]int)
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		leaseInfo := v.(*leaseEntry)
+
+		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
+		if err != nil {
+			// We probably want to track that an error occured, but continue counting
+			m.logger.Warn("could not get lease namespace from ID", "error", err)
+			return true
+		}
+
+		leaseMatches := (leaseNS == requestNS) || (includeChildNamespaces && leaseNS.HasParent(requestNS))
+		if !leaseMatches {
+			// the lease doesn't meet our criteria, so keep looking
+			return true
+		}
+
+		// TODO verify path is kept
+		if _, ok := numMatchingLeasesPerMount[leaseInfo.Path]; !ok {
+			numMatchingLeasesPerMount[leaseInfo.Path] = 0
+		}
+
+		numMatchingLeases++
+		numMatchingLeasesPerMount[leaseInfo.Path]++
+
+		return true
+	})
+
+	resp := make(map[string]interface{})
+	resp["lease_count"] = numMatchingLeases
+	resp["counts"] = numMatchingLeases
+
+	return resp, nil
+}
+
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {

@@ -1210,6 +1210,30 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
 		},
+
+		{
+			Pattern: "leases/count$",
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseCount,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["count-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["count-leases"][1]),
+		},
+
+		{
+			Pattern: "leases(/)?$",
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ListOperation: b.handleLeaseList,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["list-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["list-leases"][1]),
+		},
 	}
 }
 
