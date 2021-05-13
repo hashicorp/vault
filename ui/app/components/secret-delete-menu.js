@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
@@ -41,7 +42,7 @@ export default class SecretDeleteMenu extends Component {
   @maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.args || !context.modelForData || !context.modelForData.id) return;
+      if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/delete/${id}`,
@@ -128,6 +129,12 @@ export default class SecretDeleteMenu extends Component {
         .adapterFor('secret-v2-version')
         .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType)
         .then(resp => {
+          if (Ember.testing) {
+            return;
+          }
+          if (!resp) {
+            location.reload();
+          }
           if (resp.isAdapterError) {
             const errorMessage = getErrorMessage(resp.errors);
             this.flashMessages.danger(errorMessage);

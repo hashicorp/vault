@@ -284,17 +284,20 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-delete-modal="delete-version"]').doesNotExist('delete version does not show');
   });
 
-  test('version 2 with policy with only delete option does not show modal', async function(assert) {
+  test('version 2 with policy with only delete option does not show modal and undelete is an option', async function(assert) {
     let backend = 'kv-v2';
     const V2_POLICY = `
       path "kv-v2/delete/*" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/undelete/*" {
         capabilities = ["update"]
       }
       path "kv-v2/metadata/*" {
         capabilities = ["list","read","create","update"]
       }
       path "kv-v2/data/secret" {
-        capabilities = ["create", "read", "update", "delete"]
+        capabilities = ["create", "read"]
       }
     `;
     await consoleComponent.runCommands([
@@ -308,10 +311,16 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
-
     await writeSecret(backend, 'secret', 'foo', 'bar');
     assert.dom('[data-test-delete-open-modal]').doesNotExist('delete version does not show');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+    await showPage.deleteSecretV2();
+    // unable to reload page in test scenario so going to list and back to secret to confirm deletion
+    let url = `/vault/secrets/${backend}/list`;
+    await visit(url);
+    await click('[data-test-secret-link="secret"]');
+    assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
+    assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
   });
 
   test('paths are properly encoded', async function(assert) {
