@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -190,33 +188,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
-	if err := diagnose.Test(ctx, "setup-telemetry", func(ctx context.Context) error {
-		var prometheusEnabled bool
-		var inmemMetrics *metrics.InmemSink
-		inmemMetrics, metricSink, prometheusEnabled, err = configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
-			Config:      config.Telemetry,
-			Ui:          c.UI,
-			ServiceName: "vault",
-			DisplayName: "Vault",
-			UserAgent:   useragent.String(),
-			ClusterName: config.ClusterName,
-		})
-		metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
-
-		// TODO: Comment this error back in. Currently commenting this error in yields
-		// indeterministic test behavior, where some subset of operator_diagnose tests have
-		// AlreadyRegisteredError errors. We need these metrics values to be initialized for
-		// to add them to the coreConfig in later steps, so we have to keep this step in as a
-		// no-op for now.
-
-		// if err != nil {
-		// 	return fmt.Errorf("Error initializing telemetry: %s", err)
-		// }
-
-		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
