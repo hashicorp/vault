@@ -251,6 +251,69 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
+  test('version 2 with policy with destroy capabilities shows modal', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/destroy/*" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/metadata/*" {
+        capabilities = ["list", "update", "delete"]
+      }
+      path "kv-v2/data/secret" {
+        capabilities = ["create", "read", "update"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await click('[data-test-delete-open-modal]');
+    await settled();
+    assert.dom('[data-test-delete-modal="destroy-version"]').exists('destroy this version option shows');
+    assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists('destroy all versions option shows');
+    assert.dom('[data-test-delete-modal="delete-version"]').doesNotExist('delete version does not show');
+  });
+
+  test('version 2 with policy with only delete option does not show modal', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/delete/*" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/metadata/*" {
+        capabilities = ["list","read","create","update"]
+      }
+      path "kv-v2/data/secret" {
+        capabilities = ["create", "read", "update", "delete"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    assert.dom('[data-test-delete-open-modal]').doesNotExist('delete version does not show');
+    assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+  });
+
   test('paths are properly encoded', async function(assert) {
     let backend = 'kv';
     let paths = [
