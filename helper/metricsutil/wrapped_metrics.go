@@ -110,7 +110,9 @@ func NamespaceLabel(ns *namespace.Namespace) metrics.Label {
 	case ns.ID == namespace.RootNamespaceID:
 		return metrics.Label{"namespace", "root"}
 	default:
-		return metrics.Label{"namespace",
-			strings.Trim(ns.Path, "/")}
+		return metrics.Label{
+			"namespace",
+			strings.Trim(ns.Path, "/"),
+		}
 	}
 }

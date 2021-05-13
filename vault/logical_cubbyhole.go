@@ -83,12 +83,12 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 	}
 }
 
-func (b *CubbyholeBackend) revoke(ctx context.Context, saltedToken string) error {
+func (b *CubbyholeBackend) revoke(ctx context.Context, view *BarrierView, saltedToken string) error {
 	if saltedToken == "" {
 		return fmt.Errorf("client token empty during revocation")
 	}
 
-	if err := logical.ClearView(ctx, b.storageView.(*BarrierView).SubView(saltedToken+"/")); err != nil {
+	if err := logical.ClearView(ctx, view.SubView(saltedToken+"/")); err != nil {
 		return err
 	}
 

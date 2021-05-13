@@ -21,7 +21,7 @@ require (
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-metrics v0.3.4
-	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
+	github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 	github.com/aws/aws-sdk-go v1.34.28
@@ -46,7 +46,7 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
-	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
@@ -56,7 +56,7 @@ require (
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-discover v0.0.0-20200812215701-c4b85f6ed31f
-	github.com/hashicorp/go-gcp-common v0.6.0
+	github.com/hashicorp/go-gcp-common v0.7.0
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
@@ -77,7 +77,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.6.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.7.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.7.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.8.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.8.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.8.1

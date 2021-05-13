@@ -16,13 +16,12 @@ import (
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
+	"google.golang.org/api/iamcredentials/v1"
 )
 
-var (
-	// cacheTime is the duration for which to cache clients and credentials. This
-	// must be less than 60 minutes.
-	cacheTime = 30 * time.Minute
-)
+// cacheTime is the duration for which to cache clients and credentials. This
+// must be less than 60 minutes.
+var cacheTime = 30 * time.Minute
 
 type GcpAuthBackend struct {
 	*framework.Backend
@@ -71,7 +70,14 @@ func Backend() *GcpAuthBackend {
 	return b
 }
 
-// IAMClient returns a new IAM client. The client is cached.
+// IAMClient returns a new IAM client. This client talks to the IAM endpoint,
+// for all things that are not signing JWTs. The SignJWT method in the IAM
+// client has been deprecated, but other methods are still valid and supported.
+//
+// See: https://pkg.go.dev/google.golang.org/api@v0.45.0/iam/v1 and:
+// https://cloud.google.com/iam/docs/migrating-to-credentials-api#iam-sign-jwt-go
+//
+// The client is cached.
 func (b *GcpAuthBackend) IAMClient(s logical.Storage) (*iam.Service, error) {
 	httpClient, err := b.httpClient(s)
 	if err != nil {
@@ -92,6 +98,35 @@ func (b *GcpAuthBackend) IAMClient(s logical.Storage) (*iam.Service, error) {
 	}
 
 	return client.(*iam.Service), nil
+}
+
+// IAMCredentialsClient returns a new IAM Service Account Credentials client.
+// This client talks to the IAM Service Credentials endpoint, for signing JWTs.
+//
+// See:
+// https://pkg.go.dev/google.golang.org/api@v0.45.0/iamcredentials/v1#pkg-overview
+//
+// The client is cached.
+func (b *GcpAuthBackend) IAMCredentialsClient(s logical.Storage) (*iamcredentials.Service, error) {
+	httpClient, err := b.httpClient(s)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to create IAM Service Account Credentials HTTP client: {{err}}", err)
+	}
+
+	client, err := b.cache.Fetch("iamcredentials", cacheTime, func() (interface{}, error) {
+		client, err := iamcredentials.New(httpClient)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create IAM Service Account Credentials client: {{err}}", err)
+		}
+		client.UserAgent = useragent.String()
+
+		return client, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return client.(*iamcredentials.Service), nil
 }
 
 // ComputeClient returns a new Compute client. The client is cached.

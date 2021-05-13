@@ -111,7 +111,7 @@ github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
 github.com/armon/go-metrics/prometheus
-# github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
+# github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a
 github.com/armon/go-proxyproto
 # github.com/armon/go-radix v1.0.0
 github.com/armon/go-radix
@@ -324,7 +324,7 @@ github.com/go-stack/stack
 github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 github.com/go-yaml/yaml
-# github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+# github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
@@ -428,7 +428,7 @@ github.com/hashicorp/go-discover/provider/softlayer
 github.com/hashicorp/go-discover/provider/tencentcloud
 github.com/hashicorp/go-discover/provider/triton
 github.com/hashicorp/go-discover/provider/vsphere
-# github.com/hashicorp/go-gcp-common v0.6.0
+# github.com/hashicorp/go-gcp-common v0.7.0
 github.com/hashicorp/go-gcp-common/gcputil
 # github.com/hashicorp/go-hclog v0.14.1
 github.com/hashicorp/go-hclog
@@ -512,7 +512,7 @@ github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.8.0
+# github.com/hashicorp/vault-plugin-auth-gcp v0.8.1
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.8.1
@@ -1175,6 +1175,7 @@ google.golang.org/api/compute/v1
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/iam/v1
+google.golang.org/api/iamcredentials/v1
 google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/third_party/uritemplates

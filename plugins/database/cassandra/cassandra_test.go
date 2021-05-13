@@ -3,7 +3,6 @@ package cassandra
 import (
 	"reflect"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,14 +14,16 @@ import (
 )
 
 func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()) {
-	cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
-	pieces := strings.Split(connURL, ":")
+	host, cleanup := cassandra.PrepareTestContainer(t,
+		cassandra.Version("latest"),
+		cassandra.CopyFromTo(insecureFileMounts),
+	)
 
 	db := new()
 	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
-			"hosts":            connURL,
-			"port":             pieces[1],
+			"hosts":            host.ConnectionURL(),
+			"port":             host.Port,
 			"username":         "cassandra",
 			"password":         "cassandra",
 			"protocol_version": protocolVersion,
@@ -32,8 +33,8 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 	}
 
 	expectedConfig := map[string]interface{}{
-		"hosts":            connURL,
-		"port":             pieces[1],
+		"hosts":            host.ConnectionURL(),
+		"port":             host.Port,
 		"username":         "cassandra",
 		"password":         "cassandra",
 		"protocol_version": protocolVersion,
