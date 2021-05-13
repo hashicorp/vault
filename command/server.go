@@ -1405,7 +1405,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
 	if !core.IsInSealMigrationMode() {
-		go runUnseal(c, core)
+		go runUnseal(c, core, context.Background())
 	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
@@ -2401,9 +2401,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	return nil
 }
 
-func runUnseal(c *ServerCommand, core *vault.Core) {
+func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 	for {
-		err := core.UnsealWithStoredKeys(context.Background())
+		err := core.UnsealWithStoredKeys(ctx)
 		if err == nil {
 			return
 		}
