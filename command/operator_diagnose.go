@@ -191,13 +191,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		var subspanErrStrings []string
-		// diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 
 			b, err := server.setupStorage(config)
 			if err != nil {
-				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			backend = &b
@@ -212,7 +209,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
-					subspanErrStrings = append(subspanErrStrings, err.Error())
 					return err
 				}
 				return nil
@@ -229,21 +225,37 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Attempt to use storage backend
 		if !c.skipEndEnd {
-			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(20*time.Second, func(ctx context.Context) error {
-				err = diagnose.StorageEndToEndLatencyCheck(ctx, *backend)
-				if err != nil {
-					subspanErrStrings = append(subspanErrStrings, err.Error())
+			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+				// TODO: A static file in storage that probably won't cause a collision seems low-risk to write to for now.
+				// Should we make this a proper uuid?
+
+				veryRandomUuid := "diagnose-secret-uuid-1234"
+				err := diagnose.EndToEndLatencyCheckWrite(ctx, veryRandomUuid, *backend)
+				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
+					diagnose.Warn(ctx, err.Error())
+				} else if err != nil {
+					return err
+				}
+				err = diagnose.EndToEndLatencyCheckRead(ctx, veryRandomUuid, *backend)
+				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
+					diagnose.Warn(ctx, err.Error())
+				} else if err != nil {
+					return err
+				}
+				err = diagnose.EndToEndLatencyCheckDelete(ctx, veryRandomUuid, *backend)
+				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
+					diagnose.Warn(ctx, err.Error())
+				} else if err != nil {
 					return err
 				}
 				return nil
 			}))
 		}
-		return multiErr(subspanErrStrings)
+		return nil
 	})
 
 	var configSR sr.ServiceRegistration
 	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
-		var subspanErrStrings []string
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
 			return fmt.Errorf("No service registration config")
 		}
@@ -254,7 +266,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			// storage. See the consul package in physical for details.
 			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
-				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			return nil
@@ -269,51 +280,52 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return nil
 			})
 		}
-		return multiErr(subspanErrStrings)
+		return nil
 	})
 
-	ctx, span = diagnose.StartSpan(ctx, "create-seal")
+	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
 	var seals []vault.Seal
 	var sealConfigError error
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
 	// Check error here
 	if err != nil {
-		diagnose.Fail(ctx, err.Error())
+		diagnose.Fail(sealcontext, err.Error())
 		goto SEALFAIL
 	}
 	if sealConfigError != nil {
-		diagnose.Fail(ctx, "seal could not be configured: seals may already be initialized")
+		diagnose.Fail(sealcontext, "seal could not be configured: seals may already be initialized")
 		goto SEALFAIL
-
 	}
 
 	if seals != nil {
 		for _, seal := range seals {
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
-				err = (*seal).Finalize(context.Background())
+				sealType := (*seal).BarrierType()
+				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "finalize-seal-"+sealType)
+				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+					diagnose.Fail(finalizeSealContext, "error finalizing seal")
+					finalizeSealSpan.End()
 				}
+				finalizeSealSpan.End()
 			}(&seal)
 		}
 	}
 
 	if barrierSeal == nil {
-		diagnose.Fail(ctx, "could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
+		diagnose.Fail(sealcontext, "could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
 	}
-	span.End()
 
 SEALFAIL:
+	sealspan.End()
 	var coreConfig vault.CoreConfig
 	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
-		var subspanErrStrings []string
 		diagnose.Test(ctx, "init-randreader", func(ctx context.Context) error {
 			// prepare a secure random reader for core
 			secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
 			if err != nil {
-				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			return nil
@@ -323,14 +335,13 @@ SEALFAIL:
 			return fmt.Errorf(BackendUninitializedErr)
 		}
 		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
-		return multiErr(subspanErrStrings)
+		return nil
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
 
 	var disableClustering bool
 	diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
-		var subspanErrStrings []string
 		if backend == nil {
 			return fmt.Errorf(BackendUninitializedErr)
 		}
@@ -338,7 +349,6 @@ SEALFAIL:
 			// Initialize the separate HA storage backend, if it exists
 			disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
 			if err != nil {
-				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			return nil
@@ -354,13 +364,12 @@ SEALFAIL:
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
-					subspanErrStrings = append(subspanErrStrings, err.Error())
 					return err
 				}
 				return nil
 			})
 		}
-		return multiErr(subspanErrStrings)
+		return nil
 	})
 
 	// // Determine the redirect address from environment variables
@@ -383,7 +392,6 @@ SEALFAIL:
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		var subspanErrStrings []string
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
@@ -392,7 +400,6 @@ SEALFAIL:
 		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
 			status, listeners, _, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
 			if status != 0 {
-				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			return nil
@@ -425,7 +432,6 @@ SEALFAIL:
 				// perform an active probe.
 				_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
 				if err != nil {
-					subspanErrStrings = append(subspanErrStrings, err.Error())
 					return err
 				}
 
@@ -436,23 +442,13 @@ SEALFAIL:
 			}
 			err = diagnose.ListenerChecks(sanitizedListeners)
 			if err != nil {
-				subspanErrStrings = append(subspanErrStrings, err.Error())
 				return err
 			}
 			return nil
 		})
-		return multiErr(subspanErrStrings)
+		return nil
 	})
 
 	// TODO: Diagnose logging configuration
-	return nil
-}
-
-// ROY: remove multierr and just fail the subspan without bothering with the span
-// the span will fail in a separate PR
-func multiErr(errstrings []string) error {
-	if errstrings != nil {
-		return fmt.Errorf(strings.Join(errstrings, "\n"))
-	}
 	return nil
 }
