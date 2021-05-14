@@ -43,10 +43,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "setup-telemetry",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -135,6 +131,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name:   "finalize-seal-shamir",
+					Status: diagnose.OkStatus,
+				},
 			},
 		},
 		{
@@ -145,10 +145,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]*diagnose.Result{
 				{
 					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-telemetry",
 					Status: diagnose.OkStatus,
 				},
 				{
@@ -211,6 +207,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name:   "finalize-seal-shamir",
+					Status: diagnose.OkStatus,
+				},
 			},
 		},
 		{
@@ -221,10 +221,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]*diagnose.Result{
 				{
 					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-telemetry",
 					Status: diagnose.OkStatus,
 				},
 				{
@@ -316,6 +312,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name:   "finalize-seal-shamir",
+					Status: diagnose.OkStatus,
+				},
 			},
 		},
 		{
@@ -329,12 +329,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "setup-telemetry",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "storage",
-					Status: diagnose.ErrorStatus,
+					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-storage-backend",
@@ -409,12 +405,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "setup-telemetry",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "storage",
-					Status: diagnose.ErrorStatus,
+					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-storage-backend",
@@ -460,7 +452,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "setup-ha-storage",
-					Status: diagnose.ErrorStatus,
+					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-ha-storage-backend",
@@ -490,10 +482,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "setup-telemetry",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -512,9 +500,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					},
 				},
 				{
-					Name:    "service-discovery",
-					Status:  diagnose.ErrorStatus,
-					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid",
+					Name:   "service-discovery",
+					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:    "test-serviceregistration-tls-consul",
@@ -540,10 +527,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]*diagnose.Result{
 				{
 					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-telemetry",
 					Status: diagnose.OkStatus,
 				},
 				{
@@ -638,6 +621,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name:   "finalize-seal-shamir",
+					Status: diagnose.OkStatus,
+				},
 			},
 		},
 	}
@@ -695,7 +682,12 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 		}
 	}
 	if len(exp.Children) != len(act.Children) {
-		return fmt.Errorf("section %s, child count mismatch: %d vs %d", exp.Name, len(exp.Children), len(act.Children))
+		errStrings := []string{}
+		for _, c := range act.Children {
+			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
+		}
+		return fmt.Errorf(strings.Join(errStrings, ","))
+		// return fmt.Errorf("section %s, child count mismatch: %d vs %d", exp.Name, len(exp.Children), len(act.Children))
 	}
 	return nil
 }
