@@ -15,15 +15,15 @@ func TestStorageTimeout(t *testing.T) {
 		mb           physical.Backend
 	}{
 		{
-			errSubString: timeOutErr + "operation: Put",
+			errSubString: LatencyWarning,
 			mb:           mockStorageBackend{callType: timeoutCallWrite},
 		},
 		{
-			errSubString: timeOutErr + "operation: Get",
+			errSubString: LatencyWarning,
 			mb:           mockStorageBackend{callType: timeoutCallRead},
 		},
 		{
-			errSubString: timeOutErr + "operation: Delete",
+			errSubString: LatencyWarning,
 			mb:           mockStorageBackend{callType: timeoutCallDelete},
 		},
 		{
@@ -42,14 +42,22 @@ func TestStorageTimeout(t *testing.T) {
 			errSubString: wrongRWValsPrefix,
 			mb:           mockStorageBackend{callType: badReadCall},
 		},
-		{
-			errSubString: "",
-			mb:           mockStorageBackend{callType: ""},
-		},
 	}
 
 	for _, tc := range testCases {
-		outErr := StorageEndToEndLatencyCheck(context.Background(), tc.mb)
+		var outErr error
+		uuid := "foo"
+		backendCallType := tc.mb.(mockStorageBackend).callType
+		if callTypeToOp(backendCallType) == readOp {
+			outErr = EndToEndLatencyCheckRead(context.Background(), uuid, tc.mb)
+		}
+		if callTypeToOp(backendCallType) == writeOp {
+			outErr = EndToEndLatencyCheckWrite(context.Background(), uuid, tc.mb)
+		}
+		if callTypeToOp(backendCallType) == deleteOp {
+			outErr = EndToEndLatencyCheckDelete(context.Background(), uuid, tc.mb)
+		}
+
 		if tc.errSubString == "" && outErr == nil {
 			// this is the success case where the Storage Latency check passes
 			continue

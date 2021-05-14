@@ -42,6 +42,9 @@ func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backe
 	if err != nil {
 		return err
 	}
+	if val == nil {
+		return fmt.Errorf("no value found when reading generated data")
+	}
 	if val.Key != "diagnose" && string(val.Value) != "diagnose" {
 		return fmt.Errorf(wrongRWValsPrefix+"expecting diagnose, but got %s, %s", val.Key, val.Value)
 	}
