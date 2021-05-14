@@ -705,8 +705,9 @@ func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 	return nil
 }
 
-// NewCore is used to construct a new core
-func NewCore(conf *CoreConfig) (*Core, error) {
+// NewCoreUninit conducts static validations on the Core Config
+// and returns an uninitialized core.
+func NewCoreUninit(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		if conf.RedirectAddr == "" {
 			return nil, fmt.Errorf("missing API address, please set in configuration or via environment")
@@ -894,8 +895,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		})
 	}
 	c.seal.SetCore(c)
+	return c, nil
+}
 
-	if err := coreInit(c, conf); err != nil {
+// NewCore is used to construct a new core
+func NewCore(conf *CoreConfig) (*Core, error) {
+	var err error
+	c, err := NewCoreUninit(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = coreInit(c, conf); err != nil {
 		return nil, err
 	}
 
@@ -914,8 +925,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 				err)
 		}
 	}
-
-	var err error
 
 	// Construct a new AES-GCM barrier
 	c.barrier, err = NewAESGCMBarrier(c.physical)

@@ -390,15 +390,16 @@ SEALFAIL:
 		return nil
 	})
 
-	// Initialize the core
+	// Run all the checks that are utilized when initializing a core object
+	// without actually calling core.Init. These are in the init-core section
+	// as they are runtime checks.
 	var core *vault.Core
 	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
-		// Initialize the core
 		var newCoreError error
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
 		}
-		core, newCoreError = vault.NewCore(&coreConfig)
+		core, newCoreError = vault.NewCoreUninit(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
 				return fmt.Errorf("Error initializing core: %s", newCoreError)
@@ -407,6 +408,9 @@ SEALFAIL:
 				"WARNING! A non-fatal error occurred during initialization. Please "+
 					"check the logs for more information."))
 		}
+
+		// The following diagnose checks are copied from the NewCore function.
+
 		return nil
 	}); err != nil {
 		diagnose.Error(ctx, err)
