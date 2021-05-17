@@ -1,4 +1,4 @@
-// +build !race,!hsm
+// +build !race,!hsm,!enterprise
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
