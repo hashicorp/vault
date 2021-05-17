@@ -172,7 +172,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		roleSessionName = normalizeDisplayName(roleSessionName)
 		if len(roleSessionName) > 64 {
 			roleSessionName = roleSessionName[0:64]
-			roleSessionNameWarning = "the role session name were truncated to 64 chars fit into IAM session name length limits"
+			roleSessionNameWarning = "the role session name was truncated to 64 characters to fit within IAM session name length limits"
 		}
 	}
 
