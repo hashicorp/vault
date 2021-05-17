@@ -209,6 +209,8 @@ github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEe
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/cenkalti/backoff/v3 v3.0.0 h1:ske+9nBpD9qZsTBoF41nW5L+AIuFBKMeze18XQ3eG1c=
 github.com/cenkalti/backoff/v3 v3.0.0/go.mod h1:cIeZDE3IrqwwJl6VUwCN6trj1oXrTS4rc0ij+ULvLYs=
+github.com/cenkalti/backoff/v3 v3.2.2 h1:cfUAAO3yvKMYKPrvhDuHSwQnhZNk/RMHKdZqKTxfm6M=
+github.com/cenkalti/backoff/v3 v3.2.2/go.mod h1:cIeZDE3IrqwwJl6VUwCN6trj1oXrTS4rc0ij+ULvLYs=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f h1:gJzxrodnNd/CtPXjO3WYiakyNzHg3rtAi7rO74ejHYU=
 github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f/go.mod h1:C0rtzmGXgN78pYR0tGJFhtHgkbAs0lIbHwkB81VxDQE=
@@ -712,6 +714,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0 h1:dg1vrZl+XwGipfjet7M
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0/go.mod h1:SSkKpSTOMnX84PfgYiWHgwVg+YMhxHNjo+YCJGNBoZk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.9.0 h1:RfJsZ9DoOhJutvHx3KDSuCXZqZEWKyu3Pksa9F5fjYo=
 github.com/hashicorp/vault-plugin-secrets-azure v0.9.0/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
+github.com/hashicorp/vault-plugin-secrets-azure v0.9.1 h1:vZhWEafEedxLS7t906QSYFKT+jiNM6Mv6fDHxOX6O5I=
+github.com/hashicorp/vault-plugin-secrets-azure v0.9.1/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0 h1:gfaTe+QNNk+wZLec0k9pUt2VSBKPB237F/Dh0a1u8ic=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0 h1:yoMAcYkdvuo0LMiPaD4OCNRO8ekkYVMhSo+GswZrgb4=
