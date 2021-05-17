@@ -481,6 +481,10 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
+		if err := c.checkRaftTLSKeyUpgrades(c.activeContext); err != nil {
+			c.logger.Error("error checking for raft TLS key upgrades", "error", err)
+		}
+
 		// Perform seal migration
 		if err := c.migrateSeal(c.activeContext); err != nil {
 			c.logger.Error("seal migration error", "error", err)
@@ -547,8 +551,8 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 				continue
 			}
-
 		}
+
 		// Advertise as leader
 		if err := c.advertiseLeader(activeCtx, uuid, leaderLostCh); err != nil {
 			c.heldHALock = nil
