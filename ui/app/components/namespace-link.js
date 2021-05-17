@@ -19,11 +19,9 @@ export default Component.extend({
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
     let ns = this.get('normalizedNamespace');
+    if (!ns) return 'root';
     let showLastSegment = this.get('showLastSegment');
-    let parts = ns.split('/');
-    if (ns === '') {
-      return 'root';
-    }
+    let parts = ns?.split('/');
     return showLastSegment ? parts[parts.length - 1] : ns;
   }),
 
