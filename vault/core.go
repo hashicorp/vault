@@ -120,6 +120,7 @@ var (
 	LastRemoteWAL                = lastRemoteWALImpl
 	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
+	storedLicenseCheck           = storedLicenseCheckImpl
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -651,8 +652,6 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
-	// Don't set this unless in dev mode, ideally only when using inmem
-	DevLicenseDuration time.Duration
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -923,6 +922,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
 
+	if err := storedLicenseCheck(c, conf); err != nil {
+		return nil, err
+	}
 	// We create the funcs here, then populate the given config with it so that
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
@@ -2861,4 +2863,8 @@ func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,
 	}, nil
+}
+
+func storedLicenseCheckImpl(c *Core, conf *CoreConfig) error {
+	return nil
 }
