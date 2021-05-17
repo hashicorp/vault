@@ -393,13 +393,12 @@ SEALFAIL:
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
-	var core *vault.Core
 	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
 		var newCoreError error
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
 		}
-		core, newCoreError = vault.NewCoreUninit(&coreConfig)
+		_, newCoreError = vault.NewCoreUninit(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
 				return fmt.Errorf("Error initializing core: %s", newCoreError)
@@ -483,41 +482,38 @@ SEALFAIL:
 
 	// TODO: Diagnose logging configuration
 
+	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
+	// decrypt a mock value. It will not call runUnseal.
 	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
-		if core != nil {
-			runUnseal(server, core, ctx)
-		} else {
-			return fmt.Errorf(CoreUninitializedErr)
+		if barrierWrapper == nil {
+			return fmt.Errorf("Diagnose could not create a barrier seal object")
 		}
-		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
-
-	// If service discovery is available, run service discovery
-	if err := diagnose.Test(ctx, "run-listeners", func(ctx context.Context) error {
-
-		// Instantiate the wait group
-		server.WaitGroup = &sync.WaitGroup{}
-
-		err = runListeners(server, &coreConfig, config, configSR)
+		barrierEncValue := "diagnose-0481"
+		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error encrypting with seal barrier: %w", err)
+		}
+		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
+		if err != nil {
+			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
+
+		}
+		if string(plaintext) != barrierEncValue {
+			return fmt.Errorf("barrier returned incorrect decrypted value for mock data")
 		}
 		return nil
 	}); err != nil {
 		diagnose.Error(ctx, err)
 	}
 
+	// The following block contains static checks that are run during the
+	// startHttpServers portion of server run. In other words, they are static
+	// checks during resource creation.
 	if err := diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
-		// Initialize the HTTP servers
-		if core != nil {
-			err = startHttpServers(server, core, config, lns)
-			if err != nil {
-				return err
+		for _, ln := range lns {
+			if ln.Config == nil {
+				return fmt.Errorf("Found nil listener config after parsing")
 			}
-		} else {
-			return fmt.Errorf(CoreUninitializedErr)
 		}
 		return nil
 	}); err != nil {

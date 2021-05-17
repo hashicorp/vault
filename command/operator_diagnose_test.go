@@ -115,6 +115,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "init-core",
+					Status: diagnose.OkStatus,
+				},
+				{
 					Name:   "init-listeners",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -130,6 +134,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "Diagnose could not create a barrier seal object",
+				},
+				{
+					Name:   "start-servers",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "finalize-seal-shamir",
@@ -191,6 +204,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:    "init-core",
+					Status:  diagnose.ErrorStatus,
+					Message: "diagnose cannot attempt this step because core config could not be set",
+				},
+				{
 					Name:   "init-listeners",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -206,6 +224,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "Diagnose could not create a barrier seal object",
+				},
+				{
+					Name:   "start-servers",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "finalize-seal-shamir",
@@ -296,6 +323,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "init-core",
+					Status: diagnose.OkStatus,
+				},
+				{
 					Name:   "init-listeners",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -311,6 +342,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "Diagnose could not create a barrier seal object",
+				},
+				{
+					Name:   "start-servers",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "finalize-seal-shamir",
@@ -605,6 +645,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "init-core",
+					Status: diagnose.OkStatus,
+				},
+				{
 					Name:   "init-listeners",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -620,6 +664,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "Diagnose could not create a barrier seal object",
+				},
+				{
+					Name:   "start-servers",
+					Status: diagnose.OkStatus,
 				},
 				{
 					Name:   "finalize-seal-shamir",
