@@ -101,6 +101,12 @@ func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption
 	}
 }
 
+// Success sets the span to Successful (overriding any previous status) and sets the message to the input.
+func Success(ctx context.Context, message string) {
+	span := trace.SpanFromContext(ctx)
+	span.SetStatus(codes.Ok, message)
+}
+
 // Fail records a failure in the current span
 func Fail(ctx context.Context, message string) {
 	span := trace.SpanFromContext(ctx)
