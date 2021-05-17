@@ -109,10 +109,6 @@ export default class SecretDeleteMenu extends Component {
     return true;
   }
 
-  @action toggleDeleteModal() {
-    this.showDeleteModal = !this.showDeleteModal;
-  }
-
   @action
   handleDelete(deleteType) {
     // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions'
@@ -133,12 +129,15 @@ export default class SecretDeleteMenu extends Component {
             return;
           }
           if (!resp) {
-            location.reload();
+            this.showDeleteModal = false;
+            this.args.refresh();
+            return;
           }
           if (resp.isAdapterError) {
             const errorMessage = getErrorMessage(resp.errors);
             this.flashMessages.danger(errorMessage);
           } else {
+            // not likely to ever get to this situation, but adding just in case.
             location.reload();
           }
         });

@@ -113,7 +113,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canDelete: alias('updatePath.canDelete'),
-  canUpdate: alias('updatePath.canUpdate'),
+  canEdit: alias('updatePath.canEdit'),
 
   v2UpdatePath: maybeQueryRecord(
     'capabilities',

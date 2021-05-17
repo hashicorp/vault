@@ -84,6 +84,7 @@ export default ApplicationAdapter.extend({
       return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } })
         .then(() => {
           let model = store.peekRecord('secret-v2-version', id);
+          // potential that model.reload() is never called.
           return model && model.rollbackAttributes() && model.reload();
         })
         .catch(e => {
