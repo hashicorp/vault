@@ -274,12 +274,13 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled: pointerutil.BoolPtr(true),
-			Verify:  &verify,
-			Cert:    &sc.AgentConfig.Vault.ClientCert,
-			Key:     &sc.AgentConfig.Vault.ClientKey,
-			CaCert:  &sc.AgentConfig.Vault.CACert,
-			CaPath:  &sc.AgentConfig.Vault.CAPath,
+			Enabled:    pointerutil.BoolPtr(true),
+			Verify:     &verify,
+			Cert:       &sc.AgentConfig.Vault.ClientCert,
+			Key:        &sc.AgentConfig.Vault.ClientKey,
+			CaCert:     &sc.AgentConfig.Vault.CACert,
+			CaPath:     &sc.AgentConfig.Vault.CAPath,
+			ServerName: &sc.AgentConfig.Vault.TLSServerName,
 		}
 	}
 	enabled := attempts > 0
