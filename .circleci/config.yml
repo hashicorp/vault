@@ -685,7 +685,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.12
+    - GO_VERSION: 1.15.11
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -783,7 +783,7 @@ jobs:
         - .buildcache/packages/store
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.12-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -871,7 +871,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.12-buster \
+              testcontainer circleci/golang:1.15.11-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1002,7 +1002,7 @@ jobs:
         - .buildcache/packages/store
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.12-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1086,7 +1086,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.12-buster \
+              testcontainer circleci/golang:1.15.11-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1468,7 +1468,7 @@ jobs:
         - .buildcache/packages/store
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.12-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1552,7 +1552,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.12-buster \
+              testcontainer circleci/golang:1.15.11-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1698,7 +1698,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.12-buster \
+              testcontainer circleci/golang:1.15.11-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1747,7 +1747,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.12
+    - GO_VERSION: 1.15.11
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   netbsd_amd64_package:
@@ -2171,7 +2171,7 @@ jobs:
         command: make ci-verify
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.12-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -2259,7 +2259,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.12-buster \
+              testcontainer circleci/golang:1.15.11-buster \
               tail -f /dev/null
 
             # Run tests
