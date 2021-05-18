@@ -484,7 +484,7 @@ SEALFAIL:
 
 	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
 	// decrypt a mock value. It will not call runUnseal.
-	if err := diagnose.Test(ctx, "unseal", func(ctx context.Context) error {
+	if err := diagnose.Test(ctx, "unseal", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 		if barrierWrapper == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object")
 		}
@@ -502,7 +502,7 @@ SEALFAIL:
 			return fmt.Errorf("barrier returned incorrect decrypted value for mock data")
 		}
 		return nil
-	}); err != nil {
+	})); err != nil {
 		diagnose.Error(ctx, err)
 	}
 
