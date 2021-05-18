@@ -625,6 +625,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 
 	auth := &logical.Auth{
 		ClientToken: root.ID,
+		Policies:    []string{"root"},
 	}
 
 	te := &logical.TokenEntry{
@@ -1416,7 +1417,6 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 }
-
 func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
@@ -1490,6 +1490,142 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 			t.Fatalf("Bad: %v", req)
 		}
 		break
+	}
+}
+
+func TestExpiration_Renew_FinalSecond(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       2 * time.Second,
+				Renewable: true,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	id, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	le, err := exp.loadEntry(ctx, id)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Give it an auth section to emulate the real world bug
+	le.Auth = &logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	exp.persistEntry(ctx, le)
+
+	noop.Response = &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:    2 * time.Second,
+				MaxTTL: 2 * time.Second,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "123",
+			"secret_key": "abcd",
+		},
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+	_, err = exp.Renew(ctx, id, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if _, ok := exp.nonexpiring.Load(id); ok {
+		t.Fatalf("expirable lease became nonexpiring")
+	}
+}
+
+func TestExpiration_Renew_FinalSecond_Lease(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       2 * time.Second,
+				Renewable: true,
+			},
+			LeaseID: "abcde",
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	id, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	le, err := exp.loadEntry(ctx, id)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Give it an auth section to emulate the real world bug
+	le.Auth = &logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	exp.persistEntry(ctx, le)
+
+	time.Sleep(1000 * time.Millisecond)
+	_, err = exp.Renew(ctx, id, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if _, ok := exp.nonexpiring.Load(id); ok {
+		t.Fatalf("expirable lease became nonexpiring")
 	}
 }
 
