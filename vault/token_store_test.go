@@ -3761,7 +3761,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
 		req.Data = map[string]interface{}{
-			"increment": 1,
+			"increment": 2,
 		}
 		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
@@ -3818,7 +3818,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
 		req.Data = map[string]interface{}{
-			"increment": 1,
+			"increment": 2,
 		}
 		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
