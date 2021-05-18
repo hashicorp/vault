@@ -12,8 +12,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorUnsealCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorUnsealCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorUnsealCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorUnsealCommand)(nil)
+)
 
 type OperatorUnsealCommand struct {
 	*BaseCommand

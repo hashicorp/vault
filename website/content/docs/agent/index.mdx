@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Vault Agent
-sidebar_title: Vault Agent
 description: |-
   Vault Agent is a client-side daemon that can be used to perform some Vault
   functionality automatically.
@@ -93,6 +92,32 @@ configuration entries:
   connecting via TLS. This value can be overridden by setting the
   `VAULT_TLS_SERVER_NAME` environment variable.
 
+#### retry Stanza
+
+The `vault` stanza may contain a `retry` stanza that controls how failing
+Vault requests are handled, whether these requests are issued in order to render
+templates, or are proxied requests coming from the proxy cache subsystem.
+Auto-auth, however, has its own notion of retrying and is not affected by this
+section.
+
+Here are the options for the `retry` stanza:
+
+- `num_retries` `(int: 12)` - Specify how many times a failing request will
+  be retried. A value of `0` translates to the default, i.e. 12 retries.
+  A value of `-1` disables retries. The environment variable `VAULT_MAX_RETRIES`
+  overrides this setting.
+
+There are a couple of subtleties to be aware of here. First, requests originating
+from the proxy cache will only be retried if they resulted in specific HTTP
+result codes: any 50x code except 501 ("not implemented"), as well as 412
+("precondition failed"); 412 is used in Vault Enterprise 1.7+ to indicate a
+stale read due to eventual consistency. Requests coming from the template
+subsystem are retried regardless of the failure.
+
+Second, the backoff algorithm used to set the time between retries differs for
+the template and cache subsystems. This is a technical limitation we hope
+to address in the future.
+
 ### listener Stanza
 
 Agent supports one or more [listener][listener_main] stanzas. In addition to
@@ -113,56 +138,59 @@ An example configuration, with very contrived values, follows:
 pid_file = "./pidfile"
 
 vault {
-        address = "https://127.0.0.1:8200"
+  address = "https://127.0.0.1:8200"
+  retry {
+    num_retries = 5
+  }
 }
 
 auto_auth {
-        method "aws" {
-                mount_path = "auth/aws-subaccount"
-                config = {
-                        type = "iam"
-                        role = "foobar"
-                }
-        }
+  method "aws" {
+    mount_path = "auth/aws-subaccount"
+    config = {
+      type = "iam"
+      role = "foobar"
+    }
+  }
 
-        sink "file" {
-                config = {
-                        path = "/tmp/file-foo"
-                }
-        }
+  sink "file" {
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
 
-        sink "file" {
-                wrap_ttl = "5m"
-                aad_env_var = "TEST_AAD_ENV"
-                dh_type = "curve25519"
-                dh_path = "/tmp/file-foo-dhpath2"
-                config = {
-                        path = "/tmp/file-bar"
-                }
-        }
+  sink "file" {
+    wrap_ttl = "5m"
+    aad_env_var = "TEST_AAD_ENV"
+    dh_type = "curve25519"
+    dh_path = "/tmp/file-foo-dhpath2"
+    config = {
+      path = "/tmp/file-bar"
+    }
+  }
 }
 
 cache {
-        use_auto_auth_token = true
+  use_auto_auth_token = true
 }
 
 listener "unix" {
-         address = "/path/to/socket"
-         tls_disable = true
+  address = "/path/to/socket"
+  tls_disable = true
 }
 
 listener "tcp" {
-         address = "127.0.0.1:8100"
-         tls_disable = true
+  address = "127.0.0.1:8100"
+  tls_disable = true
 }
 
 template {
-  source      = "/etc/vault/server.key.ctmpl"
+  source = "/etc/vault/server.key.ctmpl"
   destination = "/etc/vault/server.key"
 }
 
 template {
-  source      = "/etc/vault/server.crt.ctmpl"
+  source = "/etc/vault/server.crt.ctmpl"
   destination = "/etc/vault/server.crt"
 }
 ```
@@ -173,3 +201,4 @@ template {
 [template]: /docs/agent/template
 [listener]: /docs/agent#listener-stanza
 [listener_main]: /docs/configuration/listener/tcp
+[winsvc]: /docs/agent/winsvc

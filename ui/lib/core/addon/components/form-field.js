@@ -33,6 +33,15 @@ export default Component.extend({
   disabled: false,
   showHelpText: true,
   subText: '',
+  // This is only used internally for `optional-text` editType
+  showInput: false,
+
+  init() {
+    this._super(...arguments);
+    const valuePath = this.attr.options?.fieldValue || this.attr.name;
+    const modelValue = this.model[valuePath];
+    this.set('showInput', !!modelValue);
+  },
 
   onChange() {},
 
@@ -128,6 +137,14 @@ export default Component.extend({
       if (!hasErrors) {
         this.model.set(path, valToSet);
         this.onChange(path, valToSet);
+      }
+    },
+
+    toggleShow(path) {
+      const value = !this.showInput;
+      this.set('showInput', value);
+      if (!value) {
+        this.send('setAndBroadcast', path, null);
       }
     },
   },

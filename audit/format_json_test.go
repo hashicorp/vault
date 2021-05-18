@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
-
-	"errors"
-
-	"fmt"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -61,7 +59,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 					TTL: 60 * time.Second,
 				},
 				Headers: map[string][]string{
-					"foo": []string{"bar"},
+					"foo": {"bar"},
 				},
 			},
 			errors.New("this is an error"),
@@ -92,7 +90,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 					TTL: 60 * time.Second,
 				},
 				Headers: map[string][]string{
-					"foo": []string{"bar"},
+					"foo": {"bar"},
 				},
 			},
 			errors.New("this is an error"),
@@ -125,14 +123,14 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
 		}
 
-		var expectedjson = new(AuditRequestEntry)
+		expectedjson := new(AuditRequestEntry)
 
 		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 		expectedjson.Request.Namespace = &AuditNamespace{ID: "root"}
 
-		var actualjson = new(AuditRequestEntry)
+		actualjson := new(AuditRequestEntry)
 		if err := jsonutil.DecodeJSON([]byte(buf.String())[len(tc.Prefix):], &actualjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}

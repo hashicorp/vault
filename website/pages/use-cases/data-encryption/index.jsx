@@ -6,9 +6,13 @@ import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
 import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
   const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
   return { props: { content } }
 }
 
@@ -24,7 +28,11 @@ export default function DataEncryptionUseCase({ content }) {
         />
 
         <div className="button-container">
-          <Button title="Download" url="/downloads" />
+          <Button
+            title="Download"
+            url="/downloads"
+            theme={{ brand: 'vault' }}
+          />
           <Button title="Get Started" url="/intro" theme="dark-outline" />
         </div>
       </section>
@@ -32,22 +40,7 @@ export default function DataEncryptionUseCase({ content }) {
       {/* Before/After Diagram */}
       <section>
         <div className="g-container">
-          <BeforeAfterDiagram
-            beforeImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1539885046-data-protectionchallenge.svg',
-              format: 'svg',
-            }}
-            beforeHeadline="The Challenge"
-            beforeContent="All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly"
-            afterImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1539885039-data-protectionsolution.svg',
-              format: 'svg',
-            }}
-            afterHeadline="The Solution"
-            afterContent="Vault provides encryption as a service with centralized key management to simplify encrypting data in transit and at rest across clouds and data centers"
-          />
+          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
 

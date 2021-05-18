@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: TCP - Listeners - Configuration
-sidebar_title: TCP
 description: |-
   The TCP listener configures Vault to listen on the specified TCP address and
   port.
@@ -54,8 +53,8 @@ advertise the correct address to other nodes.
   label suffix like `"30s"` or `"1h"`.
 
 - `max_request_size` `(int: 33554432)` – Specifies a hard maximum allowed
-  request size, in bytes. Defaults to 32 MB. Specifying a number less than or
-  equal to `0` turns off limiting altogether.
+  request size, in bytes. Defaults to 32 MB if not set or set to `0`.
+  Specifying a number less than `0` turns off limiting altogether.
 
 - `max_request_duration` `(string: "90s")` – Specifies the maximum
   request duration allowed before Vault cancels the request. This overrides
@@ -142,8 +141,13 @@ advertise the correct address to other nodes.
 
 ### `telemetry` Parameters
 
-- `unauthenticated_metrics_access` `(string: "false")` - If set to true, allows
+- `unauthenticated_metrics_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/metrics` endpoint.
+
+### `profiling` Parameters
+
+- `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
+  unauthenticated access to the `/v1/sys/pprof` endpoint.
 
 ## `tcp` Listener Examples
 
@@ -187,6 +191,19 @@ listener "tcp" {
   }
 }
 ```
+
+### Configuring unauthenticated profiling access
+
+This example shows enabling unauthenticated profiling access.
+
+```hcl
+listener "tcp" {
+  profiling {
+    unauthenticated_pprof_access = true
+  }
+}
+```
+
 
 ### Listening on all IPv6 & IPv4 Interfaces
 

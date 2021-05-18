@@ -20,10 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
-var (
-	// invalidKey is used to test Unseal
-	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
-)
+// invalidKey is used to test Unseal
+var invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
 	logger = logging.NewVaultLogger(log.Trace)
@@ -247,7 +245,7 @@ func TestCore_Shutdown(t *testing.T) {
 	}
 }
 
-// verify the channel returned by ShutdownDone is closed after Shutdown
+// verify the channel returned by ShutdownDone is closed after Finalize
 func TestCore_ShutdownDone(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	doneCh := c.ShutdownDone()
@@ -1161,6 +1159,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1199,6 +1198,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -1272,6 +1272,7 @@ func TestCore_StepDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1308,6 +1309,7 @@ func TestCore_StepDown(t *testing.T) {
 		DisableMlock: true,
 		Logger:       logger.Named("core2"),
 	})
+	defer core2.Shutdown()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1463,6 +1465,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1528,6 +1531,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -1640,6 +1644,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1694,6 +1699,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -2058,7 +2064,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		return noopBack, nil
 	}
 
-	var secretWritingPolicy = `
+	secretWritingPolicy := `
 name = "admins"
 path "secret/*" {
 	capabilities = ["update", "create", "read"]
@@ -2214,6 +2220,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -2235,6 +2242,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -2314,10 +2322,10 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			"Should-Passthrough":                  []string{"foo"},
-			"Should-Passthrough-Case-Insensitive": []string{"baz"},
-			"Should-Not-Passthrough":              []string{"bar"},
-			consts.AuthHeaderName:                 []string{"nope"},
+			"Should-Passthrough":                  {"foo"},
+			"Should-Passthrough-Case-Insensitive": {"baz"},
+			"Should-Not-Passthrough":              {"bar"},
+			consts.AuthHeaderName:                 {"nope"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2392,7 +2400,7 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			consts.AuthHeaderName: []string{"foo"},
+			consts.AuthHeaderName: {"foo"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2505,7 +2513,6 @@ func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized boo
 
 // TestCore_ServiceRegistration tests whether standalone ServiceRegistration works
 func TestCore_ServiceRegistration(t *testing.T) {
-
 	// Make a mock service discovery
 	sr := &mockServiceRegistration{}
 
@@ -2530,6 +2537,7 @@ func TestCore_ServiceRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer core.Shutdown()
 
 	// Vault should not yet be registered
 	if diff := deep.Equal(sr, &mockServiceRegistration{}); diff != nil {

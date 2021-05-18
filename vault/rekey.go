@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/errwrap"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-uuid"
@@ -85,7 +84,7 @@ func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.
 		config, err = c.seal.BarrierConfig(ctx)
 	}
 	if err != nil {
-		return 0, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("unable to look up config: {{err}}", err).Error())
+		return 0, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("unable to look up config: %w", err).Error())
 	}
 	if config == nil {
 		return 0, logical.CodedError(http.StatusBadRequest, ErrNotInit.Error())
@@ -205,7 +204,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
 		c.logger.Error("invalid rekey seal configuration", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("invalid rekey seal configuration: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("invalid rekey seal configuration: %w", err).Error())
 	}
 
 	c.stateLock.RLock()
@@ -232,7 +231,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 	nonce, err := uuid.GenerateUUID()
 	if err != nil {
 		c.barrierRekeyConfig = nil
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("error generating nonce for procedure: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error generating nonce for procedure: %w", err).Error())
 	}
 	c.barrierRekeyConfig.Nonce = nonce
 
@@ -251,7 +250,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
 		c.logger.Error("invalid recovery configuration", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("invalid recovery configuration: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("invalid recovery configuration: %w", err).Error())
 	}
 
 	if !c.seal.RecoveryKeySupported() {
@@ -282,7 +281,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 	nonce, err := uuid.GenerateUUID()
 	if err != nil {
 		c.recoveryRekeyConfig = nil
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("error generating nonce for procedure: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error generating nonce for procedure: %w", err).Error())
 	}
 	c.recoveryRekeyConfig.Nonce = nonce
 
@@ -340,7 +339,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		existingConfig, err = c.seal.BarrierConfig(ctx)
 	}
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to fetch existing config: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to fetch existing config: %w", err).Error())
 	}
 	// Ensure the barrier is initialized
 	if existingConfig == nil {
@@ -387,7 +386,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		recoveredKey, err = shamir.Combine(c.barrierRekeyConfig.RekeyProgress)
 		c.barrierRekeyConfig.RekeyProgress = nil
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute root key: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to compute root key: %w", err).Error())
 		}
 	}
 
@@ -395,7 +394,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	case useRecovery:
 		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
 			c.logger.Error("rekey recovery key verification failed", "error", err)
-			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusBadRequest, fmt.Errorf("recovery key verification failed: %w", err).Error())
 		}
 	case c.seal.BarrierType() == wrapping.Shamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
@@ -407,22 +406,22 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			testseal.SetCore(c)
 			err = testseal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(recoveredKey)
 			if err != nil {
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to setup unseal key: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup unseal key: %w", err).Error())
 			}
 			cfg, err := c.seal.BarrierConfig(ctx)
 			if err != nil {
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to setup test barrier config: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup test barrier config: %w", err).Error())
 			}
 			testseal.SetCachedBarrierConfig(cfg)
 			stored, err := testseal.GetStoredKeys(ctx)
 			if err != nil {
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to read root key: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to read root key: %w", err).Error())
 			}
 			recoveredKey = stored[0]
 		}
 		if err := c.barrier.VerifyRoot(recoveredKey); err != nil {
 			c.logger.Error("root key verification failed", "error", err)
-			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("root key verification failed: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusBadRequest, fmt.Errorf("rootter key verification failed: %w", err).Error())
 		}
 	}
 
@@ -432,7 +431,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	newKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		c.logger.Error("failed to generate root key", "error", err)
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("root key generation failed: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("root key generation failed: %w", err).Error())
 	}
 
 	results := &RekeyResult{
@@ -448,7 +447,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			shares, err := shamir.Split(newKey, c.barrierRekeyConfig.SecretShares, c.barrierRekeyConfig.SecretThreshold)
 			if err != nil {
 				c.logger.Error("failed to generate shares", "error", err)
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to generate shares: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to generate shares: %w", err).Error())
 			}
 			results.SecretShares = shares
 		}
@@ -457,12 +456,12 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// If PGP keys are passed in, encrypt shares with corresponding PGP keys.
 	if len(c.barrierRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
-		for i, _ := range results.SecretShares {
+		for i := range results.SecretShares {
 			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
 		}
 		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(hexEncodedShares, c.barrierRekeyConfig.PGPKeys)
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to encrypt shares: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to encrypt shares: %w", err).Error())
 		}
 
 		// If backup is enabled, store backup info in vault.coreBarrierUnsealKeysBackupPath
@@ -484,7 +483,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			buf, err := json.Marshal(backupVals)
 			if err != nil {
 				c.logger.Error("failed to marshal unseal key backup", "error", err)
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to marshal unseal key backup: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to marshal unseal key backup: %w", err).Error())
 			}
 			pe := &physical.Entry{
 				Key:   coreBarrierUnsealKeysBackupPath,
@@ -492,7 +491,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			}
 			if err = c.physical.Put(ctx, pe); err != nil {
 				c.logger.Error("failed to save unseal key backup", "error", err)
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save unseal key backup: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to save unseal key backup: %w", err).Error())
 			}
 		}
 	}
@@ -502,7 +501,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		nonce, err := uuid.GenerateUUID()
 		if err != nil {
 			c.barrierRekeyConfig = nil
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to generate verification nonce: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to generate verification nonce: %w", err).Error())
 		}
 		c.barrierRekeyConfig.VerificationNonce = nonce
 		c.barrierRekeyConfig.VerificationKey = newKey
@@ -513,7 +512,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	}
 
 	if err := c.performBarrierRekey(ctx, newKey); err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform barrier rekey: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform barrier rekey: %w", err).Error())
 	}
 
 	c.barrierRekeyConfig = nil
@@ -526,7 +525,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 		// We won't be able to call SetStoredKeys without setting StoredShares=1.
 		existingConfig, err := c.seal.BarrierConfig(ctx)
 		if err != nil {
-			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to fetch existing config: {{err}}", err).Error())
+			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to fetch existing config: %w", err).Error())
 		}
 		existingConfig.StoredShares = 1
 		c.seal.SetCachedBarrierConfig(existingConfig)
@@ -535,23 +534,23 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
 		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(newSealKey)
 		if err != nil {
-			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to update barrier seal key: {{err}}", err).Error())
+			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to update barrier seal key: %w", err).Error())
 		}
 	}
 
 	newRootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform rekey: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform rekey: %w", err).Error())
 	}
 	if err := c.seal.SetStoredKeys(ctx, [][]byte{newRootKey}); err != nil {
 		c.logger.Error("failed to store keys", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to store keys: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to store keys: %w", err).Error())
 	}
 
 	// Rekey the barrier
 	if err := c.barrier.Rekey(ctx, newRootKey); err != nil {
 		c.logger.Error("failed to rekey barrier", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to rekey barrier: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to rekey barrier: %w", err).Error())
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("security barrier rekeyed", "stored", c.barrierRekeyConfig.StoredShares, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
@@ -564,7 +563,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 		})
 		if err != nil {
 			c.logger.Error("failed to store new seal key", "error", err)
-			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to store new seal key: {{err}}", err).Error())
+			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to store new seal key: %w", err).Error())
 		}
 	}
 
@@ -572,7 +571,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 
 	if err := c.seal.SetBarrierConfig(ctx, c.barrierRekeyConfig); err != nil {
 		c.logger.Error("error saving rekey seal configuration", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save rekey seal configuration: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to save rekey seal configuration: %w", err).Error())
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
@@ -582,7 +581,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
 		c.logger.Error("error saving keyring canary", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save keyring canary: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to save keyring canary: %w", err).Error())
 	}
 
 	c.barrierRekeyConfig.RekeyProgress = nil
@@ -618,7 +617,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	// Get the seal configuration
 	existingConfig, err := c.seal.RecoveryConfig(ctx)
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to fetch existing recovery config: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to fetch existing recovery config: %w", err).Error())
 	}
 	// Ensure the seal is initialized
 	if existingConfig == nil {
@@ -665,21 +664,21 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		recoveryKey, err = shamir.Combine(c.recoveryRekeyConfig.RekeyProgress)
 		c.recoveryRekeyConfig.RekeyProgress = nil
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute recovery key: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to compute recovery key: %w", err).Error())
 		}
 	}
 
 	// Verify the recovery key
 	if err := c.seal.VerifyRecoveryKey(ctx, recoveryKey); err != nil {
 		c.logger.Error("recovery key verification failed", "error", err)
-		return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Errorf("recovery key verification failed: %w", err).Error())
 	}
 
 	// Generate a new root key
 	newRootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		c.logger.Error("failed to generate recovery key", "error", err)
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("recovery key generation failed: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("recovery key generation failed: %w", err).Error())
 	}
 
 	// Return the root key if only a single key part is used
@@ -694,19 +693,19 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		shares, err := shamir.Split(newRootKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
 		if err != nil {
 			c.logger.Error("failed to generate shares", "error", err)
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to generate shares: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to generate shares: %w", err).Error())
 		}
 		results.SecretShares = shares
 	}
 
 	if len(c.recoveryRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
-		for i, _ := range results.SecretShares {
+		for i := range results.SecretShares {
 			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
 		}
 		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(hexEncodedShares, c.recoveryRekeyConfig.PGPKeys)
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to encrypt shares: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to encrypt shares: %w", err).Error())
 		}
 
 		if c.recoveryRekeyConfig.Backup {
@@ -727,7 +726,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 			buf, err := json.Marshal(backupVals)
 			if err != nil {
 				c.logger.Error("failed to marshal recovery key backup", "error", err)
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to marshal recovery key backup: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to marshal recovery key backup: %w", err).Error())
 			}
 			pe := &physical.Entry{
 				Key:   coreRecoveryUnsealKeysBackupPath,
@@ -735,7 +734,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 			}
 			if err = c.physical.Put(ctx, pe); err != nil {
 				c.logger.Error("failed to save unseal key backup", "error", err)
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save unseal key backup: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to save unseal key backup: %w", err).Error())
 			}
 		}
 	}
@@ -746,7 +745,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		nonce, err := uuid.GenerateUUID()
 		if err != nil {
 			c.recoveryRekeyConfig = nil
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to generate verification nonce: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to generate verification nonce: %w", err).Error())
 		}
 		c.recoveryRekeyConfig.VerificationNonce = nonce
 		c.recoveryRekeyConfig.VerificationKey = newRootKey
@@ -757,7 +756,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	if err := c.performRecoveryRekey(ctx, newRootKey); err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform recovery rekey: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey: %w", err).Error())
 	}
 
 	c.recoveryRekeyConfig = nil
@@ -767,14 +766,14 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 func (c *Core) performRecoveryRekey(ctx context.Context, newRootKey []byte) logical.HTTPCodedError {
 	if err := c.seal.SetRecoveryKey(ctx, newRootKey); err != nil {
 		c.logger.Error("failed to set recovery key", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to set recovery key: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to set recovery key: %w", err).Error())
 	}
 
 	c.recoveryRekeyConfig.VerificationKey = nil
 
 	if err := c.seal.SetRecoveryConfig(ctx, c.recoveryRekeyConfig); err != nil {
 		c.logger.Error("error saving rekey seal configuration", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save rekey seal configuration: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to save rekey seal configuration: %w", err).Error())
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
@@ -784,7 +783,7 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newRootKey []byte) logi
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {
 		c.logger.Error("error saving keyring canary", "error", err)
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save keyring canary: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to save keyring canary: %w", err).Error())
 	}
 
 	c.recoveryRekeyConfig.RekeyProgress = nil
@@ -876,7 +875,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 		var err error
 		recoveredKey, err = shamir.Combine(config.VerificationProgress)
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute key for verification: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to compute key for verification: %w", err).Error())
 		}
 	}
 
@@ -888,12 +887,12 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 	switch recovery {
 	case false:
 		if err := c.performBarrierRekey(ctx, recoveredKey); err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform rekey: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform rekey: %w", err).Error())
 		}
 		c.barrierRekeyConfig = nil
 	default:
 		if err := c.performRecoveryRekey(ctx, recoveredKey); err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform recovery key rekey: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery key rekey: %w", err).Error())
 		}
 		c.recoveryRekeyConfig = nil
 	}
@@ -988,7 +987,7 @@ func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBa
 		entry, err = c.physical.Get(ctx, coreBarrierUnsealKeysBackupPath)
 	}
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("error getting keys from backup: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error getting keys from backup: %w", err).Error())
 	}
 	if entry == nil {
 		return nil, nil
@@ -997,7 +996,7 @@ func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBa
 	ret := &RekeyBackup{}
 	err = jsonutil.DecodeJSON(entry.Value, ret)
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("error decoding backup keys: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error decoding backup keys: %w", err).Error())
 	}
 
 	return ret, nil
@@ -1018,13 +1017,13 @@ func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTT
 	if recovery {
 		err := c.physical.Delete(ctx, coreRecoveryUnsealKeysBackupPath)
 		if err != nil {
-			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("error deleting backup keys: {{err}}", err).Error())
+			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error deleting backup keys: %w", err).Error())
 		}
 		return nil
 	}
 	err := c.physical.Delete(ctx, coreBarrierUnsealKeysBackupPath)
 	if err != nil {
-		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("error deleting backup keys: {{err}}", err).Error())
+		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error deleting backup keys: %w", err).Error())
 	}
 	return nil
 }

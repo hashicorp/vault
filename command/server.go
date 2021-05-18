@@ -14,12 +14,14 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -54,8 +56,10 @@ import (
 	"google.golang.org/grpc/grpclog"
 )
 
-var _ cli.Command = (*ServerCommand)(nil)
-var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+var (
+	_ cli.Command             = (*ServerCommand)(nil)
+	_ cli.CommandAutocomplete = (*ServerCommand)(nil)
+)
 
 var memProfilerEnabled = false
 
@@ -100,6 +104,8 @@ type ServerCommand struct {
 	startedCh       chan (struct{}) // for tests
 	reloadedCh      chan (struct{}) // for tests
 
+	allLoggers []log.Logger
+
 	// new stuff
 	flagConfigs            []string
 	flagLogLevel           string
@@ -126,6 +132,7 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
+	flagDiagnose           string
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -209,6 +216,19 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		f.StringVar(&StringVar{
+			Name:    "diagnose",
+			Target:  &c.flagDiagnose,
+			Default: notSetValue,
+			Usage:   "Run diagnostics before starting Vault. Specify a filename to direct output to that file.",
+		})
+	} else {
+		// Ensure diagnose is *not* run when feature flag is off.
+		c.flagDiagnose = notSetValue
+	}
 
 	f = set.NewFlagSet("Dev Options")
 
@@ -812,6 +832,135 @@ func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ..
 	q.t.Reset(100 * time.Millisecond)
 }
 
+func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, error) {
+	// Ensure that a backend is provided
+	if config.Storage == nil {
+		return nil, fmt.Errorf("A storage backend must be specified")
+	}
+
+	// Initialize the backend
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		return nil, fmt.Errorf("Unknown storage type %s", config.Storage.Type)
+	}
+
+	// Do any custom configuration needed per backend
+	switch config.Storage.Type {
+	case storageTypeConsul:
+		if config.ServiceRegistration == nil {
+			// If Consul is configured for storage and service registration is unconfigured,
+			// use Consul for service registration without requiring additional configuration.
+			// This maintains backward-compatibility.
+			config.ServiceRegistration = &server.ServiceRegistration{
+				Type:   "consul",
+				Config: config.Storage.Config,
+			}
+		}
+	case storageTypeRaft:
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+		if len(config.ClusterAddr) == 0 {
+			return nil, fmt.Errorf("Cluster address must be set when using raft storage")
+		}
+	}
+
+	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	c.allLoggers = append(c.allLoggers, namedStorageLogger)
+	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	if err != nil {
+		return nil, fmt.Errorf("Error initializing storage of type %s: %w", config.Storage.Type, err)
+	}
+
+	return backend, nil
+}
+
+// InitListeners returns a response code, error message, Listeners, and a TCP Address list.
+func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
+	clusterAddrs := []*net.TCPAddr{}
+
+	// Initialize the listeners
+	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
+
+	c.reloadFuncsLock.Lock()
+
+	defer c.reloadFuncsLock.Unlock()
+
+	var errMsg error
+	for i, lnConfig := range config.Listeners {
+		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
+		if err != nil {
+			errMsg = fmt.Errorf("Error initializing listener of type %s: %s", lnConfig.Type, err)
+			return 1, nil, nil, errMsg
+		}
+
+		if reloadFunc != nil {
+			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
+			relSlice = append(relSlice, reloadFunc)
+			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
+		}
+
+		if !disableClustering && lnConfig.Type == "tcp" {
+			addr := lnConfig.ClusterAddress
+			if addr != "" {
+				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
+				if err != nil {
+					errMsg = fmt.Errorf("Error resolving cluster_address: %s", err)
+					return 1, nil, nil, errMsg
+				}
+				clusterAddrs = append(clusterAddrs, tcpAddr)
+			} else {
+				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+				if !ok {
+					errMsg = fmt.Errorf("Failed to parse tcp listener")
+					return 1, nil, nil, errMsg
+				}
+				clusterAddr := &net.TCPAddr{
+					IP:   tcpAddr.IP,
+					Port: tcpAddr.Port + 1,
+				}
+				clusterAddrs = append(clusterAddrs, clusterAddr)
+				addr = clusterAddr.String()
+			}
+			props["cluster address"] = addr
+		}
+
+		if lnConfig.MaxRequestSize == 0 {
+			lnConfig.MaxRequestSize = vaulthttp.DefaultMaxRequestSize
+		}
+		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
+
+		if lnConfig.MaxRequestDuration == 0 {
+			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
+		}
+		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
+
+		lns = append(lns, listenerutil.Listener{
+			Listener: ln,
+			Config:   lnConfig,
+		})
+
+		// Store the listener props for output later
+		key := fmt.Sprintf("listener %d", i+1)
+		propsList := make([]string, 0, len(props))
+		for k, v := range props {
+			propsList = append(propsList, fmt.Sprintf(
+				"%s: %q", k, v))
+		}
+		sort.Strings(propsList)
+		*infoKeys = append(*infoKeys, key)
+		(*info)[key] = fmt.Sprintf(
+			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
+
+	}
+	if !disableClustering {
+		if c.logger.IsDebug() {
+			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+		}
+	}
+	return 0, lns, clusterAddrs, nil
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -843,6 +992,21 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if c.flagDiagnose != notSetValue {
+		if c.flagDev {
+			c.UI.Error("Cannot run diagnose on Vault in dev mode.")
+			return 1
+		}
+		// TODO: add a file output flag to Diagnose
+		diagnose := &OperatorDiagnoseCommand{
+			BaseCommand: c.BaseCommand,
+			flagDebug:   false,
+			flagSkips:   []string{},
+			flagConfigs: c.flagConfigs,
+		}
+		diagnose.RunWithParsedFlags()
+	}
+
 	// Load the configuration
 	var config *server.Config
 	var err error
@@ -868,6 +1032,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
 		}
+		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
 	parsedConfig, err := c.parseConfig()
@@ -918,7 +1083,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
 
-	allLoggers := []log.Logger{c.logger}
+	c.allLoggers = []log.Logger{c.logger}
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -931,7 +1096,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
-	allLoggers = append(allLoggers, namedGRPCLogFaker)
+	c.allLoggers = append(c.allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
 		logger: namedGRPCLogFaker,
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
@@ -939,12 +1104,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if memProfilerEnabled {
 		c.startMemProfiler()
-	}
-
-	// Ensure that a backend is provided
-	if config.Storage == nil {
-		c.UI.Output("A storage backend must be specified")
-		return 1
 	}
 
 	if config.DefaultMaxRequestDuration != 0 {
@@ -960,6 +1119,13 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Output("Error parsing the environment variable VAULT_DISABLE_MLOCK")
 			return 1
 		}
+	}
+
+	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+		config.LicensePath = envLicensePath
+	}
+	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+		config.License = envLicense
 	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
@@ -988,44 +1154,15 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
-	// Initialize the backend
-	factory, exists := c.PhysicalBackends[config.Storage.Type]
-	if !exists {
-		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
-		return 1
-	}
-
-	// Do any custom configuration needed per backend
-	switch config.Storage.Type {
-	case storageTypeConsul:
-		if config.ServiceRegistration == nil {
-			// If Consul is configured for storage and service registration is unconfigured,
-			// use Consul for service registration without requiring additional configuration.
-			// This maintains backward-compatibility.
-			config.ServiceRegistration = &server.ServiceRegistration{
-				Type:   "consul",
-				Config: config.Storage.Config,
-			}
-		}
-	case storageTypeRaft:
-		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
-		}
-		if len(config.ClusterAddr) == 0 {
-			c.UI.Error("Cluster address must be set when using raft storage")
-			return 1
-		}
-	}
-
-	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
-	allLoggers = append(allLoggers, namedStorageLogger)
-	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	// Initialize the storage backend
+	backend, err := c.setupStorage(config)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
+		c.UI.Error(err.Error())
 		return 1
 	}
 
 	// Prevent server startup if migration is active
+	// TODO: Use OpenTelemetry to integrate this into Diagnose
 	if c.storageMigrationActive(backend) {
 		return 1
 	}
@@ -1040,7 +1177,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
-		allLoggers = append(allLoggers, namedSDLogger)
+		c.allLoggers = append(c.allLoggers, namedSDLogger)
 
 		// Since we haven't even begun starting Vault's core yet,
 		// we know that Vault is in its pre-running state.
@@ -1094,14 +1231,14 @@ func (c *ServerCommand) Run(args []string) int {
 
 			var seal vault.Seal
 			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-			allLoggers = append(allLoggers, sealLogger)
+			c.allLoggers = append(c.allLoggers, sealLogger)
 			defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("shamir"),
 				}),
 			})
 			var sealInfoKeys []string
-			var sealInfoMap = map[string]string{}
+			sealInfoMap := map[string]string{}
 			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
@@ -1118,7 +1255,7 @@ func (c *ServerCommand) Run(args []string) int {
 				})
 			}
 
-			var infoPrefix = ""
+			infoPrefix := ""
 			if configSeal.Disabled {
 				unwrapSeal = seal
 				infoPrefix = "Old "
@@ -1155,37 +1292,41 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
-		RawConfig:                 config,
-		Physical:                  backend,
-		RedirectAddr:              config.Storage.RedirectAddr,
-		StorageType:               config.Storage.Type,
-		HAPhysical:                nil,
-		ServiceRegistration:       configSR,
-		Seal:                      barrierSeal,
-		UnwrapSeal:                unwrapSeal,
-		AuditBackends:             c.AuditBackends,
-		CredentialBackends:        c.CredentialBackends,
-		LogicalBackends:           c.LogicalBackends,
-		Logger:                    c.logger,
-		DisableSentinelTrace:      config.DisableSentinelTrace,
-		DisableCache:              config.DisableCache,
-		DisableMlock:              config.DisableMlock,
-		MaxLeaseTTL:               config.MaxLeaseTTL,
-		DefaultLeaseTTL:           config.DefaultLeaseTTL,
-		ClusterName:               config.ClusterName,
-		CacheSize:                 config.CacheSize,
-		PluginDirectory:           config.PluginDirectory,
-		EnableUI:                  config.EnableUI,
-		EnableRaw:                 config.EnableRawEndpoint,
-		DisableSealWrap:           config.DisableSealWrap,
-		DisablePerformanceStandby: config.DisablePerformanceStandby,
-		DisableIndexing:           config.DisableIndexing,
-		AllLoggers:                allLoggers,
-		BuiltinRegistry:           builtinplugins.Registry,
-		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
-		MetricsHelper:             metricsHelper,
-		MetricSink:                metricSink,
-		SecureRandomReader:        secureRandomReader,
+		RawConfig:                      config,
+		Physical:                       backend,
+		RedirectAddr:                   config.Storage.RedirectAddr,
+		StorageType:                    config.Storage.Type,
+		HAPhysical:                     nil,
+		ServiceRegistration:            configSR,
+		Seal:                           barrierSeal,
+		UnwrapSeal:                     unwrapSeal,
+		AuditBackends:                  c.AuditBackends,
+		CredentialBackends:             c.CredentialBackends,
+		LogicalBackends:                c.LogicalBackends,
+		Logger:                         c.logger,
+		DisableSentinelTrace:           config.DisableSentinelTrace,
+		DisableCache:                   config.DisableCache,
+		DisableMlock:                   config.DisableMlock,
+		MaxLeaseTTL:                    config.MaxLeaseTTL,
+		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		ClusterName:                    config.ClusterName,
+		CacheSize:                      config.CacheSize,
+		PluginDirectory:                config.PluginDirectory,
+		EnableUI:                       config.EnableUI,
+		EnableRaw:                      config.EnableRawEndpoint,
+		DisableSealWrap:                config.DisableSealWrap,
+		DisablePerformanceStandby:      config.DisablePerformanceStandby,
+		DisableIndexing:                config.DisableIndexing,
+		AllLoggers:                     c.allLoggers,
+		BuiltinRegistry:                builtinplugins.Registry,
+		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
+		MetricsHelper:                  metricsHelper,
+		MetricSink:                     metricSink,
+		SecureRandomReader:             secureRandomReader,
+		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
+		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+		License:                        config.License,
+		LicensePath:                    config.LicensePath,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -1237,7 +1378,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
-		allLoggers = append(allLoggers, namedHALogger)
+		c.allLoggers = append(c.allLoggers, namedHALogger)
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(
@@ -1442,82 +1583,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	clusterAddrs := []*net.TCPAddr{}
+	status, lns, clusterAddrs, errMsg := c.InitListeners(config, disableClustering, &infoKeys, &info)
 
-	// Initialize the listeners
-	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
-	c.reloadFuncsLock.Lock()
-	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
-			return 1
-		}
-
-		if reloadFunc != nil {
-			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
-			relSlice = append(relSlice, reloadFunc)
-			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
-		}
-
-		if !disableClustering && lnConfig.Type == "tcp" {
-			addr := lnConfig.ClusterAddress
-			if addr != "" {
-				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
-					return 1
-				}
-				clusterAddrs = append(clusterAddrs, tcpAddr)
-			} else {
-				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-				if !ok {
-					c.UI.Error("Failed to parse tcp listener")
-					return 1
-				}
-				clusterAddr := &net.TCPAddr{
-					IP:   tcpAddr.IP,
-					Port: tcpAddr.Port + 1,
-				}
-				clusterAddrs = append(clusterAddrs, clusterAddr)
-				addr = clusterAddr.String()
-			}
-			props["cluster address"] = addr
-		}
-
-		if lnConfig.MaxRequestSize == 0 {
-			lnConfig.MaxRequestSize = vaulthttp.DefaultMaxRequestSize
-		}
-		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
-
-		if lnConfig.MaxRequestDuration == 0 {
-			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
-		}
-		props["max_request_duration"] = fmt.Sprintf("%s", lnConfig.MaxRequestDuration.String())
-
-		lns = append(lns, listenerutil.Listener{
-			Listener: ln,
-			Config:   lnConfig,
-		})
-
-		// Store the listener props for output later
-		key := fmt.Sprintf("listener %d", i+1)
-		propsList := make([]string, 0, len(props))
-		for k, v := range props {
-			propsList = append(propsList, fmt.Sprintf(
-				"%s: %q", k, v))
-		}
-		sort.Strings(propsList)
-		infoKeys = append(infoKeys, key)
-		info[key] = fmt.Sprintf(
-			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
-
-	}
-	c.reloadFuncsLock.Unlock()
-	if !disableClustering {
-		if c.logger.IsDebug() {
-			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
-		}
+	if status != 0 {
+		c.UI.Output("Error parsing listener configuration.")
+		c.UI.Error(errMsg.Error())
+		return 1
 	}
 
 	// Make sure we close all listeners from this point on
@@ -1737,7 +1808,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 						"Development mode should NOT be used in production installations!"))
 					c.UI.Warn("")
 				})
-			})}
+			}),
+		}
 		c.logger.RegisterSink(qw)
 	}
 
@@ -1832,6 +1904,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -1858,6 +1933,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			shutdownTriggered = true
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
+
+			// Notify systemd that the server is reloading config
+			c.notifySystemd(systemd.SdNotifyReloading)
 
 			// Check for new log level
 			var config *server.Config
@@ -1910,16 +1988,17 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 
 		case <-c.SigUSR2Ch:
-			buf := make([]byte, 32*1024*1024)
-			n := runtime.Stack(buf[:], true)
-			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
+			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
+	// Notify systemd that the server is shutting down
+	c.notifySystemd(systemd.SdNotifyStopping)
 
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
 
-	// Shutdown will wait until after Vault is sealed, which means the
+	// Finalize will wait until after Vault is sealed, which means the
 	// request forwarding listeners will also be closed (and also
 	// waited for).
 	if err := core.Shutdown(); err != nil {
@@ -1929,6 +2008,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	} else {
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
+	}
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
@@ -2188,7 +2280,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		return 1
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0755); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o755); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
 		return 1
 	}
@@ -2243,7 +2335,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(testCluster.Cleanup)
 
-			// Shutdown will wait until after Vault is sealed, which means the
+			// Finalize will wait until after Vault is sealed, which means the
 			// request forwarding listeners will also be closed (and also
 			// waited for).
 			for _, core := range testCluster.Cores {
@@ -2420,7 +2512,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
@@ -2483,7 +2575,6 @@ type StorageMigrationStatus struct {
 
 func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) {
 	entry, err := b.Get(context.Background(), storageMigrationLock)
-
 	if err != nil {
 		return nil, err
 	}

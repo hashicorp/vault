@@ -24,8 +24,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorMigrateCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorMigrateCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorMigrateCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorMigrateCommand)(nil)
+)
 
 var errAbort = errors.New("Migration aborted")
 
@@ -212,7 +214,6 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 		}
 
 		entry, err := from.Get(ctx, path)
-
 		if err != nil {
 			return errwrap.Wrapf("error reading entry: {{err}}", err)
 		}

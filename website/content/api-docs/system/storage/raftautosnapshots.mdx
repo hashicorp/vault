@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/storage/raft/snapshot-auto - HTTP API
-sidebar_title: <code>/sys/storage/raft/snapshot-auto</code>
 description: |-
 
   The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
@@ -20,8 +19,9 @@ where the snapshots are written, as well as a retention policy governing when
 older snapshots get deleted.
 
 Note that for cloud storage types, you can either provide credentials explicitly
-using the parameters below, or omit them and rely on the cloud provider's
-other mechanisms to provide access to cloud resources.
+using the parameters below, or for GCP and AWS you can omit them and rely on the
+other mechanisms the cloud provider's SDK allows for authenticating, e.g.
+environment variables or files on disk in predefined locations.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
@@ -39,9 +39,9 @@ other mechanisms to provide access to cloud resources.
   oldest ones will be deleted.
 
 - `path_prefix` `(string: <required>)` - For `storage_type=local`, the directory to
-  write the snapshots in. For cloud storage types, the bucket prefix to use. 
-  Types `azure-s3` and `google-gcs` require a trailing `/` (slash). 
-  Types `local` and `aws-s3` the trailing `/` is optional. 
+  write the snapshots in. For cloud storage types, the bucket prefix to use.
+  Types `azure-s3` and `google-gcs` require a trailing `/` (slash).
+  Types `local` and `aws-s3` the trailing `/` is optional.
 
 - `file_prefix` `(string: "vault-snapshot")` - Within the directory or bucket
   prefix given by `path_prefix`, the file or object name of snapshot files
@@ -54,7 +54,7 @@ other mechanisms to provide access to cloud resources.
 #### storage_type=local
 
 - `local_max_space` `(integer: <required>)` - For `storage_type=local`, the maximum
-  space to use for snapshots. Snapshot attempts will fail if there is not enough
+  space, in bytes, to use for snapshots. Snapshot attempts will fail if there is not enough
   space left in this allowance.
 
 #### storage_type=aws-s3
@@ -83,27 +83,28 @@ other mechanisms to provide access to cloud resources.
 
 - `aws_s3_server_side_encryption` `(boolean)` - Use AES256 to encrypt bucket contents.
 
-- `aws_s3_server_kms_key` `(string)` - Use named KMS key, when `aws_s3_enable_kms=true`
+- `aws_s3_kms_key` `(string)` - Use named KMS key, when `aws_s3_enable_kms=true`
 
 #### storage_type=google-gcs
 
 - `google_gcs_bucket` `(string: <required>)` GCS bucket to write snapshots to.
 
-- `google_service_account_key` `(string)` - Google service account key in JSON format.  Depending
-on how the API is invoked, this may be need to be JSON-escaped, e.g. for newlines and double quotes.
-The raw value looks like this:
+- `google_service_account_key` `(string)` - Google service account key in JSON format. Depending
+  on how the API is invoked, this may be need to be JSON-escaped, e.g. for newlines and double quotes.
+  The raw value looks like this:
+
 ```json
 {
- "type": "service_account",
- "project_id": "project-id",
- "private_key_id": "key-id",
- "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQ ... /WZs=\n-----END RSA PRIVATE KEY-----\n",
- "client_email": "service-account-email",
- "client_id": "client-id",
- "auth_uri": "https://accounts.google.com/o/oauth2/auth",
- "token_uri": "https://accounts.google.com/o/oauth2/token",
- "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
- "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/service-account-email"
+  "type": "service_account",
+  "project_id": "project-id",
+  "private_key_id": "key-id",
+  "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQ ... /WZs=\n-----END RSA PRIVATE KEY-----\n",
+  "client_email": "service-account-email",
+  "client_id": "client-id",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/service-account-email"
 }
 ```
 

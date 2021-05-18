@@ -1,5 +1,4 @@
 import { inject as service } from '@ember/service';
-import { get } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import RSVP from 'rsvp';
 const INIT = 'vault.cluster.init';
@@ -55,22 +54,23 @@ export default Mixin.create({
   },
 
   hasKeyData() {
-    return !!get(this.controllerFor(INIT), 'keyData');
+    /* eslint-disable-next-line ember/no-controller-access-in-routes */
+    return !!this.controllerFor(INIT).keyData;
   },
 
   targetRouteName(transition) {
     const cluster = this.clusterModel();
     const isAuthed = this.authToken();
-    if (get(cluster, 'needsInit')) {
+    if (cluster.needsInit) {
       return INIT;
     }
     if (this.hasKeyData() && this.routeName !== UNSEAL && this.routeName !== AUTH) {
       return INIT;
     }
-    if (get(cluster, 'sealed')) {
+    if (cluster.sealed) {
       return UNSEAL;
     }
-    if (get(cluster, 'dr.isSecondary')) {
+    if (cluster?.dr?.isSecondary) {
       if (transition && transition.targetName === DR_REPLICATION_SECONDARY_DETAILS) {
         return DR_REPLICATION_SECONDARY_DETAILS;
       }
@@ -87,9 +87,9 @@ export default Mixin.create({
       return AUTH;
     }
     if (
-      (!get(cluster, 'needsInit') && this.routeName === INIT) ||
-      (!get(cluster, 'sealed') && this.routeName === UNSEAL) ||
-      (!get(cluster, 'dr.isSecondary') && this.routeName === DR_REPLICATION_SECONDARY) ||
+      (!cluster.needsInit && this.routeName === INIT) ||
+      (!cluster.sealed && this.routeName === UNSEAL) ||
+      (!cluster?.dr?.isSecondary && this.routeName === DR_REPLICATION_SECONDARY) ||
       (isAuthed && this.routeName === AUTH)
     ) {
       return CLUSTER;

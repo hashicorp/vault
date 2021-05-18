@@ -1,9 +1,8 @@
 ---
 layout: api
 page_title: /sys/license - HTTP API
-sidebar_title: <code>/sys/license</code>
 description: |-
-  The `/sys/license` endpoint is used to view and update the license used in 
+  The `/sys/license` endpoint is used to view and update the license used in
   Vault.
 ---
 
@@ -41,6 +40,32 @@ $ curl \
     "start_time": "2017-11-14T16:04:36.546753-05:00"
   },
   "warnings": ["time left on license is 29m33s"]
+}
+```
+
+## Read Signed License
+
+This endpoint returns the signed license blob for the currently installed license.
+
+| Method | Path           |
+| :----- | :------------- |
+| `GET`  | `/sys/license/signed` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/license/signed
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "signed": "01ABCDEFG..."
+  }
 }
 ```
 

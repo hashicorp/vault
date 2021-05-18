@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
@@ -44,7 +45,7 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusForbidden, nil)
 			return
 		}
-		respondError(w, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err))
+		respondError(w, http.StatusBadRequest, fmt.Errorf("error performing token check: %w", err))
 		return
 	}
 

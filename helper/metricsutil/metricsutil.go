@@ -81,12 +81,13 @@ func (m *MetricsHelper) AddGaugeLoopMetric(key []string, val float32, labels []L
 		GaugeMetric{
 			Key:    key,
 			Value:  val,
-			Labels: labels})
+			Labels: labels,
+		})
 }
 
 func (m *MetricsHelper) CreateMetricsCacheKeyName(key []string, val float32, labels []Label) string {
 	var keyJoin string = strings.Join(key, ".")
-	var labelJoinStr = ""
+	labelJoinStr := ""
 	for _, label := range labels {
 		labelJoinStr = labelJoinStr + label.Name + "|" + label.Value + "||"
 	}

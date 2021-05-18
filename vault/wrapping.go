@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -38,7 +37,7 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 	if entry == nil {
 		key, err := ecdsa.GenerateKey(elliptic.P521(), c.secureRandomReader)
 		if err != nil {
-			return errwrap.Wrapf("failed to generate wrapping key: {{err}}", err)
+			return fmt.Errorf("failed to generate wrapping key: %w", err)
 		}
 		keyParams.D = key.D
 		keyParams.X = key.X
@@ -46,20 +45,20 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 		keyParams.Type = corePrivateKeyTypeP521
 		val, err := jsonutil.EncodeJSON(keyParams)
 		if err != nil {
-			return errwrap.Wrapf("failed to encode wrapping key: {{err}}", err)
+			return fmt.Errorf("failed to encode wrapping key: %w", err)
 		}
 		entry = &logical.StorageEntry{
 			Key:   coreWrappingJWTKeyPath,
 			Value: val,
 		}
 		if err = c.barrier.Put(ctx, entry); err != nil {
-			return errwrap.Wrapf("failed to store wrapping key: {{err}}", err)
+			return fmt.Errorf("failed to store wrapping key: %w", err)
 		}
 	}
 
 	// Redundant if we just created it, but in this case serves as a check anyways
 	if err = jsonutil.DecodeJSON(entry.Value, &keyParams); err != nil {
-		return errwrap.Wrapf("failed to decode wrapping key parameters: {{err}}", err)
+		return fmt.Errorf("failed to decode wrapping key parameters: %w", err)
 	}
 
 	c.wrappingJWTKey = &ecdsa.PrivateKey{
@@ -76,6 +75,9 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 	return nil
 }
 
+// wrapInCubbyhole is invoked when a caller asks for response wrapping.
+// On success, return (nil, nil) and mutates resp.  On failure, returns
+// either a response describing the failure or an error.
 func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *logical.Response, auth *logical.Auth) (*logical.Response, error) {
 	if c.perfStandby {
 		return forwardWrapRequest(ctx, c, req, resp, auth)
@@ -403,12 +405,12 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {
-			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
+			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)
 		}
 		var claims squarejwt.Claims
-		var allClaims = make(map[string]interface{})
+		allClaims := make(map[string]interface{})
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
-			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
+			return false, fmt.Errorf("wrapping token signature could not be validated: %w", err)
 		}
 		typeClaimRaw, ok := allClaims["type"]
 		if !ok {

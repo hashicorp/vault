@@ -128,12 +128,18 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	// Otherwise, attempt to make connection
 	conn := c.ConnectionURL
 
-	// Ensure timezone is set to UTC for all the connections
+	// PostgreSQL specific settings
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
+		// Ensure timezone is set to UTC for all the connections
 		if strings.Contains(conn, "?") {
 			conn += "&timezone=UTC"
 		} else {
 			conn += "?timezone=UTC"
+		}
+
+		// Ensure a reasonable application_name is set
+		if !strings.Contains(conn, "application_name") {
+			conn += "&application_name=vault"
 		}
 	}
 

@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Agent Sidecar Injector Installation
-sidebar_title: Installation
 description: The Vault Agent Sidecar Injector can be installed using Vault Helm.
 ---
 
@@ -21,7 +20,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.9.0        	1.6.1      	Official HashiCorp Vault Chart
+hashicorp/vault	0.10.0       	1.7.0      	Official HashiCorp Vault Chart
 ```
 
 Then install the chart and enable the injection feature by setting the
@@ -92,7 +91,7 @@ should be set to `false` since leader-election is not necessary in this case.
 If there is only one replica set (regardless of other TLS or leaderElector
 settings), no leader-elector containers will be deployed.
 
-[k8s-blog]: <https://kubernetes.io/blog/2016/01/simple-leader-election-with-kubernetes/> "Simple leader election with Kubernetes and Docker"
+[k8s-blog]: https://kubernetes.io/blog/2016/01/simple-leader-election-with-kubernetes/ 'Simple leader election with Kubernetes and Docker'
 
 ## Namespace Selector
 

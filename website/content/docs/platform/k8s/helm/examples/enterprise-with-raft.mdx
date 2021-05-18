@@ -2,7 +2,6 @@
 layout: 'docs'
 page_title: 'Highly Available Vault Enterprise Cluster with Raft'
 sidebar_current: 'docs-platform-k8s-examples-enterprise-with-raft'
-sidebar_title: 'HA Enterprise Cluster with Raft'
 description: |-
   Describes how to set up a highly available Vault Enterprise cluster with Integrated Storage (Raft)
 ---
@@ -16,7 +15,7 @@ Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` valu
 ```shell
 helm install vault hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.5.4_ent' \
+  --set='server.image.tag=1.7.0_ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```

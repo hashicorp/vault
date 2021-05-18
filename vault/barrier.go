@@ -136,11 +136,26 @@ type SecurityBarrier interface {
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)
 
-	// Rekey is used to change the root key used to protect the keyring
+	// RotationConfig returns the auto-rotation config for the barrier key
+	RotationConfig() (KeyRotationConfig, error)
+
+	// SetRotationConfig updates the auto-rotation config for the barrier key
+	SetRotationConfig(ctx context.Context, config KeyRotationConfig) error
+
 	Rekey(context.Context, []byte) error
 
 	// For replication we must send over the keyring, so this must be available
 	Keyring() (*Keyring, error)
+
+	// For encryption count shipping, a function which handles updating local encryption counts if the consumer succeeds.
+	// This isolates the barrier code from the replication system
+	ConsumeEncryptionCount(consumer func(int64) error) error
+
+	// Add encryption counts from a remote source (downstream cluster node)
+	AddRemoteEncryptions(encryptions int64)
+
+	// Check whether an automatic rotation is due
+	CheckBarrierAutoRotate(ctx context.Context) (string, error)
 
 	// SecurityBarrier must provide the storage APIs
 	logical.Storage
@@ -177,4 +192,5 @@ type BarrierEncryptor interface {
 type KeyInfo struct {
 	Term        int
 	InstallTime time.Time
+	Encryptions int64
 }

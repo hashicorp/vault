@@ -60,6 +60,50 @@ render pages.`,
 			},
 		},
 		{
+			Pattern: "pprof/allocs",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handlePprofAllocs,
+					Summary:     "Returns a sampling of all past memory allocations.",
+					Description: "Returns a sampling of all past memory allocations.",
+				},
+			},
+		},
+		{
+			Pattern: "pprof/threadcreate",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handlePprofThreadcreate,
+					Summary:     "Returns stack traces that led to the creation of new OS threads",
+					Description: "Returns stack traces that led to the creation of new OS threads",
+				},
+			},
+		},
+		{
+			Pattern: "pprof/block",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handlePprofBlock,
+					Summary:     "Returns stack traces that led to blocking on synchronization primitives",
+					Description: "Returns stack traces that led to blocking on synchronization primitives",
+				},
+			},
+		},
+		{
+			Pattern: "pprof/mutex",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handlePprofMutex,
+					Summary:     "Returns stack traces of holders of contended mutexes",
+					Description: "Returns stack traces of holders of contended mutexes",
+				},
+			},
+		},
+		{
 			Pattern: "pprof/profile",
 
 			Fields: map[string]*framework.FieldSchema{
@@ -143,6 +187,42 @@ func (b *SystemBackend) handlePprofHeap(ctx context.Context, req *logical.Reques
 	}
 
 	pprof.Handler("heap").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePprofAllocs(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := checkRequestHandlerParams(req); err != nil {
+		return nil, err
+	}
+
+	pprof.Handler("allocs").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePprofThreadcreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := checkRequestHandlerParams(req); err != nil {
+		return nil, err
+	}
+
+	pprof.Handler("threadcreate").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePprofBlock(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := checkRequestHandlerParams(req); err != nil {
+		return nil, err
+	}
+
+	pprof.Handler("block").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePprofMutex(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := checkRequestHandlerParams(req); err != nil {
+		return nil, err
+	}
+
+	pprof.Handler("mutex").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 

@@ -12,19 +12,25 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
-const msSQLTypeName = "mssql"
+const (
+	msSQLTypeName = "mssql"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 20) (.RoleName | truncate 20) (random 20) (unix_time) | truncate 128 }}`
+)
 
 var _ dbplugin.Database = &MSSQL{}
 
 // MSSQL is an implementation of Database interface
 type MSSQL struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func New() (interface{}, error) {
@@ -69,6 +75,26 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	m.usernameProducer = up
+
+	_, err = m.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template - did you reference a field that isn't available? : %w", err)
+	}
+
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
@@ -90,12 +116,7 @@ func (m *MSSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplu
 		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 20),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 20),
-		credsutil.MaxLength(128),
-		credsutil.Separator("-"),
-	)
+	username, err := m.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
@@ -371,6 +392,7 @@ BEGIN
   DROP LOGIN [%s]
 END
 `
+
 const alterLoginSQL = `
 ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `

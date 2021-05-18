@@ -2,12 +2,14 @@ package azuresecrets
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // AzureProvider is an interface to access underlying Azure client objects and supporting services.
@@ -85,6 +87,24 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 		userAgent = useragent.String()
 	}
 
+	// Sets a unique ID in the user-agent
+	// Normal user-agent looks like this:
+	//
+	// Vault/1.6.0 (+https://www.vaultproject.io/; azure-secrets; go1.15.7)
+	//
+	// Here we append a unique code if it's an enterprise version, where
+	// VersionMetadata will contain a non-empty string like "ent" or "prem".
+	// Otherwise use the default identifier for OSS Vault. The end result looks
+	// like so:
+	//
+	// Vault/1.6.0 (+https://www.vaultproject.io/; azure-secrets; go1.15.7; b2c13ec1-60e8-4733-9a76-88dbb2ce2471)
+	vaultIDString := "; 15cd22ce-24af-43a4-aa83-4c1a36a4b177)"
+	ver := version.GetVersion()
+	if ver.VersionMetadata != "" {
+		vaultIDString = "; b2c13ec1-60e8-4733-9a76-88dbb2ce2471)"
+	}
+	userAgent = strings.Replace(userAgent, ")", vaultIDString, 1)
+
 	appClient := graphrbac.NewApplicationsClient(settings.TenantID)
 	appClient.Authorizer = authorizer
 	appClient.AddToUserAgent(userAgent)
@@ -103,11 +123,11 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 		return nil, err
 	}
 
-	raClient := authorization.NewRoleAssignmentsClient(settings.SubscriptionID)
+	raClient := authorization.NewRoleAssignmentsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, settings.SubscriptionID)
 	raClient.Authorizer = authorizer
 	raClient.AddToUserAgent(userAgent)
 
-	rdClient := authorization.NewRoleDefinitionsClient(settings.SubscriptionID)
+	rdClient := authorization.NewRoleDefinitionsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, settings.SubscriptionID)
 	rdClient.Authorizer = authorizer
 	rdClient.AddToUserAgent(userAgent)
 

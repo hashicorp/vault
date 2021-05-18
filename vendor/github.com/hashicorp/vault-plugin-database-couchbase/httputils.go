@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"testing"
+	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/hashicorp/go-version"
@@ -108,15 +110,27 @@ func createGroup(hostname string, port int, adminuser, adminpassword, group, rol
 	return nil
 }
 
-func waitForBucketInstalled(address, username, password, bucket string) (bucketFound, bucketInstalled bool, err error) {
+func waitForBucket(t *testing.T, address, username, password, bucketName string) {
+	t.Logf("Waiting for bucket %s...", bucketName)
+	f := func() error {
+		return checkBucketReady(address, username, password, bucketName)
+	}
+	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(1*time.Second), 10)
+	err := backoff.Retry(f, bo)
+	if err != nil {
+		t.Fatalf("bucket %s installed check failed: %s", bucketName, err)
+	}
+}
+
+func checkBucketReady(address, username, password, bucket string) (err error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s@%s:8091/sampleBuckets", username, password, address))
 	if err != nil {
-		return false, false, err
+		return err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, false, err
+		return err
 	}
 
 	type installed []struct {
@@ -129,20 +143,26 @@ func waitForBucketInstalled(address, username, password, bucket string) (bucketF
 
 	err = json.Unmarshal(body, &iresult)
 	if err != nil {
-		err := backoff.PermanentError{
+		err := &backoff.PermanentError{
 			Err: fmt.Errorf("error unmarshaling JSON %s", err),
 		}
-		return false, false, &err
+		return err
 	}
 
+	bucketFound := false
 	for _, s := range iresult {
 		if s.Name == bucket {
 			bucketFound = true
 			if s.Installed == true {
-				bucketInstalled = true
+				return nil // Found & installed
 			}
 		}
-
 	}
-	return bucketFound, bucketInstalled, nil
+
+	err = fmt.Errorf("bucket not found")
+
+	if !bucketFound {
+		return backoff.Permanent(err)
+	}
+	return err
 }
