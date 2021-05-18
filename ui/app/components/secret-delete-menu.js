@@ -25,7 +25,9 @@ export default class SecretDeleteMenu extends Component {
       }
       let backend = context.args.model.backend;
       let id = context.args.model.id;
-      let path = context.args.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      let path = context.args.isV2
+        ? `${encodeURIComponent(backend)}/data/${encodeURIComponent(id)}`
+        : `${encodeURIComponent(backend)}/${encodeURIComponent(id)}`;
       return {
         id: path,
       };
@@ -45,7 +47,7 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
-        id: `${backend}/delete/${id}`,
+        id: `${encodeURIComponent(backend)}/delete/${encodeURIComponent(id)}`,
       };
     },
     'model.id'
@@ -59,7 +61,7 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
-        id: `${backend}/undelete/${id}`,
+        id: `${encodeURIComponent(backend)}/undelete/${encodeURIComponent(id)}`,
       };
     },
     'model.id'
@@ -73,7 +75,7 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
-        id: `${backend}/destroy/${id}`,
+        id: `${encodeURIComponent(backend)}/destroy/${encodeURIComponent(id)}`,
       };
     },
     'model.id'
@@ -88,7 +90,7 @@ export default class SecretDeleteMenu extends Component {
       let backend = context.args.model.engine.id;
       let id = context.args.model.id;
       return {
-        id: `${backend}/metadata/${id}`,
+        id: `${encodeURIComponent(backend)}/metadata/${encodeURIComponent(id)}`,
       };
     },
     'model',
