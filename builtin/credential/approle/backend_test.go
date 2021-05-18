@@ -9,6 +9,7 @@ import (
 )
 
 func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+	t.Helper()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -24,6 +25,39 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 		t.Fatal(err)
 	}
 	return b, config.StorageView
+}
+
+func TestAppRole_RoleServiceToBatchNumUses(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	requestFunc := func(operation logical.Operation, data map[string]interface{}) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "role/testrole",
+			Operation: operation,
+			Storage:   s,
+			Data:      data,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %#v\nresp: %#v", err, resp)
+		}
+	}
+
+	data := map[string]interface{}{
+		"bind_secret_id":        false,
+		"secret_id_bound_cidrs": "10.90.28.0/22",
+		"secret_id_num_uses":    0,
+		"secret_id_ttl":         "10m",
+		"token_policies":        "policy",
+		"token_ttl":             "5m",
+		"token_max_ttl":         "10m",
+		"token_num_uses":        2,
+		"token_type":            "default",
+	}
+	requestFunc(logical.CreateOperation, data)
+
+	data["token_num_uses"] = 0
+	data["token_type"] = "batch"
+	requestFunc(logical.UpdateOperation, data)
 }
 
 func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
