@@ -79,7 +79,7 @@ define GEN_CONFIG
 endef
 
 # Always re-generate the config, as we can't trust timestamps with git.
-.PHONY: $(OUT)
+# .PHONY: $(OUT)
 $(OUT): $(CONFIG_SOURCE) 
 	$(GEN_CONFIG)
 	@echo "$@ updated"
