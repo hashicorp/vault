@@ -6,36 +6,36 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if sum}}
+{{#if @sum}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="field">
       <label for="sum" class="is-input">Sum</label>
       <div class="control">
-        <textarea readonly class="textarea" id="sum" data-test-tools-input="sum">{{sum}}</textarea>
+        <textarea readonly class="textarea" id="sum" data-test-tools-input="sum">{{@sum}}</textarea>
       </div>
     </div>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton @clipboardText={{sum}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Hashed data copied!")}}>
+      <CopyButton @clipboardText={{@sum}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Hashed data copied!")}}>
       Copy
       </CopyButton>
     </div>
     <div class="control">
-      <button {{action 'onClear'}} type="button" class="button" data-test-tools-back=true>
+      <button {{on "click" (action this.onClear)}} type="button" class="button" data-test-tools-back=true>
         Back
       </button>
     </div>
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @errors={{errors}} />
+    <MessageError @errors={{@errors}} />
     <div class="field">
       <label for="input" class="is-label">
         Input
       </label>
       <div class="control">
-        <Textarea @id="input" @name="input" @value={{input}} class="textarea" data-test-tools-input="hash-input" />
+        <Textarea @id="input-hash" @name="input" @value={{input}} class="textarea" data-test-tools-input="hash-input" />
         <B64Toggle @value={{input}} @isInput={{false}} @data-test-tools-b64-toggle="input" />
       </div>
     </div>
@@ -48,10 +48,10 @@
               <select
                 name="algorithm"
                 id="algorithm"
-                onchange={{action (mut algorithm) value="target.value"}}
+                onchange={{action (mut @algorithm) value="target.value"}}
               >
                 {{#each (sha2-digest-sizes) as |algo|}}
-                  <option selected={{if algorithm (eq algorithm algo)}} value={{algo}}>
+                  <option selected={{if @algorithm (eq @algorithm algo)}} value={{algo}}>
                     {{algo}}
                   </option>
                 {{/each}}
@@ -66,10 +66,10 @@
               <select
                  name="format"
                  id="format"
-                 onchange={{action (mut format) value="target.value"}}
+                 onchange={{action (mut @format) value="target.value"}}
               >
                 {{#each (array 'base64' 'hex') as |formatOption|}}
-                  <option selected={{if format (eq format formatOption)}} value={{formatOption}}>
+                  <option selected={{if @format (eq @format formatOption)}} value={{formatOption}}>
                     {{formatOption}}
                   </option>
                 {{/each}}
