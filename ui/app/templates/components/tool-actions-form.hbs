@@ -13,6 +13,16 @@
       @random_bytes={{random_bytes}}
       @errors={{errors}}
       @format={{format}}
+      @bytes={{bytes}}
+    />
+  {{else if (eq selectedAction 'rewrap')}}
+    <ToolRewrap
+      @onClear={{action "onClear"}}
+      @rewrap_token={{rewrap_token}}
+      @selectedAction={{selectedAction}}
+      @errors={{errors}}
+      @token={{token}}
+      @bytes={{bytes}}
     />
   {{else}}
     {{log selectedAction}}
