@@ -1,13 +1,21 @@
 <form onsubmit={{action "doSubmit"}}>
   {{#if (eq selectedAction 'hash')}}
-    <HashTool 
-      @sum={{sum}}
+    <ToolHash
       @onClear={{action "onClear"}}
+      @sum={{sum}}
       @algorithm={{algorithm}}
       @errors={{errors}}
       @format={{format}}
     />
+  {{else if (eq selectedAction 'random')}}
+    <ToolRandom
+      @onClear={{action "onClear"}}
+      @random_bytes={{random_bytes}}
+      @errors={{errors}}
+      @format={{format}}
+    />
   {{else}}
+    {{log selectedAction}}
     {{partial (concat "partials/tools/" selectedAction)}}
   {{/if}}
 </form>

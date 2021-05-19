@@ -6,26 +6,26 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if random_bytes}}
+{{#if @random_bytes}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <label for="rand" class="is-label">Random bytes</label>
-    <textarea readonly class="textarea" id="rand" data-test-tools-input="random-bytes">{{random_bytes}}</textarea>
+    <textarea readonly class="textarea" id="rand" data-test-tools-input="random-bytes">{{@random_bytes}}</textarea>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton @clipboardText={{random_bytes}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Random bytes copied!")}}>
+      <CopyButton @clipboardText={{@random_bytes}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Random bytes copied!")}}>
         Copy
       </CopyButton>
     </div>
     <div class="control">
-      <button {{action 'onClear'}} type="button" class="button">
+      <button {{on "click" (action this.onClear)}} type="button" class="button">
         Back
       </button>
     </div>
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @errors={{errors}} />
+    <MessageError @errors={{@errors}} />
     <div class="field is-horizontal">
       <div class="field-body">
         <div class="field">
@@ -45,10 +45,10 @@
               <select
                  name="format"
                  id="format"
-                 onchange={{action (mut format) value="target.value"}}
+                 onchange={{action (mut @format) value="target.value"}}
               >
                 {{#each (array 'base64' 'hex') as |formatOption|}}
-                  <option selected={{if format (eq format formatOption)}} value={{formatOption}}>
+                  <option selected={{if @format (eq @format formatOption)}} value={{formatOption}}>
                     {{formatOption}}
                   </option>
                 {{/each}}
