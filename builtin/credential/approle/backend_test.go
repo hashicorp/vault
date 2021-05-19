@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -43,21 +45,54 @@ func TestAppRole_RoleServiceToBatchNumUses(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"bind_secret_id":        false,
-		"secret_id_bound_cidrs": "10.90.28.0/22",
-		"secret_id_num_uses":    0,
-		"secret_id_ttl":         "10m",
-		"token_policies":        "policy",
-		"token_ttl":             "5m",
-		"token_max_ttl":         "10m",
-		"token_num_uses":        2,
-		"token_type":            "default",
+		"bind_secret_id":     true,
+		"secret_id_num_uses": 0,
+		"secret_id_ttl":      "10m",
+		"token_policies":     "policy",
+		"token_ttl":          "5m",
+		"token_max_ttl":      "10m",
+		"token_num_uses":     2,
+		"token_type":         "default",
 	}
 	requestFunc(logical.CreateOperation, data)
 
 	data["token_num_uses"] = 0
 	data["token_type"] = "batch"
 	requestFunc(logical.UpdateOperation, data)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	roleID := resp.Data["role_id"]
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	secretID := resp.Data["secret_id"]
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+		Storage: s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	require.NotNil(t, resp.Auth)
 }
 
 func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
