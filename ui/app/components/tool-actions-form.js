@@ -136,11 +136,13 @@ export default Component.extend(DEFAULTS, {
     },
 
     updateTtl(evt) {
+      if (!evt) return;
       const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
       set(this, 'wrapTTL', ttl);
     },
 
     codemirrorUpdated(val, codemirror) {
+      if (!codemirror) return;
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;
       setProperties(this, {

@@ -33,8 +33,27 @@
       @errors={{errors}}
       @token={{token}}
     />
-  {{else}}
-    {{log selectedAction}}
-    {{partial (concat "partials/tools/" selectedAction)}}
+  {{else if (eq selectedAction 'lookup')}}
+    <ToolLookup
+      @creation_time={{creation_time}}
+      @creation_ttl={{creation_ttl}}
+      @creation_path={{creation_path}}
+      @expirationDate={{expirationDate}}
+      @selectedAction={{selectedAction}}
+      @token={{token}}
+      @onClear={{action "onClear"}}
+      @errors={{errors}}
+    />
+  {{else if (eq selectedAction 'wrap')}}
+    <ToolWrap
+      @token={{token}}
+      @selectedAction={{selectedAction}}
+      @onClear={{action "onClear"}}
+      @codemirrorUpdated={{action "codemirrorUpdated"}}
+      @updateTtl={{action "updateTtl"}}
+      @data={{data}}
+      @buttonDisabled={{buttonDisabled}}
+      @errors={{errors}}
+    />
   {{/if}}
 </form>
