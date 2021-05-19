@@ -122,6 +122,7 @@ var (
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
 	storedLicenseCheck           = func(c *Core, conf *CoreConfig) error { return nil }
 	LicenseAutoloaded            = func(*Core) bool { return false }
+	LicenseInitCheck             = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be

@@ -160,8 +160,8 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
-	if !LicenseAutoloaded(c) {
-		return nil, ErrInitWithoutAutoloading
+	if err := LicenseInitCheck(c); err != nil {
+		return nil, err
 	}
 
 	atomic.StoreUint32(&initInProgress, 1)
