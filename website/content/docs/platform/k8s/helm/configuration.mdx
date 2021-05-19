@@ -34,19 +34,19 @@ and consider if they're appropriate for your deployment.
       add to the Pod Security Policies. This can either be YAML or a YAML-formatted
       multi-line templated string.
 
-      ```yaml
-      annotations:
-        seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
-        apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
-        seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
-        apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
-      # or
-      annotations: |
-        seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
-        apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
-        seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
-        apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
-      ```
+    ```yaml
+    annotations:
+      seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
+      apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
+      seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
+      apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
+    # or
+    annotations: |
+      seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
+      apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
+      seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
+      apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
+    ```
 
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
@@ -83,7 +83,7 @@ and consider if they're appropriate for your deployment.
 
     - `tag` (`string: "1.7.0"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
-- `agentDefaults` - Values that configure the injected Vault Agent containers default values.
+  - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
 
     - `cpuLimit` (`string: "500m"`) - The default CPU limit for injected Vault Agent containers.
     
@@ -110,41 +110,41 @@ and consider if they're appropriate for your deployment.
 
   - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
 
-    ```yaml
-    resources:
-      requests:
-        memory: '10Gi'
-      limits:
-        memory: '10Gi'
-    ```
+  ```yaml
+  resources:
+    requests:
+      memory: '10Gi'
+    limits:
+      memory: '10Gi'
+  ```
 
   - `namespaceSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If set to null, all non-system namespaces are eligible for injection.
 
-    ```yaml
-    # Selectors are defined as a YAML dictionary.
-    # In this example, all namespaces with the label "injection: enabled" are eligible:
-    namespaceSelector:
-      matchLabels:
-        injection: enabled
-    ```
+  ```yaml
+  # Selectors are defined as a YAML dictionary.
+  # In this example, all namespaces with the label "injection: enabled" are eligible:
+  namespaceSelector:
+    matchLabels:
+      injection: enabled
+  ```
 
   - `objectSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what objects can be effected by mutation.
 
-    ```yaml
-    # Selectors are defined as a YAML dictionary.
-    # In this example, all namespaces with the label "injection: enabled" are eligible:
-    objectSelector:
-      matchLabels:
-        injection: enabled
-    ```
+  ```yaml
+  # Selectors are defined as a YAML dictionary.
+  # In this example, all namespaces with the label "injection: enabled" are eligible:
+  objectSelector:
+    matchLabels:
+      injection: enabled
+  ```
 
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
-    ```yaml
-    extraLabels:
-      'sample/label1': 'foo'
-      'sample/label2': 'bar'
-    ```
+  ```yaml
+  extraLabels:
+    'sample/label1': 'foo'
+    'sample/label2': 'bar'
+  ```
 
   - `certs` - The certs section configures how the webhook TLS certs are configured. These are the TLS certs for the Kube apiserver communicating to the webhook. By default, the injector will generate and manage its own certs, but this requires the ability for the injector to update its own `MutatingWebhookConfiguration`. In a production environment, custom certs should probably be used. Configure the values below to enable this.
 
@@ -160,18 +160,18 @@ and consider if they're appropriate for your deployment.
 
   - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
 
-    ```yaml
-    # Recommended default server affinity:
-    affinity: |
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchLabels:
-              app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
-              app.kubernetes.io/instance: "{{ .Release.Name }}"
-              component: webhook
-          topologyKey: kubernetes.io/hostname
-    ```
+  ```yaml
+  # Recommended default server affinity:
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
+            app.kubernetes.io/instance: "{{ .Release.Name }}"
+            component: webhook
+        topologyKey: kubernetes.io/hostname
+  ```
 
   - `tolerations` (`string: null`) - Toleration Settings for injector pods. This should be a multi-line string matching the Toleration array in a PodSpec.
 
@@ -180,6 +180,25 @@ and consider if they're appropriate for your deployment.
   - `priorityClassName` (`string: ""`) - Priority class for injector pods
 
   - `annotations` (`dictionary: {}`) - This value defines additional annotations for injector pods. This can either be YAML or a YAML-formatted multi-line templated string.
+
+  ```yaml
+  annotations:
+    "sample/annotation1": "foo"
+    "sample/annotation2": "bar"
+  # or
+  annotations: |
+    "sample/annotation1": "foo"
+    "sample/annotation2": "bar"
+  ```
+
+  - `failurePolicy` (`string: "Ignore"`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
+    When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
+
+  - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
+
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+      add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted
+      multi-line templated string.
 
     ```yaml
     annotations:
@@ -191,24 +210,6 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string: "Ignore"`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
-    When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
-
-  - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
-
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted
-      multi-line templated string.
-
-      ```yaml
-      annotations:
-        "sample/annotation1": "foo"
-        "sample/annotation2": "bar"
-      # or
-      annotations: |
-        "sample/annotation1": "foo"
-        "sample/annotation2": "bar"
-      ```
   - `hostNetwork` (`boolean: false`) - When set to true, configures the Vault Agent Injector to run on the host network. This is useful 
     when alternative cluster networking is used.
 
@@ -236,13 +237,13 @@ and consider if they're appropriate for your deployment.
 
   - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources. **Setting this is highly recommended.**
 
-      ```yaml
-      resources:
-        requests:
-          memory: '10Gi'
-        limits:
-          memory: '10Gi'
-      ```
+    ```yaml
+    resources:
+      requests:
+        memory: '10Gi'
+      limits:
+        memory: '10Gi'
+    ```
 
   - `ingress` - Values that configure Ingress services for Vault.
 
@@ -257,26 +258,26 @@ and consider if they're appropriate for your deployment.
         add to the Ingress service. This can either be YAML or a YAML-formatted
         multi-line templated string.
 
-      ```yaml
-      annotations:
-        kubernetes.io/ingress.class: nginx
-        kubernetes.io/tls-acme: "true"
-      # or
-      annotations: |
-        kubernetes.io/ingress.class: nginx
-        kubernetes.io/tls-acme: "true"
-      ```
+    ```yaml
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      kubernetes.io/tls-acme: "true"
+    # or
+    annotations: |
+      kubernetes.io/ingress.class: nginx
+      kubernetes.io/tls-acme: "true"
+    ```
 
     - `extraPaths` (`array: {}`) - Configures extra paths to prepend to the host configuration. 
       This is useful when working with annotation based services.
 
-      ```yaml
-      extraPaths: 
-        - path: /*
-          backend:
-            serviceName: ssl-redirect
-            servicePort: use-annotation
-      ```
+    ```yaml
+    extraPaths: 
+      - path: /*
+        backend:
+          serviceName: ssl-redirect
+          servicePort: use-annotation
+    ```
 
     - `hosts` - Values that configure the Ingress host rules.
 
@@ -308,12 +309,12 @@ and consider if they're appropriate for your deployment.
 
     - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
 
-    ```yaml
-    hosts:
-      - sslexample.foo.com
-      - sslexample.bar.com
-      secretName: testsecret-tls
-    ```
+  ```yaml
+  hosts:
+    - sslexample.foo.com
+    - sslexample.bar.com
+    secretName: testsecret-tls
+  ```
 
   - `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 
@@ -335,16 +336,16 @@ and consider if they're appropriate for your deployment.
 
     - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
 
-    ```yaml
-    readinessProbe:
-      enabled: true
-      path: /v1/sys/health?standbyok=true
-      failureThreshold: 2
-      initialDelaySeconds: 5
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-    ```
+  ```yaml
+  readinessProbe:
+    enabled: true
+    path: /v1/sys/health?standbyok=true
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  ```
 
   - `livenessProbe` - Values that configure the liveliness probe for the Vault pods.
 
@@ -362,16 +363,16 @@ and consider if they're appropriate for your deployment.
 
     - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
 
-    ```yaml
-    livelinessProbe:
-      enabled: true
-      path: /v1/sys/health?standbyok=true
-      initialDelaySeconds: 60
-      failureThreshold: 2
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-    ```
+  ```yaml
+  livelinessProbe:
+    enabled: true
+    path: /v1/sys/health?standbyok=true
+    initialDelaySeconds: 60
+    failureThreshold: 2
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  ```
 
   - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
 
@@ -409,9 +410,9 @@ and consider if they're appropriate for your deployment.
 
   - `extraArgs` (`string: null`) - The extra arguments to be applied to the Vault server startup command.
 
-    ```yaml
-    extraArgs: '-config=/path/to/extra/config.hcl -log-format=json'
-    ```
+  ```yaml
+  extraArgs: '-config=/path/to/extra/config.hcl -log-format=json'
+  ```
 
   - `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server. This should be a multi-line key/value string.
 
@@ -424,13 +425,13 @@ and consider if they're appropriate for your deployment.
     - `secretKey` (`string: required`) -
       Name of the key where the requested secret value is located in the Kubernetes secret.
 
-    ```yaml
-    # Extra Environment Variables populated from a secret.
-    extraSecretEnvironmentVars:
-      - envName: AWS_SECRET_ACCESS_KEY
-        secretName: vault
-        secretKey: AWS_SECRET_ACCESS_KEY
-    ```
+  ```yaml
+  # Extra Environment Variables populated from a secret.
+  extraSecretEnvironmentVars:
+    - envName: AWS_SECRET_ACCESS_KEY
+      secretName: vault
+      secretKey: AWS_SECRET_ACCESS_KEY
+  ```
 
   - `extraVolumes` (`array: []`) - Deprecated: please use `volumes` instead. A list of extra volumes to mount to Vault servers. This is useful for bringing in extra data that can be referenced by other configurations at a well known path, such as TLS certificates. The value of this should be a list of objects. Each object supports the following keys:
 
@@ -449,31 +450,31 @@ and consider if they're appropriate for your deployment.
     - `defaultMode` (`string: "420"`) -
       Default mode of the mounted files.
 
-    ```yaml
-    extraVolumes:
-      - type: 'secret'
-        name: 'vault-certs'
-        path: '/etc/pki'
-    ```
+  ```yaml
+  extraVolumes:
+    - type: 'secret'
+      name: 'vault-certs'
+      path: '/etc/pki'
+  ```
 
   - `volumes` (`array: []`) - A list of volumes made available to all containers. This takes
     standard Kubernetes volume definitions.
 
-    ```yaml
-    volumes:
-      - name: plugins
-        emptyDir: {}
-    ```
+  ```yaml
+  volumes:
+    - name: plugins
+      emptyDir: {}
+  ```
 
   - `volumeMounts` (`array: []`) - A list of volumes mounts made available to all containers. This takes
     standard Kubernetes volume definitions.
 
-    ```yaml
-    volumeMounts:
-      - mountPath: /usr/local/libexec/vault
-        name: plugins
-        readOnly: true
-    ```
+  ```yaml
+  volumeMounts:
+    - mountPath: /usr/local/libexec/vault
+      name: plugins
+      readOnly: true
+  ```
 
   - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for server pods. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
 
@@ -824,31 +825,31 @@ and consider if they're appropriate for your deployment.
   - `volumes` (`array: []`) - A list of volumes made available to all containers. This takes
     standard Kubernetes volume definitions.
 
-    ```yaml
-    volumes:
-      - name: plugins
-        emptyDir: {}
-    ```
+  ```yaml
+  volumes:
+    - name: plugins
+      emptyDir: {}
+  ```
 
   - `volumeMounts` (`array: []`) - A list of volumes mounts made available to all containers. This takes
     standard Kubernetes volume mount definitions.
 
-    ```yaml
-    volumeMounts:
-      - mountPath: /usr/local/libexec/vault
-        name: plugins
-        readOnly: true
-    ```
+  ```yaml
+  volumeMounts:
+    - mountPath: /usr/local/libexec/vault
+      name: plugins
+      readOnly: true
+  ```
 
   - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each of the CSI containers. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) objects. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
 
-    ```yaml
-    resources:
-      requests:
-        memory: '10Gi'
-      limits:
-        memory: '10Gi'
-    ```
+  ```yaml
+  resources:
+    requests:
+      memory: '10Gi'
+    limits:
+      memory: '10Gi'
+  ```
 
   - `daemonSet` - Values that configure the Vault CSI Provider daemonSet.
 
@@ -876,13 +877,13 @@ and consider if they're appropriate for your deployment.
     add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
     multi-line templated string.
 
-    ```yaml
-    annotations:
-      foo: bar
-    # or
-    annotations: |
-      foo: bar
-    ```
+  ```yaml
+  annotations:
+    foo: bar
+  # or
+  annotations: |
+    foo: bar
+  ```
 
   - `serviceAccount` - Values that configure the Vault CSI Provider's serviceaccount.
 
@@ -890,13 +891,13 @@ and consider if they're appropriate for your deployment.
     add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
     multi-line templated string.
 
-    ```yaml
-    annotations:
-      foo: bar
-    # or
-    annotations: |
-      foo: bar
-    ```
+  ```yaml
+  annotations:
+    foo: bar
+  # or
+  annotations: |
+    foo: bar
+  ```
 
   - `readinessProbe` - Values that configure the readiness probe for the Vault CSI Proivder pods.
 
