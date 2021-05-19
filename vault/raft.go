@@ -37,6 +37,8 @@ var (
 
 	// TestingUpdateClusterAddr is used in tests to override the cluster address
 	TestingUpdateClusterAddr uint32
+
+	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
 
 // GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
@@ -1107,6 +1109,9 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
+	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+		return ErrJoinWithoutAutoloading
+	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
 		return err
 	}
@@ -1207,8 +1212,9 @@ type answerRespData struct {
 }
 
 type answerResp struct {
-	Peers      []raft.Peer      `json:"peers"`
-	TLSKeyring *raft.TLSKeyring `json:"tls_keyring"`
+	Peers             []raft.Peer      `json:"peers"`
+	TLSKeyring        *raft.TLSKeyring `json:"tls_keyring"`
+	AutoloadedLicense bool             `json:"autoloaded_license"`
 }
 
 func newDiscover() (*discover.Discover, error) {
