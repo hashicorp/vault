@@ -37,8 +37,10 @@ func TestDiagnoseOtelResults(t *testing.T) {
 			},
 		},
 	}
-	sess := New()
+	sess := New(os.Stdout)
 	sess.SetSkipList([]string{"dispose-grounds"})
+		},
+	}
 	ctx := Context(context.Background(), sess)
 
 	func() {

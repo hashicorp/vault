@@ -2,11 +2,13 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/shirou/gopsutil/disk"
+	"os"
 	"strings"
 	"sync"
 
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -17,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"github.com/shirou/gopsutil/disk"
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
@@ -97,6 +100,12 @@ func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
 		Default: false,
 		Usage:   "Dump all information collected by Diagnose.",
 	})
+
+	f.StringVar(&StringVar{
+		Name:   "format",
+		Target: &c.flagFormat,
+		Usage:  "The output format",
+	})
 	return set
 }
 
@@ -137,6 +146,29 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	err := c.offlineDiagnostics(ctx)
 	c.diagnose.SetSkipList(c.flagSkips)
 
+	if c.diagnose == nil {
+		if c.flagFormat == "json" {
+			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+		} else {
+			c.UI.Output(version.GetVersion().FullVersionNumber(true))
+			c.diagnose = diagnose.New(os.Stdout)
+		}
+	}
+	ctx = diagnose.Context(context.Background(), c.diagnose)
+	err = c.offlineDiagnostics(ctx)
+
+	results := c.diagnose.Finalize(ctx)
+	if c.flagFormat == "json" {
+		resultsJS, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			return 2
+		}
+		c.UI.Output(string(resultsJS))
+	} else {
+		c.UI.Output("\nResults:")
+		results.Write(os.Stdout)
+	}
 	if err != nil {
 		return 1
 	}
@@ -178,7 +210,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
-	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
 		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
@@ -221,14 +253,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			})
 		}
 		return diagnose.ListenerChecks(sanitizedListeners)
-	}); err != nil {
-		return err
-	}
+	})
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
-	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
 		b, err := server.setupStorage(config)
 		if err != nil {
 			return err
@@ -252,7 +282,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 			if err != nil {
 				return err
 			}
@@ -267,22 +296,28 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 
 		return nil
-	}); err != nil {
-		return err
-	}
+	})
 
 	diagnose.Test(ctx, "disk-usage", func(ctx context.Context) error {
 		partitions, err := disk.Partitions(false)
 		if err != nil {
 			return err
 		}
+
+		partitionExcludes := []string{"/boot"}
+	partLoop:
 		for _, partition := range partitions {
+			for _, exc := range partitionExcludes {
+				if strings.HasPrefix(partition.Mountpoint, exc) {
+					continue partLoop
+				}
+			}
 			usage, err := disk.Usage(partition.Mountpoint)
 			testName := "disk-usage: " + partition.Mountpoint
 			if err != nil {
 				diagnose.Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s", partition.Mountpoint))
 			} else {
-				if usage.UsedPercent > 0.95 {
+				if usage.UsedPercent > 95 {
 					diagnose.SpotWarn(ctx, testName, "more than 95% full")
 				} else if usage.Free < 2<<30 {
 					diagnose.SpotWarn(ctx, testName, "less than 1GB free")

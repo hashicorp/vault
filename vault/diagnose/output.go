@@ -3,6 +3,7 @@ package diagnose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -21,32 +22,60 @@ const (
 	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
 	status_skipped = "\u001b[90m[ skip ]\u001b[0m "
 	same_line      = "\u001b[F"
-	ErrorStatus    = "error"
-	WarningStatus  = "warn"
-	OkStatus       = "ok"
-	SkippedStatus  = "skipped"
+	ErrorStatus    = 3
+	WarningStatus  = 2
+	SkippedStatus  = 1
+	OkStatus       = 0
 )
 
 var errUnimplemented = errors.New("unimplemented")
 
-type Result struct {
-	Time     time.Time
-	Name     string
-	Warnings []string
-	Status   string
-	Message  string
-	Children []*Result
+type status int
+
+func (s status) String() string {
+	switch s {
+	case ErrorStatus:
+		return "error"
+	case WarningStatus:
+		return "warn"
+	case OkStatus:
+		return "ok"
+	case SkippedStatus:
+		return "skipped"
+	}
+	return "unknown"
 }
 
-func (r *Result) sortChildren() {
+func (s status) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprint("\"", s, "\"")), nil
+}
+
+type Result struct {
+	Time     time.Time `json:"time"`
+	Name     string    `json:"name"`
+	Status   status    `json:"status"`
+	Warnings []string  `json:"warnings,omitempty"`
+	Message  string    `json:"message,omitempty"`
+	Children []*Result `json:"children,omitempty"`
+}
+
+func (r *Result) finalize() status {
+	maxStatus := r.Status
 	if len(r.Children) > 0 {
 		sort.SliceStable(r.Children, func(i, j int) bool {
 			return r.Children[i].Time.Before(r.Children[j].Time)
 		})
 		for _, c := range r.Children {
-			c.sortChildren()
+			cms := c.finalize()
+			if cms != SkippedStatus && cms > maxStatus {
+				maxStatus = cms
+			}
+		}
+		if maxStatus > r.Status {
+			r.Status = maxStatus
 		}
 	}
+	return maxStatus
 }
 
 func (r *Result) ZeroTimes() {
@@ -60,6 +89,7 @@ func (r *Result) ZeroTimes() {
 // TelemetryCollector is an otel SpanProcessor that gathers spans and once the outermost
 // span ends, walks the otel traces in order to produce a top-down tree of Diagnose results.
 type TelemetryCollector struct {
+	ui         io.Writer
 	spans      map[trace.SpanID]sdktrace.ReadOnlySpan
 	rootSpan   sdktrace.ReadOnlySpan
 	results    map[trace.SpanID]*Result
@@ -67,8 +97,12 @@ type TelemetryCollector struct {
 	mu         sync.Mutex
 }
 
-func NewTelemetryCollector() *TelemetryCollector {
+// NewTelemetryCollector creates a SpanProcessor that collects OpenTelemetry spans
+// and aggregates them into a tree structure for use by Diagnose.
+// It also outputs the status of main sections to that writer.
+func NewTelemetryCollector(w io.Writer) *TelemetryCollector {
 	return &TelemetryCollector{
+		ui:      w,
 		spans:   make(map[trace.SpanID]sdktrace.ReadOnlySpan),
 		results: make(map[trace.SpanID]*Result),
 	}
@@ -79,6 +113,18 @@ func (t *TelemetryCollector) OnStart(_ context.Context, s sdktrace.ReadWriteSpan
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.spans[s.SpanContext().SpanID()] = s
+	if isMainSection(s) {
+		fmt.Fprintf(t.ui, status_unknown+s.Name())
+	}
+}
+
+func isMainSection(s sdktrace.ReadOnlySpan) bool {
+	for _, a := range s.Attributes() {
+		if a.Key == "diagnose" && a.Value.AsString() == "main-section" {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
@@ -93,6 +139,7 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 					p := t.getOrBuildResult(s.Parent().SpanID())
 					if p != nil {
 						p.Children = append(p.Children, r)
+
 					}
 				} else {
 					t.RootResult = r
@@ -101,7 +148,13 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 		}
 
 		// Then walk the results sorting children by time
-		t.RootResult.sortChildren()
+		t.RootResult.finalize()
+	} else if isMainSection(e) {
+		r := t.getOrBuildResult(e.SpanContext().SpanID())
+		if r != nil {
+			fmt.Print(same_line)
+			fmt.Fprintln(t.ui, r.String(0))
+		}
 	}
 }
 
@@ -137,7 +190,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				}
 			case skippedEventName:
 				r.Status = SkippedStatus
-			case ErrorStatus:
+			case "fail":
 				var message string
 				var action string
 				for _, a := range e.Attributes {
@@ -246,10 +299,23 @@ func (r *Result) Write(writer io.Writer) error {
 }
 
 func (r *Result) write(sb *strings.Builder, depth int) {
-	if r.Status != WarningStatus || (len(r.Warnings) == 0 && r.Message != "") {
-		for i := 0; i < depth; i++ {
-			sb.WriteRune('\t')
-		}
+	indent(sb, depth)
+	sb.WriteString(r.String(depth))
+	sb.WriteRune('\n')
+	for _, c := range r.Children {
+		c.write(sb, depth+1)
+	}
+}
+
+func indent(sb *strings.Builder, depth int) {
+	for i := 0; i < depth; i++ {
+		sb.WriteString("  ")
+	}
+}
+
+func (r *Result) String(depth int) string {
+	var sb strings.Builder
+	if len(r.Warnings) == 0 || r.Message != "" {
 		switch r.Status {
 		case OkStatus:
 			sb.WriteString(status_ok)
@@ -267,18 +333,24 @@ func (r *Result) write(sb *strings.Builder, depth int) {
 		}
 		sb.WriteString(r.Message)
 	}
-	for _, w := range r.Warnings {
+	warnings := r.Warnings
+	if r.Message == "" && len(warnings) > 0 {
+		sb.WriteString(status_warn)
+		sb.WriteString(r.Name)
+		sb.WriteString(": ")
+		sb.WriteString(warnings[0])
+
+		warnings = warnings[1:]
+	}
+	for _, w := range warnings {
 		sb.WriteRune('\n')
-		for i := 0; i < depth; i++ {
-			sb.WriteRune('\t')
-		}
+		indent(&sb, depth+1)
+		//TODO: Indentation
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
 		sb.WriteString(w)
 	}
-	sb.WriteRune('\n')
-	for _, c := range r.Children {
-		c.write(sb, depth+1)
-	}
+	return sb.String()
+
 }
