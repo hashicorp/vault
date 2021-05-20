@@ -80,7 +80,7 @@ const (
 )
 
 var (
-	hitMaxIrrevocableLeases = errors.New("Command cancelled because many irrevocable leases were found. To emit the entire list, re-run the command with the force flag set true.")
+	errHitMaxIrrevocableLeases = errors.New("Command cancelled because many irrevocable leases were found. To emit the entire list, re-run the command with the force flag set true.")
 )
 
 type pendingInfo struct {
@@ -2516,7 +2516,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 
 		if !force && (numMatchingLeases >= maxIrrevocableLeasesToReturn) {
 			m.logger.Warn("hit max irrevocable leases without force flag set")
-			retErr = hitMaxIrrevocableLeases
+			retErr = errHitMaxIrrevocableLeases
 			return false
 		}
 
