@@ -1,3 +1,92 @@
+## 1.6.5
+### May 20th, 2021
+
+SECURITY:
+
+* Non-Expiring Leases: Vault and Vault Enterprise renewed nearly-expiring token
+leases and dynamic secret leases with a zero-second TTL, causing them to be
+treated as non-expiring, and never revoked. This issue affects Vault and Vault
+Enterprise versions 0.10.0 through 1.7.1, and is fixed in 1.5.9, 1.6.5, and
+1.7.2 (CVE-2021-32923).
+
+CHANGES:
+
+* agent: Update to use IAM Service Account Credentials endpoint for signing JWTs
+when using GCP Auto-Auth method [[GH-11473](https://github.com/hashicorp/vault/pull/11473)]
+* auth/gcp: Update to v0.8.1 to use IAM Service Account Credentials API for
+signing JWTs [[GH-11498](https://github.com/hashicorp/vault/pull/11498)]
+
+BUG FIXES:
+
+* core (enterprise): Fix plugins mounted in namespaces being unable to use password policies [[GH-11596](https://github.com/hashicorp/vault/pull/11596)]
+* core: correct logic for renewal of leases nearing their expiration time. [[GH-11650](https://github.com/hashicorp/vault/pull/11650)]
+* secrets/database: Fix marshalling to allow providing numeric arguments to external database plugins. [[GH-11451](https://github.com/hashicorp/vault/pull/11451)]
+* secrets/database: Fixes issue for V4 database interface where `SetCredentials` wasn't falling back to using `RotateRootCredentials` if `SetCredentials` is `Unimplemented` [[GH-11585](https://github.com/hashicorp/vault/pull/11585)]
+* ui: Fix namespace-bug on login [[GH-11182](https://github.com/hashicorp/vault/pull/11182)]
+
+## 1.6.4
+### 21 April 2021
+
+SECURITY:
+
+* The PKI Secrets Engine tidy functionality may cause Vault to exclude revoked-but-unexpired certificates from the
+  Vault CRL. This vulnerability affects Vault and Vault Enterprise 1.5.1 and newer and was fixed in versions
+  1.5.8, 1.6.4, and 1.7.1. (CVE-2021-27668)
+* The Cassandra Database and Storage backends were not correctly verifying TLS certificates. This issue affects all
+  versions of Vault and Vault Enterprise and was fixed in versions 1.6.4, and 1.7.1. (CVE-2021-27400)
+
+CHANGES:
+
+* go: Update to Go 1.15.11 [[GH-11396](https://github.com/hashicorp/vault/pull/11396)]
+
+IMPROVEMENTS:
+
+* command/debug: Now collects logs (at level `trace`) as a periodic output. [[GH-10609](https://github.com/hashicorp/vault/pull/10609)]
+* core: Add tls_max_version listener config option. [[GH-11226](https://github.com/hashicorp/vault/pull/11226)]
+* core: allow arbitrary length stack traces upon receiving SIGUSR2 (was 32MB) [[GH-11364](https://github.com/hashicorp/vault/pull/11364)]
+
+BUG FIXES:
+
+* core: Fix cleanup of storage entries from cubbyholes within namespaces. [[GH-11408](https://github.com/hashicorp/vault/pull/11408)]
+* core: Fix goroutine leak when updating rate limit quota [[GH-11371](https://github.com/hashicorp/vault/pull/11371)]
+* core: Fix storage entry leak when revoking leases created with non-orphan batch tokens. [[GH-11377](https://github.com/hashicorp/vault/pull/11377)]
+* pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
+* pki: Preserve ordering of all DN attribute values when issuing certificates [[GH-11259](https://github.com/hashicorp/vault/pull/11259)]
+* replication: Fix: mounts created within a namespace that was part of an Allow
+  filtering rule would not appear on performance secondary if created after rule
+  was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
+* secrets/database/cassandra: Fixed issue where hostnames were not being validated when using TLS [[GH-11365](https://github.com/hashicorp/vault/pull/11365)]
+* storage/raft: leader_tls_servername wasn't used unless leader_ca_cert_file and/or mTLS were configured. [[GH-11252](https://github.com/hashicorp/vault/pull/11252)]
+
+## 1.6.3
+### February 25, 2021
+
+SECURITY:
+
+* Limited Unauthenticated License Metadata Read: We addressed a security vulnerability that allowed for the unauthenticated
+reading of Vault license metadata from DR Secondaries. This vulnerability affects Vault Enterprise and is
+fixed in 1.6.3 (CVE-2021-27668).
+
+CHANGES:
+
+* secrets/mongodbatlas: Move from whitelist to access list API [[GH-10966](https://github.com/hashicorp/vault/pull/10966)]
+
+IMPROVEMENTS:
+
+* ui: Clarify language on usage metrics page empty state [[GH-10951](https://github.com/hashicorp/vault/pull/10951)]
+
+BUG FIXES:
+
+* auth/kubernetes: Cancel API calls to TokenReview endpoint when request context
+is closed [[GH-10930](https://github.com/hashicorp/vault/pull/10930)]
+* core/identity: Fix deadlock in entity merge endpoint. [[GH-10877](https://github.com/hashicorp/vault/pull/10877)]
+* quotas: Fix duplicate quotas on performance standby nodes. [[GH-10855](https://github.com/hashicorp/vault/pull/10855)]
+* quotas/rate-limit: Fix quotas enforcing old rate limit quota paths [[GH-10689](https://github.com/hashicorp/vault/pull/10689)]
+* replication (enterprise): Don't write request count data on DR Secondaries.
+Fixes DR Secondaries becoming out of sync approximately every 30s. [[GH-10970](https://github.com/hashicorp/vault/pull/10970)]
+* secrets/azure (enterprise): Forward service principal credential creation to the
+primary cluster if called on a performance standby or performance secondary. [[GH-10902](https://github.com/hashicorp/vault/pull/10902)]
+
 ## 1.6.2
 ### January 29, 2021
 
