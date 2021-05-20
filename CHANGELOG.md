@@ -20,6 +20,7 @@ IMPROVEMENTS:
 
 * api, agent: LifetimeWatcher now does more retries when renewal failures occur.  This also impacts Agent auto-auth and leases managed via Agent caching. [[GH-11445](https://github.com/hashicorp/vault/pull/11445)]
 * auth/aws: Underlying error included in validation failure message. [[GH-11638](https://github.com/hashicorp/vault/pull/11638)]
+* http: Add optional HTTP response headers for hostname and raft node ID [[GH-11289](https://github.com/hashicorp/vault/pull/11289)]
 * secrets/aws: add ability to provide a role session name when generating STS credentials [[GH-11345](https://github.com/hashicorp/vault/pull/11345)]
 * secrets/database/mongodb: Add ability to customize `SocketTimeout`, `ConnectTimeout`, and `ServerSelectionTimeout` [[GH-11600](https://github.com/hashicorp/vault/pull/11600)]
 * secrets/database/mongodb: Increased throughput by allowing for multiple request threads to simultaneously update users in MongoDB [[GH-11600](https://github.com/hashicorp/vault/pull/11600)]
