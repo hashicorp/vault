@@ -35,14 +35,14 @@
       <div class="control">
         <JsonEditor @title="Data to wrap" 
           @subTitle="json-formatted"
-          @value={{@data}} 
-          @valueUpdated={{action this.codemirrorUpdated}} />
+          @value={{this.data}} 
+          @valueUpdated={{action "codemirrorUpdated"}} />
       </div>
     </div>
     <TtlPicker2
       @label="Wrap TTL"
       @initialValue="30m"
-      @onChange={{action this.updateTtl}}
+      @onChange={{action "updateTtl"}}
       @helperTextDisabled="Vault will use the default (30m)"
       @helperTextEnabled="Wrap will expire after"
       @changeOnInit={{true}}

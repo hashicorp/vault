@@ -106,7 +106,6 @@ export default Component.extend(DEFAULTS, {
     if (action === 'random') {
       return { bytes: this.bytes, format: this.format };
     }
-
     if (action === 'hash') {
       return { input: this.input, format: this.format, algorithm: this.algorithm };
     }
@@ -135,16 +134,11 @@ export default Component.extend(DEFAULTS, {
       this.reset();
     },
 
-    updateTtl(evt) {
-      if (!evt) return;
-      const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
+    updateTtl(ttl) {
       set(this, 'wrapTTL', ttl);
     },
 
-    codemirrorUpdated(val, codemirror) {
-      if (!codemirror) return;
-      codemirror.performLint();
-      const hasErrors = codemirror.state.lint.marked.length > 0;
+    codemirrorUpdated(val, hasErrors) {
       setProperties(this, {
         buttonDisabled: hasErrors,
         data: val,
