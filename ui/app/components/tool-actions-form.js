@@ -10,9 +10,9 @@ const DEFAULTS = {
   rewrap_token: null,
   errors: [],
   wrap_info: null,
+  data: '{\n}',
   creation_time: null,
   creation_ttl: null,
-  data: '{\n}',
   unwrap_data: null,
   details: null,
   wrapTTL: null,
@@ -117,6 +117,7 @@ export default Component.extend(DEFAULTS, {
       const action = this.selectedAction;
       const wrapTTL = action === 'wrap' ? this.wrapTTL : null;
       const data = this.getData();
+      console.log(data, 'data');
       setProperties(this, {
         errors: null,
         wrap_info: null,

@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 export default class HashTool extends Component {
   @tracked data = '{\n}';
   @tracked buttonDisabled = false;
+
   @action
   onClear() {
     this.args.onClear();
