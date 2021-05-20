@@ -149,6 +149,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 	ctx := diagnose.Context(context.Background(), c.diagnose)
 	err := c.offlineDiagnostics(ctx)
+	c.diagnose.SetSkipList(c.flagSkips)
 
 	results := c.diagnose.Finalize(ctx)
 	if c.flagFormat == "json" {

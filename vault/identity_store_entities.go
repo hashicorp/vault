@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -644,7 +643,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 
 	iter, err := txn.Get(entitiesTable, "namespace_id", ns.ID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
+		return nil, fmt.Errorf("failed to fetch iterator for entities in memdb: %w", err)
 	}
 
 	ws.Add(iter.WatchCh())
@@ -793,7 +792,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 			err = i.MemDBUpsertAliasInTxn(txn, alias, false)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
+				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
 			// Add the alias to the desired entity

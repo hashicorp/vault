@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/hcl/hcl/token"
 	"io"
 	"io/ioutil"
 	"os"
@@ -23,7 +22,7 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	UnusedKeys map[string][]token.Pos `hcl:",unusedKeyPositions"`
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
 	entConfig
 
 	*configutil.SharedConfig `hcl:"-"`
