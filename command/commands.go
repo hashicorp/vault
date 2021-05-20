@@ -347,6 +347,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator generate-root": func() (cli.Command, error) {
 			return &OperatorGenerateRootCommand{
 				BaseCommand: getBaseCommand(),
@@ -354,11 +359,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator init": func() (cli.Command, error) {
 			return &OperatorInitCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator diagnose": func() (cli.Command, error) {
-			return &OperatorDiagnoseCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
