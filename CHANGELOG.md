@@ -1,3 +1,49 @@
+## 1.5.9
+### May 20th, 2021
+
+SECURITY:
+
+* Non-Expiring Leases: Vault and Vault Enterprise renewed nearly-expiring token
+leases and dynamic secret leases with a zero-second TTL, causing them to be
+treated as non-expiring, and never revoked. This issue affects Vault and Vault
+Enterprise versions 0.10.0 through 1.7.1, and is fixed in 1.5.9, 1.6.5, and
+1.7.2 (CVE-2021-32923).
+
+CHANGES:
+
+* agent: Update to use IAM Service Account Credentials endpoint for signing JWTs
+when using GCP Auto-Auth method [[GH-11473](https://github.com/hashicorp/vault/pull/11473)]
+* auth/gcp: Update to v0.7.2 to use IAM Service Account Credentials API for
+signing JWTs [[GH-11499](https://github.com/hashicorp/vault/pull/11499)]
+
+BUG FIXES:
+
+* core: correct logic for renewal of leases nearing their expiration time. [[GH-11650](https://github.com/hashicorp/vault/pull/11650)]
+
+## 1.5.8
+### 21 April 2021
+
+SECURITY:
+
+* The PKI Secrets Engine tidy functionality may cause Vault to exclude revoked-but-unexpired certificates from the
+  Vault CRL. This vulnerability affects Vault and Vault Enterprise 1.5.1 and newer and was fixed in versions
+  1.5.8, 1.6.4, and 1.7.1. (CVE-2021-27668)
+
+CHANGES:
+
+* go: Update to Go 1.14.15 [[GH-11397](https://github.com/hashicorp/vault/pull/11397)]
+
+IMPROVEMENTS:
+
+* core: Add tls_max_version listener config option. [[GH-11226](https://github.com/hashicorp/vault/pull/11226)]
+
+BUG FIXES:
+
+* core/identity: Fix deadlock in entity merge endpoint. [[GH-10877](https://github.com/hashicorp/vault/pull/10877)]
+* core: Fix cleanup of storage entries from cubbyholes within namespaces. [[GH-11408](https://github.com/hashicorp/vault/pull/11408)]
+* pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
+* core: Avoid deadlocks by ensuring that if grabLockOrStop returns stopped=true, the lock will not be held. [[GH-10456](https://github.com/hashicorp/vault/pull/10456)]
+
 ## 1.5.7
 ### January 29, 2021
 
