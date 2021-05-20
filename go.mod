@@ -34,6 +34,7 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
@@ -51,6 +52,7 @@ require (
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.4.2
+	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.25.2
@@ -72,7 +74,7 @@ require (
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/hashicorp/hcl v1.0.1-vault
+	github.com/hashicorp/hcl v1.0.1-vault-2
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.3.0
 	github.com/hashicorp/raft-autopilot v0.1.3
@@ -95,7 +97,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.8.0
@@ -103,7 +105,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
-	github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210505171055-299f311fa707
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

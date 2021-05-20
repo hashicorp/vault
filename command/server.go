@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -1120,6 +1121,13 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+		config.LicensePath = envLicensePath
+	}
+	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+		config.License = envLicense
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1317,6 +1325,8 @@ func (c *ServerCommand) Run(args []string) int {
 		SecureRandomReader:             secureRandomReader,
 		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+		License:                        config.License,
+		LicensePath:                    config.LicensePath,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -1894,6 +1904,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -1920,6 +1933,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			shutdownTriggered = true
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
+
+			// Notify systemd that the server is reloading config
+			c.notifySystemd(systemd.SdNotifyReloading)
 
 			// Check for new log level
 			var config *server.Config
@@ -1976,6 +1992,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 		}
 	}
+	// Notify systemd that the server is shutting down
+	c.notifySystemd(systemd.SdNotifyStopping)
 
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
@@ -1990,6 +2008,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	} else {
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
+	}
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {

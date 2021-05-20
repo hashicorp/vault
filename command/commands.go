@@ -296,6 +296,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"license": func() (cli.Command, error) {
+			return &LicenseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"license get": func() (cli.Command, error) {
+			return &LicenseGetCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"list": func() (cli.Command, error) {
 			return &ListCommand{
 				BaseCommand: getBaseCommand(),
@@ -334,6 +344,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

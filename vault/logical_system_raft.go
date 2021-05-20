@@ -374,8 +374,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"peers":       peers,
-				"tls_keyring": &keyring,
+				"peers":              peers,
+				"tls_keyring":        &keyring,
+				"autoloaded_license": LicenseAutoloaded(b.Core),
 			},
 		}, nil
 	}

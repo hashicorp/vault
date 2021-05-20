@@ -14,7 +14,7 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster"
+    default: "docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster"
   use_docker:
     type: boolean
     default: false

@@ -278,6 +278,9 @@ github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
 ## explicit
 github.com/coreos/go-semver/semver
+# github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
+## explicit
+github.com/coreos/go-systemd/daemon
 # github.com/coreos/go-systemd/v22 v22.0.0
 github.com/coreos/go-systemd/v22/journal
 # github.com/couchbase/gocb/v2 v2.1.4
@@ -435,7 +438,9 @@ github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.5.5
+## explicit
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
@@ -586,7 +591,7 @@ github.com/hashicorp/go-version
 ## explicit
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
-# github.com/hashicorp/hcl v1.0.1-vault
+# github.com/hashicorp/hcl v1.0.1-vault-2
 ## explicit
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -679,7 +684,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+# github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
@@ -706,7 +711,7 @@ github.com/hashicorp/vault-plugin-secrets-terraform
 # github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
 ## explicit
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20210204230556-cf85a862b7c6 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20210505171055-299f311fa707 => ./sdk
 ## explicit
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
@@ -1272,29 +1277,10 @@ go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
 # go.opentelemetry.io/otel v0.20.0
 ## explicit
-go.opentelemetry.io/otel
-go.opentelemetry.io/otel/attribute
-go.opentelemetry.io/otel/codes
-go.opentelemetry.io/otel/internal
-go.opentelemetry.io/otel/internal/baggage
-go.opentelemetry.io/otel/internal/global
-go.opentelemetry.io/otel/internal/trace/noop
-go.opentelemetry.io/otel/propagation
-go.opentelemetry.io/otel/semconv
-go.opentelemetry.io/otel/unit
-# go.opentelemetry.io/otel/metric v0.20.0
-go.opentelemetry.io/otel/metric
-go.opentelemetry.io/otel/metric/number
-go.opentelemetry.io/otel/metric/registry
 # go.opentelemetry.io/otel/sdk v0.20.0
 ## explicit
-go.opentelemetry.io/otel/sdk/instrumentation
-go.opentelemetry.io/otel/sdk/internal
-go.opentelemetry.io/otel/sdk/resource
-go.opentelemetry.io/otel/sdk/trace
 # go.opentelemetry.io/otel/trace v0.20.0
 ## explicit
-go.opentelemetry.io/otel/trace
 # go.uber.org/atomic v1.6.0
 ## explicit
 go.uber.org/atomic
@@ -1441,6 +1427,7 @@ google.golang.org/api/compute/v1
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/iam/v1
+google.golang.org/api/iamcredentials/v1
 google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/third_party/uritemplates

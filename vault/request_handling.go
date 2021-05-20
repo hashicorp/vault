@@ -419,7 +419,7 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
+		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
 	ctx = namespace.ContextWithNamespace(ctx, ns)
 
@@ -754,7 +754,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			c.logger.Trace("request rejected due to lease count quota violation", "request_path", req.Path)
 		}
 
-		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrLeaseCountQuotaExceeded))
+		retErr = multierror.Append(retErr, fmt.Errorf("request path %q: %w", req.Path, quotas.ErrLeaseCountQuotaExceeded))
 		return nil, auth, retErr
 	}
 
@@ -1152,7 +1152,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				c.logger.Trace("request rejected due to lease count quota violation", "request_path", req.Path)
 			}
 
-			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrLeaseCountQuotaExceeded))
+			retErr = multierror.Append(retErr, fmt.Errorf("request path %q: %w", req.Path, quotas.ErrLeaseCountQuotaExceeded))
 			return
 		}
 
@@ -1203,7 +1203,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			auth.EntityID = entity.ID
-			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases)
+			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases, req.MountAccessor)
 			if err != nil {
 				return nil, nil, err
 			}

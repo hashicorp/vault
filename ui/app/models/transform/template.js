@@ -19,6 +19,7 @@ const M = Model.extend({
   }),
   type: attr('string', { defaultValue: 'regex' }),
   pattern: attr('string', {
+    editType: 'regex',
     subText: 'The template’s pattern defines the data format. Expressed in regex.',
   }),
   alphabet: attr('array', {

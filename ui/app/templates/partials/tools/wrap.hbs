@@ -32,9 +32,11 @@
     <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
     <MessageError @errors={{errors}} />
     <div class="field">
-      <label for="data" class="is-label">Data to wrap <span class="is-size-9 is-lowercase has-text-grey">(json-formatted)</span></label>
       <div class="control">
-        <JsonEditor @value={{data}} @valueUpdated={{action "codemirrorUpdated"}} />
+        <JsonEditor @title="Data to wrap" 
+          @subTitle="json-formatted"
+          @value={{data}} 
+          @valueUpdated={{action "codemirrorUpdated"}} />
       </div>
     </div>
     <TtlPicker2

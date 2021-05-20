@@ -2,7 +2,8 @@ package diagnose
 
 import (
 	"context"
-	"io"
+	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -12,6 +13,7 @@ import (
 
 const (
 	warningEventName        = "warning"
+	skippedEventName        = "skipped"
 	actionKey               = "actionKey"
 	spotCheckOkEventName    = "spot-check-ok"
 	spotCheckWarnEventName  = "spot-check-warn"
@@ -28,10 +30,13 @@ var (
 var diagnoseSession = struct{}{}
 var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
 
+type testFunction func(context.Context) error
+
 type Session struct {
 	tc     *TelemetryCollector
 	tracer trace.Tracer
 	tp     *sdktrace.TracerProvider
+	skip   map[string]bool
 }
 
 // New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
@@ -50,13 +55,37 @@ func New(w io.Writer) *Session {
 		tp:     tp,
 		tc:     tc,
 		tracer: tracer,
+		skip:   make(map[string]bool),
 	}
 	return sess
+}
+
+func (s *Session) SetSkipList(ls []string) {
+	for _, e := range ls {
+		s.skip[e] = true
+	}
+}
+
+// IsSkipped returns true if skipName is present in the skip list.  Can be used in combination with Skip to mark a
+// span skipped and conditionally skip some logic.
+func (s *Session) IsSkipped(skipName string) bool {
+	return s.skip[skipName]
 }
 
 // Context returns a new context with a defined diagnose session
 func Context(ctx context.Context, sess *Session) context.Context {
 	return context.WithValue(ctx, diagnoseSession, sess)
+}
+
+// CurrentSession retrieves the active diagnose session from the context, or nil if none.
+func CurrentSession(ctx context.Context) *Session {
+	sessionCtxVal := ctx.Value(diagnoseSession)
+	if sessionCtxVal != nil {
+
+		return sessionCtxVal.(*Session)
+
+	}
+	return nil
 }
 
 // Finalize ends the Diagnose session, returning the root of the result tree.  This will be empty until
@@ -68,9 +97,8 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 
 // StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
 func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
-	sessionCtxVal := ctx.Value(diagnoseSession)
-	if sessionCtxVal != nil {
-		session := sessionCtxVal.(*Session)
+	session := CurrentSession(ctx)
+	if session != nil {
 		return session.tracer.Start(ctx, spanName, options...)
 	} else {
 		return noopTracer.Start(ctx, spanName, options...)
@@ -88,6 +116,12 @@ func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err, options...)
 	return err
+}
+
+// Skipped marks the current span skipped
+func Skipped(ctx context.Context) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(skippedEventName)
 }
 
 // Warn records a warning on the current span
@@ -141,7 +175,7 @@ func SpotCheck(ctx context.Context, checkName string, f func() error) error {
 
 // Test creates a new named span, and executes the provided function within it.  If the function returns an error,
 // the span is considered to have failed.
-func Test(ctx context.Context, spanName string, function func(context.Context) error, options ...trace.SpanOption) error {
+func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanOption) error {
 	ctx, span := StartSpan(ctx, spanName, options...)
 	defer span.End()
 
@@ -150,4 +184,39 @@ func Test(ctx context.Context, spanName string, function func(context.Context) e
 		span.SetStatus(codes.Error, err.Error())
 	}
 	return err
+}
+
+// WithTimeout wraps a context consuming function, and when called, returns an error if the sub-function does not
+// complete within the timeout, e.g.
+//
+// diagnose.Test(ctx, "my-span", diagnose.WithTimeout(5 * time.Second, myTestFunc))
+func WithTimeout(d time.Duration, f testFunction) testFunction {
+	return func(ctx context.Context) error {
+		rch := make(chan error)
+		t := time.NewTimer(d)
+		defer t.Stop()
+		go f(ctx)
+		select {
+		case <-t.C:
+			return fmt.Errorf("timed out after %s", d.String())
+		case err := <-rch:
+			return err
+		}
+	}
+}
+
+// Skippable wraps a Test function with logic that will not run the test if the skipName
+// was in the session's skip list
+func Skippable(skipName string, f testFunction) testFunction {
+	return func(ctx context.Context) error {
+		session := CurrentSession(ctx)
+		if session != nil {
+			if !session.IsSkipped(skipName) {
+				return f(ctx)
+			} else {
+				Skipped(ctx)
+			}
+		}
+		return nil
+	}
 }

@@ -31,9 +31,14 @@ func TestDiagnoseOtelResults(t *testing.T) {
 				Status:  ErrorStatus,
 				Message: "no scones",
 			},
+			{
+				Name:   "dispose-grounds",
+				Status: SkippedStatus,
+			},
 		},
 	}
 	sess := New(os.Stdout)
+	sess.SetSkipList([]string{"dispose-grounds"})
 	ctx := Context(context.Background(), sess)
 
 	func() {
@@ -48,6 +53,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
 	}
+	results.Write(os.Stdout)
 }
 
 const coffeeLeft = 3
@@ -69,6 +75,7 @@ func makeCoffee(ctx context.Context) error {
 
 	SpotCheck(ctx, "pick-scone", pickScone)
 
+	Test(ctx, "dispose-grounds", Skippable("dispose-grounds", disposeGrounds))
 	return nil
 }
 
@@ -87,4 +94,9 @@ func brewCoffee(ctx context.Context) error {
 
 func pickScone() error {
 	return errors.New("no scones")
+}
+
+func disposeGrounds(_ context.Context) error {
+	//Done!
+	return nil
 }

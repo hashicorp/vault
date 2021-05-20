@@ -195,6 +195,21 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ClusterID:                  clusterID,
 	}
 
+	licenseState, err := vault.LicenseSummary(core)
+	if err != nil {
+		return http.StatusInternalServerError, nil, err
+	}
+
+	if licenseState != nil {
+		body.License = &HealthResponseLicense{
+			State:      licenseState.State,
+			Terminated: licenseState.Terminated,
+		}
+		if !licenseState.ExpiryTime.IsZero() {
+			body.License.ExpiryTime = licenseState.ExpiryTime.Format(time.RFC3339)
+		}
+	}
+
 	if init && !sealed && !standby {
 		body.LastWAL = vault.LastWAL(core)
 	}
@@ -202,16 +217,23 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	return code, body, nil
 }
 
+type HealthResponseLicense struct {
+	State      string `json:"state"`
+	ExpiryTime string `json:"expiry_time"`
+	Terminated bool   `json:"terminated"`
+}
+
 type HealthResponse struct {
-	Initialized                bool   `json:"initialized"`
-	Sealed                     bool   `json:"sealed"`
-	Standby                    bool   `json:"standby"`
-	PerformanceStandby         bool   `json:"performance_standby"`
-	ReplicationPerformanceMode string `json:"replication_performance_mode"`
-	ReplicationDRMode          string `json:"replication_dr_mode"`
-	ServerTimeUTC              int64  `json:"server_time_utc"`
-	Version                    string `json:"version"`
-	ClusterName                string `json:"cluster_name,omitempty"`
-	ClusterID                  string `json:"cluster_id,omitempty"`
-	LastWAL                    uint64 `json:"last_wal,omitempty"`
+	Initialized                bool                   `json:"initialized"`
+	Sealed                     bool                   `json:"sealed"`
+	Standby                    bool                   `json:"standby"`
+	PerformanceStandby         bool                   `json:"performance_standby"`
+	ReplicationPerformanceMode string                 `json:"replication_performance_mode"`
+	ReplicationDRMode          string                 `json:"replication_dr_mode"`
+	ServerTimeUTC              int64                  `json:"server_time_utc"`
+	Version                    string                 `json:"version"`
+	ClusterName                string                 `json:"cluster_name,omitempty"`
+	ClusterID                  string                 `json:"cluster_id,omitempty"`
+	LastWAL                    uint64                 `json:"last_wal,omitempty"`
+	License                    *HealthResponseLicense `json:"license,omitempty"`
 }

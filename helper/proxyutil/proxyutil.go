@@ -7,7 +7,6 @@ import (
 	"time"
 
 	proxyproto "github.com/armon/go-proxyproto"
-	"github.com/hashicorp/errwrap"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
@@ -56,7 +55,7 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 
 				sa, err := sockaddr.NewSockAddr(addr.String())
 				if err != nil {
-					return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
+					return false, fmt.Errorf("error parsing remote address: %w", err)
 				}
 
 				for _, authorizedAddr := range config.AuthorizedAddrs {

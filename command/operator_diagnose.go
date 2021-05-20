@@ -2,11 +2,6 @@ package command
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"github.com/docker/docker/pkg/ioutils"
-	"github.com/hashicorp/vault/sdk/version"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +37,7 @@ type OperatorDiagnoseCommand struct {
 	reloadFuncs     *map[string][]reloadutil.ReloadFunc
 	startedCh       chan struct{} // for tests
 	reloadedCh      chan struct{} // for tests
+	skipEndEnd      bool          // for tests
 }
 
 func (c *OperatorDiagnoseCommand) Synopsis() string {
@@ -163,6 +159,11 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Output("\nResults:")
 		results.Write(os.Stdout)
 	}
+	c.UI.Output(version.GetVersion().FullVersionNumber(true))
+	ctx := diagnose.Context(context.Background(), c.diagnose)
+	err := c.offlineDiagnostics(ctx)
+	c.diagnose.SetSkipList(c.flagSkips)
+
 	if err != nil {
 		return 1
 	}
@@ -193,19 +194,18 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
-
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
-		return diagnose.SpotError(ctx, "parse-config", err, diagnose.MainSection)
+		return diagnose.SpotError(ctx, "parse-config", err)
 	} else {
-		diagnose.SpotOk(ctx, "parse-config", "", diagnose.MainSection)
+		diagnose.SpotOk(ctx, "parse-config", "")
 	}
 	// Check Listener Information
 	// TODO: Run Diagnose checks on the actual net.Listeners
 
 	if err := diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
+		disableClustering := config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
 		status, lns, _, errMsg := server.InitListeners(config, disableClustering, &infoKeys, &info)
@@ -242,33 +242,38 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 
 			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-				Listener: ln.
-					Listener,
-				Config: ln.Config,
+				Listener: ln.Listener,
+				Config:   ln.Config,
 			})
 		}
-		time.Sleep(1 * time.Second)
 		return diagnose.ListenerChecks(sanitizedListeners)
-	}, diagnose.MainSection); err != nil {
+	}); err != nil {
 		return err
 	}
 
 	// Errors in these items could stop Vault from starting but are not yet covered:
 	// TODO: logging configuration
 	// TODO: SetupTelemetry
-	// TODO: check for storage backend
-
 	if err := diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		time.Sleep(1 * time.Second)
-		_, err = server.setupStorage(config)
+		b, err := server.setupStorage(config)
 		if err != nil {
 			return err
+		}
+
+		dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+		if dirAccess != "" {
+			diagnose.Warn(ctx, dirAccess)
 		}
 
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 			if err != nil {
 				return err
+			}
+
+			dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
 			}
 		}
 
@@ -278,22 +283,36 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return err
 			}
 		}
+
+		// Attempt to use storage backend
+		if !c.skipEndEnd {
+			err = diagnose.StorageEndToEndLatencyCheck(ctx, b)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
-	}, diagnose.MainSection); err != nil {
+	}); err != nil {
 		return err
 	}
 
 	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
-		time.Sleep(1 * time.Second)
+		srConfig := config.ServiceRegistration.Config
 		// Initialize the Service Discovery, if there is one
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
+			// setupStorage populates the srConfig, so no nil checks are necessary.
+			dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
+			if dirAccess != "" {
+				diagnose.Warn(ctx, dirAccess)
+			}
+
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), config.ServiceRegistration.Config, server.logger, true)
+			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
-	}, diagnose.MainSection)
-}
+	})

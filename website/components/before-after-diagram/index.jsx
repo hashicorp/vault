@@ -1,7 +1,7 @@
 import Image from '@hashicorp/react-image'
 import InlineSvg from '@hashicorp/react-inline-svg'
-import alertIcon from 'public/img/icons/alert-icon.svg?include'
-import checkIcon from 'public/img/icons/check-icon.svg?include'
+import alertIcon from 'public/img/icons/alert.svg?include'
+import checkIcon from 'public/img/icons/check.svg?include'
 import fragment from './fragment.graphql'
 import s from './style.module.css'
 function BeforeAfterDiagram(props) {
@@ -24,9 +24,8 @@ function BeforeAfterDiagram(props) {
         </div>
         <div className={s.contentContainer}>
           <span className={s.iconLineContainer}>
-            <span className={s.lineSegmentOne} />
             <InlineSvg className={s.beforeIcon} src={alertIcon} />
-            <span className={s.lineSegmentTwo} />
+            <span className={s.lineSegment} />
           </span>
           <div>
             {beforeHeadline && (
