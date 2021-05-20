@@ -5,6 +5,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 

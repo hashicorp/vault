@@ -2,9 +2,13 @@ package command
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/docker/docker/pkg/ioutils"
+	"github.com/hashicorp/vault/sdk/version"
+	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -144,7 +148,9 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			c.diagnose = diagnose.New(os.Stdout)
 		}
 	}
+	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := diagnose.Context(context.Background(), c.diagnose)
+	c.diagnose.SetSkipList(c.flagSkips)
 	err := c.offlineDiagnostics(ctx)
 
 	results := c.diagnose.Finalize(ctx)
@@ -159,10 +165,6 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Output("\nResults:")
 		results.Write(os.Stdout)
 	}
-	c.UI.Output(version.GetVersion().FullVersionNumber(true))
-	ctx := diagnose.Context(context.Background(), c.diagnose)
-	err := c.offlineDiagnostics(ctx)
-	c.diagnose.SetSkipList(c.flagSkips)
 
 	if err != nil {
 		return 1
@@ -297,7 +299,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return err
 	}
 
-	return diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
 		srConfig := config.ServiceRegistration.Config
 		// Initialize the Service Discovery, if there is one
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
@@ -309,10 +311,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
-			if err != nil {
-				return err
-			}
+			return srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 		}
 		return nil
 	})
+
+	return nil
+}

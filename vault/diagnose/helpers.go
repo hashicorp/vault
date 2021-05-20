@@ -3,6 +3,7 @@ package diagnose
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
