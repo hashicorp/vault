@@ -166,6 +166,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
 
+	// OS Specific checks
+	// Check open file count
+	diagnose.OSChecks(ctx)
+
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {

@@ -39,6 +39,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
+					Name:   "open file limits",
+					Status: diagnose.OkStatus,
+				},
+				{
 					Name:   "parse-config",
 					Status: diagnose.OkStatus,
 				},
@@ -66,17 +70,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:    "storage",
 					Status:  diagnose.ErrorStatus,
 					Message: "A storage backend must be specified",
@@ -90,19 +83,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "init-listeners",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "service-discovery",
 					Status: diagnose.OkStatus,
 				},
 			},
@@ -114,19 +95,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "init-listeners",
 					Status: diagnose.WarningStatus,
 					Warnings: []string{
 						"TLS is disabled in a Listener config stanza.",
 					},
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.ErrorStatus,
 				},
 			},
 		},
@@ -136,17 +109,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				"-config", "./server/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
 			},
 			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
@@ -162,21 +124,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",
 			},
 			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.OkStatus,
-				},
 				{
 					Name:    "service-discovery",
 					Status:  diagnose.ErrorStatus,
@@ -194,26 +141,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.WarningStatus,
 					Warnings: []string{
 						diagnose.DirAccessErr,
 					},
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
 				},
 			},
 		},
@@ -236,10 +168,20 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				cmd.Run(tc.args)
 				result := cmd.diagnose.Finalize(context.Background())
 
-				for i, exp := range tc.expected {
-					act := result.Children[i]
-					if err := compareResult(t, exp, act); err != nil {
-						t.Fatalf("%v", err)
+				for _, exp := range tc.expected {
+					found := false
+					// Check them all so we don't have to be order specific
+					for _, act := range result.Children {
+						if exp.Name == act.Name {
+							found = true
+							if err := compareResult(t, exp, act); err != nil {
+								t.Fatalf("%v", err)
+							}
+							break
+						}
+					}
+					if !found {
+						t.Fatalf("could not find expected test result: %s", exp.Name)
 					}
 				}
 			})
