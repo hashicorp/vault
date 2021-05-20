@@ -123,6 +123,7 @@ var (
 	storedLicenseCheck           = func(c *Core, conf *CoreConfig) error { return nil }
 	LicenseAutoloaded            = func(*Core) bool { return false }
 	LicenseInitCheck             = func(*Core) error { return nil }
+	LicenseSummary               = func(*Core) (*LicenseState, error) { return nil, nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -2865,4 +2866,10 @@ func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,
 	}, nil
+}
+
+type LicenseState struct {
+	State      string
+	ExpiryTime time.Time
+	Terminated bool
 }
