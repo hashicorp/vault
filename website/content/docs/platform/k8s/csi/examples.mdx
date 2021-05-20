@@ -10,10 +10,10 @@ The following examples demonstrate how the Vault CSI Provider can be used.
 
 ~> A common mistake is to not install the CSI Secret Store Driver before using the Vault CSI Provider.
 
-## File Based Dynamic Database Credentials 
+## File Based Dynamic Database Credentials
 
-The following Secret Provider Class retrieves dynamic database credentials from Vault and 
-extracts the generated username and password. The secrets are then mounted as files in the 
+The following Secret Provider Class retrieves dynamic database credentials from Vault and
+extracts the generated username and password. The secrets are then mounted as files in the
 configured mount location.
 
 ```yaml
@@ -25,9 +25,9 @@ metadata:
 spec:
   provider: vault
   parameters:
-    roleName: "app"
-    vaultAddress: "https://vault.vault:8200"
-    vaultCACertPath: "/vault/tls/ca.crt"
+    roleName: 'app'
+    vaultAddress: 'https://vault.vault:8200'
+    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"
@@ -59,31 +59,31 @@ spec:
     spec:
       serviceAccountName: app
       containers:
-      - name: app
-        image: my-app:1.0.0
-        volumeMounts:
-        - name: "vault-db-creds"
-          mountPath: "/mnt/secrets-store"
-          readOnly: true
+        - name: app
+          image: my-app:1.0.0
+          volumeMounts:
+            - name: 'vault-db-creds'
+              mountPath: '/mnt/secrets-store'
+              readOnly: true
       volumes:
-      - name: vault-db-creds
-        csi:
-          driver: "secrets-store.csi.k8s.io"
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "vault-db-creds"
+        - name: vault-db-creds
+          csi:
+            driver: 'secrets-store.csi.k8s.io'
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'vault-db-creds'
 ```
 
-The pod mounts a CSI volume and specifies the Secret Provider Class (`vault-db-creds`) created above. 
-The secrets created from that provider class are mounted to `/mnt/secrets-store`. When this pod is 
-created the containers will find two files containing secrets: 
+The pod mounts a CSI volume and specifies the Secret Provider Class (`vault-db-creds`) created above.
+The secrets created from that provider class are mounted to `/mnt/secrets-store`. When this pod is
+created the containers will find two files containing secrets:
 
-* `/mnt/secrets-store/dbUsername`
-* `/mnt/secrets-store/dbPassword`
+- `/mnt/secrets-store/dbUsername`
+- `/mnt/secrets-store/dbPassword`
 
-## Environment Variable Dynamic Database Credentials 
+## Environment Variable Dynamic Database Credentials
 
-The following Secret Provider Class retrieves dynamic database credentials from Vault and 
+The following Secret Provider Class retrieves dynamic database credentials from Vault and
 extracts the generated username and password. The secrets are then synced to Kubernetes secrets
 so that they can be mounted as environment variables in the containers.
 
@@ -96,17 +96,17 @@ metadata:
 spec:
   provider: vault
   secretObjects:
-  - secretName: vault-db-creds-secret
-    type: Opaque
-    data:
-    - objectName: dbUsername # References dbUsername below
-      key: username          # Key within k8s secret for this value
-    - objectName: dbPassword
-      key: password
+    - secretName: vault-db-creds-secret
+      type: Opaque
+      data:
+        - objectName: dbUsername # References dbUsername below
+          key: username # Key within k8s secret for this value
+        - objectName: dbPassword
+          key: password
   parameters:
-    roleName: "app"
-    vaultAddress: "https://vault.vault:8200"
-    vaultCACertPath: "/vault/tls/ca.crt"
+    roleName: 'app'
+    vaultAddress: 'https://vault.vault:8200'
+    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"
@@ -138,32 +138,32 @@ spec:
     spec:
       serviceAccountName: app
       containers:
-      - name: app
-        image: my-app:1.0.0
-        envs:
-        - name: DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: vault-db-creds-secret
-              key: username
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: vault-db-creds-secret
-              key: password
-        volumeMounts:
-        - name: "vault-db-creds"
-          mountPath: "/mnt/secrets-store"
-          readOnly: true
+        - name: app
+          image: my-app:1.0.0
+          envs:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vault-db-creds-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vault-db-creds-secret
+                  key: password
+          volumeMounts:
+            - name: 'vault-db-creds'
+              mountPath: '/mnt/secrets-store'
+              readOnly: true
       volumes:
-      - name: vault-db-creds
-        csi:
-          driver: "secrets-store.csi.k8s.io"
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "vault-db-creds"
+        - name: vault-db-creds
+          csi:
+            driver: 'secrets-store.csi.k8s.io'
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'vault-db-creds'
 ```
 
-The pod mounts a CSI volume and specifies the Secret Provider Class (`vault-db-creds`) created above. 
-The secrets created from that provider class are mounted to `/mnt/secrets-store`, additionally a Kubernetes 
+The pod mounts a CSI volume and specifies the Secret Provider Class (`vault-db-creds`) created above.
+The secrets created from that provider class are mounted to `/mnt/secrets-store`, additionally a Kubernetes
 secret called `vault-db-creds` is created and referenced in two environment variables.

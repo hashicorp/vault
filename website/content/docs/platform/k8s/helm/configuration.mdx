@@ -66,7 +66,7 @@ and consider if they're appropriate for your deployment.
       - `repository` (`string: "gcr.io/google_containers/leader-elector"`) - The name of the leader election image for the Vault Agent Injector.
 
       - `tag` (`string: "0.4"`) - The tag of the Docker image for the Leader Election. **This should be pinned to a specific version when running in production.**
-    
+
     - `ttl` (`string: "60s"`) - The frequency in which leader elections are performed in the Vault Agent Injector cluster.
 
   - `image` - Values that configure the Vault Agent Injector Docker image.
@@ -138,7 +138,6 @@ and consider if they're appropriate for your deployment.
         injection: enabled
     ```
 
-
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
     ```yaml
@@ -198,8 +197,8 @@ and consider if they're appropriate for your deployment.
   - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
 
     - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-        add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted
-        multi-line templated string.
+      add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted
+      multi-line templated string.
 
       ```yaml
       annotations:
@@ -870,35 +869,36 @@ and consider if they're appropriate for your deployment.
       annotations: |
         foo: bar
       ```
+
   - `pod` - Values that configure the Vault CSI Provider pod.
 
-   - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+  - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+    add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
+    multi-line templated string.
 
-      ```yaml
-      annotations:
-        foo: bar
-      # or
-      annotations: |
-        foo: bar
-      ```
+    ```yaml
+    annotations:
+      foo: bar
+    # or
+    annotations: |
+      foo: bar
+    ```
 
   - `serviceAccount` - Values that configure the Vault CSI Provider's serviceaccount.
 
-   - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+  - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+    add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
+    multi-line templated string.
 
-      ```yaml
-      annotations:
-        foo: bar
-      # or
-      annotations: |
-        foo: bar
-      ```
+    ```yaml
+    annotations:
+      foo: bar
+    # or
+    annotations: |
+      foo: bar
+    ```
 
-  - `readinessProbe` - Values that configure the readiness probe for the Vault CSI Proivder  pods.
+  - `readinessProbe` - Values that configure the readiness probe for the Vault CSI Proivder pods.
 
     - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
 
@@ -909,7 +909,7 @@ and consider if they're appropriate for your deployment.
     - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
 
     - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
-    
+
   - `livenessProbe` - Values that configure the liveliness probe for the Vault CSI Proivder pods.
 
     - `initialDelaySeconds` (`int: 5`) - Sets the initial delay of the liveliness probe when the container starts.

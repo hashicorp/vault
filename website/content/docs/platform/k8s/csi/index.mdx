@@ -7,38 +7,38 @@ description: >-
 
 # Vault CSI Provider
 
-The Vault CSI Provider allows pods to consume Vault secrets using 
+The Vault CSI Provider allows pods to consume Vault secrets using
 [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes.
 
-~> The Vault CSI Provider requires the [CSI Secret Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) 
-  Driver to be installed.
+~> The Vault CSI Provider requires the [CSI Secret Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver)
+Driver to be installed.
 
 ## Overview
 
-At a high level, the CSI Secrets Store driver allows users to create `SecretProviderClass` objects. 
-This object defines which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes 
-are created, the CSI Secrets Store driver will send the request to the Vault CSI Provider if the provider 
-is `vault`. The Vault CSI Provider will then use Secret Class Provider specified and the pod's service account to retrieve 
+At a high level, the CSI Secrets Store driver allows users to create `SecretProviderClass` objects.
+This object defines which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes
+are created, the CSI Secrets Store driver will send the request to the Vault CSI Provider if the provider
+is `vault`. The Vault CSI Provider will then use Secret Class Provider specified and the pod's service account to retrieve
 the secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
 
-The secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase. 
+The secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase.
 This means that pods will be blocked from starting until the secrets have been read from Vault and written to the volume.
 
 ### Features
 
 The following features are supported by the Vault CSI Provider:
 
-* All Vault secret engines supported.
-* Authenticatation using the requesting pod's service account.
-* TLS/mTLS communciations with Vault.
-* Rendering Vault secrets to files.
-* Syncing secrets to Kubernetes secrets to be used as environment variables.
-* Installation via [Vault Helm](/docs/platform/k8s/helm)
+- All Vault secret engines supported.
+- Authenticatation using the requesting pod's service account.
+- TLS/mTLS communciations with Vault.
+- Rendering Vault secrets to files.
+- Syncing secrets to Kubernetes secrets to be used as environment variables.
+- Installation via [Vault Helm](/docs/platform/k8s/helm)
 
 ## Authenticating with Vault
 
-The primary method of authentication with Vault when using the Vault CSI Provider 
-is the service account attached to the pod. At this time no other authentication methods 
+The primary method of authentication with Vault when using the Vault CSI Provider
+is the service account attached to the pod. At this time no other authentication methods
 are supported.
 
 For [Kubernetes authentication](/docs/auth/kubernetes), the service account must be bound to a Vault role and a
@@ -63,11 +63,11 @@ spec:
   provider: vault
   parameters:
     # Vault role name to use during login
-    roleName: "app"
+    roleName: 'app'
     # Vault's hostname
-    vaultAddress: "https://vault:8200"
+    vaultAddress: 'https://vault:8200'
     # TLS CA certification for validation
-    vaultCACertPath: "/vault/tls/ca.crt"
+    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"
@@ -75,7 +75,7 @@ spec:
       - objectName: "dbPassword"
         secretPath: "database/creds/db-app"
         secretKey: "password"
-    # "objectName" is an alias used within the SecretProviderClass to reference 
+    # "objectName" is an alias used within the SecretProviderClass to reference
     # that specific secret. This will also be the filename containing the secret.
     # "secretPath" is the path in Vault where the secret should be retrieved.
     # "secretKey" is the key within the Vault secret response to extract a value from.
@@ -104,22 +104,22 @@ spec:
     spec:
       serviceAccountName: app
       containers:
-      - name: app
-        image: my-app:1.0.0
-        volumeMounts:
-        - name: "vault-db-creds"
-          mountPath: "/mnt/secrets-store"
-          readOnly: true
+        - name: app
+          image: my-app:1.0.0
+          volumeMounts:
+            - name: 'vault-db-creds'
+              mountPath: '/mnt/secrets-store'
+              readOnly: true
       volumes:
-      - name: vault-db-creds
-        csi:
-          driver: "secrets-store.csi.k8s.io"
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "vault-db-creds"
+        - name: vault-db-creds
+          csi:
+            driver: 'secrets-store.csi.k8s.io'
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'vault-db-creds'
 ```
 
-In this example `volumes.csi` is created on the application deployment and references 
+In this example `volumes.csi` is created on the application deployment and references
 the Secret Provider Class named `vault-db-creds`.
 
 ## Learn
