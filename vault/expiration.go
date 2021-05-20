@@ -269,11 +269,11 @@ func (r *revocationJob) OnFailure(err error) {
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
 	nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
-	var mountAccessor string
 	m.coreStateLock.RLock()
 	mount := m.core.router.MatchingMountEntry(nsCtx, leaseID)
 	m.coreStateLock.RUnlock()
 
+	var mountAccessor string
 	if mount == nil {
 		// figure out what this means - if we couldn't find the mount, can we automatically revoke
 		m.logger.Debug("could not find lease path", "lease_id", leaseID)
@@ -2445,8 +2445,6 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 	numMatchingLeases := 0
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
-		leaseInfo := v.(*leaseEntry)
-
 		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
 		if err != nil {
 			// We probably want to track that an error occured, but continue counting
@@ -2460,20 +2458,30 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 			return true
 		}
 
-		// TODO verify path is kept
-		if _, ok := numMatchingLeasesPerMount[leaseInfo.Path]; !ok {
-			numMatchingLeasesPerMount[leaseInfo.Path] = 0
+		m.coreStateLock.RLock()
+		mount := m.core.router.MatchingMountEntry(ctx, leaseID)
+		m.coreStateLock.RUnlock()
+
+		var mountAccessor string
+		if mount == nil {
+			mountAccessor = "mount-accessor-not-found"
+		} else {
+			mountAccessor = mount.Accessor
+		}
+
+		if _, ok := numMatchingLeasesPerMount[mountAccessor]; !ok {
+			numMatchingLeasesPerMount[mountAccessor] = 0
 		}
 
 		numMatchingLeases++
-		numMatchingLeasesPerMount[leaseInfo.Path]++
+		numMatchingLeasesPerMount[mountAccessor]++
 
 		return true
 	})
 
 	resp := make(map[string]interface{})
 	resp["lease_count"] = numMatchingLeases
-	resp["counts"] = numMatchingLeases
+	resp["counts"] = numMatchingLeasesPerMount
 
 	return resp, nil
 }

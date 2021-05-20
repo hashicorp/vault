@@ -2869,3 +2869,115 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 		}
 	}
 }
+
+func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) {
+	t.Helper()
+
+	uuid, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("error generating uuid: %v", err)
+	}
+
+	if ns == nil {
+		ns = namespace.RootNamespace
+	}
+
+	le := &leaseEntry{
+		LeaseID:    pathPrefix + "lease" + uuid,
+		Path:       pathPrefix,
+		namespace:  ns,
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now().Add(time.Hour),
+		RevokeErr:  "some error message",
+	}
+
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
+
+	if err := m.persistEntry(context.Background(), le); err != nil {
+		t.Fatalf("error persisting irrevocable lease: %v", err)
+	}
+
+	m.updatePendingInternal(le)
+}
+
+// set up multiple mounts, and return a mapping of the path to the mount accessor
+func mountNoopBackends(t *testing.T, c *Core, paths []string) map[string]string {
+	t.Helper()
+
+	// enable the noop backend
+	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	pathToMount := make(map[string]string)
+	for _, path := range paths {
+		me := &MountEntry{
+			Table: mountTableType,
+			Path:  path,
+			Type:  "noop",
+		}
+		err := c.mount(namespace.RootContext(nil), me)
+		if err != nil {
+			t.Fatalf("err mounting backend %s: %v", path, err)
+		}
+
+		mount := c.router.MatchingMountEntry(namespace.RootContext(nil), path)
+		if mount == nil {
+			t.Fatalf("couldn't map path to mount")
+		}
+		pathToMount[path] = mount.Accessor
+	}
+
+	return pathToMount
+}
+
+func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	mountPrefixes := []string{"foo/bar/1/", "foo/bar/2/", "foo/bar/3/"}
+	pathToMount := mountNoopBackends(t, c, mountPrefixes)
+
+	exp := c.expiration
+
+	expectedPerMount := 10
+	for i := 0; i < expectedPerMount; i++ {
+		for _, mountPrefix := range mountPrefixes {
+			addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+		}
+	}
+
+	out, err := exp.getIrrevocableLeaseCounts(namespace.RootContext(nil), false)
+	if err != nil {
+		t.Fatalf("error getting irrevocable lease counts: %v", err)
+	}
+
+	countRaw, ok := out["lease_count"]
+	if !ok {
+		t.Fatalf("no lease count")
+	}
+
+	countPerMountRaw, ok := out["counts"]
+	if !ok {
+		t.Fatalf("no count per mount")
+	}
+
+	count := countRaw.(int)
+	countPerMount := countPerMountRaw.(map[string]int)
+
+	expectedCount := len(mountPrefixes) * expectedPerMount
+	if count != expectedCount {
+		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
+	}
+
+	if len(countPerMount) != len(mountPrefixes) {
+		t.Fatalf("bad mounts. got %#v, expected %v", countPerMount, mountPrefixes)
+	}
+
+	for _, mountPrefix := range mountPrefixes {
+		mountCount := countPerMount[pathToMount[mountPrefix]]
+		if mountCount != expectedPerMount {
+			t.Errorf("bad count for prefix %q. expected %d, got %d", mountPrefix, expectedPerMount, mountCount)
+		}
+	}
+}
