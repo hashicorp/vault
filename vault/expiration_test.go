@@ -2883,9 +2883,14 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 		ns = namespace.RootNamespace
 	}
 
+	nsSuffix := ""
+	if ns != namespace.RootNamespace {
+		nsSuffix = fmt.Sprintf("/blah.%s", ns.ID)
+	}
+
 	le := &leaseEntry{
-		LeaseID:    pathPrefix + "lease" + uuid,
-		Path:       pathPrefix,
+		LeaseID:    pathPrefix + "lease" + uuid + nsSuffix,
+		Path:       pathPrefix + nsSuffix,
 		namespace:  ns,
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now().Add(time.Hour),
@@ -3047,5 +3052,44 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 				t.Errorf("no error message for irrevocable leaseID %q", lease.LeaseID)
 			}
 		}
+	}
+}
+
+func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
+
+	expectedNumLeases := maxIrrevocableLeasesToReturn + 10
+	for i := 0; i < expectedNumLeases; i++ {
+		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
+	}
+
+	dataRaw, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
+	if err == nil {
+		t.Fatalf("expected error - more than max number of irrevocable leases")
+	}
+	if dataRaw != nil {
+		t.Fatalf("expected nil data, got %#v", dataRaw)
+	}
+
+	dataRaw, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true)
+	if err != nil {
+		t.Fatalf("got error on force list leases: %v", err)
+	}
+	if dataRaw == nil {
+		t.Fatalf("got nil data on force list leases")
+	}
+
+	numLeasesRaw, ok := dataRaw["lease_count"]
+	if !ok {
+		t.Fatalf("lease count data not present")
+	}
+	if numLeasesRaw == nil {
+		t.Fatalf("nil lease count")
+	}
+
+	numLeases := numLeasesRaw.(int)
+	if numLeases != expectedNumLeases {
+		t.Errorf("bad lease count. expected %d, got %d", expectedNumLeases, numLeases)
 	}
 }
