@@ -269,18 +269,7 @@ func (r *revocationJob) OnFailure(err error) {
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
 	nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
-	m.coreStateLock.RLock()
-	mount := m.core.router.MatchingMountEntry(nsCtx, leaseID)
-	m.coreStateLock.RUnlock()
-
-	var mountAccessor string
-	if mount == nil {
-		// figure out what this means - if we couldn't find the mount, can we automatically revoke
-		m.logger.Debug("could not find lease path", "lease_id", leaseID)
-		mountAccessor = "mount-accessor-not-found"
-	} else {
-		mountAccessor = mount.Accessor
-	}
+	mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
 
 	job, err := newRevocationJob(nsCtx, leaseID, ns, m)
 	if err != nil {
@@ -2433,6 +2422,21 @@ func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID
 	return leaseNS, nil
 }
 
+func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID string) string {
+	m.coreStateLock.RLock()
+	mount := m.core.router.MatchingMountEntry(ctx, leaseID)
+	m.coreStateLock.RUnlock()
+
+	var mountAccessor string
+	if mount == nil {
+		mountAccessor = "mount-accessor-not-found"
+	} else {
+		mountAccessor = mount.Accessor
+	}
+
+	return mountAccessor
+}
+
 // TODO if keep counts as a map, should update the RFC
 func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
 	requestNS, err := namespace.FromContext(ctx)
@@ -2458,16 +2462,7 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 			return true
 		}
 
-		m.coreStateLock.RLock()
-		mount := m.core.router.MatchingMountEntry(ctx, leaseID)
-		m.coreStateLock.RUnlock()
-
-		var mountAccessor string
-		if mount == nil {
-			mountAccessor = "mount-accessor-not-found"
-		} else {
-			mountAccessor = mount.Accessor
-		}
+		mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
 
 		if _, ok := numMatchingLeasesPerMount[mountAccessor]; !ok {
 			numMatchingLeasesPerMount[mountAccessor] = 0
@@ -2525,8 +2520,10 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 			return false
 		}
 
+		mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
+
 		numMatchingLeases++
-		matchingLeasesPerMount[leaseInfo.Path] = append(matchingLeasesPerMount[leaseInfo.Path], &leaseResponse{
+		matchingLeasesPerMount[mountAccessor] = append(matchingLeasesPerMount[mountAccessor], &leaseResponse{
 			LeaseID: leaseID,
 			ErrMsg:  leaseInfo.RevokeErr,
 		})

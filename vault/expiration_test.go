@@ -2870,7 +2870,8 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	}
 }
 
-func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) {
+// returns the lease ID for the lease
+func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) string {
 	t.Helper()
 
 	uuid, err := uuid.GenerateUUID()
@@ -2899,6 +2900,8 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 	}
 
 	m.updatePendingInternal(le)
+
+	return le.LeaseID
 }
 
 // set up multiple mounts, and return a mapping of the path to the mount accessor
@@ -2954,12 +2957,12 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 
 	countRaw, ok := out["lease_count"]
 	if !ok {
-		t.Fatalf("no lease count")
+		t.Fatal("no lease count")
 	}
 
 	countPerMountRaw, ok := out["counts"]
 	if !ok {
-		t.Fatalf("no count per mount")
+		t.Fatal("no count per mount")
 	}
 
 	count := countRaw.(int)
@@ -2978,6 +2981,71 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 		mountCount := countPerMount[pathToMount[mountPrefix]]
 		if mountCount != expectedPerMount {
 			t.Errorf("bad count for prefix %q. expected %d, got %d", mountPrefix, expectedPerMount, mountCount)
+		}
+	}
+}
+
+func TestExpiration_listIrrevocableLeases(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	mountPrefixes := []string{"foo/bar/1/", "foo/bar/2/", "foo/bar/3/"}
+	pathToMount := mountNoopBackends(t, c, mountPrefixes)
+
+	exp := c.expiration
+
+	expectedLeasesPerMount := make(map[string][]string)
+	expectedPerMount := 10
+	for i := 0; i < expectedPerMount; i++ {
+		for _, mountPrefix := range mountPrefixes {
+			leaseID := addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+			expectedLeasesPerMount[mountPrefix] = append(expectedLeasesPerMount[mountPrefix], leaseID)
+		}
+	}
+
+	out, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
+	if err != nil {
+		t.Fatalf("error listing irrevocable leases: %v", err)
+	}
+
+	countRaw, ok := out["lease_count"]
+	if !ok {
+		t.Fatal("no lease count")
+	}
+
+	leasesRaw, ok := out["leases"]
+	if !ok {
+		t.Fatal("no leases")
+	}
+
+	count := countRaw.(int)
+	leases := leasesRaw.(map[string][]*leaseResponse)
+
+	expectedCount := len(mountPrefixes) * expectedPerMount
+	if count != expectedCount {
+		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
+	}
+
+	for _, mountPrefix := range mountPrefixes {
+		mount := pathToMount[mountPrefix]
+
+		// sort both sets of data for easy comparison
+		sort.Strings(expectedLeasesPerMount[mountPrefix])
+		sort.Slice(leases[mount], func(i, j int) bool {
+			return leases[mount][i].LeaseID < leases[mount][j].LeaseID
+		})
+
+		if len(leases[mount]) != expectedPerMount {
+			t.Fatalf("bad leases for mount prefix %q: expected %d, got %d", mountPrefix, expectedPerMount, len(leases[mount]))
+		}
+
+		for i, v := range expectedLeasesPerMount[mountPrefix] {
+			lease := leases[mount][i]
+			if lease.LeaseID != v {
+				t.Errorf("bad leaseID for mount prefix %q: expected %s, got %s", mountPrefix, v, lease.LeaseID)
+			}
+			if lease.ErrMsg == "" {
+				t.Errorf("no error message for irrevocable leaseID %q", lease.LeaseID)
+			}
 		}
 	}
 }
