@@ -626,6 +626,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 			} else {
 				tokenCache[le.ClientToken] = true
 			}
+
 			goto REVOKE_CHECK
 		} else {
 			if isValid {
@@ -841,6 +842,7 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -998,7 +1000,13 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
 		m.logger.Info("revoked lease", "lease_id", leaseID)
 	}
-
+	if m.logger.IsWarn() && !skipToken && le.isIncorrectlyNonExpiring() {
+		var accessor string
+		if le.Auth != nil {
+			accessor = le.Auth.Accessor
+		}
+		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
+	}
 	return nil
 }
 
@@ -1724,15 +1732,14 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 	info, leaseInPending := m.pending.Load(le.LeaseID)
 
 	var pending pendingInfo
-	if le.ExpireTime.IsZero() {
-		if le.nonexpiringToken() {
-			// Store this in the nonexpiring map instead of pending.
-			// There does not appear to be any cases where a token that had
-			// a nonzero can be can be assigned a zero TTL, but we can handle that
-			// anyway by falling through to the next check.
-			pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
-			m.nonexpiring.Store(le.LeaseID, pending)
-		}
+
+	if le.ExpireTime.IsZero() && le.nonexpiringToken() {
+		// Store this in the nonexpiring map instead of pending.
+		// There does not appear to be any cases where a token that had
+		// a nonzero can be can be assigned a zero TTL, but that can be
+		// handled by the next check
+		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
+		m.nonexpiring.Store(le.LeaseID, pending)
 
 		// if the timer happened to exist, stop the time and delete it from the
 		// pending timers.
@@ -2613,12 +2620,19 @@ func (le *leaseEntry) nonexpiringToken() bool {
 	if le.Auth == nil {
 		return false
 	}
-	return !le.Auth.LeaseEnabled()
+	// Note that at this time the only non-expiring tokens are root tokens, this test is more involved as it is trying
+	// to catch tokens created by the VAULT-1949 non-expiring tokens bug and ensure they become expiring.
+	return !le.Auth.LeaseEnabled() && len(le.Auth.Policies) == 1 && le.Auth.Policies[0] == "root" && le.namespace != nil &&
+		le.namespace.ID == namespace.RootNamespaceID
 }
 
 // TODO maybe lock RevokeErr once this goes in: https://github.com/hashicorp/vault/pull/11122
 func (le *leaseEntry) isIrrevocable() bool {
 	return le.RevokeErr != ""
+}
+
+func (le *leaseEntry) isIncorrectlyNonExpiring() bool {
+	return le.ExpireTime.IsZero() && !le.nonexpiringToken()
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry

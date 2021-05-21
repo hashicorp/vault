@@ -87,7 +87,7 @@
         {{form-field data-test-field attr=attr model=@model}}
       {{/if}}
     {{/each}}
-    
+
     {{!-- Plugin Config Section --}}
     <div class="form-section box is-shadowless is-fullwidth">
       <fieldset class="form-fieldset">
@@ -148,7 +148,6 @@
           />
         {{else}}
           {{#each @model.statementFields as |attr|}}
-          {{log attr}}
             {{form-field data-test-field attr=attr model=@model}}
           {{/each}}
         {{/if}}
@@ -295,11 +294,11 @@
   {{#each @model.showAttrs as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
-        <InfoTableRow 
+        <InfoTableRow
           @alwaysRender={{true}}
           @defaultShown={{attr.options.defaultShown}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{stringify (get @model attr.name)}} 
+          @value={{stringify (get @model attr.name)}}
         />
       {{else if (eq attr.type "array")}}
         <InfoTableRow
