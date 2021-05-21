@@ -76,7 +76,7 @@ const (
 
 	// maximum number of irrevocable leases we return to the irrevocable lease
 	// list API **without** the `force` flag set
-	maxIrrevocableLeasesToReturn = 10000
+	MaxIrrevocableLeasesToReturn = 10000
 )
 
 var (
@@ -2521,7 +2521,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 			return true
 		}
 
-		if !force && (numMatchingLeases >= maxIrrevocableLeasesToReturn) {
+		if !force && (numMatchingLeases >= MaxIrrevocableLeasesToReturn) {
 			m.logger.Warn("hit max irrevocable leases without force flag set")
 			retErr = errHitMaxIrrevocableLeases
 			return false

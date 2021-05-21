@@ -1235,10 +1235,24 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases(/)?$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Description: "Set true if you want counts for this namespace and its children.",
+				},
+				"force": {
+					Type:        framework.TypeBool,
+					Description: "Set true if to get lists containing more than 10,000 entries.",
+				},
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				// currently only works for irrevocable leases with param: type=irrevocable
-				logical.ListOperation: b.handleLeaseList,
+				logical.ReadOperation: b.handleLeaseList,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["list-leases"][0]),
