@@ -2870,45 +2870,6 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	}
 }
 
-// returns the lease ID for the lease
-func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) string {
-	t.Helper()
-
-	uuid, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatalf("error generating uuid: %v", err)
-	}
-
-	if ns == nil {
-		ns = namespace.RootNamespace
-	}
-
-	nsSuffix := ""
-	if ns != namespace.RootNamespace {
-		nsSuffix = fmt.Sprintf("/blah.%s", ns.ID)
-	}
-
-	le := &leaseEntry{
-		LeaseID:    pathPrefix + "lease" + uuid + nsSuffix,
-		Path:       pathPrefix + nsSuffix,
-		namespace:  ns,
-		IssueTime:  time.Now(),
-		ExpireTime: time.Now().Add(time.Hour),
-		RevokeErr:  "some error message",
-	}
-
-	m.pendingLock.Lock()
-	defer m.pendingLock.Unlock()
-
-	if err := m.persistEntry(context.Background(), le); err != nil {
-		t.Fatalf("error persisting irrevocable lease: %v", err)
-	}
-
-	m.updatePendingInternal(le)
-
-	return le.LeaseID
-}
-
 // set up multiple mounts, and return a mapping of the path to the mount accessor
 func mountNoopBackends(t *testing.T, c *Core, paths []string) map[string]string {
 	t.Helper()
