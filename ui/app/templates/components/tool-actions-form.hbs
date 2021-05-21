@@ -55,5 +55,9 @@
       @buttonDisabled={{buttonDisabled}}
       @errors={{errors}}
     />
+  {{else}}
+    <EmptyState
+      @title="Tool not available"
+    />
   {{/if}}
 </form>

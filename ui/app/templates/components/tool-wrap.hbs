@@ -36,7 +36,7 @@
         <JsonEditor @title="Data to wrap" 
           @subTitle="json-formatted"
           @value={{this.data}} 
-          @valueUpdated={{action "codemirrorUpdated"}} />
+          @valueUpdated={{action this.codemirrorUpdated}} />
       </div>
     </div>
     <TtlPicker2
