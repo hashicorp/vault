@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/mock"
@@ -672,7 +673,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			expectedConfig: nil,
 			expectErr:      true,
 		},
-		"change password - RotateRootCredentials": {
+		"change password - RotateRootCredentials (gRPC Unimplemented)": {
 			req: v5.UpdateUserRequest{
 				Username: "existing_user",
 				Password: &v5.ChangePassword{
@@ -682,6 +683,30 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			isRootUser: true,
 
 			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
+			setCredentialsCalls: 1,
+
+			rotateRootConfig: map[string]interface{}{
+				"foo": "bar",
+			},
+			rotateRootCalls: 1,
+
+			renewUserCalls: 0,
+
+			expectedConfig: map[string]interface{}{
+				"foo": "bar",
+			},
+			expectErr: false,
+		},
+		"change password - RotateRootCredentials (ErrPluginStaticUnsupported)": {
+			req: v5.UpdateUserRequest{
+				Username: "existing_user",
+				Password: &v5.ChangePassword{
+					NewPassword: "newpassowrd",
+				},
+			},
+			isRootUser: true,
+
+			setCredentialsErr:   v4.ErrPluginStaticUnsupported,
 			setCredentialsCalls: 1,
 
 			rotateRootConfig: map[string]interface{}{

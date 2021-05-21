@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/seal"
 
-	"github.com/hashicorp/errwrap"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -126,7 +125,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 	// Generate a master key
 	masterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
-		return nil, nil, errwrap.Wrapf("key generation failed: {{err}}", err)
+		return nil, nil, fmt.Errorf("key generation failed: %w", err)
 	}
 
 	// Return the master key if only a single key part is used
@@ -137,7 +136,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(masterKey, sc.SecretShares, sc.SecretThreshold)
 		if err != nil {
-			return nil, nil, errwrap.Wrapf("failed to generate barrier shares: {{err}}", err)
+			return nil, nil, fmt.Errorf("failed to generate barrier shares: %w", err)
 		}
 		unsealKeys = shares
 	}
@@ -213,14 +212,14 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		// Check if the seal configuration is valid
 		if err := recoveryConfig.Validate(); err != nil {
 			c.logger.Error("invalid recovery configuration", "error", err)
-			return nil, errwrap.Wrapf("invalid recovery configuration: {{err}}", err)
+			return nil, fmt.Errorf("invalid recovery configuration: %w", err)
 		}
 	}
 
 	// Check if the seal configuration is valid
 	if err := barrierConfig.Validate(); err != nil {
 		c.logger.Error("invalid seal configuration", "error", err)
-		return nil, errwrap.Wrapf("invalid seal configuration: {{err}}", err)
+		return nil, fmt.Errorf("invalid seal configuration: %w", err)
 	}
 
 	// Avoid an initialization race
@@ -257,7 +256,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	err = c.seal.Init(ctx)
 	if err != nil {
 		c.logger.Error("failed to initialize seal", "error", err)
-		return nil, errwrap.Wrapf("error initializing seal: {{err}}", err)
+		return nil, fmt.Errorf("error initializing seal: %w", err)
 	}
 
 	initPTCleanup := initPTFunc(c)
@@ -284,7 +283,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Initialize the barrier
 	if err := c.barrier.Initialize(ctx, barrierKey, sealKey, c.secureRandomReader); err != nil {
 		c.logger.Error("failed to initialize barrier", "error", err)
-		return nil, errwrap.Wrapf("failed to initialize barrier: {{err}}", err)
+		return nil, fmt.Errorf("failed to initialize barrier: %w", err)
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("security barrier initialized", "stored", barrierConfig.StoredShares, "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
@@ -293,7 +292,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Unseal the barrier
 	if err := c.barrier.Unseal(ctx, barrierKey); err != nil {
 		c.logger.Error("failed to unseal barrier", "error", err)
-		return nil, errwrap.Wrapf("failed to unseal barrier: {{err}}", err)
+		return nil, fmt.Errorf("failed to unseal barrier: %w", err)
 	}
 
 	// Ensure the barrier is re-sealed
@@ -309,7 +308,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	err = c.seal.SetBarrierConfig(ctx, barrierConfig)
 	if err != nil {
 		c.logger.Error("failed to save barrier configuration", "error", err)
-		return nil, errwrap.Wrapf("barrier configuration saving failed: {{err}}", err)
+		return nil, fmt.Errorf("barrier configuration saving failed: %w", err)
 	}
 
 	results := &InitResult{
@@ -323,18 +322,18 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		keysToStore := [][]byte{barrierKey}
 		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
-			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
+			return nil, fmt.Errorf("failed to set seal key: %w", err)
 		}
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("failed to store keys", "error", err)
-			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
 		}
 		results.SecretShares = sealKeyShares
 	case seal.StoredKeysSupportedGeneric:
 		keysToStore := [][]byte{barrierKey}
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("failed to store keys", "error", err)
-			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
 		}
 	default:
 		// We don't support initializing an old-style Shamir seal anymore, so
@@ -366,7 +365,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("failed to save recovery configuration", "error", err)
-			return nil, errwrap.Wrapf("recovery configuration saving failed: {{err}}", err)
+			return nil, fmt.Errorf("recovery configuration saving failed: %w", err)
 		}
 
 		if recoveryConfig.SecretShares > 0 {
@@ -457,8 +456,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.Logger().Info("stored unseal keys supported, attempting fetch")
 	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
-		diagnose.Error(ctx, fmt.Errorf("fetching stored unseal keys failed: %v", err))
-		return NewNonFatalError(errwrap.Wrapf("fetching stored unseal keys failed: {{err}}", err))
+		return NewNonFatalError(fmt.Errorf("fetching stored unseal keys failed: %w", err))
 	}
 
 	// This usually happens when auto-unseal is configured, but the servers have
@@ -474,8 +472,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 
 	err = c.unsealInternal(ctx, keys[0])
 	if err != nil {
-		diagnose.Error(ctx, fmt.Errorf("unseal with stored key failed: %v", err))
-		return NewNonFatalError(errwrap.Wrapf("unseal with stored key failed: {{err}}", err))
+		return NewNonFatalError(fmt.Errorf("unseal with stored key failed: %w", err))
 	}
 
 	if c.Sealed() {
