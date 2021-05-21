@@ -20,7 +20,7 @@ import { tracked } from '@glimmer/tracking';
  * @param onClear {Function} - parent action that is passed through. Must be passed as {{action "onClear"}}
  * @param token=null {String} - property passed from parent to child and then passed back up to parent
  * @param selectedAction="wrap" - passed in from parent.  This is the wrap action, others include hash, etc.
- * @param codemirrorUpdated {Function} - parent action that is passed through. Must be passed as {{action "codemirrorUpdated"}}
+ * @param codemirrorUpdated {Function} - parent action that is passed through. Must be passed as {{action "codemirrorUpdated"}}.
  * @param updateTtl {Function} - parent action that is passed through. Must be passed as {{action "updateTtl"}}
  * @param buttonDisabled=false {Boolean} - false default and if there is an error on codemirror it turns to true.
  * @param error=null {Object} - errors passed from parent as default then from child back to parent.
