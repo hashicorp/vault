@@ -3156,7 +3156,7 @@ func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	exp := c.expiration
 
-	expectedNumLeases := maxIrrevocableLeasesToReturn + 10
+	expectedNumLeases := MaxIrrevocableLeasesToReturn + 10
 	for i := 0; i < expectedNumLeases; i++ {
 		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
 	}
