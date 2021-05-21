@@ -178,3 +178,65 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 		}
 	}
 }
+
+func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	core := cluster.Cores[0].Core
+
+	// test with a low enough number to not give an error without force flag
+	expectedNumLeases := vault.MaxIrrevocableLeasesToReturn + 50
+	expectedCountsPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+
+	params := make(map[string][]string)
+	params["type"] = []string{"irrevocable"}
+
+	resp, err := client.Logical().ReadWithData("sys/leases", params)
+	if err == nil {
+		t.Fatalf("expected error without force flag")
+	}
+	if resp != nil {
+		t.Errorf("expected nil response, got: %#v", resp)
+	}
+
+	// now try it with the force flag - we expect no errors and many results
+	params["force"] = []string{"true"}
+	resp, err = client.Logical().ReadWithData("sys/leases", params)
+	if err != nil {
+		t.Fatalf("unexpected error when using force flag: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("response is nil")
+	}
+	totalLeaseCountRaw, ok := resp.Data["lease_count"]
+	if !ok {
+		t.Fatalf("expected 'lease_count' response, got: %#v", resp.Data)
+	}
+
+	totalLeaseCount, err := totalLeaseCountRaw.(json.Number).Int64()
+	if err != nil {
+		t.Fatalf("error extracting lease count: %v", err)
+	}
+	if totalLeaseCount != int64(expectedNumLeases) {
+		t.Errorf("expected %d leases, got %d", expectedNumLeases, totalLeaseCount)
+	}
+
+	leasesPerMountRaw, ok := resp.Data["leases"]
+	if !ok {
+		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
+	}
+
+	leasesPerMount := leasesPerMountRaw.(map[string]interface{})
+	for mount, expectedCount := range expectedCountsPerMount {
+		leaseCount := len(leasesPerMount[mount].([]interface{}))
+		if leaseCount != expectedCount {
+			t.Errorf("bad count for mount %q, expected %d, got %d", mount, expectedCount, leaseCount)
+		}
+	}
+}

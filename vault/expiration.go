@@ -80,7 +80,7 @@ const (
 )
 
 var (
-	errHitMaxIrrevocableLeases = errors.New("Command cancelled because many irrevocable leases were found. To emit the entire list, re-run the command with the force flag set true.")
+	errHitMaxIrrevocableLeases = errors.New("Command cancelled because many irrevocable leases were found. To emit the entire list, re-run the command with force set true.")
 )
 
 type pendingInfo struct {
