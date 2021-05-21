@@ -3029,7 +3029,7 @@ func mountNoopBackends(t *testing.T, c *Core, paths []string) map[string]string 
 
 		mount := c.router.MatchingMountEntry(namespace.RootContext(nil), path)
 		if mount == nil {
-			t.Fatalf("couldn't map path to mount")
+			t.Fatalf("couldn't find mount for path %s", path)
 		}
 		pathToMount[path] = mount.Accessor
 	}
