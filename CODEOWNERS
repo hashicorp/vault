@@ -2,7 +2,7 @@
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
 
 
-/plugins/             @hashicorp/vault-ecosystem
 /builtin/credential/  @hashicorp/vault-ecosystem
 /builtin/logical/     @hashicorp/vault-ecosystem
 /command/agent/       @hashicorp/vault-ecosystem
+/plugins/             @hashicorp/vault-ecosystem
