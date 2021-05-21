@@ -1216,10 +1216,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
+					Required:    true,
 					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
 				},
 				"include_child_namespaces": {
 					Type:        framework.TypeBool,
+					Default:     false,
 					Description: "Set true if you want counts for this namespace and its children.",
 				},
 			},
@@ -1238,15 +1240,18 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
+					Required:    true,
 					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
 				},
 				"include_child_namespaces": {
 					Type:        framework.TypeBool,
+					Default:     false,
 					Description: "Set true if you want counts for this namespace and its children.",
 				},
 				"force": {
 					Type:        framework.TypeBool,
-					Description: "Set true if to get lists containing more than 10,000 entries.",
+					Default:     false,
+					Description: "Set true to get lists containing more than 10,000 entries.",
 				},
 			},
 

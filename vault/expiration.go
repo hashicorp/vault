@@ -2417,6 +2417,8 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 
 func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID string) (*namespace.Namespace, error) {
 	_, nsID := namespace.SplitIDFromString(leaseID)
+
+	// avoid re-declaring leaseNS and err with scope inside the if
 	leaseNS := namespace.RootNamespace
 	var err error
 	if nsID != "" {
@@ -2444,7 +2446,7 @@ func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID s
 	return mountAccessor
 }
 
-// TODO if keep counts as a map, should update the RFC
+// TODO SW if keep counts as a map, should update the RFC
 func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
 	requestNS, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -2458,7 +2460,7 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 		leaseID := k.(string)
 		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
 		if err != nil {
-			// We probably want to track that an error occured, but continue counting
+			// We should probably note that an error occured, but continue counting
 			m.logger.Warn("could not get lease namespace from ID", "error", err)
 			return true
 		}

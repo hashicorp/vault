@@ -80,6 +80,10 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 	}
 
 	countPerMount = countPerMountRaw.(map[string]interface{})
+	if len(countPerMount) != len(expectedCountPerMount) {
+		t.Fatalf("expected %d mounts, got %d: %#v", len(expectedCountPerMount), len(countPerMount), countPerMount)
+	}
+
 	for mount, expectedCount := range expectedCountPerMount {
 		gotCountRaw, ok := countPerMount[mount]
 		if !ok {
@@ -111,7 +115,6 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}
-	// TODO update RFC to say that it's a get operation
 	resp, err := client.Logical().ReadWithData("sys/leases", params)
 	if err != nil {
 		t.Fatal(err)
@@ -171,6 +174,10 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 	}
 
 	leasesPerMount = leasesPerMountRaw.(map[string]interface{})
+	if len(leasesPerMount) != len(expectedCountsPerMount) {
+		t.Fatalf("expected %d mounts, got %d: %#v", len(expectedCountsPerMount), len(leasesPerMount), leasesPerMount)
+	}
+
 	for mount, expectedCount := range expectedCountsPerMount {
 		leaseCount := len(leasesPerMount[mount].([]interface{}))
 		if leaseCount != expectedCount {
@@ -233,6 +240,10 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 	}
 
 	leasesPerMount := leasesPerMountRaw.(map[string]interface{})
+	if len(leasesPerMount) != len(expectedCountsPerMount) {
+		t.Fatalf("expected %d mounts, got %d: %#v", len(expectedCountsPerMount), len(leasesPerMount), leasesPerMount)
+	}
+
 	for mount, expectedCount := range expectedCountsPerMount {
 		leaseCount := len(leasesPerMount[mount].([]interface{}))
 		if leaseCount != expectedCount {

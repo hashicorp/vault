@@ -262,7 +262,7 @@ This endpoint was added in Vault 1.8.
 
 | Method | Path               |
 | :----- | :----------------- |
-| `GET` | `/sys/leases/count` |
+| `GET`  | `/sys/leases/count`|
 
 ### Sample Request
 
@@ -297,14 +297,14 @@ This endpoint was added in Vault 1.8.
 
 | Method | Path          |
 | :----- | :------------ |
-| `LIST` | `/sys/leases` |
+| `GET`  | `/sys/leases` |
 
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request LIST \
+    --request GET \
     http://127.0.0.1:8200/v1/sys/leases \
     -d type=irrevocable
 ```
