@@ -229,24 +229,33 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				// TODO: A static file in storage that probably won't cause a collision seems low-risk to write to for now.
 				// Should we make this a proper uuid?
 
+				maxDurationCrudOperation := "write"
+				maxDuration := time.Duration(0)
 				veryRandomUuid := "diagnose-secret-uuid-1234"
-				err := diagnose.EndToEndLatencyCheckWrite(ctx, veryRandomUuid, *backend)
-				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
-					diagnose.Warn(ctx, err.Error())
-				} else if err != nil {
+				dur, err := diagnose.EndToEndLatencyCheckWrite(ctx, veryRandomUuid, *backend)
+				if err != nil {
 					return err
 				}
-				err = diagnose.EndToEndLatencyCheckRead(ctx, veryRandomUuid, *backend)
-				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
-					diagnose.Warn(ctx, err.Error())
-				} else if err != nil {
+				maxDuration = dur
+				dur, err = diagnose.EndToEndLatencyCheckRead(ctx, veryRandomUuid, *backend)
+				if err != nil {
 					return err
 				}
-				err = diagnose.EndToEndLatencyCheckDelete(ctx, veryRandomUuid, *backend)
-				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
-					diagnose.Warn(ctx, err.Error())
-				} else if err != nil {
+				if dur > maxDuration {
+					maxDuration = dur
+					maxDurationCrudOperation = "read"
+				}
+				dur, err = diagnose.EndToEndLatencyCheckDelete(ctx, veryRandomUuid, *backend)
+				if err != nil {
 					return err
+				}
+				if dur > maxDuration {
+					maxDuration = dur
+					maxDurationCrudOperation = "delete"
+				}
+
+				if maxDuration > time.Duration(0) {
+					diagnose.Warn(ctx, diagnose.LatencyWarning+fmt.Sprintf("duration: %s, ", maxDuration)+fmt.Sprintf("operation: %s", maxDurationCrudOperation))
 				}
 				return nil
 			}))
@@ -322,14 +331,12 @@ SEALFAIL:
 	var coreConfig vault.CoreConfig
 	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
-		diagnose.Test(ctx, "init-randreader", func(ctx context.Context) error {
-			// prepare a secure random reader for core
-			secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		// prepare a secure random reader for core
+		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+		if err != nil {
+			return diagnose.SpotError(ctx, "init-randreader", err)
+		}
+		diagnose.SpotOk(ctx, "init-randreader", "")
 
 		if backend == nil {
 			return fmt.Errorf(BackendUninitializedErr)
@@ -372,23 +379,18 @@ SEALFAIL:
 		return nil
 	})
 
-	// // Determine the redirect address from environment variables
-	diagnose.Test(ctx, "determine-redirect", func(ctx context.Context) error {
+	// Determine the redirect address from environment variables
+	err = determineRedirectAddr(server, &coreConfig, config)
+	if err != nil {
+		return diagnose.SpotError(ctx, "determine-redirect", err)
+	}
+	diagnose.SpotOk(ctx, "determine-redirect", "")
 
-		err = determineRedirectAddr(server, &coreConfig, config)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	diagnose.Test(ctx, "find-cluster-addr", func(ctx context.Context) error {
-		err = findClusterAddress(server, &coreConfig, config, disableClustering)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = findClusterAddress(server, &coreConfig, config, disableClustering)
+	if err != nil {
+		return diagnose.SpotError(ctx, "find-cluster-addr", err)
+	}
+	diagnose.SpotOk(ctx, "find-cluster-addr", "")
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {

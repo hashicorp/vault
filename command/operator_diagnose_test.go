@@ -651,7 +651,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					}
 					act := result.Children[i]
 					if err := compareResult(t, exp, act); err != nil {
-						t.Fatalf("%v", err)
+						t.Fatalf("%v, %v, %v", err, act, exp)
 					}
 				}
 			})
@@ -687,7 +687,6 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
 		}
 		return fmt.Errorf(strings.Join(errStrings, ","))
-		// return fmt.Errorf("section %s, child count mismatch: %d vs %d", exp.Name, len(exp.Children), len(act.Children))
 	}
 	return nil
 }
