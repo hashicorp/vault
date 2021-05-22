@@ -13,7 +13,7 @@ import (
 func TestDiagnoseOtelResults(t *testing.T) {
 	expected := &Result{
 		Name:   "make-coffee",
-		Status: WarningStatus,
+		Status: ErrorStatus,
 		Warnings: []string{
 			"coffee getting low",
 		},
