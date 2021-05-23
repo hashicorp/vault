@@ -81,8 +81,15 @@ type Raft struct {
 	// be committed and applied to the FSM.
 	applyCh chan *logFuture
 
-	// Configuration provided at Raft initialization
-	conf Config
+	// conf stores the current configuration to use. This is the most recent one
+	// provided. All reads of config values should use the config() helper method
+	// to read this safely.
+	conf atomic.Value
+
+	// confReloadMu ensures that only one thread can reload config at once since
+	// we need to read-modify-write the atomic. It is NOT necessary to hold this
+	// for any other operation e.g. reading config using config().
+	confReloadMu sync.Mutex
 
 	// FSM is the client state machine to apply commands to
 	fsm FSM
@@ -199,7 +206,7 @@ type Raft struct {
 // server. Any further attempts to bootstrap will return an error that can be
 // safely ignored.
 //
-// One sane approach is to bootstrap a single server with a configuration
+// One approach is to bootstrap a single server with a configuration
 // listing just itself as a Voter, then invoke AddVoter() on it to add other
 // servers to the cluster.
 func BootstrapCluster(conf *Config, logs LogStore, stable StableStore,
@@ -316,6 +323,12 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 			continue
 		}
 
+		// Note this is the one place we call fsm.Restore without the
+		// fsmRestoreAndMeasure wrapper since this function should only be called to
+		// reset state on disk and the FSM passed will not be used for a running
+		// server instance. If the same process will eventually become a Raft peer
+		// then it will call NewRaft and restore again from disk then which will
+		// report metrics.
 		err = fsm.Restore(source)
 		// Close the source after the restore has completed
 		source.Close()
@@ -385,9 +398,9 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	return nil
 }
 
-// GetConfiguration returns the configuration of the Raft cluster without
-// starting a Raft instance or connecting to the cluster
-// This function has identical behavior to Raft.GetConfiguration
+// GetConfiguration returns the persisted configuration of the Raft cluster
+// without starting a Raft instance or connecting to the cluster. This function
+// has identical behavior to Raft.GetConfiguration.
 func GetConfiguration(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	snaps SnapshotStore, trans Transport) (Configuration, error) {
 	conf.skipStartup = true
@@ -486,7 +499,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 
 	// Make sure we have a valid server address and ID.
 	protocolVersion := conf.ProtocolVersion
-	localAddr := ServerAddress(trans.LocalAddr())
+	localAddr := trans.LocalAddr()
 	localID := conf.LocalID
 
 	// TODO (slackpad) - When we deprecate protocol version 2, remove this
@@ -495,11 +508,16 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		return nil, fmt.Errorf("when running with ProtocolVersion < 3, LocalID must be set to the network address")
 	}
 
+	// Buffer applyCh to MaxAppendEntries if the option is enabled
+	applyCh := make(chan *logFuture)
+	if conf.BatchApplyCh {
+		applyCh = make(chan *logFuture, conf.MaxAppendEntries)
+	}
+
 	// Create Raft struct.
 	r := &Raft{
 		protocolVersion:       protocolVersion,
-		applyCh:               make(chan *logFuture),
-		conf:                  *conf,
+		applyCh:               applyCh,
 		fsm:                   fsm,
 		fsmMutateCh:           make(chan interface{}, 128),
 		fsmSnapshotCh:         make(chan *reqSnapshotFuture),
@@ -523,6 +541,8 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		observers:             make(map[uint64]*Observer),
 		leadershipTransferCh:  make(chan *leadershipTransferFuture, 1),
 	}
+
+	r.conf.Store(*conf)
 
 	// Initialize as a follower.
 	r.setState(Follower)
@@ -577,23 +597,23 @@ func (r *Raft) restoreSnapshot() error {
 
 	// Try to load in order of newest to oldest
 	for _, snapshot := range snapshots {
-		if !r.conf.NoSnapshotRestoreOnStart {
+		if !r.config().NoSnapshotRestoreOnStart {
 			_, source, err := r.snapshots.Open(snapshot.ID)
 			if err != nil {
 				r.logger.Error("failed to open snapshot", "id", snapshot.ID, "error", err)
 				continue
 			}
 
-			err = r.fsm.Restore(source)
-			// Close the source after the restore has completed
-			source.Close()
-			if err != nil {
+			if err := fsmRestoreAndMeasure(r.fsm, source); err != nil {
+				source.Close()
 				r.logger.Error("failed to restore snapshot", "id", snapshot.ID, "error", err)
 				continue
 			}
+			source.Close()
 
 			r.logger.Info("restored from snapshot", "id", snapshot.ID)
 		}
+
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
 
@@ -622,6 +642,45 @@ func (r *Raft) restoreSnapshot() error {
 		return fmt.Errorf("failed to load any existing snapshots")
 	}
 	return nil
+}
+
+func (r *Raft) config() Config {
+	return r.conf.Load().(Config)
+}
+
+// ReloadConfig updates the configuration of a running raft node. If the new
+// configuration is invalid an error is returned and no changes made to the
+// instance. All fields will be copied from rc into the new configuration, even
+// if they are zero valued.
+func (r *Raft) ReloadConfig(rc ReloadableConfig) error {
+	r.confReloadMu.Lock()
+	defer r.confReloadMu.Unlock()
+
+	// Load the current config (note we are under a lock so it can't be changed
+	// between this read and a later Store).
+	oldCfg := r.config()
+
+	// Set the reloadable fields
+	newCfg := rc.apply(oldCfg)
+
+	if err := ValidateConfig(&newCfg); err != nil {
+		return err
+	}
+	r.conf.Store(newCfg)
+	return nil
+}
+
+// ReloadableConfig returns the current state of the reloadable fields in Raft's
+// configuration. This is useful for programs to discover the current state for
+// reporting to users or tests. It is safe to call from any goroutine. It is
+// intended for reporting and testing purposes primarily; external
+// synchronization would be required to safely use this in a read-modify-write
+// pattern for reloadable configuration options.
+func (r *Raft) ReloadableConfig() ReloadableConfig {
+	cfg := r.config()
+	var rc ReloadableConfig
+	rc.fromConfig(cfg)
+	return rc
 }
 
 // BootstrapCluster is equivalent to non-member BootstrapCluster but can be

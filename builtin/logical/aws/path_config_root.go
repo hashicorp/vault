@@ -12,29 +12,29 @@ func pathConfigRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/root",
 		Fields: map[string]*framework.FieldSchema{
-			"access_key": &framework.FieldSchema{
+			"access_key": {
 				Type:        framework.TypeString,
 				Description: "Access key with permission to create new keys.",
 			},
 
-			"secret_key": &framework.FieldSchema{
+			"secret_key": {
 				Type:        framework.TypeString,
 				Description: "Secret key with permission to create new keys.",
 			},
 
-			"region": &framework.FieldSchema{
+			"region": {
 				Type:        framework.TypeString,
 				Description: "Region for API calls.",
 			},
-			"iam_endpoint": &framework.FieldSchema{
+			"iam_endpoint": {
 				Type:        framework.TypeString,
 				Description: "Endpoint to custom IAM server URL",
 			},
-			"sts_endpoint": &framework.FieldSchema{
+			"sts_endpoint": {
 				Type:        framework.TypeString,
 				Description: "Endpoint to custom STS server URL",
 			},
-			"max_retries": &framework.FieldSchema{
+			"max_retries": {
 				Type:        framework.TypeInt,
 				Default:     aws.UseServiceDefaultRetries,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",

@@ -392,6 +392,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"redshift-database-plugin",
 				"snowflake-database-plugin",
 				"ssh",
+				"terraform",
 				"totp",
 				"transform",
 				"transit",

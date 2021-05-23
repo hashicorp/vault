@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
 func PrepareTestContainer(t *testing.T, version string) (func(), string) {

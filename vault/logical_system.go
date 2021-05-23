@@ -42,8 +42,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const maxBytes = 128 * 1024
-const globalScope = "global"
+const (
+	maxBytes    = 128 * 1024
+	globalScope = "global"
+)
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -631,7 +633,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	recovery bool) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to look up backed-up keys: {{err}}", err)
+		return nil, fmt.Errorf("unable to look up backed-up keys: %w", err)
 	}
 	if backup == nil {
 		return logical.ErrorResponse("no backed-up keys found"), nil
@@ -646,7 +648,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 			}
 			key, err := hex.DecodeString(j)
 			if err != nil {
-				return nil, errwrap.Wrapf("error decoding hex-encoded backup key: {{err}}", err)
+				return nil, fmt.Errorf("error decoding hex-encoded backup key: %w", err)
 			}
 			currB64Keys = append(currB64Keys, base64.StdEncoding.EncodeToString(key))
 			keysB64[k] = currB64Keys
@@ -682,7 +684,7 @@ func (b *SystemBackend) handleRekeyDelete(
 	recovery bool) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
-		return nil, errwrap.Wrapf("error during deletion of backed-up keys: {{err}}", err)
+		return nil, fmt.Errorf("error during deletion of backed-up keys: %w", err)
 	}
 
 	return nil, nil
@@ -1509,11 +1511,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			// enabled. If the vkv backend suports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 			if err != nil {
-				return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
+				return nil, fmt.Errorf("unable to parse mount entry: %w", err)
 			}
 			optVersion, err := parseutil.ParseInt(v)
 			if err != nil {
-				return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
+				return handleError(fmt.Errorf("unable to parse options: %w", err))
 			}
 
 			// Only accept valid versions
@@ -2525,52 +2527,92 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 		Data: map[string]interface{}{
 			"term":         info.Term,
 			"install_time": info.InstallTime.Format(time.RFC3339Nano),
+			"encryptions":  info.Encryptions,
 		},
 	}
 	return resp, nil
 }
 
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"max_operations": rotConfig.MaxOperations,
+			"enabled":        !rotConfig.Disabled,
+		},
+	}
+	if rotConfig.Interval > 0 {
+		resp.Data["interval"] = rotConfig.Interval.String()
+	} else {
+		resp.Data["interval"] = 0
+	}
+	return resp, nil
+}
+
+// handleKeyRotationConfigRead returns the barrier key rotation config
+func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	rotConfig, err := b.Core.barrier.RotationConfig()
+	if err != nil {
+		return nil, err
+	}
+	maxOps, ok, err := data.GetOkErr("max_operations")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.MaxOperations = maxOps.(int64)
+	}
+	interval, ok, err := data.GetOkErr("interval")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.Interval = time.Second * time.Duration(interval.(int))
+	}
+
+	enabled, ok, err := data.GetOkErr("enabled")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		rotConfig.Disabled = !enabled.(bool)
+	}
+
+	// Reject out of range settings
+	if rotConfig.Interval < minimumRotationInterval && rotConfig.Interval != 0 {
+		return logical.ErrorResponse("interval must be greater or equal to %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
+	}
+
+	if rotConfig.MaxOperations < absoluteOperationMinimum || rotConfig.MaxOperations > absoluteOperationMaximum {
+		return logical.ErrorResponse("max_operations must be in the range [%d,%d]", absoluteOperationMinimum, absoluteOperationMaximum), logical.ErrInvalidRequest
+	}
+
+	// Store the rotation config
+	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // handleRotate is used to trigger a key rotation
-func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRotate(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
 
-	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
-	if err != nil {
-		b.Backend.Logger().Error("failed to create new encryption key", "error", err)
+	if err := b.rotateBarrierKey(ctx); err != nil {
+		b.Backend.Logger().Error("error handling key rotation", "error", err)
 		return handleError(err)
 	}
-	b.Backend.Logger().Info("installed new encryption key")
-
-	// In HA mode, we need to an upgrade path for the standby instances
-	if b.Core.ha != nil {
-		// Create the upgrade path to the new term
-		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
-			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
-		}
-
-		// Schedule the destroy of the upgrade path
-		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
-			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
-			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
-				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
-			}
-		})
-	}
-
-	// Write to the canary path, which will force a synchronous truing during
-	// replication
-	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   coreKeyringCanaryPath,
-		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
-	}); err != nil {
-		b.Core.logger.Error("error saving keyring canary", "error", err)
-		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
-	}
-
 	return nil, nil
 }
 
@@ -2673,7 +2715,7 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	httpResp := &logical.HTTPResponse{}
 	err = jsonutil.DecodeJSON([]byte(response), httpResp)
 	if err != nil {
-		return nil, errwrap.Wrapf("error decoding wrapped response: {{err}}", err)
+		return nil, fmt.Errorf("error decoding wrapped response: %w", err)
 	}
 	if httpResp.Data != nil &&
 		(httpResp.Data[logical.HTTPStatusCode] != nil ||
@@ -2727,7 +2769,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, tokenID)
 		if err != nil {
-			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
+			return "", fmt.Errorf("error decrementing wrapping token's use-count: %w", err)
 		}
 
 		defer b.Core.tokenStore.revokeOrphan(ctx, tokenID)
@@ -2741,7 +2783,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return "", fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return "no information found; wrapping token may be from a previous Vault version", ErrInternalError
@@ -2937,7 +2979,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -2959,7 +3001,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	if creationTTLRaw != nil {
 		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
-			return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
+			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %w", err)
 		}
 		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
@@ -3004,7 +3046,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %w", err)
 		}
 		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
@@ -3018,7 +3060,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3037,7 +3079,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
-		return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %w", err)
 	}
 
 	// Get creation_path to return as the response later
@@ -3056,7 +3098,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)
+		return nil, fmt.Errorf("error looking up response: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3158,14 +3200,14 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	}
 
 	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
+		return logical.ErrorResponse(`"bytes" should be less than %d`, maxBytes), nil
 	}
 
 	switch format {
 	case "hex":
 	case "base64":
 	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
 	}
 
 	randBytes, err := uuid.GenerateRandomBytes(bytes)
@@ -3565,7 +3607,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
 	if err != nil {
@@ -3835,10 +3876,48 @@ func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Req
 	return httpResp, nil
 }
 
-func (b *SystemBackend) verifyDROperationToken(f framework.OperationFunc, lock bool) framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		return f(ctx, req, d)
+func (b *SystemBackend) verifyDROperationTokenOnSecondary(f framework.OperationFunc, lock bool) framework.OperationFunc {
+	if b.Core.IsDRSecondary() {
+		return b.verifyDROperationToken(f, lock)
 	}
+	return f
+}
+
+func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
+	// Rotate to the new term
+	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to create new encryption key"), err)
+	}
+	b.Backend.Logger().Info("installed new encryption key")
+
+	// In HA mode, we need to an upgrade path for the standby instances
+	if b.Core.ha != nil && b.Core.KeyRotateGracePeriod() > 0 {
+		// Create the upgrade path to the new term
+		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
+			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
+		}
+
+		// Schedule the destroy of the upgrade path
+		time.AfterFunc(b.Core.KeyRotateGracePeriod(), func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", b.Core.KeyRotateGracePeriod())
+			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
+				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
+			}
+		})
+	}
+
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
+	}); err != nil {
+		b.Core.logger.Error("error saving keyring canary", "error", err)
+		return errwrap.Wrap(errors.New("failed to save keyring canary"), err)
+	}
+
+	return nil
 }
 
 func sanitizePath(path string) string {
@@ -4338,6 +4417,25 @@ Enable a new audit backend or disable an existing backend.
 		`,
 	},
 
+	"rotate-config": {
+		"Configures settings related to the backend encryption key management.",
+		`
+		Configures settings related to the automatic rotation of the backend encryption key.
+		`,
+	},
+
+	"rotation-enabled": {
+		"Whether automatic rotation is enabled.",
+		"",
+	},
+	"rotation-max-operations": {
+		"The number of encryption operations performed before the barrier key is automatically rotated.",
+		"",
+	},
+	"rotation-interval": {
+		"How long after installation of an active key term that the key will be automatically rotated.",
+		"",
+	},
 	"rotate": {
 		"Rotates the backend encryption key used to persist data.",
 		`
@@ -4581,6 +4679,10 @@ This path responds to the following HTTP methods.
 	"activity-query": {
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
+	},
+	"activity-monthly": {
+		"Count of active clients so far this month.",
+		"Count of active clients so far this month.",
 	},
 	"activity-config": {
 		"Control the collection and reporting of client counts.",

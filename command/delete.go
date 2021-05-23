@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*DeleteCommand)(nil)
-var _ cli.CommandAutocomplete = (*DeleteCommand)(nil)
+var (
+	_ cli.Command             = (*DeleteCommand)(nil)
+	_ cli.CommandAutocomplete = (*DeleteCommand)(nil)
+)
 
 type DeleteCommand struct {
 	*BaseCommand

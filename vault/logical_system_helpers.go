@@ -55,18 +55,6 @@ var (
 		}
 	}
 
-	pathLicenseRead = func(b *SystemBackend) framework.OperationFunc {
-		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-			return nil, nil
-		}
-	}
-
-	pathLicenseUpdate = func(b *SystemBackend) framework.OperationFunc {
-		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-			return nil, nil
-		}
-	}
-
 	entPaths = func(b *SystemBackend) []*framework.Path {
 		return []*framework.Path{
 			{
@@ -92,10 +80,6 @@ var (
 	}
 
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
-
-	wrapHandleRaftRemovePeer = func(b *SystemBackend) framework.OperationFunc {
-		return b.handleRaftRemovePeerUpdate()
-	}
 )
 
 // tuneMount is used to set config on a mount point

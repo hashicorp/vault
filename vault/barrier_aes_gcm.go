@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -31,6 +30,9 @@ const (
 
 	// termSize the number of bytes used for the key term.
 	termSize = 4
+
+	autoRotateCheckInterval = 5 * time.Minute
+	legacyRotateReason      = "legacy rotation"
 )
 
 // Versions of the AESGCM storage methodology
@@ -46,9 +48,11 @@ type barrierInit struct {
 }
 
 // Validate AESGCMBarrier satisfies SecurityBarrier interface
-var _ SecurityBarrier = &AESGCMBarrier{}
-
-var barrierEncryptsMetric = []string{"barrier", "estimated_encryptions"}
+var (
+	_                      SecurityBarrier = &AESGCMBarrier{}
+	barrierEncryptsMetric                  = []string{"barrier", "estimated_encryptions"}
+	barrierRotationsMetric                 = []string{"barrier", "auto_rotation"}
+)
 
 // AESGCMBarrier is a SecurityBarrier implementation that uses the AES
 // cipher core and the Galois Counter Mode block mode. It defaults to
@@ -76,6 +80,30 @@ type AESGCMBarrier struct {
 	currentAESGCMVersionByte byte
 
 	initialized atomic.Bool
+
+	UnaccountedEncryptions *atomic.Int64
+	// Used only for testing
+	RemoteEncryptions     *atomic.Int64
+	totalLocalEncryptions *atomic.Int64
+}
+
+func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
+	if b.keyring == nil {
+		return kc, errors.New("keyring not yet present")
+	}
+	return b.keyring.rotationConfig.Clone(), nil
+}
+
+func (b *AESGCMBarrier) SetRotationConfig(ctx context.Context, rotConfig KeyRotationConfig) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+	rotConfig.Sanitize()
+	if !rotConfig.Equals(b.keyring.rotationConfig) {
+		b.keyring.rotationConfig = rotConfig
+
+		return b.persistKeyring(ctx, b.keyring)
+	}
+	return nil
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
@@ -86,6 +114,9 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 		sealed:                   true,
 		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
+		UnaccountedEncryptions:   atomic.NewInt64(0),
+		RemoteEncryptions:        atomic.NewInt64(0),
+		totalLocalEncryptions:    atomic.NewInt64(0),
 	}
 	return b, nil
 }
@@ -100,7 +131,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 	// Read the keyring file
 	keys, err := b.backend.List(ctx, keyringPrefix)
 	if err != nil {
-		return false, errwrap.Wrapf("failed to check for initialization: {{err}}", err)
+		return false, fmt.Errorf("failed to check for initialization: %w", err)
 	}
 	if strutil.StrListContains(keys, "keyring") {
 		b.initialized.Store(true)
@@ -110,7 +141,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 	// Fallback, check for the old sentinel file
 	out, err := b.backend.Get(ctx, barrierInitPath)
 	if err != nil {
-		return false, errwrap.Wrapf("failed to check for initialization: {{err}}", err)
+		return false, fmt.Errorf("failed to check for initialization: %w", err)
 	}
 	b.initialized.Store(out != nil)
 	return out != nil, nil
@@ -135,7 +166,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	// Generate encryption key
 	encrypt, err := b.GenerateKey(reader)
 	if err != nil {
-		return errwrap.Wrapf("failed to generate encryption key: {{err}}", err)
+		return fmt.Errorf("failed to generate encryption key: %w", err)
 	}
 
 	// Create a new keyring, install the keys
@@ -147,7 +178,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 		Value:   encrypt,
 	})
 	if err != nil {
-		return errwrap.Wrapf("failed to create keyring: {{err}}", err)
+		return fmt.Errorf("failed to create keyring: %w", err)
 	}
 
 	err = b.persistKeyring(ctx, keyring)
@@ -166,7 +197,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 			Value: sealKey,
 		})
 		if err != nil {
-			return errwrap.Wrapf("failed to store new seal key: {{err}}", err)
+			return fmt.Errorf("failed to store new seal key: %w", err)
 		}
 	}
 
@@ -180,7 +211,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	keyringBuf, err := keyring.Serialize()
 	defer memzero(keyringBuf)
 	if err != nil {
-		return errwrap.Wrapf("failed to serialize keyring: {{err}}", err)
+		return fmt.Errorf("failed to serialize keyring: %w", err)
 	}
 
 	// Create the AES-GCM
@@ -201,7 +232,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Value: value,
 	}
 	if err := b.backend.Put(ctx, pe); err != nil {
-		return errwrap.Wrapf("failed to persist keyring: {{err}}", err)
+		return fmt.Errorf("failed to persist keyring: %w", err)
 	}
 
 	// Serialize the master key value
@@ -213,7 +244,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	keyBuf, err := key.Serialize()
 	defer memzero(keyBuf)
 	if err != nil {
-		return errwrap.Wrapf("failed to serialize master key: {{err}}", err)
+		return fmt.Errorf("failed to serialize master key: %w", err)
 	}
 
 	// Encrypt the master key
@@ -222,7 +253,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	if err != nil {
 		return err
 	}
-	value, err = b.encrypt(masterKeyPath, activeKey.Term, aead, keyBuf)
+	value, err = b.encryptTracked(masterKeyPath, activeKey.Term, aead, keyBuf)
 	if err != nil {
 		return err
 	}
@@ -233,7 +264,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Value: value,
 	}
 	if err := b.backend.Put(ctx, pe); err != nil {
-		return errwrap.Wrapf("failed to persist master key: {{err}}", err)
+		return fmt.Errorf("failed to persist master key: %w", err)
 	}
 	return nil
 }
@@ -290,7 +321,7 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 	// Read in the keyring
 	out, err := b.backend.Get(ctx, keyringPath)
 	if err != nil {
-		return errwrap.Wrapf("failed to check for keyring: {{err}}", err)
+		return fmt.Errorf("failed to check for keyring: %w", err)
 	}
 
 	// Ensure that the keyring exists. This should never happen,
@@ -315,10 +346,19 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 		return err
 	}
 
-	// Recover the keyring
-	keyring, err := DeserializeKeyring(plain)
+	// Reset enc. counters, this may be a leadership change
+	b.totalLocalEncryptions.Store(0)
+	b.totalLocalEncryptions.Store(0)
+	b.UnaccountedEncryptions.Store(0)
+	b.RemoteEncryptions.Store(0)
+
+	return b.recoverKeyring(plain)
+}
+
+func (b *AESGCMBarrier) recoverKeyring(plaintext []byte) error {
+	keyring, err := DeserializeKeyring(plaintext)
 	if err != nil {
-		return errwrap.Wrapf("keyring deserialization failed: {{err}}", err)
+		return fmt.Errorf("keyring deserialization failed: %w", err)
 	}
 
 	// Setup the keyring and finish
@@ -334,7 +374,7 @@ func (b *AESGCMBarrier) ReloadMasterKey(ctx context.Context) error {
 	// Read the masterKeyPath upgrade
 	out, err := b.Get(ctx, masterKeyPath)
 	if err != nil {
-		return errwrap.Wrapf("failed to read master key path: {{err}}", err)
+		return fmt.Errorf("failed to read master key path: %w", err)
 	}
 
 	// The masterKeyPath could be missing (backwards incompatible),
@@ -350,7 +390,7 @@ func (b *AESGCMBarrier) ReloadMasterKey(ctx context.Context) error {
 
 	out, err = b.lockSwitchedGet(ctx, masterKeyPath, false)
 	if err != nil {
-		return errwrap.Wrapf("failed to read master key path: {{err}}", err)
+		return fmt.Errorf("failed to read master key path: %w", err)
 	}
 
 	if out == nil {
@@ -361,7 +401,7 @@ func (b *AESGCMBarrier) ReloadMasterKey(ctx context.Context) error {
 	key, err := DeserializeKey(out.Value)
 	memzero(out.Value)
 	if err != nil {
-		return errwrap.Wrapf("failed to deserialize key: {{err}}", err)
+		return fmt.Errorf("failed to deserialize key: %w", err)
 	}
 
 	// Check if the master key is the same
@@ -396,7 +436,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	// Read in the keyring
 	out, err := b.backend.Get(ctx, keyringPath)
 	if err != nil {
-		return errwrap.Wrapf("failed to check for keyring: {{err}}", err)
+		return fmt.Errorf("failed to check for keyring: %w", err)
 	}
 	if out != nil {
 		// Verify the term is always just one
@@ -416,21 +456,20 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 		}
 
 		// Recover the keyring
-		keyring, err := DeserializeKeyring(plain)
+		err = b.recoverKeyring(plain)
 		if err != nil {
-			return errwrap.Wrapf("keyring deserialization failed: {{err}}", err)
+			return fmt.Errorf("keyring deserialization failed: %w", err)
 		}
 
-		// Setup the keyring and finish
-		b.keyring = keyring
 		b.sealed = false
+
 		return nil
 	}
 
 	// Read the barrier initialization key
 	out, err = b.backend.Get(ctx, barrierInitPath)
 	if err != nil {
-		return errwrap.Wrapf("failed to check for initialization: {{err}}", err)
+		return fmt.Errorf("failed to check for initialization: %w", err)
 	}
 	if out == nil {
 		return ErrBarrierNotInit
@@ -471,7 +510,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 		Value:   init.Key,
 	})
 	if err != nil {
-		return errwrap.Wrapf("failed to create keyring: {{err}}", err)
+		return fmt.Errorf("failed to create keyring: %w", err)
 	}
 	if err := b.persistKeyring(ctx, keyring); err != nil {
 		return err
@@ -479,12 +518,13 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 
 	// Delete the old barrier entry
 	if err := b.backend.Delete(ctx, barrierInitPath); err != nil {
-		return errwrap.Wrapf("failed to delete barrier init file: {{err}}", err)
+		return fmt.Errorf("failed to delete barrier init file: %w", err)
 	}
 
 	// Set the vault as unsealed
 	b.keyring = keyring
 	b.sealed = false
+
 	return nil
 }
 
@@ -504,7 +544,7 @@ func (b *AESGCMBarrier) Seal() error {
 
 // Rotate is used to create a new encryption key. All future writes
 // should use the new key, while old values should still be decryptable.
-func (b *AESGCMBarrier) Rotate(ctx context.Context, reader io.Reader) (uint32, error) {
+func (b *AESGCMBarrier) Rotate(ctx context.Context, randomSource io.Reader) (uint32, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
 	if b.sealed {
@@ -512,9 +552,9 @@ func (b *AESGCMBarrier) Rotate(ctx context.Context, reader io.Reader) (uint32, e
 	}
 
 	// Generate a new key
-	encrypt, err := b.GenerateKey(reader)
+	encrypt, err := b.GenerateKey(randomSource)
 	if err != nil {
-		return 0, errwrap.Wrapf("failed to generate encryption key: {{err}}", err)
+		return 0, fmt.Errorf("failed to generate encryption key: %w", err)
 	}
 
 	// Get the next term
@@ -528,7 +568,7 @@ func (b *AESGCMBarrier) Rotate(ctx context.Context, reader io.Reader) (uint32, e
 		Value:   encrypt,
 	})
 	if err != nil {
-		return 0, errwrap.Wrapf("failed to add new encryption key: {{err}}", err)
+		return 0, fmt.Errorf("failed to add new encryption key: %w", err)
 	}
 
 	// Persist the new keyring
@@ -536,8 +576,14 @@ func (b *AESGCMBarrier) Rotate(ctx context.Context, reader io.Reader) (uint32, e
 		return 0, err
 	}
 
+	// Clear encryption tracking
+	b.RemoteEncryptions.Store(0)
+	b.totalLocalEncryptions.Store(0)
+	b.UnaccountedEncryptions.Store(0)
+
 	// Swap the keyrings
 	b.keyring = newKeyring
+
 	return newTerm, nil
 }
 
@@ -567,7 +613,7 @@ func (b *AESGCMBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
 	}
 
 	key := fmt.Sprintf("%s%d", keyringUpgradePrefix, prevTerm)
-	value, err := b.encrypt(key, prevTerm, primary, buf)
+	value, err := b.encryptTracked(key, prevTerm, primary, buf)
 	b.l.RUnlock()
 	if err != nil {
 		return err
@@ -644,7 +690,7 @@ func (b *AESGCMBarrier) CheckUpgrade(ctx context.Context) (bool, uint32, error) 
 	// Update the keyring
 	newKeyring, err := b.keyring.AddKey(key)
 	if err != nil {
-		return false, 0, errwrap.Wrapf("failed to add new encryption key: {{err}}", err)
+		return false, 0, fmt.Errorf("failed to add new encryption key: %w", err)
 	}
 	b.keyring = newKeyring
 
@@ -668,6 +714,7 @@ func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 	info := &KeyInfo{
 		Term:        int(term),
 		InstallTime: key.InstallTime,
+		Encryptions: b.encryptions(),
 	}
 	return info, nil
 }
@@ -748,7 +795,7 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *logical.StorageEntry) er
 }
 
 func (b *AESGCMBarrier) putInternal(ctx context.Context, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
-	value, err := b.encrypt(entry.Key, term, primary, entry.Value)
+	value, err := b.encryptTracked(entry.Key, term, primary, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -818,7 +865,7 @@ func (b *AESGCMBarrier) lockSwitchedGet(ctx context.Context, key string, getLock
 	// Decrypt the ciphertext
 	plain, err := b.decrypt(key, gcm, pe.Value)
 	if err != nil {
-		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
+		return nil, fmt.Errorf("decryption failed: %w", err)
 	}
 
 	// Wrap in a logical entry
@@ -897,7 +944,7 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 	// Create the AES cipher
 	aesCipher, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create cipher: {{err}}", err)
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	// Create the GCM mode AEAD
@@ -934,8 +981,6 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 	if n != len(nonce) {
 		return nil, errors.New("unable to read enough random bytes to fill gcm nonce")
 	}
-
-	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
 
 	// Seal the output
 	switch b.currentAESGCMVersionByte {
@@ -986,7 +1031,7 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 }
 
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
-func (b *AESGCMBarrier) Encrypt(_ context.Context, key string, plaintext []byte) ([]byte, error) {
+func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
 	if b.sealed {
 		b.l.RUnlock()
@@ -1000,7 +1045,7 @@ func (b *AESGCMBarrier) Encrypt(_ context.Context, key string, plaintext []byte)
 		return nil, err
 	}
 
-	ciphertext, err := b.encrypt(key, term, primary, plaintext)
+	ciphertext, err := b.encryptTracked(key, term, primary, plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -1034,7 +1079,7 @@ func (b *AESGCMBarrier) Decrypt(_ context.Context, key string, ciphertext []byte
 	// Decrypt the ciphertext
 	plain, err := b.decrypt(key, gcm, ciphertext)
 	if err != nil {
-		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
+		return nil, fmt.Errorf("decryption failed: %w", err)
 	}
 
 	return plain, nil
@@ -1048,4 +1093,129 @@ func (b *AESGCMBarrier) Keyring() (*Keyring, error) {
 	}
 
 	return b.keyring.Clone(), nil
+}
+
+func (b *AESGCMBarrier) ConsumeEncryptionCount(consumer func(int64) error) error {
+	if b.keyring != nil {
+		// Lock to prevent replacement of the key while we consume the encryptions
+		b.l.RLock()
+		defer b.l.RUnlock()
+
+		c := b.UnaccountedEncryptions.Load()
+		err := consumer(c)
+		if err == nil && c > 0 {
+			// Consumer succeeded, remove those from local encryptions
+			b.UnaccountedEncryptions.Sub(c)
+		}
+		return err
+	}
+	return nil
+}
+
+func (b *AESGCMBarrier) AddRemoteEncryptions(encryptions int64) {
+	// For rollup and persistence
+	b.UnaccountedEncryptions.Add(encryptions)
+	// For testing
+	b.RemoteEncryptions.Add(encryptions)
+}
+
+func (b *AESGCMBarrier) encryptTracked(path string, term uint32, gcm cipher.AEAD, buf []byte) ([]byte, error) {
+	ct, err := b.encrypt(path, term, gcm, buf)
+	if err != nil {
+		return nil, err
+	}
+	// Increment the local encryption count, and track metrics
+	b.UnaccountedEncryptions.Add(1)
+	b.totalLocalEncryptions.Add(1)
+	metrics.IncrCounterWithLabels(barrierEncryptsMetric, 1, termLabel(term))
+
+	return ct, nil
+}
+
+// UnaccountedEncryptions returns the number of encryptions made on the local instance only for the current key term
+func (b *AESGCMBarrier) TotalLocalEncryptions() int64 {
+	return b.totalLocalEncryptions.Load()
+}
+
+func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context) (string, error) {
+	const oneYear = 24 * 365 * time.Hour
+	reason, err := func() (string, error) {
+		b.l.RLock()
+		defer b.l.RUnlock()
+		if b.keyring != nil {
+			// Rotation Checks
+			var reason string
+
+			rc, err := b.RotationConfig()
+			if err != nil {
+				return "", err
+			}
+
+			if !rc.Disabled {
+				activeKey := b.keyring.ActiveKey()
+				ops := b.encryptions()
+				switch {
+				case activeKey.Encryptions == 0 && !activeKey.InstallTime.IsZero() && time.Since(activeKey.InstallTime) > oneYear:
+					reason = legacyRotateReason
+				case ops > rc.MaxOperations:
+					reason = "reached max operations"
+				case rc.Interval > 0 && time.Since(activeKey.InstallTime) > rc.Interval:
+					reason = "rotation interval reached"
+				}
+			}
+			return reason, nil
+		}
+		return "", nil
+	}()
+	if err != nil {
+		return "", err
+	}
+	if reason != "" {
+		return reason, nil
+	}
+
+	b.l.Lock()
+	defer b.l.Unlock()
+	if b.keyring != nil {
+		err := b.persistEncryptions(ctx)
+		if err != nil {
+			return "", err
+		}
+	}
+	return reason, nil
+}
+
+// Must be called with lock held
+func (b *AESGCMBarrier) persistEncryptions(ctx context.Context) error {
+	if !b.sealed {
+		// Encryption count persistence
+		upe := b.UnaccountedEncryptions.Load()
+		if upe > 0 {
+			activeKey := b.keyring.ActiveKey()
+			// Move local (unpersisted) encryptions to the key and persist.  This prevents us from needing to persist if
+			// there has been no activity. Since persistence performs an encryption, perversely we zero out after
+			// persistence and add 1 to the count to avoid this operation guaranteeing we need another
+			// autoRotateCheckInterval later.
+			newEncs := upe + 1
+			activeKey.Encryptions += uint64(newEncs)
+			newKeyring := b.keyring.Clone()
+			err := b.persistKeyring(ctx, newKeyring)
+			if err != nil {
+				return err
+			}
+			b.UnaccountedEncryptions.Sub(newEncs)
+		}
+	}
+	return nil
+}
+
+// Mostly for testing, returns the total number of encryption operations performed on the active term
+func (b *AESGCMBarrier) encryptions() int64 {
+	if b.keyring != nil {
+		activeKey := b.keyring.ActiveKey()
+		if activeKey != nil {
+			return b.UnaccountedEncryptions.Load() + int64(activeKey.Encryptions)
+		}
+	}
+	return 0
 }

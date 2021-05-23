@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: AWS - Auth Methods
-sidebar_title: AWS
 description: The aws auth method allows automated authentication of AWS entities.
 ---
 
@@ -151,7 +150,7 @@ tag on the instance is deleted for some reason, authentication fails.
 The role tags can be generated at will by an operator with appropriate API
 access. They are HMAC-signed by a per-role key stored within the method, allowing
 the method to verify the authenticity of a found role tag and ensure that it has
-not been tampered with. There is also a mechanism to blacklist role tags if one
+not been tampered with. There is also a mechanism to deny list role tags if one
 has been found to be distributed outside of its intended set of machines.
 
 ## IAM Authentication Inferences
@@ -354,8 +353,8 @@ the intended client will be unable to authenticate and can raise an alert for
 investigation.
 
 During the first login, the method stores the instance ID that authenticated
-in a `whitelist`. One method of operation of the method is to disallow any
-authentication attempt for an instance ID contained in the whitelist, using the
+in a `accesslist`. One method of operation of the method is to disallow any
+authentication attempt for an instance ID contained in the access list, using the
 `disallow_reauthentication` option on the role, meaning that an instance is
 allowed to login only once. However, this has consequences for token rotation,
 as it means that once a token has expired, subsequent authentication attempts
@@ -365,13 +364,13 @@ turned off using `disallow_reauthentication` parameter on the registered role.
 In the default method of operation, the method will return a unique nonce
 during the first authentication attempt, as part of auth `metadata`. Clients
 should present this `nonce` for subsequent login attempts and it should match
-the `nonce` cached at the identity-whitelist entry at the method. Since only
+the `nonce` cached at the identity-accesslist entry at the method. Since only
 the original client knows the `nonce`, only the original client is allowed to
-reauthenticate. (This is the reason that this is a whitelist rather than a
-blacklist; by default, it's keeping track of clients allowed to reauthenticate,
+reauthenticate. (This is the reason that this is a accesslist rather than a
+deny list; by default, it's keeping track of clients allowed to reauthenticate,
 rather than those that are not.). Clients can choose to provide a `nonce` even
 for the first login attempt, in which case the provided `nonce` will be tied to
-the cached identity-whitelist entry. It is recommended to use a strong `nonce`
+the cached identity-accesslist entry. It is recommended to use a strong `nonce`
 value in this case.
 
 It is up to the client to behave correctly with respect to the nonce; if the
@@ -386,7 +385,7 @@ are immutable and single-boot anyways, and in conjunction with a high max TTL,
 reauthentication may not be needed (and if it is, the instance can simply be
 shut down and allow ASG to start a new one).
 
-In both cases, entries can be removed from the whitelist by instance ID,
+In both cases, entries can be removed from the accesslist by instance ID,
 allowing reauthentication by a client if the nonce is lost (or not used) and an
 operator approves the process.
 
@@ -442,8 +441,8 @@ Note: This only applies to the ec2 auth method.
 If an EC2 instance loses its client nonce (due to a reboot, a stop/start of the
 client, etc.), subsequent login attempts will not succeed. If the client nonce
 is lost, normally the only option is to delete the entry corresponding to the
-instance ID from the identity `whitelist` in the method. This can be done via
-the `auth/aws/identity-whitelist/<instance_id>` endpoint. This allows a new
+instance ID from the identity `accesslist` in the method. This can be done via
+the `auth/aws/identity-accesslist/<instance_id>` endpoint. This allows a new
 client nonce to be accepted by the method during the next login request.
 
 Under certain circumstances there is another useful setting. When the instance
@@ -497,7 +496,7 @@ option is set to `false` on the role, a value of `true` in the role tag takes
 effect; however, if the option is set to `true` on the role, a value set in the
 role tag has no effect.
 
-### Blacklisting Role Tags
+### Deny listing Role Tags
 
 Note: this only applies to the ec2 auth method or the iam auth method
 when inferencing is used.
@@ -507,32 +506,32 @@ instances using that role, should have any particular role tag; that is purely u
 to the operator. Although role tags are only restrictive (a tag cannot escalate
 privileges above what is set on its role), if a role tag is found to have been
 used incorrectly, and the administrator wants to ensure that the role tag has no
-further effect, the role tag can be placed on a `blacklist` via the endpoint
-`auth/aws/roletag-blacklist/<role_tag>`. Note that this will not invalidate the
+further effect, the role tag can be placed on a `deny list` via the endpoint
+`auth/aws/roletag-denylist/<role_tag>`. Note that this will not invalidate the
 tokens that were already issued; this only blocks any further login requests from
-those instances that have the blacklisted tag attached to them.
+those instances that have the deny listed tag attached to them.
 
-### Expiration Times and Tidying of `blacklist` and `whitelist` Entries
+### Expiration Times and Tidying of `denylist` and `accesslist` Entries
 
-The expired entries in both identity `whitelist` and role tag `blacklist` are
+The expired entries in both identity `accesslist` and role tag `denylist` are
 deleted automatically. The entries in both of these lists contain an expiration
 time which is dynamically determined by three factors: `max_ttl` set on the role,
 `max_ttl` set on the role tag, and `max_ttl` value of the method mount. The
 least of these three dictates the maximum TTL of the issued token, and
 correspondingly will be set as the expiration times of these entries.
 
-The endpoints `auth/aws/tidy/identity-whitelist` and `auth/aws/tidy/roletag-blacklist` are
+The endpoints `auth/aws/tidy/identity-accesslist` and `auth/aws/tidy/roletag-denylist` are
 provided to clean up the entries present in these lists. These endpoints allow
 defining a safety buffer, such that an entry must not only be expired, but be
 past expiration by the amount of time dictated by the safety buffer in order
 to actually remove the entry.
 
 Automatic deletion of expired entries is performed by the periodic function
-of the method. This function does the tidying of both blacklist role tags
-and whitelist identities. Periodic tidying is activated by default and will
+of the method. This function does the tidying of both access list role tags
+and access list identities. Periodic tidying is activated by default and will
 have a safety buffer of 72 hours, meaning only those entries are deleted which
 were expired before 72 hours from when the tidy operation is being performed.
-This can be configured via `config/tidy/roletag-blacklist` and `config/tidy/identity-whitelist`
+This can be configured via `config/tidy/roletag-denylist` and `config/tidy/identity-accesslist`
 endpoints.
 
 ### Varying Public Certificates

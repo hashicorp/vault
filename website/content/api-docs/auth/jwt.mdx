@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: JWT/OIDC - Auth Methods - HTTP API
-sidebar_title: JWT/OIDC
 description: |-
   This is the API documentation for the Vault JWT/OIDC authentication
   method plugin.
@@ -20,7 +19,7 @@ at any location, please update your API calls accordingly.
 ## Configure
 
 Configures the validation information to be used globally across all roles. One
-(and only one) of `oidc_discovery_url` and `jwt_validation_pubkeys` must be
+(and only one) of `oidc_discovery_url`, `jwks_url`, and `jwt_validation_pubkeys` must be
 set.
 
 | Method | Path               |
@@ -40,9 +39,9 @@ set.
 - `jwks_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.
 - `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "jwks_url" or "oidc_discovery_url".
 - `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
-- `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256]. ([Available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/coreos/go-oidc/jose.go#L7) + EdDSA)
+- `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256] for OIDC roles. Defaults to all [available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/hashicorp/cap/jwt/algs.go#L12-L21) for JWT roles.
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
-- `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include Azure; the options are described in each provider's section in [OIDC Provider Setup](/docs/auth/jwt_oidc_providers)
+- `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include: Azure, Google. The options are described in each provider's section in [OIDC Provider Setup](/docs/auth/jwt_oidc_providers).
 - `namespace_in_state` `(bool: true)` - Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.
 
 ### Sample Payload
@@ -114,15 +113,18 @@ entities attempting to login. At least one of the bound values must be set.
 - `user_claim` `(string: <required>)` - The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login. The claim value must be a string.
-- `clock_skew_leeway` `(int: <optional>)` - The amount of leeway to add to all claims to
+- `clock_skew_leeway` `(int or string: <optional>)` - The amount of leeway to add to all claims to
   account for clock skew, in seconds. Defaults to `60` seconds if set to `0` and can be disabled
-  if set to `-1`. Only applicable with "jwt" roles.
-- `expiration_leeway` `(int: <optional>)` - The amount of leeway to add to expiration (`exp`) claims to
+  if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable
+  with "jwt" roles.
+- `expiration_leeway` `(int or string: <optional>)` - The amount of leeway to add to expiration (`exp`) claims to
   account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
-  if set to `-1`. Only applicable with "jwt" roles.
-- `not_before_leeway` `(int: <optional>)` - The amount of leeway to add to not before (`nbf`) claims to
+  if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable
+  with "jwt" roles.
+- `not_before_leeway` `(int or string: <optional>)` - The amount of leeway to add to not before (`nbf`) claims to
   account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
-  if set to `-1`. Only applicable with "jwt" roles.
+  if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable
+  with "jwt" roles.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`
   claim matches this value.
 - `bound_claims` `(map: <optional>)` - If set, a map of claims (keys) to match against respective claim values (values).
@@ -148,6 +150,10 @@ entities attempting to login. At least one of the bound values must be set.
 - `verbose_oidc_logging` `(bool: false)` - Log received OIDC tokens and claims when debug-level
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
+- `max_age` `(int or string: <optional>)` - Specifies the allowable elapsed time in seconds since the last
+  time the user was actively authenticated with the OIDC provider. If set, the `max_age` request parameter
+  will be included in the authentication request. See [AuthRequest](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
+  for additional details. Accepts an integer number of seconds, or a Go duration format string.
 
 @include 'tokenfields.mdx'
 

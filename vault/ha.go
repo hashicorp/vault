@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
@@ -401,7 +400,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // active.
 func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stopCh chan struct{}) {
 	var manualStepDown bool
-	var firstIteration = true
+	firstIteration := true
 	for {
 		// Check for a shutdown
 		select {
@@ -728,7 +727,6 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 					default:
 						c.logger.Debug("new leader found, but still processing previous leader change")
 					}
-
 				}
 				atomic.AddInt32(lopCount, -1)
 			}()
@@ -829,7 +827,7 @@ func (c *Core) checkKeyUpgrades(ctx context.Context) error {
 
 func (c *Core) reloadMasterKey(ctx context.Context) error {
 	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
-		return errwrap.Wrapf("error reloading master key: {{err}}", err)
+		return fmt.Errorf("error reloading master key: %w", err)
 	}
 	return nil
 }
@@ -855,7 +853,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 	case seal.StoredKeysNotSupported:
 		keyring, err := c.barrier.Keyring()
 		if err != nil {
-			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
+			return fmt.Errorf("failed to update seal access: %w", err)
 		}
 		shamirKey = keyring.masterKey
 	}
@@ -864,23 +862,23 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
 	if err := c.checkKeyUpgrades(ctx); err != nil {
-		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
+		return fmt.Errorf("error checking for key upgrades: %w", err)
 	}
 
 	if err := c.reloadMasterKey(ctx); err != nil {
-		return errwrap.Wrapf("error reloading master key: {{err}}", err)
+		return fmt.Errorf("error reloading master key: %w", err)
 	}
 
 	if err := c.barrier.ReloadKeyring(ctx); err != nil {
-		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
+		return fmt.Errorf("error reloading keyring: %w", err)
 	}
 
 	if err := c.reloadShamirKey(ctx); err != nil {
-		return errwrap.Wrapf("error reloading shamir kek key: {{err}}", err)
+		return fmt.Errorf("error reloading shamir kek key: %w", err)
 	}
 
 	if err := c.scheduleUpgradeCleanup(ctx); err != nil {
-		return errwrap.Wrapf("error scheduling upgrade cleanup: {{err}}", err)
+		return fmt.Errorf("error scheduling upgrade cleanup: %w", err)
 	}
 
 	return nil
@@ -892,7 +890,7 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 	// List the upgrades
 	upgrades, err := c.barrier.List(ctx, keyringUpgradePrefix)
 	if err != nil {
-		return errwrap.Wrapf("failed to list upgrades: {{err}}", err)
+		return fmt.Errorf("failed to list upgrades: %w", err)
 	}
 
 	// Nothing to do if no upgrades

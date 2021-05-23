@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -26,7 +25,7 @@ import (
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, keyBits)
 	if err != nil {
-		return "", "", errwrap.Wrapf("error generating RSA key-pair: {{err}}", err)
+		return "", "", fmt.Errorf("error generating RSA key-pair: %w", err)
 	}
 
 	privateKeyRsa = string(pem.EncodeToMemory(&pem.Block{
@@ -36,7 +35,7 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 
 	sshPublicKey, err := ssh.NewPublicKey(privateKey.Public())
 	if err != nil {
-		return "", "", errwrap.Wrapf("error generating RSA key-pair: {{err}}", err)
+		return "", "", fmt.Errorf("error generating RSA key-pair: %w", err)
 	}
 	publicKeyRsa = "ssh-rsa " + base64.StdEncoding.EncodeToString(sshPublicKey.Marshal())
 	return
@@ -64,7 +63,7 @@ func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, usern
 
 	err = comm.Upload(publicKeyFileName, bytes.NewBufferString(dynamicPublicKey), nil)
 	if err != nil {
-		return errwrap.Wrapf("error uploading public key: {{err}}", err)
+		return fmt.Errorf("error uploading public key: %w", err)
 	}
 
 	// Transfer the script required to install or uninstall the key to the remote
@@ -73,14 +72,14 @@ func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, usern
 	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 	err = comm.Upload(scriptFileName, bytes.NewBufferString(installScript), nil)
 	if err != nil {
-		return errwrap.Wrapf("error uploading install script: {{err}}", err)
+		return fmt.Errorf("error uploading install script: %w", err)
 	}
 
 	// Create a session to run remote command that triggers the script to install
 	// or uninstall the key.
 	session, err := comm.NewSession()
 	if err != nil {
-		return errwrap.Wrapf("unable to create SSH Session using public keys: {{err}}", err)
+		return fmt.Errorf("unable to create SSH Session using public keys: %w", err)
 	}
 	if session == nil {
 		return fmt.Errorf("invalid session object")
@@ -118,7 +117,7 @@ func roleContainsIP(ctx context.Context, s logical.Storage, roleName string, ip 
 
 	roleEntry, err := s.Get(ctx, fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
-		return false, errwrap.Wrapf("error retrieving role {{err}}", err)
+		return false, fmt.Errorf("error retrieving role %w", err)
 	}
 	if roleEntry == nil {
 		return false, fmt.Errorf("role %q not found", roleName)

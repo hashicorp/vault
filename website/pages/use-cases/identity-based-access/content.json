@@ -1,4 +1,16 @@
 {
+  "beforeAfterDiagram": {
+    "beforeImage": {
+      "url": "/img/use-cases/identity-based-access/identity-based-access-challenge.png"
+    },
+    "beforeHeadline": "The Challenge",
+    "beforeContent": "With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl",
+    "afterImage": {
+      "url": "/img/use-cases/identity-based-access/identity-based-access-solution.png"
+    },
+    "afterHeadline": "The Solution",
+    "afterContent": "Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"
+  },
   "features": [
     {
       "textSplit": {
@@ -11,7 +23,7 @@
         "google",
         "kubernetes",
         {
-          "url": "https://www.datocms-assets.com/2885/1608658148-nomad.png"
+          "url": "https://www.datocms-assets.com/2885/1619808232-nomad-logomark-color.svg"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1556657783-oktalogo.svg"
@@ -30,7 +42,7 @@
         "textSide": "right"
       },
       "image": {
-        "url": "https://www.datocms-assets.com/2885/1608659415-screenshot-entities.png"
+        "url": "/img/use-cases/identity-based-access/entities.png"
       }
     },
     {
@@ -39,7 +51,7 @@
         "content": "Require multiple Identity Entities or members of Identity Groups to authorize an requested action."
       },
       "image": {
-        "url": "https://www.datocms-assets.com/2885/1608659409-screenshot-control-groups.png"
+        "url": "/img/use-cases/identity-based-access/control-groups.png"
       }
     },
     {
@@ -60,7 +72,7 @@
         "textSide": "right"
       },
       "image": {
-        "url": "https://www.datocms-assets.com/2885/1608659421-screenshot-identity-groups.png"
+        "url": "/img/use-cases/identity-based-access/admin.png"
       }
     },
     {

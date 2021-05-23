@@ -6,13 +6,22 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
+	"time"
 
-	"github.com/hashicorp/go-syslog"
+	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/logutils"
 )
 
 // Levels are the log levels we respond to=o.
 var Levels = []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERR"}
+
+type logWriter struct {
+}
+
+// writer to output date / time in a standard format
+func (writer logWriter) Write(bytes []byte) (int, error) {
+	return fmt.Print(time.Now().Format("2006-01-02T15:04:05.000Z0700") + " " + string(bytes))
+}
 
 // Config is the configuration for this log setup.
 type Config struct {
@@ -23,7 +32,7 @@ type Config struct {
 	Syslog         bool   `json:"syslog"`
 	SyslogFacility string `json:"syslog_facility"`
 	// SyslogName is the progname as it will appear in syslog output (if enabled).
-	SyslogName     string `json:"name"`
+	SyslogName string `json:"name"`
 
 	// Writer is the output where logs should go. If syslog is enabled, data will
 	// be written to writer in addition to syslog.
@@ -32,6 +41,9 @@ type Config struct {
 
 func Setup(config *Config) error {
 	var logOutput io.Writer
+
+	log.SetFlags(0)
+	log.SetOutput(new(logWriter))
 
 	// Setup the default logging
 	logFilter := NewLogFilter()
@@ -60,7 +72,6 @@ func Setup(config *Config) error {
 		logOutput = io.MultiWriter(logFilter)
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logOutput)
 
 	return nil

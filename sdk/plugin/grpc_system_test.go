@@ -154,7 +154,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 			"foo": "bar",
 		},
 		Aliases: []*logical.Alias{
-			&logical.Alias{
+			{
 				MountType:     "logical",
 				MountAccessor: "accessor",
 				Name:          "name",

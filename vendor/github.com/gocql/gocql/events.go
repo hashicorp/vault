@@ -164,60 +164,64 @@ func (s *Session) handleNodeEvent(frames []frame) {
 
 		switch f.change {
 		case "NEW_NODE":
-			s.handleNewNode(f.host, f.port, true)
+			s.handleNewNode(f.host, f.port)
 		case "REMOVED_NODE":
 			s.handleRemovedNode(f.host, f.port)
 		case "MOVED_NODE":
 		// java-driver handles this, not mentioned in the spec
 		// TODO(zariel): refresh token map
 		case "UP":
-			s.handleNodeUp(f.host, f.port, true)
+			s.handleNodeUp(f.host, f.port)
 		case "DOWN":
 			s.handleNodeDown(f.host, f.port)
 		}
 	}
 }
 
-func (s *Session) addNewNode(host *HostInfo) {
-	if s.cfg.filterHost(host) {
-		return
-	}
-
-	host.setState(NodeUp)
-	s.pool.addHost(host)
-	s.policy.AddHost(host)
-}
-
-func (s *Session) handleNewNode(ip net.IP, port int, waitForBinary bool) {
-	if gocqlDebug {
-		Logger.Printf("gocql: Session.handleNewNode: %s:%d\n", ip.String(), port)
-	}
-
-	ip, port = s.cfg.translateAddressPort(ip, port)
-
+func (s *Session) addNewNode(ip net.IP, port int) {
 	// Get host info and apply any filters to the host
 	hostInfo, err := s.hostSource.getHostInfo(ip, port)
 	if err != nil {
 		Logger.Printf("gocql: events: unable to fetch host info for (%s:%d): %v\n", ip, port, err)
 		return
 	} else if hostInfo == nil {
-		// If hostInfo is nil, this host was filtered out by cfg.HostFilter
+		// ignore if it's null because we couldn't find it
 		return
 	}
 
-	if t := hostInfo.Version().nodeUpDelay(); t > 0 && waitForBinary {
+	if t := hostInfo.Version().nodeUpDelay(); t > 0 {
 		time.Sleep(t)
 	}
 
 	// should this handle token moving?
 	hostInfo = s.ring.addOrUpdate(hostInfo)
 
-	s.addNewNode(hostInfo)
+	if !s.cfg.filterHost(hostInfo) {
+		// we let the pool call handleNodeUp to change the host state
+		s.pool.addHost(hostInfo)
+		s.policy.AddHost(hostInfo)
+	}
 
 	if s.control != nil && !s.cfg.IgnorePeerAddr {
 		// TODO(zariel): debounce ring refresh
 		s.hostSource.refreshRing()
 	}
+}
+
+func (s *Session) handleNewNode(ip net.IP, port int) {
+	if gocqlDebug {
+		Logger.Printf("gocql: Session.handleNewNode: %s:%d\n", ip.String(), port)
+	}
+
+	ip, port = s.cfg.translateAddressPort(ip, port)
+
+	// if we already have the host and it's already up, then do nothing
+	host := s.ring.getHost(ip)
+	if host != nil && host.IsUp() {
+		return
+	}
+
+	s.addNewNode(ip, port)
 }
 
 func (s *Session) handleRemovedNode(ip net.IP, port int) {
@@ -232,45 +236,37 @@ func (s *Session) handleRemovedNode(ip net.IP, port int) {
 	if host == nil {
 		host = &HostInfo{connectAddress: ip, port: port}
 	}
-
-	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
-		return
-	}
+	s.ring.removeHost(ip)
 
 	host.setState(NodeDown)
-	s.policy.RemoveHost(host)
-	s.pool.removeHost(ip)
-	s.ring.removeHost(ip)
+	if !s.cfg.filterHost(host) {
+		s.policy.RemoveHost(host)
+		s.pool.removeHost(ip)
+	}
 
 	if !s.cfg.IgnorePeerAddr {
 		s.hostSource.refreshRing()
 	}
 }
 
-func (s *Session) handleNodeUp(eventIp net.IP, eventPort int, waitForBinary bool) {
+func (s *Session) handleNodeUp(eventIp net.IP, eventPort int) {
 	if gocqlDebug {
 		Logger.Printf("gocql: Session.handleNodeUp: %s:%d\n", eventIp.String(), eventPort)
 	}
 
-	ip, _ := s.cfg.translateAddressPort(eventIp, eventPort)
+	ip, port := s.cfg.translateAddressPort(eventIp, eventPort)
 
 	host := s.ring.getHost(ip)
 	if host == nil {
-		// TODO(zariel): avoid the need to translate twice in this
-		// case
-		s.handleNewNode(eventIp, eventPort, waitForBinary)
+		s.addNewNode(ip, port)
 		return
 	}
 
-	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
-		return
-	}
+	host.setState(NodeUp)
 
-	if t := host.Version().nodeUpDelay(); t > 0 && waitForBinary {
-		time.Sleep(t)
+	if !s.cfg.filterHost(host) {
+		s.policy.HostUp(host)
 	}
-
-	s.addNewNode(host)
 }
 
 func (s *Session) handleNodeDown(ip net.IP, port int) {
@@ -283,11 +279,11 @@ func (s *Session) handleNodeDown(ip net.IP, port int) {
 		host = &HostInfo{connectAddress: ip, port: port}
 	}
 
-	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
+	host.setState(NodeDown)
+	if s.cfg.filterHost(host) {
 		return
 	}
 
-	host.setState(NodeDown)
 	s.policy.HostDown(host)
 	s.pool.hostDown(ip)
 }

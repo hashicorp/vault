@@ -38,10 +38,6 @@ var (
 	}
 )
 
-func Partitions(all bool) ([]PartitionStat, error) {
-	return PartitionsWithContext(context.Background(), all)
-}
-
 func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, error) {
 	ret := make([]PartitionStat, 0, _DEFAULT_NUM_MOUNTS)
 
@@ -83,16 +79,8 @@ func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, erro
 	return ret, err
 }
 
-func IOCounters(names ...string) (map[string]IOCountersStat, error) {
-	return IOCountersWithContext(context.Background(), names...)
-}
-
 func IOCountersWithContext(ctx context.Context, names ...string) (map[string]IOCountersStat, error) {
 	return nil, common.ErrNotImplementedError
-}
-
-func Usage(path string) (*UsageStat, error) {
-	return UsageWithContext(context.Background(), path)
 }
 
 func UsageWithContext(ctx context.Context, path string) (*UsageStat, error) {

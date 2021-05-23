@@ -13,13 +13,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -27,18 +28,101 @@ import (
 	"golang.org/x/net/http2"
 )
 
-func raftCluster(t testing.TB) *vault.TestCluster {
+type RaftClusterOpts struct {
+	DisableFollowerJoins           bool
+	InmemCluster                   bool
+	EnableAutopilot                bool
+	PhysicalFactoryConfig          map[string]interface{}
+	DisablePerfStandby             bool
+	EnableResponseHeaderRaftNodeID bool
+}
+
+func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
+	if ropts == nil {
+		ropts = &RaftClusterOpts{}
+	}
+
 	conf := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
+		DisableAutopilot:               !ropts.EnableAutopilot,
+		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 	}
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+
+	opts := vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	}
+	opts.InmemClusterLayers = ropts.InmemCluster
+	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
+	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
+
 	teststorage.RaftBackendSetup(conf, &opts)
+
+	if ropts.DisableFollowerJoins {
+		opts.SetupFunc = nil
+	}
+
 	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_BoltDBMetrics(t *testing.T) {
+	t.Parallel()
+	conf := vault.CoreConfig{}
+	opts := vault.TestClusterOptions{
+		HandlerFunc:            vaulthttp.Handler,
+		NumCores:               1,
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Telemetry: configutil.ListenerTelemetry{
+					UnauthenticatedMetricsAccess: true,
+				},
+			},
+		},
+	}
+
+	teststorage.RaftBackendSetup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	leaderClient := cluster.Cores[0].Client
+
+	// Write a few keys
+	for i := 0; i < 50; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			fmt.Sprintf("foo%d", i): fmt.Sprintf("bar%d", i),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Even though there is a long delay between when we start the node and when we check for these metrics,
+	// the core metrics loop isn't started until postUnseal, which happens after said delay. This means we
+	// need a small artificial delay here as well, otherwise we won't see any metrics emitted.
+	time.Sleep(5 * time.Second)
+	data, err := testhelpers.SysMetricsReq(leaderClient, cluster, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noBoltDBMetrics := true
+	for _, g := range data.Gauges {
+		if strings.HasPrefix(g.Name, "raft_storage.bolt.") {
+			noBoltDBMetrics = false
+			break
+		}
+	}
+
+	if noBoltDBMetrics {
+		t.Fatal("expected to find boltdb metrics being emitted from the raft backend, but there were none")
+	}
 }
 
 func TestRaft_RetryAutoJoin(t *testing.T) {
@@ -94,7 +178,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 func TestRaft_Retry_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -115,7 +199,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leaderAPI,
 			TLSConfig:     leaderCore.TLSConfig,
 			Retry:         true,
@@ -158,7 +242,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 func TestRaft_Join(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -220,7 +304,7 @@ func TestRaft_Join(t *testing.T) {
 
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -261,9 +345,67 @@ func TestRaft_RemovePeer(t *testing.T) {
 	})
 }
 
+func TestRaft_NodeIDHeader(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		ropts         *RaftClusterOpts
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			ropts:         nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			ropts: &RaftClusterOpts{
+				EnableResponseHeaderRaftNodeID: true,
+			},
+			headerPresent: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			cluster := raftCluster(t, tc.ropts)
+			defer cluster.Cleanup()
+
+			for i, c := range cluster.Cores {
+				if c.Core.Sealed() {
+					t.Fatalf("failed to unseal core %d", i)
+				}
+
+				client := c.Client
+				req := client.NewRequest("GET", "/v1/sys/seal-status")
+				resp, err := client.RawRequest(req)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				if resp == nil {
+					t.Fatalf("nil response")
+				}
+
+				rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+				nodeID := c.Core.GetRaftNodeID()
+
+				if tc.headerPresent && rniHeader == "" {
+					t.Fatal("missing 'X-Vault-Raft-Node-ID' header entry in response")
+				}
+				if tc.headerPresent && rniHeader != nodeID {
+					t.Fatalf("got the wrong raft node id. expected %s to equal %s", rniHeader, nodeID)
+				}
+				if !tc.headerPresent && rniHeader != "" {
+					t.Fatal("didn't expect 'X-Vault-Raft-Node-ID' header but it was present anyway")
+				}
+			}
+		})
+	}
+}
+
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -310,7 +452,7 @@ func TestRaft_Configuration(t *testing.T) {
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -322,7 +464,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -400,26 +542,55 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
-	tCases := []struct {
-		Name   string
-		Rekey  bool
-		Rotate bool
-	}{
+	type testCase struct {
+		Name               string
+		Rekey              bool
+		Rotate             bool
+		DisablePerfStandby bool
+	}
+
+	tCases := []testCase{
 		{
-			Name:   "rekey",
-			Rekey:  true,
-			Rotate: false,
+			Name:               "rekey",
+			Rekey:              true,
+			Rotate:             false,
+			DisablePerfStandby: true,
 		},
 		{
-			Name:   "rotate",
-			Rekey:  false,
-			Rotate: true,
+			Name:               "rotate",
+			Rekey:              false,
+			Rotate:             true,
+			DisablePerfStandby: true,
 		},
 		{
-			Name:   "both",
-			Rekey:  true,
-			Rotate: true,
+			Name:               "both",
+			Rekey:              true,
+			Rotate:             true,
+			DisablePerfStandby: true,
 		},
+	}
+
+	if testhelpers.IsEnterprise {
+		tCases = append(tCases, []testCase{
+			{
+				Name:               "rekey-with-perf-standby",
+				Rekey:              true,
+				Rotate:             false,
+				DisablePerfStandby: false,
+			},
+			{
+				Name:               "rotate-with-perf-standby",
+				Rekey:              false,
+				Rotate:             true,
+				DisablePerfStandby: false,
+			},
+			{
+				Name:               "both-with-perf-standby",
+				Rekey:              true,
+				Rotate:             true,
+				DisablePerfStandby: false,
+			},
+		}...)
 	}
 
 	for _, tCase := range tCases {
@@ -428,7 +599,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t)
+			cluster := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -481,11 +652,17 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+
+				testhelpers.EnsureStableActiveNode(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			}
 
 			if tCaseLocal.Rekey {
 				// Rekey
 				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
+
+				testhelpers.EnsureStableActiveNode(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			}
 
 			if tCaseLocal.Rekey {
@@ -520,6 +697,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 
 			testhelpers.EnsureStableActiveNode(t, cluster)
+			testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 			// Write some data so we can make sure we can read it later. This is testing
 			// that we correctly reload the keyring
@@ -550,17 +728,21 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
-	tCases := []struct {
-		Name       string
-		Rekey      bool
-		Rotate     bool
-		ShouldSeal bool
-	}{
+	type testCase struct {
+		Name               string
+		Rekey              bool
+		Rotate             bool
+		ShouldSeal         bool
+		DisablePerfStandby bool
+	}
+
+	tCases := []testCase{
 		{
-			Name:       "rekey",
-			Rekey:      true,
-			Rotate:     false,
-			ShouldSeal: false,
+			Name:               "rekey",
+			Rekey:              true,
+			Rotate:             false,
+			ShouldSeal:         false,
+			DisablePerfStandby: true,
 		},
 		{
 			Name:   "rotate",
@@ -568,7 +750,8 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			Rotate: true,
 			// Rotate writes a new master key upgrade using the new term, which
 			// we can no longer decrypt. We must seal here.
-			ShouldSeal: true,
+			ShouldSeal:         true,
+			DisablePerfStandby: true,
 		},
 		{
 			Name:   "both",
@@ -576,8 +759,39 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			Rotate: true,
 			// If we are moving forward and we have rekeyed and rotated there
 			// isn't any way to restore the latest keys so expect to seal.
-			ShouldSeal: true,
+			ShouldSeal:         true,
+			DisablePerfStandby: true,
 		},
+	}
+
+	if testhelpers.IsEnterprise {
+		tCases = append(tCases, []testCase{
+			{
+				Name:               "rekey-with-perf-standby",
+				Rekey:              true,
+				Rotate:             false,
+				ShouldSeal:         false,
+				DisablePerfStandby: false,
+			},
+			{
+				Name:   "rotate-with-perf-standby",
+				Rekey:  false,
+				Rotate: true,
+				// Rotate writes a new master key upgrade using the new term, which
+				// we can no longer decrypt. We must seal here.
+				ShouldSeal:         true,
+				DisablePerfStandby: false,
+			},
+			{
+				Name:   "both-with-perf-standby",
+				Rekey:  true,
+				Rotate: true,
+				// If we are moving forward and we have rekeyed and rotated there
+				// isn't any way to restore the latest keys so expect to seal.
+				ShouldSeal:         true,
+				DisablePerfStandby: false,
+			},
+		}...)
 	}
 
 	for _, tCase := range tCases {
@@ -586,7 +800,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t)
+			cluster := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -633,6 +847,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			if tCaseLocal.Rekey {
 				// Rekey
 				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
+
+				testhelpers.EnsureStableActiveNode(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			}
 			if tCaseLocal.Rotate {
 				// Set the key clean up to 0 so it's cleaned immediately. This
@@ -647,8 +864,18 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				// Let the key upgrade get deleted
-				time.Sleep(1 * time.Second)
+
+				if !tCaseLocal.DisablePerfStandby {
+					// Without the key upgrade the perf standby nodes will seal and
+					// raft will get into a failure state. Make sure we get the
+					// cluster back into a healthy state before moving forward.
+					testhelpers.WaitForNCoresSealed(t, cluster, 2)
+					testhelpers.EnsureCoresUnsealed(t, cluster)
+					testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
+
+					active := testhelpers.DeriveActiveCore(t, cluster)
+					leaderClient = active.Client
+				}
 			}
 
 			// cache the new barrier keys
@@ -688,6 +915,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			}
 
 			testhelpers.EnsureStableActiveNode(t, cluster)
+			testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 			if tCaseLocal.Rekey {
 				// Restore snapshot, should fail.
 				req = leaderClient.NewRequest("POST", "/v1/sys/storage/raft/snapshot")
@@ -705,6 +933,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				if apiResp.Error() == nil || !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
 					t.Fatalf("expected error verifying hash file, got %v", apiResp.Error())
 				}
+
 			}
 
 			// Restore snapshot force
@@ -725,6 +954,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 			case false:
 				testhelpers.EnsureStableActiveNode(t, cluster)
+				testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 				// Write some data so we can make sure we can read it later. This is testing
 				// that we correctly reload the keyring
@@ -757,7 +987,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t)
+	cluster := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -803,7 +1033,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 	// Cluster 2
 	{
-		cluster2 := raftCluster(t)
+		cluster2 := raftCluster(t, nil)
 		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
@@ -850,7 +1080,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 }
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
-	cluster := raftCluster(b)
+	cluster := raftCluster(b, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -881,7 +1111,7 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 func TestRaft_Join_InitStatus(t *testing.T) {
 	t.Parallel()
 	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, &conf, &opts)

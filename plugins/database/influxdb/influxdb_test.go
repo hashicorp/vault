@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
@@ -59,12 +58,13 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo: "influxdb",
-		ImageTag:  "alpine",
+		ImageTag:  "1.8-alpine",
 		Env: []string{
 			"INFLUXDB_DB=vault",
 			"INFLUXDB_ADMIN_USER=" + c.Username,
 			"INFLUXDB_ADMIN_PASSWORD=" + c.Password,
-			"INFLUXDB_HTTP_AUTH_ENABLED=true"},
+			"INFLUXDB_HTTP_AUTH_ENABLED=true",
+		},
 		Ports: []string{"8086/tcp"},
 	})
 	if err != nil {
@@ -77,12 +77,12 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 		})
 		cli, err := influx.NewHTTPClient(c.apiConfig())
 		if err != nil {
-			return nil, errwrap.Wrapf("error creating InfluxDB client: {{err}}", err)
+			return nil, fmt.Errorf("error creating InfluxDB client: %w", err)
 		}
 		defer cli.Close()
 		_, _, err = cli.Ping(1)
 		if err != nil {
-			return nil, errwrap.Wrapf("error checking cluster status: {{err}}", err)
+			return nil, fmt.Errorf("error checking cluster status: %w", err)
 		}
 
 		return c, nil
@@ -420,20 +420,20 @@ func testCredsExist(address, username, password string) error {
 	}
 	cli, err := influx.NewHTTPClient(conf)
 	if err != nil {
-		return errwrap.Wrapf("Error creating InfluxDB Client: ", err)
+		return fmt.Errorf("Error creating InfluxDB Client: %w", err)
 	}
 	defer cli.Close()
 	_, _, err = cli.Ping(1)
 	if err != nil {
-		return errwrap.Wrapf("error checking server ping: {{err}}", err)
+		return fmt.Errorf("error checking server ping: %w", err)
 	}
 	q := influx.NewQuery("SHOW SERIES ON vault", "", "")
 	response, err := cli.Query(q)
 	if err != nil {
-		return errwrap.Wrapf("error querying influxdb server: {{err}}", err)
+		return fmt.Errorf("error querying influxdb server: %w", err)
 	}
 	if response != nil && response.Error() != nil {
-		return errwrap.Wrapf("error using the correct influx database: {{err}}", response.Error())
+		return fmt.Errorf("error using the correct influx database: %w", response.Error())
 	}
 	return nil
 }

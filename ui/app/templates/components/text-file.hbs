@@ -1,13 +1,13 @@
-{{#unless inputOnly}}
+{{#unless this.inputOnly}}
   <div class="level is-mobile">
     <div class="level-left">
       <label class="is-label" data-test-text-label=true>
-        {{#if label}}
-          {{label}}
-          {{#if helpText}}
+        {{#if this.label}}
+          {{this.label}}
+          {{#if @helpText}}
             <InfoTooltip>
               <span data-test-help-text>
-                {{helpText}}
+                {{@helpText}}
               </span>
             </InfoTooltip>
           {{/if}}
@@ -20,50 +20,57 @@
       <div class="control is-flex">
         <input
           data-test-text-toggle=true
-          id={{concat "useText-" elementId}}
+          id={{concat "useText-" this.elementId}}
           type="checkbox"
-          name={{concat "useText-" elementId}}
+          name={{concat "useText-" this.elementId}}
           class="switch is-rounded is-success is-small"
-          checked={{file.enterAsText}}
-          onchange={{action (toggle "enterAsText" file)}}
+          checked={{@file.enterAsText}}
+          {{on 'change' (toggle "enterAsText" @file)}}
         />
-        <label for={{concat "useText-" elementId}}>
+        <label for={{concat "useText-" this.elementId}}>
           Enter as text
         </label>
       </div>
     </div>
   </div>
 {{/unless}}
-<div class="field">
-  {{#if file.enterAsText}}
-    <div class="control">
+<div class="field text-file box is-fullwidth is-marginless is-shadowless {{if this.inputOnly "is-paddingless"}}" data-test-component="text-file">
+  {{#if @file.enterAsText}}
+    <div class="control has-icon-right">
       <textarea
-        class="textarea"
-        oninput={{action "updateData"}}
+        class="textarea {{unless showValue "masked-font"}}"
+        {{on 'input' this.updateData}}
         data-test-text-file-textarea=true
-      >{{file.value}}</textarea>
+      >{{@file.value}}</textarea>
+      <button 
+        {{on 'click' this.toggleMask}}
+        type="button"
+        class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}"
+        data-test-button>
+        <Icon @glyph={{if showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
+      </button>
     </div>
     <p class="help has-text-grey">
-      {{textareaHelpText}}
+      {{this.textareaHelpText}}
     </p>
   {{else}}
     <div class="control is-expanded">
         <div class="file has-name is-fullwidth">
         <label class="file-label">
-          <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-text-file-input=true>
+          <input class="file-input" type="file" {{on 'change' this.pickedFile}} data-test-text-file-input=true>
           <span class="file-cta button">
             <Icon @glyph="upload" class="has-light-grey-text" />
             Choose a file…
           </span>
           <span class="file-name has-text-grey-dark" data-test-text-file-input-label=true>
-            {{#if file.fileName}}
-              {{file.fileName}}
+            {{#if @file.fileName}}
+              {{@file.fileName}}
             {{else}}
               No file chosen
             {{/if}}
           </span>
-          {{#if file.fileName}}
-            <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear=true>
+          {{#if @file.fileName}}
+            <button type="button" class="file-delete-button" {{on 'click' this.clearFile}} data-test-text-clear=true>
               <Icon @glyph="cancel-circle-outline" />
             </button>
           {{/if}}
@@ -71,7 +78,7 @@
       </div>
     </div>
     <p class="help has-text-grey">
-      {{fileHelpText}}
+      {{this.fileHelpText}}
     </p>
   {{/if}}
 </div>

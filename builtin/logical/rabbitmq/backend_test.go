@@ -80,7 +80,6 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
-
 }
 
 func TestBackend_returnsErrs(t *testing.T) {

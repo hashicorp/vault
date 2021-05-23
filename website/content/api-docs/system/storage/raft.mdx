@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/storage/raft - HTTP API
-sidebar_title: <code>/sys/storage/raft</code>
 description: |-
 
   The `/sys/storage/raft` endpoints are used to manage Vault's Raft storage
@@ -38,6 +37,29 @@ leader node.
 
 - `leader_client_key` `(string: "")` - Client key used to communicate with
   Raft's leader node.
+
+- `leader_tls_servername` `(string: "")` - TLS servername to use when connecting with HTTPS.
+  Should match one of the names in the DNS SANs of the remote server certificate.
+
+- `auto_join` `(string: "")` - Defines any cloud auto-join metadata. If
+  supplied, Vault will attempt to automatically discover peers in addition to what
+  can be provided via 'leader_api_addr'.
+
+- `auto_join_scheme` `(string: "https")` - URI scheme to be used for `auto_join`.
+
+- `auto_join_port` `(int: 8200)` - Port to be used for `auto_join`.
+
+- `non_voter` `(bool: false) (enterprise)` - If set, will make the server not
+  participate in the Raft quorum, and have it only receive the data replication
+  stream. This can be used to add read scalability to a cluster in cases where a
+  high volume of reads to servers are needed. The default is false.
+
+Additionally, the following options are allowed in Vault open-source, but
+relevant functionality is only supported in Vault Enterprise:
+
+- `non_voter` `(bool: false)` - Joins the node to the cluster in non-voter mode
+  which results in Vault's data being replicated to it, but does not contribute
+  to the quorum count.
 
 ### Sample Payload
 
@@ -173,7 +195,7 @@ it. Unavailable if Raft is used exclusively for `ha_storage`.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    -- data-binary @raft.snap
+    --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot
 ```
 
@@ -194,6 +216,6 @@ snapshot data. Unavailable if Raft is used exclusively for `ha_storage`.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data-binary @raft.snap
+    --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
 ```

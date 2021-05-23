@@ -59,7 +59,7 @@ export default function App({ Component, pageProps }) {
         ]}
       />
       {ALERT_BANNER_ACTIVE && (
-        <AlertBanner {...alertBannerData} theme="vault" />
+        <AlertBanner {...alertBannerData} product="vault" />
       )}
       <HashiStackMenu />
       <ProductSubnav />

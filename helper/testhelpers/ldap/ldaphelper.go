@@ -18,7 +18,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		ImageTag:      version,
 		ContainerName: "ldap",
 		Ports:         []string{"389/tcp"},
-		//Env:        []string{"LDAP_DEBUG_LEVEL=384"},
+		// Env:        []string{"LDAP_DEBUG_LEVEL=384"},
 	})
 	if err != nil {
 		t.Fatalf("could not start local LDAP docker container: %s", err)
@@ -54,7 +54,6 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 
 		return docker.NewServiceURLParse(connURL)
 	})
-
 	if err != nil {
 		t.Fatalf("could not start local LDAP docker container: %s", err)
 	}

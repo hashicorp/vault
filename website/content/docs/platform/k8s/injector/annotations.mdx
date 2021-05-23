@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Agent Sidecar Injector Annotations
-sidebar_title: Annotations
 description: This section documents the configurable annotations for the Vault Agent Injector.
 ---
 
@@ -29,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `vault:1.4.2`.
+  not needed. Defaults to `vault:1.7.0`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -72,6 +71,16 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
+
+- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the 
+  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`, 
+  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret, 
+  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`. 
+  For example, if a secret annotation `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/agent-inject-template-file-foobar` would configure the template file.
+
+- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering 
+  secrets if no custom template is defined. Possible values include `map` and `json`. Defaults to `map`.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
@@ -144,7 +153,10 @@ them, optional commands to run, etc.
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
 
 - `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable
-  [caching](/docs/agent/caching). Defaults to `false`.
+  [caching](/docs/agent/caching). In Vault 1.7+ this annotation will also enable
+  a Vault Agent persistent cache. This persistent cache will be shared between the init
+  and sidecar container to reuse tokens and leases retrieved by the init container.
+  Defaults to `false`.
 
 - `vault.hashicorp.com/agent-cache-use-auto-auth-token` - configures Vault Agent cache
   to authenticate on behalf of the requester. Set to `force` to enable. Disabled
@@ -153,14 +165,30 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-cache-listener-port` - configures Vault Agent cache
   listening port. Defaults to `8080`.
 
+- `vault.hashicorp.com/agent-copy-volume-mounts` - copies the mounts from the specified
+  container and mounts them to the Vault Agent containers. The service account volume is
+  ignored.
+
 ## Vault Annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault. For
 example, Vault's address, TLS certificates to use, client parameters such as timeouts,
 etc.
 
-- `vault.hashicorp.com/auth-path` - configures the auth path for the Kubernetes
+- `vault.hashicorp.com/auth-config` - configures additional parameters for the configured
+  authentication method. The name of the config is any unique string after
+  `vault.hashicorp.com/auth-config-`, such as `vault.hashicorp.com/auth-config-role-id-file-path`.
+  This annotation can be reused multiple times to configure multiple settings for the authentication
+  method. Some authentication methods may require additional secrets and should be mounted via the
+  `vault.hashicorp.com/agent-extra-secret` annotation. For a list of valid authentication configurations,
+  see the Vault Agent [auto-auth documentation](/docs/agent/autoauth/methods).
+
+- `vault.hashicorp.com/auth-path` - configures the authentication path for the Kubernetes
   auth method. Defaults to `auth/kubernetes`.
+
+- `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
+  Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent
+  [auto-auth documentation](/docs/agent/autoauth/methods).
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
@@ -184,8 +212,14 @@ etc.
 - `vault.hashicorp.com/log-level` - configures the verbosity of the Vault Agent
   log level. Default is `info`.
 
+- `vault.hashicorp.com/log-format` - configures the log type for Vault Agent. Possible
+  values are `standard` and `json`. Default is `standard`.
+
 - `vault.hashicorp.com/namespace` - configures the Vault Enterprise namespace to
   be used when requesting secrets from Vault.
+
+- `vault.hashicorp.com/proxy-address` - configures the HTTP proxy to use when connecting
+  to a Vault server.
 
 - `vault.hashicorp.com/role` - configures the Vault role used by the Vault Agent
   auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.

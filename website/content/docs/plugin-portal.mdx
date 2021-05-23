@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Plugin Portal
-sidebar_title: Plugin Portal
 description: A curated collection of official, partner, and community Vault plugins.
 ---
 
@@ -97,12 +96,18 @@ exists within the Vault repository, the plugin can be built as instructed in
 
 Partner plugins are developed by HashiCorp partners and are owned and maintained by the technology partner. HashiCorp has verified the authenticity of the partner’s plugin, and that the partner is a member of the [HashiCorp Technology Partner Program](https://www.hashicorp.com/partners/become-a-partner#technology). Compatibility and stability guarantees on these plugins are established by their authors.
 
+### Auth
+
+- [Exoscale](https://github.com/exoscale/vault-plugin-auth-exoscale)
+
 ### Database
 
 - [Aerospike](https://github.com/aerospike-community/vault-plugin-database-aerospike)
+- [Redis Enterprise](https://github.com/RedisLabs/vault-plugin-database-redis-enterprise)
 
 ### Secrets
 
+- [Exoscale](https://github.com/exoscale/vault-plugin-secrets-exoscale)
 - [PrimeKey EJBCA](https://github.com/primekeydevs/ejbca-vault-plugin)
 - [Venafi](https://github.com/Venafi/vault-pki-backend-venafi)
 
@@ -118,11 +123,14 @@ Plugin authors who wish to have their plugins listed may file a submission via a
 ### Auth
 
 - [Jenkins](https://plugins.jenkins.io/hashicorp-vault-plugin)
+- [Terraform Enterprise/Terraform Cloud](https://github.com/gitrgoliveira/vault-plugin-auth-tfe)
 
 ### Secrets
 
 - [Ethereum](https://github.com/immutability-io/vault-ethereum)
 - [GitHub](https://github.com/martinbaillie/vault-plugin-secrets-github)
+- [HSM PKI Plugin](https://github.com/mode51software/vaultplugin-hsmpki)
+- [OAuth 2.0/OIDC](https://github.com/puppetlabs/vault-plugin-secrets-oauthapp)
 
 [github-issue]: https://github.com/hashicorp/vault/issues/new?assignees=&labels=ecosystem%2Fplugin&template=plugin-submission.md&title=%5BPlugin+Portal%5D+Plugin+Submission+-+%3CPLUGIN+NAME%3E
-[plugin-portal-mdx]: https://github.com/hashicorp/vault/blob/master/website/pages/docs/plugin-portal/index.mdx
+[plugin-portal-mdx]: https://github.com/hashicorp/vault/blob/master/website/content/docs/plugin-portal.mdx

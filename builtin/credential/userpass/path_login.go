@@ -17,12 +17,12 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username of the user.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 			},

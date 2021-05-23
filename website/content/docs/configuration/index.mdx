@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Server Configuration
-sidebar_title: Configuration
 description: Vault server configuration reference.
 ---
 
@@ -122,7 +121,7 @@ to specify where the configuration is.
   reporting system.
 
 - `log_level` `(string: "")` – Specifies the log level to use; overridden by
-  CLI and env var parameters. On SIGHUP, Vault will update the log level to the
+  CLI and env var parameters. On SIGHUP (`sudo kill -s HUP` *pid of vault*), Vault will update the log level to the
   current value specified here (including overriding the CLI/env var
   parameters). Not all parts of Vault's logging can have its level be changed
   dynamically this way; in particular, secrets/auth plugins are currently not
@@ -155,6 +154,21 @@ to specify where the configuration is.
 
 - `pid_file` `(string: "")` - Path to the file in which the Vault server's
   Process ID (PID) should be stored.
+
+- `enable_response_header_hostname` `(bool: false)` - Enables the addition of an HTTP header
+  in all of Vault's HTTP responses: `X-Vault-Hostname`. This will contain the
+  host name of the Vault node that serviced the HTTP request. This information
+  is best effort and is not guaranteed to be present. If this configuration
+  option is enabled and the `X-Vault-Hostname` header is not present in a response,
+  it means there was some kind of error retrieving the host name from the
+  operating system.
+
+- `enable_response_header_raft_node_id` `(bool: false)` - Enables the addition of an HTTP header
+  in all of Vault's HTTP responses: `X-Vault-Raft-Node-ID`. If Vault is participating
+  in a Raft cluster (i.e. using integrated storage), this header will contain the
+  Raft node ID of the Vault node that serviced the HTTP request. If Vault is not
+  participating in a Raft cluster, this header will be omitted, whether this configuration
+  option is enabled or not.
 
 ### High Availability Parameters
 

@@ -67,6 +67,7 @@ module.exports = function(environment) {
     ENV.contentSecurityPolicy = {
       'connect-src': ["'self'"],
       'img-src': ["'self'", 'data:'],
+      'font-src': ["'self'"],
       'form-action': ["'none'"],
       'script-src': ["'self'"],
       'style-src': ["'unsafe-inline'", "'self'"],

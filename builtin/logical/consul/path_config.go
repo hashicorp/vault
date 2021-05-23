@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -71,7 +70,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, errwrap.Wrapf("error reading consul access configuration: {{err}}", err)
+		return nil, nil, fmt.Errorf("error reading consul access configuration: %w", err)
 	}
 
 	return conf, nil, nil

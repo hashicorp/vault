@@ -4,14 +4,14 @@
       <p>You can decrypt ciphertext using <code>{{key.name}}</code> as the encryption key.</p>
     </div>
     <div class="field">
-      <label for="ciphertext" class="is-label">Ciphertext</label>
       <div id="ciphertext-control" class="control">
-        <IvyCodemirror @valueUpdated={{action (mut ciphertext)}} @options={{hash
-            lineNumbers=true
-            tabSize=2
-            mode='ruby'
-            theme='hashi'
-          }} @data-test-transit-input="ciphertext" />
+        <JsonEditor
+            @title="Ciphertext"
+            @valueUpdated={{action (mut ciphertext)}} 
+            @options={{hash
+              mode='ruby'
+            }}  
+            @data-test-transit-input="ciphertext" />
       </div>
     </div>
     {{#if key.derived}}

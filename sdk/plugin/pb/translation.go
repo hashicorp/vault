@@ -23,6 +23,7 @@ const (
 	ErrTypeInvalidRequest
 	ErrTypePermissionDenied
 	ErrTypeMultiAuthzPending
+	ErrTypeUnrecoverable
 )
 
 func ProtoErrToErr(e *ProtoError) error {
@@ -52,6 +53,8 @@ func ProtoErrToErr(e *ProtoError) error {
 		err = logical.ErrPermissionDenied
 	case ErrTypeMultiAuthzPending:
 		err = logical.ErrMultiAuthzPending
+	case ErrTypeUnrecoverable:
+		err = logical.ErrUnrecoverable
 	}
 
 	return err
@@ -89,6 +92,8 @@ func ErrToProtoErr(e error) *ProtoError {
 		pbErr.ErrType = ErrTypePermissionDenied
 	case e == logical.ErrMultiAuthzPending:
 		pbErr.ErrType = ErrTypeMultiAuthzPending
+	case e == logical.ErrUnrecoverable:
+		pbErr.ErrType = ErrTypeUnrecoverable
 	}
 
 	return pbErr

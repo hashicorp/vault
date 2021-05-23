@@ -7,13 +7,18 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -48,6 +53,78 @@ func TestMongoDB_Initialize(t *testing.T) {
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
+	}
+}
+
+func TestNewUser_usernameTemplate(t *testing.T) {
+	type testCase struct {
+		usernameTemplate string
+
+		newUserReq            dbplugin.NewUserRequest
+		expectedUsernameRegex string
+	}
+
+	tests := map[string]testCase{
+		"default username template": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-token-testrolenamewit-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"custom username template": {
+			usernameTemplate: "{{random 2 | uppercase}}_{{unix_time}}_{{.RoleName | uppercase}}_{{.DisplayName | uppercase}}",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^[A-Z0-9]{2}_[0-9]{10}_TESTROLENAMEWITHMANYCHARACTERS_TOKEN$",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+			defer cleanup()
+
+			db := new()
+			defer dbtesting.AssertClose(t, db)
+
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
+				},
+				VerifyConnection: true,
+			}
+			dbtesting.AssertInitialize(t, db, initReq)
+
+			ctx := context.Background()
+			newUserResp, err := db.NewUser(ctx, test.newUserReq)
+			require.NoError(t, err)
+			require.Regexp(t, test.expectedUsernameRegex, newUserResp.Username)
+
+			assertCredsExist(t, newUserResp.Username, test.newUserReq.Password, connURL)
+		})
 	}
 }
 
@@ -273,9 +350,7 @@ func TestGetTLSAuth(t *testing.T) {
 			if !test.expectErr && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
 			}
-			if !reflect.DeepEqual(actual, test.expectOpts) {
-				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
-			}
+			assertDeepEqual(t, test.expectOpts, actual)
 		})
 	}
 }
@@ -288,6 +363,27 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 		t.Fatalf("Unable to append cert to cert pool")
 	}
 	return pool
+}
+
+var cmpClientOptionsOpts = cmp.Options{
+	cmp.AllowUnexported(options.ClientOptions{}),
+
+	cmp.AllowUnexported(tls.Config{}),
+	cmpopts.IgnoreTypes(sync.Mutex{}, sync.RWMutex{}),
+
+	// 'lazyCerts' has a func field which can't be compared.
+	cmpopts.IgnoreFields(x509.CertPool{}, "lazyCerts"),
+	cmp.AllowUnexported(x509.CertPool{}),
+}
+
+// Need a special comparison for ClientOptions because reflect.DeepEquals won't work in Go 1.16.
+// See: https://github.com/golang/go/issues/45891
+func assertDeepEqual(t *testing.T, a, b *options.ClientOptions) {
+	t.Helper()
+
+	if diff := cmp.Diff(a, b, cmpClientOptionsOpts); diff != "" {
+		t.Fatalf("assertion failed: values are not equal\n--- expected\n+++ actual\n%v", diff)
+	}
 }
 
 func createDBUser(t testing.TB, connURL, db, username, password string) {
