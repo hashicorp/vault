@@ -719,7 +719,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
-	return 0
 }
 
 func logProxyEnvironmentVariables(logger hclog.Logger) {
@@ -1279,7 +1278,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if barrierSeal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+		c.UI.Error("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated.")
 		return 1
 	}
 
@@ -1659,9 +1658,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				if vault.IsFatalError(err) {
 					c.logger.Error("error unsealing core", "error", err)
 					return
-				} else {
-					c.logger.Warn("failed to unseal core", "error", err)
 				}
+				c.logger.Warn("failed to unseal core", "error", err)
 
 				select {
 				case <-c.ShutdownCh:
@@ -2082,7 +2080,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			if leaderCount == 0 {
 				buf := make([]byte, 1<<16)
 				runtime.Stack(buf, true)
-				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s\n", buf)
+				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s", buf)
 			}
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
@@ -2123,7 +2121,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = core.HandleRequest(ctx, req)
+		_, err = core.HandleRequest(ctx, req)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
@@ -2261,7 +2259,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = testCluster.Cores[0].HandleRequest(ctx, req)
+		_, err = testCluster.Cores[0].HandleRequest(ctx, req)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
