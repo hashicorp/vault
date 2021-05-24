@@ -11,7 +11,6 @@ import (
 
 const (
 	success   string = "success"
-	secretKey string = "diagnose"
 	secretVal string = "diagnoseSecret"
 
 	LatencyWarning    string        = "latency above 100 ms: "
@@ -23,7 +22,7 @@ const (
 
 func EndToEndLatencyCheckWrite(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 	start := time.Now()
-	err := b.Put(context.Background(), &physical.Entry{Key: secretKey, Value: []byte(secretVal)})
+	err := b.Put(context.Background(), &physical.Entry{Key: uuid, Value: []byte(secretVal)})
 	duration := time.Since(start)
 	if err != nil {
 		return time.Duration(0), err
@@ -37,7 +36,7 @@ func EndToEndLatencyCheckWrite(ctx context.Context, uuid string, b physical.Back
 func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 
 	start := time.Now()
-	val, err := b.Get(context.Background(), "diagnose")
+	val, err := b.Get(context.Background(), uuid)
 	duration := time.Since(start)
 	if err != nil {
 		return time.Duration(0), err
@@ -45,7 +44,7 @@ func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backe
 	if val == nil {
 		return time.Duration(0), fmt.Errorf("no value found when reading generated data")
 	}
-	if val.Key != "diagnose" && string(val.Value) != "diagnose" {
+	if val.Key != uuid && string(val.Value) != secretVal {
 		return time.Duration(0), fmt.Errorf(wrongRWValsPrefix+"expecting diagnose, but got %s, %s", val.Key, val.Value)
 	}
 	if duration > latencyThreshold {
@@ -56,7 +55,7 @@ func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backe
 func EndToEndLatencyCheckDelete(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 
 	start := time.Now()
-	err := b.Delete(context.Background(), "diagnose")
+	err := b.Delete(context.Background(), uuid)
 	duration := time.Since(start)
 	if err != nil {
 		return time.Duration(0), err

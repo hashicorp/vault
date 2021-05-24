@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
+	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -227,18 +230,16 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		// Attempt to use storage backend
 		if !c.skipEndEnd {
 			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
-				// TODO: A static file in storage that probably won't cause a collision seems low-risk to write to for now.
-				// Should we make this a proper uuid?
-
 				maxDurationCrudOperation := "write"
 				maxDuration := time.Duration(0)
-				veryRandomUuid := "diagnose-secret-uuid-1234"
-				dur, err := diagnose.EndToEndLatencyCheckWrite(ctx, veryRandomUuid, *backend)
+				uuidSuffix := strconv.Itoa(rand.Intn(int(math.Pow(2, 10))))
+				uuid := "diagnose/latency/" + uuidSuffix
+				dur, err := diagnose.EndToEndLatencyCheckWrite(ctx, uuid, *backend)
 				if err != nil {
 					return err
 				}
 				maxDuration = dur
-				dur, err = diagnose.EndToEndLatencyCheckRead(ctx, veryRandomUuid, *backend)
+				dur, err = diagnose.EndToEndLatencyCheckRead(ctx, uuid, *backend)
 				if err != nil {
 					return err
 				}
@@ -246,7 +247,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 					maxDuration = dur
 					maxDurationCrudOperation = "read"
 				}
-				dur, err = diagnose.EndToEndLatencyCheckDelete(ctx, veryRandomUuid, *backend)
+				dur, err = diagnose.EndToEndLatencyCheckDelete(ctx, uuid, *backend)
 				if err != nil {
 					return err
 				}
