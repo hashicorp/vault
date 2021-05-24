@@ -5,6 +5,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
 
 	ui := cli.NewMockUi()
 	return &OperatorDiagnoseCommand{
-		diagnose: diagnose.New(),
+		diagnose: diagnose.New(ioutil.Discard),
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
@@ -116,7 +117,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "init-listeners",
-					Status: diagnose.OkStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-listeners",
@@ -192,7 +193,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "init-listeners",
-					Status: diagnose.OkStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-listeners",
@@ -330,15 +331,16 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "storage",
-					Status: diagnose.OkStatus,
+					Status: diagnose.ErrorStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-storage-backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
+							Name:    "test-storage-tls-consul",
+							Status:  diagnose.ErrorStatus,
+							Message: "expired",
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
@@ -348,11 +350,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.WarningStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-service-discovery",
@@ -406,7 +408,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "storage",
-					Status: diagnose.OkStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-storage-backend",
@@ -414,7 +416,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.WarningStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
@@ -452,7 +454,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "setup-ha-storage",
-					Status: diagnose.OkStatus,
+					Status: diagnose.ErrorStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-ha-storage-backend",
@@ -501,7 +503,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
+					Status: diagnose.ErrorStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:    "test-serviceregistration-tls-consul",
@@ -531,7 +533,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "storage",
-					Status: diagnose.OkStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-storage-backend",
@@ -606,7 +608,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 				{
 					Name:   "init-listeners",
-					Status: diagnose.OkStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
 							Name:   "create-listeners",

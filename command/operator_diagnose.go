@@ -2,17 +2,18 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
-	"math"
-	"math/rand"
-	"strconv"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -111,6 +112,12 @@ func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
 		Default: false,
 		Usage:   "Dump all information collected by Diagnose.",
 	})
+
+	f.StringVar(&StringVar{
+		Name:   "format",
+		Target: &c.flagFormat,
+		Usage:  "The output format",
+	})
 	return set
 }
 
@@ -146,10 +153,31 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		return 1
 	}
 
+	if c.diagnose == nil {
+		if c.flagFormat == "json" {
+			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+		} else {
+			c.UI.Output(version.GetVersion().FullVersionNumber(true))
+			c.diagnose = diagnose.New(os.Stdout)
+		}
+	}
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := diagnose.Context(context.Background(), c.diagnose)
-	err := c.offlineDiagnostics(ctx)
 	c.diagnose.SetSkipList(c.flagSkips)
+	err := c.offlineDiagnostics(ctx)
+
+	results := c.diagnose.Finalize(ctx)
+	if c.flagFormat == "json" {
+		resultsJS, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			return 2
+		}
+		c.UI.Output(string(resultsJS))
+	} else {
+		c.UI.Output("\nResults:")
+		results.Write(os.Stdout)
+	}
 
 	if err != nil {
 		return 1
@@ -181,7 +209,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
-
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
@@ -232,7 +259,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 				maxDurationCrudOperation := "write"
 				maxDuration := time.Duration(0)
-				uuidSuffix := strconv.Itoa(rand.Intn(int(math.Pow(2, 10))))
+				uuidSuffix, err := uuid.GenerateUUID()
+				if err != nil {
+					return err
+				}
 				uuid := "diagnose/latency/" + uuidSuffix
 				dur, err := diagnose.EndToEndLatencyCheckWrite(ctx, uuid, *backend)
 				if err != nil {
