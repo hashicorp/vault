@@ -228,6 +228,18 @@ func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *log
 	return resp, nil
 }
 
+// handleConfigReload handles reloading specific pieces of the configuration.
+func (b *SystemBackend) handleConfigReload(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	subsystem := data.Get("subsystem").(string)
+
+	switch subsystem {
+	case "license":
+		return handleLicenseReload(b)(ctx, req, data)
+	}
+
+	return nil, nil
+}
+
 // handleCORSRead returns the current CORS configuration
 func (b *SystemBackend) handleCORSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig
@@ -4056,6 +4068,14 @@ This path responds to the following HTTP methods.
     DELETE /
         Clears the CORS configuration and disables acceptance of CORS requests.
 		`,
+	},
+	"config/reload": {
+		"Reloads the given subsystem.",
+		`
+ This path responds to the following HTTP methods.
+ 	POST /<subsystem>
+ 		Reload the config for the given subsystem.
+ 		`,
 	},
 	"config/ui/headers": {
 		"Configures response headers that should be returned from the UI.",
