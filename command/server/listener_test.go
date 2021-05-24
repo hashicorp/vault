@@ -15,7 +15,8 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 	go func() {
 		server, err := ln.Accept()
 		if err != nil {
-			t.Fatalf("err: %s", err)
+			t.Errorf("err: %s", err)
+			return
 		}
 		if certName != "" {
 			tlsConn := server.(*tls.Conn)
