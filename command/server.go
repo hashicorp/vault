@@ -49,6 +49,7 @@ import (
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
+	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
@@ -833,7 +834,7 @@ func (q quiescenceSink) Accept(name string, level hclog.Level, msg string, args 
 func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, error) {
 	// Ensure that a backend is provided
 	if config.Storage == nil {
-		return nil, fmt.Errorf("A storage backend must be specified")
+		return nil, errors.New("A storage backend must be specified")
 	}
 
 	// Initialize the backend
@@ -859,7 +860,7 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 			config.ClusterAddr = envCA
 		}
 		if len(config.ClusterAddr) == 0 {
-			return nil, fmt.Errorf("Cluster address must be set when using raft storage")
+			return nil, errors.New("Cluster address must be set when using raft storage")
 		}
 	}
 
