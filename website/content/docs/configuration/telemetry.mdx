@@ -229,9 +229,10 @@ And the following IAM role(s):
 roles/monitoring.metricWriter
 ```
 
-- `stackdriver_project_id` the Google Cloud ProjectID to send telemetry data to.
-- `stackdriver_location` the GCP or AWS region of the monitored resource.
-- `stackdriver_namespace` a namespace identifier for the telemetry data.
+- `stackdriver_project_id` `(string: "")` - The Google Cloud ProjectID to send telemetry data to.
+- `stackdriver_location` `(string: "")` - The GCP or AWS region of the monitored resource.
+- `stackdriver_namespace` `(string: "")` - A namespace identifier for the telemetry data.
+- `stackdriver_debug_logs` `(bool: "false")` - Specifies if Vault writes additional stackdriver related debug logs to stderr.  
 
 It is recommended to also enable the option `disable_hostname` to avoid having prefixed
 metrics with hostname and enable instead `enable_hostname_label`.
@@ -245,5 +246,9 @@ telemetry {
   enable_hostname_label = true
 }
 ```
+
+Metrics from Vault can be found in [Metrics Explorer](https://cloud.google.com/monitoring/charts/metrics-explorer).
+All those metrics are shown with a resource type of `generic_task`, and the metric name
+is prefixed with `custom.googleapis.com/go-metrics/`.
 
 [telemetry-tcp]: /docs/configuration/listener/tcp#telemetry-parameters
