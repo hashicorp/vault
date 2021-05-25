@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"strings"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/keybase/go-crypto/openpgp"
+	"github.com/kr/pretty"
 )
 
 const (
@@ -42,9 +44,13 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 	}
 
 	ret := make(map[string]string, len(usernames))
-	url := fmt.Sprintf("https://keybase.io/_/api/1.0/user/lookup.json?usernames=%s&fields=public_keys", strings.Join(usernames, ","))
-	resp, err := client.Get(url)
+	// url := fmt.Sprintf("https://keybase.io/_/api/1.0/user/lookup.json?usernames=%s&fields=public_keys", strings.Join(usernames, ","))
+	u := fmt.Sprintf("https://keybase.io/_/api/1.0/user/lookup.json?usernames=%s&fields=public_keys", strings.Join(usernames, ","))
+	resp, err := client.Get(u)
 	if err != nil {
+		if ue, ok := err.(*url.Error); ok {
+			pretty.Print(ue.Err)
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
