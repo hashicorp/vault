@@ -1241,7 +1241,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				"type": {
 					Type:        framework.TypeString,
 					Required:    true,
-					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
+					Description: "Type of leases to retrieve (currently only supporting irrevocable).",
 				},
 				"include_child_namespaces": {
 					Type:        framework.TypeBool,
