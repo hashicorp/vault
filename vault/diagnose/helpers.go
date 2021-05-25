@@ -3,7 +3,9 @@ package diagnose
 import (
 	"context"
 	"fmt"
+	"github.com/shirou/gopsutil/disk"
 	"io"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -226,4 +228,36 @@ func Skippable(skipName string, f testFunction) testFunction {
 		}
 		return nil
 	}
+}
+
+func DiskUsageCheck(ctx context.Context) error {
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		return err
+	}
+
+	partitionExcludes := []string{"/boot"}
+partLoop:
+	for _, partition := range partitions {
+		for _, exc := range partitionExcludes {
+			if strings.HasPrefix(partition.Mountpoint, exc) {
+				continue partLoop
+			}
+		}
+		usage, err := disk.Usage(partition.Mountpoint)
+		testName := "disk-usage: " + partition.Mountpoint
+		if err != nil {
+			Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s", partition.Mountpoint))
+		} else {
+			if usage.UsedPercent > 95 {
+				SpotWarn(ctx, testName, "more than 95% full")
+			} else if usage.Free < 2<<30 {
+				SpotWarn(ctx, testName, "less than 1GB free")
+			} else {
+				SpotOk(ctx, testName, "ok")
+			}
+		}
+
+	}
+	return nil
 }
