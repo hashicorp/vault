@@ -3,11 +3,11 @@ package diagnose
 import (
 	"context"
 	"fmt"
-	"github.com/shirou/gopsutil/disk"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/disk"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
