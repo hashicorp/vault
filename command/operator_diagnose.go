@@ -2,11 +2,13 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/shirou/gopsutil/disk"
+	"os"
 	"strings"
 	"sync"
 
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -16,6 +18,7 @@ import (
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
+	"github.com/shirou/gopsutil/disk"
 	"github.com/posener/complete"
 )
 
@@ -97,6 +100,12 @@ func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
 		Default: false,
 		Usage:   "Dump all information collected by Diagnose.",
 	})
+
+	f.StringVar(&StringVar{
+		Name:   "format",
+		Target: &c.flagFormat,
+		Usage:  "The output format",
+	})
 	return set
 }
 
@@ -132,10 +141,31 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		return 1
 	}
 
+	if c.diagnose == nil {
+		if c.flagFormat == "json" {
+			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+		} else {
+			c.UI.Output(version.GetVersion().FullVersionNumber(true))
+			c.diagnose = diagnose.New(os.Stdout)
+		}
+	}
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := diagnose.Context(context.Background(), c.diagnose)
-	err := c.offlineDiagnostics(ctx)
 	c.diagnose.SetSkipList(c.flagSkips)
+	err := c.offlineDiagnostics(ctx)
+
+	results := c.diagnose.Finalize(ctx)
+	if c.flagFormat == "json" {
+		resultsJS, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			return 2
+		}
+		c.UI.Output(string(resultsJS))
+	} else {
+		c.UI.Output("\nResults:")
+		results.Write(os.Stdout)
+	}
 
 	if err != nil {
 		return 1
@@ -167,7 +197,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
-
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
@@ -283,10 +312,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
-			if err != nil {
-				return err
-			}
+			return srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 		}
 		return nil
 	})
