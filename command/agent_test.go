@@ -899,7 +899,6 @@ auto_auth {
 							continue
 						}
 					}
-					t.Error(err)
 					return
 				}
 			}
