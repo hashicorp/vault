@@ -13,7 +13,7 @@ import (
 func TestDiagnoseOtelResults(t *testing.T) {
 	expected := &Result{
 		Name:   "make-coffee",
-		Status: WarningStatus,
+		Status: ErrorStatus,
 		Warnings: []string{
 			"coffee getting low",
 		},
@@ -37,7 +37,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 			},
 		},
 	}
-	sess := New()
+	sess := New(os.Stdout)
 	sess.SetSkipList([]string{"dispose-grounds"})
 	ctx := Context(context.Background(), sess)
 

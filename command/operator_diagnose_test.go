@@ -5,6 +5,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
 
 	ui := cli.NewMockUi()
 	return &OperatorDiagnoseCommand{
-		diagnose: diagnose.New(),
+		diagnose: diagnose.New(ioutil.Discard),
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
