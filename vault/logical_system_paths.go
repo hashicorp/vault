@@ -1246,7 +1246,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 				"include_child_namespaces": {
 					Type:        framework.TypeBool,
 					Default:     false,
-					Description: "Set true if you want counts for this namespace and its children.",
+					Description: "Set true if you want leases for this namespace and its children.",
 				},
 				"force": {
 					Type:        framework.TypeBool,
