@@ -169,28 +169,35 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				cmd.Run(tc.args)
 				result := cmd.diagnose.Finalize(context.Background())
 
-				for _, exp := range tc.expected {
-					found := false
-					// Check them all so we don't have to be order specific
-					for _, act := range result.Children {
-						if exp.Name == act.Name {
-							found = true
-							if err := compareResult(t, exp, act); err != nil {
-								t.Fatalf("%v", err)
-							}
-							break
-						}
-					}
-					if !found {
-						t.Fatalf("could not find expected test result: %s", exp.Name)
-					}
+				if err := compareResults(tc.expected, result.Children); err != nil {
+					t.Fatalf("Did not find expected test results: %v", err)
 				}
 			})
 		}
 	})
 }
 
-func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) error {
+func compareResults(expected []*diagnose.Result, actual []*diagnose.Result) error {
+	for _, exp := range expected {
+		found := false
+		// Check them all so we don't have to be order specific
+		for _, act := range actual {
+			if exp.Name == act.Name {
+				found = true
+				if err := compareResult(exp, act); err != nil {
+					return err
+				}
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("could not find expected test result: %s", exp.Name)
+		}
+	}
+	return nil
+}
+
+func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	if exp.Name != act.Name {
 		return fmt.Errorf("names mismatch: %s vs %s", exp.Name, act.Name)
 	}
@@ -214,6 +221,10 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 	}
 	if len(exp.Children) != len(act.Children) {
 		return fmt.Errorf("section %s, child count mismatch: %d vs %d", exp.Name, len(exp.Children), len(act.Children))
+	}
+
+	if len(exp.Children) > 0 {
+		return compareResults(exp.Children, act.Children)
 	}
 	return nil
 }
