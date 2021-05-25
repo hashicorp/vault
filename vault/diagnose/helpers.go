@@ -202,7 +202,7 @@ func WithTimeout(d time.Duration, f testFunction) testFunction {
 		rch := make(chan error)
 		t := time.NewTimer(d)
 		defer t.Stop()
-		go f(ctx)
+		go func() { rch <- f(ctx) }()
 		select {
 		case <-t.C:
 			return fmt.Errorf("timed out after %s", d.String())
