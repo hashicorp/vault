@@ -18,8 +18,8 @@ import (
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
-	"github.com/shirou/gopsutil/disk"
 	"github.com/posener/complete"
+	"github.com/shirou/gopsutil/disk"
 )
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
@@ -197,6 +197,39 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
+
+	diagnose.Test(ctx, "disk-usage", func(ctx context.Context) error {
+		partitions, err := disk.Partitions(false)
+		if err != nil {
+			return err
+		}
+
+		partitionExcludes := []string{"/boot"}
+	partLoop:
+		for _, partition := range partitions {
+			for _, exc := range partitionExcludes {
+				if strings.HasPrefix(partition.Mountpoint, exc) {
+					continue partLoop
+				}
+			}
+			usage, err := disk.Usage(partition.Mountpoint)
+			testName := "disk-usage: " + partition.Mountpoint
+			if err != nil {
+				diagnose.Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s", partition.Mountpoint))
+			} else {
+				if usage.UsedPercent > 95 {
+					diagnose.SpotWarn(ctx, testName, "more than 95% full")
+				} else if usage.Free < 2<<30 {
+					diagnose.SpotWarn(ctx, testName, "less than 1GB free")
+				} else {
+					diagnose.SpotOk(ctx, testName, "ok")
+				}
+			}
+
+		}
+		return nil
+	})
+
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
@@ -317,36 +350,5 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 
-	diagnose.Test(ctx, "disk-usage", func(ctx context.Context) error {
-		partitions, err := disk.Partitions(false)
-		if err != nil {
-			return err
-		}
-
-		partitionExcludes := []string{"/boot"}
-	partLoop:
-		for _, partition := range partitions {
-			for _, exc := range partitionExcludes {
-				if strings.HasPrefix(partition.Mountpoint, exc) {
-					continue partLoop
-				}
-			}
-			usage, err := disk.Usage(partition.Mountpoint)
-			testName := "disk-usage: " + partition.Mountpoint
-			if err != nil {
-				diagnose.Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s", partition.Mountpoint))
-			} else {
-				if usage.UsedPercent > 95 {
-					diagnose.SpotWarn(ctx, testName, "more than 95% full")
-				} else if usage.Free < 2<<30 {
-					diagnose.SpotWarn(ctx, testName, "less than 1GB free")
-				} else {
-					diagnose.SpotOk(ctx, testName, "ok")
-				}
-			}
-
-		}
-		return nil
-	})
 	return nil
 }
