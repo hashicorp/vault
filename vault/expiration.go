@@ -77,10 +77,8 @@ const (
 	// maximum number of irrevocable leases we return to the irrevocable lease
 	// list API **without** the `force` flag set
 	MaxIrrevocableLeasesToReturn = 10000
-)
 
-var (
-	errHitMaxIrrevocableLeases = errors.New("Command cancelled because many irrevocable leases were found. To emit the entire list, re-run the command with force set true.")
+	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
 )
 
 type pendingInfo struct {
@@ -2495,17 +2493,18 @@ type leaseResponse struct {
 	ErrMsg  string `json:"error"`
 }
 
-func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeChildNamespaces, force bool) (map[string]interface{}, error) {
+// returns a warning string, if applicable
+func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeChildNamespaces, force bool) (map[string]interface{}, string, error) {
 	requestNS, err := namespace.FromContext(ctx)
 	if err != nil {
 		m.logger.Error("could not get namespace from context", "error", err)
-		return nil, err
+		return nil, "", err
 	}
 
 	// map of mount point : lease info
 	matchingLeasesPerMount := make(map[string][]*leaseResponse)
 	numMatchingLeases := 0
-	var retErr error
+	var warning string
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
 		leaseInfo := v.(*leaseEntry)
@@ -2525,7 +2524,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 
 		if !force && (numMatchingLeases >= MaxIrrevocableLeasesToReturn) {
 			m.logger.Warn("hit max irrevocable leases without force flag set")
-			retErr = errHitMaxIrrevocableLeases
+			warning = MaxIrrevocableLeasesWarning
 			return false
 		}
 
@@ -2540,15 +2539,11 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 		return true
 	})
 
-	if retErr != nil {
-		return nil, retErr
-	}
-
 	resp := make(map[string]interface{})
 	resp["lease_count"] = numMatchingLeases
 	resp["leases"] = matchingLeasesPerMount
 
-	return resp, nil
+	return resp, warning, nil
 }
 
 // leaseEntry is used to structure the values the expiration

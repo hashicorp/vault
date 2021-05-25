@@ -3104,9 +3104,12 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 		}
 	}
 
-	out, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
+	out, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
 	if err != nil {
 		t.Fatalf("error listing irrevocable leases: %v", err)
+	}
+	if warn != "" {
+		t.Errorf("expected no warning, got %q", warn)
 	}
 
 	countRaw, ok := out["lease_count"]
@@ -3161,20 +3164,36 @@ func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
 		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
 	}
 
-	dataRaw, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
-	if err == nil {
-		t.Fatalf("expected error - more than max number of irrevocable leases")
+	dataRaw, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
 	}
-	if dataRaw != nil {
-		t.Fatalf("expected nil data, got %#v", dataRaw)
+	if warn != maxIrrevocableLeasesWarning {
+		t.Errorf("expected warning %q, got %q", maxIrrevocableLeasesWarning, warn)
+	}
+	if dataRaw == nil {
+		t.Fatal("expected partial data, got nil")
 	}
 
-	dataRaw, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true)
+	leaseListLength := len(dataRaw["leases"].(map[string][]*leaseResponse)["mount-accessor-not-found"])
+	if leaseListLength != MaxIrrevocableLeasesToReturn {
+		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, leaseListLength)
+	}
+
+	dataRaw, warn, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true)
 	if err != nil {
 		t.Fatalf("got error on force list leases: %v", err)
 	}
+	if warn != "" {
+		t.Errorf("expected no warning, got %q", warn)
+	}
 	if dataRaw == nil {
 		t.Fatalf("got nil data on force list leases")
+	}
+
+	leaseListLength = len(dataRaw["leases"].(map[string][]*leaseResponse)["mount-accessor-not-found"])
+	if leaseListLength != expectedNumLeases {
+		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, expectedNumLeases)
 	}
 
 	numLeasesRaw, ok := dataRaw["lease_count"]

@@ -29,6 +29,11 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 	if resp == nil {
 		t.Fatal("response is nil")
 	}
+
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
+	}
+
 	totalLeaseCountRaw, ok := resp.Data["lease_count"]
 	if !ok {
 		t.Fatalf("expected 'lease_count' response, got: %#v", resp.Data)
@@ -61,6 +66,11 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 	if resp == nil {
 		t.Fatal("response is nil")
 	}
+
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
+	}
+
 	totalLeaseCountRaw, ok = resp.Data["lease_count"]
 	if !ok {
 		t.Fatalf("expected 'lease_count' response, got: %#v", resp.Data)
@@ -122,6 +132,11 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 	if resp == nil {
 		t.Fatal("response is nil")
 	}
+
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
+	}
+
 	totalLeaseCountRaw, ok := resp.Data["lease_count"]
 	if !ok {
 		t.Fatalf("expected 'lease_count' response, got: %#v", resp.Data)
@@ -155,6 +170,11 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 	if resp == nil {
 		t.Fatal("response is nil")
 	}
+
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
+	}
+
 	totalLeaseCountRaw, ok = resp.Data["lease_count"]
 	if !ok {
 		t.Fatalf("expected 'lease_count' response, got: %#v", resp.Data)
@@ -205,11 +225,15 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 	params["type"] = []string{"irrevocable"}
 
 	resp, err := client.Logical().ReadWithData("sys/leases", params)
-	if err == nil {
-		t.Fatalf("expected error without force flag")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp != nil {
-		t.Errorf("expected nil response, got: %#v", resp)
+	if resp == nil {
+		t.Error("unexpected nil response")
+	}
+
+	if len(resp.Warnings) != 1 {
+		t.Errorf("expected one warning (%q), got: %v", vault.MaxIrrevocableLeasesWarning, resp.Warnings)
 	}
 
 	// now try it with the force flag - we expect no errors and many results
@@ -221,6 +245,11 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 	if resp == nil {
 		t.Fatal("response is nil")
 	}
+
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
+	}
+
 	totalLeaseCountRaw, ok := resp.Data["lease_count"]
 	if !ok {
 		t.Fatalf("expected 'lease_count' response, got: %#v", resp.Data)

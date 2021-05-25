@@ -316,14 +316,19 @@ func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Reques
 	forceRaw, ok := d.GetOk("force")
 	force := ok && forceRaw.(bool)
 
-	resp, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, force)
+	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, force)
 	if err != nil {
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: resp,
-	}, nil
+	resp := &logical.Response{
+		Data: leases,
+	}
+	if warning != "" {
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
