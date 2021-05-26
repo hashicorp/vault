@@ -8,7 +8,7 @@ const DEFAULT_DISPLAY = {
   create: 'Create secret',
   navigateTree: true,
   editComponent: 'secret-edit',
-  listItemPartial: 'partials/secret-list/item',
+  listItemPartial: 'SecretList::Item',
 };
 const SECRET_BACKENDS = {
   aws: {
@@ -18,12 +18,12 @@ const SECRET_BACKENDS = {
     create: 'Create role',
     navigateTree: false,
     editComponent: 'role-aws-edit',
-    listItemPartial: 'partials/secret-list/aws-role-item',
+    listItemPartial: 'secret-list/aws-role-item',
   },
   pki: {
     displayName: 'PKI',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/pki-role-item',
+    listItemPartial: 'secret-list/pki-role-item',
     tabs: [
       {
         name: 'roles',
@@ -41,7 +41,7 @@ const SECRET_BACKENDS = {
         item: 'certificates',
         create: 'Create role',
         tab: 'certs',
-        listItemPartial: 'partials/secret-list/pki-cert-item',
+        listItemPartial: 'secret-list/pki-cert-item',
         editComponent: 'pki-cert-show',
       },
     ],
@@ -53,12 +53,12 @@ const SECRET_BACKENDS = {
     create: 'Create role',
     navigateTree: false,
     editComponent: 'role-ssh-edit',
-    listItemPartial: 'partials/secret-list/ssh-role-item',
+    listItemPartial: 'secret-list/ssh-role-item',
   },
   database: {
     displayName: 'Database',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/database-list-item',
+    listItemPartial: 'secret-list/database-list-item',
     hasOverview: true,
     tabs: [
       {
@@ -86,7 +86,7 @@ const SECRET_BACKENDS = {
   transform: {
     displayName: 'Transformation',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/transform-list-item',
+    listItemPartial: 'secret-list/transform-list-item',
     tabs: [
       {
         name: 'transformations',
@@ -95,7 +95,7 @@ const SECRET_BACKENDS = {
         item: 'transformation',
         create: 'Create transformation',
         editComponent: 'transformation-edit',
-        listItemPartial: 'partials/secret-list/transform-transformation-item',
+        listItemPartial: 'secret-list/transform-transformation-item',
       },
       {
         name: 'role',
@@ -135,7 +135,7 @@ const SECRET_BACKENDS = {
     create: 'Create encryption key',
     navigateTree: false,
     editComponent: 'transit-edit',
-    listItemPartial: 'partials/secret-list/item',
+    listItemPartial: 'SecretList::Item',
   },
 };
 
