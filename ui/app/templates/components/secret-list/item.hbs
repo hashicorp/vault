@@ -1,26 +1,24 @@
-
-
 {{#linked-block
   (concat
     "vault.cluster.secrets.backend."
-    (if item.isFolder "list" "show")
-    (unless item.id "-root")
+    (if @item.isFolder "list" "show")
+    (unless @item.id "-root")
   )
-  item.id
+  @item.id
   class="list-item-row"
-  data-test-secret-link=item.id
+  data-test-secret-link=@item.id
   encode=true
-  queryParams=(secret-query-params backendModel.type)
+  queryParams=(secret-query-params @backendModel.type)
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
       <SecretLink
-        @mode={{if item.isFolder "list" "show" }}
-        @secret={{item.id}}
-        @queryParams={{if (eq backendModel.type "transit") (query-params tab="actions") ""}}
+        @mode={{if @item.isFolder "list" "show" }}
+        @secret={{@item.id}}
+        @queryParams={{if (eq @backendModel.type "transit") (query-params tab="actions") ""}}
         @class="has-text-black has-text-weight-semibold"><Icon
-          @glyph={{if item.isFolder 'folder-outline' 'file-outline' }}
-          @class="has-text-grey-light"/>{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
+          @glyph={{if @item.isFolder 'folder-outline' 'file-outline' }}
+          @class="has-text-grey-light"/>{{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
       </SecretLink>
     </div>
     <div class="column has-text-right">
@@ -28,61 +26,61 @@
         <Confirm as |c|>
             <nav class="menu">
               <ul class="menu-list">
-                {{#if item.isFolder}}
+                {{#if @item.isFolder}}
                   <SecretLink
                     @mode="list"
-                    @secret={{item.id}}
+                    @secret={{@item.id}}
                     @class="has-text-black has-text-weight-semibold">
                     Contents
                   </SecretLink>
                 {{else}}
-                  {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
+                  {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
                     <li class="action">
                       <button disabled type="button" class="link button is-loading is-transparent">
                         loading
                       </button>
                     </li>
                   {{else}}
-                    {{#if item.canRead}}
+                    {{#if @item.canRead}}
                       <li class="action">
                         <SecretLink
                           @mode="show"
-                          @secret={{item.id}}
+                          @secret={{@item.id}}
                           @class="has-text-black has-text-weight-semibold">
                           Details
                         </SecretLink>
                       </li>
-                      {{#if backendModel.isV2KV}}
+                      {{#if @backendModel.isV2KV}}
                         <li class="action">
                           <SecretLink
                             @mode="versions"
-                            @secret={{item.id}}
+                            @secret={{@item.id}}
                             @class="has-text-black has-text-weight-semibold">
                             View version history
                           </SecretLink>
                         </li>
                       {{/if}}
                     {{/if}}
-                    {{#if item.canEdit}}
+                    {{#if @item.canEdit}}
                       <li class="action">
                         <SecretLink
                           @mode="edit"
-                          @secret={{item.id}}
+                          @secret={{@item.id}}
                           @class="has-text-black has-text-weight-semibold">
-                          {{if backendModel.isV2KV
+                          {{if @backendModel.isV2KV
                             "Create new version"
                             "Edit"
                           }}
                         </SecretLink>
                       </li>
                     {{/if}}
-                    {{#if item.canDelete}}
+                    {{#if @item.canDelete}}
                       <li class="action">
                         <c.Message
-                          @id={{item.id}}
-                          @triggerText={{if backendModel.isV2KV "Permanently delete" "Delete"}}
+                          @id={{@item.id}}
+                          @triggerText={{if @backendModel.isV2KV "Permanently delete" "Delete"}}
                           @message="This will permanently delete this secret and all its versions."
-                          @onConfirm={{action "delete" item "secret"}}/>
+                          @onConfirm={{@delete}}/>
                       </li>
                     {{/if}}
                   {{/if}}
