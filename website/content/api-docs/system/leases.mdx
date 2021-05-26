@@ -244,10 +244,10 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/leases/tidy
 ```
 
-## Irrevocable Leases Counts
+## Lease Counts
 
-This endpoint returns the total count of irrevocable leases, as well as a count
-per mount point.
+This endpoint returns the total count of a `type` of lease, as well as a count
+per mount point. Note that it currently only supports type "irrevocable".
 
 This can help determine if particular endpoints are disproportionately
 resulting in irrevocable leases.
@@ -256,9 +256,9 @@ This endpoint was added in Vault 1.8.
 
 ### Parameters
 
-- `type` (string: <required>) - Specifies the type of lease. Set to "irrevocable"
-- `include_child_namespaces` (bool: false) - Specifies if irrevocable leases in
-   child namespaces should be included in the result
+- `type` (string: <required>) - Specifies the type of lease.
+- `include_child_namespaces` (bool: false) - Specifies if leases in child
+    namespaces should be included in the result.
 
 | Method | Path               |
 | :----- | :----------------- |
@@ -274,11 +274,11 @@ $ curl \
     -d type=irrevocable
 ```
 
-## Irrevocable Leases List
+## Leases List
 
-This endpoint returns the total count of irrevocable leases, as well as a list
-of irrevocable leases per mount point - complete with the error that marked
-the lease as irrevocable.
+This endpoint returns the total count of a `type` of lease, as well as a list
+of leases per mount point. Note that it currently only supports type
+"irrevocable".
 
 This can help determine if particular endpoints or causes are disproportionately
 resulting in irrevocable leases.
@@ -287,9 +287,9 @@ This endpoint was added in Vault 1.8.
 
 ### Parameters
 
-- `type` (string: <required>) - Specifies the type of lease. Set to "irrevocable"
-- `include_child_namespaces` (bool: false) - Specifies if irrevocable leases in
-   child namespaces should be included in the result
+- `type` (string: <required>) - Specifies the type of lease.
+- `include_child_namespaces` (bool: false) - Specifies if leases in child
+   namespaces should be included in the result
 - `force` (bool: false) - Specifies if the request should complete if there are
    more than 10,000 results to return. If this is set false, the client will
    send an error specifying that there are many results, and the request must
