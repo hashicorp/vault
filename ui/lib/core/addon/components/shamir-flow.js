@@ -157,7 +157,6 @@ export default Component.extend(DEFAULTS, {
     },
 
     onSubmit(data) {
-      console.log('on submit', data);
       if (!data.key) {
         return;
       }
