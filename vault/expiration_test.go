@@ -3140,11 +3140,9 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 		t.Errorf("bad lease results. expected %d, got %d with values %v", len(expectedLeases), len(leases), leases)
 	}
 
+	// `leases` is already sorted by lease ID
 	sort.Slice(expectedLeases, func(i, j int) bool {
 		return expectedLeases[i].id < expectedLeases[j].id
-	})
-	sort.Slice(leases, func(i, j int) bool {
-		return leases[i].LeaseID < leases[j].LeaseID
 	})
 
 	for i, lease := range expectedLeases {

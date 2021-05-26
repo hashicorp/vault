@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -2539,6 +2540,11 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 		})
 
 		return true
+	})
+
+	// sort the results for consistent API response
+	sort.Slice(matchingLeases, func(i, j int) bool {
+		return matchingLeases[i].LeaseID < matchingLeases[j].LeaseID
 	})
 
 	resp := make(map[string]interface{})
