@@ -42,7 +42,7 @@
       <ShamirFlow
         @action="unseal"
         @onUpdate={{action 'setUnsealState'}}
-        @onError={{action 'handleUnsealError'}}
+        @onLicenseError={{action 'handleLicenseError'}}
         @onShamirSuccess={{action 'transitionToCluster'}}
         @buttonText="Unseal"
         @thresholdPath="t"

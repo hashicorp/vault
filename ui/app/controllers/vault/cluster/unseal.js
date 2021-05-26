@@ -21,7 +21,7 @@ export default Controller.extend({
       return data.sealed === false;
     },
 
-    handleUnsealError() {
+    handleLicenseError() {
       this.set('showLicenseError', true);
     },
   },

@@ -42,7 +42,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   onUpdate() {},
-  onError() {},
+  onLicenseError() {},
   onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
@@ -91,7 +91,7 @@ export default Component.extend(DEFAULTS, {
     } else {
       // if licensing error, trigger parent method to handle
       if (e.httpStatus === 500 && e.errors?.join(' ').includes('licensing is in an invalid state')) {
-        this.onError();
+        this.onLicenseError();
       }
       throw e;
     }
