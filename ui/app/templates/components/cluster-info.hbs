@@ -1,7 +1,7 @@
 <div class="popup-menu-content">
   <div class="box">
     {{#unless this.version.isOSS}}
-      {{#if (and @cluster.unsealed this.auth.currentToken)}}
+      {{#if (and this.activeCluster.unsealed this.auth.currentToken)}}
         {{#unless @cluster.dr.isSecondary}}
           {{#if (has-permission 'status' routeParams='replication')}}
             <nav class="menu">
@@ -38,7 +38,7 @@
           {{/if}}
         {{else}}
           {{#if (has-permission 'status' routeParams='replication')}}
-           <nav class="menu">
+            <nav class="menu">
               <p class="menu-label">Replication</p>
               <ul>
                 {{#if @cluster.anyReplicationEnabled}}
@@ -61,7 +61,7 @@
         </div>
         <ul class="menu-list">
           <li class="action">
-            {{#if @cluster.unsealed}}
+            {{#if this.activeCluster.unsealed}}
               {{#if (and (has-permission 'status' routeParams='seal') (not @cluster.dr.isSecondary))}}
                 <LinkTo @route="vault.cluster.settings.seal" @model={{@cluster.name}} @invokeAction={{@onLinkClick}}>
                   <div class="level is-mobile">
@@ -96,7 +96,7 @@
           <ul class="menu-list">
             {{#if (and this.version.features (has-permission 'status' routeParams='license') (not @cluster.dr.isSecondary))}}
               <li class="action">
-                <LinkTo @route="vault.cluster.license" @model={{@cluster.name}} @invokeAction={{@onLinkClick}}>
+                <LinkTo @route="vault.cluster.license" @model={{this.activeCluster.name}} @invokeAction={{@onLinkClick}}>
                   <div class="level is-mobile">
                     <span class="level-left">License</span>
                     <Chevron class="has-text-grey-light level-right" />
@@ -106,7 +106,7 @@
             {{/if}}
             {{#if (and @cluster.usingRaft (has-permission 'status' routeParams='raft'))}}
               <li class="action">
-                <LinkTo @route="vault.cluster.storage" @model={{@cluster.name}} @invokeAction={{@onLinkClick}}>
+                <LinkTo @route="vault.cluster.storage" @model={{this.activeCluster.name}} @invokeAction={{@onLinkClick}}>
                   <div class="level is-mobile">
                     <span class="level-left">Raft Storage</span>
                     <Chevron class="has-text-grey-light level-right" />

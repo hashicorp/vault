@@ -7,7 +7,7 @@
     <nav class="menu">
       <ul class="menu-list">
         {{#if this.auth.allowExpiration }}
-         <li class="action">
+          <li class="action">
             <AlertBanner @type="warning" @message="We've stopped auto-renewing your token due to inactivity.
                 It will expire in {{date-from-now this.auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
                 On {{date-format this.auth.tokenExpirationDate 'MMMM Do yyyy, h:mm:ss a'}}" />

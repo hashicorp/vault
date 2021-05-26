@@ -14,7 +14,12 @@ import Component from '@glimmer/component';
  */
 export default class ClusterInfoComponent extends Component {
   @service auth;
+  @service store;
   @service version;
+
+  get activeCluster() {
+    return this.store.peekRecord('cluster', this.auth.activeCluster);
+  }
 
   transitionToRoute() {
     this.router.transitionTo(...arguments);
