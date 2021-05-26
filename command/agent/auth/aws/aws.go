@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
@@ -166,7 +165,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 		// Do an initial population of the creds because we want to err right away if we can't
 		// even get a first set.
-		creds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken, a.logger)
+		creds, err := awsutil.RetrieveCreds(accessKey, secretKey, sessionToken, a.logger)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +227,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 		defer a.credLock.Unlock()
 
 		var err error
-		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue, a.region)
+		data, err = awsutil.GenerateLoginData(a.lastCreds, a.headerValue, a.region, a.logger)
 		if err != nil {
 			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
 			return
@@ -272,7 +271,7 @@ func (a *awsMethod) checkCreds(accessKey, secretKey, sessionToken string) error 
 	defer a.credLock.Unlock()
 
 	a.logger.Trace("checking for new credentials")
-	currentCreds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken, a.logger)
+	currentCreds, err := awsutil.RetrieveCreds(accessKey, secretKey, sessionToken, a.logger)
 	if err != nil {
 		return err
 	}
