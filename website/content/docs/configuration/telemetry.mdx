@@ -232,7 +232,8 @@ roles/monitoring.metricWriter
 - `stackdriver_project_id` `(string: "")` - The Google Cloud ProjectID to send telemetry data to.
 - `stackdriver_location` `(string: "")` - The GCP or AWS region of the monitored resource.
 - `stackdriver_namespace` `(string: "")` - A namespace identifier for the telemetry data.
-- `stackdriver_debug_logs` `(bool: "false")` - Specifies if Vault writes additional stackdriver related debug logs to stderr.  
+- `stackdriver_debug_logs` `(bool: "false")` - Specifies if Vault writes additional stackdriver
+related debug logs to standard error output (stderr).  
 
 It is recommended to also enable the option `disable_hostname` to avoid having prefixed
 metrics with hostname and enable instead `enable_hostname_label`.
