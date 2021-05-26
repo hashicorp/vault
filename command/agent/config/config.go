@@ -44,8 +44,11 @@ func (c *Config) Prune() {
 	}
 }
 
+// Retry specifies the number of retries that templating and API proxy
+// performs when making client requests against a Vault server.
 type Retry struct {
-	NumRetries int `hcl:"num_retries"`
+	NumRetries    int         `hcl:"-"`
+	NumRetriesRaw interface{} `hcl:"num_retries"`
 }
 
 // Vault contains configuration for connecting to Vault servers
@@ -218,11 +221,24 @@ func LoadConfig(path string) (*Config, error) {
 	if result.Vault.Retry == nil {
 		result.Vault.Retry = &Retry{}
 	}
-	switch result.Vault.Retry.NumRetries {
-	case 0:
+
+	// If the number of retries was not specified, use the default value
+	// from consul template
+	if result.Vault.Retry.NumRetriesRaw == nil {
 		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
-	case -1:
-		result.Vault.Retry.NumRetries = 0
+	} else {
+		retries, err := parseutil.ParseInt(result.Vault.Retry.NumRetriesRaw)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse vault.retry.num_retries to an integer value: %w", err)
+		}
+
+		if retries < -1 {
+			return nil, fmt.Errorf("invalid value provided for vault.retry.num_retries: %d", retries)
+		}
+
+		// Note: For consul-template/agent templating, a value of 0 means
+		// indefinite retries.
+		result.Vault.Retry.NumRetries = int(retries)
 	}
 
 	return result, nil

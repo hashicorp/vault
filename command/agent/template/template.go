@@ -247,12 +247,18 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		attempts = sc.AgentConfig.Vault.Retry.NumRetries
 	}
 
+	// We enable retry if it's >= 0 and it was explicitly specified in the
+	// config.
+	// Note: If NumRetries is explicitly set to 0, it technically means
+	// that the client will retry 12 times per request/attempt but this
+	// shouldn't matter since template will indefinitely retry.
+	enabled := attempts >= 0 && sc.AgentConfig.Vault.Retry.NumRetriesRaw != nil
+
 	// Use the cache if available or fallback to the Vault server values.
 	// For now we're only routing templating through the cache when persistence
 	// is enabled. The templating engine and the cache have some inconsistencies
 	// that need to be fixed for 1.7x/1.8
 	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
-		attempts = 0
 		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"
@@ -283,7 +289,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 			ServerName: &sc.AgentConfig.Vault.TLSServerName,
 		}
 	}
-	enabled := attempts > 0
+
 	conf.Vault.Retry = &ctconfig.RetryConfig{
 		Attempts: &attempts,
 		Enabled:  &enabled,
