@@ -290,10 +290,10 @@ This endpoint was added in Vault 1.8.
 - `type` (string: <required>) - Specifies the type of lease.
 - `include_child_namespaces` (bool: false) - Specifies if leases in child
    namespaces should be included in the result
-- `force` (bool: false) - Specifies if the request should complete if there are
-   more than 10,000 results to return. If this is set false, the client will
-   send an error specifying that there are many results, and the request must
-   be retried using the `force` flag.
+- `include_large_results` (bool: false) - Specifies if the request should
+   complete if there are more than 10,000 results to return. If this is set
+   false, the client will send an error specifying that there are many results,
+   and the request must be retried using the `force` flag.
 
 | Method | Path          |
 | :----- | :------------ |

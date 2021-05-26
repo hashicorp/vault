@@ -160,7 +160,7 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 		t.Errorf("expected no mounts with leases, got %#v", leases)
 	}
 
-	// test with a low enough number to not give an error without force flag
+	// test with a low enough number to not give an error without include_large_results flag
 	expectedNumLeases := 50
 	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
 
@@ -212,7 +212,7 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 	}
 }
 
-func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
+func TestExpiration_irrevocableLeaseListAPI_includeLargeResults(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
@@ -223,7 +223,7 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 
-	// test with a low enough number to not give an error without force flag
+	// test with a low enough number to not give an error without include_large_results flag
 	expectedNumLeases := vault.MaxIrrevocableLeasesToReturn + 50
 	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
 
@@ -242,11 +242,11 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 		t.Errorf("expected one warning (%q), got: %v", vault.MaxIrrevocableLeasesWarning, resp.Warnings)
 	}
 
-	// now try it with the force flag - we expect no errors and many results
-	params["force"] = []string{"true"}
+	// now try it with the include_large_results flag - we expect no errors and many results
+	params["include_large_results"] = []string{"true"}
 	resp, err = client.Logical().ReadWithData("sys/leases", params)
 	if err != nil {
-		t.Fatalf("unexpected error when using force flag: %v", err)
+		t.Fatalf("unexpected error when using include_large_results flag: %v", err)
 	}
 	if resp == nil {
 		t.Fatal("response is nil")

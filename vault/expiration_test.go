@@ -3157,7 +3157,7 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	}
 }
 
-func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
+func TestExpiration_listIrrevocableLeases_includeLargeResults(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	exp := c.expiration
 
@@ -3184,13 +3184,13 @@ func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
 
 	dataRaw, warn, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true)
 	if err != nil {
-		t.Fatalf("got error on force list leases: %v", err)
+		t.Fatalf("got error on include_large_results: %v", err)
 	}
 	if warn != "" {
 		t.Errorf("expected no warning, got %q", warn)
 	}
 	if dataRaw == nil {
-		t.Fatalf("got nil data on force list leases")
+		t.Fatalf("got nil data on include_large_results")
 	}
 
 	leaseListLength = len(dataRaw["leases"].([]*leaseResponse))

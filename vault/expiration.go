@@ -2495,7 +2495,7 @@ type leaseResponse struct {
 }
 
 // returns a warning string, if applicable
-func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeChildNamespaces, force bool) (map[string]interface{}, string, error) {
+func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeChildNamespaces, includeLargeResults bool) (map[string]interface{}, string, error) {
 	requestNS, err := namespace.FromContext(ctx)
 	if err != nil {
 		m.logger.Error("could not get namespace from context", "error", err)
@@ -2523,7 +2523,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 			return true
 		}
 
-		if !force && (numMatchingLeases >= MaxIrrevocableLeasesToReturn) {
+		if !includeLargeResults && (numMatchingLeases >= MaxIrrevocableLeasesToReturn) {
 			m.logger.Warn("hit max irrevocable leases without force flag set")
 			warning = MaxIrrevocableLeasesWarning
 			return false

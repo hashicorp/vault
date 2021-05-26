@@ -1248,7 +1248,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Default:     false,
 					Description: "Set true if you want leases for this namespace and its children.",
 				},
-				"force": {
+				"include_large_results": {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: "Set true to get lists containing more than 10,000 entries.",

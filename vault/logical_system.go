@@ -313,10 +313,10 @@ func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Reques
 	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
 	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
 
-	forceRaw, ok := d.GetOk("force")
-	force := ok && forceRaw.(bool)
+	includeLargeResultsRaw, ok := d.GetOk("include_large_results")
+	includeLargeResults := ok && includeLargeResultsRaw.(bool)
 
-	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, force)
+	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, includeLargeResults)
 	if err != nil {
 		return nil, err
 	}
