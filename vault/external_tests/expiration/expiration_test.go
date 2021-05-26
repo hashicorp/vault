@@ -2,6 +2,7 @@ package expiration
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
@@ -150,18 +151,18 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 		t.Errorf("expected no leases, got %d", totalLeaseCount)
 	}
 
-	leasesPerMountRaw, ok := resp.Data["leases"]
+	leasesRaw, ok := resp.Data["leases"]
 	if !ok {
 		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
 	}
-	leasesPerMount := leasesPerMountRaw.(map[string]interface{})
-	if len(leasesPerMount) != 0 {
-		t.Errorf("expected no mounts with leases, got %#v", leasesPerMount)
+	leases := leasesRaw.([]interface{})
+	if len(leases) != 0 {
+		t.Errorf("expected no mounts with leases, got %#v", leases)
 	}
 
 	// test with a low enough number to not give an error without force flag
 	expectedNumLeases := 50
-	expectedCountsPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
 
 	resp, err = client.Logical().ReadWithData("sys/leases", params)
 	if err != nil {
@@ -188,21 +189,26 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 		t.Errorf("expected %d leases, got %d", expectedNumLeases, totalLeaseCount)
 	}
 
-	leasesPerMountRaw, ok = resp.Data["leases"]
+	leasesRaw, ok = resp.Data["leases"]
 	if !ok {
 		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
 	}
 
-	leasesPerMount = leasesPerMountRaw.(map[string]interface{})
-	if len(leasesPerMount) != len(expectedCountsPerMount) {
-		t.Fatalf("expected %d mounts, got %d: %#v", len(expectedCountsPerMount), len(leasesPerMount), leasesPerMount)
+	leases = leasesRaw.([]interface{})
+	countPerMount := make(map[string]int)
+	for _, leaseRaw := range leases {
+		lease := leaseRaw.(map[string]interface{})
+		mount := lease["mount_id"].(string)
+
+		if _, ok := countPerMount[mount]; !ok {
+			countPerMount[mount] = 0
+		}
+
+		countPerMount[mount]++
 	}
 
-	for mount, expectedCount := range expectedCountsPerMount {
-		leaseCount := len(leasesPerMount[mount].([]interface{}))
-		if leaseCount != expectedCount {
-			t.Errorf("bad count for mount %q, expected %d, got %d", mount, expectedCount, leaseCount)
-		}
+	if !reflect.DeepEqual(countPerMount, expectedCountPerMount) {
+		t.Errorf("bad mount count. expected %v, got %v", expectedCountPerMount, countPerMount)
 	}
 }
 
@@ -219,7 +225,7 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 
 	// test with a low enough number to not give an error without force flag
 	expectedNumLeases := vault.MaxIrrevocableLeasesToReturn + 50
-	expectedCountsPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
 
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}
@@ -229,7 +235,7 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if resp == nil {
-		t.Error("unexpected nil response")
+		t.Fatal("unexpected nil response")
 	}
 
 	if len(resp.Warnings) != 1 {
@@ -263,20 +269,25 @@ func TestExpiration_irrevocableLeaseListAPI_force(t *testing.T) {
 		t.Errorf("expected %d leases, got %d", expectedNumLeases, totalLeaseCount)
 	}
 
-	leasesPerMountRaw, ok := resp.Data["leases"]
+	leasesRaw, ok := resp.Data["leases"]
 	if !ok {
 		t.Fatalf("expected 'leases' response, got %#v", resp.Data)
 	}
 
-	leasesPerMount := leasesPerMountRaw.(map[string]interface{})
-	if len(leasesPerMount) != len(expectedCountsPerMount) {
-		t.Fatalf("expected %d mounts, got %d: %#v", len(expectedCountsPerMount), len(leasesPerMount), leasesPerMount)
+	leases := leasesRaw.([]interface{})
+	countPerMount := make(map[string]int)
+	for _, leaseRaw := range leases {
+		lease := leaseRaw.(map[string]interface{})
+		mount := lease["mount_id"].(string)
+
+		if _, ok := countPerMount[mount]; !ok {
+			countPerMount[mount] = 0
+		}
+
+		countPerMount[mount]++
 	}
 
-	for mount, expectedCount := range expectedCountsPerMount {
-		leaseCount := len(leasesPerMount[mount].([]interface{}))
-		if leaseCount != expectedCount {
-			t.Errorf("bad count for mount %q, expected %d, got %d", mount, expectedCount, leaseCount)
-		}
+	if !reflect.DeepEqual(countPerMount, expectedCountPerMount) {
+		t.Errorf("bad mount count. expected %v, got %v", expectedCountPerMount, countPerMount)
 	}
 }

@@ -2490,6 +2490,7 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 
 type leaseResponse struct {
 	LeaseID string `json:"lease_id"`
+	MountID string `json:"mount_id"`
 	ErrMsg  string `json:"error"`
 }
 
@@ -2502,7 +2503,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 	}
 
 	// map of mount point : lease info
-	matchingLeasesPerMount := make(map[string][]*leaseResponse)
+	matchingLeases := make([]*leaseResponse, 0)
 	numMatchingLeases := 0
 	var warning string
 	m.irrevocable.Range(func(k, v interface{}) bool {
@@ -2531,8 +2532,9 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 		mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
 
 		numMatchingLeases++
-		matchingLeasesPerMount[mountAccessor] = append(matchingLeasesPerMount[mountAccessor], &leaseResponse{
+		matchingLeases = append(matchingLeases, &leaseResponse{
 			LeaseID: leaseID,
+			MountID: mountAccessor,
 			ErrMsg:  leaseInfo.RevokeErr,
 		})
 
@@ -2541,7 +2543,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 
 	resp := make(map[string]interface{})
 	resp["lease_count"] = numMatchingLeases
-	resp["leases"] = matchingLeasesPerMount
+	resp["leases"] = matchingLeases
 
 	return resp, warning, nil
 }

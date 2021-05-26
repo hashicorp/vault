@@ -3095,12 +3095,19 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 
 	exp := c.expiration
 
-	expectedLeasesPerMount := make(map[string][]string)
+	type basicLeaseInfo struct {
+		id    string
+		mount string
+	}
+	expectedLeases := make([]*basicLeaseInfo, 0)
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
 		for _, mountPrefix := range mountPrefixes {
 			leaseID := addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
-			expectedLeasesPerMount[mountPrefix] = append(expectedLeasesPerMount[mountPrefix], leaseID)
+			expectedLeases = append(expectedLeases, &basicLeaseInfo{
+				id:    leaseID,
+				mount: pathToMount[mountPrefix],
+			})
 		}
 	}
 
@@ -3123,34 +3130,29 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	}
 
 	count := countRaw.(int)
-	leases := leasesRaw.(map[string][]*leaseResponse)
+	leases := leasesRaw.([]*leaseResponse)
 
 	expectedCount := len(mountPrefixes) * expectedPerMount
 	if count != expectedCount {
 		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
 	}
+	if len(leases) != len(expectedLeases) {
+		t.Errorf("bad lease results. expected %d, got %d with values %v", len(expectedLeases), len(leases), leases)
+	}
 
-	for _, mountPrefix := range mountPrefixes {
-		mount := pathToMount[mountPrefix]
+	sort.Slice(expectedLeases, func(i, j int) bool {
+		return expectedLeases[i].id < expectedLeases[j].id
+	})
+	sort.Slice(leases, func(i, j int) bool {
+		return leases[i].LeaseID < leases[j].LeaseID
+	})
 
-		// sort both sets of data for easy comparison
-		sort.Strings(expectedLeasesPerMount[mountPrefix])
-		sort.Slice(leases[mount], func(i, j int) bool {
-			return leases[mount][i].LeaseID < leases[mount][j].LeaseID
-		})
-
-		if len(leases[mount]) != expectedPerMount {
-			t.Fatalf("bad leases for mount prefix %q: expected %d, got %d", mountPrefix, expectedPerMount, len(leases[mount]))
+	for i, lease := range expectedLeases {
+		if lease.id != leases[i].LeaseID {
+			t.Errorf("bad lease id. expected %q, got %q", lease.id, leases[i].LeaseID)
 		}
-
-		for i, v := range expectedLeasesPerMount[mountPrefix] {
-			lease := leases[mount][i]
-			if lease.LeaseID != v {
-				t.Errorf("bad leaseID for mount prefix %q: expected %s, got %s", mountPrefix, v, lease.LeaseID)
-			}
-			if lease.ErrMsg == "" {
-				t.Errorf("no error message for irrevocable leaseID %q", lease.LeaseID)
-			}
+		if lease.mount != leases[i].MountID {
+			t.Errorf("bad mount id. expected %q, got %q", lease.mount, leases[i].MountID)
 		}
 	}
 }
@@ -3168,14 +3170,14 @@ func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	if warn != maxIrrevocableLeasesWarning {
-		t.Errorf("expected warning %q, got %q", maxIrrevocableLeasesWarning, warn)
+	if warn != MaxIrrevocableLeasesWarning {
+		t.Errorf("expected warning %q, got %q", MaxIrrevocableLeasesWarning, warn)
 	}
 	if dataRaw == nil {
 		t.Fatal("expected partial data, got nil")
 	}
 
-	leaseListLength := len(dataRaw["leases"].(map[string][]*leaseResponse)["mount-accessor-not-found"])
+	leaseListLength := len(dataRaw["leases"].([]*leaseResponse))
 	if leaseListLength != MaxIrrevocableLeasesToReturn {
 		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, leaseListLength)
 	}
@@ -3191,7 +3193,7 @@ func TestExpiration_listIrrevocableLeases_force(t *testing.T) {
 		t.Fatalf("got nil data on force list leases")
 	}
 
-	leaseListLength = len(dataRaw["leases"].(map[string][]*leaseResponse)["mount-accessor-not-found"])
+	leaseListLength = len(dataRaw["leases"].([]*leaseResponse))
 	if leaseListLength != expectedNumLeases {
 		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, expectedNumLeases)
 	}
