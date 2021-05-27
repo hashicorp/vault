@@ -1248,10 +1248,10 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 					Default:     false,
 					Description: "Set true if you want leases for this namespace and its children.",
 				},
-				"include_large_results": {
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: "Set true to get lists containing more than 10,000 entries.",
+				"limit": {
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "Set to a positive integer of the maximum number of entries to return. If you want all results, set to 'none'. If not set, you will get a maximum of 10,000 results returned.",
 				},
 			},
 

@@ -3111,7 +3111,7 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 		}
 	}
 
-	out, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
+	out, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false, MaxIrrevocableLeasesToReturn)
 	if err != nil {
 		t.Fatalf("error listing irrevocable leases: %v", err)
 	}
@@ -3155,7 +3155,7 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	}
 }
 
-func TestExpiration_listIrrevocableLeases_includeLargeResults(t *testing.T) {
+func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	exp := c.expiration
 
@@ -3164,7 +3164,7 @@ func TestExpiration_listIrrevocableLeases_includeLargeResults(t *testing.T) {
 		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
 	}
 
-	dataRaw, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false)
+	dataRaw, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false, MaxIrrevocableLeasesToReturn)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -3180,15 +3180,15 @@ func TestExpiration_listIrrevocableLeases_includeLargeResults(t *testing.T) {
 		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, leaseListLength)
 	}
 
-	dataRaw, warn, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true)
+	dataRaw, warn, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true, 0)
 	if err != nil {
-		t.Fatalf("got error on include_large_results: %v", err)
+		t.Fatalf("got error when using limit=none: %v", err)
 	}
 	if warn != "" {
 		t.Errorf("expected no warning, got %q", warn)
 	}
 	if dataRaw == nil {
-		t.Fatalf("got nil data on include_large_results")
+		t.Fatalf("got nil data when using limit=none")
 	}
 
 	leaseListLength = len(dataRaw["leases"].([]*leaseResponse))

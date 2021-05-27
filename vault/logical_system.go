@@ -304,6 +304,36 @@ func (b *SystemBackend) handleLeaseCount(ctx context.Context, req *logical.Reque
 	}, nil
 }
 
+func processLimit(d *framework.FieldData) (bool, int, error) {
+	limitStr := ""
+	limitRaw, ok := d.GetOk("limit")
+	if ok {
+		limitStr = limitRaw.(string)
+	}
+
+	includeAll := false
+	maxResults := MaxIrrevocableLeasesToReturn
+	if limitStr == "" {
+		// use the defaults
+	} else if strings.ToLower(limitStr) == "none" {
+		includeAll = true
+	} else {
+		// not having a valid, positive int here is an error
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			return false, 0, fmt.Errorf("invalid 'limit' provided: %w", err)
+		}
+
+		if limit < 1 {
+			return false, 0, fmt.Errorf("limit must be 'none' or a positive integer")
+		}
+
+		maxResults = limit
+	}
+
+	return includeAll, maxResults, nil
+}
+
 func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	typeRaw, ok := d.GetOk("type")
 	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
@@ -313,10 +343,12 @@ func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Reques
 	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
 	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
 
-	includeLargeResultsRaw, ok := d.GetOk("include_large_results")
-	includeLargeResults := ok && includeLargeResultsRaw.(bool)
+	includeAll, maxResults, err := processLimit(d)
+	if err != nil {
+		return nil, err
+	}
 
-	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, includeLargeResults)
+	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, includeAll, maxResults)
 	if err != nil {
 		return nil, err
 	}
