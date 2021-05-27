@@ -1,4 +1,3 @@
-{{!-- ARG TODO backendType is the only unknown param also changed how actions are called on click --}}
 {{#linked-block
   "vault.cluster.secrets.backend.show"
   (if this.keyTypeValue (concat 'role/' @item.id) @item.id)
@@ -9,7 +8,7 @@
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      <LinkTo @route={{concat "vault.cluster.secrets.backend.show" }} @model={{if keyTypeValue (concat 'role/' @item.id) @item.id}} class="has-text-black has-text-weight-semibold">
+      <LinkTo @route={{concat "vault.cluster.secrets.backend.show" }} @model={{if this.keyTypeValue (concat 'role/' @item.id) @item.id}} class="has-text-black has-text-weight-semibold">
         <Icon
           @glyph="user-square-outline"
           class="has-text-grey-light is-pulled-left"

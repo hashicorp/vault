@@ -1,4 +1,3 @@
-{{!-- ARG action toggleZeroAddress with params --}}
 {{#linked-block
   (concat
     "vault.cluster.secrets.backend."
@@ -66,7 +65,7 @@
                   {{#if @item.zeroAddress}}
                     <li class="action">
                       <button type="button" disabled={{get this (concat "loading-" @item.id)}} class="link button is-transparent
-                        {{if (get this (concat "loading-" @item.id)) 'is-loading'}} " {{action "toggleZeroAddress" @item @backendModel}}>
+                        {{if (get this (concat "loading-" @item.id)) 'is-loading'}} " {{on "click" @toggleZeroAddress}}>
                         Disable Zero Address
                       </button>
                     </li>
@@ -76,7 +75,7 @@
                         type="button"
                         disabled={{get this (concat "loading-" @item.id)}}
                         class="link button is-transparent {{if (get this (concat "loading-" @item.id)) 'is-loading'}}"
-                        {{action "toggleZeroAddress" @item @backendModel}}
+                        {{on "click" @toggleZeroAddress}}
                       >
                         Enable Zero Address
                       </button>
