@@ -247,7 +247,7 @@ partLoop:
 		usage, err := disk.Usage(partition.Mountpoint)
 		testName := "disk-usage: " + partition.Mountpoint
 		if err != nil {
-			Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s", partition.Mountpoint))
+			Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s: %v", partition.Mountpoint, err))
 		} else {
 			if usage.UsedPercent > 95 {
 				SpotWarn(ctx, testName, "more than 95% full")
