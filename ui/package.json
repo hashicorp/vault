@@ -182,7 +182,6 @@
     "yargs-parser": "^13.1.2",
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
-    "postcss": "^8.2.10",
     "xmlhttprequest-ssl": "^1.6.2"
   },
   "engines": {
