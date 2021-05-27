@@ -97,7 +97,7 @@ type Config struct {
 	// The CheckRetry function to use; a default is used if not provided
 	CheckRetry retryablehttp.CheckRetry
 
-	// Logger is the logger to provide to the retryable HTTP client.
+	// Logger is the leveled logger to provide to the retryable HTTP client.
 	Logger retryablehttp.LeveledLogger
 
 	// Limiter is the rate limiter used by the client.
