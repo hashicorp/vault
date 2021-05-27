@@ -13,7 +13,6 @@ module('Integration | Component | form field', function(hooks) {
   setupRenderingTest(hooks);
 
   const createAttr = (name, type, options) => {
-    console.log({ options });
     return {
       name,
       type,
