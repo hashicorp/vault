@@ -13,6 +13,7 @@ module('Integration | Component | form field', function(hooks) {
   setupRenderingTest(hooks);
 
   const createAttr = (name, type, options) => {
+    console.log({ options });
     return {
       name,
       type,
@@ -85,8 +86,8 @@ module('Integration | Component | form field', function(hooks) {
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
-  test('it renders: object with clear button', async function(assert) {
-    await setup.call(this, createAttr('foo', 'object', { allowReset: true }));
+  test('it renders: string as json with clear button', async function(assert) {
+    await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
     assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
     assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
