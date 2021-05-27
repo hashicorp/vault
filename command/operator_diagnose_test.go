@@ -40,23 +40,22 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-storage-tls-consul",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-consul-direct-access-storage",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 			},
 		},
@@ -67,20 +66,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:    "storage",
 					Status:  diagnose.ErrorStatus,
-					Message: "A storage backend must be specified",
+					Message: "no storage stanza found in config",
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.ErrorStatus,
+						},
+					},
 				},
 			},
 		},
@@ -91,20 +85,18 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "init-listeners",
 					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-listeners",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "check-listener-tls",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 			},
 		},
@@ -115,19 +107,23 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:    "test-storage-tls-consul",
+							Status:  diagnose.ErrorStatus,
+							Message: "expired",
+						},
+						{
+							Name:   "test-consul-direct-access-storage",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
 			},
 		},
@@ -138,22 +134,45 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:   "storage",
-					Status: diagnose.ErrorStatus,
-					Warnings: []string{
-						diagnose.AddrDNExistErr,
+					Status: diagnose.WarningStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-storage-tls-consul",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-consul-direct-access-storage",
+							Status: diagnose.WarningStatus,
+						},
 					},
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.ErrorStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-ha-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-consul-direct-access-storage",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:    "test-ha-storage-tls-consul",
+							Status:  diagnose.ErrorStatus,
+							Message: "x509: certificate has expired or is not yet valid",
+						},
+					},
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.ErrorStatus,
 				},
 			},
 		},
@@ -164,26 +183,21 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:    "service-discovery",
-					Status:  diagnose.ErrorStatus,
-					Message: "failed to verify certificate: x509: certificate has expired or is not yet valid:",
-					Warnings: []string{
-						diagnose.DirAccessErr,
+					Name:   "service-discovery",
+					Status: diagnose.ErrorStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:    "test-serviceregistration-tls-consul",
+							Status:  diagnose.ErrorStatus,
+							Message: "failed to verify certificate: x509: certificate has expired or is not yet valid",
+						},
+						{
+							Name:   "test-consul-direct-access-service-discovery",
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								diagnose.DirAccessErr,
+							},
+						},
 					},
 				},
 			},
@@ -195,26 +209,25 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
-					},
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						diagnose.DirAccessErr,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-storage-tls-consul",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-consul-direct-access-storage",
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								diagnose.DirAccessErr,
+							},
+						},
 					},
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
 				},
 			},
 		},
@@ -225,7 +238,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 		for _, tc := range cases {
 			tc := tc
-
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 				client, closer := testVaultServer(t)
@@ -239,6 +251,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 				if err := compareResults(tc.expected, result.Children); err != nil {
 					t.Fatalf("Did not find expected test results: %v", err)
+					t.Fatal(result.String())
 				}
 			})
 		}
@@ -288,7 +301,11 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 		}
 	}
 	if len(exp.Children) != len(act.Children) {
-		return fmt.Errorf("section %s, child count mismatch: %d vs %d", exp.Name, len(exp.Children), len(act.Children))
+		errStrings := []string{}
+		for _, c := range act.Children {
+			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
+		}
+		return fmt.Errorf(strings.Join(errStrings, ","))
 	}
 
 	if len(exp.Children) > 0 {
