@@ -12,7 +12,6 @@ backend "consul" {
     foo = "bar"
     advertise_addr = "foo"
     address = "http://remoteconsulserverIP:1028"
-
 }
 
 ha_backend "consul" {

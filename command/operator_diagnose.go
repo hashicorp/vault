@@ -209,6 +209,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
+
+	diagnose.Test(ctx, "disk-usage", diagnose.DiskUsageCheck)
+
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
@@ -400,7 +403,7 @@ SEALFAIL:
 			return nil
 		})
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
+			diagnose.Test(ctx, "test-ha-storage-tls-consul", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
 					return err
