@@ -50,8 +50,18 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				{
 					Name:   "init-listeners",
 					Status: diagnose.WarningStatus,
-					Warnings: []string{
-						"TLS is disabled in a Listener config stanza.",
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-listeners",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "check-listener-tls",
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"TLS is disabled in a Listener config stanza.",
+							},
+						},
 					},
 				},
 				{
