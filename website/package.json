@@ -42,6 +42,10 @@
     "inquirer": "^8.1.0",
     "prettier": "^2.3.0"
   },
+  "resolutions": {
+    "trim": "^0.0.3",
+    "node-fetch": "^2.6.1"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "next-hashicorp precommit"
@@ -57,6 +61,7 @@
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
     "start": "next-remote-watch ./content/**/*.mdx",
-    "static": "npm run build && npm run export && cp _redirects out/."
+    "static": "npm run build && npm run export && cp _redirects out/.",
+    "preinstall": "npx npm-force-resolutions"
   }
 }
