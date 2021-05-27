@@ -148,6 +148,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						{
 							Name:   "test-consul-direct-access-storage",
 							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"consul storage does not connect to local agent, but directly to server",
+							},
 						},
 					},
 				},
@@ -161,7 +164,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"consul storage does not connect to local agent, but directly to server",
+							},
 						},
 						{
 							Name:    "test-ha-storage-tls-consul",
