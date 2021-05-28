@@ -40,10 +40,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -61,81 +57,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-service-discovery",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "create-seal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-core",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "init-randreader",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "setup-ha-storage",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-ha-storage-backend",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "determine-redirect",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "find-cluster-addr",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-listeners",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "check-listener-tls",
-							Status: diagnose.WarningStatus,
-							Warnings: []string{
-								"TLS is disabled in a Listener config stanza.",
-							},
-						},
-					},
-				},
-				{
-					Name:   "finalize-seal-shamir",
-					Status: diagnose.OkStatus,
-				},
 			},
 		},
 		{
@@ -144,10 +65,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				"-config", "./server/test-fixtures/nostore_config.hcl",
 			},
 			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
 				{
 					Name:    "storage",
 					Status:  diagnose.ErrorStatus,
@@ -159,59 +76,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.ErrorStatus,
-				},
-				{
-					Name:   "create-seal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:    "setup-core",
-					Status:  diagnose.ErrorStatus,
-					Message: BackendUninitializedErr,
-					Children: []*diagnose.Result{
-						{
-							Name:   "init-randreader",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:    "setup-ha-storage",
-					Status:  diagnose.ErrorStatus,
-					Message: BackendUninitializedErr,
-				},
-				{
-					Name:   "determine-redirect",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "find-cluster-addr",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-listeners",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "check-listener-tls",
-							Status: diagnose.WarningStatus,
-							Warnings: []string{
-								"TLS is disabled in a Listener config stanza.",
-							},
-						},
-					},
-				},
-				{
-					Name:   "finalize-seal-shamir",
-					Status: diagnose.OkStatus,
-				},
 			},
 		},
 		{
@@ -221,82 +85,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-storage-backend",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-service-discovery",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "create-seal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-core",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "init-randreader",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "setup-ha-storage",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-ha-storage-backend",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "determine-redirect",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "find-cluster-addr",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "init-listeners",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -306,16 +94,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "check-listener-tls",
-							Status: diagnose.WarningStatus,
-							Warnings: []string{
-								"TLS is disabled in a Listener config stanza.",
-							},
+							Status: diagnose.OkStatus,
 						},
 					},
-				},
-				{
-					Name:   "finalize-seal-shamir",
-					Status: diagnose.OkStatus,
 				},
 			},
 		},
@@ -325,10 +106,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				"-config", "./server/test-fixtures/config_bad_https_storage.hcl",
 			},
 			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
 				{
 					Name:   "storage",
 					Status: diagnose.ErrorStatus,
@@ -348,52 +125,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.WarningStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.WarningStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-service-discovery",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "create-seal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-core",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "init-randreader",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "setup-ha-storage",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-ha-storage-backend",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
 			},
 		},
 		{
@@ -402,10 +133,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				"-config", "./server/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
 			},
 			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
 				{
 					Name:   "storage",
 					Status: diagnose.WarningStatus,
@@ -416,39 +143,14 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-storage-tls-consul",
-							Status: diagnose.WarningStatus,
+							Status: diagnose.OkStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-service-discovery",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "create-seal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-core",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "init-randreader",
-							Status: diagnose.OkStatus,
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"consul storage does not connect to local agent, but directly to server",
+							},
 						},
 					},
 				},
@@ -462,14 +164,21 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"consul storage does not connect to local agent, but directly to server",
+							},
 						},
 						{
-							Name:    "test-storage-tls-consul",
+							Name:    "test-ha-storage-tls-consul",
 							Status:  diagnose.ErrorStatus,
 							Message: "x509: certificate has expired or is not yet valid",
 						},
 					},
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.ErrorStatus,
 				},
 			},
 		},
@@ -479,28 +188,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",
 			},
 			[]*diagnose.Result{
-				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "storage",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-storage-backend",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
 				{
 					Name:   "service-discovery",
 					Status: diagnose.ErrorStatus,
@@ -528,10 +215,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "storage",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
@@ -551,81 +234,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 					},
-				},
-				{
-					Name:   "service-discovery",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-service-discovery",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "create-seal",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "setup-core",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "init-randreader",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "setup-ha-storage",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-ha-storage-backend",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-consul-direct-access-storage",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-				{
-					Name:   "determine-redirect",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "find-cluster-addr",
-					Status: diagnose.OkStatus,
-				},
-				{
-					Name:   "init-listeners",
-					Status: diagnose.WarningStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-listeners",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "check-listener-tls",
-							Status: diagnose.WarningStatus,
-							Warnings: []string{
-								"TLS is disabled in a Listener config stanza.",
-							},
-						},
-					},
-				},
-				{
-					Name:   "finalize-seal-shamir",
-					Status: diagnose.OkStatus,
 				},
 			},
 		},
@@ -647,21 +255,36 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				cmd.Run(tc.args)
 				result := cmd.diagnose.Finalize(context.Background())
 
-				for i, exp := range tc.expected {
-					if i >= len(result.Children) {
-						t.Fatalf("there are at least %d test cases, but fewer actual results", i)
-					}
-					act := result.Children[i]
-					if err := compareResult(t, exp, act); err != nil {
-						t.Fatalf("%v, %v, %v", err, act, exp)
-					}
+				if err := compareResults(tc.expected, result.Children); err != nil {
+					t.Fatalf("Did not find expected test results: %v", err)
+					t.Fatal(result.String())
 				}
 			})
 		}
 	})
 }
 
-func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) error {
+func compareResults(expected []*diagnose.Result, actual []*diagnose.Result) error {
+	for _, exp := range expected {
+		found := false
+		// Check them all so we don't have to be order specific
+		for _, act := range actual {
+			if exp.Name == act.Name {
+				found = true
+				if err := compareResult(exp, act); err != nil {
+					return err
+				}
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("could not find expected test result: %s", exp.Name)
+		}
+	}
+	return nil
+}
+
+func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	if exp.Name != act.Name {
 		return fmt.Errorf("names mismatch: %s vs %s", exp.Name, act.Name)
 	}
@@ -689,6 +312,10 @@ func compareResult(t *testing.T, exp *diagnose.Result, act *diagnose.Result) err
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
 		}
 		return fmt.Errorf(strings.Join(errStrings, ","))
+	}
+
+	if len(exp.Children) > 0 {
+		return compareResults(exp.Children, act.Children)
 	}
 	return nil
 }
