@@ -1,4 +1,4 @@
-// +build !race,!hsm,!enterprise
+// +build !race,!hsm
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -22,6 +22,12 @@ import (
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
 )
+
+func init() {
+	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
+		os.Setenv("VAULT_LICENSE", signed)
+	}
+}
 
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
