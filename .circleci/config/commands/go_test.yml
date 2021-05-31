@@ -76,11 +76,9 @@ steps:
         make prep
         mkdir -p test-results/go-test
 
-        # Save the vault license for tests that want it
-        export VAULT_LICENSE_CI="$VAULT_LICENSE"
-
         # Don't tempt fate by having the license env var populated: tests should
-        # have to use it explicitly rather than depending on an implicit var.
+        # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
+        # depending on an implicit behaviour.
         VAULT_LICENSE=
 
         # Create a docker network for our testcontainer
