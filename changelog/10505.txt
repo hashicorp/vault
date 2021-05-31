@@ -1,0 +1,3 @@
+```release-note:improvement
+helper: Add helper for decoding root tokens
+```
