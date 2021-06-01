@@ -38,6 +38,8 @@ var (
 	processorArchitecture uint
 )
 
+const processQueryInformation = windows.PROCESS_QUERY_LIMITED_INFORMATION | windows.PROCESS_QUERY_INFORMATION // WinXP doesn't know PROCESS_QUERY_LIMITED_INFORMATION
+
 type SystemProcessInformation struct {
 	NextEntryOffset   uint64
 	NumberOfThreads   uint64
@@ -219,7 +221,7 @@ func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
 		return false, err
 	}
 	const STILL_ACTIVE = 259 // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitcodeprocess
-	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	h, err := windows.OpenProcess(processQueryInformation, false, uint32(pid))
 	if err == windows.ERROR_ACCESS_DENIED {
 		return true, nil
 	}
@@ -273,7 +275,7 @@ func (p *Process) TgidWithContext(ctx context.Context) (int32, error) {
 }
 
 func (p *Process) ExeWithContext(ctx context.Context) (string, error) {
-	c, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(p.Pid))
+	c, err := windows.OpenProcess(processQueryInformation, false, uint32(p.Pid))
 	if err != nil {
 		return "", err
 	}
@@ -347,7 +349,7 @@ func (p *Process) ForegroundWithContext(ctx context.Context) (bool, error) {
 
 func (p *Process) UsernameWithContext(ctx context.Context) (string, error) {
 	pid := p.Pid
-	c, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	c, err := windows.OpenProcess(processQueryInformation, false, uint32(pid))
 	if err != nil {
 		return "", err
 	}
@@ -397,7 +399,7 @@ var priorityClasses = map[int]int32{
 }
 
 func (p *Process) NiceWithContext(ctx context.Context) (int32, error) {
-	c, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(p.Pid))
+	c, err := windows.OpenProcess(processQueryInformation, false, uint32(p.Pid))
 	if err != nil {
 		return 0, err
 	}
@@ -426,7 +428,7 @@ func (p *Process) RlimitUsageWithContext(ctx context.Context, gatherUsed bool) (
 }
 
 func (p *Process) IOCountersWithContext(ctx context.Context) (*IOCountersStat, error) {
-	c, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(p.Pid))
+	c, err := windows.OpenProcess(processQueryInformation, false, uint32(p.Pid))
 	if err != nil {
 		return nil, err
 	}
@@ -680,7 +682,7 @@ func ProcessesWithContext(ctx context.Context) ([]*Process, error) {
 func getRusage(pid int32) (*windows.Rusage, error) {
 	var CPU windows.Rusage
 
-	c, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	c, err := windows.OpenProcess(processQueryInformation, false, uint32(pid))
 	if err != nil {
 		return nil, err
 	}
@@ -695,7 +697,7 @@ func getRusage(pid int32) (*windows.Rusage, error) {
 
 func getMemoryInfo(pid int32) (PROCESS_MEMORY_COUNTERS, error) {
 	var mem PROCESS_MEMORY_COUNTERS
-	c, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	c, err := windows.OpenProcess(processQueryInformation, false, uint32(pid))
 	if err != nil {
 		return mem, err
 	}
@@ -729,7 +731,7 @@ type SYSTEM_TIMES struct {
 func getProcessCPUTimes(pid int32) (SYSTEM_TIMES, error) {
 	var times SYSTEM_TIMES
 
-	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	h, err := windows.OpenProcess(processQueryInformation, false, uint32(pid))
 	if err != nil {
 		return times, err
 	}
@@ -770,7 +772,7 @@ func is32BitProcess(procHandle syscall.Handle) bool {
 }
 
 func getProcessCommandLine(pid int32) (string, error) {
-	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION|windows.PROCESS_VM_READ, false, uint32(pid))
+	h, err := windows.OpenProcess(processQueryInformation|windows.PROCESS_VM_READ, false, uint32(pid))
 	if err == windows.ERROR_ACCESS_DENIED || err == windows.ERROR_INVALID_PARAMETER {
 		return "", nil
 	}

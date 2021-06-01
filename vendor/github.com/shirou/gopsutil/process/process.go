@@ -476,7 +476,8 @@ func (p *Process) PageFaults() (*PageFaultsStat, error) {
 	return p.PageFaultsWithContext(context.Background())
 }
 
-// Children returns a slice of Process of the process.
+// Children returns the children of the process represented as a slice
+// of pointers to Process type.
 func (p *Process) Children() ([]*Process, error) {
 	return p.ChildrenWithContext(context.Background())
 }

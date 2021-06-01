@@ -1109,7 +1109,7 @@ github.com/sethvargo/go-limiter
 github.com/sethvargo/go-limiter/httplimit
 github.com/sethvargo/go-limiter/internal/fasttime
 github.com/sethvargo/go-limiter/memorystore
-# github.com/shirou/gopsutil v3.21.1+incompatible
+# github.com/shirou/gopsutil v3.21.5+incompatible
 ## explicit
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
@@ -1150,6 +1150,11 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312
 # github.com/tidwall/pretty v1.0.1
 ## explicit
+# github.com/tklauser/go-sysconf v0.3.6
+## explicit
+github.com/tklauser/go-sysconf
+# github.com/tklauser/numcpus v0.2.2
+github.com/tklauser/numcpus
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ulikunitz/xz v0.5.7
