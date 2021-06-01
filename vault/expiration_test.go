@@ -3095,18 +3095,15 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 
 	exp := c.expiration
 
-	type basicLeaseInfo struct {
-		id    string
-		mount string
-	}
-	expectedLeases := make([]*basicLeaseInfo, 0)
+	expectedLeases := make([]*basicLeaseTestInfo, 0)
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
 		for _, mountPrefix := range mountPrefixes {
-			leaseID := addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
-			expectedLeases = append(expectedLeases, &basicLeaseInfo{
-				id:    leaseID,
-				mount: pathToMount[mountPrefix],
+			le := addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+			expectedLeases = append(expectedLeases, &basicLeaseTestInfo{
+				id:     le.id,
+				mount:  pathToMount[mountPrefix],
+				expire: le.expire,
 			})
 		}
 	}
@@ -3143,6 +3140,9 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	// `leases` is already sorted by lease ID
 	sort.Slice(expectedLeases, func(i, j int) bool {
 		return expectedLeases[i].id < expectedLeases[j].id
+	})
+	sort.SliceStable(expectedLeases, func(i, j int) bool {
+		return expectedLeases[i].expire.Before(expectedLeases[j].expire)
 	})
 
 	for i, lease := range expectedLeases {

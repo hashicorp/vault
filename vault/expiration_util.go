@@ -5,6 +5,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -33,9 +34,15 @@ func (m *ExpirationManager) collectLeases() (map[*namespace.Namespace][]string, 
 	return existing, leaseCount, nil
 }
 
+type basicLeaseTestInfo struct {
+	id     string
+	mount  string
+	expire time.Time
+}
+
 // add an irrevocable lease for test purposes
-// returns the lease ID for the lease
-func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) string {
+// returns the lease ID and expire time
+func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) *basicLeaseTestInfo {
 	t.Helper()
 
 	uuid, err := uuid.GenerateUUID()
@@ -52,12 +59,13 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 		nsSuffix = fmt.Sprintf("/blah.%s", ns.ID)
 	}
 
+	randomTimeDelta := time.Duration(rand.Int31n(24))
 	le := &leaseEntry{
 		LeaseID:    pathPrefix + "lease" + uuid + nsSuffix,
 		Path:       pathPrefix + nsSuffix,
 		namespace:  ns,
 		IssueTime:  time.Now(),
-		ExpireTime: time.Now().Add(time.Hour),
+		ExpireTime: time.Now().Add(randomTimeDelta * time.Hour),
 		RevokeErr:  "some error message",
 	}
 
@@ -70,7 +78,10 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 
 	m.updatePendingInternal(le)
 
-	return le.LeaseID
+	return &basicLeaseTestInfo{
+		id:     le.LeaseID,
+		expire: le.ExpireTime,
+	}
 }
 
 // InjectIrrevocableLeases injects `count` irrevocable leases (currently to a
@@ -79,9 +90,9 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 func (c *Core) InjectIrrevocableLeases(t *testing.T, ctx context.Context, count int) map[string]int {
 	out := make(map[string]int)
 	for i := 0; i < count; i++ {
-		leaseID := addIrrevocableLease(t, c.expiration, "foo/", namespace.RootNamespace)
+		le := addIrrevocableLease(t, c.expiration, "foo/", namespace.RootNamespace)
 
-		mountAccessor := c.expiration.getLeaseMountAccessor(ctx, leaseID)
+		mountAccessor := c.expiration.getLeaseMountAccessor(ctx, le.id)
 		if _, ok := out[mountAccessor]; !ok {
 			out[mountAccessor] = 0
 		}

@@ -2490,9 +2490,10 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 }
 
 type leaseResponse struct {
-	LeaseID string `json:"lease_id"`
-	MountID string `json:"mount_id"`
-	ErrMsg  string `json:"error"`
+	LeaseID    string `json:"lease_id"`
+	MountID    string `json:"mount_id"`
+	ErrMsg     string `json:"error"`
+	expireTime time.Time
 }
 
 // returns a warning string, if applicable
@@ -2536,17 +2537,21 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 
 		numMatchingLeases++
 		matchingLeases = append(matchingLeases, &leaseResponse{
-			LeaseID: leaseID,
-			MountID: mountAccessor,
-			ErrMsg:  leaseInfo.RevokeErr,
+			LeaseID:    leaseID,
+			MountID:    mountAccessor,
+			ErrMsg:     leaseInfo.RevokeErr,
+			expireTime: leaseInfo.ExpireTime,
 		})
 
 		return true
 	})
 
-	// sort the results for consistent API response
+	// sort the results for consistent API response, with the least fresh leases first in the list
 	sort.Slice(matchingLeases, func(i, j int) bool {
 		return matchingLeases[i].LeaseID < matchingLeases[j].LeaseID
+	})
+	sort.SliceStable(matchingLeases, func(i, j int) bool {
+		return matchingLeases[i].expireTime.Before(matchingLeases[j].expireTime)
 	})
 
 	resp := make(map[string]interface{})
