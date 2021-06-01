@@ -933,9 +933,14 @@ jobs:
           make prep
           mkdir -p test-results/go-test
 
-          # Don't tempt fate by having the license env var populated: tests should
-          # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
-          # depending on an implicit behaviour.
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
@@ -1155,9 +1160,14 @@ jobs:
           make prep
           mkdir -p test-results/go-test
 
-          # Don't tempt fate by having the license env var populated: tests should
-          # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
-          # depending on an implicit behaviour.
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
@@ -1628,9 +1638,14 @@ jobs:
           make prep
           mkdir -p test-results/go-test
 
-          # Don't tempt fate by having the license env var populated: tests should
-          # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
-          # depending on an implicit behaviour.
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
@@ -1781,9 +1796,14 @@ jobs:
           make prep
           mkdir -p test-results/go-test
 
-          # Don't tempt fate by having the license env var populated: tests should
-          # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
-          # depending on an implicit behaviour.
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
@@ -2385,9 +2405,14 @@ jobs:
           make prep
           mkdir -p test-results/go-test
 
-          # Don't tempt fate by having the license env var populated: tests should
-          # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
-          # depending on an implicit behaviour.
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
