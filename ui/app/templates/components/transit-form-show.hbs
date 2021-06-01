@@ -47,8 +47,7 @@
   </Toolbar>
 {{/unless}}
 
-
-{{#if (eq tab 'actions')}}
+{{#if (eq @tab 'actions')}}
   <div class="transit-card-container">
     {{#each @model.supportedActions as |supportedAction|}}
       {{#linked-block
