@@ -372,13 +372,14 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 		for !done {
 			err := boltDB.Update(func(tx *bolt.Tx) error {
 				b, err := tx.CreateBucketIfNotExists(dataBucketName)
+				b.FillPercent = 0.9
 				if err != nil {
 					return err
 				}
 
 				// Commit in batches of 50k. Bolt holds all the data in memory and
 				// doesn't split the pages until commit so we do incremental writes.
-				for i := 0; i < 50000; i++ {
+				for i := 0; i < 5000; i++ {
 					err := protoReader.ReadMsg(entry)
 					if err != nil {
 						if err == io.EOF {

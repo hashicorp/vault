@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -155,7 +157,21 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
-	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{Timeout: 1 * time.Second})
+	op := &bolt.Options{Timeout: 1 * time.Second}
+	if os.Getenv("VAULT_DEBUG_BOLT_FREELIST") != "" {
+		fmt.Println("Setting freelist type to map")
+		op.FreelistType = bolt.FreelistMapType
+	}
+	if os.Getenv("VAULT_DEBUG_BOLT_NO_FREELIST") != "" {
+		fmt.Println("Disabling freelist persistence")
+		op.NoFreelistSync = true
+	}
+	if os.Getenv("VAULT_DEBUG_BOLT_MMAP_FLAG") != "" {
+		fmt.Println("Setting mmap flag")
+		op.MmapFlags = syscall.MAP_POPULATE
+	}
+
+	boltDB, err := bolt.Open(dbPath, 0o666, op)
 	if err != nil {
 		return err
 	}

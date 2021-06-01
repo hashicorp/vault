@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -22,7 +23,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/raft-boltdb/v2"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -364,8 +365,25 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			return nil, err
 		}
 
+		op := &bolt.Options{Timeout: 1 * time.Second}
+		if os.Getenv("VAULT_DEBUG_BOLT_FREELIST") != "" {
+			fmt.Println("Setting freelist type to map")
+			op.FreelistType = bolt.FreelistMapType
+		}
+		if os.Getenv("VAULT_DEBUG_BOLT_NO_FREELIST") != "" {
+			fmt.Println("Disabling freelist persistence")
+			op.NoFreelistSync = true
+		}
+		if os.Getenv("VAULT_DEBUG_BOLT_MMAP_FLAG") != "" {
+			fmt.Println("Setting mmap flag")
+			op.MmapFlags = syscall.MAP_POPULATE
+		}
+
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
+		store, err := raftboltdb.New(raftboltdb.Options{
+			Path:        filepath.Join(path, "raft.db"),
+			BoltOptions: op,
+		})
 		if err != nil {
 			return nil, err
 		}
