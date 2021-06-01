@@ -85,6 +85,13 @@ module('Integration | Component | form field', function(hooks) {
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
+  test('it renders: string as json with clear button', async function(assert) {
+    await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
+    assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
+    assert.ok(component.hasJSONEditor, 'renders the json editor');
+    assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
+  });
+
   test('it renders: editType textarea', async function(assert) {
     let [model, spy] = await setup.call(
       this,

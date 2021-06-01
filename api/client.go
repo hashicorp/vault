@@ -97,6 +97,9 @@ type Config struct {
 	// The CheckRetry function to use; a default is used if not provided
 	CheckRetry retryablehttp.CheckRetry
 
+	// Logger is the leveled logger to provide to the retryable HTTP client.
+	Logger retryablehttp.LeveledLogger
+
 	// Limiter is the rate limiter used by the client.
 	// If this pointer is nil, then there will be no limit set.
 	// In contrast, if this pointer is set, even to an empty struct,
@@ -477,6 +480,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.Timeout = c.config.Timeout
 	newConfig.Backoff = c.config.Backoff
 	newConfig.CheckRetry = c.config.CheckRetry
+	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
@@ -738,6 +742,15 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 	c.config.Backoff = backoff
 }
 
+func (c *Client) SetLogger(logger retryablehttp.LeveledLogger) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.Logger = logger
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
@@ -761,6 +774,7 @@ func (c *Client) Clone() (*Client, error) {
 		Timeout:          config.Timeout,
 		Backoff:          config.Backoff,
 		CheckRetry:       config.CheckRetry,
+		Logger:           config.Logger,
 		Limiter:          config.Limiter,
 		OutputCurlString: config.OutputCurlString,
 		AgentAddress:     config.AgentAddress,
@@ -865,6 +879,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
 	outputCurlString := c.config.OutputCurlString
+	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
@@ -924,6 +939,7 @@ START:
 		RetryMax:     maxRetries,
 		Backoff:      backoff,
 		CheckRetry:   checkRetry,
+		Logger:       logger,
 		ErrorHandler: retryablehttp.PassthroughErrorHandler,
 	}
 
