@@ -8,7 +8,7 @@ const DEFAULT_DISPLAY = {
   create: 'Create secret',
   navigateTree: true,
   editComponent: 'secret-edit',
-  listItemPartial: 'SecretList::Item',
+  listItemPartial: 'secret-list/item',
 };
 const SECRET_BACKENDS = {
   aws: {
@@ -135,7 +135,7 @@ const SECRET_BACKENDS = {
     create: 'Create encryption key',
     navigateTree: false,
     editComponent: 'transit-edit',
-    listItemPartial: 'SecretList::Item',
+    listItemPartial: 'secret-list/item',
   },
 };
 
