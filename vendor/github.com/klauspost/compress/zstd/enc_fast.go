@@ -5,6 +5,8 @@
 package zstd
 
 import (
+	"fmt"
+	"math"
 	"math/bits"
 
 	"github.com/klauspost/compress/zstd/internal/xxhash"
@@ -22,26 +24,29 @@ type tableEntry struct {
 	offset int32
 }
 
-type fastEncoder struct {
-	o encParams
+type fastBase struct {
 	// cur is the offset at the start of hist
 	cur int32
 	// maximum offset. Should be at least 2x block size.
 	maxMatchOff int32
 	hist        []byte
 	crc         *xxhash.Digest
-	table       [tableSize]tableEntry
 	tmp         [8]byte
 	blk         *blockEnc
 }
 
+type fastEncoder struct {
+	fastBase
+	table [tableSize]tableEntry
+}
+
 // CRC returns the underlying CRC writer.
-func (e *fastEncoder) CRC() *xxhash.Digest {
+func (e *fastBase) CRC() *xxhash.Digest {
 	return e.crc
 }
 
 // AppendCRC will append the CRC to the destination slice and return it.
-func (e *fastEncoder) AppendCRC(dst []byte) []byte {
+func (e *fastBase) AppendCRC(dst []byte) []byte {
 	crc := e.crc.Sum(e.tmp[:0])
 	dst = append(dst, crc[7], crc[6], crc[5], crc[4])
 	return dst
@@ -49,7 +54,7 @@ func (e *fastEncoder) AppendCRC(dst []byte) []byte {
 
 // WindowSize returns the window size of the encoder,
 // or a window size small enough to contain the input size, if > 0.
-func (e *fastEncoder) WindowSize(size int) int32 {
+func (e *fastBase) WindowSize(size int) int32 {
 	if size > 0 && size < int(e.maxMatchOff) {
 		b := int32(1) << uint(bits.Len(uint(size)))
 		// Keep minimum window.
@@ -62,7 +67,7 @@ func (e *fastEncoder) WindowSize(size int) int32 {
 }
 
 // Block returns the current block.
-func (e *fastEncoder) Block() *blockEnc {
+func (e *fastBase) Block() *blockEnc {
 	return e.blk
 }
 
@@ -74,7 +79,7 @@ func (e *fastEncoder) Encode(blk *blockEnc, src []byte) {
 	)
 
 	// Protect against e.cur wraparound.
-	for e.cur > (1<<30)+e.maxMatchOff {
+	for e.cur >= bufferReset {
 		if len(e.hist) == 0 {
 			for i := range e.table[:] {
 				e.table[i] = tableEntry{}
@@ -94,6 +99,7 @@ func (e *fastEncoder) Encode(blk *blockEnc, src []byte) {
 			e.table[i].offset = v
 		}
 		e.cur = e.maxMatchOff
+		break
 	}
 
 	s := e.addBlock(src)
@@ -110,11 +116,7 @@ func (e *fastEncoder) Encode(blk *blockEnc, src []byte) {
 	sLimit := int32(len(src)) - inputMargin
 	// stepSize is the number of bytes to skip on every main loop iteration.
 	// It should be >= 2.
-	stepSize := int32(e.o.targetLength)
-	if stepSize == 0 {
-		stepSize++
-	}
-	stepSize++
+	const stepSize = 2
 
 	// TEMPLATE
 	const hashLog = tableBits
@@ -151,7 +153,7 @@ encodeLoop:
 		canRepeat := len(blk.sequences) > 2
 
 		for {
-			if debug && canRepeat && offset1 == 0 {
+			if debugAsserts && canRepeat && offset1 == 0 {
 				panic("offset0 was 0")
 			}
 
@@ -167,9 +169,22 @@ encodeLoop:
 			if canRepeat && repIndex >= 0 && load3232(src, repIndex) == uint32(cv>>16) {
 				// Consider history as well.
 				var seq seq
-				lenght := 4 + e.matchlen(s+6, repIndex+4, src)
+				var length int32
+				// length = 4 + e.matchlen(s+6, repIndex+4, src)
+				{
+					a := src[s+6:]
+					b := src[repIndex+4:]
+					endI := len(a) & (math.MaxInt32 - 7)
+					length = int32(endI) + 4
+					for i := 0; i < endI; i += 8 {
+						if diff := load64(a, i) ^ load64(b, i); diff != 0 {
+							length = int32(i+bits.TrailingZeros64(diff)>>3) + 4
+							break
+						}
+					}
+				}
 
-				seq.matchLen = uint32(lenght - zstdMinMatch)
+				seq.matchLen = uint32(length - zstdMinMatch)
 
 				// We might be able to match backwards.
 				// Extend as long as we can.
@@ -195,11 +210,11 @@ encodeLoop:
 					println("repeat sequence", seq, "next s:", s)
 				}
 				blk.sequences = append(blk.sequences, seq)
-				s += lenght + 2
+				s += length + 2
 				nextEmit = s
 				if s >= sLimit {
 					if debug {
-						println("repeat ended", s, lenght)
+						println("repeat ended", s, length)
 
 					}
 					break encodeLoop
@@ -212,10 +227,10 @@ encodeLoop:
 			if coffset0 < e.maxMatchOff && uint32(cv) == candidate.val {
 				// found a regular match
 				t = candidate.offset - e.cur
-				if debug && s <= t {
-					panic("s <= t")
+				if debugAsserts && s <= t {
+					panic(fmt.Sprintf("s (%d) <= t (%d)", s, t))
 				}
-				if debug && s-t > e.maxMatchOff {
+				if debugAsserts && s-t > e.maxMatchOff {
 					panic("s - t >e.maxMatchOff")
 				}
 				break
@@ -225,13 +240,13 @@ encodeLoop:
 				// found a regular match
 				t = candidate2.offset - e.cur
 				s++
-				if debug && s <= t {
-					panic("s <= t")
+				if debugAsserts && s <= t {
+					panic(fmt.Sprintf("s (%d) <= t (%d)", s, t))
 				}
-				if debug && s-t > e.maxMatchOff {
+				if debugAsserts && s-t > e.maxMatchOff {
 					panic("s - t >e.maxMatchOff")
 				}
-				if debug && t < 0 {
+				if debugAsserts && t < 0 {
 					panic("t<0")
 				}
 				break
@@ -246,16 +261,29 @@ encodeLoop:
 		offset2 = offset1
 		offset1 = s - t
 
-		if debug && s <= t {
-			panic("s <= t")
+		if debugAsserts && s <= t {
+			panic(fmt.Sprintf("s (%d) <= t (%d)", s, t))
 		}
 
-		if debug && canRepeat && int(offset1) > len(src) {
+		if debugAsserts && canRepeat && int(offset1) > len(src) {
 			panic("invalid offset")
 		}
 
 		// Extend the 4-byte match as long as possible.
-		l := e.matchlen(s+4, t+4, src) + 4
+		//l := e.matchlen(s+4, t+4, src) + 4
+		var l int32
+		{
+			a := src[s+4:]
+			b := src[t+4:]
+			endI := len(a) & (math.MaxInt32 - 7)
+			l = int32(endI) + 4
+			for i := 0; i < endI; i += 8 {
+				if diff := load64(a, i) ^ load64(b, i); diff != 0 {
+					l = int32(i+bits.TrailingZeros64(diff)>>3) + 4
+					break
+				}
+			}
+		}
 
 		// Extend backwards
 		tMin := s - e.maxMatchOff
@@ -292,7 +320,20 @@ encodeLoop:
 		if o2 := s - offset2; canRepeat && load3232(src, o2) == uint32(cv) {
 			// We have at least 4 byte match.
 			// No need to check backwards. We come straight from a match
-			l := 4 + e.matchlen(s+4, o2+4, src)
+			//l := 4 + e.matchlen(s+4, o2+4, src)
+			var l int32
+			{
+				a := src[s+4:]
+				b := src[o2+4:]
+				endI := len(a) & (math.MaxInt32 - 7)
+				l = int32(endI) + 4
+				for i := 0; i < endI; i += 8 {
+					if diff := load64(a, i) ^ load64(b, i); diff != 0 {
+						l = int32(i+bits.TrailingZeros64(diff)>>3) + 4
+						break
+					}
+				}
+			}
 
 			// Store this, since we have it.
 			nextHash := hash6(cv, hashLog)
@@ -342,8 +383,9 @@ func (e *fastEncoder) EncodeNoHist(blk *blockEnc, src []byte) {
 			panic("src too big")
 		}
 	}
+
 	// Protect against e.cur wraparound.
-	if e.cur > (1<<30)+e.maxMatchOff {
+	if e.cur >= bufferReset {
 		for i := range e.table[:] {
 			e.table[i] = tableEntry{}
 		}
@@ -410,10 +452,23 @@ encodeLoop:
 			if len(blk.sequences) > 2 && load3232(src, repIndex) == uint32(cv>>16) {
 				// Consider history as well.
 				var seq seq
-				// lenght := 4 + e.matchlen(s+6, repIndex+4, src)
-				lenght := 4 + int32(matchLen(src[s+6:], src[repIndex+4:]))
+				// length := 4 + e.matchlen(s+6, repIndex+4, src)
+				// length := 4 + int32(matchLen(src[s+6:], src[repIndex+4:]))
+				var length int32
+				{
+					a := src[s+6:]
+					b := src[repIndex+4:]
+					endI := len(a) & (math.MaxInt32 - 7)
+					length = int32(endI) + 4
+					for i := 0; i < endI; i += 8 {
+						if diff := load64(a, i) ^ load64(b, i); diff != 0 {
+							length = int32(i+bits.TrailingZeros64(diff)>>3) + 4
+							break
+						}
+					}
+				}
 
-				seq.matchLen = uint32(lenght - zstdMinMatch)
+				seq.matchLen = uint32(length - zstdMinMatch)
 
 				// We might be able to match backwards.
 				// Extend as long as we can.
@@ -439,11 +494,11 @@ encodeLoop:
 					println("repeat sequence", seq, "next s:", s)
 				}
 				blk.sequences = append(blk.sequences, seq)
-				s += lenght + 2
+				s += length + 2
 				nextEmit = s
 				if s >= sLimit {
 					if debug {
-						println("repeat ended", s, lenght)
+						println("repeat ended", s, length)
 
 					}
 					break encodeLoop
@@ -456,11 +511,14 @@ encodeLoop:
 			if coffset0 < e.maxMatchOff && uint32(cv) == candidate.val {
 				// found a regular match
 				t = candidate.offset - e.cur
-				if debug && s <= t {
-					panic("s <= t")
+				if debugAsserts && s <= t {
+					panic(fmt.Sprintf("s (%d) <= t (%d)", s, t))
 				}
-				if debug && s-t > e.maxMatchOff {
+				if debugAsserts && s-t > e.maxMatchOff {
 					panic("s - t >e.maxMatchOff")
+				}
+				if debugAsserts && t < 0 {
+					panic(fmt.Sprintf("t (%d) < 0, candidate.offset: %d, e.cur: %d, coffset0: %d, e.maxMatchOff: %d", t, candidate.offset, e.cur, coffset0, e.maxMatchOff))
 				}
 				break
 			}
@@ -469,13 +527,13 @@ encodeLoop:
 				// found a regular match
 				t = candidate2.offset - e.cur
 				s++
-				if debug && s <= t {
-					panic("s <= t")
+				if debugAsserts && s <= t {
+					panic(fmt.Sprintf("s (%d) <= t (%d)", s, t))
 				}
-				if debug && s-t > e.maxMatchOff {
+				if debugAsserts && s-t > e.maxMatchOff {
 					panic("s - t >e.maxMatchOff")
 				}
-				if debug && t < 0 {
+				if debugAsserts && t < 0 {
 					panic("t<0")
 				}
 				break
@@ -490,13 +548,29 @@ encodeLoop:
 		offset2 = offset1
 		offset1 = s - t
 
-		if debug && s <= t {
-			panic("s <= t")
+		if debugAsserts && s <= t {
+			panic(fmt.Sprintf("s (%d) <= t (%d)", s, t))
 		}
 
+		if debugAsserts && t < 0 {
+			panic(fmt.Sprintf("t (%d) < 0 ", t))
+		}
 		// Extend the 4-byte match as long as possible.
 		//l := e.matchlenNoHist(s+4, t+4, src) + 4
-		l := int32(matchLen(src[s+4:], src[t+4:])) + 4
+		// l := int32(matchLen(src[s+4:], src[t+4:])) + 4
+		var l int32
+		{
+			a := src[s+4:]
+			b := src[t+4:]
+			endI := len(a) & (math.MaxInt32 - 7)
+			l = int32(endI) + 4
+			for i := 0; i < endI; i += 8 {
+				if diff := load64(a, i) ^ load64(b, i); diff != 0 {
+					l = int32(i+bits.TrailingZeros64(diff)>>3) + 4
+					break
+				}
+			}
+		}
 
 		// Extend backwards
 		tMin := s - e.maxMatchOff
@@ -534,7 +608,20 @@ encodeLoop:
 			// We have at least 4 byte match.
 			// No need to check backwards. We come straight from a match
 			//l := 4 + e.matchlenNoHist(s+4, o2+4, src)
-			l := 4 + int32(matchLen(src[s+4:], src[o2+4:]))
+			// l := 4 + int32(matchLen(src[s+4:], src[o2+4:]))
+			var l int32
+			{
+				a := src[s+4:]
+				b := src[o2+4:]
+				endI := len(a) & (math.MaxInt32 - 7)
+				l = int32(endI) + 4
+				for i := 0; i < endI; i += 8 {
+					if diff := load64(a, i) ^ load64(b, i); diff != 0 {
+						l = int32(i+bits.TrailingZeros64(diff)>>3) + 4
+						break
+					}
+				}
+			}
 
 			// Store this, since we have it.
 			nextHash := hash6(cv, hashLog)
@@ -567,9 +654,16 @@ encodeLoop:
 	if debug {
 		println("returning, recent offsets:", blk.recentOffsets, "extra literals:", blk.extraLits)
 	}
+	// We do not store history, so we must offset e.cur to avoid false matches for next user.
+	if e.cur < bufferReset {
+		e.cur += int32(len(src))
+	}
 }
 
-func (e *fastEncoder) addBlock(src []byte) int32 {
+func (e *fastBase) addBlock(src []byte) int32 {
+	if debugAsserts && e.cur > bufferReset {
+		panic(fmt.Sprintf("ecur (%d) > buffer reset (%d)", e.cur, bufferReset))
+	}
 	// check if we have space already
 	if len(e.hist)+len(src) > cap(e.hist) {
 		if cap(e.hist) == 0 {
@@ -597,39 +691,41 @@ func (e *fastEncoder) addBlock(src []byte) int32 {
 
 // useBlock will replace the block with the provided one,
 // but transfer recent offsets from the previous.
-func (e *fastEncoder) UseBlock(enc *blockEnc) {
+func (e *fastBase) UseBlock(enc *blockEnc) {
 	enc.reset(e.blk)
 	e.blk = enc
 }
 
-func (e *fastEncoder) matchlenNoHist(s, t int32, src []byte) int32 {
+func (e *fastBase) matchlenNoHist(s, t int32, src []byte) int32 {
 	// Extend the match to be as long as possible.
 	return int32(matchLen(src[s:], src[t:]))
 }
 
-func (e *fastEncoder) matchlen(s, t int32, src []byte) int32 {
-	if debug {
+func (e *fastBase) matchlen(s, t int32, src []byte) int32 {
+	if debugAsserts {
 		if s < 0 {
-			panic("s<0")
+			err := fmt.Sprintf("s (%d) < 0", s)
+			panic(err)
 		}
 		if t < 0 {
-			panic("t<0")
+			err := fmt.Sprintf("s (%d) < 0", s)
+			panic(err)
 		}
 		if s-t > e.maxMatchOff {
-			panic(s - t)
+			err := fmt.Sprintf("s (%d) - t (%d) > maxMatchOff (%d)", s, t, e.maxMatchOff)
+			panic(err)
 		}
-	}
-	s1 := int(s) + maxMatchLength - 4
-	if s1 > len(src) {
-		s1 = len(src)
+		if len(src)-int(s) > maxCompressedBlockSize {
+			panic(fmt.Sprintf("len(src)-s (%d) > maxCompressedBlockSize (%d)", len(src)-int(s), maxCompressedBlockSize))
+		}
 	}
 
 	// Extend the match to be as long as possible.
-	return int32(matchLen(src[s:s1], src[t:]))
+	return int32(matchLen(src[s:], src[t:]))
 }
 
 // Reset the encoding table.
-func (e *fastEncoder) Reset() {
+func (e *fastBase) Reset(singleBlock bool) {
 	if e.blk == nil {
 		e.blk = &blockEnc{}
 		e.blk.init()
@@ -642,7 +738,7 @@ func (e *fastEncoder) Reset() {
 	} else {
 		e.crc.Reset()
 	}
-	if cap(e.hist) < int(e.maxMatchOff*2) {
+	if !singleBlock && cap(e.hist) < int(e.maxMatchOff*2) {
 		l := e.maxMatchOff * 2
 		// Make it at least 1MB.
 		if l < 1<<20 {
@@ -650,7 +746,10 @@ func (e *fastEncoder) Reset() {
 		}
 		e.hist = make([]byte, 0, l)
 	}
-	// We offset current position so everything will be out of reach
-	e.cur += e.maxMatchOff + int32(len(e.hist))
+	// We offset current position so everything will be out of reach.
+	// If above reset line, history will be purged.
+	if e.cur < bufferReset {
+		e.cur += e.maxMatchOff + int32(len(e.hist))
+	}
 	e.hist = e.hist[:0]
 }
