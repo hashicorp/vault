@@ -937,9 +937,9 @@ jobs:
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
-          # So we set VAULT_LICENSE in CI, and here we unset it.  We instead
-          # populate VAULT_LICENSE_CI so that tests which want an externally
-          # supplied license can opt-in to using it.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
@@ -1164,9 +1164,9 @@ jobs:
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
-          # So we set VAULT_LICENSE in CI, and here we unset it.  We instead
-          # populate VAULT_LICENSE_CI so that tests which want an externally
-          # supplied license can opt-in to using it.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
@@ -1642,9 +1642,9 @@ jobs:
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
-          # So we set VAULT_LICENSE in CI, and here we unset it.  We instead
-          # populate VAULT_LICENSE_CI so that tests which want an externally
-          # supplied license can opt-in to using it.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
@@ -1800,9 +1800,9 @@ jobs:
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
-          # So we set VAULT_LICENSE in CI, and here we unset it.  We instead
-          # populate VAULT_LICENSE_CI so that tests which want an externally
-          # supplied license can opt-in to using it.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
@@ -2409,9 +2409,9 @@ jobs:
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
-          # So we set VAULT_LICENSE in CI, and here we unset it.  We instead
-          # populate VAULT_LICENSE_CI so that tests which want an externally
-          # supplied license can opt-in to using it.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
