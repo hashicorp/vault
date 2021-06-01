@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/oracle/oci-go-sdk/objectstorage"
@@ -118,7 +117,7 @@ func (b *Backend) HAEnabled() bool {
 func (b *Backend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errwrap.Wrapf("Lock with: {{err}}", err)
+		return nil, fmt.Errorf("Lock with: %w", err)
 	}
 	return &Lock{
 		backend:  b,
@@ -148,7 +147,7 @@ func (l *Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// occurs.
 	acquired, err := l.attemptLock(stopCh)
 	if err != nil {
-		return nil, errwrap.Wrapf("lock: {{err}}", err)
+		return nil, fmt.Errorf("lock: %w", err)
 	}
 	if !acquired {
 		return nil, nil
@@ -183,7 +182,7 @@ func (l *Lock) attemptLock(stopCh <-chan struct{}) (bool, error) {
 		case <-ticker.C:
 			acquired, err := l.writeLock()
 			if err != nil {
-				return false, errwrap.Wrapf("attempt lock: {{err}}", err)
+				return false, fmt.Errorf("attempt lock: %w", err)
 			}
 			if !acquired {
 				continue
@@ -314,7 +313,7 @@ func (l *Lock) Unlock() error {
 	// Get current lock record
 	currentLockRecord, etag, err := l.get(context.Background())
 	if err != nil {
-		return errwrap.Wrapf("error reading lock record: {{err}}", err)
+		return fmt.Errorf("error reading lock record: %w", err)
 	}
 
 	if currentLockRecord != nil && currentLockRecord.Identity == l.identity {
@@ -323,7 +322,7 @@ func (l *Lock) Unlock() error {
 		opcClientRequestId, err := uuid.GenerateUUID()
 		if err != nil {
 			l.backend.logger.Debug("Unlock: error generating UUID")
-			return errwrap.Wrapf("failed to generate UUID: {{err}}", err)
+			return fmt.Errorf("failed to generate UUID: %w", err)
 		}
 		l.backend.logger.Debug("Unlock", "opc-client-request-id", opcClientRequestId)
 		request := objectstorage.DeleteObjectRequest{
@@ -339,7 +338,7 @@ func (l *Lock) Unlock() error {
 
 		if err != nil {
 			metrics.IncrCounter(metricDeleteFailed, 1)
-			return errwrap.Wrapf("write lock: {{err}}", err)
+			return fmt.Errorf("write lock: %w", err)
 		}
 	}
 
@@ -370,7 +369,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
 		l.backend.logger.Error("getHa: error generating UUID")
-		return nil, "", errwrap.Wrapf("failed to generate UUID: {{err}}", err)
+		return nil, "", fmt.Errorf("failed to generate UUID: %w", err)
 	}
 	l.backend.logger.Debug("getHa", "opc-client-request-id", opcClientRequestId)
 
@@ -394,7 +393,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 
 		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error calling GET", "err", err)
-		return nil, "", errwrap.Wrapf(fmt.Sprintf("failed to read Value for %q: {{err}}", l.key), err)
+		return nil, "", fmt.Errorf("failed to read Value for %q: %w", l.key, err)
 	}
 
 	defer response.RawResponse.Body.Close()
@@ -403,7 +402,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 	if err != nil {
 		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error reading content", "err", err)
-		return nil, "", errwrap.Wrapf("failed to decode Value into bytes: {{err}}", err)
+		return nil, "", fmt.Errorf("failed to decode Value into bytes: %w", err)
 	}
 
 	var lockRecord LockRecord
@@ -411,7 +410,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 	if err != nil {
 		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error un-marshalling content", "err", err)
-		return nil, "", errwrap.Wrapf(fmt.Sprintf("failed to read Value for %q: {{err}}", l.key), err)
+		return nil, "", fmt.Errorf("failed to read Value for %q: %w", l.key, err)
 	}
 
 	return &lockRecord, *response.ETag, nil
@@ -442,7 +441,7 @@ func (l *Lock) writeLock() (bool, error) {
 		// case secondary
 		currentLockRecord, currentEtag, err := l.get(ctx)
 		if err != nil {
-			return false, errwrap.Wrapf("error reading lock record: {{err}}", err)
+			return false, fmt.Errorf("error reading lock record: %w", err)
 		}
 
 		if (lockRecordCache == nil) || lockRecordCache.etag != currentEtag {
@@ -471,7 +470,7 @@ func (l *Lock) writeLock() (bool, error) {
 
 	newLockRecordJson, err := json.Marshal(newLockRecord)
 	if err != nil {
-		return false, errwrap.Wrapf("error reading lock record: {{err}}", err)
+		return false, fmt.Errorf("error reading lock record: %w", err)
 	}
 
 	defer metrics.MeasureSince(metricPutHa, time.Now())
@@ -479,7 +478,7 @@ func (l *Lock) writeLock() (bool, error) {
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
 		l.backend.logger.Error("putHa: error generating UUID")
-		return false, errwrap.Wrapf("failed to generate UUID", err)
+		return false, fmt.Errorf("failed to generate UUID: %w", err)
 	}
 	l.backend.logger.Debug("putHa", "opc-client-request-id", opcClientRequestId)
 	size := int64(len(newLockRecordJson))
@@ -536,7 +535,7 @@ func (l *Lock) writeLock() (bool, error) {
 	}
 
 	if err != nil {
-		return false, errwrap.Wrapf("write lock: {{err}}", err)
+		return false, fmt.Errorf("write lock: %w", err)
 	}
 
 	l.backend.logger.Debug("Lock written", string(newLockRecordJson))

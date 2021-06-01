@@ -109,8 +109,8 @@ This client token is then returned to the client.
 
 On each request a client provides this token. Vault then uses it to check that
 the token is valid and has not been revoked or expired, and generates an ACL
-based on the associated policies. Vault uses a strict default deny or whitelist
-enforcement. This means unless an associated policy allows for a given action,
+based on the associated policies. Vault uses a strict default deny 
+enforcement strategy. This means unless an associated policy allows for a given action,
 it will be denied. Each policy specifies a level of access granted to a path in
 Vault. When the policies are merged (if multiple policies are associated with a
 client), the highest access level permitted is used. For example, if the
