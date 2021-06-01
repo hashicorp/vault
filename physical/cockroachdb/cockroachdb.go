@@ -12,7 +12,6 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/cockroachdb/cockroach-go/crdb"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -59,7 +58,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 
 	err := validateDBTable(dbTable)
 	if err != nil {
-		return nil, errwrap.Wrapf("invalid table: {{err}}", err)
+		return nil, fmt.Errorf("invalid table: %w", err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -67,7 +66,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -77,14 +76,14 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	// Create CockroachDB handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to connect to cockroachdb: {{err}}", err)
+		return nil, fmt.Errorf("failed to connect to cockroachdb: %w", err)
 	}
 
 	// Create the required table if it doesn't exists.
 	createQuery := "CREATE TABLE IF NOT EXISTS " + dbTable +
 		" (path STRING, value BYTES, PRIMARY KEY (path))"
 	if _, err := db.Exec(createQuery); err != nil {
-		return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+		return nil, fmt.Errorf("failed to create mysql table: %w", err)
 	}
 
 	// Setup the backend
@@ -117,7 +116,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 func (c *CockroachDBBackend) prepare(name, query string) error {
 	stmt, err := c.client.Prepare(query)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
 	c.statements[name] = stmt
 	return nil
@@ -194,7 +193,7 @@ func (c *CockroachDBBackend) List(ctx context.Context, prefix string) ([]string,
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
 		key = strings.TrimPrefix(key, prefix)

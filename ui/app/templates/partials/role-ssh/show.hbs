@@ -1,9 +1,0 @@
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each model.showFields as |attr|}}
-    {{#if (eq attr.type "object")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
-    {{else}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
-    {{/if}}
-  {{/each}}
-</div>

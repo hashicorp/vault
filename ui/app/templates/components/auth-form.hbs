@@ -64,7 +64,34 @@
       id="auth-form"
       onsubmit={{action "doSubmit"}}
     >
-        {{partial providerPartialName}}
+        {{#if (eq providerName 'github')}}
+          <div class="field">
+            <label for="token" class="is-label">GitHub token</label>
+            <div class="control">
+              <Input @type="password" @value={{token}} @name="token" @id="token" class="input" data-test-token={{true}} @autocomplete="off" @spellcheck="false" />
+            </div>
+          </div>
+        {{else if (eq providerName 'token')}}
+          <div class="field">
+            <label for="token" class="is-label">Token</label>
+            <div class="control">
+              <Input @type="password" @value={{token}} @name="token" class="input" @autocomplete="off" @spellcheck="false" data-test-token={{true}} />
+            </div>
+          </div>
+        {{else}}
+          <div class="field">
+            <label for="username" class="is-label">Username</label>
+            <div class="control">
+              <Input @value={{username}} @name="username" @id="username" class="input" @autocomplete="off" @spellcheck="false" data-test-username={{true}} />
+            </div>
+          </div>
+          <div class="field">
+            <label for="password" class="is-label">Password</label>
+            <div class="control">
+              <Input @value={{password}} @name="password" @id="password" @type="password" class="input" @autocomplete="off" @spellcheck="false" data-test-password={{true}} />
+            </div>
+          </div>
+        {{/if}}
         {{#if (not-eq selectedAuthBackend.type "token")}}
           <AuthFormOptions
             @customPath={{this.customPath}}
