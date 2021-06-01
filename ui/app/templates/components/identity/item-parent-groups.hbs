@@ -1,5 +1,5 @@
-{{#if model.parentGroupIds.length}}
-  {{#each model.parentGroupIds as |gid|}}
+{{#if @model.parentGroupIds.length}}
+  {{#each @model.parentGroupIds as |gid|}}
     {{#linked-block
       "vault.cluster.access.identity.show"
       "groups"
@@ -9,7 +9,8 @@
     }}
       <div class="columns is-mobile">
         <div class="column is-10">
-          <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="is-block has-text-black has-text-weight-semibold"><Icon
+          <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="is-block has-text-black has-text-weight-semibold">
+            <Icon
               @glyph="folder-outline"
               class="has-text-grey-light"
             />{{gid}}
