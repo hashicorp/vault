@@ -120,22 +120,25 @@ type Sigacts struct{}
 
 type ExternProc struct {
 	P_un        [16]byte
-	P_vmspace   *Vmspace
-	P_sigacts   *Sigacts
+	P_vmspace   uint64
+	P_sigacts   uint64
+	Pad_cgo_0   [3]byte
 	P_flag      int32
 	P_stat      int8
 	P_pid       int32
 	P_oppid     int32
 	P_dupfd     int32
-	User_stack  *int8
-	Exit_thread *byte
+	Pad_cgo_1   [4]byte
+	User_stack  uint64
+	Exit_thread uint64
 	P_debugger  int32
 	Sigwait     int32
 	P_estcpu    uint32
 	P_cpticks   int32
 	P_pctcpu    uint32
-	P_wchan     *byte
-	P_wmesg     *int8
+	Pad_cgo_2   [4]byte
+	P_wchan     uint64
+	P_wmesg     uint64
 	P_swtime    uint32
 	P_slptime   uint32
 	P_realtimer Itimerval
@@ -144,9 +147,11 @@ type ExternProc struct {
 	P_sticks    uint64
 	P_iticks    uint64
 	P_traceflag int32
-	P_tracep    *Vnode
+	Pad_cgo_3   [4]byte
+	P_tracep    uint64
 	P_siglist   int32
-	P_textvp    *Vnode
+	Pad_cgo_4   [4]byte
+	P_textvp    uint64
 	P_holdcnt   int32
 	P_sigmask   uint32
 	P_sigignore uint32
@@ -155,11 +160,13 @@ type ExternProc struct {
 	P_usrpri    uint8
 	P_nice      int8
 	P_comm      [17]int8
-	P_pgrp      *Pgrp
-	P_addr      *UserStruct
+	Pad_cgo_5   [4]byte
+	P_pgrp      uint64
+	P_addr      uint64
 	P_xstat     uint16
 	P_acflag    uint16
-	P_ru        *Rusage
+	Pad_cgo_6   [4]byte
+	P_ru        uint64
 }
 
 type Itimerval struct {

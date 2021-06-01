@@ -1,4 +1,4 @@
-// +build !darwin,!linux,!freebsd,!openbsd,!windows
+// +build !darwin,!linux,!freebsd,!openbsd,!windows,!solaris
 
 package process
 
