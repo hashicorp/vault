@@ -142,7 +142,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error) {
 
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
@@ -166,10 +166,19 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, roleName, "iam_user")
+	roleSessionNameWarning := ""
+	if roleSessionName == "" {
+		roleSessionName, roleSessionNameWarning = genUsername(displayName, roleName, "iam_user")
+	} else {
+		roleSessionName = normalizeDisplayName(roleSessionName)
+		if len(roleSessionName) > 64 {
+			roleSessionName = roleSessionName[0:64]
+			roleSessionNameWarning = "the role session name was truncated to 64 characters to fit within IAM session name length limits"
+		}
+	}
 
 	assumeRoleInput := &sts.AssumeRoleInput{
-		RoleSessionName: aws.String(username),
+		RoleSessionName: aws.String(roleSessionName),
 		RoleArn:         aws.String(roleArn),
 		DurationSeconds: &lifeTimeInSeconds,
 	}
@@ -189,8 +198,9 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		"access_key":     *tokenResp.Credentials.AccessKeyId,
 		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 		"security_token": *tokenResp.Credentials.SessionToken,
+		"arn":            *tokenResp.AssumedRoleUser.Arn,
 	}, map[string]interface{}{
-		"username": username,
+		"username": roleSessionName,
 		"policy":   roleArn,
 		"is_sts":   true,
 	})
@@ -201,8 +211,8 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	// STS are purposefully short-lived and aren't renewable
 	resp.Secret.Renewable = false
 
-	if usernameWarning != "" {
-		resp.AddWarning(usernameWarning)
+	if roleSessionNameWarning != "" {
+		resp.AddWarning(roleSessionNameWarning)
 	}
 
 	return resp, nil

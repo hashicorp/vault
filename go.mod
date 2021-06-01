@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault
 
-go 1.13
+go 1.15
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -76,7 +76,6 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.3.0
 	github.com/hashicorp/raft-autopilot v0.1.3
-	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c // indirect
 	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/serf v0.9.5 // indirect
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.8.0
@@ -95,7 +94,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.8.0
@@ -103,7 +102,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
-	github.com/hashicorp/vault/sdk v0.2.1-0.20210419223509-b296e151b5b3
+	github.com/hashicorp/vault/sdk v0.2.1-0.20210519002511-48c5544c77f4
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

@@ -1356,7 +1356,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	if roleEntry.InferredEntityType == ec2EntityType {
 		instance, err := b.validateInstance(ctx, req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", entity.SessionInfo, roleEntry.InferredAWSRegion)), nil
+			return logical.ErrorResponse("failed to verify %s as a valid EC2 instance in region %s: %s", entity.SessionInfo, roleEntry.InferredAWSRegion, err), nil
 		}
 
 		// build a fake identity doc to pass on metadata about the instance to verifyInstanceMeetsRoleRequirements
