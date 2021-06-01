@@ -18,6 +18,10 @@ parameters:
   use_docker:
     type: boolean
     default: false
+  arch:
+    type: string
+    # Only supported for use_docker=false, and only other value allowed is 386
+    default: amd64
 steps:
   - run:
       name: Compute test cache key
@@ -55,13 +59,13 @@ steps:
             jq -r 'select(.Deps != null) |
               select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
               .ForTest | select(. != null)' |
-              sort -u | circleci tests split --split-by=timings --timings-type=classname)
+              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
         else
           package_names=$(go list -test -json ./... |
             jq -r 'select(.Deps != null) |
               select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
               .ForTest | select(. != null)' |
-              sort -u | circleci tests split --split-by=timings --timings-type=classname)
+              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
         fi
 
         # After running tests split step, we are now running the following steps
@@ -71,6 +75,11 @@ steps:
 
         make prep
         mkdir -p test-results/go-test
+
+        # Don't tempt fate by having the license env var populated: tests should
+        # have to use it explicitly (via env var VAULT_LICENSE_CI) rather than
+        # depending on an implicit behaviour.
+        VAULT_LICENSE=
 
         # Create a docker network for our testcontainer
         if [ $USE_DOCKER == 1 ]; then
@@ -102,6 +111,7 @@ steps:
 
           docker exec -w /go/src/github.com/hashicorp/vault/ \
             -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+            -e VAULT_LICENSE_CI \
             testcontainer \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
@@ -113,7 +123,8 @@ steps:
               << parameters.extra_flags >> \
               ${package_names}
         else
-          GOCACHE=<< parameters.cache_dir >> \
+          GOARCH=<< parameters.arch >> \
+            GOCACHE=<< parameters.cache_dir >> \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
