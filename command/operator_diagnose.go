@@ -210,6 +210,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
 
+	// OS Specific checks
+	// Check open file count
+	diagnose.OSChecks(ctx)
 	diagnose.Test(ctx, "disk-usage", diagnose.DiskUsageCheck)
 
 	server.flagConfigs = c.flagConfigs

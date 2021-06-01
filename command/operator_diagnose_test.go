@@ -40,6 +40,31 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
+					Name:   "open file limits",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "parse-config",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-listeners",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "check-listener-tls",
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"TLS is disabled in a Listener config stanza.",
+							},
+						},
+					},
+				},
+				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -312,6 +337,10 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
 		}
 		return fmt.Errorf(strings.Join(errStrings, ","))
+	}
+
+	if len(exp.Children) > 0 {
+		return compareResults(exp.Children, act.Children)
 	}
 
 	if len(exp.Children) > 0 {
