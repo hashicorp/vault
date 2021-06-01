@@ -103,7 +103,7 @@ net:
 		"connectionStatus": 1,
 	}
 
-	client, err := mongo.getConnection(ctx)
+	client, err := mongo.Connection(ctx)
 	if err != nil {
 		t.Fatalf("Unable to make connection to Mongo: %s", err)
 	}

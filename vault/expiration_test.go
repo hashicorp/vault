@@ -56,7 +56,7 @@ func TestExpiration_Metrics(t *testing.T) {
 
 	// Set up a count function to calculate number of leases
 	count := 0
-	countFunc := func(leaseID string) {
+	countFunc := func(_ string) {
 		count++
 	}
 
@@ -177,7 +177,7 @@ func TestExpiration_Metrics(t *testing.T) {
 	}
 
 	if !foundLabelOne || !foundLabelTwo || !foundLabelThree {
-		t.Errorf("One of the labels is missing")
+		t.Errorf("One of the labels is missing. one: %t, two: %t, three: %t", foundLabelOne, foundLabelTwo, foundLabelThree)
 	}
 
 	// test the same leases while ignoring namespaces so the 2 different namespaces get aggregated
@@ -216,6 +216,99 @@ func TestExpiration_Metrics(t *testing.T) {
 	}
 	if !foundLabelOne || !foundLabelTwo {
 		t.Errorf("One of the labels is missing")
+	}
+}
+
+func TestExpiration_TotalLeaseCount(t *testing.T) {
+	// Quotas and internal lease count tracker are coupled, so this is a proxy
+	// for testing the total lease count quota
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
+
+	expectedCount := 0
+	otherNS := &namespace.Namespace{
+		ID:   "nsid",
+		Path: "foo/bar",
+	}
+	for i := 0; i < 50; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		expectedCount++
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		expectedCount++
+		exp.pendingLock.Unlock()
+	}
+
+	// add some irrevocable leases to each count to ensure they are counted too
+	// note: irrevocable leases almost certainly have an expire time set in the
+	// past, but for this exercise it should be fine to set it to whatever
+	for i := 50; i < 60; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now(),
+			RevokeErr:  "some err message",
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now(),
+			RevokeErr:  "some err message",
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		expectedCount++
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		expectedCount++
+		exp.pendingLock.Unlock()
+	}
+
+	exp.pendingLock.RLock()
+	count := exp.leaseCount
+	exp.pendingLock.RUnlock()
+
+	if count != expectedCount {
+		t.Errorf("bad lease count. expected %d, got %d", expectedCount, count)
 	}
 }
 
@@ -824,6 +917,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 
 	auth := &logical.Auth{
 		ClientToken: root.ID,
+		Policies:    []string{"root"},
 	}
 
 	te := &logical.TokenEntry{
@@ -1145,7 +1239,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	defer noop.Unlock()
 
 	if len(noop.Requests) != 3 {
-		t.Fatalf("Bad: %v", noop.Requests)
+		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 	for _, req := range noop.Requests {
 		if req.Operation != logical.RevokeOperation {
@@ -1613,7 +1707,6 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 }
-
 func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
@@ -1687,6 +1780,142 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 			t.Fatalf("Bad: %v", req)
 		}
 		break
+	}
+}
+
+func TestExpiration_Renew_FinalSecond(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       2 * time.Second,
+				Renewable: true,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	id, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	le, err := exp.loadEntry(ctx, id)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Give it an auth section to emulate the real world bug
+	le.Auth = &logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	exp.persistEntry(ctx, le)
+
+	noop.Response = &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:    2 * time.Second,
+				MaxTTL: 2 * time.Second,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "123",
+			"secret_key": "abcd",
+		},
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+	_, err = exp.Renew(ctx, id, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if _, ok := exp.nonexpiring.Load(id); ok {
+		t.Fatalf("expirable lease became nonexpiring")
+	}
+}
+
+func TestExpiration_Renew_FinalSecond_Lease(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       2 * time.Second,
+				Renewable: true,
+			},
+			LeaseID: "abcde",
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	id, err := exp.Register(ctx, req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	le, err := exp.loadEntry(ctx, id)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Give it an auth section to emulate the real world bug
+	le.Auth = &logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	exp.persistEntry(ctx, le)
+
+	time.Sleep(1000 * time.Millisecond)
+	_, err = exp.Renew(ctx, id, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if _, ok := exp.nonexpiring.Load(id); ok {
+		t.Fatalf("expirable lease became nonexpiring")
 	}
 }
 
@@ -2585,6 +2814,7 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading non irrevocable lease after restore: %v", err)
 	}
+	exp.updatePending(loadedLE)
 
 	if !loadedLE.isIrrevocable() {
 		t.Fatalf("irrevocable lease is not irrevocable and should be")

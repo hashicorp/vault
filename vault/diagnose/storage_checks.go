@@ -11,60 +11,59 @@ import (
 
 const (
 	success   string = "success"
-	secretKey string = "diagnose"
 	secretVal string = "diagnoseSecret"
 
-	LatencyWarning    string        = "latency above 100 ms for storage call: "
+	LatencyWarning    string        = "latency above 100 ms: "
 	DirAccessErr      string        = "consul storage does not connect to local agent, but directly to server"
 	AddrDNExistErr    string        = "config address does not exist: 127.0.0.1:8500 will be used"
 	wrongRWValsPrefix string        = "Storage get and put gave wrong values: "
 	latencyThreshold  time.Duration = time.Millisecond * 100
 )
 
-func EndToEndLatencyCheckWrite(ctx context.Context, uuid string, b physical.Backend) error {
+func EndToEndLatencyCheckWrite(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 	start := time.Now()
-	err := b.Put(context.Background(), &physical.Entry{Key: secretKey, Value: []byte(secretVal)})
+	err := b.Put(context.Background(), &physical.Entry{Key: uuid, Value: []byte(secretVal)})
 	duration := time.Since(start)
 	if err != nil {
-		return err
+		return time.Duration(0), err
 	}
 	if duration > latencyThreshold {
-		return fmt.Errorf(LatencyWarning + "operation: put")
+		return duration, nil
 	}
-	return nil
+	return time.Duration(0), nil
 }
 
-func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backend) error {
+func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 
 	start := time.Now()
-	val, err := b.Get(context.Background(), "diagnose")
+	val, err := b.Get(context.Background(), uuid)
 	duration := time.Since(start)
 	if err != nil {
-		return err
+		return time.Duration(0), err
 	}
 	if val == nil {
-		return fmt.Errorf("no value found when reading generated data")
+		return time.Duration(0), fmt.Errorf("no value found when reading generated data")
 	}
-	if val.Key != "diagnose" && string(val.Value) != "diagnose" {
-		return fmt.Errorf(wrongRWValsPrefix+"expecting diagnose, but got %s, %s", val.Key, val.Value)
+	if val.Key != uuid && string(val.Value) != secretVal {
+		return time.Duration(0), fmt.Errorf(wrongRWValsPrefix+"expecting diagnose, but got %s, %s", val.Key, val.Value)
 	}
 	if duration > latencyThreshold {
-		return fmt.Errorf(LatencyWarning + "operation: get")
+		return duration, nil
 	}
-	return nil
+	return time.Duration(0), nil
 }
-func EndToEndLatencyCheckDelete(ctx context.Context, uuid string, b physical.Backend) error {
+func EndToEndLatencyCheckDelete(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 
 	start := time.Now()
-	err := b.Delete(context.Background(), "diagnose")
+	err := b.Delete(context.Background(), uuid)
 	duration := time.Since(start)
 	if err != nil {
-		return err
+		return time.Duration(0), err
 	}
 	if duration > latencyThreshold {
-		return fmt.Errorf(LatencyWarning + "operation: get")
+		return duration, nil
 	}
-	return nil
+	return time.Duration(0), nil
 }
 
 // ConsulDirectAccess verifies that consul is connecting to local agent,

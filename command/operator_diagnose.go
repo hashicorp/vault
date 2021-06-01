@@ -2,14 +2,18 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -108,6 +112,12 @@ func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
 		Default: false,
 		Usage:   "Dump all information collected by Diagnose.",
 	})
+
+	f.StringVar(&StringVar{
+		Name:   "format",
+		Target: &c.flagFormat,
+		Usage:  "The output format",
+	})
 	return set
 }
 
@@ -143,9 +153,31 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		return 1
 	}
 
+	if c.diagnose == nil {
+		if c.flagFormat == "json" {
+			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+		} else {
+			c.UI.Output(version.GetVersion().FullVersionNumber(true))
+			c.diagnose = diagnose.New(os.Stdout)
+		}
+	}
 	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := diagnose.Context(context.Background(), c.diagnose)
+	c.diagnose.SetSkipList(c.flagSkips)
 	err := c.offlineDiagnostics(ctx)
+
+	results := c.diagnose.Finalize(ctx)
+	if c.flagFormat == "json" {
+		resultsJS, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			return 2
+		}
+		c.UI.Output(string(resultsJS))
+	} else {
+		c.UI.Output("\nResults:")
+		results.Write(os.Stdout)
+	}
 
 	if err != nil {
 		return 1
@@ -177,6 +209,8 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	ctx, span := diagnose.StartSpan(ctx, "initialization")
 	defer span.End()
+
+	diagnose.Test(ctx, "disk-usage", diagnose.DiskUsageCheck)
 
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
@@ -226,27 +260,37 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		// Attempt to use storage backend
 		if !c.skipEndEnd {
 			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
-				// TODO: A static file in storage that probably won't cause a collision seems low-risk to write to for now.
-				// Should we make this a proper uuid?
+				maxDurationCrudOperation := "write"
+				maxDuration := time.Duration(0)
+				uuidSuffix, err := uuid.GenerateUUID()
+				if err != nil {
+					return err
+				}
+				uuid := "diagnose/latency/" + uuidSuffix
+				dur, err := diagnose.EndToEndLatencyCheckWrite(ctx, uuid, *backend)
+				if err != nil {
+					return err
+				}
+				maxDuration = dur
+				dur, err = diagnose.EndToEndLatencyCheckRead(ctx, uuid, *backend)
+				if err != nil {
+					return err
+				}
+				if dur > maxDuration {
+					maxDuration = dur
+					maxDurationCrudOperation = "read"
+				}
+				dur, err = diagnose.EndToEndLatencyCheckDelete(ctx, uuid, *backend)
+				if err != nil {
+					return err
+				}
+				if dur > maxDuration {
+					maxDuration = dur
+					maxDurationCrudOperation = "delete"
+				}
 
-				veryRandomUuid := "diagnose-secret-uuid-1234"
-				err := diagnose.EndToEndLatencyCheckWrite(ctx, veryRandomUuid, *backend)
-				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
-					diagnose.Warn(ctx, err.Error())
-				} else if err != nil {
-					return err
-				}
-				err = diagnose.EndToEndLatencyCheckRead(ctx, veryRandomUuid, *backend)
-				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
-					diagnose.Warn(ctx, err.Error())
-				} else if err != nil {
-					return err
-				}
-				err = diagnose.EndToEndLatencyCheckDelete(ctx, veryRandomUuid, *backend)
-				if err != nil && strings.Contains(err.Error(), diagnose.LatencyWarning) {
-					diagnose.Warn(ctx, err.Error())
-				} else if err != nil {
-					return err
+				if maxDuration > time.Duration(0) {
+					diagnose.Warn(ctx, diagnose.LatencyWarning+fmt.Sprintf("duration: %s, ", maxDuration)+fmt.Sprintf("operation: %s", maxDurationCrudOperation))
 				}
 				return nil
 			}))
@@ -322,14 +366,12 @@ SEALFAIL:
 	var coreConfig vault.CoreConfig
 	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
-		diagnose.Test(ctx, "init-randreader", func(ctx context.Context) error {
-			// prepare a secure random reader for core
-			secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		// prepare a secure random reader for core
+		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+		if err != nil {
+			return diagnose.SpotError(ctx, "init-randreader", err)
+		}
+		diagnose.SpotOk(ctx, "init-randreader", "")
 
 		if backend == nil {
 			return fmt.Errorf(BackendUninitializedErr)
@@ -353,6 +395,7 @@ SEALFAIL:
 			}
 			return nil
 		})
+
 		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
 			dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
 			if dirAccess != "" {
@@ -361,7 +404,7 @@ SEALFAIL:
 			return nil
 		})
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
+			diagnose.Test(ctx, "test-ha-storage-tls-consul", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
 					return err
@@ -372,28 +415,23 @@ SEALFAIL:
 		return nil
 	})
 
-	// // Determine the redirect address from environment variables
-	diagnose.Test(ctx, "determine-redirect", func(ctx context.Context) error {
+	// Determine the redirect address from environment variables
+	err = determineRedirectAddr(server, &coreConfig, config)
+	if err != nil {
+		return diagnose.SpotError(ctx, "determine-redirect", err)
+	}
+	diagnose.SpotOk(ctx, "determine-redirect", "")
 
-		err = determineRedirectAddr(server, &coreConfig, config)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	diagnose.Test(ctx, "find-cluster-addr", func(ctx context.Context) error {
-		err = findClusterAddress(server, &coreConfig, config, disableClustering)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = findClusterAddress(server, &coreConfig, config, disableClustering)
+	if err != nil {
+		return diagnose.SpotError(ctx, "find-cluster-addr", err)
+	}
+	diagnose.SpotOk(ctx, "find-cluster-addr", "")
 
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
-	if err := diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
+	diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
 		var newCoreError error
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
@@ -407,19 +445,8 @@ SEALFAIL:
 				"WARNING! A non-fatal error occurred during initialization. Please "+
 					"check the logs for more information."))
 		}
-
-		// The following diagnose checks are copied from the NewCore function.
-
 		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
-
-	if coreConfig.ReloadFuncs != nil && coreConfig.ReloadFuncsLock != nil {
-		// Copy the reload funcs pointers back
-		server.reloadFuncs = coreConfig.ReloadFuncs
-		server.reloadFuncsLock = coreConfig.ReloadFuncsLock
-	}
+	})
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
@@ -484,11 +511,15 @@ SEALFAIL:
 
 	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
 	// decrypt a mock value. It will not call runUnseal.
-	if err := diagnose.Test(ctx, "unseal", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+	diagnose.Test(ctx, "unseal", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 		if barrierWrapper == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object")
 		}
-		barrierEncValue := "diagnose-0481"
+		barrierUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return fmt.Errorf("Diagnose could not create unique UUID for unsealing")
+		}
+		barrierEncValue := "diagnose-" + barrierUUID
 		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
 		if err != nil {
 			return fmt.Errorf("Error encrypting with seal barrier: %w", err)
@@ -502,22 +533,18 @@ SEALFAIL:
 			return fmt.Errorf("barrier returned incorrect decrypted value for mock data")
 		}
 		return nil
-	})); err != nil {
-		diagnose.Error(ctx, err)
-	}
+	}))
 
 	// The following block contains static checks that are run during the
 	// startHttpServers portion of server run. In other words, they are static
 	// checks during resource creation.
-	if err := diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+	diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
 		for _, ln := range lns {
 			if ln.Config == nil {
 				return fmt.Errorf("Found nil listener config after parsing")
 			}
 		}
 		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
+	})
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 func TestDiagnoseOtelResults(t *testing.T) {
 	expected := &Result{
 		Name:   "make-coffee",
-		Status: WarningStatus,
+		Status: ErrorStatus,
 		Warnings: []string{
 			"coffee getting low",
 		},
@@ -31,9 +31,14 @@ func TestDiagnoseOtelResults(t *testing.T) {
 				Status:  ErrorStatus,
 				Message: "no scones",
 			},
+			{
+				Name:   "dispose-grounds",
+				Status: SkippedStatus,
+			},
 		},
 	}
-	sess := New()
+	sess := New(os.Stdout)
+	sess.SetSkipList([]string{"dispose-grounds"})
 	ctx := Context(context.Background(), sess)
 
 	func() {
@@ -70,6 +75,7 @@ func makeCoffee(ctx context.Context) error {
 
 	SpotCheck(ctx, "pick-scone", pickScone)
 
+	Test(ctx, "dispose-grounds", Skippable("dispose-grounds", disposeGrounds))
 	return nil
 }
 
@@ -88,4 +94,9 @@ func brewCoffee(ctx context.Context) error {
 
 func pickScone() error {
 	return errors.New("no scones")
+}
+
+func disposeGrounds(_ context.Context) error {
+	//Done!
+	return nil
 }

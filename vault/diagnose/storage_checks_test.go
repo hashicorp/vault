@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -46,20 +47,25 @@ func TestStorageTimeout(t *testing.T) {
 
 	for _, tc := range testCases {
 		var outErr error
+		var dur time.Duration
 		uuid := "foo"
 		backendCallType := tc.mb.(mockStorageBackend).callType
 		if callTypeToOp(backendCallType) == readOp {
-			outErr = EndToEndLatencyCheckRead(context.Background(), uuid, tc.mb)
+			dur, outErr = EndToEndLatencyCheckRead(context.Background(), uuid, tc.mb)
 		}
 		if callTypeToOp(backendCallType) == writeOp {
-			outErr = EndToEndLatencyCheckWrite(context.Background(), uuid, tc.mb)
+			dur, outErr = EndToEndLatencyCheckWrite(context.Background(), uuid, tc.mb)
 		}
 		if callTypeToOp(backendCallType) == deleteOp {
-			outErr = EndToEndLatencyCheckDelete(context.Background(), uuid, tc.mb)
+			dur, outErr = EndToEndLatencyCheckDelete(context.Background(), uuid, tc.mb)
 		}
 
 		if tc.errSubString == "" && outErr == nil {
 			// this is the success case where the Storage Latency check passes
+			continue
+		}
+		if tc.errSubString == LatencyWarning && dur > time.Duration(0) {
+			// this is the success case where the Storage Latency check successfully returns nonzero duration
 			continue
 		}
 		if !strings.Contains(outErr.Error(), tc.errSubString) {

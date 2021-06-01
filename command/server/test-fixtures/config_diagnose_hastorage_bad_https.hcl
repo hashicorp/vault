@@ -11,13 +11,12 @@ listener "tcp" {
 backend "consul" {
     foo = "bar"
     advertise_addr = "foo"
-    address = "https://remoteconsulserverIP:1028"
-
+    address = "http://remoteconsulserverIP:1028"
 }
 
 ha_backend "consul" {
     bar = "baz"
-    address = "127.0.0.1:1028"
+    address = "https://remoteconsulserverIP:1028"
     advertise_addr = "snafu"
     disable_clustering = "true"
     scheme = "https"

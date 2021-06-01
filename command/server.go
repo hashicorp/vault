@@ -2258,7 +2258,6 @@ func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.Co
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
 			return false, fmt.Errorf("Unknown HA storage type %s", config.HAStorage.Type)
-
 		}
 
 		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
@@ -2266,7 +2265,6 @@ func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.Co
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			return false, fmt.Errorf("Error initializing HA storage of type %s: %s", config.HAStorage.Type, err)
-
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
@@ -2458,6 +2456,8 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		SecureRandomReader:             secureRandomReader,
 		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+		License:                        config.License,
+		LicensePath:                    config.LicensePath,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

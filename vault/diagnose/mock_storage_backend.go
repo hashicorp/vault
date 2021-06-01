@@ -24,7 +24,7 @@ const (
 	deleteOp               string = "delete"
 )
 
-var goodEntry physical.Entry = physical.Entry{Key: secretKey, Value: []byte(secretVal)}
+var goodEntry physical.Entry = physical.Entry{Key: "diagnose", Value: []byte(secretVal)}
 var badEntry physical.Entry = physical.Entry{}
 
 type mockStorageBackend struct {
