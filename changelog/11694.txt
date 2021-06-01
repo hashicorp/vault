@@ -1,3 +1,0 @@
-```release-note:improvement
-command: Cleanup unused code and fix t.Fatal usage in goroutine in testing
-```
