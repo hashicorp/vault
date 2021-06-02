@@ -312,7 +312,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
-      console.log('blah here here here');
       const MAXIMUM_VERSIONS = 9999999999999999;
       let model = this.modelForData;
       let secret = this.model;
