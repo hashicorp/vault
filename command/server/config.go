@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -464,24 +463,24 @@ func ParseConfig(d, source string) (*Config, error) {
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
 		if err := ParseStorage(result, o, "storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'ha_storage': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'ha_backend': {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
@@ -489,13 +488,13 @@ func ParseConfig(d, source string) (*Config, error) {
 	// Parse service discovery
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'service_registration': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
 	}
 
 	entConfig := &(result.entConfig)
 	if err := entConfig.parseConfig(list); err != nil {
-		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
+		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
 	// Remove all unused keys from Config that were satisfied by SharedConfig.
@@ -563,7 +562,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 	for _, f := range files {
 		config, err := LoadConfigFile(f)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
 		}
 
 		if result == nil {
