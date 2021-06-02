@@ -1,45 +1,45 @@
-{{#if (and item.updatePath.canRead (not isBuiltin))}}
+{{#if (and @item.updatePath.canRead (not this.isBuiltin))}}
   {{#linked-block
     "vault.cluster.secrets.backend.show"
-    itemPath
+    @itemPath
     class="list-item-row"
-    data-test-secret-link=itemPath
+    data-test-secret-link=@itemPath
     encode=true
-    queryParams=(secret-query-params backendType)
+    queryParams=(secret-query-params @backendType)
   }}
     <div class="columns is-mobile">
     <div class="column is-10">
       <SecretLink
         @mode="show"
-        @secret={{itemPath}}
-        @queryParams={{query-params type=modelType}}
+        @secret={{@itemPath}}
+        @queryParams={{query-params type=@modelType}}
         @class="has-text-black has-text-weight-semibold">
         <Icon
           @glyph='file-outline'
           @class="has-text-grey-light"/>
-        {{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
+        {{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
       </SecretLink>
     </div>
     <div class="column has-text-right">
-      {{#if (or item.updatePath.canRead item.updatePath.canUpdate)}}
+      {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{#if item.updatePath.canRead}}
+            {{#if @item.updatePath.canRead}}
               <li class="action">
                 <SecretLink
                   @mode="show"
-                  @secret={{itemPath}}
+                  @secret={{@itemPath}}
                   @class="has-text-black has-text-weight-semibold">
                   Details
                 </SecretLink>
               </li>
             {{/if}}
-            {{#if item.updatePath.canUpdate}}
+            {{#if @item.updatePath.canUpdate}}
               <li class="action">
                 <SecretLink
                   @mode="edit"
-                  @secret={{itemPath}}
+                  @secret={{@itemPath}}
                   @class="has-text-black has-text-weight-semibold">
                   Edit
                 </SecretLink>
@@ -59,24 +59,25 @@
         <Icon
           @glyph='file-outline'
           @class="has-text-grey-light"/>
-        {{#if isBuiltin}}
+        {{#if this.isBuiltin}}
           <ToolTip
             @verticalPosition="above"
             @horizontalPosition="left"
             as |T|>
             <T.trigger @tabindex=false>
-              {{item.id}}
+              {{@item.id}}
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">
-                This is a built-in HashiCorp {{itemType}}. It can't be viewed or edited.
+                This is a built-in HashiCorp {{@itemType}}. It can't be viewed or edited.
               </div>
             </T.content>
           </ToolTip>
         {{else}}
-          {{item.id}}
+          {{@item.id}}
         {{/if}}
       </div>
     </div>
   </div>
 {{/if}}
+

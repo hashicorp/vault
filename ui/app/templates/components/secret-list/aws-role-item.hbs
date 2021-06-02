@@ -2,22 +2,22 @@
   (concat
     "vault.cluster.secrets.backend."
     "credentials"
-    (unless item.id "-root")
+    (unless @item.id "-root")
   )
-  item.id
+  @item.id
   class="list-item-row"
-  data-test-secret-link=item.id
+  data-test-secret-link=@item.id
   encode=true
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      <LinkTo @route={{concat "vault.cluster.secrets.backend." "credentials" (unless item.id "-root") }} @model={{item.id}} class="has-text-black has-text-weight-semibold">
+      <LinkTo @route={{concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root") }} @model={{@item.id}} class="has-text-black has-text-weight-semibold">
         <Icon
           @glyph="user-square-outline"
           class="has-text-grey-light is-pulled-left"
         />
         <div class="role-item-details">
-          <span class="is-underline">{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}</span>
+          <span class="is-underline">{{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}</span>
         </div>
       </LinkTo>
     </div>
@@ -26,20 +26,20 @@
         <Confirm as |c|>
           <nav class="menu">
             <ul class="menu-list">
-              {{#if item.generatePath.isPending}}
+              {{#if @item.generatePath.isPending}}
                 <li class="action">
                   <button disabled type="button" class="link button is-loading is-transparent">
                     loading
                   </button>
                 </li>
-              {{else if item.canGenerate}}
+              {{else if @item.canGenerate}}
                 <li class="action">
-                  <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{item.id}} data-test-role-aws-link="generate">
+                  <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} data-test-role-aws-link="generate">
                     Generate credentials
                   </LinkTo>
                 </li>
               {{/if}}
-              {{#if item.updatePath.isPending}}
+              {{#if @item.updatePath.isPending}}
                 <li class="action">
                   <button disabled type="button" class="link button is-loading is-transparent">
                     loading
@@ -51,26 +51,26 @@
                   </button>
                 </li>
               {{else}}
-                {{#if item.canRead}}
+                {{#if @item.canRead}}
                   <li class="action">
-                    <LinkTo @route="vault.cluster.secrets.backend.show" @model={{item.id}} data-test-role-ssh-link="show">
+                    <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@item.id}} data-test-role-ssh-link="show">
                       Details
                     </LinkTo>
                   </li>
                 {{/if}}
-                {{#if item.canEdit}}
+                {{#if @item.canEdit}}
                   <li class="action">
-                    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{item.id}} data-test-role-ssh-link="edit">
+                    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} data-test-role-ssh-link="edit">
                       Edit
                     </LinkTo>
                   </li>
                 {{/if}}
-                {{#if item.canDelete}}
+                {{#if @item.canDelete}}
                   <li class="action">
                     <c.Message
-                      @id={{item.id}}
-                      @onConfirm={{action "delete" item}}
-                      data-test-aws-role-delete={{item.id}}/>
+                      @id={{@item.id}}
+                      @onConfirm={{@delete}}
+                      data-test-aws-role-delete={{@item.id}}/>
                   </li>
                 {{/if}}
               {{/if}}
