@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -229,10 +230,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
 		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
-
 			b, err := server.setupStorage(config)
 			if err != nil {
 				return err
+			}
+			if b == nil {
+				return fmt.Errorf("storage backend was initialized to nil")
 			}
 			backend = &b
 			return nil
@@ -258,6 +261,17 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				}
 				return nil
 			})
+
+			if config.Storage.Type == storageTypeRaft {
+				path, ok := config.Storage.Config["path"]
+				if !ok {
+					diagnose.SpotError(ctx, "raft file permission checks", fmt.Errorf("storage file path is required"))
+				}
+				diagnose.RaftFilePermsChecks(ctx, path)
+
+				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
+
+			}
 		}
 
 		// Attempt to use storage backend
