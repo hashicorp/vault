@@ -259,6 +259,13 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// is enabled. The templating engine and the cache have some inconsistencies
 	// that need to be fixed for 1.7x/1.8
 	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
+		// Disable template retries if attempts is greater than zero so that we
+		// don't end up performing n^2 retries by both template and the cache
+		// client.
+		if attempts > 0 {
+			enabled = false
+		}
+
 		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"

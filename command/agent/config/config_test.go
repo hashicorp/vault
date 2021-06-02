@@ -781,7 +781,8 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
-				NumRetries: 5,
+				NumRetries:    5,
+				NumRetriesRaw: 5,
 			},
 		},
 	}
@@ -826,7 +827,7 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
-				ctconfig.DefaultRetryAttempts,
+				NumRetries: ctconfig.DefaultRetryAttempts,
 			},
 		},
 	}
