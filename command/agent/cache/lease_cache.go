@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
@@ -577,7 +576,7 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			if err == io.EOF {
 				err = errors.New("empty JSON provided")
 			}
-			logical.RespondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse JSON input: {{err}}", err))
+			logical.RespondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse JSON input: %w", err))
 			return
 		}
 
@@ -586,7 +585,7 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 		in, err := parseCacheClearInput(req)
 		if err != nil {
 			c.logger.Error("unable to parse clear input", "error", err)
-			logical.RespondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse clear input: {{err}}", err))
+			logical.RespondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse clear input: %w", err))
 			return
 		}
 
@@ -597,7 +596,7 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			if err == errInvalidType {
 				httpStatus = http.StatusBadRequest
 			}
-			logical.RespondError(w, httpStatus, errwrap.Wrapf("failed to clear cache: {{err}}", err))
+			logical.RespondError(w, httpStatus, fmt.Errorf("failed to clear cache: %w", err))
 			return
 		}
 
