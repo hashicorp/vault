@@ -3580,3 +3580,89 @@ func makeStorage(t *testing.T, entries ...*logical.StorageEntry) *logical.InmemS
 
 	return store
 }
+
+func leaseLimitFieldData(limit string) *framework.FieldData {
+	raw := make(map[string]interface{})
+	raw["limit"] = limit
+	return &framework.FieldData{
+		Raw: raw,
+		Schema: map[string]*framework.FieldSchema{
+			"limit": {
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "limit return results",
+			},
+		},
+	}
+}
+
+func TestProcessLimit(t *testing.T) {
+	testCases := []struct {
+		d               *framework.FieldData
+		expectReturnAll bool
+		expectLimit     int
+		expectErr       bool
+	}{
+		{
+			d:               leaseLimitFieldData("500"),
+			expectReturnAll: false,
+			expectLimit:     500,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData(""),
+			expectReturnAll: false,
+			expectLimit:     MaxIrrevocableLeasesToReturn,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("none"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("NoNe"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("hello_world"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("0"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("-1"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+	}
+
+	for i, tc := range testCases {
+		returnAll, limit, err := processLimit(tc.d)
+
+		if returnAll != tc.expectReturnAll {
+			t.Errorf("bad return all for test case %d. expected %t, got %t", i, tc.expectReturnAll, returnAll)
+		}
+		if limit != tc.expectLimit {
+			t.Errorf("bad limit for test case %d. expected %d, got %d", i, tc.expectLimit, limit)
+		}
+
+		haveErr := err != nil
+		if haveErr != tc.expectErr {
+			t.Errorf("bad error status for test case %d. expected error: %t, got error: %t", i, tc.expectErr, haveErr)
+			if err != nil {
+				t.Errorf("error was: %v", err)
+			}
+		}
+	}
+}

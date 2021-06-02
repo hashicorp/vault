@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,6 +74,12 @@ const (
 	genericIrrevocableErrorMessage = "unknown"
 
 	outOfRetriesMessage = "out of retries"
+
+	// maximum number of irrevocable leases we return to the irrevocable lease
+	// list API **without** the `force` flag set
+	MaxIrrevocableLeasesToReturn = 10000
+
+	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
 )
 
 type pendingInfo struct {
@@ -261,18 +268,7 @@ func (r *revocationJob) OnFailure(err error) {
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
 	nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
-	var mountAccessor string
-	m.coreStateLock.RLock()
-	mount := m.core.router.MatchingMountEntry(nsCtx, leaseID)
-	m.coreStateLock.RUnlock()
-
-	if mount == nil {
-		// figure out what this means - if we couldn't find the mount, can we automatically revoke
-		m.logger.Debug("could not find lease path", "lease_id", leaseID)
-		mountAccessor = "mount-accessor-not-found"
-	} else {
-		mountAccessor = mount.Accessor
-	}
+	mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
 
 	job, err := newRevocationJob(nsCtx, leaseID, ns, m)
 	if err != nil {
@@ -2416,6 +2412,155 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 	m.removeFromPending(ctx, le.LeaseID, false)
 	m.nonexpiring.Delete(le.LeaseID)
+}
+
+func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID string) (*namespace.Namespace, error) {
+	_, nsID := namespace.SplitIDFromString(leaseID)
+
+	// avoid re-declaring leaseNS and err with scope inside the if
+	leaseNS := namespace.RootNamespace
+	var err error
+	if nsID != "" {
+		leaseNS, err = NamespaceByID(ctx, nsID, m.core)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return leaseNS, nil
+}
+
+func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID string) string {
+	m.coreStateLock.RLock()
+	mount := m.core.router.MatchingMountEntry(ctx, leaseID)
+	m.coreStateLock.RUnlock()
+
+	var mountAccessor string
+	if mount == nil {
+		mountAccessor = "mount-accessor-not-found"
+	} else {
+		mountAccessor = mount.Accessor
+	}
+
+	return mountAccessor
+}
+
+// TODO SW if keep counts as a map, should update the RFC
+func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
+	requestNS, err := namespace.FromContext(ctx)
+	if err != nil {
+		m.logger.Error("could not get namespace from context", "error", err)
+		return nil, err
+	}
+
+	numMatchingLeasesPerMount := make(map[string]int)
+	numMatchingLeases := 0
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
+		if err != nil {
+			// We should probably note that an error occured, but continue counting
+			m.logger.Warn("could not get lease namespace from ID", "error", err)
+			return true
+		}
+
+		leaseMatches := (leaseNS == requestNS) || (includeChildNamespaces && leaseNS.HasParent(requestNS))
+		if !leaseMatches {
+			// the lease doesn't meet our criteria, so keep looking
+			return true
+		}
+
+		mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
+
+		if _, ok := numMatchingLeasesPerMount[mountAccessor]; !ok {
+			numMatchingLeasesPerMount[mountAccessor] = 0
+		}
+
+		numMatchingLeases++
+		numMatchingLeasesPerMount[mountAccessor]++
+
+		return true
+	})
+
+	resp := make(map[string]interface{})
+	resp["lease_count"] = numMatchingLeases
+	resp["counts"] = numMatchingLeasesPerMount
+
+	return resp, nil
+}
+
+type leaseResponse struct {
+	LeaseID    string `json:"lease_id"`
+	MountID    string `json:"mount_id"`
+	ErrMsg     string `json:"error"`
+	expireTime time.Time
+}
+
+// returns a warning string, if applicable
+// limit specifies how many results to return, and must be >0
+// includeAll specifies if all results should be returned, regardless of limit
+func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeChildNamespaces, returnAll bool, limit int) (map[string]interface{}, string, error) {
+	requestNS, err := namespace.FromContext(ctx)
+	if err != nil {
+		m.logger.Error("could not get namespace from context", "error", err)
+		return nil, "", err
+	}
+
+	// map of mount point : lease info
+	matchingLeases := make([]*leaseResponse, 0)
+	numMatchingLeases := 0
+	var warning string
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		leaseInfo := v.(*leaseEntry)
+
+		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
+		if err != nil {
+			// We probably want to track that an error occured, but continue counting
+			m.logger.Warn("could not get lease namespace from ID", "error", err)
+			return true
+		}
+
+		leaseMatches := (leaseNS == requestNS) || (includeChildNamespaces && leaseNS.HasParent(requestNS))
+		if !leaseMatches {
+			// the lease doesn't meet our criteria, so keep looking
+			return true
+		}
+
+		if !returnAll && (numMatchingLeases >= limit) {
+			m.logger.Warn("hit max irrevocable leases without force flag set")
+			warning = MaxIrrevocableLeasesWarning
+			return false
+		}
+
+		mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
+
+		numMatchingLeases++
+		matchingLeases = append(matchingLeases, &leaseResponse{
+			LeaseID:    leaseID,
+			MountID:    mountAccessor,
+			ErrMsg:     leaseInfo.RevokeErr,
+			expireTime: leaseInfo.ExpireTime,
+		})
+
+		return true
+	})
+
+	// sort the results for consistent API response. we primarily sort on
+	// increasing expire time, and break ties with increasing lease id
+	sort.Slice(matchingLeases, func(i, j int) bool {
+		if !matchingLeases[i].expireTime.Equal(matchingLeases[j].expireTime) {
+			return matchingLeases[i].expireTime.Before(matchingLeases[j].expireTime)
+		}
+
+		return matchingLeases[i].LeaseID < matchingLeases[j].LeaseID
+	})
+
+	resp := make(map[string]interface{})
+	resp["lease_count"] = numMatchingLeases
+	resp["leases"] = matchingLeases
+
+	return resp, warning, nil
 }
 
 // leaseEntry is used to structure the values the expiration

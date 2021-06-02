@@ -285,6 +285,84 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
+func (b *SystemBackend) handleLeaseCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	typeRaw, ok := d.GetOk("type")
+	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
+		return nil, nil
+	}
+
+	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
+	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
+
+	resp, err := b.Core.expiration.getIrrevocableLeaseCounts(ctx, includeChildNamespaces)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: resp,
+	}, nil
+}
+
+func processLimit(d *framework.FieldData) (bool, int, error) {
+	limitStr := ""
+	limitRaw, ok := d.GetOk("limit")
+	if ok {
+		limitStr = limitRaw.(string)
+	}
+
+	includeAll := false
+	maxResults := MaxIrrevocableLeasesToReturn
+	if limitStr == "" {
+		// use the defaults
+	} else if strings.ToLower(limitStr) == "none" {
+		includeAll = true
+	} else {
+		// not having a valid, positive int here is an error
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			return false, 0, fmt.Errorf("invalid 'limit' provided: %w", err)
+		}
+
+		if limit < 1 {
+			return false, 0, fmt.Errorf("limit must be 'none' or a positive integer")
+		}
+
+		maxResults = limit
+	}
+
+	return includeAll, maxResults, nil
+}
+
+func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	typeRaw, ok := d.GetOk("type")
+	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
+		return nil, nil
+	}
+
+	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
+	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
+
+	includeAll, maxResults, err := processLimit(d)
+	if err != nil {
+		return nil, err
+	}
+
+	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, includeAll, maxResults)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: leases,
+	}
+	if warning != "" {
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
@@ -4687,5 +4765,13 @@ This path responds to the following HTTP methods.
 	"activity-config": {
 		"Control the collection and reporting of client counts.",
 		"Control the collection and reporting of client counts.",
+	},
+	"count-leases": {
+		"Count of leases associated with this Vault cluster",
+		"Count of leases associated with this Vault cluster",
+	},
+	"list-leases": {
+		"List leases associated with this Vault cluster",
+		"List leases associated with this Vault cluster",
 	},
 }

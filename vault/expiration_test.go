@@ -3005,3 +3005,207 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 		}
 	}
 }
+
+// set up multiple mounts, and return a mapping of the path to the mount accessor
+func mountNoopBackends(t *testing.T, c *Core, paths []string) map[string]string {
+	t.Helper()
+
+	// enable the noop backend
+	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	pathToMount := make(map[string]string)
+	for _, path := range paths {
+		me := &MountEntry{
+			Table: mountTableType,
+			Path:  path,
+			Type:  "noop",
+		}
+		err := c.mount(namespace.RootContext(nil), me)
+		if err != nil {
+			t.Fatalf("err mounting backend %s: %v", path, err)
+		}
+
+		mount := c.router.MatchingMountEntry(namespace.RootContext(nil), path)
+		if mount == nil {
+			t.Fatalf("couldn't find mount for path %s", path)
+		}
+		pathToMount[path] = mount.Accessor
+	}
+
+	return pathToMount
+}
+
+func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	mountPrefixes := []string{"foo/bar/1/", "foo/bar/2/", "foo/bar/3/"}
+	pathToMount := mountNoopBackends(t, c, mountPrefixes)
+
+	exp := c.expiration
+
+	expectedPerMount := 10
+	for i := 0; i < expectedPerMount; i++ {
+		for _, mountPrefix := range mountPrefixes {
+			addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+		}
+	}
+
+	out, err := exp.getIrrevocableLeaseCounts(namespace.RootContext(nil), false)
+	if err != nil {
+		t.Fatalf("error getting irrevocable lease counts: %v", err)
+	}
+
+	countRaw, ok := out["lease_count"]
+	if !ok {
+		t.Fatal("no lease count")
+	}
+
+	countPerMountRaw, ok := out["counts"]
+	if !ok {
+		t.Fatal("no count per mount")
+	}
+
+	count := countRaw.(int)
+	countPerMount := countPerMountRaw.(map[string]int)
+
+	expectedCount := len(mountPrefixes) * expectedPerMount
+	if count != expectedCount {
+		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
+	}
+
+	if len(countPerMount) != len(mountPrefixes) {
+		t.Fatalf("bad mounts. got %#v, expected %v", countPerMount, mountPrefixes)
+	}
+
+	for _, mountPrefix := range mountPrefixes {
+		mountCount := countPerMount[pathToMount[mountPrefix]]
+		if mountCount != expectedPerMount {
+			t.Errorf("bad count for prefix %q. expected %d, got %d", mountPrefix, expectedPerMount, mountCount)
+		}
+	}
+}
+
+func TestExpiration_listIrrevocableLeases(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	mountPrefixes := []string{"foo/bar/1/", "foo/bar/2/", "foo/bar/3/"}
+	pathToMount := mountNoopBackends(t, c, mountPrefixes)
+
+	exp := c.expiration
+
+	expectedLeases := make([]*basicLeaseTestInfo, 0)
+	expectedPerMount := 10
+	for i := 0; i < expectedPerMount; i++ {
+		for _, mountPrefix := range mountPrefixes {
+			le := addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+			expectedLeases = append(expectedLeases, &basicLeaseTestInfo{
+				id:     le.id,
+				mount:  pathToMount[mountPrefix],
+				expire: le.expire,
+			})
+		}
+	}
+
+	out, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false, MaxIrrevocableLeasesToReturn)
+	if err != nil {
+		t.Fatalf("error listing irrevocable leases: %v", err)
+	}
+	if warn != "" {
+		t.Errorf("expected no warning, got %q", warn)
+	}
+
+	countRaw, ok := out["lease_count"]
+	if !ok {
+		t.Fatal("no lease count")
+	}
+
+	leasesRaw, ok := out["leases"]
+	if !ok {
+		t.Fatal("no leases")
+	}
+
+	count := countRaw.(int)
+	leases := leasesRaw.([]*leaseResponse)
+
+	expectedCount := len(mountPrefixes) * expectedPerMount
+	if count != expectedCount {
+		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
+	}
+	if len(leases) != len(expectedLeases) {
+		t.Errorf("bad lease results. expected %d, got %d with values %v", len(expectedLeases), len(leases), leases)
+	}
+
+	// `leases` is already sorted by lease ID
+	sort.Slice(expectedLeases, func(i, j int) bool {
+		return expectedLeases[i].id < expectedLeases[j].id
+	})
+	sort.SliceStable(expectedLeases, func(i, j int) bool {
+		return expectedLeases[i].expire.Before(expectedLeases[j].expire)
+	})
+
+	for i, lease := range expectedLeases {
+		if lease.id != leases[i].LeaseID {
+			t.Errorf("bad lease id. expected %q, got %q", lease.id, leases[i].LeaseID)
+		}
+		if lease.mount != leases[i].MountID {
+			t.Errorf("bad mount id. expected %q, got %q", lease.mount, leases[i].MountID)
+		}
+	}
+}
+
+func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
+
+	expectedNumLeases := MaxIrrevocableLeasesToReturn + 10
+	for i := 0; i < expectedNumLeases; i++ {
+		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
+	}
+
+	dataRaw, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false, MaxIrrevocableLeasesToReturn)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if warn != MaxIrrevocableLeasesWarning {
+		t.Errorf("expected warning %q, got %q", MaxIrrevocableLeasesWarning, warn)
+	}
+	if dataRaw == nil {
+		t.Fatal("expected partial data, got nil")
+	}
+
+	leaseListLength := len(dataRaw["leases"].([]*leaseResponse))
+	if leaseListLength != MaxIrrevocableLeasesToReturn {
+		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, leaseListLength)
+	}
+
+	dataRaw, warn, err = exp.listIrrevocableLeases(namespace.RootContext(nil), false, true, 0)
+	if err != nil {
+		t.Fatalf("got error when using limit=none: %v", err)
+	}
+	if warn != "" {
+		t.Errorf("expected no warning, got %q", warn)
+	}
+	if dataRaw == nil {
+		t.Fatalf("got nil data when using limit=none")
+	}
+
+	leaseListLength = len(dataRaw["leases"].([]*leaseResponse))
+	if leaseListLength != expectedNumLeases {
+		t.Fatalf("expected %d results, got %d", MaxIrrevocableLeasesToReturn, expectedNumLeases)
+	}
+
+	numLeasesRaw, ok := dataRaw["lease_count"]
+	if !ok {
+		t.Fatalf("lease count data not present")
+	}
+	if numLeasesRaw == nil {
+		t.Fatalf("nil lease count")
+	}
+
+	numLeases := numLeasesRaw.(int)
+	if numLeases != expectedNumLeases {
+		t.Errorf("bad lease count. expected %d, got %d", expectedNumLeases, numLeases)
+	}
+}
