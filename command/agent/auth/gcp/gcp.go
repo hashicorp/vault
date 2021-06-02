@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	hclog "github.com/hashicorp/go-hclog"
@@ -109,7 +108,7 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if ok {
 		g.jwtExp, err = parseutil.ParseInt(jwtExpRaw)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing 'jwt_raw' into integer: {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'jwt_raw' into integer: %w", err)
 		}
 	}
 
@@ -130,7 +129,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 		{
 			req, err := http.NewRequest("GET", fmt.Sprintf(identityEndpoint, g.serviceAccount), nil)
 			if err != nil {
-				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				retErr = fmt.Errorf("error creating request: %w", err)
 				return
 			}
 			req = req.WithContext(ctx)
@@ -141,7 +140,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 			req.URL.RawQuery = q.Encode()
 			resp, err := httpClient.Do(req)
 			if err != nil {
-				retErr = errwrap.Wrapf("error fetching instance token: {{err}}", err)
+				retErr = fmt.Errorf("error fetching instance token: %w", err)
 				return
 			}
 			if resp == nil {
@@ -151,7 +150,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 			defer resp.Body.Close()
 			jwtBytes, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				retErr = errwrap.Wrapf("error reading instance token response body: {{err}}", err)
+				retErr = fmt.Errorf("error reading instance token response body: %w", err)
 				return
 			}
 
@@ -163,7 +162,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 
 		credentials, tokenSource, err := gcputil.FindCredentials(g.credentials, ctx, iamcredentials.CloudPlatformScope)
 		if err != nil {
-			retErr = errwrap.Wrapf("could not obtain credentials: {{err}}", err)
+			retErr = fmt.Errorf("could not obtain credentials: %w", err)
 			return
 		}
 
@@ -193,7 +192,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 		}
 		payloadBytes, err := json.Marshal(jwtPayload)
 		if err != nil {
-			retErr = errwrap.Wrapf("could not convert JWT payload to JSON string: {{err}}", err)
+			retErr = fmt.Errorf("could not convert JWT payload to JSON string: %w", err)
 			return
 		}
 
@@ -203,14 +202,14 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 
 		iamClient, err := iamcredentials.New(httpClient)
 		if err != nil {
-			retErr = errwrap.Wrapf("could not create IAM client: {{err}}", err)
+			retErr = fmt.Errorf("could not create IAM client: %w", err)
 			return
 		}
 
 		resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccount)
 		resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, jwtReq).Do()
 		if err != nil {
-			retErr = errwrap.Wrapf(fmt.Sprintf("unable to sign JWT for %s using given Vault credentials: {{err}}", resourceName), err)
+			retErr = fmt.Errorf("unable to sign JWT for %s using given Vault credentials: %w", resourceName, err)
 			return
 		}
 
