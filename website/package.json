@@ -25,7 +25,7 @@
     "@hashicorp/react-subnav": "8.2.1",
     "@hashicorp/react-tabs": "6.0.1",
     "@hashicorp/react-text-split": "3.1.1",
-    "@hashicorp/react-text-splits": "2.1.1",
+    "@hashicorp/react-text-splits": "3.0.0",
     "@hashicorp/react-use-cases": "3.0.2",
     "@hashicorp/react-vertical-text-block-list": "6.0.2",
     "next": "10.2.2",
