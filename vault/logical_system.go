@@ -237,7 +237,7 @@ func (b *SystemBackend) handleConfigReload(ctx context.Context, req *logical.Req
 		return handleLicenseReload(b)(ctx, req, data)
 	}
 
-	return nil, nil
+	return nil, logical.ErrUnsupportedPath
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -4068,14 +4068,6 @@ This path responds to the following HTTP methods.
     DELETE /
         Clears the CORS configuration and disables acceptance of CORS requests.
 		`,
-	},
-	"config/reload": {
-		"Reloads the given subsystem.",
-		`
- This path responds to the following HTTP methods.
- 	POST /<subsystem>
- 		Reload the config for the given subsystem.
- 		`,
 	},
 	"config/ui/headers": {
 		"Configures response headers that should be returned from the UI.",

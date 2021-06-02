@@ -1568,7 +1568,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if testCluster.LicensePublicKey == nil {
-		pubKey, priKey, err := TestGenerateCoreKeys()
+		pubKey, priKey, err := GenerateTestLicenseKeys()
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}

@@ -61,20 +61,19 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 		{
 			Pattern: "config/reload/(?P<subsystem>.+)",
-
 			Fields: map[string]*framework.FieldSchema{
 				"subsystem": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["config/reload"][0]),
 				},
 			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleConfigReload,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:    b.handleConfigReload,
+					Summary:     "Reload the given subsystem",
+					Description: "",
+				},
 			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["config/reload"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["config/reload"][1]),
 		},
 
 		{
