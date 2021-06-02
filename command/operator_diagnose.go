@@ -211,9 +211,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	defer span.End()
 
 	// OS Specific checks
-	// Check open file count
 	diagnose.OSChecks(ctx)
-	diagnose.Test(ctx, "disk-usage", diagnose.DiskUsageCheck)
 
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()

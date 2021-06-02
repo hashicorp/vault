@@ -40,9 +40,20 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "open file limits",
+					Name:   "operating system",
 					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "open file limits",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "disk usage",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
+
 				{
 					Name:   "parse-config",
 					Status: diagnose.OkStatus,
@@ -331,7 +342,7 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 			return fmt.Errorf("section %s, warning message not found: %s in %s", exp.Name, exp.Warnings[j], act.Warnings[j])
 		}
 	}
-	if len(exp.Children) != len(act.Children) {
+	if len(exp.Children) > len(act.Children) {
 		errStrings := []string{}
 		for _, c := range act.Children {
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
