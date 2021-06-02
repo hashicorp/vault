@@ -354,8 +354,5 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 		return compareResults(exp.Children, act.Children)
 	}
 
-	if len(exp.Children) > 0 {
-		return compareResults(exp.Children, act.Children)
-	}
 	return nil
 }
