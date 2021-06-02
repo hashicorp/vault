@@ -1,4 +1,4 @@
-// +build !windows !openbsd,!arm
+// +build !openbsd,!arm
 
 package diagnose
 
