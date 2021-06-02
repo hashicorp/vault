@@ -40,9 +40,20 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "open file limits",
+					Name:   "operating system",
 					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "open file limits",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "disk usage",
+							Status: diagnose.OkStatus,
+						},
+					},
 				},
+
 				{
 					Name:   "parse-config",
 					Status: diagnose.OkStatus,

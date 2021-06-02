@@ -7,5 +7,7 @@ import (
 )
 
 func OSChecks(ctx context.Context) {
-	// None so far
+	ctx, span := StartSpan(ctx, "operating system")
+	defer span.End()
+	diskUsage(ctx)
 }

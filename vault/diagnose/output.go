@@ -266,7 +266,28 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Time:    e.Time,
 						})
 				}
+			case spotCheckSkippedEventName:
+				var checkName string
+				var message string
+				for _, a := range e.Attributes {
+					switch a.Key {
+					case nameKey:
+						checkName = a.Value.AsString()
+					case messageKey:
+						message = a.Value.AsString()
+					}
+				}
+				if checkName != "" {
+					r.Children = append(r.Children,
+						&Result{
+							Name:    checkName,
+							Status:  SkippedStatus,
+							Message: message,
+							Time:    e.Time,
+						})
+				}
 			}
+
 		}
 		switch s.StatusCode() {
 		case codes.Unset:

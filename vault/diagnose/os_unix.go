@@ -9,6 +9,9 @@ import (
 )
 
 func OSChecks(ctx context.Context) {
+	ctx, span := StartSpan(ctx, "operating system")
+	defer span.End()
+
 	var limit unix.Rlimit
 	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &limit); err != nil {
 		SpotError(ctx, "open file limits", fmt.Errorf("could not determine open file limit: %w", err))
@@ -23,4 +26,6 @@ func OSChecks(ctx context.Context) {
 			SpotOk(ctx, "open file limits", fmt.Sprintf("set to %d", min))
 		}
 	}
+
+	diskUsage(ctx)
 }
