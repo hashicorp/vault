@@ -908,7 +908,7 @@ func (m *Manager) setupQuotaType(ctx context.Context, storage logical.Storage, q
 
 	names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+quotaType+"/"))
 	if err != nil {
-		return nil
+		return err
 	}
 	for _, name := range names {
 		quota, err := Load(ctx, m.storage, quotaType, name)
