@@ -2546,12 +2546,14 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 		return true
 	})
 
-	// sort the results for consistent API response, with the least fresh leases first in the list
+	// sort the results for consistent API response. we primarily sort on
+	// increasing expire time, and break ties with increasing lease id
 	sort.Slice(matchingLeases, func(i, j int) bool {
+		if !matchingLeases[i].expireTime.Equal(matchingLeases[j].expireTime) {
+			return matchingLeases[i].expireTime.Before(matchingLeases[j].expireTime)
+		}
+
 		return matchingLeases[i].LeaseID < matchingLeases[j].LeaseID
-	})
-	sort.SliceStable(matchingLeases, func(i, j int) bool {
-		return matchingLeases[i].expireTime.Before(matchingLeases[j].expireTime)
 	})
 
 	resp := make(map[string]interface{})
