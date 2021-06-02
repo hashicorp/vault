@@ -58,7 +58,8 @@ var (
 
 	// defaultClientRetryAttempts is the default number of retries that the
 	// client will make if vault.retry.num_retries is not specified in the
-	// config. 12 is chosen as the value for backward compatibility.
+	// config. 12 is chosen as the value for backward compatibility and was
+	// based on the value from ctconfig.DefaultRetryAttempts.
 	defaultClientRetryAttempts = 12
 )
 
@@ -425,17 +426,20 @@ func (c *AgentCommand) Run(args []string) int {
 	// confuse the issue of retries for auth failures which have their own
 	// config and are handled a bit differently.
 	if os.Getenv(api.EnvVaultMaxRetries) == "" {
-		retries := config.Vault.Retry.NumRetries
 
 		// Overrides here to maintain backward compatibility in behavior
 		switch config.Vault.Retry.NumRetries {
 		case -1:
-			retries = 0
+			client.SetMaxRetries(0)
 		case 0:
-			retries = defaultClientRetryAttempts
+			// If the value was not explicitly provided, we set to it the
+			// internal default for backward compatibility.
+			if config.Vault.Retry.NumRetriesRaw == nil {
+				client.SetMaxRetries(defaultClientRetryAttempts)
+			}
+		default:
+			client.SetMaxRetries(config.Vault.Retry.NumRetries)
 		}
-
-		client.SetMaxRetries(retries)
 	}
 
 	enforceConsistency := cache.EnforceConsistencyNever
