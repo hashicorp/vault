@@ -16,13 +16,12 @@ import differenceInDays from 'date-fns/differenceInDays';
 export default class LicenseBanners extends Component {
   get licenseExpired() {
     if (!this.args.expiry) return false;
-    const now = new Date();
-    return isAfter(now, new Date(this.args.expiry));
+    return isAfter(new Date(), new Date(this.args.expiry));
   }
 
   get licenseExpiringInDays() {
-    if (!this.args.expiry) return -1;
-    const now = new Date();
-    return differenceInDays(new Date(this.args.expiry), now);
+    // Anything more than 30 does not render a warning
+    if (!this.args.expiry) return 99;
+    return differenceInDays(new Date(this.args.expiry), new Date());
   }
 }
