@@ -20,7 +20,7 @@ export default class LicenseBanners extends Component {
     return isAfter(now, new Date(this.args.expiry));
   }
 
-  get licenseExpiring() {
+  get licenseExpiringInDays() {
     if (!this.args.expiry) return -1;
     const now = new Date();
     return differenceInDays(new Date(this.args.expiry), now);
