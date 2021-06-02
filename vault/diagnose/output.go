@@ -301,7 +301,9 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				r.Status = OkStatus
 			}
 		case codes.Error:
-			r.Status = ErrorStatus
+			if r.Status != SkippedStatus {
+				r.Status = ErrorStatus
+			}
 		}
 		t.results[id] = r
 	}
