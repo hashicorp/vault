@@ -141,7 +141,7 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
-		return 1
+		return 3
 	}
 	return c.RunWithParsedFlags()
 }
@@ -150,7 +150,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
-		return 1
+		return 3
 	}
 
 	if c.diagnose == nil {
@@ -171,7 +171,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		resultsJS, err := json.MarshalIndent(results, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
-			return 2
+			return 4
 		}
 		c.UI.Output(string(resultsJS))
 	} else {
@@ -180,6 +180,13 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	if err != nil {
+		return 4
+	}
+	// Use a different return code
+	switch results.Status {
+	case diagnose.WarningStatus:
+		return 2
+	case diagnose.ErrorStatus:
 		return 1
 	}
 	return 0
