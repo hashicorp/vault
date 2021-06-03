@@ -146,6 +146,59 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 	return dur, nil
 }
 
+func ParseDurationMillisecond(in interface{}) (time.Duration, error) {
+	var dur time.Duration
+	jsonIn, ok := in.(json.Number)
+	if ok {
+		in = jsonIn.String()
+	}
+	switch inp := in.(type) {
+	case nil:
+		// return default of zero
+	case string:
+		if inp == "" {
+			return dur, nil
+		}
+		var err error
+		// Look for a suffix otherwise its a plain millisecond value
+		if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") || strings.HasSuffix(inp, "ms") {
+			dur, err = time.ParseDuration(inp)
+			if err != nil {
+				return dur, err
+			}
+		} else {
+			// Plain integer
+			msecs, err := strconv.ParseInt(inp, 10, 64)
+			if err != nil {
+				return dur, err
+			}
+			dur = time.Duration(msecs) * time.Millisecond
+		}
+	case int:
+		dur = time.Duration(inp) * time.Millisecond
+	case int32:
+		dur = time.Duration(inp) * time.Millisecond
+	case int64:
+		dur = time.Duration(inp) * time.Millisecond
+	case uint:
+		dur = time.Duration(inp) * time.Millisecond
+	case uint32:
+		dur = time.Duration(inp) * time.Millisecond
+	case uint64:
+		dur = time.Duration(inp) * time.Millisecond
+	case float32:
+		dur = time.Duration(inp) * time.Millisecond
+	case float64:
+		dur = time.Duration(inp) * time.Millisecond
+	case time.Duration:
+		dur = inp
+	default:
+		return 0, errors.New("could not parse duration from input")
+	}
+
+	return dur, nil
+}
+
 func ParseAbsoluteTime(in interface{}) (time.Time, error) {
 	var t time.Time
 	switch inp := in.(type) {

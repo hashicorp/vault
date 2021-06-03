@@ -179,6 +179,30 @@ func Test_ParseDurationSecond(t *testing.T) {
 	}
 }
 
+func Test_ParseDurationMillisecond(t *testing.T) {
+	outp, err := ParseDurationMillisecond("11675ms")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outp != time.Duration(11675)*time.Millisecond {
+		t.Fatal("not equivalent")
+	}
+	outp, err = ParseDurationMillisecond("9876")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outp != time.Duration(9876)*time.Millisecond {
+		t.Fatal("not equivalent")
+	}
+	outp, err = ParseDurationMillisecond(json.Number("4352"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outp != time.Duration(4352)*time.Millisecond {
+		t.Fatal("not equivalent")
+	}
+}
+
 func Test_ParseAbsoluteTime(t *testing.T) {
 	testCases := []struct {
 		inp      interface{}
