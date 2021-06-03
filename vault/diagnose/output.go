@@ -317,13 +317,17 @@ func (r *Result) Write(writer io.Writer) error {
 }
 
 func (r *Result) write(sb *strings.Builder, depth int) {
-	for i := 0; i < depth; i++ {
-		sb.WriteString("  ")
-	}
-	sb.WriteString(r.String())
+	indent(sb, depth)
+	r.write(sb)
 	sb.WriteRune('\n')
 	for _, c := range r.Children {
 		c.write(sb, depth+1)
+	}
+}
+
+func indent(sb *strings.Builder, depth int) {
+	for i := 0; i < depth; i++ {
+		sb.WriteString("  ")
 	}
 }
 
@@ -363,6 +367,11 @@ func (r *Result) String() string {
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
 		sb.WriteString(w)
+	}
+
+	if r.Advice != nil {
+		sb.WriteString("\n\n")
+		sb.Write
 	}
 	return sb.String()
 
