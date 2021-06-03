@@ -124,6 +124,7 @@ var (
 	LicenseAutoloaded            = func(*Core) bool { return false }
 	LicenseInitCheck             = func(*Core) error { return nil }
 	LicenseSummary               = func(*Core) (*LicenseState, error) { return nil, nil }
+	LicenseReload                = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
