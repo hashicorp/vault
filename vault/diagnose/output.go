@@ -365,7 +365,6 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 func writeWrapped(sb *strings.Builder, msg string, depth int, limit int) {
 	if limit > 0 {
 		sz := uint(limit - depth*len(indentString))
-		fmt.Printf("word wrapping to %d\n", sz)
 		msg = wordwrap.WrapString(msg, sz)
 		parts := strings.Split(msg, "\n")
 		sb.WriteString(parts[0])
