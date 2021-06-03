@@ -32,8 +32,9 @@ func TestDiagnoseOtelResults(t *testing.T) {
 				Message: "no scones",
 			},
 			{
-				Name:   "dispose-grounds",
-				Status: SkippedStatus,
+				Name:    "dispose-grounds",
+				Status:  SkippedStatus,
+				Message: "skipped as requested",
 			},
 		},
 	}

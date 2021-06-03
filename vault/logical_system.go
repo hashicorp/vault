@@ -228,6 +228,18 @@ func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *log
 	return resp, nil
 }
 
+// handleConfigReload handles reloading specific pieces of the configuration.
+func (b *SystemBackend) handleConfigReload(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	subsystem := data.Get("subsystem").(string)
+
+	switch subsystem {
+	case "license":
+		return handleLicenseReload(b)(ctx, req, data)
+	}
+
+	return nil, logical.ErrUnsupportedPath
+}
+
 // handleCORSRead returns the current CORS configuration
 func (b *SystemBackend) handleCORSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig
