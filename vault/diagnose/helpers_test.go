@@ -10,6 +10,8 @@ import (
 	"testing"
 )
 
+const getMoreCoffee = "You'll find more coffee in the freezer door, or consider buying more for the office."
+
 func TestDiagnoseOtelResults(t *testing.T) {
 	expected := &Result{
 		Name:   "make-coffee",
@@ -17,6 +19,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 		Warnings: []string{
 			"coffee getting low",
 		},
+		Advice: getMoreCoffee,
 		Children: []*Result{
 			{
 				Name:   "warm-milk",
@@ -62,6 +65,7 @@ const coffeeLeft = 3
 func makeCoffee(ctx context.Context) error {
 	if coffeeLeft < 5 {
 		Warn(ctx, "coffee getting low")
+		Advise(ctx, getMoreCoffee)
 	}
 
 	err := Test(ctx, "warm-milk", warmMilk)

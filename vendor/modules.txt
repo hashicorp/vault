@@ -923,6 +923,9 @@ github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-testing-interface v1.14.0
 ## explicit
 github.com/mitchellh/go-testing-interface
+# github.com/mitchellh/go-wordwrap v1.0.0
+## explicit
+github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/gox v1.0.1
 ## explicit
 github.com/mitchellh/gox

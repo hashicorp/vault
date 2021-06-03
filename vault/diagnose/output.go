@@ -287,14 +287,17 @@ func findAttributes(e trace.Event, attr1, attr2 attribute.Key) (string, string) 
 }
 
 // Write outputs a human readable version of the results tree
-func (r *Result) Write(writer io.Writer) error {
+func (r *Result) Write(writer io.Writer, wrapLimit int) error {
 	var sb strings.Builder
-	r.write(&sb, 0)
+	r.write(&sb, 0, wrapLimit)
 	_, err := writer.Write([]byte(sb.String()))
 	return err
 }
 
-const indentString = "  "
+const (
+	indentString    = "  "
+	statusPrefixLen = 9
+)
 
 func indent(sb *strings.Builder, depth int) {
 	for i := 0; i < depth; i++ {
@@ -303,67 +306,75 @@ func indent(sb *strings.Builder, depth int) {
 }
 
 func (r *Result) String() string {
+	return r.StringWrapped(80)
+}
+
+func (r *Result) StringWrapped(wrapLimit int) string {
 	var sb strings.Builder
-	r.write(&sb, 0)
+	r.write(&sb, 0, wrapLimit)
 	return sb.String()
 }
 
-func (r *Result) write(sb *strings.Builder, depth int) {
+func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 	indent(sb, depth)
+	var prelude string
 	if len(r.Warnings) == 0 {
 		switch r.Status {
 		case OkStatus:
-			sb.WriteString(status_ok)
+			prelude = status_ok
 		case WarningStatus:
-			sb.WriteString(status_warn)
+			prelude = status_warn
 		case ErrorStatus:
-			sb.WriteString(status_failed)
+			prelude = status_failed
 		case SkippedStatus:
-			sb.WriteString(status_skipped)
+			prelude = status_skipped
 		}
-		sb.WriteString(r.Name)
+		prelude = prelude + r.Name
 
 		if r.Message != "" || len(r.Warnings) > 0 {
-			sb.WriteString(": ")
+			prelude = prelude + ": " + r.Message
 		}
-		writeWrapped(sb, r.Message, depth+1)
 	}
 	warnings := r.Warnings
 	if r.Message == "" && len(warnings) > 0 {
-		sb.WriteString(status_warn)
-		sb.WriteString(r.Name)
-		sb.WriteString(": ")
-		writeWrapped(sb, warnings[0], depth+1)
-
+		prelude = status_warn + r.Name + ": " + warnings[0]
 		warnings = warnings[1:]
 	}
+	writeWrapped(sb, prelude, depth+1, limit)
 	for _, w := range warnings {
 		sb.WriteRune('\n')
 		indent(sb, depth)
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
-		writeWrapped(sb, w, depth+1)
+		writeWrapped(sb, w, depth+1, limit)
 	}
 
 	if r.Advice != "" {
 		sb.WriteString("\n\n")
 		indent(sb, depth+1)
-		writeWrapped(sb, r.Advice, depth+1)
+		writeWrapped(sb, r.Advice, depth+1, limit)
 		sb.WriteRune('\n')
 	}
 	sb.WriteRune('\n')
 	for _, c := range r.Children {
-		c.write(sb, depth+1)
+		c.write(sb, depth+1, limit)
 	}
 }
 
-func writeWrapped(sb *strings.Builder, msg string, depth int) {
-	parts := strings.Split(wordwrap.WrapString(msg, uint(76-depth*len(indentString))), "\n")
-	sb.WriteString(parts[0])
-	for _, p := range parts[1:] {
-		sb.WriteRune('\n')
-		indent(sb, depth)
-		sb.WriteString(p)
+func writeWrapped(sb *strings.Builder, msg string, depth int, limit int) {
+	if limit > 0 {
+		sz := uint(limit - depth*len(indentString))
+		fmt.Printf("word wrapping to %d\n", sz)
+		msg = wordwrap.WrapString(msg, sz)
+		parts := strings.Split(msg, "\n")
+		sb.WriteString(parts[0])
+		for _, p := range parts[1:] {
+			sb.WriteRune('\n')
+			indent(sb, depth)
+			sb.WriteString(p)
+		}
+	} else {
+		sb.WriteString(msg)
 	}
 }

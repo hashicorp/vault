@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/term"
 	"io"
 	"os"
 	"strings"
@@ -175,7 +176,13 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Output(string(resultsJS))
 	} else {
 		c.UI.Output("\nResults:")
-		results.Write(os.Stdout)
+		w, _, err := term.GetSize(0)
+		fmt.Printf("%v %v", w, err)
+		if err == nil {
+			results.Write(os.Stdout, w)
+		} else {
+			results.Write(os.Stdout, 0)
+		}
 	}
 
 	if err != nil {
