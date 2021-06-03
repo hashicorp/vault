@@ -11,7 +11,6 @@ export default Component.extend({
   model: null,
   text: '',
   showForm: false,
-  isTemporary: equal('licenseId', 'temporary'),
   featuresInfo: computed('features', 'model.performanceStandbyCount', function() {
     return allFeatures().map(feature => {
       let active = this.features.includes(feature);
@@ -26,13 +25,4 @@ export default Component.extend({
       return { name: feature, active };
     });
   }),
-  saveModel() {},
-  actions: {
-    saveModel(text) {
-      this.saveModel(text);
-    },
-    toggleForm() {
-      this.toggleProperty('showForm');
-    },
-  },
 });

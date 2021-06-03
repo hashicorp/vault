@@ -3,68 +3,26 @@
     <h1 class="title is-3">License</h1>
   </p.levelLeft>
 </PageHeader>
-<MessageError @model={{model}} />
-{{#if isTemporary}}
-  <section class="box is-sideless is-fullwidth">
-    <AlertBanner
-      @type="warning"
-      @message="Your temporary license expires in {{date-from-now expirationTime}} and your vault will seal. Please enter a valid license below."
-      @class="license-warning"
-      data-test-cluster-status
-      data-test-warning-text
-    />
-    <span class="title is-5" data-test-temp-license>Temporary license</span>
-    <form {{action "saveModel" text on="submit"}}>
-      <div class="box is-shadowless is-fullwidth is-marginless">
-        <div class="field">
-          <label for="license-id" class="is-label">License</label>
-          <div class="control">
-            <Input @id="license-id" @value={{text}} @autocomplete="off" class="input" data-test-text-input="data-test-text-input" />
-          </div>
-        </div>
-      </div>
-      <div class="field">
-        <div class="control">
-          <button type="submit" class="button is-primary" data-test-save-button>Save</button>
-        </div>
-      </div>
-    </form>
-  </section>
-{{else}}
-  <section class="box is-sideless is-fullwidth">
-    <span class="title is-5">Details</span>
-    {{#if showForm}}
-      <form {{action "saveModel" text on="submit"}}>
-        <div class="field">
-          <label for="license-id" class="is-label">License</label>
-          <div class="control">
-            <Input @id="license-id" @value={{text}} @autocomplete="off" class="input" data-test-text-input="data-test-text-input" />
-          </div>
-        </div>
-        <div class="field is-grouped">
-          <div class="control">
-            <button type="submit" class="button is-primary" data-test-save-button>Save</button>
-          </div>
-          <div class="control">
-            <button type="button" {{action "toggleForm"}} class="button" data-test-cancel-button>Cancel</button>
-          </div>
-        </div>
-      </form>
-    {{else}}
-      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
-        <InfoTableRow @label="License ID" @value={{licenseId}} />
-        <InfoTableRow @label="Valid from" @value={{startTime}}>
-          {{date-format startTime 'MMM dd, yyyy hh:mm:ss a'}} to {{date-format expirationTime 'MMM dd, yyyy hh:mm:ss a'}}
+
+<section class="box is-sideless is-marginless is-shadowless is-fullwidth">
+  <span class="title is-5">Details</span>
+
+    <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+      <InfoTableRow @label="License ID" @value={{licenseId}} />
+      <InfoTableRow @label="Valid from" @value={{startTime}}>
+        {{date-format startTime 'MMM dd, yyyy hh:mm:ss a'}} to {{date-format expirationTime 'MMM dd, yyyy hh:mm:ss a'}}
+      </InfoTableRow>
+      <InfoTableRow @label="License state" @value={{autoloaded}}>
+        {{#if autoloaded}}
+          Autoloaded
+        {{else}}
+          Stored
+          <Icon @glyph="alert-triangle" class="has-text-highlight" /> <span class="is-size-8">Stored licenses will be deprecated in Vault 1.11. We recommend autoloading your license. Read more <a href="https://learn.hashicorp.com/tutorials/nomad/hashicorp-enterprise-license" rel="noreferrer noopener" target="_blank" >here</a>.</span>
+        {{/if}}
         </InfoTableRow>
-      </div>
-      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
-        <div class="control">
-          <button type="button" {{action "toggleForm"}} class="button" data-test-enter-button>Enter new license</button>
-        </div>
-      </div>
-    {{/if}}
-    </section>
-  {{/if}}
+    </div>
+</section>
+
 <section class="box is-sideless is-marginless is-shadowless is-fullwidth">
   <span class="title is-5">Features</span>
   <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
