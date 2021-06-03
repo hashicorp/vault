@@ -161,7 +161,6 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			c.diagnose = diagnose.New(os.Stdout)
 		}
 	}
-	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := diagnose.Context(context.Background(), c.diagnose)
 	c.diagnose.SetSkipList(c.flagSkips)
 	err := c.offlineDiagnostics(ctx)

@@ -174,8 +174,8 @@ func Advice(message string) trace.EventOption {
 	return trace.WithAttributes(adviceKey.String(message))
 }
 
-// AddAdvice adds advice to the current diagnose span
-func AddAdvice(ctx context.Context, message string) {
+// Advise adds advice to the current diagnose span
+func Advise(ctx context.Context, message string) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(adviceEventName, Advice(message))
 }

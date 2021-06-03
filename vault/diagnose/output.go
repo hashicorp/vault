@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"sort"
 	"strings"
@@ -190,16 +191,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 			case skippedEventName:
 				r.Status = SkippedStatus
 			case "fail":
-				var message string
-				var action string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case actionKey:
-						action = a.Value.AsString()
-					case errorMessageKey:
-						message = a.Value.AsString()
-					}
-				}
+				message, action := findAttributes(e, errorMessageKey, actionKey)
 				if message != "" && action != "" {
 					r.Children = append(r.Children, &Result{
 						Name:    action,
@@ -209,16 +201,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 
 				}
 			case spotCheckOkEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -229,16 +212,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						})
 				}
 			case spotCheckWarnEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -249,16 +223,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						})
 				}
 			case spotCheckErrorEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -269,16 +234,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						})
 				}
 			case spotCheckSkippedEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -287,6 +243,11 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Message: message,
 							Time:    e.Time,
 						})
+				}
+			case adviceEventName:
+				message, _ := findAttributes(e, adviceKey, "")
+				if message != "" {
+					r.Advice = message
 				}
 			}
 
@@ -310,6 +271,19 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 		t.results[id] = r
 	}
 	return r
+}
+
+func findAttributes(e trace.Event, attr1, attr2 attribute.Key) (string, string) {
+	var av1, av2 string
+	for _, a := range e.Attributes {
+		switch a.Key {
+		case attr1:
+			av1 = a.Value.AsString()
+		case attr2:
+			av2 = a.Value.AsString()
+		}
+	}
+	return av1, av2
 }
 
 // Write outputs a human readable version of the results tree
@@ -374,8 +348,9 @@ func (r *Result) write(sb *strings.Builder, depth int) {
 
 	if r.Advice != "" {
 		sb.WriteString("\n\n")
-		indent(sb, depth)
-		writeWrapped(sb, r.Advice, depth)
+		indent(sb, depth+1)
+		writeWrapped(sb, r.Advice, depth+1)
+		sb.WriteRune('\n')
 	}
 	sb.WriteRune('\n')
 	for _, c := range r.Children {
@@ -387,6 +362,7 @@ func writeWrapped(sb *strings.Builder, msg string, depth int) {
 	parts := strings.Split(wordwrap.WrapString(msg, uint(76-depth*len(indentString))), "\n")
 	sb.WriteString(parts[0])
 	for _, p := range parts[1:] {
+		sb.WriteRune('\n')
 		indent(sb, depth)
 		sb.WriteString(p)
 	}
