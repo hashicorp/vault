@@ -309,7 +309,8 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var configSR sr.ServiceRegistration
 	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
-			return fmt.Errorf("No service registration config")
+			diagnose.Skipped(ctx, "no service registration configured")
+			return nil
 		}
 		srConfig := config.ServiceRegistration.Config
 
@@ -404,9 +405,13 @@ SEALFAIL:
 			return nil
 		})
 		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
-			dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
+			if config.HAStorage == nil {
+				diagnose.Skipped(ctx, "no HA storage configured")
+			} else {
+				dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+				if dirAccess != "" {
+					diagnose.Warn(ctx, dirAccess)
+				}
 			}
 			return nil
 		})
@@ -437,7 +442,7 @@ SEALFAIL:
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		disableClustering := config.HAStorage.DisableClustering
+		disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener
