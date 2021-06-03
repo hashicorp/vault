@@ -8,12 +8,12 @@
   <span class="title is-5">Details</span>
 
     <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
-      <InfoTableRow @label="License ID" @value={{licenseId}} />
-      <InfoTableRow @label="Valid from" @value={{startTime}}>
-        {{date-format startTime 'MMM dd, yyyy hh:mm:ss a'}} to {{date-format expirationTime 'MMM dd, yyyy hh:mm:ss a'}}
+      <InfoTableRow @label="License ID" @value={{@licenseId}} />
+      <InfoTableRow @label="Valid from" @value={{@startTime}}>
+        {{date-format @startTime 'MMM dd, yyyy hh:mm:ss a'}} to {{date-format @expirationTime 'MMM dd, yyyy hh:mm:ss a'}}
       </InfoTableRow>
-      <InfoTableRow @label="License state" @value={{autoloaded}}>
-        {{#if autoloaded}}
+      <InfoTableRow @label="License state" @value={{if @autoloaded "Autoloaded" "Stored"}}>
+        {{#if @autoloaded}}
           Autoloaded
         {{else}}
           Stored
@@ -26,7 +26,7 @@
 <section class="box is-sideless is-marginless is-shadowless is-fullwidth">
   <span class="title is-5">Features</span>
   <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
-    {{#each featuresInfo as |info|}}
+    {{#each this.featuresInfo as |info|}}
       <InfoTableRow @label={{info.name}} @value={{if info.active "Active" "Not Active"}} @data-test-feature-row="data-test-feature-row">
         {{#if info.active}}
         <Icon
