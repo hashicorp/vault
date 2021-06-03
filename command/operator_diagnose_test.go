@@ -40,21 +40,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "operating system",
-					Status: diagnose.OkStatus,
-					Children: []*diagnose.Result{
-						{
-							Name:   "open file limits",
-							Status: diagnose.OkStatus,
-						},
-						{
-							Name:   "disk usage",
-							Status: diagnose.OkStatus,
-						},
-					},
-				},
-
-				{
 					Name:   "parse-config",
 					Status: diagnose.OkStatus,
 				},
@@ -293,7 +278,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 				if err := compareResults(tc.expected, result.Children); err != nil {
 					t.Fatalf("Did not find expected test results: %v", err)
-					t.Fatal(result.String())
 				}
 			})
 		}
